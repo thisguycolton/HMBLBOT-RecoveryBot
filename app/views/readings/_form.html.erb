@@ -11,22 +11,42 @@
     </div>
   <% end %>
 
-  <div>
-    <%= form.label :title, style: "display: block" %>
-    <%= form.text_field :title %>
+  <div class="mb-3">
+    <%= form.label :title, class: "form-label" %>
+    <%= form.text_field :title, class: "form-control" %>
+  </div>
+  <div class="mb-3">
+    <%= form.label :meetingDate, class: "form-label" %>
+    <div class="input-group date" id="datepicker">
+      <%= form.date_select :meetingDate, class: "form-control" %>
+    </div>
   </div>
 
-  <div>
-    <%= form.label :content, style: "display: block" %>
+  <div class="mb-3">
+    <%= form.label :meetingTime, class: "form-label" %>
+    <div class="input-group time mb-3" id="timepicker">
+      <%= form.time_select :meetingTime, class: "form-control" %>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <%= form.label :content, class: "form-label" %>
     <%= form.rich_text_area :content %>
   </div>
 
-  <div>
-    <%= form.label :topic, style: "display: block" %>
-    <%= form.rich_text_area :topic %>
+  <div class="mb-3">
+    <%= form.label :source, class: "form-label" %>
+    <%= form.text_field :source, class: "form-control" %>
   </div>
 
-  <div>
+  <div class="mb-3">
+    <%= form.label :topic, class: "form-label" %>
+    <%= form.rich_text_area :topic, class: "form-control" %>
+  </div>
+
+  <%= form.hidden_field :user_id, value: current_user.id %>
+
+  <div class="mb-3">
     <%= form.submit %>
   </div>
 <% end %>

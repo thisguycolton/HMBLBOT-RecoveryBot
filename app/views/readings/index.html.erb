@@ -1,14 +1,37 @@
-<p style="color: green"><%= notice %></p>
-
-<h1>Readings</h1>
-
-<div id="readings">
-  <% @readings.each do |reading| %>
-    <%= render reading %>
-    <p>
-      <%= link_to "Show this reading", reading %>
-    </p>
-  <% end %>
+<div class='container-fluid p-0'>
+  <div class="jumbotron text-bg-secondary p-5">
+    <div class="container">
+      <div class="d-flex">
+        <span class="flex-fill">
+          <h1 class="display-3 fw-bold">Topic Index</h1>
+        </span>
+      </div>
+    </div>
+  </div>
 </div>
-
-<%= link_to "New reading", new_reading_path %>
+<div class="container py-5">
+  <div class="row row-cols-auto reading-index" id="readings">
+    <% @readings.each do |reading| %>
+      <div class="col reading bg-light p-5">
+        <span class="fw-bold fs-4"><%= reading.title %></span>
+        <div class="">
+          <blockquote class="blockquote">
+            <%= reading.content.to_plain_text.truncate(140, separator: ' ') %>
+          </blockquote>
+        </div>
+        <div class="row mt-2">
+          <div class="col">
+            <cite title="<%= reading.source %>"><%= reading.source %></cite>
+          </div>
+          <div class="col-3 text-end">
+            <span class="fw-bolder"><%= reading.meetingDate.strftime("%b-%d-%y") %></span>
+          </div>
+        </div>
+        <div class="d-grid gap-2 mt-3">
+          <%= link_to "Read More", reading, class: "btn btn-primary" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+<p style="color: green"><%= notice %></p>

@@ -1,10 +1,6 @@
-<p style="color: green"><%= notice %></p>
-
 <%= render @reading %>
-
+<p style="color: green"><%= notice %></p>
 <div>
-  <%= link_to "Edit this reading", edit_reading_path(@reading) %> |
-  <%= link_to "Back to readings", readings_path %>
-
+  <%= link_to "Edit this reading", edit_reading_path(@reading) %>
   <%= button_to "Destroy this reading", @reading, method: :delete %>
 </div>

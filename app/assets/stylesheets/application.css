@@ -13,3 +13,25 @@
  *= require_tree .
  *= require_self
  */
+body {
+	font-family: 'Montserrat', sans-serif!important;
+}
+
+blockquote {
+	font-family: Gentium Book Plus;
+	font-size: 25px!important;
+}
+
+.li-questions .trix-content ul li{
+	list-style: none;
+	font-size: 25px;
+	padding:10px;
+	text-align: center;
+}
+
+.btn .bi{
+	font-size: 1.5em;
+}
+.navbar-brand{
+	font-weight: 700;
+}

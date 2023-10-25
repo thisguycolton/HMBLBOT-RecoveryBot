@@ -1,17 +1,44 @@
 <div id="<%= dom_id reading %>">
-  <p>
-    <strong>Title:</strong>
-    <%= reading.title %>
-  </p>
+  <div class='container-fluid p-0'>
+    <div class="jumbotron text-bg-light py-5">
+      <div class="container">
+        <div class="d-flex">
+          <span class="flex-fill">
+            <h1 class="display-3 fw-bold">THE ACID TEST</h1>
+            
+            <h3 class="display-4"><span class="fw-bold pr-1"><%= reading.meetingTime.strftime("%k") %>PM</span> <%= reading.meetingDate.strftime("%B %d, %Y") %></h3>
 
-  <p>
-    <strong>Content:</strong>
-    <%= reading.content %>
-  </p>
-
-  <p>
-    <strong>Topic:</strong>
-    <%= reading.topic %>
-  </p>
-
+            <h3 class="display-4"> Meeting Reading </h3>
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="container pt-4">
+      <figure>
+        <h2 class="font-weight-bold mb-4"><%= reading.title %></h2>
+        
+        <blockquote class="blockquote">
+          <p>
+            <%= reading.content %>
+          </p>
+        </blockquote>
+        <figcaption class="blockquote-footer">
+          <cite title="<%= reading.title %>" class=" fs-3"><%= reading.source %></cite>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="container-fluid mt-5 p-0">
+    <div class="jumbotron text-bg-light py-5">
+      <div class="container">
+        <h2 class="text-center display-4 pb-3">Example Topics For Sharing</h2>
+        <h3 class="card-subtitle mb-2 text-body-secondary text-center"><em>Feel free to check in!</em></h3>
+        <hr>
+        <ul class="list-unstyled li-questions">
+          <%= reading.topic %>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
+
