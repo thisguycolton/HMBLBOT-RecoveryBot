@@ -1,0 +1,14 @@
+<p style="color: green"><%= notice %></p>
+
+<h1>Readings</h1>
+
+<div id="readings">
+  <% @readings.each do |reading| %>
+    <%= render reading %>
+    <p>
+      <%= link_to "Show this reading", reading %>
+    </p>
+  <% end %>
+</div>
+
+<%= link_to "New reading", new_reading_path %>
