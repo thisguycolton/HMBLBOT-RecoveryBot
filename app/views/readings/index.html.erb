@@ -4,6 +4,9 @@
       <div class="d-flex">
         <span class="flex-fill">
           <h1 class="display-3 fw-bold">Topic Index</h1>
+          <p class="lead">
+            An archive of the meeting readings.
+          </p>
         </span>
       </div>
     </div>
@@ -13,24 +16,27 @@
   <div class="row row-cols-sm-1 row-cols-md-2 row-cols-lg-3 reading-index" id="readings">
     <% @readings.each do |reading| %>
       <div class="col reading position-relative">
-        <div class="bg-light p-5 ">
-          <span class="fw-bold fs-4" style="height: 60px;"><%= reading.title %></span>
-          <div class="">
-            <blockquote class="blockquote pb-5" style="min-height: 300px;">
-              <%= reading.content.to_plain_text.truncate(140, separator: ' ') %>
-            </blockquote>
+        <div class="card bg-light h-100">
+          <div class="pt-3 px-3">
+            <span class="fw-bold fs-4" ><%= reading.title %></span>
+            <hr>
+            <div class="">
+              <blockquote class="blockquote pb-2">
+                <%= reading.content.to_plain_text.truncate(160, separator: ' ') %>
+              </blockquote>
+            </div>
           </div>
-          <div class="position-absolute w-75 bottom-0 start-50 translate-middle">
-            <div class="row mt-2 ">
+          <div class="card-footer text-bg-secondary mt-auto">
+            <div class="row ">
               <div class="col">
-                <cite title="<%= reading.source %>"><%= reading.source %></cite>
+                <cite title="<%= reading.source %>">- <%= reading.source.truncate(26) %></cite>
               </div>
-              <div class="col-3 text-end">
-                <span class="fw-bolder"><%= reading.meetingDate.strftime("%b-%d-%y") %></span>
+              <div class="col-3 text-end me-3">
+                <span class="fw-bolder text-nowrap"><%= reading.meetingDate.strftime("%b-%d-%y") %></span>
               </div>
             </div>
-            <div class="d-grid gap-2 mt-3">
-              <%= link_to "Read More", reading, class: "btn btn-primary" %>
+            <div class="d-grid gap-2 mt-3 mb-2">
+              <%= link_to "Read More", reading, class: "btn btn-light" %>
             </div>
           </div>
         </div>
