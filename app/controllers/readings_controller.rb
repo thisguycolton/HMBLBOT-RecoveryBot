@@ -1,10 +1,9 @@
 class ReadingsController < ApplicationController
   before_action :set_reading, only: %i[ show edit update destroy ]
-  before_action :authenticate_user!
 
   # GET /readings or /readings.json
   def index
-    @readings = Reading.all
+    @readings = Reading.all.order(meetingDate: :desc)
   end
 
   # GET /readings/1 or /readings/1.json
@@ -66,6 +65,6 @@ class ReadingsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def reading_params
-      params.require(:reading).permit(:title, :content, :topic, :user_id, :meetingTime, :meetingDate, :source)
+      params.require(:reading).permit(:title, :content, :topic, :user_id, :meetingTime, :meetingDate, :source, :meetingName, :meetingUrl, :host)
     end
 end

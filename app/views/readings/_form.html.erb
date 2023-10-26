@@ -11,6 +11,19 @@
     </div>
   <% end %>
 
+
+  <div class="mb-3">
+    <%= form.label :meetingName, class: "form-label" %>
+    <%= form.text_field :meetingName, class: "form-control" %>
+  </div>
+  <div class="mb-3">
+    <%= form.label :meetingUrl, class: "form-label" %>
+    <%= form.text_field :meetingUrl, class: "form-control" %>
+  </div>
+  <div class="mb-3">
+    <%= form.label :host, class: "form-label" %>
+    <%= form.text_field :host, class: "form-control" %>
+  </div>
   <div class="mb-3">
     <%= form.label :title, class: "form-label" %>
     <%= form.text_field :title, class: "form-control" %>

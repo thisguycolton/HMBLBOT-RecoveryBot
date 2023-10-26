@@ -4,11 +4,21 @@
       <div class="container">
         <div class="d-flex">
           <span class="flex-fill">
-            <h1 class="display-3 fw-bold">THE ACID TEST</h1>
-            
-            <h3 class="display-4"><span class="fw-bold pr-1"><%= reading.meetingTime.strftime("%k") %>PM</span> <%= reading.meetingDate.strftime("%B %d, %Y") %></h3>
+            <% unless reading.meetingUrl.blank? %>
+            <div class="position-absolute top-0 end-0 mt-5 mx-4">
+              <a class="btn btn-lg btn-primary mt-5 d-none d-md-block align-middle" href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
+            </div>
+            <% end %>
+            <h1 class="display-3 fw-bold"><%= reading.meetingName %></h1>
+            <h3 class="display-4 fw-semibold"> Meeting Reading </h3>
+            <h3 class="display-5"> <span class="pr-1 "><%= reading.meetingDate.strftime("%B %d, %Y") %></span><span class="fw-lighter"><%= reading.meetingTime.strftime("%k") %>PM</span></h3>
 
-            <h3 class="display-4"> Meeting Reading </h3>
+            <% unless reading.meetingUrl.blank? %>
+            <div class="d-flex">
+              <a class="btn btn-primary mt-5 w-100 d-md-none " href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
+            </div>
+            <% end %>
+
           </span>
         </div>
       </div>

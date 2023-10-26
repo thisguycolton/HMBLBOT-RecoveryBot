@@ -35,3 +35,7 @@ blockquote {
 .navbar-brand{
 	font-weight: 700;
 }
+.admin-bar-reading{
+	width: 300px;
+	float: right;
+}
