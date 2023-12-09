@@ -12,9 +12,9 @@
       <% end %>
       <%= search_form_for @q do |f| %>
           <%= f.hidden_field :searchable_number_eq, value: @random.to_s %>
-          <div class="d-grid gap-2 col-6 mx-auto mt-5">
+          <div class="d-grid gap-2 col-lg-6 mx-auto mt-5">
             <%= f.button :submit, class: 'btn btn-lg btn-primary p-3' do %>
-              <i class="bi bi-shuffle"></i> <span class="display-6 p-4"> Pick a Random Topic</span><i class="bi bi-shuffle"></i> 
+              <i class="bi bi-shuffle"></i> <span class="display-6 p-4"> Random Topic </span><i class="bi bi-shuffle"></i> 
             <% end %>
           </div>
       <% end %>

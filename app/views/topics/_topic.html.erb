@@ -22,11 +22,12 @@ function myFunction() {
 
    // Copy the text inside the text field
   navigator.clipboard.writeText(copyText.value);
+  navigator.clipboard.writeText('#<%= topic.searchable_number %>: <%= topic.title %>')
 
   // Alert the copied text
   var element = document.getElementById("topic_<%= topic.id %>_copy_btn");
   element.classList.remove('btn-outline-dark');
-  element.classList.add('btn-outline-success');
+  element.classList.add('btn-success');
 
 } 
 </script>
