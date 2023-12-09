@@ -1,0 +1,41 @@
+<div class="container-fluid">
+  <div class="jumbotron text-bg-light py-5">
+    <div class="container">
+      <h1 class="display-1 fw-bolder"> The Topicificator 9000 </h1>
+      <h3 class="display-6"><%= @all_topics.count %> Topics and Counting</h3>
+      <br/>
+      <%= search_form_for @q do |f| %>
+        <div class="input-group input-group-lg mb-3">
+          <%= f.search_field :title_or_searchable_number_cont, placeholder: "Search For A Topic By Name or Number", class: "form-control" %>
+          <%= f.submit "Search", class: 'btn btn-success' %>
+        </div>
+      <% end %>
+      <%= search_form_for @q do |f| %>
+          <%= f.hidden_field :searchable_number_eq, value: @random.to_s %>
+          <div class="d-grid gap-2 col-6 mx-auto mt-5">
+            <%= f.button :submit, class: 'btn btn-lg btn-primary p-3' do %>
+              <i class="bi bi-shuffle"></i> <span class="display-6 p-4"> Pick a Random Topic</span><i class="bi bi-shuffle"></i> 
+            <% end %>
+          </div>
+      <% end %>
+
+  </div>
+</div>
+<div class="container">
+  <div class="row">
+    <div id="topics" class="mt-5">
+      <% if @topics.any? %>
+        <% @topics.each do |topic| %>
+          <%= render topic %>
+        <% end %>
+      <% else %>
+          <div class="card bg-danger text-light text-center">
+    <div class="p-5">
+      <h1 class="display-4"><span class="fw-bold">No '<%= @q.title_or_searchable_number_cont %>' Topic Found</h1>
+    </div>
+  </div>
+      <% end %>
+    </div>
+  </div>
+
+</div>

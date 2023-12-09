@@ -1,0 +1,32 @@
+<div id="<%= dom_id topic %>" class="col">
+  <div class="card mb-5">
+      <div class="position-absolute top-0 end-0 m-2">
+        <input type="text" value="#<%= topic.searchable_number %>: <%= topic.title %>" id="topic_<%= topic.id %>_copy" class="d-none">
+
+        <button onclick="myFunction()" id="topic_<%= topic.id %>_copy_btn" class="btn btn-outline-dark"><i class="bi bi-clipboard" id="topic_<%= topic.id %>_copy_btn_icon"></i></button> 
+      </div>
+    <div class="p-5">
+      <h1 class="display-4"><span class="fw-bold">#<%= topic.searchable_number %>:</span> <%= topic.title %></h1>
+    </div>
+  </div>
+
+</div>
+<script type="text/javascript">
+function myFunction() {
+  // Get the text field
+  var copyText = document.getElementById("topic_<%= topic.id %>_copy");
+
+  // Select the text field
+  copyText.select();
+  copyText.setSelectionRange(0, 99999); // For mobile devices
+
+   // Copy the text inside the text field
+  navigator.clipboard.writeText(copyText.value);
+
+  // Alert the copied text
+  var element = document.getElementById("topic_<%= topic.id %>_copy_btn");
+  element.classList.remove('btn-outline-dark');
+  element.classList.add('btn-outline-success');
+
+} 
+</script>
