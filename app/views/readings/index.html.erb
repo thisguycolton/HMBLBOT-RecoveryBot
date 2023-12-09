@@ -1,47 +1,48 @@
 <div class='container-fluid p-0'>
-  <div class="jumbotron text-bg-secondary p-5">
+  <div class="jumbotron text-bg-light p-5">
     <div class="container">
       <div class="d-flex">
-        <span class="flex-fill">
-          <h1 class="display-3 fw-bold">Topic Index</h1>
-          <p class="lead">
-            An archive of the meeting readings.
-          </p>
+        <span class="flex-fill text-center py-5">
+          <h1 class="display-1 fw-bolder">Reading Archive</h1>
+          <h3 class="display-6">
+            An index of the meeting readings and topics.
+          </h3>
         </span>
       </div>
     </div>
   </div>
 </div>
 <div class="container pt-3">
-  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 reading-index" id="readings">
-    <% @readings.each do |reading| %>
-      <div class="col reading position-relative mb-3">
-        <div class="card bg-light h-100">
-          <div class="pt-3 px-3">
-            <span class="fw-bold fs-4" ><%= reading.title %></span>
-            <hr>
-            <div class="">
-              <blockquote class="blockquote pb-2">
-                <%= reading.content.to_plain_text.truncate(160, separator: ' ') %>
-              </blockquote>
-            </div>
-          </div>
-          <div class="card-footer text-bg-secondary mt-auto">
-            <div class="row ">
-              <div class="col">
-                <cite title="<%= reading.source %>">- <%= reading.source.truncate(26) %></cite>
-              </div>
-              <div class="col-3 text-end me-3">
-                <span class="fw-bolder text-nowrap"><%= reading.meetingDate.strftime("%b-%d-%y") %></span>
+  <div class="row justify-content-center reading-index" id="readings">
+    <div class="col-md-10 col-lg-8 col-xl-7 pt-5">
+      <% @readings.each do |reading| %>
+        <div class="col reading position-relative mb-5">
+          <div class="h-100">
+            <div class=" ">
+              <%= link_to reading, class: "text-decoration-none link-dark link-opacity-50-hover" do %>
+                <h3 class="display-6 fw-normal" ><%= reading.title %></h3>
+              <% end %>
+              <div class="pt-3">
+                <blockquote class="blockquote pb-2">
+                  <%= reading.content.to_plain_text.truncate(260, separator: ' ') %>
+                </blockquote>
               </div>
             </div>
-            <div class="d-grid gap-2 mt-3 mb-2">
-              <%= link_to "Read More", reading, class: "btn btn-light" %>
+            <div class=" mt-auto">
+              <div class="row ">
+                <div class="col">
+                  <cite title="<%= reading.source %>">- <%= reading.source.truncate(36) %></cite>
+                </div>
+                <div class="col-3 text-end me-3">
+                  <span class="fw-bolder text-nowrap"><%= reading.meetingDate.strftime("%b-%d-%y") %></span>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
-      </div>
-    <% end %>
+      <% end %>
+    </div>
   </div>
 </div>
 <p style="color: green"><%= notice %></p>
