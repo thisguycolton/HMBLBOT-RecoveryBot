@@ -1,3 +1,18 @@
+<style>
+body {
+  min-height: 200vh;
+}
+
+#scroll-progress {
+  position: fixed;
+  top: 0;
+  width: 0%;
+  height: 6px;
+  background: #5bc0de;
+  z-index: 10000;
+}
+</style>
+
 <%= render @reading %>
 <p style="color: green"><%= notice %></p>
 <% if user_signed_in? %>
@@ -16,3 +31,14 @@
   </div>
 </div>
 <% end %>
+<script type="text/javascript">
+  const scrollProgress = document.getElementById('scroll-progress');
+const height =
+  document.documentElement.scrollHeight - document.documentElement.clientHeight;
+
+window.addEventListener('scroll', () => {
+  const scrollTop =
+    document.body.scrollTop || document.documentElement.scrollTop;
+  scrollProgress.style.width = `${(scrollTop / height) * 100}%`;
+});
+</script>

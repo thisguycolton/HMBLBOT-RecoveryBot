@@ -1,7 +1,7 @@
 <div class="container-fluid">
   <div class="jumbotron text-bg-light py-5">
     <div class="container">
-      <h1 class="display-1 fw-bolder"> The Topicificator 9000 </h1>
+      <h1 class="display-1 fw-bolder" id="animateMe"> The Topicificator 9000 </h1>
       <h3 class="display-6"><%= @all_topics.count %> Topics and Counting</h3>
       <br/>
       <%= search_form_for @q do |f| %>
@@ -14,7 +14,7 @@
           <%= f.hidden_field :searchable_number_eq, value: @random.to_s %>
           <div class="d-grid gap-2 col-lg-6 mx-auto mt-5">
             <%= f.button :submit, class: 'btn btn-lg btn-primary p-3' do %>
-              <i class="bi bi-shuffle"></i> <span class="display-6 p-4"> Random Topic </span><i class="bi bi-shuffle"></i> 
+              <i class="bi bi-shuffle"></i> <span class="display-6 p-4"> Random </span><i class="bi bi-shuffle"></i> 
             <% end %>
           </div>
       <% end %>
@@ -23,8 +23,18 @@
 </div>
 <div class="container">
   <div class="row">
-    <div id="topics" class="mt-5">
-      <% if @topics.any? %>
+    <div id="topics" class="">
+      <% if @topics.any? && params[:q].present? %>
+        <% @topics.each do |topic| %>
+          <%= render topic %>
+        <% end %>
+
+      <% elsif @topics.any? %>
+        <div class="bg-info w-100 rounded-bottom">
+          <p class="lead fw-normal p-3 text-light">
+            Thanks for trying out <span class="fw-bolder">The Topicificator 9000</span>. You can use the search bar above to find a topic matching a word, or the number associated with that topic. Or you can have a topic randomly picked for you! Here are <span class="fw-bolder">four example topics</span>:
+          </p>
+        </div>
         <% @topics.each do |topic| %>
           <%= render topic %>
         <% end %>
@@ -39,3 +49,36 @@
   </div>
 
 </div>
+
+<script type="text/javascript">
+  
+
+import Letterize from "https://cdn.skypack.dev/letterizejs@2.0.0";
+var test = new Letterize({
+      targets: "#animateMe"
+    });
+
+    test.listAll;
+    for (var i = 0; i < test.listAll.length; i++) {
+      test.listAll[i].addEventListener("mouseover", function(e) {
+        e.target = anime({
+          targets: e.target,
+          duration: 100,
+          translateX: anime.random(-10,10),
+          translateY: anime.random(-10,10),
+          rotate: anime.random(-10,10),
+          opacity: 0.5
+        });
+      });
+
+      test.listAll[i].addEventListener("mouseout", function(e) {
+        e.target = anime({
+          targets: e.target,
+          duration: 3000,
+          opacity: 1
+        });
+      });
+    }
+
+
+</script>

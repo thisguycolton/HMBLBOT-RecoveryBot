@@ -5,8 +5,12 @@ class TopicsController < ApplicationController
   def index
     @all_topics = Topic.all
     @q = Topic.ransack(params[:q])
-    @random = rand(1-325)
-    @topics = @q.result(distinct: true)
+    @random = rand(1...324)
+    unless params[:q].nil?
+      @topics = @q.result(distinct: true)
+    else
+      @topics = Topic.all.sample(4)
+    end
   end
 
   # GET /topics/1 or /topics/1.json
