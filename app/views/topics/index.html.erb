@@ -1,4 +1,4 @@
-<div class="container-fluid bg-info">
+<div class="container-fluid <% if user_signed_in? %>bg-info<% end %>">
   <div class="jumbotron text-bg-light py-5">
     <div class="container">
       <h1 class="display-1 fw-bolder" id="animateMe"> The Topicificator 9000 </h1>
@@ -23,7 +23,7 @@
 </div>
 <div class="container">
   <div class="row">
-    <div id="topics" class="my-5">
+    <div id="topics" class="<% if user_signed_in? %>my-5 <% end %>">
       <% if @topics.any? && params[:q].present? %>
         <% @topics.each do |topic| %>
           <%= render topic %>
