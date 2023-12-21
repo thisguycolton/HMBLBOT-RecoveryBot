@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  mount AhoyCaptain::Engine => '/ahoy_captain'
 
   resources :books do
     resources :pages, only: [:show], param: :page_number

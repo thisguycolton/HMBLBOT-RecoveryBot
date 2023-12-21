@@ -33,6 +33,17 @@ gem 'ransack'
 #PDF Reader
 gem 'pdf-reader'
 
+#Analytics with Ahoy!
+gem "ahoy_matey"
+
+#Geocoding
+gem "geocoder"
+
+#Front end for analytics
+gem 'ahoy_captain'
+
+
+
 # Use Redis adapter to run Action Cable in production
 # gem "redis", "~> 4.0"
 
