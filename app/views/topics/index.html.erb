@@ -23,7 +23,7 @@
 </div>
 <div class="container">
   <div class="row">
-    <div id="topics" class="">
+    <div id="topics" class="my-5">
       <% if @topics.any? && params[:q].present? %>
         <% @topics.each do |topic| %>
           <%= render topic %>
