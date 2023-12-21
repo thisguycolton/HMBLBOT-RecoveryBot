@@ -1,4 +1,8 @@
 Rails.application.routes.draw do
+
+  resources :books do
+    resources :pages, only: [:show], param: :page_number
+  end
   resources :topics
   devise_for :users
   resources :readings

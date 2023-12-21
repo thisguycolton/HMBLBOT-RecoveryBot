@@ -1,0 +1,21 @@
+<div id="<%= dom_id page %>">
+  <div class='container-fluid p-0'>
+
+    <div class="row justify-content-center reading-index" id="readings">
+      <div class="col-md-9 col-lg-7 col-xl-6 pt-5">
+        <figure>
+          
+          <blockquote class="blockquote">
+            <p>
+              <%= page.content.gsub("\n\n", "<br>").html_safe %>
+            </p>
+          </blockquote>
+          <div class="w-100 text-center page-info pt-3">
+            <span class="fw-bold">Pg. <%= page.page_number %> </span>| <span class="fw-bolder"><%= @book.title %></span>
+          </div>
+
+        </figure>
+      </div>
+    </div>
+  </div>
+</div>

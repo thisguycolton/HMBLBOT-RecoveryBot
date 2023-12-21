@@ -30,6 +30,9 @@ gem "jbuilder"
 #search
 gem 'ransack'
 
+#PDF Reader
+gem 'pdf-reader'
+
 # Use Redis adapter to run Action Cable in production
 # gem "redis", "~> 4.0"
 
