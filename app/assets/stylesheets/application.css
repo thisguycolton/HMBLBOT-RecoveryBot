@@ -102,7 +102,7 @@ mark, .mark{
 .chapter-paragraph-sm{
 	font-size: 1.2em!important;
 	padding: 1em;
-	max-height: 255px;
+	height: 255px;
 	overflow: hidden;
 }
 

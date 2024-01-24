@@ -11,7 +11,7 @@
 <div class="container">
 
 
-  <div id="chapters" class="row row-cols-1 row-cols-sm-1 row-cols-md-2 row-cols-lg-3 g-4 mt-3 mx-auto">
+  <div id="chapters" class="row row-cols-1 row-cols-sm-1 row-cols-md-2 row-cols-xl-3 g-4 mt-3 mx-auto">
     <% @book.chapters.each do |chapter| %>
     <div class="col">
       <div class="card text-bg-light mb-3 h-100">
@@ -23,10 +23,10 @@
               <% else %>
                 <small class="text-body-secondary tracking-widest"> PREFACE</small><br>
               <% end %>
-              <strong class="tracking-widest"><%= chapter.title %></strong>            
+              <strong class="tracking-widest text-truncate"><%= chapter.title %></strong>            
             </h5>
           </span>
-          <div class="card-text card-chapter-text">
+          <div class="card-text card-chapter-text h-75 pb-3">
             <blockquote class="chapter-paragraph chapter-paragraph-sm ">
               <%= raw(chapter.content).gsub(/(\d+:\d+)/, '<lit>\1</lit>').truncate(300).html_safe %>
             </blockquote>
