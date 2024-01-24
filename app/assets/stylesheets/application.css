@@ -99,3 +99,20 @@ mark, .mark{
 	height: 335px;
 	overflow: hidden
 }
+.chapter-paragraph-sm{
+	font-size: 1.2em!important;
+	padding: 1em;
+	max-height: 255px;
+	overflow: hidden;
+}
+
+.card-chapter-text{
+	background-color: #fff !important;
+	border-radius: 10px !important;
+	margin-top: 10px;
+	padding-bottom: 5px;
+}
+
+lit {
+  	color: rgb(108, 117, 125);
+}

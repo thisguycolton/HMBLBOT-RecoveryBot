@@ -11,9 +11,40 @@
 <div class="container">
 
 
-  <div id="chapters">
+  <div id="chapters" class="row row-cols-1 row-cols-sm-1 row-cols-md-2 row-cols-lg-3 g-4 mt-3 mx-auto">
     <% @book.chapters.each do |chapter| %>
-      <%= render chapter %>
+    <div class="col">
+      <div class="card text-bg-light mb-3">
+        <div class="card-body">
+          <span class="w-100 text-center align-middle">
+            <h5 class="fw-bold ">
+              <% if chapter.number > 0 %>
+                <small class="text-body-secondary tracking-widest"> CHAPTER <%= chapter.number %></small><br>
+              <% else %>
+                <small class="text-body-secondary tracking-widest"> PREFACE</small><br>
+              <% end %>
+              <strong class="tracking-widest"><%= chapter.title %></strong>            
+            </h5>
+          </span>
+          <div class="card-text card-chapter-text">
+            <% content_html = chapter.content %>
+            <% sanitized_content = sanitize(content_html, tags: %w(p br em strong), attributes: %w(style)) %>
+            <% fragment = Nokogiri::HTML::DocumentFragment.parse(sanitized_content) %>
+
+              <% paragraph = fragment.css('p').first %>
+              <blockquote id="chapter_<%= chapter.id %>_paragraph_1" class="chapter-paragraph chapter-paragraph-sm ">
+              <%= raw(paragraph).gsub(/(\d+:\d+)/, '<lit>\1</lit>').truncate(300).html_safe %>
+            </blockquote>
+          </div>
+        </div>
+        <div class="card-footer">
+          <%= link_to book_chapter_path(chapter.book.id, chapter.id), class: "btn btn-success fw-bold w-100" do %>
+          <i class="bi bi-book-half"></i> <span class="align-text-bottom ps-2">READ CHAPTER</span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
       
     <% end %>
   </div>
