@@ -12,7 +12,7 @@
         <blockquote class="blockquote">
           <p>
             <% content_html = chapter.content.gsub(/(\d+:\d+)/, '</p><p class="p-isolate"><span class="text-secondary">\1</span>') %>
-                <% sanitized_content = sanitize(content_html, tags: %w(p br), attributes: %w(style)) %>
+                <% sanitized_content = sanitize(content_html, tags: %w(p br em), attributes: %w(style)) %>
                 <% fragment = Nokogiri::HTML::DocumentFragment.parse(sanitized_content) %>
                 <% fragment.css('p').each_with_index do |paragraph, index| %>
               <div id="chapter_<%= chapter.id %>_paragraph_<%= index + 1 %>" class="chapter-paragraph">
