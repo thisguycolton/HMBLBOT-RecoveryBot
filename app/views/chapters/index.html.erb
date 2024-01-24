@@ -33,7 +33,7 @@
 
               <% paragraph = fragment.css('p').first %>
               <blockquote id="chapter_<%= chapter.id %>_paragraph_1" class="chapter-paragraph chapter-paragraph-sm ">
-              <%= raw(paragraph).gsub(/(\d+:\d+)/, '<lit>\1</lit>').truncate(300).html_safe %>
+              <%= raw(chapter.content).gsub(/(\d+:\d+)/, '<lit>\1</lit>').truncate(300).html_safe %>
             </blockquote>
           </div>
         </div>
