@@ -1,9 +1,16 @@
-<h1>New book</h1>
+<div class=" container  mt-5">
+  <div class="row">
+    <div class="col-lg-6 offset-lg-3 bg-light rounded-5 shadow-sm mb-5">
+      <h2 class="text-center my-5">New Book</h2>
+      <hr class="border-dark border-5 opacity-50">
+      <div class="px-5 py-2">
+        <%= render "form", book: @book %>
+      </div>
+      <br>
 
-<%= render "form", book: @book %>
-
-<br>
-
-<div>
-  <%= link_to "Back to books", books_path %>
+      <div>
+        <%= link_to "Back to books", books_path %>
+      </div>
+    </div>
+  </div>
 </div>

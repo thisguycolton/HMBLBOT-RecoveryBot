@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_12_21_213443) do
+ActiveRecord::Schema[7.0].define(version: 2024_01_23_044216) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -104,6 +104,21 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_21_213443) do
     t.string "purchase_link"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "aa_approved"
+    t.boolean "org_approved"
+    t.boolean "publicly_accessible"
+    t.string "image_url"
+    t.text "description"
+  end
+
+  create_table "chapters", force: :cascade do |t|
+    t.bigint "book_id", null: false
+    t.string "title"
+    t.integer "number"
+    t.text "content"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["book_id"], name: "index_chapters_on_book_id"
   end
 
   create_table "pages", force: :cascade do |t|
@@ -131,9 +146,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_21_213443) do
 
   create_table "topics", force: :cascade do |t|
     t.string "title"
+    t.string "searchable_number"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "searchable_number"
   end
 
   create_table "users", force: :cascade do |t|
@@ -150,6 +165,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_12_21_213443) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "chapters", "books"
   add_foreign_key "pages", "books"
   add_foreign_key "readings", "users"
 end

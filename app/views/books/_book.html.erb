@@ -1,22 +1,31 @@
-<div id="<%= dom_id book %>">
-  <p>
-    <strong>Title:</strong>
-    <%= book.title %>
-  </p>
 
-  <p>
-    <strong>Author:</strong>
-    <%= book.author %>
-  </p>
-
-  <p>
-    <strong>Published date:</strong>
-    <%= book.published_date %>
-  </p>
-
-  <p>
-    <strong>Purchase link:</strong>
-    <%= book.purchase_link %>
-  </p>
-
+<div class="card text-bg-light mb-3 w-100">
+  <div class="card-body">
+    <div class="img-blur-wrapper">
+      <img src="<%= book.image_url %>" class="card-img-top bg-img-blur" alt="...">
+    </div>
+    <img src="<%= book.image_url %>" class="card-img-top mb-5 book-img" alt="...">
+    <h5 class="card-title"><%= book.title %></h5>
+    <p class="card-text">
+      <%= book.description %>
+    </p>
+    <p><sm>Published in <%= book.published_date.year %></sm></p>
+    <figcaption class="blockquote-footer">
+      <%= book.author %> 
+    </figcaption>
+  </div>
+    <div class="card-footer text-body-secondary py-3">
+    <div class="row">
+      <div class="col-6">
+        <a href="<%= book.purchase_link %>" target="_blank" class="btn btn-success w-100"> 
+          <i class="bi bi-cart4"></i> 
+        </a>
+      </div>
+      <div class="col-6">
+        <%= link_to book_chapters_path(book.id), class: "btn btn-info text-light w-100" do %> 
+          <i class="bi bi-book"></i> 
+        <% end %>
+      </div>
+    </div>
+  </div>
 </div>

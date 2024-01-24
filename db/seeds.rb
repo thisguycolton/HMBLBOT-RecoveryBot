@@ -7,11 +7,12 @@
 #   Character.create(name: "Luke", movie: movies.first)
 require 'csv'
 
-csv_text = File.read(Rails.root.join('lib', 'seeds', 'Topics.csv'))
-csv = CSV.parse(csv_text)
-csv.each do |row|
+csv_text = File.read(Rails.root.join('lib', 'seeds', 'Topics.csv'), row_sep: "|")
+csv = CSV.parse(csv_text, col_sep: "|")
+csv.each.with_index(1) do |row, index|
   t = Topic.new
   t.title = row[0]
+  t.searchable_number = index
   t.save
   puts "#{t.id}, #{t.title} saved"
 end

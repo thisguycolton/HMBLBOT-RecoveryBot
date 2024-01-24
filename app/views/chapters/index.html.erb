@@ -1,0 +1,22 @@
+
+<div class="container-fluid py-5 book-jumbotron">
+
+  <h1 class="display-4 mt-4 text-center text-light fw-bolder"><%= @book.title %></h1>
+
+  <% if user_signed_in? %>
+    <%= link_to "Edit", edit_book_path(@book.id), class: "btn btn-lg btn-primary" %>
+  <% end %>
+   <p style="color: green"><%= notice %></p>
+</div>
+<div class="container">
+
+
+  <div id="chapters">
+    <% @book.chapters.each do |chapter| %>
+      <%= render chapter %>
+      
+    <% end %>
+  </div>
+
+  <%= link_to "New chapter", new_book_chapter_path(params[:book_id]) %>
+</div>

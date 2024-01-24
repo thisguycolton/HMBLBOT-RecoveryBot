@@ -1,0 +1,29 @@
+<p style="color: green"><%= notice %></p>
+
+<%= render @chapter %>
+
+
+
+<div>
+  <%= link_to "Edit this chapter", edit_book_chapter_path(params[:book_id], @chapter) %> |
+  <%= link_to "Back to chapters", book_chapters_path(params[:book_id]) %>
+
+  <%= button_to "Destroy this chapter", book_chapter_path(params[:book_id], @chapter), method: :delete %>
+</div>
+
+
+
+
+<script>
+  function scrollToParagraph() {
+    var paragraphToScroll = <%= params[:paragraph].to_i || 1 %>;
+    var targetElement = document.getElementById("chapter_<%= @chapter.id %>_paragraph_" + paragraphToScroll);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth' });
+      targetElement.classList.add('mark'); // Add the .mark class
+    }
+  }
+
+  document.addEventListener('turbolinks:render', setTimeout(scrollToParagraph, 100));
+  document.addEventListener('DOMContentLoaded', setTimeout(scrollToParagraph, 100) );
+</script>

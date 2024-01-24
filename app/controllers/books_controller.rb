@@ -3,7 +3,12 @@ class BooksController < ApplicationController
 
   # GET /books or /books.json
   def index
-    @books = Book.all
+    @q = Book.ransack(params[:q])
+    unless params[:q].nil?
+      @books = @q.result(distinct: true)
+    else
+      @books = Book.all
+    end
   end
 
   # GET /books/1 or /books/1.json
@@ -48,7 +53,7 @@ class BooksController < ApplicationController
   def update
     respond_to do |format|
       if @book.update(book_params)
-        format.html { redirect_to book_url(@book), notice: "Book was successfully updated." }
+        format.html { redirect_to book_chapters_url(@book), notice: "Book was successfully updated." }
         format.json { render :show, status: :ok, location: @book }
       else
         format.html { render :edit, status: :unprocessable_entity }
@@ -75,6 +80,6 @@ class BooksController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def book_params
-      params.require(:book).permit(:title, :author, :published_date, :purchase_link, :info, :pdf_url)
+      params.require(:book).permit(:title, :author, :published_date, :purchase_link, :info, :pdf_url, :publicly_accessible, :aa_approved, :image_url, :description)
     end
 end

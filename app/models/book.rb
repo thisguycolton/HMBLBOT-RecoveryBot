@@ -1,19 +1,28 @@
 class Book < ApplicationRecord
 	has_many :pages
+    has_many :chapters
 
-	validates :pdf_url, presence: true
+    def self.ransackable_attributes(auth_object = nil)
+    ["aa_approved", "author", "created_at", "id", "info", "org_approved", "pdf_url", "publicly_accessible", "published_date", "purchase_link", "title", "updated_at"]
+    end
 
-	  after_create :extract_and_save_pages_from_pdf
+    def self.ransackable_associations(auth_object = nil)
+    ["chapters", "pages"]
+    end
+
+	# validates :pdf_url, presence: true
+
+	#   after_create :extract_and_save_pages_from_pdf
 
   private
 
-  def extract_and_save_pages_from_pdf
-    pdf_url = self.pdf_url # Replace this with your attribute containing the PDF URL
+  # def extract_and_save_pages_from_pdf
+  #   pdf_url = self.pdf_url # Replace this with your attribute containing the PDF URL
 
-    PageExtractor.extract_and_save_pages(self.id, pdf_url)
-  rescue StandardError => e
-    Rails.logger.error "Extraction failed for book #{self.id}: #{e.message}"
-  end
+  #   PageExtractor.extract_and_save_pages(self.id, pdf_url)
+  # rescue StandardError => e
+  #   Rails.logger.error "Extraction failed for book #{self.id}: #{e.message}"
+  # end
 # require 'open-uri'
 # require 'pdf/reader'
 

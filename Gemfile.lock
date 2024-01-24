@@ -245,6 +245,8 @@ GEM
     stringio (3.0.8)
     thor (1.3.0)
     timeout (0.4.0)
+    tinymce-rails (6.8.2)
+      railties (>= 3.1.1)
     ttfunk (1.7.0)
     turbo-rails (1.5.0)
       actionpack (>= 6.0.0)
@@ -289,6 +291,7 @@ DEPENDENCIES
   image_processing (~> 1.2)
   importmap-rails
   jbuilder
+  nokogiri
   pdf-reader
   pg (~> 1.1)
   puma (~> 5.0)
@@ -297,6 +300,7 @@ DEPENDENCIES
   selenium-webdriver
   sprockets-rails
   stimulus-rails
+  tinymce-rails
   turbo-rails
   tzinfo-data
   web-console

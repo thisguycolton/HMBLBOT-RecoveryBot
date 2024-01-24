@@ -11,32 +11,54 @@
     </div>
   <% end %>
 
-  <div>
-    <%= form.label :title, style: "display: block" %>
-    <%= form.text_field :title %>
+  <div class="mb-3">
+    <label for="titleInput" class="form-label">Title</label>
+    <%= form.text_field :title, id: "titleInput", class: "form-control" %>
   </div>
 
-  <div>
-    <%= form.label :pdf_url, style: "display: block" %>
-    <%= form.text_field :pdf_url %>
+  <div class="mb-3">
+    <label for="authorInput" class="form-label">Author</label>
+    <%= form.text_field :author, id: "authorInput", class: "form-control" %>
   </div>
 
-  <div>
-    <%= form.label :author, style: "display: block" %>
-    <%= form.text_field :author %>
+  <div class="mb-3">
+    <label for="publishInputDate" class="form-label">Date Published</label>
+    <div class="input-group date" data-date-format="mm/dd/yyyy" data-date="04/10/1955">
+      <%= form.date_field :published_date, id: "publishInputDate", class: "form-control", value: "04/10/1955" %>
+
+    </div>
   </div>
 
-  <div>
-    <%= form.label :published_date, style: "display: block" %>
-    <%= form.date_field :published_date %>
+  <div class="mb-3">
+    <label for="purchaseLinkInput" class="form-label">Purchase Link</label>
+    <%= form.text_field :purchase_link, id: "purchaseLinkInput", class: "form-control" %>
   </div>
 
-  <div>
-    <%= form.label :purchase_link, style: "display: block" %>
-    <%= form.text_field :purchase_link %>
+  <div class="mb-3">
+    <label for="imageURLInput" class="form-label">Image URL</label>
+    <%= form.text_field :image_url, id: "imageURLInput", class: "form-control" %>
   </div>
 
-  <div>
-    <%= form.submit %>
+  <div class="mb-3">
+    <label for="descriptionInput" class="form-label">Description</label>
+    <%= form.text_area :description, id: "descriptionInput", class: "form-control" %>
+  </div>
+
+  <div class="form-check mb-3">
+    <%= form.check_box :aa_approved, class: "form-check-input", type: "checkbox", id: "aaApprovedCheck" %>
+    <label class="form-check-label" for="aaApprovedCheck">
+      AA Approved?
+    </label>
+  </div>
+  <div class="form-check mb-3">
+    <%= form.check_box :publicly_accessible, class: "form-check-input", type: "checkbox", id: "publiclyAccessibleCheck" %>
+    <label class="form-check-label" for="publiclyAccessibleCheck">
+      Publicly Accessible?
+    </label>
+  </div>
+
+
+  <div class="mb-3">
+    <%= form.submit "Save Book", class: "btn btn-primary w-100" %>
   </div>
 <% end %>

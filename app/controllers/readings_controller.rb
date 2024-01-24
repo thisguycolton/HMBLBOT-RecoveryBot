@@ -8,7 +8,7 @@ class ReadingsController < ApplicationController
 
   # GET /readings/1 or /readings/1.json
   def show
-    # ahoy.track "Viewed Reading", title: @reading.title
+     ahoy.track "Viewed Reading", title: @reading.title
   end
 
   # GET /readings/new

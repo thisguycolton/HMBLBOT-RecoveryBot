@@ -1,0 +1,30 @@
+<div id="<%= dom_id chapter %>">
+   <div class="container pt-4">
+      <figure>
+        <span class="w-100 text-center">
+          <h2 class="fw-bold mb-4 ">
+            <% if chapter.number > 0 %>
+              <small class="text-body-secondary tracking-widest"> CHAPTER <%= chapter.number %></small><br>
+            <% end %>
+            <strong class="tracking-widest"><%= chapter.title %></strong>            
+          </h2>
+        </span>
+        <blockquote class="blockquote">
+          <p>
+            <% content_html = chapter.content.gsub(/(\d+:\d+)/, '</p><p class="p-isolate"><span class="text-secondary">\1</span>') %>
+                <% sanitized_content = sanitize(content_html, tags: %w(p br), attributes: %w(style)) %>
+                <% fragment = Nokogiri::HTML::DocumentFragment.parse(sanitized_content) %>
+                <% fragment.css('p').each_with_index do |paragraph, index| %>
+              <div id="chapter_<%= chapter.id %>_paragraph_<%= index + 1 %>" class="chapter-paragraph">
+              <%= raw(paragraph).gsub(/(\d+:\d+)/, '<span class="text-secondary">\1</span>').html_safe %>
+            </div>
+            <% end %>
+          </p>
+        </blockquote>
+        <figcaption class="blockquote-footer">
+          <cite title="<%= chapter.book.title %>" class=" fs-3"><%= chapter.book.title %></cite>
+        </figcaption>
+      </figure>
+    </div>
+
+</div>

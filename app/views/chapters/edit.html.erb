@@ -1,0 +1,21 @@
+<div class="container-fluid p-5 mx-5">
+  <span class="fw-bold"><%= link_to @chapter.book.title, book_chapters_path(@chapter.book.id), class: "link-dark link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"  %></span> > 
+  <span class="fw-bold">
+    <%= link_to @chapter.title, book_chapter_path(@chapter.book.id, @chapter.id), class: "link-dark link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"  %>
+      
+    </span>
+  <h1 class="display-3 mt-4">Editing Chapter</h1>
+   
+</div>
+<div class="container">
+
+
+  <%= render "form", chapter: @chapter %>
+
+  <br>
+
+  <div>
+    <%= link_to "Show this chapter", book_chapter_path(params[:book_id], @chapter) %> |
+    <%= link_to "Back to chapters", book_chapters_path(params[:book_id]) %>
+  </div>
+</div>
