@@ -2,40 +2,46 @@
   <div class='container-fluid p-0'>
     <div class="jumbotron text-bg-light py-5">
       <div class="container">
-        <div class="d-flex">
-          <span class="flex-fill">
-            <% unless reading.meetingUrl.blank? %>
-            <div class="position-absolute top-0 end-0 mt-5 mx-4">
-              <a class="btn btn-lg btn-primary mt-5 d-none d-md-block align-middle" href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
-            </div>
-            <% end %>
-            <h1 class="display-3 fw-bold"><%= reading.meetingName %></h1>
-            <h3 class="display-4 fw-semibold"> Meeting Reading </h3>
-            <h3 class="display-5"> <span class="pr-1 "><%= reading.meetingDate.strftime("%B %d, %Y") %></span><span class="fw-lighter"><%= reading.meetingTime.strftime("%k") %>PM</span></h3>
+        <div class="row">
+          <div class="col-lg-10 col-xl-8 offset-lg-1 offset-xl-2">
+            <span class="flex-fill">
+              <% unless reading.meetingUrl.blank? %>
+              <div class="position-absolute top-0 end-0 mt-5 mx-4">
+                <a class="btn btn-lg btn-primary mt-5 d-none d-md-block align-middle" href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
+              </div>
+              <% end %>
+              <h1 class="display-3 fw-bold"><%= reading.meetingName %></h1>
+              <h3 class="display-4 fw-semibold"> Meeting Reading </h3>
+              <h3 class="display-5"> <span class="pr-1 "><%= reading.meetingDate.strftime("%B %d, %Y") %></span><span class="fw-lighter"><%= reading.meetingTime.strftime("%l:%M %p").sub(':00', '') %></span></h3>
 
-            <% unless reading.meetingUrl.blank? %>
-            <div class="d-flex">
-              <a class="btn btn-primary mt-5 w-100 d-md-none " href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
-            </div>
-            <% end %>
+              <% unless reading.meetingUrl.blank? %>
+              <div class="d-flex">
+                <a class="btn btn-primary mt-5 w-100 d-md-none " href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
+              </div>
+              <% end %>
 
-          </span>
+            </span>
+          </div>
         </div>
       </div>
     </div>
     <div class="container pt-4">
-      <figure>
-        <h2 class="font-weight-bold mb-4"><%= reading.title %></h2>
-        
-        <blockquote class="blockquote">
-          <p>
-            <%= reading.content %>
-          </p>
-        </blockquote>
-        <figcaption class="blockquote-footer">
-          <cite title="<%= reading.title %>" class=" fs-3"><%= reading.source %></cite>
-        </figcaption>
-      </figure>
+      <div class="row">
+        <div class="col-lg-10 col-xl-8 offset-lg-1 offset-xl-2">
+          <figure>
+            <h1 class="fw-bold mb-4 tracking-widest text-uppercase"><%= reading.title %></h1>
+            
+            <blockquote class="blockquote">
+              <p>
+                <%= reading.content.body.to_html.html_safe %>
+              </p>
+            </blockquote>
+            <figcaption class="blockquote-footer">
+              <cite title="<%= reading.title %>" class=" fs-3"><%= reading.source %></cite>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
     </div>
   </div>
   <div class="container-fluid mt-5 p-0">

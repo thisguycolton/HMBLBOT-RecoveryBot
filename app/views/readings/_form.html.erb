@@ -13,38 +13,51 @@
 
 
   <div class="mb-3">
-    <%= form.label :meetingName, class: "form-label" %>
-    <%= form.text_field :meetingName, class: "form-control" %>
+    <label for="meetingNameInput" class="form-label">Group Name:</label>
+    <%= form.text_field :meetingName, id: "meetingNameInput", class: "form-control" %>
+  </div>
+
+  <div class="mb-3">
+    <label for="meetingURLInput" class="form-label">Meeting URL:</label>
+    <%= form.text_field :meetingUrl, id: "meetingURLInput", class: "form-control" %>
+  </div>
+
+  <div class="mb-3">
+    <label for="meetingDateInput" class="form-label">Date of Meeting:</label>
+    <div class="input-group date" data-date-format="mm/dd/yyyy" data-date="04/10/1955">
+      <%= form.date_field :meetingDate, id: "meetingDateInput", class: "form-control"  %>
+    </div>
   </div>
   <div class="mb-3">
-    <%= form.label :meetingUrl, class: "form-label" %>
-    <%= form.text_field :meetingUrl, class: "form-control" %>
-  </div>
-  <div class="mb-3">
-    <%= form.label :host, class: "form-label" %>
-    <%= form.text_field :host, class: "form-control" %>
-  </div>
-  <div class="mb-3">
-    <%= form.label :title, class: "form-label" %>
-    <%= form.text_field :title, class: "form-control" %>
-  </div>
-  <div class="mb-3">
-    <%= form.label :meetingDate, class: "form-label" %>
-    <div class="input-group date" id="datepicker">
-      <%= form.date_select :meetingDate, class: "form-control" %>
+    <label for="meetingTimeInput" class="form-label">Time of Meeting:</label>
+    <div class="timepicker input-group">
+      <select class="hour form-control" name="reading[hour]">
+        <%= options_for_select((1..12).to_a, reading.meetingTime ? reading.meetingTime.strftime('%l').to_i : nil) %>
+      </select>
+      <span class="colon input-group-text fw-bold">:</span>
+      <select class="minute form-control" name="reading[minute]" >
+        <%= options_for_select(['00', '15', '30', '45'], reading.meetingTime ? reading.meetingTime.strftime('%M').to_i : nil) %>
+      </select>
+      <select class="meridiem form-control" name="reading[meridiem]" >
+        <%= options_for_select(['AM', 'PM'], reading.meetingTime ? reading.meetingTime.strftime('%p') : nil) %>
+      </select>
+      <span class="input-group-text px-3"><i class="bi bi-clock"></i></span>
     </div>
   </div>
 
   <div class="mb-3">
-    <%= form.label :meetingTime, class: "form-label" %>
-    <div class="input-group time mb-3" id="timepicker">
-      <%= form.time_select :meetingTime, class: "form-control" %>
-    </div>
+    <label for="hostInput" class="form-label">Host:</label>
+    <%= form.text_field :host, id: "hostInput", class: "form-control" %>
   </div>
+  <div class="mb-3">
+    <label for="meetingURLInput" class="form-label">Reading Title:</label>
+    <%= form.text_field :title, class: "form-control" %>
+  </div>
+
 
   <div class="mb-3">
     <%= form.label :content, class: "form-label" %>
-    <%= form.rich_text_area :content %>
+    <%= form.text_area :content, class: "tinymce", rows: 30  %>
   </div>
 
   <div class="mb-3">
@@ -54,12 +67,21 @@
 
   <div class="mb-3">
     <%= form.label :topic, class: "form-label" %>
-    <%= form.rich_text_area :topic, class: "form-control" %>
+    <%= form.text_area :topic, class: "tinymce2", rows: 10  %>
   </div>
 
   <%= form.hidden_field :user_id, value: current_user.id %>
 
   <div class="mb-3">
-    <%= form.submit %>
+    <%= button_tag(class: "btn btn-success btn-lg w-100") do %>
+      <i class="bi bi-floppy fs-4 pe-3 align-baseline"></i>
+      <span class="align-text-bottom ps-2 fw-normal tracking-widest">SAVE READING</span>
+    <% end %>
   </div>
 <% end %>
+
+<script>
+  tinymce.init({
+    selector: '.tinymce, .tinymce2',
+  });
+</script>

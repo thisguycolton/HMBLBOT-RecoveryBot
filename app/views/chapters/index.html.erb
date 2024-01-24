@@ -33,7 +33,7 @@
           </div>
         </div>
         <div class="card-footer">
-          <%= link_to book_chapter_path(chapter.book.id, chapter.id), class: "btn btn-success fw-bold w-100" do %>
+          <%= link_to book_chapter_path(chapter.book.id, chapter.id), class: "btn btn-success fw-bold w-100", data: { turbolinks: false } do %>
           <i class="bi bi-book-half"></i> <span class="align-text-bottom ps-2">READ CHAPTER</span>
           <% end %>
         </div>

@@ -19,12 +19,12 @@
         <div class="col reading position-relative mb-5">
           <div class="h-100">
             <div class=" ">
-              <%= link_to reading, class: "text-decoration-none link-dark link-opacity-50-hover" do %>
+              <%= link_to reading, class: "text-decoration-none link-dark link-opacity-50-hover stretched-link" do %>
                 <h3 class="display-6 fw-normal" ><%= reading.title %></h3>
               <% end %>
               <div class="pt-3">
                 <blockquote class="blockquote pb-2">
-                  <%= reading.content.to_plain_text.truncate(260, separator: ' ') %>
+                  <%= reading.content.body.to_html.truncate(500).html_safe %> <span class="fw-bold fst-italic"> Read More</span>
                 </blockquote>
               </div>
             </div>

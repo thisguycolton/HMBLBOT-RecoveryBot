@@ -1,15 +1,25 @@
-
-
-<div class="container mt-5">
-
-  <h1>New reading</h1>
-
-  <%= render "form", reading: @reading %>
-
-  <br>
-
-  <div>
-    <%= link_to "Back to readings", readings_path %>
+<div class=" container  mt-5">
+  <div class="row">
+    <div class="col bg-light rounded-5 shadow-sm mb-5">
+      <div class="w-100 bg-light rounded-top-5 sticky-top">
+        <h2 class="pb-4 pt-5 d-flex">
+          <div class="align-content-start">
+            <%= link_to readings_path, class: "btn btn-lg  btn-link text-dark text-decoration-none px-5"  do %>
+              <i class="bi bi-chevron-left"></i>
+            <% end %>
+          </div>
+          <span class="tracking-widest text-uppercase fw-bold align-text-top w-100 p-2">
+            New Reading
+          </span>
+        </h2>
+        <hr>
+      </div>
+      <div class="px-5 py-2">
+        <%= render "form", reading: @reading %>
+        <br>
+          
+      </div>
+    </div>
   </div>
 </div>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
