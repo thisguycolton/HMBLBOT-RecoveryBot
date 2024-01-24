@@ -116,3 +116,11 @@ mark, .mark{
 lit {
   	color: rgb(108, 117, 125);
 }
+
+.sticky-chapter{
+	top:70px!important;
+}
+
+.sticky-book{
+	z-index: 2000!important;
+}

@@ -15,54 +15,74 @@
   </div>
   <div class="container">
     <p style="color: green"><%= notice %></p>
-    <h1 class="display-4">Search Books</h1>
+    <% if params[:q].nil? %>
+      <h1 class="display-4">Browse Books</h1>
+    <% else %>
+      <h1 class="display-4">Search Books</h1>
+    <% end %>
   </div>
 </div>
 
-<div class="container">
+  <% if params[:q].nil? %>
+  <div class="container">
     <div id="books" class="row row-cols-2 row-cols-md-2 g-2">
-      <% if params[:q].nil? %>
+      <% @books.each do |book| %>
+        <div class="col">
+          <%= render book %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+  <% else %>
+  <div class="container-fluid bg-light py-5">
+    <div class="container">
+      <div class="row pt-4">
         <% @books.each do |book| %>
-          <div class="col">
-            <%= render book %>
+          <div class="bg-white rounded shadow p-5">
+            <div class="bg-white rounded-top sticky-top sticky-book">
+              <h2 class="w-100 text-center py-4"><span class="tracking-widest text-uppercase fw-light"><%= book.title %></span></h2>
+            </div>
+            <hr>
+            <% book.chapters.each do |chapter| %>
+              <% if chapter.content.include?(@q.chapters_content_i_cont) %>
+                <div class="matching-chapter">
+                  <div class="bg-white rounded-top sticky-top sticky-chapter">
+                    <h3 class="w-100 text-center py-4"><strong  class="tracking-widest"><%= chapter.title %></strong></h3>
+                    <hr>
+                  </div>
+                  
+                  <% content_html = chapter.content.gsub(/(\d+:\d+)/, '</p><p class="p-isolate"><span class="text-secondary">\1</span>').html_safe %>
+                  <% sanitized_content = sanitize(content_html, tags: %w(p br em strong), attributes: %w(style)) %>
+                  <% fragment = Nokogiri::HTML::DocumentFragment.parse(sanitized_content) %>
+                  <% fragment.css('p').each_with_index do |paragraph, index| %>
+                    <% if paragraph.content.include?(@q.chapters_content_i_cont) %>
+
+                      <%= link_to book_chapter_path(book, chapter, paragraph: index + 1), class: "read-chapter-link link-dark link-offset-2 link-underline-opacity-0 link-underline-opacity-25-hover" do %>
+                        <div id="chapter_<%= chapter.id %>_paragraph_<%= index + 1 %>" class="matching-paragraph">
+                          <% highlighted_content = paragraph.content.gsub(/#{@q.chapters_content_i_cont}/i, '<mark>\0</mark>').html_safe %>
+                          <blockquote>
+                            <%= raw(highlighted_content).gsub(/(\d+:\d+)/, '<span class="text-secondary">\1</span>').html_safe %>
+                          </blockquote>
+                        </div>
+                      <% end %>
+                      
+                    <% end %>
+                  <% end %>
+                  <hr>
+                </div>
+              <% end %>
+            <% end %>
           </div>
         <% end %>
-      <% else %>
-        <% @books.each do |book| %>
-          <h2><%= book.title %></h2>
-          <% book.chapters.each do |chapter| %>
-            <% if chapter.content.include?(@q.chapters_content_i_cont) %>
-              <div class="matching-chapter">
-                <h3><%= chapter.title %></h3>
-                <% content_html = chapter.content.gsub(/(\d+:\d+)/, '</p><p class="p-isolate"><span class="text-secondary">\1</span>').html_safe %>
-                <% sanitized_content = sanitize(content_html, tags: %w(p br em strong), attributes: %w(style)) %>
-                <% fragment = Nokogiri::HTML::DocumentFragment.parse(sanitized_content) %>
-                <% fragment.css('p').each_with_index do |paragraph, index| %>
-                  <% if paragraph.content.include?(@q.chapters_content_i_cont) %>
-
-                    <%= link_to book_chapter_path(book, chapter, paragraph: index + 1), class: "read-chapter-link link-dark link-offset-2 link-underline-opacity-0 link-underline-opacity-25-hover" do %>
-                      <div id="chapter_<%= chapter.id %>_paragraph_<%= index + 1 %>" class="matching-paragraph">
-                        <% highlighted_content = paragraph.content.gsub(/#{@q.chapters_content_i_cont}/i, '<mark>\0</mark>').html_safe %>
-                        <blockquote>
-                          <%= raw(highlighted_content).gsub(/(\d+:\d+)/, '<span class="text-secondary">\1</span>').html_safe %>
-                        </blockquote>
-                      </div>
-                    <% end %>
-                    
-                  <% end %>
-                <% end %>
-                <hr>
-              </div>
-            <% end %>
-          <% end %>
-        <% end %>
-
-      <% end %>
-
+      </div>
     </div>
-    <div class="p-5">
-      <%= link_to "Add Book", new_book_path, class: "btn btn-lg btn-secondary w-100" %>
-    </div>
+  </div>
+  <% end %>
+
+  </div>
+  <div class="p-5">
+    <%= link_to "Add Book", new_book_path, class: "btn btn-lg btn-secondary w-100" %>
+  </div>
 
 </div>
 <script src="node_modules/colorthief/dist/color-thief.umd.js"></script>
