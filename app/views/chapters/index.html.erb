@@ -27,12 +27,7 @@
             </h5>
           </span>
           <div class="card-text card-chapter-text">
-            <% content_html = chapter.content %>
-            <% sanitized_content = sanitize(content_html, tags: %w(p br em strong), attributes: %w(style)) %>
-            <% fragment = Nokogiri::HTML::DocumentFragment.parse(sanitized_content) %>
-
-              <% paragraph = fragment.css('p').first %>
-              <blockquote id="chapter_<%= chapter.id %>_paragraph_1" class="chapter-paragraph chapter-paragraph-sm ">
+            <blockquote class="chapter-paragraph chapter-paragraph-sm ">
               <%= raw(chapter.content).gsub(/(\d+:\d+)/, '<lit>\1</lit>').truncate(300).html_safe %>
             </blockquote>
           </div>
