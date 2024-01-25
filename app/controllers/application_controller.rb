@@ -1,7 +1,7 @@
 class ApplicationController < ActionController::Base
-	  #before_action :authenticate_user!
-	    after_action :track_action
-
+	 #before_action :authenticate_user!
+	 after_action :track_action
+   
   protected
   
   def track_action

@@ -1,3 +1,10 @@
+<style type="text/css">
+  body{
+    background-color: rgb(248, 249, 250);
+  }
+
+</style>
+
 <div class="container-fluid <% if user_signed_in? %>bg-info<% end %>  bg-jumbo-blue-light border-bottom shadow-sm">
   <div class="container py-0 ">
     <div class="row">
@@ -19,7 +26,7 @@
           <%= search_form_for @q do |f| %>
             <div class="input-group input-group-lg mb-3">
               <%= f.search_field :title_or_searchable_number_cont, placeholder: "Search for a topic by name or number", class: "form-control" %>
-              <%= f.submit "Search", class: 'btn btn-success text-light' %>
+              <%= f.submit "Search", class: 'btn bg-jumbo-blue-light text-blue-dark' %>
             </div>
           <% end %>
           <%= search_form_for @q do |f| %>
@@ -35,37 +42,38 @@
     </div>
   </div>
 </div>
-<div class="container">
-  <div class="row">
-    <div id="topics" class="<% if user_signed_in? %>my-5 <% end %>">
-      <% if @topics.any? && params[:q].present? %>
-        <% @topics.each do |topic| %>
-          <%= render topic %>
-        <% end %>
+<div class="container-fluid bg-light mb-5">
+  <div class="container">
+    <div class="row">
+      <div id="topics" class="<% if user_signed_in? %><% end %>">
+        <% if @topics.any? && params[:q].present? %>
+          <% @topics.each do |topic| %>
+            <%= render topic %>
+          <% end %>
 
-      <% elsif @topics.any? %>
-        <div class="row">
-          <div class="col-lg-10 col-md-12 mx-auto p-3 px-4 bg-jumbo-yellow-light rounded-bottom shadow-sm">
-              <p class="lead fw-normal p-0 text-dark">
-                Thanks for trying out <span class="fw-bolder">The Topicificator 9000</span>. You can use the search bar above to find a topic matching a word, or the number associated with that topic. Or you can have a topic randomly picked for you! Here are <span class="fw-bolder">four example topics</span>:
-              </p>
+        <% elsif @topics.any? %>
+          <div class="row">
+            <div class="col-lg-10 col-md-12 mx-auto p-3 px-4 bg-jumbo-yellow-light rounded-bottom shadow-sm">
+                <p class="lead fw-normal p-0 text-dark">
+                  Thanks for trying out <span class="fw-bolder">The Topicificator 9000</span>. You can use the search bar above to find a topic matching a word, or the number associated with that topic. Or you can have a topic randomly picked for you! Here are <span class="fw-bolder">four example topics</span>:
+                </p>
+            </div>
           </div>
-        </div>
-        <% @topics.each do |topic| %>
-          <%= render topic %>
+          <% @topics.each do |topic| %>
+            <%= render topic %>
+          <% end %>
+        <% else %>
+            <div class="card bg-danger text-light text-center">
+      <div class="p-5">
+        <h1 class="display-4"><span class="fw-bold">No '<%= @q.title_or_searchable_number_cont %>' Topic Found</h1></span>
+      </div>
+    </div>
         <% end %>
-      <% else %>
-          <div class="card bg-danger text-light text-center">
-    <div class="p-5">
-      <h1 class="display-4"><span class="fw-bold">No '<%= @q.title_or_searchable_number_cont %>' Topic Found</h1>
+      </div>
     </div>
-  </div>
-      <% end %>
-    </div>
-  </div>
 
+  </div>
 </div>
-
 <script type="text/javascript">
   
 

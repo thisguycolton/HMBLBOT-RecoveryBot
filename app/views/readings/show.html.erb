@@ -12,6 +12,7 @@ body {
   z-index: 10000;
 }
 </style>
+<%- content_for(:page_title, "HMBLBOT | #{@reading.title}") %>
 
 <%= render @reading %>
 <p style="color: green"><%= notice %></p>
