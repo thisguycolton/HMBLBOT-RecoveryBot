@@ -134,3 +134,68 @@ lit {
 .sticky-book{
 	z-index: 2000!important;
 }
+.bg-jumbo-green{
+	background-color: #cad2c5!important;
+}
+.bg-jumbo-green-light{
+	background-color: #EAEDE8!important;
+}
+.bg-jumbo-green-dark{
+	background-color: #282E23!important;
+}
+
+
+.text-green-light{
+	color: #EAEDE8!important;
+}
+
+.text-green{
+	color: #cad2c5!important;
+}
+.bg-jumbo-teal{
+	background-color: #1F7A8C!important;
+}
+
+.bg-jumbo-teal-light{
+	background-color: #2CAFC9!important;
+}
+
+.bg-jumbo-yellow{
+	background-color: #FFF275!important;
+}
+
+.bg-jumbo-yellow-light{
+	background-color: #FFF9C2!important;
+}
+
+.brand-accent-text{
+	color:#1F7A8C!important;
+}
+
+.brand-accent-text-light{
+	color:#2CAFC9!important;
+}
+
+.bg-jumbo-purple{
+	background-color: #982649!important;
+}
+
+.bg-jumbo-blue {
+	background-color: #36B9D3!important;
+}
+
+.bg-jumbo-blue-dark{
+	background-color: #2592A7;
+}
+.bg-jumbo-blue-light {
+	background-color: #ABE2ED!important;
+}
+
+.text-blue-light{
+	color: #ABE2ED!important;
+}
+
+.bg-jumbo-purple-light{
+	background-color: #DE7C9A!important;
+}
+

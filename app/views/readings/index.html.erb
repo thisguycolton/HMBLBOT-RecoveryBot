@@ -1,12 +1,12 @@
-<div class='container-fluid p-0'>
-  <div class="jumbotron text-bg-light p-5">
+<div class='container-fluid p-0 bg-jumbo-teal'>
+  <div class="jumbotron text-white p-5">
     <div class="container">
       <div class="d-flex">
         <span class="flex-fill text-center py-5">
-          <h1 class="display-1 fw-bolder">Reading Archive</h1>
-          <h4 class="display-6">
+          <h1 class="display-4 fw-bold tracking-widest">READING ARCHIVE</h1>
+          <p class="lead">
             An index of the meeting readings and topics.
-          </h4>
+          </p>
         </span>
       </div>
     </div>
@@ -20,7 +20,7 @@
           <div class="h-100">
             <div class=" ">
               <%= link_to reading, class: "text-decoration-none link-dark link-opacity-50-hover stretched-link" do %>
-                <h3 class="display-6 fw-normal" ><%= reading.title %></h3>
+                <h3 class="display-6 fw-bold tracking-widest text-uppercase" ><%= reading.title %></h3>
               <% end %>
               <div class="pt-3">
                 <blockquote class="blockquote pb-2">
