@@ -1,12 +1,12 @@
 <div id="<%= dom_id reading %>">
-  <div class='container-fluid p-0'>
+  <div class='reading-container container-fluid p-0 shadow-sm pb-5 position-relative'>
     <div class="jumbotron text-bg-light py-5">
       <div class="container">
         <div class="d-flex">
-          <span class="flex-fill">
+          <div class="w-100 position-relative">
             <% unless reading.meetingUrl.blank? %>
-            <div class="position-absolute top-0 end-0 mt-5 mx-4">
-              <a class="btn btn-lg btn-primary mt-5 d-none d-md-block align-middle" href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
+            <div class="position-absolute top-0 end-0 mt-2 mx-4">
+              <a class="btn btn-lg btn-primary mt-0 d-none d-md-block align-top" href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
             </div>
             <% end %>
             <h1 class="display-3 fw-bold"><%= reading.meetingName %></h1>
@@ -19,7 +19,7 @@
             </div>
             <% end %>
 
-          </span>
+          </div>
         </div>
       </div>
     </div>
@@ -38,15 +38,16 @@
       </figure>
     </div>
   </div>
-  <div class="container-fluid mt-5 p-0">
+  <div class="container-fluid  p-0  example-topics z-n1">
     <div class="jumbotron text-bg-light py-5">
       <div class="container">
-        <h2 class="text-center display-4 pb-3">Example Topics For Sharing</h2>
-        <h3 class="card-subtitle mb-2 text-body-secondary text-center"><em>Feel free to check in!</em></h3>
-        <hr>
-        <ul class="list-unstyled li-questions">
-          <%= reading.topic %>
-        </ul>
+        <h2 class="text-center display-5 pb-3 fw-bold text-uppercase">Example Topics For Sharing</h2>
+        <h3 class="mb-2 text-body-secondary text-center fs-3 tracking-widest"><em>Feel free to check in!</em></h3>
+        <div class="bg-white rounded-5 py-5 mt-4 shadow-sm">
+          <ul class="list-unstyled li-questions ">
+            <%= reading.topic %>
+          </ul>
+        </div>
       </div>
     </div>
   </div>

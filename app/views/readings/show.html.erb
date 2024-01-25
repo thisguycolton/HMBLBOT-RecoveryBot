@@ -11,13 +11,16 @@ body {
   background: #5bc0de;
   z-index: 10000;
 }
+.reading-container{
+  margin-top: -20px;
+}
 </style>
 <%- content_for(:page_title, "HMBLBOT | #{@reading.title}") %>
-
-<%= render @reading %>
 <p style="color: green"><%= notice %></p>
+<%= render @reading %>
+
 <% if user_signed_in? && current_user.id = @reading.user_id %>
-<div class=" admin-bar-reading p-5">
+<div class="container-fluid admin-bar-reading p-5 shadow position-relative">
   <div class="row">
     <div class="col">
       <%= link_to edit_reading_path(@reading), class:"btn btn-outline-info w-100", data: { turbolinks: false } do %> 

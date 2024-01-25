@@ -203,3 +203,7 @@ lit {
 	background-color: #DE7C9A!important;
 }
 
+.nav-container{
+	position: relative;
+  	z-index: 10;
+}
