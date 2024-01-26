@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "dockerfileLines": [
-    "FROM library/ruby:3.2.2-alpine3.7",
+    "FROM library/ruby:3.2.3-alpine3.19",
     "RUN apk --update add make g++",
     "RUN apk update && apk add git",
     "RUN mkdir -p /usr/src/app",
