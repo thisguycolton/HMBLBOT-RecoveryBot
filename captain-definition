@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "dockerfileLines": [
     "FROM library/ruby:3.2.2-alpine3.7",
     "RUN apk --update add make g++",
