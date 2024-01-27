@@ -81,7 +81,7 @@ test:
 #
 production:
   <<: *default
-  database: postgres
+  database: recovery_prod_db
   host: <%= ENV["POSTGRE_SQL_HOST"] %>
   username: postgres
   password: <%= ENV["POSTGRE_SQL_PASSWORD"] %>
