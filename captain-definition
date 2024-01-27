@@ -15,12 +15,11 @@
   "RUN mkdir -p /usr/src/app",
   "WORKDIR /usr/src/app",
   "RUN gem install bundler",
-  "ADD ./src/Gemfile /usr/src/app/",
-  "ADD ./src/Gemfile.lock /usr/src/app/",
+  "ADD Gemfile /usr/src/app/",
+  "ADD Gemfile.lock /usr/src/app/",
   "RUN bundle install",
-  "COPY ./src /usr/src/app",
-  "ENV RACK_ENV production",
-  "EXPOSE 80",
-  "CMD [\"rackup\", \"config.ru\", \"--host\", \"0.0.0.0\", \"--port\", \"80\"]"
+  "COPY . /usr/src/app",
+  "EXPOSE 3000",
+  "CMD [\"rackup\", \"config.ru\", \"--host\", \"0.0.0.0\", \"--port\", \"3000\"]"
   ]
 }
