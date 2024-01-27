@@ -1,5 +1,15 @@
 {
   "schemaVersion": 2,
+  "preDeploy": [
+    {
+      "id": "precompile-assets",
+      "name": "Precompile Assets",
+      "script": [
+        "cd /path/to/your/rails/app",
+        "bundle exec rails assets:precompile RAILS_ENV=production"
+      ]
+    }
+  ],
   "dockerfileLines": [
     "FROM library/ruby:3.2.3-alpine3.19",
     "RUN apk --update add make g++",
