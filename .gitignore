@@ -27,5 +27,7 @@
 
 /public/assets
 
+/config/initializers/custom_port.rb
+
 # Ignore master key for decrypting credentials and more.
 /config/master.key

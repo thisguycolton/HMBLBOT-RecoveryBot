@@ -86,9 +86,16 @@
   <% end %>
 
   </div>
-  <div class="p-5">
-    <%= link_to "Add Book", new_book_path, class: "btn btn-lg btn-secondary w-100" %>
+  <div class="container">
+    <div class="w-50 mx-auto py-5">
+      <% if user_signed_in? %>
+        <%= link_to new_book_path, class: "btn btn-lg btn-warning w-100 mx-auto" do %>
+          <i class="bi bi-book-half"></i> <span class="align-text-bottom ps-2 fw-bold">ADD BOOK</span>
+        <% end %>
+      <% end %>
+    </div>
   </div>
+
 
 </div>
 <script src="node_modules/colorthief/dist/color-thief.umd.js"></script>
