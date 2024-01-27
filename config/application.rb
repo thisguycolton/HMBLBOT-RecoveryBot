@@ -20,5 +20,6 @@ module AcidTest
     # config.eager_load_paths << Rails.root.join("extras")
     config.secret_key_base = ENV['SECRET_KEY_BASE'] || Rails.application.credentials.secret_key_base || 'fallback_key'
 
+
   end
 end
