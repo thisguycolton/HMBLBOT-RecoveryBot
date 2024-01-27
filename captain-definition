@@ -3,13 +3,13 @@
   "dockerfileLines": [
     "FROM library/ruby:3.2.3-alpine3.19",
     "RUN apk --update add make g++",
-    "RUN apk update && apk add git && apk add postgresql-dev",
+    "RUN apk update && apk add git",
     "RUN mkdir -p /usr/src/app",
     "WORKDIR /usr/src/app",
     "RUN gem update --system && gem install bundler",
-    "COPY Gemfile /usr/src/app/",
-    "RUN bundle",
-    "COPY . /usr/src/app",
+    "COPY ./src/Gemfile /usr/src/app/",
+    "RUN bundle install",
+    "COPY ./src /usr/src/app",
     "ENV RACK_ENV production",
     "EXPOSE 80",
     "CMD [\"rackup\", \"config.ru\", \"--host\", \"0.0.0.0\", \"--port\", \"80\"]"
