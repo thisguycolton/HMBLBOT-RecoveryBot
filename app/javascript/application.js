@@ -4,5 +4,6 @@ import "controllers"
 // import "trix"
 import "@rails/actiontext"
 import "ahoy"
+//= require_tree .
 
 Turbo.setFormMode("optin")
