@@ -9,7 +9,7 @@
     "RUN gem update --system && gem install bundler",
     "COPY Gemfile /usr/src/app/",
     "RUN bundle install",
-    "COPY . /usr/bin",
+    "COPY . /usr/src/app/",
     "EXPOSE 3000",
     "CMD [\"bundle\", \"exec\", \"rails\", \"s\", \"-b\", \"0.0.0.0\"]"
   ]
