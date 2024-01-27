@@ -81,6 +81,6 @@ test:
 #
 production:
   <<: *default
-  database: acid_test_production
-  username: acid_test
-  password: <%= ENV["ACID_TEST_DATABASE_PASSWORD"] %>
+  database: <%= ENV["POSTGRE_SQL_HOST"] %>
+  username: postgres
+  password: <%= ENV["POSTGRE_SQL_PASSWORD"] %>
