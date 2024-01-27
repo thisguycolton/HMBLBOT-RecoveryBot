@@ -82,6 +82,6 @@ test:
 production:
   <<: *default
   database: postgres
-  database: <%= ENV["POSTGRE_SQL_HOST"] %>
+  host: <%= ENV["POSTGRE_SQL_HOST"] %>
   username: postgres
   password: <%= ENV["POSTGRE_SQL_PASSWORD"] %>
