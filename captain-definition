@@ -5,7 +5,7 @@
       "id": "precompile-assets",
       "name": "Precompile Assets",
       "script": [
-        "cd /path/to/your/rails/app",
+        "cd /assets/",
         "bundle exec rails assets:precompile RAILS_ENV=production"
       ]
     }
