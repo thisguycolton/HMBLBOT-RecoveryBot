@@ -7,7 +7,7 @@
     "RUN mkdir -p /usr/src/app",
     "WORKDIR /usr/src/app",
     "RUN gem update --system && gem install bundler",
-    "COPY ./src/Gemfile /usr/src/app/",
+    "COPY Gemfile /usr/src/app/",
     "RUN bundle install",
     "COPY ./src /usr/src/app",
     "ENV RACK_ENV production",
