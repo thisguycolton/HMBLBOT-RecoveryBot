@@ -1,7 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>The page you were looking for doesn't exist (404)</title>
+  <title>HMBLBOT | Beep Boop Bop! Error detected! </title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" integrity="sha384-4LISF5TTJX/fLmGSxO53rV4miRxdg84mZsxmO8Rx5jGtp/LbrixFETvWa5a6sESd" crossorigin="anonymous">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400;1,700&family=Montserrat:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,400;1,600;1,800;1,900&display=swap" rel="stylesheet">
+        
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+  <script src="https://browser.sentry-cdn.com/7.98.0/bundle.feedback.min.js" integrity="sha384-NpOcpdAPzCsJu3aC74l3WEnozN+9J0mmJLmnzQu2mxr2t3XpLuaVKi6K+CVPjOG5" crossorigin="anonymous"></script>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
   .rails-default-error-page {
@@ -51,17 +62,42 @@
     color: #666;
     box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);
   }
+  .full-height{
+    height: 100vh;
+  }
+  body{
+    font-family: 'Montserrat', sans-serif!important;
+  }
   </style>
 </head>
 
-<body class="rails-default-error-page">
-  <!-- This file lives in public/404.html -->
-  <div class="dialog">
-    <div>
-      <h1>The page you were looking for doesn't exist.</h1>
-      <p>You may have mistyped the address or the page may have moved.</p>
+<body class="bg-danger">
+  <!-- This file lives in public/500.html -->
+  <div class="container-fluid">
+    <div class="container">
+      <div class="row full-height align-items-center">
+        <div class="col-md-8 offset-md-2 col-xl-6 offset-xl-3">
+          <div class="card bg-white shadow text-center p-5">
+            <h1><i class="bi bi-robot"></i></h1>
+            <h3>BEEP! BOOP! BOP! BEEP!</h3>
+            <p> I don't understand what you are looking for! Click below to go back to the homepage.</p>
+            <a href="https://aa.humblebot.io" class="btn btn-success btn-lg w-100"> GO HOME</a>
+          </div>
+        </div>
+      </div>
     </div>
-    <p>If you are the application owner check the logs for more information.</p>
   </div>
+  <script>
+  Sentry.init({
+    dsn: "https://219f61840e024bcfb7d17149a0b7d5d0@glitch-tap.hmblbot.com/1",
+    beforeSend(event, hint) {
+      // Check if it is an exception, and if so, show the report dialog
+      if (event.exception && event.event_id) {
+        Sentry.showReportDialog({ eventId: event.event_id });
+      }
+      return event;
+    },
+  });
+</script>
 </body>
 </html>
