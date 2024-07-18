@@ -16,7 +16,8 @@ module AcidTest
     # These settings can be overridden in specific environments using the files
     # in config/environments, which are processed later.
     #
-    # config.time_zone = "Central Time (US & Canada)"
+    config.time_zone = "Arizona"
+    config.active_record.default_timezone = :local
     # config.eager_load_paths << Rails.root.join("extras")
     config.secret_key_base = ENV['SECRET_KEY_BASE'] || Rails.application.credentials.secret_key_base || 'fallback_key'
 

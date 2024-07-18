@@ -1,9 +1,7 @@
 import { Application } from "@hotwired/stimulus"
+import { definitionsFromContext } from "@hotwired/stimulus-loading"
 
-const application = Application.start()
+window.Stimulus = Application.start()
+Stimulus.load(definitionsFromContext(context))
 
-// Configure Stimulus development experience
-application.debug = false
-window.Stimulus   = application
-
-export { application }
+Turbo.setFormMode("optin")

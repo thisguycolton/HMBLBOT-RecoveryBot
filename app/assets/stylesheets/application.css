@@ -207,3 +207,63 @@ lit {
 	position: relative;
   	z-index: 10;
 }
+
+
+trix-toolbar {
+	border-bottom: 0px solid black !important;
+	padding-top: 8px !important;
+	padding-left: 8px !important;
+	padding-right: 8px !important;
+	border-radius: 0.5em;
+	background-color: #5dce99eb;
+	box-shadow: rgba(0, 0, 0, 0.15) 0px 8px 16px 0px;
+	position: sticky;
+	top: 10px;
+}
+
+.trix-button-group {
+	border: none !important;
+}
+.trix-button {
+	display: inline-block;
+	height: 24px !important;
+	width: 28px !important;
+	padding: 3px 5px !important;
+	border: none !important;
+	cursor: pointer;
+}
+
+.reading-content-editor {
+	height: calc(100vh - 200px) !important;
+	background-color: #ffffff;
+}
+@media (min-width:576px) {
+	/* Bootstrap breakpoint small */
+
+
+}
+
+@media (min-width:768px) {
+	/* tablet, landscape iPad, lo-res laptops ands desktops */
+	
+}
+
+@media (min-width:992px) {
+	/* big landscape tablets, laptops, and desktops */
+	.form-side-panel {
+			height: calc(100vh - 200px) !important;
+		}
+	
+		.reading-content-editor {
+			height: calc(100vh - 200px) !important;
+			background-color: #ffffff;
+		}
+		trix-toolbar {
+			position: sticky;
+			top: 10px;
+		}
+}
+
+@media (min-width:1281px) {
+	/* hi-res laptops and desktops */
+}

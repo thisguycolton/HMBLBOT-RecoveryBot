@@ -1,7 +1,7 @@
-<div class=" container  mt-5">
-  <div class="row">
-    <div class="col bg-light rounded-5 shadow-sm mb-5">
-      <div class="w-100 bg-light rounded-top-5 sticky-top">
+<div class="overflow-hidden">
+  <div class="row my-0">
+    <div class="col bg-light rounded-5 shadow-sm ">
+      <div class="w-100 bg-light mb-3 sticky-top">
         <h2 class="pb-4 pt-5 d-flex">
           <div class="align-content-start">
             <%= link_to readings_path, class: "btn btn-lg  btn-link text-dark text-decoration-none px-5"  do %>
@@ -14,10 +14,8 @@
         </h2>
         <hr>
       </div>
-      <div class="px-5 py-2">
+      <div class="pt-0 m-0">
         <%= render "form", reading: @reading %>
-        <br>
-          
       </div>
     </div>
   </div>

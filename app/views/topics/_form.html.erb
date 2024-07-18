@@ -11,12 +11,11 @@
     </div>
   <% end %>
 
-  <div>
-    <%= form.label :title, style: "display: block" %>
-    <%= form.text_field :title %>
+  <div class="mb-4">
+    <%= form.text_field :title, class: "display-4 w-100 border-0 bg-light" %>
   </div>
 
   <div>
-    <%= form.submit %>
+    <%= form.submit "Save", class: "btn btn-primary w-100" %>
   </div>
 <% end %>

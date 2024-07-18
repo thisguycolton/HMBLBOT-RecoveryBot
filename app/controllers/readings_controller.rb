@@ -14,6 +14,7 @@ class ReadingsController < ApplicationController
   # GET /readings/new
   def new
     @reading = Reading.new
+    @polls = Poll.all.order(updated_at: :desc)
   end
 
   # GET /readings/1/edit

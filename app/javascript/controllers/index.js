@@ -1,11 +1,30 @@
-// Import and register all your controllers from the importmap under controllers/*
+// app/javascript/controllers/dynamic_fields_controller.js
+import { Application } from "@hotwired/stimulus"
+import { definitionsFromContext } from "@hotwired/stimulus-loading"
 
-import { application } from "controllers/application"
+const application = Application.start()
+const context = require.context("controllers", true, /\.js$/)
+application.load(definitionsFromContext(context))
 
-// Eager load all controllers defined in the import map under controllers/**/*_controller
-import { eagerLoadControllersFrom } from "@hotwired/stimulus-loading"
-eagerLoadControllersFrom("controllers", application)
+import { Controller } from "@hotwired/stimulus"
 
-// Lazy load controllers as they appear in the DOM (remember not to preload controllers in import map!)
-// import { lazyLoadControllersFrom } from "@hotwired/stimulus-loading"
-// lazyLoadControllersFrom("controllers", application)
+export default class extends Controller {
+  static targets = ["template"]
+
+  connect() {
+    // Any initialization code can go here
+  }
+
+  add(event) {
+    event.preventDefault()
+    const content = this.templateTarget.innerHTML.replace(/__CHILD_INDEX__/g, new Date().getTime())
+    this.element.insertAdjacentHTML('beforeend', content)
+  }
+
+  remove(event) {
+    event.preventDefault()
+    let item = event.target.closest('.field')
+    item.querySelector('input[name*="_destroy"]').value = 1
+    item.style.display = 'none'
+  }
+}

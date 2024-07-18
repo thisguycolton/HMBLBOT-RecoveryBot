@@ -1,0 +1,11 @@
+<div class="container">
+    <h1 class="display-6 fw-bold tracking-widest text-uppercase">New poll</h1>
+
+    <%= render "form", poll: @poll %>
+
+    <br>
+
+    <div>
+      <%= link_to "Back to polls", polls_path %>
+    </div>
+</div>

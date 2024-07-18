@@ -1,0 +1,87 @@
+<style>
+trix-editor {
+  border: 0px;
+  height: 200px;
+  padding-top: 20px;
+}
+</style>
+
+<%= form_with model: @poll do |form| %>
+  <div class="mb-3">
+    <label for="meetingDateInput" class="form-label">Polls Close Day:</label>
+    <div class="input-group date" data-date-format="mm/dd/yyyy" data-date="04/10/1955">
+      <%= form.date_field :closeDate, id: "closeDateInput", class: "form-control" %>
+    </div>
+  </div>
+  <div class="mb-3">
+    <label for="closeTimeInput" class="form-label">Polls Close Time:</label>
+    <div class="timepicker input-group">
+      <select id="hour" class="hour form-control">
+        <%= options_for_select((1..12).to_a, @poll.closeTime ? @poll.closeTime.strftime('%l').to_i : nil) %>
+      </select>
+      <span class="colon input-group-text fw-bold">:</span>
+      <select id="minute" class="minute form-control">
+        <%= options_for_select(['00', '15', '30', '45'], @poll.closeTime ? @poll.closeTime.strftime('%M').to_i : nil) %>
+      </select>
+      <select id="meridiem" class="meridiem form-control">
+        <%= options_for_select(['AM', 'PM'], @poll.closeTime ? @poll.closeTime.strftime('%p') : nil) %>
+      </select>
+      <span class="input-group-text px-3"><i class="bi bi-clock"></i></span>
+    </div>
+  </div>
+  <%= form.hidden_field :closeTime, id: "closeTime" %>
+
+  <div class="option-fields">
+    <% @random_topics.each_with_index do |topic, index| %>
+      <div class="option-fields" data-controller="dropdown">
+        <%= form.fields_for :options, @poll.options[index] do |ff| %>
+          <div class="field">
+            <%= ff.label :topic_id %>
+            <%= ff.select :topic_id, options_for_select(Topic.all.map { |t| [t.title, t.id] }, selected: topic.id), {}, { class: "option-select form-select", data: { action: "dropdown#toggle" } } %>
+            <%= ff.hidden_field :_destroy %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const hourSelect = document.getElementById("hour");
+    const minuteSelect = document.getElementById("minute");
+    const meridiemSelect = document.getElementById("meridiem");
+    const closeTimeInput = document.getElementById("closeTime");
+
+    function updateCloseTime() {
+      const selectedHour = hourSelect.value;
+      const selectedMinute = minuteSelect.value;
+      const selectedMeridiem = meridiemSelect.value;
+      const closeDate = new Date(); // You can replace this with the actual close date if you have it
+
+      let hour = parseInt(selectedHour);
+      if (selectedMeridiem === "PM" && hour !== 12) {
+        hour += 12;
+      } else if (selectedMeridiem === "AM" && hour === 12) {
+        hour = 0;
+      }
+
+      closeDate.setHours(hour);
+      closeDate.setMinutes(parseInt(selectedMinute));
+      closeDate.setSeconds(0);
+      closeDate.setMilliseconds(0);
+
+      closeTimeInput.value = closeDate.toISOString();
+    }
+
+    hourSelect.addEventListener("change", updateCloseTime);
+    minuteSelect.addEventListener("change", updateCloseTime);
+    meridiemSelect.addEventListener("change", updateCloseTime);
+
+    // Initialize the close_time field on page load
+    updateCloseTime();
+  });
+</script>

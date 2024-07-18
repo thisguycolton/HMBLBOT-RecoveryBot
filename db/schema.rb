@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_01_23_044216) do
+ActiveRecord::Schema[7.0].define(version: 2024_06_27_011201) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -121,6 +121,15 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_23_044216) do
     t.index ["book_id"], name: "index_chapters_on_book_id"
   end
 
+  create_table "options", force: :cascade do |t|
+    t.bigint "poll_id", null: false
+    t.integer "topic_id"
+    t.string "topic_title"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["poll_id"], name: "index_options_on_poll_id"
+  end
+
   create_table "pages", force: :cascade do |t|
     t.bigint "book_id", null: false
     t.text "content"
@@ -128,6 +137,13 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_23_044216) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["book_id"], name: "index_pages_on_book_id"
+  end
+
+  create_table "polls", force: :cascade do |t|
+    t.datetime "closeDate"
+    t.datetime "closeTime"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "readings", force: :cascade do |t|
@@ -166,6 +182,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_23_044216) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "chapters", "books"
+  add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
   add_foreign_key "readings", "users"
 end

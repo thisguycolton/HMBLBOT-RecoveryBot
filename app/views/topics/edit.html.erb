@@ -1,10 +1,15 @@
-<h1>Editing topic</h1>
 
+<div class="container-fluid m-0">
+  <div class="bg-jumbo-blue-dark border-bottom shadow-sm text-light">
+    <h1 class="p-5">Editing <span class="tracking-widest fw-light"> #<%= @topic.searchable_number %>:</span> "<span class="fw-light tracking-tighter text-blue-light ms-0"><%= @topic.title %></span>"</h1>
+  </div>
+</div>
+<div class="container py-5">
 <%= render "form", topic: @topic %>
 
 <br>
 
-<div>
-  <%= link_to "Show this topic", @topic %> |
-  <%= link_to "Back to topics", topics_path %>
+  <div>
+    <%= link_to "Back to Topicificator", topics_path %>
+  </div>
 </div>

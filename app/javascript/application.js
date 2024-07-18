@@ -1,9 +1,11 @@
-// Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
-import "@hotwired/turbo-rails"
-import "controllers"
-// import "trix"
-import "@rails/actiontext"
-import "ahoy"
-//= require_tree .
+import { Application } from "@hotwired/stimulus"
 
-Turbo.setFormMode("optin")
+// Initialize Stimulus application
+window.Stimulus = Application.start()
+
+// Import all Stimulus controllers
+import DropdownController from "./controllers/dropdown_controller"
+window.Stimulus.register("dropdown", DropdownController)
+
+import PollCountdownController from "./controllers/poll_countdown_controller.js"
+window.Stimulus.register("poll-countdown", PollCountdownController)

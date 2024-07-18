@@ -1,0 +1,22 @@
+<div id="<%= dom_id poll %>">
+  <% seconds_left_value = poll.closeDate.to_i - Time.now.to_i %>
+  <%= distance_of_time_in_words(Time.zone.now, poll.closeDate.to_i) %>
+  <%= content_tag(:h1, "", data: {
+    controller: "poll-countdown",
+    poll_countdown_target:"pollCountdown",
+    seconds_left_value: seconds_left_value
+  }) %>
+
+  <p>
+    <strong>Description:</strong>
+    <div class="list-group">
+      <% poll.options.each_with_index do |op, i| %>
+        <% topic = Topic.find(op.topic_id) %>
+          <a href="#" class="list-group-item list-group-item-action">
+          <%= topic.title %>
+          </a>
+      <% end %>
+    </div >
+  </p>
+
+</div>
