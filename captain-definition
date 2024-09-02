@@ -15,7 +15,7 @@
     "RUN apk update && apk add git && apk add postgresql-dev",
     "RUN mkdir -p /usr/src/app",
     "WORKDIR /usr/src/app",
-    "RUN gem update --system && gem install bundler",
+    "RUN gem update --system && gem update bundler",
     "COPY Gemfile /usr/src/app/",
     "COPY Gemfile.lock /usr/src/app/",
     "RUN bundle install",
