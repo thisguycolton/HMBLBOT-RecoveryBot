@@ -93,21 +93,23 @@ trix-editor{
           </p>
           <div class="collapse" id="collapseExample">
             <div class="card card-body mb-3" style="max-height: 21vh; overflow: scroll;">
-            <% @polls.each do |poll| %>
-              <input type="radio" class="btn-check" name="options-base" id="option<%=poll.id%>" autocomplete="off">
-              <label class="btn btn-outline-dark mb-3" for="option<%=poll.id%>"> 
-                  <div class="list-group list-group-flush">
-                    <% poll.options.each_with_index do |op, i| %>
-                      <% topic = Topic.find(op.topic_id) %>
-                        <li class="list-group-item list-group-item-light">
-                        <%= topic.title %>
-                        </li>
-                    <% end %>
-                  </div >
-                  <hr class="border border-dark border-1 opacity-25 mb-1">
-              <em class="mb-4">created <%= time_ago_in_words(poll.created_at) %> ago</em>
-              
-              </label>
+            <% unless @polls.nil? %>
+              <% @polls.each do |poll| %>
+                <input type="radio" class="btn-check" name="options-base" id="option<%=poll.id%>" autocomplete="off">
+                <label class="btn btn-outline-dark mb-3" for="option<%=poll.id%>"> 
+                    <div class="list-group list-group-flush">
+                      <% poll.options.each_with_index do |op, i| %>
+                        <% topic = Topic.find(op.topic_id) %>
+                          <li class="list-group-item list-group-item-light">
+                          <%= topic.title %>
+                          </li>
+                      <% end %>
+                    </div >
+                    <hr class="border border-dark border-1 opacity-25 mb-1">
+                <em class="mb-4">created <%= time_ago_in_words(poll.created_at) %> ago</em>
+                
+                </label>
+              <% end %>
             <% end %>
             </div>
           </div>
