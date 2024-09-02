@@ -11,12 +11,14 @@
         </span>
         <blockquote class="blockquote">
           <p>
-            <% content_html = chapter.content.gsub(/(\d+:\d+)/, '</p><p class="p-isolate"><span class="text-secondary">\1</span>') %>
+            <% content_html = chapter.content.gsub(/(\d+:\d+)/, '</p><p>') %>
+            <%= content_html.html_safe %>
                 <% sanitized_content = sanitize(content_html, tags: %w(p br em strong), attributes: %w(style)) %>
                 <% fragment = Nokogiri::HTML::DocumentFragment.parse(sanitized_content) %>
+                <%= fragment.count %>
                 <% fragment.css('p').each_with_index do |paragraph, index| %>
               <div id="chapter_<%= chapter.id %>_paragraph_<%= index + 1 %>" class="chapter-paragraph">
-              <%= raw(paragraph).gsub(/(\d+:\d+)/, '<span class="text-secondary">\1</span>').html_safe %>
+              <% raw(paragraph).gsub(/(\d+:\d+)/, '<span class="text-secondary">\1</span>').html_safe %>
             </div>
             <% end %>
           </p>

@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  get 'host_helper/scratchpaper'
   resources :polls do
     resources :options
   end
