@@ -18,7 +18,7 @@
     "RUN gem update --system && gem install bundler",
     "COPY Gemfile /usr/src/app/",
     "COPY Gemfile.lock /usr/src/app/",
-    "gem update --system",
+    "RUN gem update --system",
     "RUN bundle install",
     "COPY . /usr/src/app/",
     "EXPOSE 3000",
