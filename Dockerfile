@@ -15,9 +15,8 @@ RUN apk add \
 WORKDIR /app
 RUN gem update --system && gem install bundler
 
-# Use what the base image provides rather than create our own  app directory
-
-# Add a script to be executed every time the container starts.
+COPY --from=builder /usr/local/bundle/ /usr/local/bundle/
+COPY ./ ./
 
 
 EXPOSE 3000
