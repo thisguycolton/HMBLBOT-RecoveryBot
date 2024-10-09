@@ -15,6 +15,6 @@ COPY --from=builder /usr/local/bundle/ /usr/local/bundle/
 COPY ./ ./
 EXPOSE 3000
 RUN bundle exec rails assets:precompile
-RUN RAILS_ENV=production SECRET_KEY_BASE=c36dd7e468987186e90107839224b824a7012c025bdb65937fca615c0321ece936b336a421a130adae50e255f716c52966f68b9e19fbbe5d82fe78f337ba78df bundle exec rails db:create
+RUN rails db:migrate
 
 CMD ["rails", "server", "-e"]
