@@ -19,9 +19,7 @@ RUN gem update --system && gem install bundler
 WORKDIR /usr/src/app/
 
 # Add a script to be executed every time the container starts.
-COPY .dockerdev/entrypoint.sh /usr/bin/
-RUN chmod +x /usr/bin/entrypoint.sh
-ENTRYPOINT ["entrypoint.sh"]
+
 
 EXPOSE 3000
 
