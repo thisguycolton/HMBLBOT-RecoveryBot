@@ -16,5 +16,4 @@ COPY ./ ./
 EXPOSE 3000
 RUN bundle exec rails assets:precompile
 # RUN RAILS_ENV=production SECRET_KEY_BASE=6289ecd1c0ee332f500d2d1b6c0ffab83af00442bb46e017597da462a6a3368a3ae2bf3b71ab29a56ffdfb33d7cd5cdce0c7721decb4cd8093206d89ce0a2fa6 bundle exec rails db:create
-RUN bundle exec rails db:migrate
 CMD ["rails", "server", "-e"]
