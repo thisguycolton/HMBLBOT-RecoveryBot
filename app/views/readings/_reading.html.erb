@@ -11,7 +11,7 @@
             <% end %>
             <h1 class="display-3 fw-bold"><%= reading.meetingName %></h1>
             <h3 class="display-4 fw-semibold"> Meeting Reading </h3>
-            <h3 class="display-5"> <span class="pr-1 "><%= reading.meetingDate.strftime("%B %d, %Y") %></span><span class="fw-lighter"><%= reading.meetingTime.strftime("%l:%M %p").sub(':00', '') %></span></h3>
+            <h3 class="display-5"> <span class="pr-1 "><%= reading.meetingDate.strftime("%B %d, %Y") %></span><span class="fw-lighter"><%= local_time(reading.meetingTime).to_time.strftime("%l:%M %p").sub(':00', '') %></span></h3>
 
             <% unless reading.meetingUrl.blank? %>
             <div class="d-flex">

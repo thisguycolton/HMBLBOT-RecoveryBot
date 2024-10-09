@@ -7,6 +7,10 @@ const context = require.context("controllers", true, /\.js$/)
 application.load(definitionsFromContext(context))
 
 import { Controller } from "@hotwired/stimulus"
+import Sortable from '@stimulus-components/sortable'
+
+const application = Application.start()
+application.register('sortable', Sortable)
 
 export default class extends Controller {
   static targets = ["template"]

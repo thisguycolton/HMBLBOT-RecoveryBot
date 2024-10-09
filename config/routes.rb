@@ -1,4 +1,9 @@
 Rails.application.routes.draw do
+  resources :user_active_groups, only: %i[create update]
+
+  resources :groups do
+    resources :meetings
+  end
   get 'host_helper/scratchpaper'
   resources :polls do
     resources :options

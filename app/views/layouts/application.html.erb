@@ -10,24 +10,20 @@
 
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" integrity="sha384-4LISF5TTJX/fLmGSxO53rV4miRxdg84mZsxmO8Rx5jGtp/LbrixFETvWa5a6sESd" crossorigin="anonymous">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
 
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
+
     <link href="https://fonts.googleapis.com/css2?family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400;1,700&family=Montserrat:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,400;1,600;1,800;1,900&display=swap" rel="stylesheet">
-        
+
     <%= javascript_importmap_tags %>
-    
 
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/trix@2.0.8/dist/trix.css">
   <script type="text/javascript" src="https://unpkg.com/trix@2.0.8/dist/trix.umd.min.js"></script>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 
     <!-- Theme included stylesheets -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" crossorigin="anonymous">
@@ -61,30 +57,15 @@
                   <span class="<% if current_page?('/readings') %> fw-semibold <% end %>"> Readings </span>
                 <% end %>
               </li>
-              <li class="nav-item justify-content-start">
-                <%= link_to host_helper_scratchpaper_url, class:"nav-link text-uppercase" do %>
-                  <span class="<% if current_page?('/host_helper/scratchpaper') %> fw-semibold <% end %>"> Host-burger Helper </span>
-                <% end %>
-              </li>
-              <% if user_signed_in? %>
-
-              <li class="nav-item justify-content-start">
-                <%= link_to books_url, class:"nav-link text-uppercase" do %>
-                  <span class="<% if current_page?('/books') %> fw-semibold <% end %>"> Books </span>
-                <% end %>
-              </li>
-
-              <% end %>
-              
             </ul>
               <div class="d-flex">
-                <% if user_signed_in? %> 
-                  <%= link_to new_reading_path, class:"btn btn-outline-info mx-3" do %>
-                    <i class="bi bi-plus"></i>
-                  <% end %> 
-                  <%= link_to destroy_user_session_path, class:"btn btn-outline-danger" do %>
-                    <i class="bi bi-door-open"></i> 
-                  <% end %> 
+              <% if user_signed_in? %>
+              <li class="nav-item " style="list-style: none;">
+                <a class="nav-link btn text-uppercase" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
+                 <i class="bi bi-person-circle"></i> Account
+                </a>
+                
+              </li>
                 <% else %> 
                   <%= link_to new_user_session_path, class:"btn btn-outline-success" do %>
                     <i class="bi bi-door-closed"></i> 
@@ -96,7 +77,78 @@
         </div>
       </nav>
     </div>
-    <%= yield %>
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offcanvasRightLabel">Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body p-0">
+        <div class="list-group list-group-flush">
+          <% if current_user.user_active_group.present? %>
+            <%= link_to new_reading_path, class:"list-group-item list-group-item-action" do %><i class="bi bi-plus"></i><span class="<% if current_page?('/readings/new') %> fw-semibold <% end %>"> Create Reading</span><% end %>
+          <% else %>
+            <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#groupModal"><i class="bi bi-plus"></i> Create Reading</a>
+          <% end %>
+          <%= link_to host_helper_scratchpaper_url, class:"list-group-item list-group-item-action" do %><span class="<% if current_page?('/host_helper/scratchpaper') %> fw-semibold <% end %>"><i class="bi bi-cake"></i> Host-Burger Helper </span><% end %>
+          <%= link_to books_url, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('/books') %> fw-semibold <% end %>"><i class="bi bi-book-half"></i> Books <span class="badge text-bg-warning position-absolute end-0 me-2">Under Construction</span> </span><% end %>
+          <%= link_to edit_user_registration_path, class:"list-group-item list-group-item-action" do %><span class="<% if current_page?('/users/edit') %> fw-semibold <% end %>"><i class="bi bi-gear-wide-connected"></i> Settings <% end %>
+          <%= link_to new_user_session_path, class:"list-group-item list-group-item-action bg-danger text-white" do %><i class="bi bi-door-open"></i> Sign Out<% end %>
+        </div>
+      </div>
+    </div>
 
+
+    <div class="page-container">
+      <%= yield %>
+    </div>
+    <% if user_signed_in? %>
+    <div class="modal fade" id="groupModal" tabindex="-1" aria-labelledby="groupModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="groupModalLabel">Set the group for this reading</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <%= form_with model: UserActiveGroup.create, method: :post do |form| %>
+
+            <div class="modal-body">
+              <%= form.collection_select :group_id, Group.all, :id, :title, {}, {:class => "form-select"} %>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <%= form.submit(class: "btn btn-success") do %>Save changes<% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+    <% end %>
+    <div class="container-fluid m-0 bg-dark text-light">
+      <div class="container">
+        <footer class="d-flex flex-wrap justify-content-between align-items-end py-5 ">
+        <p class="col-12 col-md-4 mb-0 text-body-secondary montserrat justify-content-sm-center justify-content-md-start text-center text-md-left">© 2024 <span class="fw-bold">Fountain Hills Roofing</span></p>
+
+        <a href="/" class=" col-12 col-md-4 d-flex align-items-center justify-content-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none mt-4 mt-md-0 mb-2 mb-md-0">
+          <div class="text-center text-light pb-2">
+            <img src="https://humblebot.s3.us-west-2.amazonaws.com/hmblbotLOGOsmBLUE.png" class="hmblbot-logo">
+            <p class="hmblbot-text pb-0 mb-0 fw-light tracking-wide">Powered By</p>
+            <p class="hmblbot-brand tracking-widest">HMBLBOT</p>
+          </div>
+        </a>
+        
+
+        <ul class="nav col-6 offset-3 offset-md-0 col-md-3 col-lg-2 justify-content-md-end justify-content-sm-center">
+          <div class="row mb-3 pe-2">
+              <div class="col pr-1">
+                <a href="https://discord.gg/mBkUUwH7hd" target="_blank" class="link-light link-offset-2 link-underline-opacity-25 fs-4"><i class="bi bi-discord"></i></a>
+              </div>
+            </div>
+          <div class="row">
+
+            </div>
+        </ul>
+        </footer>
+      </div>
+    </div>
   </body>
 </html>

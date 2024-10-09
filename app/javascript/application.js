@@ -1,5 +1,6 @@
 import { Application } from "@hotwired/stimulus"
-
+import "popper"
+import "bootstrap"
 // Initialize Stimulus application
 window.Stimulus = Application.start()
 
@@ -9,3 +10,6 @@ window.Stimulus.register("dropdown", DropdownController)
 
 import PollCountdownController from "./controllers/poll_countdown_controller.js"
 window.Stimulus.register("poll-countdown", PollCountdownController)
+
+//= require js.cookie
+//= require browser_timezone_rails/set_time_zone

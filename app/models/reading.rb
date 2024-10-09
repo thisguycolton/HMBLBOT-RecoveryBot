@@ -1,6 +1,8 @@
 class Reading < ApplicationRecord
   has_rich_text :content
   has_rich_text :topic
+  belongs_to :user, optional: true
+  belongs_to :group, optional: true
 
 
   attr_accessor :hour, :minute, :meridiem
@@ -9,7 +11,7 @@ class Reading < ApplicationRecord
 
   def parse_time
     if hour and minute and meridiem
-      self.meetingTime = DateTime.parse("#{hour}:#{minute}#{meridiem}") 
+      self.meetingTime = DateTime.parse("#{hour}:#{minute}#{meridiem}")
     end
   end
 end

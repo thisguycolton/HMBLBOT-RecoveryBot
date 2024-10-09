@@ -11,8 +11,13 @@
     </div>
   <% end %>
 
-  <div class="mb-4">
-    <%= form.text_field :title, class: "display-4 w-100 border-0 bg-light" %>
+  <div class="form-floating mb-4">
+    <%= form.text_field :title, class: "form-control", placeholder: "Topic Title" %>
+    <label><%= t("activerecord.attributes.topic.title") %></label>
+  </div>
+    <div class="form-floating mb-4">
+    <%= form.text_field :subtitle, class: "form-control" %>
+    <label><%= t("activerecord.attributes.topic.subtitle") %></label>
   </div>
 
   <div>

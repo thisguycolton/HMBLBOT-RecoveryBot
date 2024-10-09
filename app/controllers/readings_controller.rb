@@ -67,6 +67,6 @@ class ReadingsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def reading_params
-      params.require(:reading).permit(:title, :content, :topic, :user_id, :meetingTime, :meetingDate, :source, :meetingName, :meetingUrl, :host, :hour, :minute, :meridiem)
+      params.require(:reading).permit(:title, :content, :topic, :user_id, :meetingTime, :meetingDate, :source, :meetingName, :meetingUrl, :host, :hour, :minute, :meridiem, :group_id)
     end
 end

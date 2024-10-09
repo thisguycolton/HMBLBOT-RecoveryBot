@@ -1,14 +1,23 @@
 <div id="<%= dom_id topic %>" class="col">
-  <div class="card my-5 mx-3 position-relative">
-    <h1><span class="position-absolute top-0 start-0 translate-middle badge bg-jumbo-purple"><span class="fw-light">#</span><%= topic.searchable_number %></span></h1>
-      <div class="position-absolute top-0 end-0 m-2">
-        <input type="text" value="#<%= topic.searchable_number %>: <%= topic.title %>" id="topic_<%= topic.id %>_copy" class="d-none">
-        <% if user_signed_in? && current_user.email == "coltonhagan@gmail.com" %><%= link_to edit_topic_path(topic), class: "btn btn-outline-info" do %> <i class="bi bi-pencil"></i> <% end %><% end %>
-        <button onclick="myFunction<%= topic.searchable_number %>()" id="topic_<%= topic.id %>_copy_btn" class="btn btn-outline-secondary"><i class="bi bi-clipboard" id="topic_<%= topic.id %>_copy_btn_icon"></i></button> 
-      </div>
-    <div class="p-5">
-      <h1 class="display-4"><span class="fw-bold"></span> <%= topic.title %></h1>
+  <div class="card my-5 mx-3 position-relative overflow-hidden">
+    <h2><span class="position-absolute top-0 start-0 ms-4 mt-3 ps-5 translate-middle badge bg-jumbo-purple shadow rounded-0 rounded-bottom-2"><span class="fw-light">#</span><%= topic.searchable_number %></span></h2>
+    <div class="position-absolute top-0 end-0 m-2 overflow-x-hidden">
+      <input type="text" value="#<%= topic.searchable_number %>: <%= topic.title %>" id="topic_<%= topic.id %>_copy" class="d-none">
+      <% if user_signed_in? && current_user.email == "coltonhagan@gmail.com" %><%= link_to edit_topic_path(topic), class: "btn btn-outline-info" do %> <i class="bi bi-pencil"></i> <% end %><% end %>
+      <button onclick="myFunction<%= topic.searchable_number %>()" id="topic_<%= topic.id %>_copy_btn" class="btn btn-outline-secondary"><i class="bi bi-clipboard" id="topic_<%= topic.id %>_copy_btn_icon"></i></button> 
     </div>
+    <% if topic.subtitle.present? %>
+      <div class="px-5 pt-4 mt-2 pb-5 mb-2">
+        <h1 class="display-4"><span class="fw-bold"> <%= topic.title %></span></h1>
+      </div>
+      <div class="position-absolute bottom-0 start-0 mb-2 ps-3 ps-lg-5">
+        <h3 class="display-6 text-nowrap " <% if topic.sub_long? %> id="subtitleScroll_<%= topic.id %>"<% end %> ><%= topic.subtitle %></h3>
+      </div>
+    <% else %>
+      <div class="p-5">
+        <h1 class="display-4"><span class="fw-bold"> <%= topic.title %></span></h1>
+      </div>
+    <% end %>
   </div>
 
 </div>
@@ -31,4 +40,60 @@ function myFunction<%= topic.searchable_number %>() {
   element.classList.add('btn-success');
 
 } 
+
+
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const subtitleElement = document.getElementById("subtitleScroll_<%= topic.id %>");
+    
+    if (subtitleElement) {
+      animate(subtitleElement);
+    }
+
+    function animate(element) {
+      const elementWidth = element.offsetWidth;  // Width of the subtitle text
+      const grandparentWidth = element.parentElement.parentElement.offsetWidth;  // Width of the grandparent container
+
+      console.log("Element Width: ", elementWidth);          // Debugging log
+      console.log("Grandparent Width: ", grandparentWidth);  // Debugging log
+
+      let flag = 0;                // Starting point
+      const scrollSpeed = 10;      // Speed of the scroll (lower is faster)
+
+      // Check if the subtitle is wider than the grandparent container
+      if (elementWidth > grandparentWidth) {
+        const maxScroll = elementWidth - grandparentWidth + 50;  // Calculate how much to scroll
+
+        console.log("Max Scroll: ", maxScroll); // Debugging log
+
+        // Initial pause before starting the scroll
+        setTimeout(() => scroll(element, maxScroll), 1000);
+
+        function scroll(element, maxScroll) {
+          let intervalId = setInterval(() => {
+            element.style.marginLeft = --flag + "px"; // Move the element left by 1px
+
+            // Stop when the entire subtitle is visible
+            if (Math.abs(flag) >= maxScroll) {
+              clearInterval(intervalId);
+
+              // Pause briefly before resetting the position
+              setTimeout(() => {
+                flag = 0; // Reset position to the start
+                element.style.marginLeft = flag + "px";
+
+                // Pause again before restarting the scroll
+                setTimeout(() => scroll(element, maxScroll), 1000); // Restart the scroll
+              }, 1000);  // Pause duration at the end before resetting
+            }
+          }, scrollSpeed);
+        }
+      } else {
+        // If the subtitle is not wider than the grandparent, keep it in view
+        console.log("Subtitle is not wider than the grandparent, keeping it visible."); // Debugging log
+        element.style.marginLeft = '0px';
+      }
+    }
+  });
 </script>

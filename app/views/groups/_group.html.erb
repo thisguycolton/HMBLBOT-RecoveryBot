@@ -1,0 +1,28 @@
+<div id="<%= dom_id group %>">
+  <div class='reading-container container-fluid p-0 shadow-sm pb-5 position-relative'>
+    <div class="jumbotron text-bg-light py-5">
+      <div class="container">
+        <div class="d-flex">
+          <div class="w-100 position-relative">
+            <% unless group.meetingLink.blank? %>
+            <div class="position-absolute top-0 end-0 mt-2 mx-4">
+              <a class="btn btn-lg btn-primary mt-0 d-none d-md-block align-top" href="<%= group.meetingLink %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
+            </div>
+            <% end %>
+            <h1 class="display-3 fw-bold"><%= group.title %></h1>
+            <h3 class="display-4 fw-semibold"> <%= group.location %> </h3>
+
+            <% unless group.meetingLink.blank? %>
+            <div class="d-flex">
+              <a class="btn btn-primary mt-5 w-100 d-md-none " href="<%= group.meetingLink %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
+            </div>
+            <% end %>
+            <div class="">
+              <%= group.description %>
+              <%= group.website %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

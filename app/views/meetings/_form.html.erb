@@ -1,0 +1,40 @@
+<div class="container">
+  <div class="row">
+    <div class="col-md-6 offset-md-3">
+    <%= form_with model: @group do |form| %>
+    <%= form.fields_for :meetings do |meeting_form| %>
+      <% if @meeting.errors.any? %>
+        <div style="color: red">
+          <h2><%= pluralize(meeting.errors.count, "error") %> prohibited this meeting from being saved:</h2>
+
+          <ul>
+            <% meeting.errors.each do |error| %>
+              <li><%= error.full_message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+      <div class="mb-3">
+        <%= meeting_form.hidden_field :datetime, value: params[:format] %>
+      </div>
+
+      <div class="mb-3">
+        <%= meeting_form.label :host, class: "form-label" %>
+        <%= meeting_form.text_field :host,  class: "form-control" %>
+      </div>
+
+      <div class="form-check mb-3">
+        <%= meeting_form.check_box :reocurring, class: "form-check-input" %>
+        <%= meeting_form.label :reocurring, class: "form-check-label" %>
+      </div>
+
+      <div class="mb-3">
+        <%= meeting_form.label :frequency, style: "display: block" %>
+        <%= meeting_form.select :frequency, options_for_select([['Weekly', 1], ['Monthly', 2]]), {}, {class: "form-select"} %>
+      </div>
+
+      <div class="mb-3 d-grid">
+        <%= meeting_form.submit "Save Meeting", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+    <% end %>

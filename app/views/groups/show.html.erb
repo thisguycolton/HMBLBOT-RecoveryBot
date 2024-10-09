@@ -1,0 +1,31 @@
+<p style="color: green"><%= notice %></p>
+<%= link_to groups_path, class: "position-absolute z-1 fs-1 ms-5 mt-md-5 mt-lg-0" do %> 
+  <i class="bi bi-chevron-left"></i>
+<% end %>
+<%= link_to edit_group_path(@group), class: "position-absolute z-1 fs-1 me-5 mt-md-5 mt-lg-0 end-0" do %> 
+  <i class="bi bi-gear-wide-connected"></i>
+<% end %>
+<%= render @group %>
+
+<div>
+</div>
+<%= turbo_frame_tag 'calendar' do %>
+  <%= week_calendar(number_of_weeks: 1) do |date| %>
+    <div class="fw-bold rounded-circle text-center day-number" style=""><%= date.to_datetime.strftime("%e") %></div>
+    <% date_meetings = Meeting.where(datetime: date).order(:datetime) %>
+    <% if date_meetings.none? %>
+      <div class="vstack gap-3 " style="height:285px;">
+        <div class="p-2">NO SCHEDULED MEETINGS</div>
+      </div>
+    <% else %>
+      <% date_meetings.each do |date_meeting| %>
+      <div class="vstack gap-3 " style="height:285px;">
+        <div class="p-2"><%= date_meeting.host %></div>
+      </div>
+      <% end %>
+    <% end %>
+      <div class="d-grid">
+        <%= link_to "Add Meeting", new_group_meeting_path(@group, date), class: "btn btn-outline-secondary mt-auto" %>
+      </div>
+  <% end %>
+<% end %>
