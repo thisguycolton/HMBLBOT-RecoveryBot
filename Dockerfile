@@ -15,6 +15,5 @@ COPY --from=builder /usr/local/bundle/ /usr/local/bundle/
 COPY ./ ./
 EXPOSE 3000
 RUN bundle exec rails assets:precompile
-RUN rails db:migrate
 
 CMD ["rails", "server", "-e"]
