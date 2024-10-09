@@ -1,5 +1,5 @@
 <div id="<%= dom_id topic %>" class="col">
-  <div class="card my-5 mx-3 position-relative overflow-hidden">
+  <div class="card my-5 mx-md-3 position-relative overflow-hidden">
     <h2><span class="position-absolute top-0 start-0 ms-4 mt-3 ps-5 translate-middle badge bg-jumbo-purple shadow rounded-0 rounded-bottom-2"><span class="fw-light">#</span><%= topic.searchable_number %></span></h2>
     <div class="position-absolute top-0 end-0 m-2 overflow-x-hidden">
       <input type="text" value="#<%= topic.searchable_number %>: <%= topic.title %>" id="topic_<%= topic.id %>_copy" class="d-none">
@@ -7,14 +7,14 @@
       <button onclick="myFunction<%= topic.searchable_number %>()" id="topic_<%= topic.id %>_copy_btn" class="btn btn-outline-secondary"><i class="bi bi-clipboard" id="topic_<%= topic.id %>_copy_btn_icon"></i></button> 
     </div>
     <% if topic.subtitle.present? %>
-      <div class="px-5 pt-4 mt-2 pb-5 mb-2">
+      <div class="px-2 px-md-5 p-5 pt-4 mt-2 pb-5 mb-2">
         <h1 class="display-4"><span class="fw-bold"> <%= topic.title %></span></h1>
       </div>
       <div class="position-absolute bottom-0 start-0 mb-2 ps-3 ps-lg-5">
         <h3 class="display-6 text-nowrap " <% if topic.sub_long? %> id="subtitleScroll_<%= topic.id %>"<% end %> ><%= topic.subtitle %></h3>
       </div>
     <% else %>
-      <div class="p-5">
+      <div class="px-2 px-md-5 p-5">
         <h1 class="display-4"><span class="fw-bold"> <%= topic.title %></span></h1>
       </div>
     <% end %>

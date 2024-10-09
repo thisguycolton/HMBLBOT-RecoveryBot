@@ -25,8 +25,8 @@
           <br/>
           <%= search_form_for @q do |f| %>
             <div class="input-group input-group-lg mb-3">
-              <%= f.search_field :searchable_number_eq, placeholder: "Search by number", class: "form-control" %>
-              <%= f.search_field :title_or_subtitle_cont, placeholder: "Search by name", class: "form-control" %>
+              <%= f.search_field :searchable_number_eq, placeholder: "Number Search", class: "form-control" %>
+              <%= f.search_field :title_or_subtitle_cont, placeholder: "Word Search", class: "form-control" %>
               <%= f.submit "Search", class: 'btn bg-jumbo-blue-light text-blue-dark' %>
             </div>
           <% end %>
