@@ -1,5 +1,5 @@
 
-ARG RUBY_VERSION=3.2.2
+ARG RUBY_VERSION=3.2.3
 
 FROM ruby:${RUBY_VERSION}-alpine AS builder
 RUN apk add \
