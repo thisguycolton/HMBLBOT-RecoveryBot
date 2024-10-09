@@ -4,7 +4,7 @@ class UserActiveGroupsController < ApplicationController
     @user_active_group = UserActiveGroup.new(user_active_group_params)
     @user_active_group.user = User.find(current_user.id)
       if @user_active_group.save
-        redirect_to root_path
+        redirect_to new_reading_path
       else
 
       end

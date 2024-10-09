@@ -32,7 +32,7 @@ function myFunction<%= topic.searchable_number %>() {
 
    // Copy the text inside the text field
   navigator.clipboard.writeText(copyText.value);
-  navigator.clipboard.writeText('#<%= topic.searchable_number %>: <%= topic.title %>')
+  navigator.clipboard.writeText('#<%= topic.searchable_number %>: <%= topic.title %> | <% if topic.subtitle.present? %><%= topic.subtitle %><% end %>')
 
   // Alert the copied text
   var element = document.getElementById("topic_<%= topic.id %>_copy_btn");
