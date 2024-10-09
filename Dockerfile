@@ -16,7 +16,6 @@ WORKDIR /app
 RUN gem update --system && gem install bundler
 
 # Use what the base image provides rather than create our own  app directory
-WORKDIR /usr/src/app/
 
 # Add a script to be executed every time the container starts.
 
