@@ -1,6 +1,6 @@
 <style>
 body {
-  min-height: 200vh;
+  /* min-height: 200vh; */
 }
 
 #scroll-progress {
@@ -20,7 +20,7 @@ body {
 <%= render @reading %>
 
 <% if user_signed_in? && current_user.id = @reading.user_id %>
-<div class="container-fluid admin-bar-reading p-5 shadow position-relative">
+<div class="container-fluid admin-bar-reading p-5 shadow position-relative ">
   <div class="row">
     <div class="col">
       <%= link_to edit_reading_path(@reading), class:"btn btn-outline-info w-100", data: { turbolinks: false } do %> 

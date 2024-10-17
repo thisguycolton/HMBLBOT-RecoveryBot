@@ -1,6 +1,8 @@
+
+
 <div id="<%= dom_id reading %>">
-  <div class='reading-container container-fluid p-0 shadow-sm pb-5 position-relative'>
-    <div class="jumbotron text-bg-light py-5">
+  <div class='reading-container container-fluid p-0  position-relative '>
+    <div class="jumbotron text-bg-light py-5 bg-jumbo-blue-light">
       <div class="container">
         <div class="d-flex">
           <div class="w-100 position-relative">
@@ -23,23 +25,28 @@
         </div>
       </div>
     </div>
-    <div class="container pt-4">
-      <figure>
-        <h1 class="fw-bold mb-4 tracking-widest text-uppercase"><%= reading.title %></h1>
-        
-        <blockquote class="blockquote">
-          <p>
-            <%= reading.content.body.to_html.html_safe %>
-          </p>
-        </blockquote>
-        <figcaption class="blockquote-footer">
-          <cite title="<%= reading.title %>" class=" fs-3"><%= reading.source %></cite>
-        </figcaption>
-      </figure>
+    <div class="container-fluid  bg-light border-top border-bottom border-5 border-dark-subtle">
+      <div class="container py-5">
+        <figure>
+          <h1 class="fw-bold mb-4 tracking-widest text-uppercase"><%= reading.title %></h1>
+          
+          <blockquote class="blockquote">
+            <p>
+              <%= reading.content.body.to_html.html_safe %>
+            </p>
+          </blockquote>
+          <figcaption class="blockquote-footer">
+            <cite title="<%= reading.title %>" class=" fs-3"><%= reading.source %></cite>
+          </figcaption>
+        </figure>
+      </div>
+      <button id="reading_<%= reading.id %>_copy_btn" class="btn btn-outline-secondary position-absolute end-0 top-0 mt-3 me-3">
+        <i class="bi bi-clipboard" id="reading_<%= reading.id %>_copy_btn_icon"></i>
+      </button>
     </div>
   </div>
-  <div class="container-fluid  p-0  example-topics z-n1">
-    <div class="jumbotron text-bg-light py-5">
+  <div class="container-fluid  p-0  example-topics z-n1  bg-jumbo-light">
+    <div class="jumbotron position-relative py-5">
       <div class="container">
         <h2 class="text-center display-5 pb-3 fw-bold text-uppercase">Example Topics For Sharing</h2>
         <h3 class="mb-2 text-body-secondary text-center fs-3 tracking-widest"><em>Feel free to check in!</em></h3>
@@ -51,5 +58,42 @@
       </div>
     </div>
   </div>
+  <div class="container-fluid  bg-light border-top border-5 border-dark-subtle">
+    <div class="container py-5 ">
+      <div class="row mx-lg-5">
+        <div class="col-lg-2 text-center text-lg-start">
+          <h1 class="display-2 fw-semibold"><i class="bi bi-chat-right-quote-fill"></i></h1>
+        </div>
+        <div class="col-lg-10 text-center text-lg-start">
+          <span class="display-4"> Share Readings Easier </span>
+          <div class="montserrat mt-3 fs-4">Sign up to post your readings and share them with others with a simple click.</div>
+        </div>
+      </div>
+      <div class="row justify-content-center mt-2">
+        <div class="col-lg-8">
+          <%= link_to "Sign Up",  new_user_registration_path, class: "btn btn-primary mt-3 mb-2 fs-5 w-100 "%>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  function copyReading<%= reading.id %>() {
+    // Get the button element
+    var copyText = document.getElementById("reading_<%= reading.id %>_copy_btn");
+
+    // Copy the custom text
+    navigator.clipboard.writeText('Reading: <%= reading.title %> | <%= link_to reading %> Example Topics For Sharing | Feel free to check in! <%= reading.topic %>');
+
+    // Change the button's appearance
+    copyText.classList.remove('btn-outline-secondary');
+    copyText.classList.add('btn-success');
+  }
+
+  // Bind the click event to the button
+  var copyButton = document.getElementById("reading_<%= reading.id %>_copy_btn");
+  copyButton.addEventListener("click", copyReading<%= reading.id %>);
+});
+</script>

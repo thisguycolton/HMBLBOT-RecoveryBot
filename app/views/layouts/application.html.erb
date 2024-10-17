@@ -57,6 +57,11 @@
                   <span class="<% if current_page?('/readings') %> fw-semibold <% end %>"> Readings </span>
                 <% end %>
               </li>
+              <li class="nav-item justify-content-start">
+                <%= link_to host_helper_scratchpaper_url, class:"nav-link text-uppercase" do %>
+                  <span class="<% if current_page?('/host_helper/scratchpaper') %> fw-semibold text-black <% end %>"> <i class="bi bi-clipboard-heart-fill"></i> </span>
+                <% end %>
+              </li>
             </ul>
               <div class="d-flex">
               <% if user_signed_in? %>
@@ -140,12 +145,10 @@
             <p class="hmblbot-brand tracking-widest">HMBLBOT</p>
           </div>
         </a>
-        
-
-        <ul class="nav col-6 offset-3 offset-md-0 col-md-3 col-lg-2 justify-content-md-end justify-content-sm-center">
-          <div class="row mb-3 pe-2">
-              <div class="col pr-1">
-                <a href="https://discord.gg/mBkUUwH7hd" target="_blank" class="link-light link-offset-2 link-underline-opacity-25 fs-4"><i class="bi bi-discord"></i></a>
+        <ul class="nav col-6 offset-3 offset-md-0 col-md-3 col-lg-2 ms-md-auto">
+          <div class="w-100 mb-3  justify-content-center ">
+              <div class="col align-self-center text-center">
+                <a href="https://discord.gg/mBkUUwH7hd" target="_blank" class="link-light  link-underline-opacity-25 fs-4 "><i class="bi bi-discord"></i></a>
               </div>
             </div>
           <div class="row">
