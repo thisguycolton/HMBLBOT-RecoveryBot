@@ -126,6 +126,8 @@ GEM
     erubi (1.13.0)
     execjs (2.9.1)
     ffi (1.16.3)
+    flash_rails_messages (2.3.0)
+      rails (>= 5.2)
     geocoder (1.8.3)
       base64 (>= 0.1.0)
       csv (>= 3.0.0)
@@ -329,6 +331,7 @@ DEPENDENCIES
   debug
   devise (~> 4.9)
   ffi
+  flash_rails_messages
   geocoder
   image_processing (~> 1.2)
   importmap-rails

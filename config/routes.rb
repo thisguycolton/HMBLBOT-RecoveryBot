@@ -17,6 +17,14 @@ Rails.application.routes.draw do
   end
   resources :topics
   devise_for :users
+
+  namespace :admin_panel do
+    resources :users, only: [:index] do
+      member do
+        patch :confirm
+      end
+    end
+  end
   resources :readings
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

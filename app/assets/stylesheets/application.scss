@@ -165,6 +165,12 @@ footer {
 
  /* SIMPLE CALENDER END */
 
+
+ .alert-container{
+	top: 10vh !important;
+	z-index: 1000 !important;
+ }
+
 body {
 	font-family: 'Montserrat', sans-serif!important;
 }

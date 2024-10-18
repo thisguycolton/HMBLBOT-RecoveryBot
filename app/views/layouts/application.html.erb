@@ -69,7 +69,6 @@
                 <a class="nav-link btn text-uppercase" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
                  <i class="bi bi-person-circle"></i> Account
                 </a>
-                
               </li>
                 <% else %> 
                   <%= link_to new_user_session_path, class:"btn btn-outline-success" do %>
@@ -97,14 +96,19 @@
           <% end %>
           <%= link_to host_helper_scratchpaper_url, class:"list-group-item list-group-item-action" do %><span class="<% if current_page?('/host_helper/scratchpaper') %> fw-semibold <% end %>"><i class="bi bi-cake"></i> Host-Burger Helper </span><% end %>
           <%= link_to books_url, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('/books') %> fw-semibold <% end %>"><i class="bi bi-book-half"></i> Books <span class="badge text-bg-warning position-absolute end-0 me-2">Under Construction</span> </span><% end %>
-          <%= link_to edit_user_registration_path, class:"list-group-item list-group-item-action" do %><span class="<% if current_page?('/users/edit') %> fw-semibold <% end %>"><i class="bi bi-gear-wide-connected"></i> Settings <% end %>
+          <%= link_to edit_user_registration_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('/users/edit') %> fw-semibold <% end %>"><i class="bi bi-gear-wide-connected"></i> Account Settings<% end %>
+          <% if current_user.admin? %><%= link_to admin_panel_users_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('admin_panel/users') %> fw-semibold <% end %>"><i class="bi bi-people-fill"></i> Users <% end %><% end %>
+
+
+
           <%= link_to destroy_user_session_path, class:"list-group-item list-group-item-action bg-danger text-white" do %><i class="bi bi-door-open"></i> Sign Out<% end %>
         </div>
       </div>
     </div>
     <% end %>
-
-
+    <div class="position-fixed start-50 translate-middle alert-container">
+      <%= render_flash_messages class: "alert-toast"%>
+    </div>
     <div class="page-container">
       <%= yield %>
     </div>

@@ -15,4 +15,4 @@ csv.each.with_index(1) do |row, index|
   t.searchable_number = index
   t.save
   puts "#{t.id}, #{t.title} saved"
-end
+endUser.create!(email: 'admin@example.com', password: 'password', password_confirmation: 'password') if Rails.env.development?
