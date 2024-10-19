@@ -16,11 +16,10 @@ body {
 }
 </style>
 <%- content_for(:page_title, "HMBLBOT | #{@reading.title}") %>
-<p style="color: green"><%= notice %></p>
 <%= render @reading %>
 
 <% if user_signed_in? && current_user.id = @reading.user_id %>
-<div class="container-fluid admin-bar-reading p-5 shadow position-relative ">
+<div class="container-fluid admin-bar-reading p-5 position-relative ">
   <div class="row">
     <div class="col">
       <%= link_to edit_reading_path(@reading), class:"btn btn-outline-info w-100", data: { turbolinks: false } do %> 
@@ -46,4 +45,50 @@ body {
       document.body.scrollTop || document.documentElement.scrollTop;
     scrollProgress.style.width = `${(scrollTop / height) * 100}%`;
   });
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  function copyReading<%= @reading.id %>() {
+    // Get the button element
+    var copyText = document.getElementById("reading_<%= @reading.id %>_copy_btn");
+
+    // Construct the content to copy with HTML formatting
+    var readingTitle = "<strong style='font-size: 1.5em;'>Reading:</strong><br>" + 
+                       "<%= @reading.title.gsub(/"/, '\\"') %><br>";
+    var readingLink = "https://aa.humblebot.io/readings/<%= @reading.id %><br>"; // Generate the full URL
+    var exampleTopics = <%= raw @reading.topic.body.to_json %>; // Use raw to avoid escaping HTML
+
+    // Ensure proper formatting of the exampleTopics
+    var formattedTopics = exampleTopics
+      .replace(/<\/?ul>/g, '') // Remove <ul> tags
+      .replace(/<\/li>/g, '<br>') // Replace </li> with newlines
+      .replace(/<li>/g, '- ') // Replace <li> with bullet points
+      .replace(/&nbsp;/g, ' ') // Convert non-breaking spaces to regular spaces
+      .trim(); // Trim any leading/trailing whitespace
+
+    // Create the final text to copy with HTML formatting, including dividers
+    var contentToCopy = 
+      "====================<br>" +
+      readingTitle + 
+      readingLink + 
+      "====================<br>" +
+      "<strong style='font-size: 1.5em;'>Example Topics For Sharing:</strong><br>Feel free to check in!<br>" + 
+      "---------------------<br>" +
+      formattedTopics;
+
+    // Copy the custom text as rich text
+    navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([contentToCopy], {type: 'text/html'}),
+      'text/plain': new Blob([contentToCopy.replace(/<\/?[^>]+(>|$)/g, "")], {type: 'text/plain'}) // Fallback plain text
+    })]);
+
+    // Change the button's appearance
+    copyText.classList.remove('btn-outline-secondary');
+    copyText.classList.add('btn-success');
+  }
+
+  // Bind the click event to the button
+  var copyButton = document.getElementById("reading_<%= @reading.id %>_copy_btn");
+  copyButton.addEventListener("click", copyReading<%= @reading.id %>);
+});
 </script>

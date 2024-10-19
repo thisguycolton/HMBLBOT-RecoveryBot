@@ -78,22 +78,3 @@
   </div>
 </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-  function copyReading<%= reading.id %>() {
-    // Get the button element
-    var copyText = document.getElementById("reading_<%= reading.id %>_copy_btn");
-
-    // Copy the custom text
-    navigator.clipboard.writeText('Reading: <%= reading.title %> | <%= link_to reading %> Example Topics For Sharing | Feel free to check in! <%= reading.topic %>');
-
-    // Change the button's appearance
-    copyText.classList.remove('btn-outline-secondary');
-    copyText.classList.add('btn-success');
-  }
-
-  // Bind the click event to the button
-  var copyButton = document.getElementById("reading_<%= reading.id %>_copy_btn");
-  copyButton.addEventListener("click", copyReading<%= reading.id %>);
-});
-</script>
