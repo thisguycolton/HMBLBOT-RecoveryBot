@@ -1,15 +1,23 @@
 <style>
-.li-decoration{
-  list-style-type: none;
-}
-
+  .li-decoration {
+    list-style-type: none;
+  }
 </style>
 
 <div class="container-fluid bg-jumbo-yellow-light border-bottom shadow-sm p-5">
   <div class="container">
     <div class="row">
       <div class="col-md-12 text-center text-lg-start">
-        <h1 class="display-3 fw-bold"><svg fill="none" height="64" viewBox="0 0 44 62" width="44" xmlns="http://www.w3.org/2000/svg"><g stroke="#141b34" stroke-linecap="round" stroke-width="2.0" transform="scale(2.0)"><path d="m21 16.9286v-6.9286c0-3.77124 0-5.65685-1.1716-6.82843-1.1715-1.17157-3.0572-1.17157-6.8284-1.17157h-1c-3.77124 0-5.65685 0-6.82843 1.17157-1.17157 1.17158-1.17157 3.05719-1.17157 6.82843v9.5"/><path d="m21 17h-14.5c-1.38071 0-2.5 1.1193-2.5 2.5s1.11929 2.5 2.5 2.5h14.5"/><path d="m21 22c-1.3807 0-2.5-1.1193-2.5-2.5s1.1193-2.5 2.5-2.5"/><path d="m14.3877 6.84933c.318-.21509.7006-.34055 1.1123-.34055 1.1046 0 2 .90328 2 2.01755 0 1.09638-.9043 2.01367-2 2.01367v.96c0 .9428 0 1.4142-.2929 1.7071s-.7643.2929-1.7071.2929h-2c-.9428 0-1.4142 0-1.70711-.2929-.29289-.2929-.29289-.7643-.29289-1.7071v-.835c-1.16783 0-2-.86985-2-2.13867 0-1.11427.89543-2.01755 2-2.01755.41166 0 .7943.12546 1.1123.34055.2734-.78586 1.0153-1.34933 1.8877-1.34933s1.6143.56347 1.8877 1.34933zm0 0c.0727.20913.1123.43402.1123.66822" stroke-linejoin="round"/></g></svg> </h3>
+        <h1 class="display-3 fw-bold">
+          <svg fill="none" height="64" viewBox="0 0 44 62" width="44" xmlns="http://www.w3.org/2000/svg">
+            <g stroke="#141b34" stroke-linecap="round" stroke-width="2.0" transform="scale(2.0)">
+              <path d="m21 16.9286v-6.9286c0-3.77124 0-5.65685-1.1716-6.82843-1.1715-1.17157-3.0572-1.17157-6.8284-1.17157h-1c-3.77124 0-5.65685 0-6.82843 1.17157-1.17157 1.17158-1.17157 3.05719-1.17157 6.82843v9.5" />
+              <path d="m21 17h-14.5c-1.38071 0-2.5 1.1193-2.5 2.5s1.11929 2.5 2.5 2.5h14.5" />
+              <path d="m21 22c-1.3807 0-2.5-1.1193-2.5-2.5s1.1193-2.5 2.5-2.5" />
+              <path d="m14.3877 6.84933c.318-.21509.7006-.34055 1.1123-.34055 1.1046 0 2 .90328 2 2.01755 0 1.09638-.9043 2.01367-2 2.01367v.96c0 .9428 0 1.4142-.2929 1.7071s-.7643.2929-1.7071.2929h-2c-.9428 0-1.4142 0-1.70711-.2929-.29289-.2929-.29289-.7643-.29289-1.7071v-.835c-1.16783 0-2-.86985-2-2.13867 0-1.11427.89543-2.01755 2-2.01755.41166 0 .7943.12546 1.1123.34055.2734-.78586 1.0153-1.34933 1.8877-1.34933s1.6143.56347 1.8877 1.34933zm0 0c.0727.20913.1123.43402.1123.66822" stroke-linejoin="round" />
+            </g>
+          </svg>
+        </h1>
         <h1 class="display-3 fw-bold">Host-burger Helper</h1>
       </div>
     </div>
@@ -19,7 +27,12 @@
 <div class="container">
   <div class="row">
     <div class="col-md-12 col-lg-6">
-    <h3 class="py-3 fw-bold">People Doing Service:</h3>
+      <h3 class="py-3 fw-bold">People Doing Service:</h3>
+      <!-- Service Input Fields -->
+      <div class="mb-3">
+        <label for="cohost" class="col-sm-4 control-label text-uppercase fw-bold">Cohost:</label>
+        <input type="text" name="cohost" id="cohost" value="" class="form-control col-md-12">
+      </div>
       <div class="mb-3">
         <label for="howitworks" class="col-sm-4 control-label text-uppercase fw-bold">How It Works:</label>
         <input type="text" name="howitworks" id="howitworks" value="" class="form-control col-md-12">
@@ -37,13 +50,17 @@
         <input type="text" name="closingreading" id="closingreading" value="" class="form-control col-md-12">
       </div>
     </div>
-    <div class="col-md-12 col-lg-6 pt-3">
+
+    <!-- Milestone Section -->
+    <div class="col-md-12 col-lg-6 py-3">
       <h3 class="pb-4 fw-bold">People Celebrating Milestones:</h3>
       <form>
         <ul data-controller="sortable" data-sortable-animation-value="150" id="sortable">
           <li class="li-decoration">
             <div class="row pt-lg-3 pb-3">
-              <label class="col-1 col-form-label text-dark text-opacity-25" for="milestone"><i class="bi bi-circle-fill"></i></label>
+              <label class="col-1 col-form-label text-dark text-opacity-25" for="milestone">
+                <i class="bi bi-circle-fill"></i>
+              </label>
               <div class="col-11">
                 <div class="input-group mb-3" id="milestone">
                   <input type="text" class="form-control" placeholder="Screen Name" aria-label="Screen Name">
@@ -53,30 +70,40 @@
               </div>
             </div>
           </li>
-          <div id="milestone_fields">
-          </div>
+          <!-- Dynamically added milestone fields go here -->
+          <div id="milestone_fields"></div>
         </ul>
-        <button class="btn btn-success w-100" type="button"  onclick="milestone_fields();"> <i class="bi bi-plus-lg"></i> </button>
+        <button class="btn btn-success w-100" type="button" onclick="milestone_fields();">
+          <i class="bi bi-plus-lg"></i> Add Milestone
+        </button>
       </form>
-      </div>
     </div>
+
   </div>
 </div>
 
 <script>
 var milestone = 1;
 function milestone_fields() {
-
     ++milestone;
-    var objTo = document.getElementById('milestone_fields')
-    var div_milestone = document.createElement("div");
-	div_milestone.setAttribute("class", "mb-3 removeclass"+milestone);
-	var rdiv = 'removeclass'+milestone;
+    var objTo = document.getElementById('sortable');
+    var div_milestone = document.createElement("li");
+    div_milestone.setAttribute("class", "mb-3 li-decoration removeclass" + milestone);
+    var rdiv = 'removeclass' + milestone;
     div_milestone.innerHTML = '<div class="row"><label class="col-1 col-form-label text-dark text-opacity-25" for="milestone"><i class="bi bi-circle-fill"></i></label><div class="col-11"><div class="input-group mb-3" id="milestone"><input type="text" class="form-control" placeholder="Screen Name" aria-label="Screen Name"><span class="input-group-text"><i class="bi bi-clock-history"></i></span><input type="text" class="form-control" placeholder="Time" aria-label="Time"></div></div></div>';
 
-    objTo.appendChild(div_milestone)
+    objTo.appendChild(div_milestone);
 }
 
-var el = document.getElementById('#sortable');
-var sortable = Sortable.create(el);
+
+  // Initialize Sortable.js
+    var sortable = new Sortable(document.getElementById('sortable'), {
+        animation: 150, // Adds a smooth animation effect
+        onEnd: function (/**Event*/evt) {
+            console.log('Element Reordered');
+            // evt.item contains the element being dragged.
+            // You can perform additional operations here, such as updating the order on the server.
+        }
+    });
+
 </script>

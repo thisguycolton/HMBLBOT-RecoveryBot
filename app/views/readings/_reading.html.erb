@@ -2,13 +2,16 @@
 
 <div id="<%= dom_id reading %>">
   <div class='reading-container container-fluid p-0  position-relative '>
-    <div class="jumbotron text-bg-light py-5 bg-jumbo-blue-light">
+    <div class="jumbotron text-bg-dark py-5 bg-jumbo-blue-dark">
       <div class="container">
         <div class="d-flex">
           <div class="w-100 position-relative">
             <% unless reading.meetingUrl.blank? %>
-            <div class="position-absolute top-0 end-0 mt-2 mx-4">
-              <a class="btn btn-lg btn-primary mt-0 d-none d-md-block align-top" href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
+            <div class=" btn-group position-absolute end-0 d-md-block mt-0 d-none d-md-block align-top" style=" top:10px!important;">
+              <a class="btn btn-lg btn-primary " href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-lg-2"></i><span class="align-text-bottom d-none d-lg-inline"> Join With Zoom </span> </a>
+              <button id="reading_<%= reading.id %>_copy_btn" class="btn btn-lg btn-light">
+                <i class="bi bi-clipboard" id="reading_<%= reading.id %>_copy_btn_icon"></i>
+              </button>
             </div>
             <% end %>
             <h1 class="display-3 fw-bold"><%= reading.meetingName %></h1>
@@ -16,16 +19,20 @@
             <h3 class="display-5"> <span class="pr-1 "><%= reading.meetingDate.strftime("%B %d, %Y") %></span><span class="fw-lighter"><%= local_time(reading.meetingTime).to_time.strftime("%l:%M %p").sub(':00', '') %></span></h3>
 
             <% unless reading.meetingUrl.blank? %>
-            <div class="d-flex">
-              <a class="btn btn-primary mt-5 w-100 d-md-none " href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
+            <div class="btn-group d-flex  d-md-none">
+              <a class="btn btn-primary mt-5 w-100  " href="<%= reading.meetingUrl %>">   <i class="bi bi-camera-video-fill pe-3 "></i> Join With Zoom </a>
+              <button id="reading_<%= reading.id %>_copy_btn" class="btn btn-light mt-5">
+                <i class="bi bi-clipboard" id="reading_<%= reading.id %>_copy_btn_icon"></i>
+              </button>
             </div>
+
             <% end %>
 
           </div>
         </div>
       </div>
     </div>
-    <div class="container-fluid  bg-light border-top border-bottom border-5 border-dark-subtle">
+    <div class="container-fluid  bg-light border-top border-bottom border-5 border-light-subtle">
       <div class="container py-5">
         <figure>
           <h1 class="fw-bold mb-4 tracking-widest text-uppercase"><%= reading.title %></h1>
@@ -40,9 +47,7 @@
           </figcaption>
         </figure>
       </div>
-      <button id="reading_<%= reading.id %>_copy_btn" class="btn btn-outline-secondary position-absolute end-0 top-0 mt-3 me-3">
-        <i class="bi bi-clipboard" id="reading_<%= reading.id %>_copy_btn_icon"></i>
-      </button>
+      
     </div>
   </div>
   <div class="container-fluid  p-0  example-topics z-n1  bg-jumbo-light">
@@ -58,7 +63,7 @@
       </div>
     </div>
   </div>
-  <div class="container-fluid  bg-light border-top border-5 border-dark-subtle">
+  <div class="container-fluid  bg-light border-top border-5 border-light-subtle">
     <div class="container py-5 ">
       <div class="row mx-lg-5">
         <div class="col-lg-2 text-center text-lg-start">
