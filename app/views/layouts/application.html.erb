@@ -43,21 +43,22 @@
             <span class="navbar-toggler-icon fs-6"></span>
           </button>
           <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0 d-flex w-100">
-              <li class="nav-item justify-content-start position-relative mt-0 pe-4 me-3">
+            <ul class="navbar-nav mb-2 mb-lg-0 d-flex w-100">
+              <li class="nav-item justify-content-start position-relative mt-0 ">
                 <%= link_to topics_url, class:"nav-link text-uppercase" do %>
-                  <span class="me-3 <% if current_page?('/') || current_page?('/topics') %> fw-semibold <% end %>">Topicificator</span>
-                  <span class="badge bg-success position-absolute ms-3 translate-middle top-50">
-                    9000
+                  <span class=" <% if current_page?('/') || current_page?('/topics') %> fw-semibold <% end %>">Topicificator 9000</span>
+                <% end %>
+              </li>
+              <li class="nav-item justify-content-start border-start" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Tooltip on bottom">
+                <%= link_to service_readings_url, class:"nav-link text-uppercase position-relative me-4" do %>
+                  <span class="<% if current_page?('/service_readings') %> fw-semibold <% end %>"> Service Readings </span>
+                    <span class="position-absolute top-50 start-100 translate-middle p-2 ms-2 bg-success border border-light rounded-circle">
+                      <span class="visually-hidden">New page!</span>
+                    </span>
                   </span>
                 <% end %>
               </li>
-              <li class="nav-item justify-content-start">
-                <%= link_to readings_url, class:"nav-link text-uppercase" do %>
-                  <span class="<% if current_page?('/readings') %> fw-semibold <% end %>"> Readings </span>
-                <% end %>
-              </li>
-              <li class="nav-item justify-content-start">
+              <li class="nav-item justify-content-start border-start">
                 <%= link_to host_helper_scratchpaper_url, class:"nav-link text-uppercase" do %>
                   <span class="<% if current_page?('/host_helper/scratchpaper') %> fw-semibold text-black <% end %>"> <i class="bi bi-clipboard-heart-fill"></i> </span>
                 <% end %>
@@ -98,7 +99,7 @@
           <%= link_to books_url, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('/books') %> fw-semibold <% end %>"><i class="bi bi-book-half"></i> Books <span class="badge text-bg-warning position-absolute end-0 me-2">Under Construction</span> </span><% end %>
           <%= link_to edit_user_registration_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('/users/edit') %> fw-semibold <% end %>"><i class="bi bi-gear-wide-connected"></i> Account Settings<% end %>
           <% if current_user.admin? %><%= link_to admin_panel_users_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('admin_panel/users') %> fw-semibold <% end %>"><i class="bi bi-people-fill"></i> Users <% end %><% end %>
-          <% if current_user.admin? %><%= link_to service_readings_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('service_readings/') %> fw-semibold <% end %>"><i class="bi bi-bookmark-heart"></i> Manage Service Readings <% end %><% end %>
+          <%= link_to readings_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('readings/') %> fw-semibold <% end %>"><i class="bi bi-bookmark-heart"></i> Reading Archive <% end %>
 
 
 

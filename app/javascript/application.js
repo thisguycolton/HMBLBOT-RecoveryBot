@@ -13,3 +13,6 @@ window.Stimulus.register("poll-countdown", PollCountdownController)
 
 //= require js.cookie
 //= require browser_timezone_rails/set_time_zone
+
+const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
