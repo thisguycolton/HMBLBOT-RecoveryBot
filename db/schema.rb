@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_10_18_174324) do
+ActiveRecord::Schema[7.0].define(version: 2025_01_28_235207) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -50,6 +50,12 @@ ActiveRecord::Schema[7.0].define(version: 2024_10_18_174324) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "add_icons_to_service_readings", force: :cascade do |t|
+    t.string "icon"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "ahoy_events", force: :cascade do |t|
@@ -182,6 +188,15 @@ ActiveRecord::Schema[7.0].define(version: 2024_10_18_174324) do
     t.bigint "group_id"
     t.index ["group_id"], name: "index_readings_on_group_id"
     t.index ["user_id"], name: "index_readings_on_user_id"
+  end
+
+  create_table "service_readings", force: :cascade do |t|
+    t.string "title"
+    t.string "short_title"
+    t.string "source"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "icon"
   end
 
   create_table "topics", force: :cascade do |t|

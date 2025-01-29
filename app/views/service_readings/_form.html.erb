@@ -1,0 +1,80 @@
+<%= form_with(model: service_reading) do |form| %>
+  <% if service_reading.errors.any? %>
+    <div style="color: red">
+      <h2><%= pluralize(service_reading.errors.count, "error") %> prohibited this service_reading from being saved:</h2>
+
+      <ul>
+        <% service_reading.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="mb-2">
+    <%= form.label :title, style: "display: block" %>
+    <%= form.text_field :title, class: "form-control", placeholder: "Full Reading Title" %>
+  </div>
+
+  <div class="mb-2">
+    <%= form.label :short_title, style: "display: block" %>
+    <%= form.text_field :short_title, class: "form-control", placeholder: "Shorter Reading Title" %>
+  </div>
+  <div class="dropdown">
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="iconPickerDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+      Choose an Icon
+    </button>
+    <ul class="dropdown-menu" aria-labelledby="iconPickerDropdown" style="max-height: 300px; overflow-y: auto;">
+      <% # Loop through a list of Bootstrap icons %>
+      <% icons = %w[bi-peace bi-list-ol bi-people bi-book bi-stars bi-calendar-check bi-gear bi-clock bi-trash bi-check-circle bi-heart bi-chat-quote] %>
+      <% icons.each do |icon| %>
+        <li>
+          <a href="#" class="dropdown-item d-flex align-items-center icon-option" data-icon="<%= icon %>">
+            <i class="<%= icon %> me-2"></i> <%= icon.gsub('bi-', '').humanize %>
+          </a>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+
+  <!-- Hidden input to store the selected icon -->
+    <%= form.hidden_field :icon, id: "selectedIcon" %>
+  <div class="mt-3">
+    Selected Icon: <i id="selectedIconPreview" class="bi"></i>
+  </div>
+
+  <div class="mb-2">
+    <%= form.label :body, style: "display: block" %>
+    <%= form.rich_text_area :body, class: "border-dark-subtle border-top-0 rounded-bottom overflow-y-auto overflow-y-scroll", style:"height:28em;" %>
+  </div>
+
+  <div class="mb-2">
+    <%= form.label :source, style: "display: block" %>
+    <%= form.text_field :source,  class: "form-control", placeholder: "Source of Reading" %>
+  </div>
+
+  <div class="my-2">
+    <%= button_tag(class: "btn btn-success btn-lg w-100") do %>
+      <i class="bi bi-floppy fs-4 pe-3 align-baseline"></i>
+      <span class="align-text-bottom ps-2 fw-normal tracking-widest">SAVE READING</span>
+    <% end %>
+  </div>
+<% end %>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const iconOptions = document.querySelectorAll(".icon-option");
+  const selectedIconInput = document.getElementById("selectedIcon");
+  const selectedIconPreview = document.getElementById("selectedIconPreview");
+
+  iconOptions.forEach(option => {
+    option.addEventListener("click", function (event) {
+      event.preventDefault(); // Prevent the link from navigating
+
+      const selectedIcon = this.dataset.icon; // Get the icon from data attribute
+      selectedIconInput.value = selectedIcon; // Set it in the hidden input
+      selectedIconPreview.className = `bi ${selectedIcon}`; // Update the preview icon
+    });
+  });
+});
+
+</script>

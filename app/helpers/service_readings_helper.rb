@@ -1,0 +1,2 @@
+module ServiceReadingsHelper
+end

@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  resources :service_readings
   resources :user_active_groups, only: %i[create update]
 
   resources :groups do

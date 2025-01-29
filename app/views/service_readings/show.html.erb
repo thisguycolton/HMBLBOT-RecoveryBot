@@ -1,0 +1,132 @@
+<style>
+  .container-lg{
+    max-width: 1140px!important;
+  }
+
+  body {
+    /* min-height: 200vh; */
+  }
+
+  #scroll-progress {
+    position: fixed;
+    top: 0;
+    width: 0%;
+    height: 6px;
+    background: #5bc0de;
+    z-index: 10000;
+  }
+  .reading-container{
+    margin-top: -20px;
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+<p style="color: green"><%= notice %></p>
+
+<%= render @service_reading %>
+
+<% if user_signed_in? && current_user.admin? %>
+<div class="container-fluid admin-bar-reading p-5 position-relative ">
+  <div class="row">
+    <div class="col">
+      <%= link_to edit_service_reading_path(@service_reading), class:"btn btn-outline-info w-100", data: { turbolinks: false } do %> 
+        <i class="bi bi-pencil-square"></i> 
+      <% end %>
+    </div>
+    <div class="col">
+      <%= button_to @service_reading, method: :delete, class:"btn btn-outline-danger w-100" do %> 
+        <i class="bi bi-trash"></i> 
+      <% end %>
+    </div>
+  </div>
+</div>
+<% end %>
+<script type="text/javascript">
+  const scrollProgress = document.getElementById('scroll-progress');
+  const height =
+
+  document.documentElement.scrollHeight - document.documentElement.clientHeight;
+
+  window.addEventListener('scroll', () => {
+    const scrollTop =
+      document.body.scrollTop || document.documentElement.scrollTop;
+    scrollProgress.style.width = `${(scrollTop / height) * 100}%`;
+  });
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  function copyReading<%= @service_reading.id %>() {
+    // Get the button element
+    var copyText = document.getElementById("reading_<%= @service_reading.id %>_copy_btn");
+
+    // Construct the content to copy with HTML formatting
+    var readingTitle = "<strong style='font-size: 1.5em;'>Reading:</strong><br>" + 
+                       "<%= @service_reading.title.gsub(/"/, '\\"') %><br>";
+    var readingLink = "https://aa.humblebot.io/service_readings/<%= @service_reading.id %><br>"; // Generate the full URL
+    var source = <%= raw @service_reading.source %>; // Use raw to avoid escaping HTML
+    var contentToCopy = 
+      "====================<br>" +
+      readingTitle +
+      source +
+      "====================<br>" +
+      readingLink;
+
+    // Copy the custom text as rich text
+    navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([contentToCopy], {type: 'text/html'}),
+      'text/plain': new Blob([contentToCopy.replace(/<\/?[^>]+(>|$)/g, "")], {type: 'text/plain'}) // Fallback plain text
+    })]);
+
+    // Change the button's appearance
+    copyText.classList.remove('btn-outline-secondary');
+    copyText.classList.add('btn-success');
+  }
+
+  // Bind the click event to the button
+  var copyButton = document.getElementById("reading_<%= @service_reading.id %>_copy_btn");
+  copyButton.addEventListener("click", copyReading<%= @service_reading.id %>);
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("Script is running!");
+
+  const jumbotron = document.querySelector(".jumbotron");
+  if (!jumbotron) {
+    console.error("No element with the class 'jumbotron' found.");
+    return;
+  }
+
+  console.log("Jumbotron element found:", jumbotron);
+
+  function toggleJumbotronPadding() {
+    const scrollPosition = window.scrollY; // Current scroll position
+    const triggerPoint = 30; // Position of the jumbotron
+
+    console.log("Scroll Position:", scrollPosition, "Jumbotron Offset:", triggerPoint);
+
+    if (scrollPosition >= triggerPoint) {
+      // Add scrolled-specific classes
+      jumbotron.classList.replace("py-5", "py-3"); // Replace padding
+      jumbotron.classList.add("shadow-sm"); // Add new classes
+      console.log("Added scrolled classes");
+    } else {
+      // Restore original classes
+      jumbotron.classList.replace("py-3", "py-5"); // Restore padding
+      jumbotron.classList.remove("shadow-sm"); // Remove new classes
+      console.log("Restored original classes");
+    }
+  }
+
+  // Listen for scroll event
+  window.addEventListener("scroll", toggleJumbotronPadding);
+
+  console.log("Scroll event listener added");
+});
+
+
+</script>
+
+

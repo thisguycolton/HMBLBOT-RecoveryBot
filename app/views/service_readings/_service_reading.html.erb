@@ -1,0 +1,34 @@
+
+<div class='reading-container container-fluid p-0  position-relative '>
+  <div class="jumbotron text-bg-light py-5 bg-jumbo-blue-light sticky-lg-top top-0 border-bottom border-5 border-light-subtle" id="jumbo-sticky">
+      <div class="container-lg">
+        <div class="d-flex">
+          <div class="pe-2 display-1 text-secondary opacity-25 flex-shrink-1 d-none d-lg-block">
+            <i class="bi <%= service_reading.icon %>"></i>
+          </div>
+          <div class="w-100 position-relative ">
+            <div class=" position-absolute end-0 d-md-block mt-0 d-none d-md-block align-top" style=" top:10px!important;">
+              <button id="reading_<%= service_reading.id %>_copy_btn" class="btn btn-lg btn-light">
+                <i class="bi bi-clipboard" id="reading_<%= service_reading.id %>_copy_btn_icon"></i>
+              </button>
+            </div>
+            <h1 class="fw-bold mb-3 tracking-widest text-uppercase "><%= service_reading.title %></h1>
+            <h3 class="fw-thin mb-0 tracking-widest text-uppercase"><%= service_reading.source %></h3>
+          </div>
+        </div>
+      </div>
+  </div>
+  <div class="container-fluid  bg-light border-top ">
+    <div class="container-lg py-2">
+      <figure>
+        <blockquote class="blockquote fs-3 tracking-wide" style="font-family: "Noto Serif", serif; font-weight:700;">
+        <p>
+          <%= service_reading.body %>
+        </p>
+        </blockquote>
+      </figure>
+    </div>
+  </div>
+</div>
+
+

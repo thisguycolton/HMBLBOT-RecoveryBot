@@ -1,0 +1,51 @@
+<p style="color: green"><%= notice %></p>
+<div class='reading-container container-fluid p-0  position-relative mb-3'>
+    <div class="jumbotron text-bg-dark py-5 bg-jumbo-teal">
+      <div class="container">
+        <div class="d-flex">
+          <span class="flex-fill text-center py-5">
+          <h1 class="display-4 fw-bold tracking-widest">SERVICE READINGS</h1>
+          <p class="lead">
+            An index of commonly used meeting readings for service work.
+          </p>
+        </span>
+        </div>
+      </div>
+    </div>
+  </div>
+<div class="container text-center">
+  <div class="row">
+    <% @service_readings.each do |service_reading| %>
+      <%= link_to service_reading, {class: "col text-decoration-none"} do %>
+        <div class="card">
+          <div class="row g-0">
+            <div class="col-4 bg-jumbo-blue-light position-relative">
+              <div class="p-4 display-1 display-lg-3 text-secondary opacity-25 flex-shrink-1 position-absolute top-50 start-50 translate-middle">
+                <i class="bi <%= service_reading.icon %>"></i>
+              </div>
+            </div>
+            <div class="col-8">
+              <div class="card-body p-4">
+                <h4 class="card-title fw-bold mb-3 tracking-widest text-uppercase"><%= service_reading.title %></h4>
+                <h5 class="card-title fw-thin mb-3 tracking-widest text-uppercase"><%= service_reading.source %></h5>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<% if user_signed_in? && current_user.admin? %>
+<div class="container-fluid admin-bar-reading p-5 position-relative ">
+  <div class="row">
+    <div class="col">
+      <%= link_to new_service_reading_path, class:"btn btn-success w-100", data: { turbolinks: false } do  %>
+        <i class="bi bi-plus"></i> 
+      <% end %>
+    </div>
+  </div>
+</div>
+<% end %>
+

@@ -98,6 +98,7 @@
           <%= link_to books_url, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('/books') %> fw-semibold <% end %>"><i class="bi bi-book-half"></i> Books <span class="badge text-bg-warning position-absolute end-0 me-2">Under Construction</span> </span><% end %>
           <%= link_to edit_user_registration_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('/users/edit') %> fw-semibold <% end %>"><i class="bi bi-gear-wide-connected"></i> Account Settings<% end %>
           <% if current_user.admin? %><%= link_to admin_panel_users_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('admin_panel/users') %> fw-semibold <% end %>"><i class="bi bi-people-fill"></i> Users <% end %><% end %>
+          <% if current_user.admin? %><%= link_to service_readings_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('service_readings/') %> fw-semibold <% end %>"><i class="bi bi-bookmark-heart"></i> Manage Service Readings <% end %><% end %>
 
 
 

@@ -1,0 +1,16 @@
+<div class="container-fluid bg-jumbo-blue-light h-100">
+  <div class="container">
+    <div class="card rounded-0 p-3 my-5 shadow border-0">
+      <h1>Editing service reading</h1>
+
+      <%= render "form", service_reading: @service_reading %>
+
+      <br>
+
+      <div>
+        <%= link_to "Show this service reading", @service_reading %> |
+        <%= link_to "Back to service readings", service_readings_path %>
+      </div>
+    </div>
+  </div>
+</div>
