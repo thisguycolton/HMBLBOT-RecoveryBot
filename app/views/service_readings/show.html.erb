@@ -60,11 +60,10 @@ document.addEventListener("DOMContentLoaded", function() {
     // Get the button element
     var copyText = document.getElementById("reading_<%= @service_reading.id %>_copy_btn");
 
-    // Construct the content to copy with HTML formatting
     var readingTitle = "<strong style='font-size: 1.5em;'>Reading:</strong><br>" + 
                        "<%= @service_reading.title.gsub(/"/, '\\"') %><br>";
     var readingLink = "https://aa.humblebot.io/service_readings/<%= @service_reading.id %><br>"; // Generate the full URL
-    var source = <%= raw @service_reading.source %>; // Use raw to avoid escaping HTML
+    var source = "<%= @service_reading.source %>"; 
     var contentToCopy = 
       "====================<br>" +
       readingTitle +
@@ -91,39 +90,31 @@ document.addEventListener("DOMContentLoaded", function() {
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("Script is running!");
 
   const jumbotron = document.querySelector(".jumbotron");
   if (!jumbotron) {
-    console.error("No element with the class 'jumbotron' found.");
     return;
   }
 
-  console.log("Jumbotron element found:", jumbotron);
 
   function toggleJumbotronPadding() {
     const scrollPosition = window.scrollY; // Current scroll position
     const triggerPoint = 30; // Position of the jumbotron
 
-    console.log("Scroll Position:", scrollPosition, "Jumbotron Offset:", triggerPoint);
-
     if (scrollPosition >= triggerPoint) {
       // Add scrolled-specific classes
       jumbotron.classList.replace("py-5", "py-3"); // Replace padding
       jumbotron.classList.add("shadow-sm"); // Add new classes
-      console.log("Added scrolled classes");
     } else {
       // Restore original classes
       jumbotron.classList.replace("py-3", "py-5"); // Restore padding
       jumbotron.classList.remove("shadow-sm"); // Remove new classes
-      console.log("Restored original classes");
     }
   }
 
   // Listen for scroll event
   window.addEventListener("scroll", toggleJumbotronPadding);
 
-  console.log("Scroll event listener added");
 });
 
 
