@@ -1,50 +1,93 @@
-<div class='reading-container container-fluid p-0  position-relative mb-3'>
-    <div class="jumbotron text-bg-dark py-5 bg-jumbo-teal">
-      <div class="container">
-        <div class="d-flex">
-          <span class="flex-fill text-center py-5">
+<div class='reading-container container-fluid p-0 position-relative mb-3'>
+  <div class="jumbotron text-bg-dark py-5 bg-jumbo-teal">
+    <div class="container">
+      <div class="d-flex">
+        <span class="flex-fill text-center py-5">
           <h1 class="display-4 fw-bold tracking-widest">SERVICE READINGS</h1>
           <p class="lead">
             An index of commonly used meeting readings for service work.
           </p>
         </span>
-        </div>
       </div>
     </div>
   </div>
+</div>
+
 <div class="container text-center">
   <div class="row row-cols-1 row-cols-md-2 g-4">
-    <% @service_readings.each do |service_reading| %>
-      <%= link_to service_reading, {class: "col text-decoration-none"} do %>
-        <div class="card">
-          <div class="row g-0">
-            <div class="col-4 bg-jumbo-blue-light position-relative">
-              <div class="p-4 display-1 display-lg-3 text-secondary opacity-25 flex-shrink-1 position-absolute top-50 start-50 translate-middle">
-                <i class="bi <%= service_reading.icon %>"></i>
+    <% @service_readings.group_by(&:title).each do |title, readings| %>
+      <% service_reading = readings.first %> <!-- Take the first reading for each group -->
+      
+      <% if readings.size == 1 %> <!-- If only one source, link directly to the reading -->
+        <%= link_to service_reading, class: "col text-decoration-none" do %>
+          <div class="card h-100">
+            <div class="row g-0 h-100">
+              <div class="col-4 bg-jumbo-blue-light position-relative">
+                <div class="p-4 display-1 display-lg-3 text-secondary opacity-25 flex-shrink-1 position-absolute top-50 start-50 translate-middle">
+                  <i class="bi <%= service_reading.icon %>"></i>
+                </div>
+              </div>
+              <div class="col-8">
+                <div class="card-body p-4 text-start">
+                  <h4 class="card-title fw-bold mb-3 tracking-widest text-uppercase"><%= service_reading.title %></h4>
+                  <h5 class="card-title fw-thin mb-3 tracking-widest text-uppercase"><%= service_reading.source %></h5>
+                </div>
               </div>
             </div>
-            <div class="col-8">
-              <div class="card-body p-4">
-                <h4 class="card-title fw-bold mb-3 tracking-widest text-uppercase"><%= service_reading.title %></h4>
-                <h5 class="card-title fw-thin mb-3 tracking-widest text-uppercase"><%= service_reading.source %></h5>
+          </div>
+        <% end %>
+      <% else %> <!-- If multiple sources, trigger modal -->
+        <a href="#" class="col text-decoration-none" data-bs-toggle="modal" data-bs-target="#modal-<%= service_reading.title.parameterize %>">
+          <div class="card h-100">
+            <div class="row g-0 h-100">
+              <div class="col-4 bg-jumbo-blue-light position-relative">
+                <div class="p-4 display-1 display-lg-3 text-secondary opacity-25 flex-shrink-1 position-absolute top-50 start-50 translate-middle">
+                  <i class="bi <%= service_reading.icon %>"></i>
+                </div>
+              </div>
+              <div class="col-8">
+                <div class="card-body p-4 text-start">
+                  <h4 class="card-title fw-bold mb-3 tracking-widest text-uppercase"><%= service_reading.title %></h4>
+                  <h5 class="card-title fw-thin mb-3 tracking-widest text-uppercase">
+                    <%= "#{readings.size} sources" %>
+                  </h5>
+                </div>
+              </div>
+            </div>
+          </div>
+        </a>
+
+        <!-- Modal for the current service reading -->
+        <div class="modal fade" id="modal-<%= service_reading.title.parameterize %>" tabindex="-1" aria-labelledby="modalLabel-<%= service_reading.title.parameterize %>" aria-hidden="true">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header text-center">
+                <h4 class="modal-title  w-100 fw-bold tracking-widest text-uppercase" id="modalLabel-<%= service_reading.title.parameterize %>"><%= service_reading.title %></h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <ul class="list-group list-group-flush">
+                  <% readings.each do |reading| %>
+                    <%= link_to reading, class: "list-group-item fw-thin tracking-widest text-uppercase" do %><%= reading.source %><% end %>
+                  <% end %>
+                </ul>
               </div>
             </div>
           </div>
         </div>
-      <% end %>
+      <% end %> <!-- End of if/else block -->
     <% end %>
   </div>
 </div>
 
 <% if user_signed_in? && current_user.admin? %>
-<div class="container-fluid admin-bar-reading p-5 position-relative ">
-  <div class="row">
-    <div class="col">
-      <%= link_to new_service_reading_path, class:"btn btn-success w-100", data: { turbolinks: false } do  %>
-        <i class="bi bi-plus"></i> 
-      <% end %>
+  <div class="container-fluid admin-bar-reading p-5 position-relative">
+    <div class="row">
+      <div class="col">
+        <%= link_to new_service_reading_path, class: "btn btn-success w-100", data: { turbolinks: false } do %>
+          <i class="bi bi-plus"></i>
+        <% end %>
+      </div>
     </div>
   </div>
-</div>
 <% end %>
-

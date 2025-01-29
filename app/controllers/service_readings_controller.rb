@@ -4,6 +4,7 @@ class ServiceReadingsController < ApplicationController
   # GET /service_readings or /service_readings.json
   def index
     @service_readings = ServiceReading.all
+
   end
 
   # GET /service_readings/1 or /service_readings/1.json
