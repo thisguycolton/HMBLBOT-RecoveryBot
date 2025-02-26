@@ -13,6 +13,7 @@ RUN apk add \
   nodejs \
   postgresql-dev
 WORKDIR /app
+RUN gem install nokogiri-1.18.3-x86_64-linux-musl
 RUN gem update --system && gem install bundler
 
 COPY --from=builder /usr/local/bundle/ /usr/local/bundle/
