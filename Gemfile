@@ -69,6 +69,7 @@ gem "simple_calendar"
 gem "image_processing", "~> 1.2"
 gem "ffi", force_ruby_platform: true
 gem "nokogiri"
+gem "aws-sdk-s3"
 
 gem 'tzinfo-data'
 
