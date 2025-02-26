@@ -24,9 +24,15 @@
               <% end %>
               <div class="pt-3">
                 <blockquote class="blockquote pb-2">
-                  <%= reading.content.body.to_html.truncate(500).html_safe %> <span class="fw-bold fst-italic"> 
-                    Read More
-                  </span>
+                  <% if reading.richer_content.id.present? %>
+                    <%= reading.richer_content.to_plain_text.truncate(500).html_safe %> <span class="fw-bold fst-italic"> 
+                      Read More
+                    </span>
+                  <% elsif reading.content.present? %>
+                    <%= reading.content.to_plain_text.truncate(500).html_safe %> <span class="fw-bold fst-italic">
+                        Read More
+                      </span>
+                  <% end %>
                 </blockquote>
               </div>
             </div>

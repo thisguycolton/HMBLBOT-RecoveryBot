@@ -5,4 +5,3 @@ window.Stimulus = Application.start()
 const context = require.context("controllers", true, /\.js$/)
 Stimulus.load(definitionsFromContext(context))
 
-Turbo.setFormMode("optin")

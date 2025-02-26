@@ -1,168 +1,194 @@
 <style>
-#reading_content {
-  font-family: Gentium Book Plus;
-  font-size: 20px !important;
-}
-#reading_content p{
-  font-size: 20px !important;
-}
+  #reading_content {
+    font-family: Gentium Book Plus;
+    font-size: 20px !important;
+  }
 
-#reading_title{
-  font-family: "Montserrat", sans-serif!important;
-  font-size: 40px !important;
-  font-weight: 700;
-}
+  #reading_content p {
+    font-size: 20px !important;
+  }
 
-trix-editor{
-  min-height:200px;
-  border: 0px solid #bbb;
-}
+  #reading_title {
+    font-family: "Montserrat", sans-serif !important;
+    font-size: 40px !important;
+    font-weight: 700;
+  }
 
-#reading_source{
-  font-family: "Montserrat", sans-serif!important;
-  font-size: 20px !important;
-  font-style: italic;
-}
-#reading_topic{
-  font-family: "Montserrat", sans-serif!important;
-  font-size: 20px !important;
-}
+  trix-editor {
+    min-height: 200px;
+    border: 0px solid #bbb;
+  }
 
+  #reading_source {
+    font-family: "Montserrat", sans-serif !important;
+    font-size: 20px !important;
+    font-style: italic;
+  }
+
+  #reading_topic {
+    font-family: "Montserrat", sans-serif !important;
+    font-size: 20px !important;
+  }
+  .ProseMirror{
+    min-height: 300px!important;
+  }
 </style>
-
-<%= form_with(model: reading) do |form| %>
-<div class="row h-100 gx-0">
-  <div class="col-lg-4">
-    <div class="form-side-panel bg-jumbo-blue-dark overflow-y-hidden" style="margin-top:-1rem ">
-      <div class="col-md-8 col-lg-12 offset-md-2 offset-lg-0 px-2">
-        <div class="details-cont bg-jumbo-blue-light p-3">
-          <% if reading.errors.any? %>
-            <div style="color: red">
-              <h2><%= pluralize(reading.errors.count, "error") %> prohibited this reading from being saved:</h2>
-
-              <ul>
-                <% reading.errors.each do |error| %>
-                  <li><%= error.full_message %></li>
-                <% end %>
-              </ul>
-            </div>
-          <% end %>
-
-
-          <div class="mb-3">
-            <label for="meetingNameInput" class="form-label">Group Name:</label>
-            <%= form.text_field :meetingName, id: "meetingNameInput", class: "form-control", value: current_user.user_active_group.group.title %>
-          </div>
-
-          <div class="mb-3">
-            <label for="meetingURLInput" class="form-label">Meeting URL:</label>
-            <%= form.text_field :meetingUrl, id: "meetingURLInput", class: "form-control", value: current_user.user_active_group.group.meetingLink %>
-          </div>
-
-          <div class="mb-3">
-            <label for="meetingDateInput" class="form-label">Date of Meeting:</label>
-            <div class="input-group date" data-date-format="mm/dd/yyyy" data-date="04/10/1955">
-              <%= form.date_field :meetingDate, id: "meetingDateInput", class: "form-control"  %>
-            </div>
-          </div>
-          <div class="mb-3">
-            <label for="meetingTimeInput" class="form-label">Time of Meeting:</label>
-            <div class="timepicker input-group">
-              <select class="hour form-control" name="reading[hour]">
-                <%= options_for_select((1..12).to_a, reading.meetingTime ? reading.meetingTime.strftime('%l').to_i : nil) %>
-              </select>
-              <span class="colon input-group-text fw-bold">:</span>
-              <select class="minute form-control" name="reading[minute]" >
-                <%= options_for_select(['00', '15', '30', '45'], reading.meetingTime ? reading.meetingTime.strftime('%M').to_i : nil) %>
-              </select>
-              <select class="meridiem form-control" name="reading[meridiem]" >
-                <%= options_for_select(['AM', 'PM'], reading.meetingTime ? reading.meetingTime.strftime('%p') : nil) %>
-              </select>
-              <span class="input-group-text px-3"><i class="bi bi-clock"></i></span>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="hostInput" class="form-label">Host:</label>
-            <%= form.text_field :host, id: "hostInput", class: "form-control", value: current_user.name %>
-          </div>
-          <p class="d-inline-flex gap-1">
-            <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
-              <span class="fs-5">Attach Poll</span> <i class="bi bi-clipboard-check"></i> 
-            </a>
-          </p>
-          <div class="collapse" id="collapseExample">
-            <div class="card card-body mb-3" style="max-height: 21vh; overflow: scroll;">
-            <% unless @polls.nil? %>
-              <% @polls.each do |poll| %>
-                <input type="radio" class="btn-check" name="options-base" id="option<%=poll.id%>" autocomplete="off">
-                <label class="btn btn-outline-dark mb-3" for="option<%=poll.id%>"> 
-                    <div class="list-group list-group-flush">
-                      <% poll.options.each_with_index do |op, i| %>
-                        <% topic = Topic.find(op.topic_id) %>
-                          <li class="list-group-item list-group-item-light">
-                          <%= topic.title %>
-                          </li>
-                      <% end %>
-                    </div >
-                    <hr class="border border-dark border-1 opacity-25 mb-1">
-                <em class="mb-4">created <%= time_ago_in_words(poll.created_at) %> ago</em>
-                
-                </label>
-              <% end %>
+<%= form_with(model: reading, local: true, html: {class: 'needs-validation', novalidate: 'true'}) do |form| %>
+  <div class="row h-100 gx-0">
+    <div class="col-lg-4">
+      <div class="form-side-panel bg-jumbo-blue-dark overflow-y-hidden" style="margin-top:-1rem ">
+        <div class="col-md-8 col-lg-12 offset-md-2 offset-lg-0 px-2">
+          <div class="details-cont bg-jumbo-blue-light p-3">
+            <% if reading.errors.any? %>
+              <div style="color: red">
+                <h2>
+                  <%= pluralize(reading.errors.count, "error" ) %> prohibited this reading from being saved:
+                </h2>
+                <ul>
+                  <% reading.errors.each do |error| %>
+                    <li>
+                      <%= error.full_message %>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
             <% end %>
+            <div class="mb-3">
+              <label for="meetingNameInput" class="form-label">Group Name:</label>
+              <%= form.text_field :meetingName, id: "meetingNameInput" , class: "form-control" , value: current_user.user_active_group.group.title, required: "true" %>
             </div>
+            <div class="mb-3">
+              <label for="meetingURLInput" class="form-label">Meeting URL:</label>
+              <%= form.text_field :meetingUrl, id: "meetingURLInput" , class: "form-control" , value: current_user.user_active_group.group.meetingLink, required: "true" %>
+            </div>
+            <div class="mb-3">
+              <label for="meetingDateInput" class="form-label">Date of Meeting:</label>
+              <div class="input-group date" data-date-format="mm/dd/yyyy" data-date="04/10/1955">
+                <%= form.date_field :meetingDate, id: "meetingDateInput" , class: "form-control", required: "true" %>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="meetingTimeInput" class="form-label">Time of Meeting:</label>
+              <div class="timepicker input-group">
+                <select class="hour form-control" name="reading[hour]">
+                  <%= options_for_select((1..12).to_a, reading.meetingTime ? reading.meetingTime.strftime('%l').to_i
+                        : nil) %>
+                </select>
+                <span class="colon input-group-text fw-bold">:</span>
+                <select class="minute form-control" name="reading[minute]">
+                  <%= options_for_select(['00', '15' , '30' , '45' ], reading.meetingTime ?
+                        reading.meetingTime.strftime('%M').to_i : nil) %>
+                </select>
+                <select class="meridiem form-control" name="reading[meridiem]", required>
+                  <%= options_for_select(['AM', 'PM' ], reading.meetingTime ? reading.meetingTime.strftime('%p') :
+                        nil) %>
+                </select>
+                <span class="input-group-text px-3"><i class="bi bi-clock"></i></span>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="hostInput" class="form-label">Host:</label>
+              <%= form.text_field :host, id: "hostInput" , class: "form-control" , value: current_user.name, required: "true" %>
+            </div>
+            <% if current_user.id==1 %>
+              <p class="d-inline-flex gap-1">
+                <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseExample" role="button"
+                      aria-expanded="false" aria-controls="collapseExample">
+                  <span class="fs-5">Attach Poll</span> <i class="bi bi-clipboard-check"></i>
+                </a>
+              </p>
+              <div class="collapse" id="collapseExample">
+                <div class="card card-body mb-3" style="max-height: 21vh; overflow: scroll;">
+                  <% unless @polls.nil? %>
+                    <% @polls.each do |poll| %>
+                      <input type="radio" class="btn-check" name="options-base" id="option<%=poll.id%>"
+                            autocomplete="off">
+                      <label class="btn btn-outline-dark mb-3" for="option<%=poll.id%>">
+                        <div class="list-group list-group-flush">
+                          <% poll.options.each_with_index do |op, i| %>
+                            <% topic=Topic.find(op.topic_id) %>
+                            <li class="list-group-item list-group-item-light">
+                              <%= topic.title %>
+                            </li>
+                          <% end %>
+                        </div>
+                        <hr class="border border-dark border-1 opacity-25 mb-1">
+                        <em class="mb-4">created <%= time_ago_in_words(poll.created_at) %> ago</em>
+                      </label>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+            <% if user_signed_in? %>
+              <div class="mb-0">
+                <%= button_tag(class: "btn btn-success btn-lg w-100" ) do %>
+                  <i class="bi bi-floppy fs-4 pe-3 align-baseline"></i>
+                  <span class="align-text-bottom ps-2 fw-normal tracking-widest">SAVE READING</span>
+                <% end %>
+              </div>
+            <% end %>
           </div>
-        <% if current_user.id == 1 %>
-          <div class="mb-0">
-              <%= button_tag(class: "btn btn-success btn-lg w-100") do %>
-                <i class="bi bi-floppy fs-4 pe-3 align-baseline"></i>
-                <span class="align-text-bottom ps-2 fw-normal tracking-widest">SAVE READING</span>
-              <% end %>
-            </div>
-          <% end %>
         </div>
       </div>
     </div>
-  </div>
-  <div class="col-lg-8">
-    <div class="reading-content-editor  container-fluid overflow-y-scroll">
+    <div class="col-lg-8">
+      <div class="reading-content-editor  container-fluid overflow-y-scroll">
         <div class="col-lg-12 order-lg-0 mt-2">
           <div class="editor-cont border border-0 mb-3">
             <div class="toolbar w-100"></div>
             <div class="mb-0">
-              <%= form.text_field :title, class: "form-control border border-0 tracking-widest text-uppercase fw-bold align-text-top w-100 fs-1 bg-light text-break ", placeholder: "Reading Title" %>
+              <%= form.text_field :title, class: "form-control border border-0 tracking-widest text-uppercase fw-bold align-text-top w-100 fs-1 bg-light text-break ", placeholder: "Reading Title", required: "true" %>
             </div>
             <div class="reading-container container-fluid p-0 shadow-sm pb-5 position-relative">
               <div class="mb-0">
-                <%= form.rich_text_area :content, placeholder: "Put your reading here..." %>
-
-                </div>
-
-              <div class="mb-3 d-inline">
-                <div class="d-inline fw-bold">-</div><%= form.text_field :source, class: "form-control w-75 border border-0 rounded-0 bg-light d-inline", placeholder: "Source of reading" %>
+                <% if reading.content.present? && reading.richer_content.id.nil? %>
+                  <%= form.rich_text_area :content, required: "true", value: reading.content.body %>
+                <% else %>
+                  <%= form.richer_text_area :richer_content, required: "true" %>
+                <% end %>
               </div>
-             </div>
-            </div>
-            <div class="my-3">
-              <h2 class="text-center display-5 pb-3 fw-bold text-uppercase">Example Topics For Sharing</h2>
-              <h3 class="mb-2 text-body-secondary text-center fs-3 tracking-widest"><em>Feel free to check in!</em></h3>
-              <div id="blank-toolbar" hidden></div>
-                <% if reading.topic.blank? %><%= form.rich_text_area :topic, value:"<ul><li> </li></ul>", toolbar: "blank-toolbar", class: "text-center" %><% else %><%= form.rich_text_area :topic, toolbar: "blank-toolbar", class: "text-center" %><% end %>
-              <div>
-
+              <div class="mb-3 d-flex">
+                <div class="d-inline fw-bold px-2"><i class="bi bi-subtract" style="font-size: 2em; color:rgb(61, 62, 62);"></i></div>
+                <%= form.text_field :source, class: "form-control w-100 border border-0 rounded-0 bg-light d-inline", placeholder: "Source of reading" %>
               </div>
             </div>
-            <%= form.hidden_field :user_id, value: current_user.id %>
-            <%= form.hidden_field :user_id, value: current_user.user_active_group.group.id %>
           </div>
+          <div class="my-3">
+            <h2 class="text-center display-5 pb-3 fw-bold text-uppercase">Example Topics For Sharing</h2>
+            <h3 class="mb-2 text-body-secondary text-center fs-3 tracking-widest"><em>Feel free to check in!</em></h3>
+            <div id="blank-toolbar" hidden></div>
+            <% if reading.topic.blank? %>
+              <%= form.rich_text_area :topic, value:"<ul>
+                <li> </li>
+                </ul>", toolbar: "blank-toolbar", class: "text-center" %><% else %>
+              <%= form.rich_text_area :topic, toolbar: "blank-toolbar" , class: "text-center" %>
+            <% end %>
+            <div>
+            </div>
+          </div>
+          <%= form.hidden_field :user_id, value: current_user.id %>
+          <%= form.hidden_field :user_id, value: current_user.user_active_group.group.id %>
         </div>
-
+      </div>
     </div>
   </div>
 </div>
 <% end %>
-
-
-
+<script>
+  (() => {
+  'use strict'
+  // Fetch all the forms we want to apply custom Bootstrap validation styles to
+  const forms = document.querySelectorAll('.needs-validation')
+  // Loop over them and prevent submission
+  Array.from(forms).forEach(form => {
+  form.addEventListener('submit', event => {
+  if (!form.checkValidity()) {
+  event.preventDefault()
+  event.stopPropagation()
+  }
+  form.classList.add('was-validated')
+  }, false)
+  })
+  })()
 </script>

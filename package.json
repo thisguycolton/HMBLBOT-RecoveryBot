@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "@afomera/richer-text": "^2.1.0",
     "@hotwired/stimulus": "^3.2.2",
-    "cheerio": "^1.0.0-rc.12"
+    "cheerio": "^1.0.0-rc.12",
+    "highlight.js": "^11.11.1"
   }
 }

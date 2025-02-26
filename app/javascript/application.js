@@ -16,3 +16,5 @@ window.Stimulus.register("poll-countdown", PollCountdownController)
 
 const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
 const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+
+import "@afomera/richer-text"

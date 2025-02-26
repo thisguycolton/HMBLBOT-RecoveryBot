@@ -13,3 +13,4 @@ pin "@stimulus-components/sortable", to: "@stimulus-components--sortable.js" # @
 pin "sortablejs" # @1.15.3
 pin "popper", to: 'popper.js', preload: true
 pin "bootstrap", to: 'bootstrap.min.js', preload: true
+pin "@afomera/richer-text", to: "richer-text.js"
