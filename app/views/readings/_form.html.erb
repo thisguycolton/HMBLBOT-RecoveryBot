@@ -175,6 +175,7 @@
   </div>
 </div>
 <% end %>
+<div contenteditable="true" class="test-editor">Paste here</div>
 <script>
   (() => {
   'use strict'
@@ -191,4 +192,70 @@
   }, false)
   })
   })()
+</script>
+<script>
+  document.addEventListener('turbo:load', function() {
+  // Check if the editor already exists
+  let editor = document.querySelector('.tiptap.ProseMirror');
+  if (editor) {
+  attachPasteHandler(editor);
+  } else {
+  // If the editor doesn't exist yet, set up a MutationObserver
+  const observer = new MutationObserver(function(mutations, obs) {
+  editor = document.querySelector('.tiptap.ProseMirror');
+  if (editor) {
+  console.log('Editor found!');
+  attachPasteHandler(editor);
+  obs.disconnect(); // Stop observing once the editor is found
+  }
+  });
+  // Start observing the document body for changes
+  observer.observe(document.body, { childList: true, subtree: true });
+  }
+  });
+  function attachPasteHandler(editor) {
+  editor.addEventListener('paste', function(event) {
+  console.log('Paste event detected');
+  const pastedText = (event.clipboardData || window.clipboardData).getData('text');
+  console.log('Pasted content:', pastedText);
+  event.preventDefault();
+  const formattedText = removeUnnecessaryLineBreaks(pastedText);
+  insertTextAtCursor(formattedText);
+  });
+  }
+  function removeUnnecessaryLineBreaks(text) {
+  // Replace single line breaks with a space
+  let formattedText = text.replace(/([^\n])\n([^\n])/g, '$1 $2');
+  // Preserve structural line breaks (e.g., double line breaks)
+  formattedText = formattedText.replace(/\n{2,}/g, '\n\n');
+  return formattedText;
+  }
+  function insertTextAtCursor(text) {
+  const editor = document.querySelector('.tiptap.ProseMirror');
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+  const range = selection.getRangeAt(0);
+  range.deleteContents(); // Remove any selected text
+  const textNode = document.createTextNode(text);
+  range.insertNode(textNode);
+  // Move the cursor to the end of the inserted text
+  range.setStartAfter(textNode);
+  range.setEndAfter(textNode);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  }
+  }
+</script>
+<script>
+  document.addEventListener('turbo:load', function() {
+  setTimeout(function() {
+  const editor = document.querySelector('.tiptap.ProseMirror');
+  if (editor) {
+  console.log('Editor found after delay');
+  attachPasteHandler(editor);
+  } else {
+  console.error('Editor still not found!');
+  }
+  }, 1000); // Adjust the delay as needed
+  });
 </script>
