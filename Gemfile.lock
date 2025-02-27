@@ -116,6 +116,8 @@ GEM
     benchmark (0.4.0)
     bigdecimal (3.1.9)
     bindex (0.8.1)
+    bootsnap (1.18.4)
+      msgpack (~> 1.2)
     bootstrap (5.3.3)
       autoprefixer-rails (>= 9.1.0)
       popper_js (>= 2.11.8, < 3)
@@ -196,6 +198,7 @@ GEM
       logger
     mini_mime (1.1.5)
     minitest (5.25.4)
+    msgpack (1.8.0)
     net-imap (0.5.6)
       date
       net-protocol
@@ -371,6 +374,7 @@ DEPENDENCIES
   ahoy_captain
   ahoy_matey
   aws-sdk-s3
+  bootsnap
   bootstrap
   capybara
   debug
