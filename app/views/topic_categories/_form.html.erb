@@ -1,0 +1,58 @@
+<%= form_with(model: topic_category) do |form| %>
+  <% if topic_category.errors.any? %>
+    <div style="color: red">
+      <h2><%= pluralize(topic_category.errors.count, "error") %> prohibited this topic_category from being saved:</h2>
+
+      <ul>
+        <% topic_category.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="mb-3">
+    <%= form.label :title, style: "display: block" %>
+    <%= form.text_field :title, class: "form-control" %>
+  </div>
+
+    <div class="form-group mt-3">
+      <%= form.label :icon_id, "Select Icon" %>
+        <div class="icon-grid bg-dark p-3 rounded">
+          <% Icon.all.each do |icon| %>
+            <div class="icon-option" data-icon-id="<%= icon.id %>">
+              <%= image_tag icon.file_path, alt: icon.name, class: "img-fluid" %>
+            </div>
+            <% end %>
+        </div>
+        <%= form.hidden_field :icon_id, id: "selected_icon_id" %>
+    </div>
+  
+  <!-- Hidden input to store the selected icon -->
+  <%= form.hidden_field :icon, id: "selectedIcon" %>
+    <div class="my-3">
+      Selected Icon: <i id="selectedIconPreview" class="bi"></i>
+    </div>
+  <div>
+    <%= form.submit "Submit", class: "btn btn-lg btn-primary" %>
+  </div>
+<% end %>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const iconOptions = document.querySelectorAll(".icon-option");
+    const selectedIconIdField = document.getElementById("selected_icon_id");
+
+    iconOptions.forEach((icon) => {
+      icon.addEventListener("click", () => {
+        // Remove the 'selected' class from all icons
+        iconOptions.forEach((opt) => opt.classList.remove("selected"));
+
+        // Add the 'selected' class to the clicked icon
+        icon.classList.add("selected");
+
+        // Set the selected icon's ID in the hidden field
+        selectedIconIdField.value = icon.dataset.iconId;
+      });
+    });
+  });
+</script>

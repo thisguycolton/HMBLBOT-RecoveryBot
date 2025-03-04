@@ -14,3 +14,11 @@ pin "sortablejs" # @1.15.3
 pin "popper", to: 'popper.js', preload: true
 pin "bootstrap", to: 'bootstrap.min.js', preload: true
 pin "@afomera/richer-text", to: "richer-text.js"
+pin "pixi.js" # @8.8.1
+pin "@pixi/colord", to: "@pixi--colord.js" # @2.9.6
+pin "@pixi/colord/plugins/names", to: "@pixi--colord--plugins--names.js" # @2.9.6
+pin "@xmldom/xmldom", to: "@xmldom--xmldom.js" # @0.8.10
+pin "earcut" # @2.2.4
+pin "eventemitter3" # @5.0.1
+pin "ismobilejs" # @1.1.1
+pin "parse-svg-path" # @0.1.2

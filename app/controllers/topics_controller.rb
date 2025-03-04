@@ -13,8 +13,24 @@ class TopicsController < ApplicationController
     end
   end
 
+  def by_category
+    @topic_category = TopicCategory.find_by(id: params[:topic_category_id])
+    if @topic_category
+      @topics = @topic_category.topics
+      render json: @topics
+    else
+      render json: { error: "Topic category not found" }, status: :not_found
+    end
+  end
+
   # GET /topics/1 or /topics/1.json
   def show
+  @topic = Topic.find_by(id: params[:id])
+  if @topic
+    render json: @topic
+  else
+    render json: { error: "Topic not found" }, status: :not_found
+  end
   end
 
   # GET /topics/new
@@ -72,6 +88,6 @@ class TopicsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def topic_params
-      params.require(:topic).permit(:title, :searchable_number, :subtitle, :link)
+      params.require(:topic).permit(:title, :searchable_number, :subtitle, :link, :topic_category_id)
     end
 end

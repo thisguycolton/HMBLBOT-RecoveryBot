@@ -6,6 +6,10 @@ class PagesController < ApplicationController
     @pages = Page.all
   end
 
+  def game
+
+  end
+
   # GET /pages/1 or /pages/1.json
   def show
     @book = Book.find(params[:book_id])

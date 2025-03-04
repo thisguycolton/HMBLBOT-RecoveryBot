@@ -1,0 +1,13 @@
+<h1>Icon Picker</h1>
+
+<%= form_with url: select_icon_path, method: :post do |form| %>
+  <div class="icon-grid">
+    <% @icons.each do |icon| %>
+      <label class="icon-option">
+        <%= form.radio_button :icon_id, icon.id %>
+          <%= image_tag icon.file_path, alt: icon.name, class: "icon-image" %>
+      </label>
+      <% end %>
+  </div>
+  <%= form.submit "Select Icon" %>
+<% end %>

@@ -1,4 +1,5 @@
 class Topic < ApplicationRecord
+  belongs_to :topic_category, optional: true
   def sub_long?
     subtitle.present? && subtitle.length > 20
   end

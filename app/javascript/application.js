@@ -18,3 +18,14 @@ const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]
 const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 
 import "@afomera/richer-text"
+
+document.addEventListener("DOMContentLoaded", () => {
+  const iconOptions = document.querySelectorAll(".icon-option");
+
+  iconOptions.forEach((option) => {
+    option.addEventListener("click", () => {
+      iconOptions.forEach((opt) => opt.classList.remove("selected"));
+      option.classList.add("selected");
+    });
+  });
+});

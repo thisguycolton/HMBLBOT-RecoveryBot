@@ -429,3 +429,27 @@ trix-toolbar {
 	/* hi-res laptops and desktops */
 }
 
+// Test Icon Styles
+.icon-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+	gap: 10px;
+	margin-bottom: 20px;
+}
+
+.icon-option {
+	border: 2px solid transparent;
+	border-radius: 8px;
+	padding: 10px;
+	cursor: pointer;
+	text-align: center;
+	transition: border-color 0.3s ease;
+
+	&:hover {
+		border-color: #007bff;
+	}
+
+	&.selected {
+		border-color: #28a745;
+	}
+}

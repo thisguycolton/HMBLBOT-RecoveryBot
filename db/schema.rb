@@ -10,9 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2025_02_26_200442) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_04_010456) do
   # These are extensions that must be enabled in order to support this database
-  enable_extension "plpgsql"
+  enable_extension "pg_catalog.plpgsql"
 
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
@@ -138,6 +138,14 @@ ActiveRecord::Schema[7.0].define(version: 2025_02_26_200442) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "icons", force: :cascade do |t|
+    t.string "name"
+    t.string "file_path"
+    t.string "category"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "meetings", force: :cascade do |t|
     t.timestamptz "datetime"
     t.string "host"
@@ -228,6 +236,15 @@ ActiveRecord::Schema[7.0].define(version: 2025_02_26_200442) do
     t.string "icon"
   end
 
+  create_table "topic_categories", force: :cascade do |t|
+    t.string "title"
+    t.string "icon"
+    t.string "cat"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "icon_id"
+  end
+
   create_table "topics", force: :cascade do |t|
     t.string "title"
     t.string "searchable_number"
@@ -235,6 +252,8 @@ ActiveRecord::Schema[7.0].define(version: 2025_02_26_200442) do
     t.datetime "updated_at", null: false
     t.string "subtitle"
     t.string "link"
+    t.bigint "topic_category_id"
+    t.index ["topic_category_id"], name: "index_topics_on_topic_category_id"
   end
 
   create_table "user_active_groups", force: :cascade do |t|
@@ -273,6 +292,7 @@ ActiveRecord::Schema[7.0].define(version: 2025_02_26_200442) do
   add_foreign_key "pages", "books"
   add_foreign_key "readings", "groups"
   add_foreign_key "readings", "users"
+  add_foreign_key "topics", "topic_categories"
   add_foreign_key "user_active_groups", "groups"
   add_foreign_key "user_active_groups", "users"
 end

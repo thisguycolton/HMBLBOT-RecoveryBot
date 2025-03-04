@@ -19,6 +19,12 @@
     <%= form.text_field :subtitle, class: "form-control" %>
     <label><%= t("activerecord.attributes.topic.subtitle") %></label>
   </div>
+    <div class="form-floating mb-4">
+      <%= form.select :topic_category_id, options_from_collection_for_select(TopicCategory.all, :id, :title), {}, class: "form-control" %>
+        <label>
+          <%= t("activerecord.attributes.topic.category") %>
+        </label>
+    </div>
 
   <div>
     <%= form.submit "Save", class: "btn btn-primary w-100" %>

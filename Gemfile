@@ -28,7 +28,7 @@ gem "stimulus-rails"
 gem "jbuilder"
 
 #search
-gem 'ransack'
+gem 'ransack', :github => 'activerecord-hackery/ransack', :branch => 'main'
 
 #PDF Reader
 gem 'pdf-reader'
@@ -69,9 +69,6 @@ gem "image_processing", "~> 1.2"
 gem "ffi", force_ruby_platform: true
 gem "nokogiri"
 gem "aws-sdk-s3"
-
-gem 'tzinfo-data'
-
 gem "sentry-ruby"
 gem "sentry-rails"
 gem 'flash_rails_messages'
@@ -104,3 +101,4 @@ gem "devise", "~> 4.9"
 gem "bootstrap"
 gem "sassc-rails"
 gem "richer_text"
+gem 'vite_rails'

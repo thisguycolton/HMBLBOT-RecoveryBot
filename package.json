@@ -3,6 +3,15 @@
     "@afomera/richer-text": "^2.1.0",
     "@hotwired/stimulus": "^3.2.2",
     "cheerio": "^1.0.0-rc.12",
-    "highlight.js": "^11.11.1"
+    "highlight.js": "^11.11.1",
+    "pixi.js": "^8.8.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.14",
+    "vite-plugin-ruby": "^5.1.1"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
   }
 }

@@ -1,7 +1,10 @@
 Rails.application.routes.draw do
+  resources :topic_categories
   resources :service_readings
   resources :user_active_groups, only: %i[create update]
-
+  resources :icons, only: [:index, :show]
+  get 'game/game'
+  get 'topics/by_category', to: 'topics#by_category'
   resources :groups do
     resources :meetings
   end

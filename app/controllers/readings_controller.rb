@@ -3,7 +3,13 @@ class ReadingsController < ApplicationController
 
   # GET /readings or /readings.json
   def index
-    @readings = Reading.all.order(meetingDate: :desc)
+    @q = Reading.ransack(params[:q])
+    unless params[:q].nil?
+      @readings = @q.result(distinct: true).order(meetingDate: :desc)
+    else
+      @readings = Reading.all.order(meetingDate: :desc)
+    end
+
   end
 
   # GET /readings/1 or /readings/1.json
