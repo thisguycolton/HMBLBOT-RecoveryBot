@@ -13,15 +13,22 @@ class TopicsController < ApplicationController
     end
   end
 
-  def by_category
-    @topic_category = TopicCategory.find_by(id: params[:topic_category_id])
-    if @topic_category
-      @topics = @topic_category.topics
-      render json: @topics
-    else
-      render json: { error: "Topic category not found" }, status: :not_found
-    end
+def by_category
+  category_id = params[:topic_category_id]
+  exclude_ids = params[:exclude_ids]&.split(',')&.map(&:to_i)
+  exclude_ids ||= []  # Ensure exclude_ids is an empty array if nil
+
+  # Find topics for the category excluding used ones
+  topics = Topic.where(topic_category_id: category_id)
+  topics = topics.where.not(id: exclude_ids) unless exclude_ids.empty?
+
+  if topics.any?
+    render json: topics.sample
+  else
+    render json: { error: "No available topics" }, status: :not_found
   end
+end
+
 
   # GET /topics/1 or /topics/1.json
   def show

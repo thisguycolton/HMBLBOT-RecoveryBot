@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_04_010456) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_07_202931) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -182,6 +182,29 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_04_010456) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "quest_inventories", force: :cascade do |t|
+    t.bigint "quest_session_id", null: false
+    t.text "items"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["quest_session_id"], name: "index_quest_inventories_on_quest_session_id"
+  end
+
+  create_table "quest_players", force: :cascade do |t|
+    t.string "screen_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "quest_sessions", force: :cascade do |t|
+    t.bigint "quest_player_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "join_code"
+    t.jsonb "game_state"
+    t.index ["quest_player_id"], name: "index_quest_sessions_on_quest_player_id"
+  end
+
   create_table "readings", force: :cascade do |t|
     t.string "title"
     t.datetime "created_at", null: false
@@ -290,6 +313,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_04_010456) do
   add_foreign_key "meetings", "groups"
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
+  add_foreign_key "quest_inventories", "quest_sessions"
+  add_foreign_key "quest_sessions", "quest_players"
   add_foreign_key "readings", "groups"
   add_foreign_key "readings", "users"
   add_foreign_key "topics", "topic_categories"

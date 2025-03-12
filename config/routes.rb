@@ -1,4 +1,27 @@
 Rails.application.routes.draw do
+  namespace :api do
+    namespace :v1 do
+      # Quest Players
+      resources :quest_players, only: [:create, :show, :index, :update, :destroy] do
+        resources :quest_sessions, only: [:index, :create, :destroy]
+        collection do
+          post :create_by_screen_name
+        end
+      end
+
+      # Quest Sessions
+      resources :quest_sessions, only: [:create, :show, :index, :update, :destroy] do
+        resources :quest_inventory, only: [:show, :update], singleton: true
+      end
+
+      # Join Session by Code
+      post '/join_session', to: 'quest_sessions#join_by_code'
+
+      # Health Check
+      get '/health', to: 'health#check'
+    end
+  end
+
   resources :topic_categories
   resources :service_readings
   resources :user_active_groups, only: %i[create update]

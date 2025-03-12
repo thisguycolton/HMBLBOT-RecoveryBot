@@ -2,8 +2,13 @@
   "dependencies": {
     "@afomera/richer-text": "^2.1.0",
     "@hotwired/stimulus": "^3.2.2",
+    "@pixi/loaders": "^6.5.10",
+    "@pixi/sound": "^6.0.1",
+    "@pixi/tilemap": "^5.0.1",
     "cheerio": "^1.0.0-rc.12",
     "highlight.js": "^11.11.1",
+    "phaser": "^3.88.2",
+    "pixi-filters": "^6.1.0",
     "pixi.js": "^8.8.1"
   },
   "devDependencies": {

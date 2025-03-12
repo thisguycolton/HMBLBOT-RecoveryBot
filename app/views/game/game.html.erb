@@ -1,9 +1,54 @@
+<style>
+  #login-screen {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
+
+  #session-list {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
+
+  #game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+</style>
+
 <link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/webfont/1.6.28/webfontloader.js"></script>
 <!-- filepath: /home/colton/Projects/acid-test/acid-test/app/views/game/game.html.erb -->
-<div data-controller="game" data-game-topics-url-value="/topics.json"
-  data-game-topic-categories-url-value="/topic_categories.json">
-  <!-- The PixiJS canvas will be appended here -->
+<div data-controller="game" data-game-topics-url-value="/topics.json" data-game-topic-categories-url-value="/topic_categories.json" id="game-container" >
+  <!-- The PHASER canvas will be appended here -->
+</div>
+<div id="login-screen" style="display: none;">
+  <h2>Welcome to the Adventure Game</h2>
+  <input type="text" id="screen-name" placeholder="Enter your screen name...">
+  <button id="join-button">Join Game</button>
+</div>
+
+<div id="session-list" style="display: none;">
+  <h2>Your Sessions</h2>
+  <div id="session-list-container"></div>
+  <button id="create-session">Create New Session</button>
 </div>
 
 <%= vite_javascript_tag 'controllers/game_controller.js' %>
