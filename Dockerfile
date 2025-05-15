@@ -4,15 +4,15 @@ ARG RUBY_VERSION=3.2.3
 FROM ruby:${RUBY_VERSION}-alpine AS builder
 RUN apk add \
   build-base \
-  postgresql-dev
+  postgresql-dev \
+  git
 COPY Gemfile* ./
 RUN bundle install
 FROM ruby:3.2.3-alpine AS runner
 RUN apk add \
   tzdata \
   nodejs \
-  postgresql-dev \
-  git
+  postgresql-dev
 WORKDIR /app
 RUN gem update --system && gem install bundler
 
