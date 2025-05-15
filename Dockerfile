@@ -11,7 +11,8 @@ FROM ruby:3.2.3-alpine AS runner
 RUN apk add \
   tzdata \
   nodejs \
-  postgresql-dev
+  postgresql-dev \
+  git
 WORKDIR /app
 RUN gem update --system && gem install bundler
 
