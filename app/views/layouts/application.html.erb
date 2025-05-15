@@ -30,7 +30,8 @@
     <link href="https://cdn.quilljs.com/1.3.6/quill.bubble.css" rel="stylesheet" crossorigin="anonymous">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
     <script src="https://browser.sentry-cdn.com/7.98.0/bundle.feedback.min.js" integrity="sha384-NpOcpdAPzCsJu3aC74l3WEnozN+9J0mmJLmnzQu2mxr2t3XpLuaVKi6K+CVPjOG5" crossorigin="anonymous"></script>
-
+    <%= vite_client_tag %>
+      <%= vite_javascript_tag 'application' %>
     <!--
       If using a TypeScript entrypoint file:
         vite_typescript_tag 'application'
