@@ -10,7 +10,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        application: 'app/javascript/application.js', // Update this line
+        application: 'app/javascript/entrypoints/application.js', // Update this line
       },
     },
   },
