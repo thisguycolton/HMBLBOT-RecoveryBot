@@ -2,6 +2,13 @@
 "schemaVersion": 2,
 "preDeploy": [
 {
+"id": "vite-build",
+"name": "Vite Build",
+"script": [
+"bin/vite build"
+]
+},
+{
 "id": "precompile-assets",
 "name": "Precompile Assets",
 "script": [
