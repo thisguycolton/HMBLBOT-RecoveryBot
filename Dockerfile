@@ -22,4 +22,4 @@ COPY ./ ./
 
 EXPOSE 3000
 
-CMD ["bundle", "exec", "rails", "s", "-b", "0.0.0.0"]
+CMD bin/vite dev & bundle exec rails s -b 0.0.0.0
