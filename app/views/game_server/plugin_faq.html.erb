@@ -1,0 +1,368 @@
+<script>
+  async function loadServerStatus() {
+    const res = await fetch("https://api.mcstatus.io/v2/status/java/mc.humblebot.io");
+    const data = await res.json();
+
+    const statusBox = document.getElementById("server-status");
+    if (!data || !data.online) {
+      statusBox.innerHTML = `<span class="text-danger">🔴 Server Offline</span>`;
+    } else {
+      const players = data.players.online;
+      const max = data.players.max;
+      statusBox.innerHTML = `
+        <div class="w-100 bg-success "><span class="text-light">Server Online</span></div><br>
+        <span class="fw-bold">${data.motd.clean}</span<br>
+        <div class="w-100 bg-info mt-4"><span class="text-light">Players: ${players}/${max}</span></div>
+      `;
+    }
+  }
+
+  loadServerStatus();
+</script>
+
+
+<style>
+      .accordion-body {
+      background-color: #e2ecf5;
+    }
+    .nav-tabs {
+      border-bottom: none;
+      justify-content: center;
+    }
+    .nav-tabs .nav-link {
+      border: none;
+      border-radius: 0;
+      padding: 0.75rem 1.5rem;
+      font-weight: 500;
+      color: #0d6efd;
+    }
+
+    @font-face {
+      font-family: 'Monocraft';
+      src: url('https://raw.githubusercontent.com/IdreesInc/Monocraft/main/dist/Monocraft.ttf') format('truetype');
+    }
+    #server-status {
+  background-color: #f1f3f5;
+  font-family: 'Monocraft', monospace;
+  font-size: 1.0rem;
+  border-radius: 6px;
+  padding: 0rem;
+  max-width: 360px;
+  margin: auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+}
+
+</style>
+<div class="container-fluid bg-jumbo-blue-light border-bottom shadow-sm">
+  <div class="row">
+    <div class="col-md-4 text-center py-3 order-md-5">
+      <div class="container py-4 text-center">
+        <div id="server-status" class="fw-bold text-muted">Checking...</div>
+      </div>
+    </div>
+    <div class="col-md-8 text-center pt-5 pb-0 mb-0">
+      <h1 class="display-4"> Minecraft Server FAQ</h1>
+      <p class="lead">Frequently Asked Questions about the plugins for our Minecraft Server</p>
+      <ul class="nav nav-tabs justify-content-center pt-3">
+        <li class="nav-item">
+          <a class="nav-link" href="/game_server/getting_started">Getting Started</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="#">FAQ</a>
+        </li>
+        </ul>
+    </div>
+  </div>
+
+</div>
+<div class="container py-5">
+  <div class="accordion" id="faqAccordion">
+    <!-- GriefDefender -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q12">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a12">
+          How do I protect my land with GriefDefender?
+        </button>
+      </h2>
+      <div id="a12" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          Use a golden shovel to right-click two corners of the area you want to claim. You get blocks to claim over
+          time.
+          View claims with <code>/claimslist</code>, and trust others with <code>/trust [player]</code>.
+        </div>
+      </div>
+      </div>
+    <!-- Invisible Item Frames -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q1">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a1">
+          How do I use invisible item frames?
+        </button>
+      </h2>
+      <div id="a1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          Just place an item frame and shift + right-click it with an item to make the frame invisible. The item inside
+          will still show.
+        </div>
+      </div>
+    </div>
+
+    <!-- mcMMO -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q2">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a2">
+          What is mcMMO and how do I level up skills?
+        </button>
+      </h2>
+      <div id="a2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          mcMMO adds RPG-like skills (like mining, fishing, swords) that level up as you use them. Use
+          <code>/mcstats</code> to see your progress.
+        </div>
+      </div>
+    </div>
+
+    <!-- PostOffice -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q3">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a3">
+          How do I send items to another player with the Post Office?
+        </button>
+      </h2>
+      <div id="a3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          Use a postbox or type <code>/mail send [player]</code> while holding the item. They can check their mail with
+          <code>/mailbox</code>.
+        </div>
+      </div>
+    </div>
+
+    <!-- ChestShop - Buy Shop -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q4">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a4">
+          How do I create a shop using ChestShop?
+        </button>
+      </h2>
+      <div id="a4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          Place a chest and fill it with the item you want to sell or buy. Then place a sign above or next to the chest
+          with this format:
+          <br><br>
+          <strong>To Sell to Others:</strong>
+          <pre>
+YourName
+Amount
+B Price
+ItemName
+          </pre>
+          <strong>To Buy from Others:</strong>
+          <pre>
+YourName
+Amount
+S Price
+ItemName
+          </pre>
+          <ul>
+            <li><code>B</code> = players buy from you (you sell)</li>
+            <li><code>S</code> = players sell to you (you buy)</li>
+          </ul>
+          After placing the sign, right-click the chest to link it.
+        </div>
+      </div>
+    </div>
+
+    <!-- AuctionHouse -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q5">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a5">
+          How do I sell items in the Auction House?
+        </button>
+      </h2>
+      <div id="a5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          Hold the item and use <code>/ah sell [price]</code>. To view auctions, use <code>/ah</code>.
+        </div>
+      </div>
+    </div>
+
+    <!-- BackpackPlus -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q6">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a6">
+          How do I craft backpacks?
+        </button>
+      </h2>
+      <div id="a6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          <style>
+            .crafting-table {
+              border-collapse: collapse;
+              margin-bottom: 1rem;
+            }
+          
+            .crafting-table td {
+              width: 48px;
+              height: 48px;
+              padding: 2px;
+              text-align: center;
+            }
+          
+            .crafting-table img {
+              width: 40px;
+              height: 40px;
+              object-fit: contain;
+            }
+          </style>
+          
+          <strong>Iron Backpack</strong><br>
+          <table class="crafting-table">
+            <tr>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/334_Leather.png" alt="Leather"></td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/265_Iron Ingot.png" alt="Iron Ingot">
+              </td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/334_Leather.png" alt="Leather"></td>
+            </tr>
+            <tr>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/265_Iron Ingot.png" alt="Iron Ingot">
+              </td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/54_Chest.png" alt="Chest"></td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/265_Iron Ingot.png" alt="Iron Ingot">
+              </td>
+            </tr>
+            <tr>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/42_Iron Block.png" alt="Iron Block">
+              </td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/265_Iron Ingot.png" alt="Iron Ingot">
+              </td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/42_Iron Block.png" alt="Iron Block">
+              </td>
+            </tr>
+          </table>
+          
+          <strong>Gold Backpack</strong><br>
+          <table class="crafting-table">
+            <tr>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/334_Leather.png" alt="Leather"></td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/266_Gold Ingot.png" alt="Gold Ingot">
+              </td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/334_Leather.png" alt="Leather"></td>
+            </tr>
+            <tr>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/266_Gold Ingot.png" alt="Gold Ingot">
+              </td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/54_Chest.png" alt="Chest"></td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/266_Gold Ingot.png" alt="Gold Ingot">
+              </td>
+            </tr>
+            <tr>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/41_Gold Block.png" alt="Gold Block">
+              </td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/266_Gold Ingot.png" alt="Gold Ingot">
+              </td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/41_Gold Block.png" alt="Gold Block">
+              </td>
+            </tr>
+          </table>
+          <strong>Diamond Backpack</strong><br>
+          <table class="crafting-table">
+            <tr>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/334_Leather.png" alt="Leather"></td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/264_Diamond.png" alt="Diamond"></td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/334_Leather.png" alt="Leather"></td>
+            </tr>
+            <tr>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/264_Diamond.png" alt="Diamond"></td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/54_Chest.png" alt="Chest"></td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/264_Diamond.png" alt="Diamond"></td>
+            </tr>
+            <tr>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/57_Diamond Block.png"
+                  alt="Diamond Block"></td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/264_Diamond.png" alt="Diamond"></td>
+              <td><img src="https://raw.githubusercontent.com/undrfined/mc-icons/master/pics/57_Diamond Block.png"
+                  alt="Diamond Block"></td>
+            </tr>
+          </table>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ChatItem -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q7">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a7">
+          How do I show an item in chat?
+        </button>
+      </h2>
+      <div id="a7" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          Type <code>[item]</code> in chat while holding an item. It will display the item to others.
+        </div>
+      </div>
+    </div>
+
+    <!-- EssentialsX -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q8">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a8">
+          What useful commands can I use from EssentialsX?
+        </button>
+      </h2>
+      <div id="a8" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          Try <code>/spawn</code>, <code>/home</code>, <code>/sethome</code>, <code>/tpa</code>, and <code>/warp</code>.
+          These make traveling and social play easier.
+        </div>
+      </div>
+    </div>
+
+    <!-- HeadDatabase / HeadsPlus -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q9">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a9">
+          How do I get decorative heads?
+        </button>
+      </h2>
+      <div id="a9" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          Use <code>/hdb</code> to browse decorative heads. Some heads also drop from mobs using HeadsPlus.
+        </div>
+      </div>
+    </div>
+
+    <!-- Quarry -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q10">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a10">
+          How do I build and use a quarry?
+        </button>
+      </h2>
+      <div id="a10" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          Craft a quarry and place it down. It will automatically mine blocks in a set area over time. Use
+          <code>/quarry</code> for help.
+        </div>
+      </div>
+    </div>
+
+    <!-- Networks -->
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q11">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a11">
+          How do Networks work?
+        </button>
+      </h2>
+      <div id="a11" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          Networks allow you to wirelessly link inventories or machines. Use special blocks to connect things and move
+          items automatically.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+

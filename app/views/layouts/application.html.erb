@@ -62,19 +62,23 @@
                 <% end %>
               </li>
               <li class="nav-item justify-content-start border-start" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="NEW FEATURE">
-                <%= link_to service_readings_url, class:"nav-link text-uppercase position-relative me-4" do %>
+                <%= link_to service_readings_url, class:"nav-link text-uppercase position-relative" do %>
                   <span class="<% if current_page?('/service_readings') %> fw-semibold <% end %>"> Service Readings </span>
-                    <span class="position-absolute top-50 start-100 translate-middle p-2 ms-2 bg-success border border-light rounded-circle">
-                      <span class="visually-hidden">New page!</span>
-                    </span>
                   </span>
                 <% end %>
               </li>
-              <li class="nav-item justify-content-start border-start">
-                <%= link_to host_helper_scratchpaper_url, class:"nav-link text-uppercase" do %>
-                  <span class="<% if current_page?('/host_helper/scratchpaper') %> fw-semibold text-black <% end %>"> <i class="bi bi-clipboard-heart-fill"></i> </span>
-                <% end %>
-              </li>
+              <li class="nav-item dropdown  border-start">
+                <a class="nav-link dropdown-toggle text-uppercase position-relative me-4" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Extras
+                </a>
+                <ul class="dropdown-menu">
+                  <li><%= link_to host_helper_scratchpaper_url, class:"nav-link text-uppercase" do %>
+                    <span class="<% if current_page?('/host_helper/scratchpaper') %> fw-semibold text-black <% end %>"> Host Helper </span>
+                    <% end%></li>
+                  <li><%= link_to game_server_getting_started_url, class:"nav-link text-uppercase" do %>
+                    <span class="<% if current_page?('/game_server/faq') %> fw-semibold text-black <% end %>"> Minecraft Server </span>
+                    <% end %></li>
+                </ul> </li>
             </ul>
               <div class="d-flex">
               <% if user_signed_in? %>
@@ -177,4 +181,5 @@
       </div>
     </div>
   </body>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </html>

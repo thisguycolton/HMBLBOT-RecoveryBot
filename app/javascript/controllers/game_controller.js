@@ -21,6 +21,8 @@ export default class extends Controller {
     this.animationInProgress = false;
     this.points = 5;
     this.usedTopics = [];
+    this.grid = new Map(); // Initialize grid here
+
   }
 
     connect() {
@@ -204,33 +206,40 @@ async reloadSessionList(container = null) {
   
 async joinSession(session) {
   try {
-    console.log('Starting joinSession with session:', session);
-    this.currentSession = session;
-    this.hideSessionList();
-    
-    console.log('Fetching topic categories...');
-    const categories = await this.fetchTopicCategories();
-    console.log('Topic categories fetched:', categories);
-
-    console.log('Initializing game...');
+    console.log("Starting joinSession with session:", session);
+    console.log("Initializing game...");
     await this.initializeGame();
+    console.log("Game initialized. Switching to LoadingScene...");
 
-    if (this.scene) {
-      this.scene.topicCategories = categories;
-      this.scene.loadIcons();
+    // Get the loading scene and pass the controller reference
+    const loadingScene = this.game.scene.getScene("LoadingScene");
+    if (loadingScene) {
+      loadingScene.controller = this; // Attach GameController reference
     } else {
-      console.error('Scene is not available for loading icons');
+      console.warn("LoadingScene not found.");
     }
 
-    console.log('Game initialized. Loading saved game state...');
-    await this.loadSavedGameState(session.id);
-    
-    console.log('Game state loaded. Proceeding...');
+    // Store session ID so LoadingScene can access it
+    loadingScene.registry.set("sessionId", session.id);
+
+    // Switch to LoadingScene
+    this.game.scene.start("LoadingScene");
   } catch (error) {
-    console.error('Error in joinSession:', error);
+    console.error("Error in joinSession:", error);
   }
 }
 
+
+
+
+generateJoinCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 4; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
 
 async createSession() {
   try {
@@ -295,8 +304,6 @@ async loadSavedGameState(sessionId) {
     console.log('Starting to load game state for session ID:', sessionId);
     this.isLoading = true;
 
-    // Wait for game to be ready
-    console.log('Checking if game is initialized...');
     await this.initializeGame();
 
     if (!this.scene) {
@@ -304,7 +311,7 @@ async loadSavedGameState(sessionId) {
       return;
     }
 
-    console.log('Scene is available, proceeding to fetch session data...');
+    console.log('Fetching session data...');
     const response = await fetch(`/api/v1/quest_sessions/${sessionId}`);
 
     if (!response.ok) {
@@ -315,50 +322,46 @@ async loadSavedGameState(sessionId) {
     const data = await response.json();
     console.log('Session data received:', data);
 
-    // Process the game state here
     const gameState = data.game_state;
+    const gridEntries = Object.entries(gameState.grid);
+    const grid = new Map();
 
-    if (gameState.grid) {
-      console.log('Processing grid data...');
-      const gridEntries = Object.entries(gameState.grid);
-      const grid = new Map();
+    gridEntries.forEach(([key, tileData]) => {
+      const [x, y] = key.split(',').map(Number);
+      const topicCategory = tileData.topicCategory 
+        ? this.scene.topicCategories.get(tileData.topicCategory.title) 
+        : null;
 
-      gridEntries.forEach(([key, tileData]) => {
-        const [x, y] = key.split(',').map(Number);
-        const tile = {
-          key,
-          x,
-          y,
-          type: tileData.type,
-          visited: tileData.visited,
-          unlocked: tileData.unlocked,
-          canBeWater: tileData.canBeWater,
-          isStructure: tileData.isStructure,
-          structureId: tileData.structureId,
-          size: tileData.size,
-          topicCategory: tileData.topicCategory ? {
-            id: tileData.topicCategory.id,
-            title: tileData.topicCategory.title
-          } : null
-        };
-        grid.set(key, tile);
-      });
+      const tile = {
+        key,
+        x,
+        y,
+        type: tileData.type,
+        visited: tileData.visited,
+        unlocked: tileData.unlocked,
+        canBeWater: tileData.canBeWater,
+        isStructure: tileData.isStructure,
+        structureId: tileData.structureId,
+        size: tileData.size,
+        topicCategory: topicCategory, // ✅ Assign topic category
+      };
+      grid.set(key, tile);
+    });
 
-      console.log('Grid size after loading:', grid.size);
+    console.log('Grid size after loading:', grid.size);
 
-      if (this.scene) {
-        console.log('Passing grid to Phaser scene...');
-        if (this.scene.grid) {
-          console.log('Clearing old grid before loading new session...');
-          this.scene.clearGrid(); // Call a function in GameScene to clear the previous grid
-        }
-        this.scene.grid = grid;
-        this.scene.renderGrid();
-      }
+    if (this.scene) {
+      this.scene.grid = grid;
+      this.scene.renderGrid();
     }
 
     this.usedTopics = gameState.usedTopics || [];
     this.currentPosition = gameState.current_position || { x: 0, y: 0 };
+
+    if (this.scene && this.scene.centerCameraOnCurrentTile) {
+      this.scene.centerCameraOnCurrentTile(false); // false = no animation
+    }
+
     this.points = gameState.points || 5;
     this.inventory = gameState.inventory || {};
 
@@ -370,56 +373,49 @@ async loadSavedGameState(sessionId) {
   }
 }
 
-async fetchTopicCategories() {
-  try {
-    const response = await fetch('/topic_categories.json');
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    this.topicCategories = data;
-    return data;
-  } catch (error) {
-    console.error("Error fetching topic categories:", error);
-    return [];
-  }
-}
+
 
 async initializeGame() {
   if (this.game) return;
 
-  console.log('Initializing Phaser game...');
-  
+  console.log("Initializing Phaser game...");
+
   const config = {
     type: Phaser.WEBGL,
     width: window.innerWidth,
     height: window.innerHeight,
-    backgroundColor: '#1099bb',
+    backgroundColor: "#1099bb",
     scene: [LoadingScene, GameScene],
-    parent: 'game-container',
+    parent: "game-container",
     resizeTo: window,
     scaleMode: Phaser.Scale.RESIZE_TO_FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH
+    autoCenter: Phaser.Scale.CENTER_BOTH,
   };
 
   this.game = new Phaser.Game(config);
-  
-  console.log('Phaser game created. Waiting for ready event...');
-  
-  return new Promise(resolve => {
+
+  console.log("Phaser game created. Waiting for ready event...");
+
+  return new Promise((resolve) => {
     this.game.events.once(Phaser.Core.Events.READY, () => {
-      console.log('Phaser game is ready');
-      this.game.scene.start('LoadingScene');
-      
-      // Give the scene some time to initialize
-      setTimeout(() => {
-        this.scene = this.game.scene.getScene('GameScene');
-        console.log('Scene reference:', this.scene);
-        resolve();
-      }, 1000);
+      console.log("Phaser game is ready");
+      this.game.scene.start("LoadingScene");
+
+      // Wait for GameScene to be created
+      const checkSceneInterval = setInterval(() => {
+        this.scene = this.game.scene.getScene("GameScene");
+        if (this.scene) {
+          console.log("GameScene is fully loaded:", this.scene);
+          clearInterval(checkSceneInterval);
+          resolve();
+        }
+      }, 100);
     });
   });
 }
+
+
+
   getCsrfToken() {
     return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
   }

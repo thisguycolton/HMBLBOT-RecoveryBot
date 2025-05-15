@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  get "game_server/getting_started"
+  get "game_server/plugin_faq"
   namespace :api do
     namespace :v1 do
       # Quest Players

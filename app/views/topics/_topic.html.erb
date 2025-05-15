@@ -1,7 +1,7 @@
 <div id="<%= dom_id topic %>" class="col">
   <div class="card my-5 mx-md-3 position-relative overflow-hidden">
     <h2><span class="position-absolute top-0 start-0 ms-4 mt-3 ps-5 translate-middle badge bg-jumbo-purple shadow rounded-0 rounded-bottom-2"><span class="fw-light">#</span><%= topic.searchable_number %></span></h2>
-    <% if topic.topic_category.present? %><h2><a href="<%= topic_category_path(topic.topic_category_id) %>" class="link-underline link-underline-opacity-0 position-absolute bottom-0 end-0 me-2 mb-2 badge bg-primary shadow z-2"><span class="bi <%= topic.topic_category.icon %> pe-3"></span><%= topic.topic_category.title %></a></h2><% end %>
+    <% if topic.topic_category.present? %><h2><a href="<%= topic_category_path(topic.topic_category_id) %>" class="link-underline link-underline-opacity-0 position-absolute bottom-0 end-0 me-2 ms-1 mb-2 badge bg-primary shadow z-2"><%= image_tag topic.topic_category.icon.file_path, class: "me-3 pt-0" %><%= topic.topic_category.title %></a></h2><% end %>
 
     <div class="position-absolute top-0 end-0 m-2 overflow-x-hidden">
       <input type="text" value="#<%= topic.searchable_number %>: <%= topic.title %>" id="topic_<%= topic.id %>_copy" class="d-none">

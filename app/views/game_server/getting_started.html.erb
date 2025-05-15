@@ -1,0 +1,141 @@
+<script>
+  async function loadServerStatus() {
+    const res = await fetch("https://api.mcstatus.io/v2/status/java/mc.humblebot.io");
+    const data = await res.json();
+
+    const statusBox = document.getElementById("server-status");
+    if (!data || !data.online) {
+      statusBox.innerHTML = `<span class="text-danger">🔴 Server Offline</span>`;
+    } else {
+      const players = data.players.online;
+      const max = data.players.max;
+      statusBox.innerHTML = `
+        <div class="w-100 bg-success "><span class="text-light">Server Online</span></div><br>
+        <span class="fw-bold">${data.motd.clean}</span<br>
+        <div class="w-100 bg-info mt-4"><span class="text-light">Players: ${players}/${max}</span></div>
+      `;
+    }
+  }
+
+  loadServerStatus();
+</script>
+
+
+<style>
+  .accordion-body {
+    background-color: #e2ecf5;
+  }
+
+  .nav-tabs {
+    border-bottom: none;
+    justify-content: center;
+  }
+
+  .nav-tabs .nav-link {
+    border: none;
+    border-radius: 0;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    color: #0d6efd;
+  }
+
+  @font-face {
+    font-family: 'Monocraft';
+    src: url('https://raw.githubusercontent.com/IdreesInc/Monocraft/main/dist/Monocraft.ttf') format('truetype');
+  }
+
+  #server-status {
+    background-color: #f1f3f5;
+    font-family: 'Monocraft', monospace;
+    font-size: 1.0rem;
+    border-radius: 6px;
+    padding: 0rem;
+    max-width: 360px;
+    margin: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  }
+</style>
+
+<div class="container-fluid bg-jumbo-blue-light border-bottom shadow-sm">
+  <div class="row">
+    <div class="col-md-4 text-center py-3 order-md-5">
+      <div class="container py-4 text-center">
+        <div id="server-status" class="fw-bold text-muted">Checking...</div>
+      </div>
+    </div>
+    <div class="col-md-8 text-center pt-5 pb-0 mb-0">
+      <h1 class="display-4">Getting Started</h1>
+      <p class="lead">Join our Minecraft server and connect with the community!</p>
+      <ul class="nav nav-tabs justify-content-center pt-3">
+        <li class="nav-item">
+          <a class="nav-link active" href="#">Getting Started</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/game_server/plugin_faq">FAQ</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="container py-5">
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">🌐 Server Info</h5>
+      <p><strong>IP Address:</strong> <code>mc.humblebot.io</code></p>
+      <p><strong>Port:</strong><br>
+        Java: <code>25565</code><br>
+        Bedrock: <code>19132</code></p>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">💻 Java Edition (PC/Mac)</h5>
+      <ol>
+        <li>Install from <a href="https://www.minecraft.net/" target="_blank">minecraft.net</a></li>
+        <li>Launch and log in</li>
+        <li>Click <strong>"Multiplayer"</strong> > <strong>"Add Server"</strong></li>
+        <li>Enter server name and <code>mc.humblebot.io</code></li>
+        <li>Click <strong>Done</strong>, then <strong>Join</strong></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">📱 Bedrock Edition (Mobile, Win10/11, Xbox, PS, Switch)</h5>
+      <h6>Windows 10/11:</h6>
+      <ol>
+        <li>Launch Minecraft</li>
+        <li>Play > Servers > Add Server</li>
+        <li>Name: AA Server<br>Address: <code>mc.humblebot.io</code><br>Port: <code>19132</code></li>
+      </ol>
+      <h6>iOS / Android:</h6>
+      <ol>
+        <li>Open Minecraft</li>
+        <li>Play > Servers > Add Server</li>
+        <li>Name: AA Server<br>Address: <code>mc.humblebot.io</code><br>Port: <code>19132</code></li>
+      </ol>
+      <h6>Xbox / PS / Switch:</h6>
+      <p>These platforms don’t support custom servers natively.</p>
+      <ul>
+        <li>Option 1: Use <a href="https://geysermc.org/switch/" target="_blank">GeyserConnect</a></li>
+        <li>Option 2: Use DNS workaround or mobile hotspot + custom DNS</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">🧭 Rules and Tips</h5>
+      <ul>
+        <li>Be kind and respectful — this is a safe space for recovery and fun.</li>
+        <li>No griefing, stealing, or toxicity.</li>
+        <li>Meeting spaces and builds may be reserved — ask for a tour!</li>
+      </ul>
+    </div>
+  </div>
+</div>
