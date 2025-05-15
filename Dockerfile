@@ -2,6 +2,8 @@
 ARG RUBY_VERSION=3.2.3
 
 FROM ruby:${RUBY_VERSION}-alpine AS builder
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
+  apk add nodejs build-essential
 RUN apk add \
   build-base \
   postgresql-dev \
