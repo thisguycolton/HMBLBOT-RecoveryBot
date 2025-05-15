@@ -6,7 +6,6 @@ RUN apk add \
   build-base \
   postgresql-dev \
   git \
-  build-essential \
   nodejs
 COPY Gemfile* ./
 RUN bundle install
