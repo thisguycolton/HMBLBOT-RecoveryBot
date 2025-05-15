@@ -8,22 +8,7 @@
             An index of the meeting readings and topics.
           </p>
           <p>
-            <%= search_form_for @q do |f| %>
-              <div class="input-group mb-3">
-                <%= f.search_field :richer_content_body_cont, class: "form-control" , placeholder: "Type search terms here..." %>
-                  <%= button_tag class: "btn bg-jumbo-teal-light" do %>
-                    <i class="bi bi-search"></i>
-                    <span class="align-text-bottom ps-2">SEARCH</span>
-                    <% end %>
-              </div>
-                <% end %>
-                <% topics = Topic.order("RANDOM()").limit(10).pluck(:id, :title) %>
-                <% topics.each do |id, title| %>
-                  <div class="topic">
-                    <p>ID: <%= id %></p>
-                    <p>Title: <%= title %></p>
-                  </div>
-                <% end %>
+
           </p>
         </span>
       </div>
