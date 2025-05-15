@@ -10,7 +10,9 @@ class Reading < ApplicationRecord
   def self.ransackable_associations(auth_object = nil)
     ["richer_content", "content"]
   end
-
+  ransacker :richer_content_body do |parent|
+    Arel.sql("(SELECT body FROM action_text_rich_texts WHERE action_text_rich_texts.record_type = 'Reading' AND action_text_rich_texts.record_id = readings.id AND action_text_rich_texts.name = 'richer_content')")
+  end
   attr_accessor :hour, :minute, :meridiem
 
   after_validation :parse_time
