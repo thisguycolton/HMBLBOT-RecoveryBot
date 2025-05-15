@@ -6,7 +6,7 @@ export default defineConfig({
     RubyPlugin(),
   ],
   build: {
-    outDir: 'public/assets',
+    outDir: 'public/vite',
     emptyOutDir: true,
     rollupOptions: {
       input: {
