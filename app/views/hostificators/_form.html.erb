@@ -1,0 +1,83 @@
+<%= form_with model: @hostificator, class: "needs-validation", local: true do |f| %>
+  <div class="mb-3">
+    <label for="meetingDateInput" class="form-label">Meeting Date</label>
+    <input type="date"
+           id="meetingDateInput"
+           class="form-control"
+           value="<%= @hostificator.meeting_date_time&.to_date %>">
+  </div>
+
+  <div class="mb-3">
+    <label for="meetingTimeInput" class="form-label">Meeting Time</label>
+    <input type="time"
+           id="meetingTimeInput"
+           class="form-control"
+           value="<%= @hostificator.meeting_date_time&.strftime("%H:%M") %>">
+  </div>
+
+  <%= f.hidden_field :meeting_date_time, id: "meetingDateTimeCombined" %>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const dateInput = document.getElementById("meetingDateInput");
+      const timeInput = document.getElementById("meetingTimeInput");
+      const combinedInput = document.getElementById("meetingDateTimeCombined");
+
+      function updateCombined() {
+        const date = dateInput.value;
+        const time = timeInput.value;
+        if (date && time) {
+          combinedInput.value = new Date(`${date}T${time}`).toISOString();
+        }
+      }
+
+      dateInput.addEventListener("change", updateCombined);
+      timeInput.addEventListener("change", updateCombined);
+      updateCombined(); // set initial value
+    });
+  </script>
+
+  <h4 class="mb-4">Host Proposals</h4>
+<div class="row g-4">
+  <%= f.fields_for :host_props do |ff| %>
+    <div class="col-md-4">
+      <div class="card p-3 shadow-sm h-100">
+        <div class="mb-2">
+          <%= ff.label :name, "Host Name", class: "form-label" %>
+          <%= ff.text_field :name, class: "form-control" %>
+        </div>
+        <div class="mb-2">
+          <%= ff.label :proposed_meeting, "Proposed Meeting Format", class: "form-label" %>
+          <%= ff.text_field :proposed_meeting, class: "form-control" %>
+        </div>
+        <div>
+          <%= ff.check_box :_destroy %>
+          <%= ff.label :_destroy, "Remove this proposal" %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% (3 - @hostificator.host_props.size).times do %>
+    <div class="col-md-4">
+      <%= f.fields_for :host_props, HostProp.new do |ff| %>
+        <div class="card p-3 shadow-sm h-100 bg-light">
+          <div class="mb-2">
+            <%= ff.label :name, "Host Name", class: "form-label" %>
+            <%= ff.text_field :name, class: "form-control" %>
+          </div>
+          <div class="mb-2">
+            <%= ff.label :proposed_meeting, "Proposed Meeting Format", class: "form-label" %>
+            <%= ff.text_field :proposed_meeting, class: "form-control" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+
+  <div class="text-center mt-4">
+    <%= f.submit class: "btn btn-success" %>
+  </div>
+<% end %>

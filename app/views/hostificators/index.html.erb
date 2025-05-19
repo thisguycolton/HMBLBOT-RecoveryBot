@@ -1,0 +1,20 @@
+<p style="color: green"><%= notice %></p>
+
+<% content_for :title, "Hostificators" %>
+
+<h1>Hostificators</h1>
+
+<div id="hostificators">
+  <% if @hostificators.empty? %>
+    <p>No hostificators found.</p>
+  <% else %>
+    <% @hostificators.each do |hostificator| %>
+      <%= render hostificator %>
+      <p>
+        <%= link_to "Show this hostificator", hostificator %>
+      </p>
+    <% end %>
+  <% end %>
+</div>
+
+<%= link_to "New hostificator", new_hostificator_path %>

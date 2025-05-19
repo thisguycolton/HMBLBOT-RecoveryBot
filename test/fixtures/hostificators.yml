@@ -1,0 +1,7 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  meeting_date_time: 2025-05-18 17:45:02
+
+two:
+  meeting_date_time: 2025-05-18 17:45:02

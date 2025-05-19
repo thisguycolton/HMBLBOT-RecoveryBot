@@ -1,0 +1,60 @@
+<div class="container-fluid bg-jumbo-blue-dark p-5">
+  <h1 class="display-3 text-light text-center" id="animateMe">
+    <span class="text-blue-light tracking-wide fw-semibold">
+      THE
+    </span>
+    <span class="tracking-widest fw-light">
+      HOSTIFICATOR
+    </span>
+    <span class="fw-light tracking-tighter text-blue-light ms-0">
+      <%= @hostificator.id + 2000 %>
+    </span>
+  </h1>
+</div>
+
+<div class="container mt-5">
+
+  <h2 class="mb-4 text-center">
+    Vote on the Meeting Plan for
+    <span class="text-primary">
+      <%= @hostificator.meeting_date_time.strftime("%A, %B %d at %I:%M %p") %>
+    </span>
+  </h2>
+
+  <% if @voted %>
+    <div class="alert alert-success text-center">
+      You've already voted in this poll. Thank you!
+    </div>
+    <% else %>
+      <%= form_with url: vote_hostificator_path(@hostificator), method: :post, class: "mt-4" do %>
+        <div class="row g-4">
+          <% @hostificator.host_props.each do |prop| %>
+            <div class="col-md-4">
+              <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                  <div class="form-check">
+                    <%= radio_button_tag :host_prop_id, prop.id, false, class: "form-check-input" ,
+                      id: "prop_#{prop.id}" %>
+                      <%= label_tag "prop_#{prop.id}" , nil, class: "form-check-label" do %>
+                        <h5 class="card-title mb-1">
+                          <%= prop.name %>
+                        </h5>
+                        <p class="card-text text-muted">
+                          <%= prop.proposed_meeting %>
+                        </p>
+                        <% end %>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <% end %>
+        </div>
+
+        <div class="text-center mt-4">
+          <%= submit_tag "Submit Vote" , class: "btn btn-primary btn-lg" %> <% if user_signed_in? %> <%= link_to "Edit Poll" , edit_hostificator_path(@hostificator), class: "btn btn-primary btn-lg" %> <% end %>
+        </div>
+        <% end %>
+    <% end %>
+
+
+</div>

@@ -8,6 +8,9 @@ application.load(definitionsFromContext(context))
 
 import { Controller } from "@hotwired/stimulus"
 import Sortable from '@stimulus-components/sortable'
+import DatetimeController from "./datetime_controller"
+
+application.register("datetime", DatetimeController)
 
 const application = Application.start()
 application.register('sortable', Sortable)

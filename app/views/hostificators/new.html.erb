@@ -1,0 +1,18 @@
+<div class="container mt-5">
+  <p style="color: green"><%= notice %></p>
+
+  <% content_for :title, "New hostificator" %>
+  
+    <h1>New Hostificator</h1>
+  
+    <%= render "form" , hostificator: @hostificator %>
+  
+    <br>
+
+    <div>
+      <%= link_to "Back to hostificators" , hostificators_path %>
+    </div>
+
+</div>
+
+

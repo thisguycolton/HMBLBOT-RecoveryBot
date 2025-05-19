@@ -1,0 +1,30 @@
+<div class="container mt-5">
+  <h2 class="mb-4 text-center">
+    Results for <%= @hostificator.meeting_date_time.strftime("%A, %B %d at %I:%M %p") %>
+  </h2>
+
+  <% if @total_votes==0 %>
+    <div class="alert alert-info text-center">
+      No votes have been cast yet.
+    </div>
+    <% else %>
+      <% @results.each do |r| %>
+        <% percentage=((r[:vote_count].to_f / @total_votes) * 100).round(1) %>
+          <div class="mb-3">
+            <h5>
+              <%= r[:prop].name %> – <%= r[:prop].proposed_meeting %>
+            </h5>
+            <div class="progress">
+              <div class="progress-bar bg-success" role="progressbar" style="width: <%= percentage %>%;"
+                aria-valuenow="<%= percentage %>" aria-valuemin="0" aria-valuemax="100">
+                <%= percentage %>% (<%= r[:vote_count] %> vote<%= "s" if r[:vote_count] !=1 %>)
+              </div>
+            </div>
+          </div>
+          <% end %>
+            <% end %>
+
+              <div class="mt-4 text-center">
+                <%= link_to "Back to Poll" , @hostificator, class: "btn btn-outline-secondary" %>
+              </div>
+</div>

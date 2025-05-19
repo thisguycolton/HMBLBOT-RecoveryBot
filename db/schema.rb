@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_07_202931) do
+ActiveRecord::Schema[8.0].define(version: 2025_05_19_005849) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -134,6 +134,34 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_07_202931) do
     t.string "website"
     t.boolean "remote"
     t.string "meetingLink"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "host_props", force: :cascade do |t|
+    t.string "name"
+    t.string "proposed_meeting"
+    t.bigint "hostificator_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hostificator_id"], name: "index_host_props_on_hostificator_id"
+  end
+
+  create_table "host_votes", force: :cascade do |t|
+    t.string "session_id"
+    t.bigint "hostificator_id", null: false
+    t.bigint "host_prop_id", null: false
+    t.integer "weight", default: 1
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["host_prop_id"], name: "index_host_votes_on_host_prop_id"
+    t.index ["hostificator_id"], name: "index_host_votes_on_hostificator_id"
+    t.index ["session_id", "hostificator_id"], name: "index_host_votes_on_session_id_and_hostificator_id", unique: true
+  end
+
+  create_table "hostificators", force: :cascade do |t|
+    t.datetime "meeting_date_time"
+    t.time "poll_closes_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
@@ -310,6 +338,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_07_202931) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "chapters", "books"
+  add_foreign_key "host_props", "hostificators"
+  add_foreign_key "host_votes", "host_props"
+  add_foreign_key "host_votes", "hostificators"
   add_foreign_key "meetings", "groups"
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"

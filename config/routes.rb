@@ -1,4 +1,17 @@
 Rails.application.routes.draw do
+  resources :hostificators do
+    member do
+      get :results
+      post :vote
+    end
+  end
+
+
+  resources :hostificators, only: [:new, :create, :show] do
+    post :vote, on: :member
+  end
+
+
   get "game_server/getting_started"
   get "game_server/plugin_faq"
   namespace :api do
