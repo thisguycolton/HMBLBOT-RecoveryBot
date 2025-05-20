@@ -9,9 +9,13 @@ module AdminPanel
     end
 
     def confirm
-      user = User.find(params[:id])
-      user.update(confirmed: true)
-      redirect_to admin_panel_users_path, notice: "User #{user.email} has been confirmed."
+      @user = User.find(params[:id])
+      if @user.update(confirmed: true)
+        UserMailer.approval_notification(@user).deliver_later
+        redirect_to admin_panel_users_path, notice: 'User approved and notified.'
+      else
+        redirect_to admin_panel_users_path, alert: 'Could not approve user.'
+      end
     end
 
     private

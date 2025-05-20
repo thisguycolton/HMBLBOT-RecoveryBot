@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Password Changed</title>
+  <title>Account Approved</title>
   <style>
     body {
       margin: 0;
@@ -31,6 +31,17 @@
       margin: 1rem 0;
     }
 
+    a.button {
+      display: inline-block;
+      background-color: #111827;
+      color: #ffffff !important;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 1rem;
+    }
+
     .footer {
       font-size: 0.8rem;
       color: #6b7280;
@@ -41,19 +52,15 @@
 
 <body>
   <div class="container">
-    <h1>Password Changed</h1>
-    <p>Hello <%= @resource.email %>,</p>
+    <h1>You’re In 🎉</h1>
+    <p>Hello <%= @user.name || @user.email %>,</p>
 
     <p>
-      We're contacting you to let you know that your password has been changed.
+      Your HumbleBot account has been approved by a site administrator. You can now sign in and start using the app.
     </p>
 
     <p>
-      If you made this change, no further action is needed.
-    </p>
-
-    <p>
-      If you did not change your password, please reset it immediately and contact support.
+      <a href="https://aa.humblebot.io/users/sign_in" class="button">Log In Now</a>
     </p>
 
     <div class="footer">

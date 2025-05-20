@@ -1,7 +1,71 @@
-<p>Hello <%= @email %>!</p>
+<!DOCTYPE html>
+<html lang="en">
 
-<% if @resource.try(:unconfirmed_email?) %>
-  <p>We're contacting you to notify you that your email is being changed to <%= @resource.unconfirmed_email %>.</p>
-<% else %>
-  <p>We're contacting you to notify you that your email has been changed to <%= @resource.email %>.</p>
-<% end %>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Changed</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #111827;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      font-size: 1rem;
+      line-height: 1.5;
+      margin: 1rem 0;
+    }
+
+    .footer {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Email Change Notice</h1>
+    <p>Hello <%= @email %>,</p>
+
+    <% if @resource.try(:unconfirmed_email?) %>
+      <p>
+        We're contacting you to let you know that your email is in the process of being changed to <strong>
+          <%= @resource.unconfirmed_email %>
+        </strong>.
+      </p>
+      <p>
+        Please confirm the new email address to complete the change.
+      </p>
+      <% else %>
+        <p>
+          We're contacting you to let you know that your email has been successfully changed to <strong>
+            <%= @resource.email %>
+          </strong>.
+        </p>
+        <% end %>
+
+          <div class="footer">
+            Sent with ♥ by HumbleBot<br />
+            <a href="https://aa.humblebot.io">https://aa.humblebot.io</a>
+          </div>
+  </div>
+</body>
+
+</html>
