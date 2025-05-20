@@ -12,7 +12,7 @@ pin "@rails/request.js", to: "@rails--request.js.js" # @0.0.8
 pin "@stimulus-components/sortable", to: "@stimulus-components--sortable.js" # @5.0.1
 pin "sortablejs" # @1.15.3
 pin "popper", to: 'popper.js', preload: true
-pin "bootstrap", to: 'bootstrap.min.js', preload: true
+pin "bootstrap", to: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
 pin "@afomera/richer-text", to: "richer-text.js"
 pin "pixi.js" # @8.8.1
 pin "@pixi/colord", to: "@pixi--colord.js" # @2.9.6

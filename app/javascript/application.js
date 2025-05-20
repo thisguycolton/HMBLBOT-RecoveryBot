@@ -1,33 +1,40 @@
 import { Application } from "@hotwired/stimulus"
-import "popper"
-import "bootstrap"
-
+import * as bootstrap from "bootstrap"
 import "channels"
-// Initialize Stimulus application
+
+// ✅ Turbo-aware bootstrap support
+document.addEventListener("turbo:load", () => {
+  // Dropdowns
+  document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach((el) => {
+    new bootstrap.Dropdown(el)
+  })
+
+  // Tooltips
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+    new bootstrap.Tooltip(el)
+  })
+})
+
+// ✅ Stimulus
 window.Stimulus = Application.start()
 
-// Import all Stimulus controllers
+// Stimulus Controllers
 import DropdownController from "./controllers/dropdown_controller"
 window.Stimulus.register("dropdown", DropdownController)
 
-import PollCountdownController from "./controllers/poll_countdown_controller.js"
+import PollCountdownController from "./controllers/poll_countdown_controller"
 window.Stimulus.register("poll-countdown", PollCountdownController)
 
-//= require js.cookie
-//= require browser_timezone_rails/set_time_zone
-
-const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
-const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
-
+// ✅ Rich text
 import "@afomera/richer-text"
 
+// ✅ DOM-ready fallback for static JS
 document.addEventListener("DOMContentLoaded", () => {
-  const iconOptions = document.querySelectorAll(".icon-option");
-
+  const iconOptions = document.querySelectorAll(".icon-option")
   iconOptions.forEach((option) => {
     option.addEventListener("click", () => {
-      iconOptions.forEach((opt) => opt.classList.remove("selected"));
-      option.classList.add("selected");
-    });
-  });
-});
+      iconOptions.forEach((opt) => opt.classList.remove("selected"))
+      option.classList.add("selected")
+    })
+  })
+})
