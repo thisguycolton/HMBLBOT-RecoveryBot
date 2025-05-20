@@ -1,6 +1,8 @@
 import { Application } from "@hotwired/stimulus"
 import "popper"
 import "bootstrap"
+
+import "channels"
 // Initialize Stimulus application
 window.Stimulus = Application.start()
 

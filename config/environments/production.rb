@@ -92,4 +92,16 @@ Rails.application.configure do
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
   config.active_storage.service = :amazon
+  config.action_mailer.default_url_options = { host: 'humblebot.io', protocol: 'https' }
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.smtp_settings = {
+    address:              'smtp.mail.me.com',
+    port:                 587,
+    domain:               'hmblbot.com',
+    user_name:            ENV['APPLE_EMAIL'], # or your @icloud.com
+    password:             ENV['APPLE_PASSWORD'], # app-specific password
+    authentication:       'plain',
+    enable_starttls_auto: true
+  }
+
 end

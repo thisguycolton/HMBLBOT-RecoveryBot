@@ -71,4 +71,20 @@ config.assets.compile = true
   # Store files locally.
   config.active_storage.service = :local
 
+
+  config.action_cable.mount_path = "/cable"
+  config.action_cable.allowed_request_origins = [ /http:\/\/localhost:\d+/ ]
+  config.action_cable.disable_request_forgery_protection = true
+
+  config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
+config.action_mailer.delivery_method = :smtp
+config.action_mailer.smtp_settings = {
+  address:              'smtp.mail.me.com',
+  port:                 587,
+  domain:               'hmblbot.com',
+  user_name:            'support@hmblbot.com',   # or @me.com
+  password:             '',
+  authentication:       'plain',
+  enable_starttls_auto: true
+}
 end

@@ -51,6 +51,27 @@ class HostificatorsController < ApplicationController
     )
 
     if @host_vote.save
+      results = @hostificator.host_props.includes(:host_votes).map do |prop|
+        {
+          prop: prop,
+          vote_count: prop.host_votes.size
+        }
+      end
+
+      total_votes = results.sum { |r| r[:vote_count] }
+
+      ResultsChannel.broadcast_to(
+        @hostificator,
+        render_to_string(
+          partial: "hostificators/results",
+          locals: {
+            hostificator: @hostificator,
+            results: results,
+            total_votes: total_votes
+          }
+        )
+      )
+
       redirect_to results_hostificator_path(@hostificator), notice: "Vote submitted!"
     else
       redirect_to @hostificator, alert: "There was an issue with your vote."

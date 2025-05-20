@@ -50,7 +50,7 @@ Rails.application.routes.draw do
   resources :polls do
     resources :options
   end
-
+  mount ActionCable.server => '/cable'
   mount AhoyCaptain::Engine => '/ahoy_captain'
 
   resources :books do

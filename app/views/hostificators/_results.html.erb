@@ -1,0 +1,13 @@
+<% results.each do |r| %>
+  <% percentage=((r[:vote_count].to_f / total_votes) * 100).round(1) %>
+    <div class="mb-3">
+      <h5>
+        <%= r[:prop].name %> – <%= r[:prop].proposed_meeting %>
+      </h5>
+      <div class="progress">
+        <div class="progress-bar bg-success" style="width: <%= percentage %>%;">
+          <%= percentage %>% (<%= r[:vote_count] %> votes)
+        </div>
+      </div>
+    </div>
+<% end %>
