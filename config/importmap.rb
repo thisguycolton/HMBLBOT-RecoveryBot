@@ -22,6 +22,7 @@ pin "earcut" # @2.2.4
 pin "eventemitter3" # @5.0.1
 pin "ismobilejs" # @1.1.1
 pin "parse-svg-path" # @0.1.2
+pin "@afomera/richer-text", to: "richer-text.js"
 pin "@rails/actioncable", to: "actioncable.esm.js"
 pin "channels", preload: true
 pin_all_from "app/javascript/channels", under: "channels"
