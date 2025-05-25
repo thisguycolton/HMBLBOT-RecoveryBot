@@ -1,38 +1,26 @@
-ARG RUBY_VERSION=3.2.3
+# Dockerfile
 
-FROM ruby:${RUBY_VERSION}-alpine AS builder
+FROM ruby:3.2
 
-RUN apk add --no-cache \
-  build-base \
-  postgresql-dev \
-  git \
-  nodejs \
-  yarn # optional if any JS dependencies needed for e.g. Stimulus
+# Install dependencies
+RUN apt-get update -qq && apt-get install -y nodejs postgresql-client yarn
 
+# Set working directory
 WORKDIR /app
-COPY Gemfile* ./
+
+# Install bundler
+RUN gem install bundler
+
+# Copy Gemfiles and install gems
+COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
-FROM ruby:${RUBY_VERSION}-alpine AS runner
-
-RUN apk add --no-cache \
-  tzdata \
-  nodejs \
-  postgresql-dev
-
-WORKDIR /app
-
-RUN gem update --system && gem install bundler
-
-COPY --from=builder /usr/local/bundle/ /usr/local/bundle/
+# Copy entire app
 COPY . .
 
-# If you're using importmaps, skip assets:precompile
-RUN bundle exec rails importmap:install
+# Precompile assets and Vite build
+RUN bundle exec rails assets:precompile RAILS_ENV=production \
+  && bin/vite build
 
-# Optional: you can precompile views or run setup commands here
-# RUN bundle exec rails db:prepare
-
-EXPOSE 3000
-
-CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
+# Start the server (if using puma)
+CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
