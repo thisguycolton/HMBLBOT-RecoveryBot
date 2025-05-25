@@ -2,24 +2,35 @@
 
 FROM ruby:3.2.3
 
-# Install dependencies
-RUN apt-get update -qq && apt-get install -y nodejs postgresql-client yarn
+# Install system dependencies
+RUN apt-get update -qq && apt-get install -y \
+  build-essential \
+  libpq-dev \
+  curl \
+  git \
+  gnupg \
+  # Node.js + npm
+  nodejs \
+  npm \
+  # Yarn (optional but common)
+  && npm install --global yarn
 
 # Set working directory
 WORKDIR /app
 
-# Install bundler
-RUN gem install bundler
-
-# Copy Gemfiles and install gems
+# Install gems
 COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
-# Copy entire app
+# Install node modules before copying the rest
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
+
+# Copy the rest of the app
 COPY . .
 
-# Precompile assets and Vite build
-RUN bundle exec rails assets:precompile RAILS_ENV=production 
+# Build assets
+RUN bundle exec rails assets:precompile RAILS_ENV=production
 
-# Start the server (if using puma)
+# Start server
 CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
