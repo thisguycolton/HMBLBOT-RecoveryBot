@@ -19,8 +19,7 @@ RUN bundle install
 COPY . .
 
 # Precompile assets and Vite build
-RUN bundle exec rails assets:precompile RAILS_ENV=production \
-  && bin/vite build
+RUN bundle exec rails assets:precompile RAILS_ENV=production 
 
 # Start the server (if using puma)
 CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
