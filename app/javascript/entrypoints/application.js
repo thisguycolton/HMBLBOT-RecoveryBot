@@ -28,8 +28,6 @@ console.log('Visit the guide for more information: ', 'https://vite-ruby.netlify
 // import '~/index.css'
 import { Application } from '@hotwired/stimulus';
 import GameController from '../controllers/game_controller';
-import "richer_text"
-import "richer_text/styles"
 
 const stimulusApp = Application.start();
 stimulusApp.register('game', GameController);
