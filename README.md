@@ -12,7 +12,6 @@
 - 📚 **Literature Library** – Searchable collection of recovery readings
 - 📝 **Rich Text Editor** – Post and format meeting readings online
 - 🔒 **User Authentication** – Admin approval required for new accounts
-- 🎨 **Maglev CMS Integration** – Easy editing and layout customization
 
 ---
 
@@ -73,8 +72,6 @@
 🧱 Built With
 
     Ruby on Rails
-
-    MaglevCMS
 
     Stimulus.js
 
