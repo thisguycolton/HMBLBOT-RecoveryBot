@@ -23,8 +23,8 @@ COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
 # Install node modules before copying the rest
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+COPY package.json ./
+RUN npm install
 
 # Copy the rest of the app
 COPY . .
