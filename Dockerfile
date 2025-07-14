@@ -28,7 +28,7 @@ RUN npm install
 COPY . .
 
 # Build assets
-RUN bundle exec rails assets:precompile RAILS_ENV=production
+RUN yarn vite build
 
 # Start server
 CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
