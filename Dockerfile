@@ -1,5 +1,3 @@
-# Dockerfile
-
 FROM ruby:3.2.3
 
 # Install system dependencies
@@ -8,12 +6,12 @@ RUN apt-get update -qq && apt-get install -y \
   libpq-dev \
   curl \
   git \
-  gnupg \
-  # Node.js + npm
-  nodejs \
-  npm \
-  # Yarn (optional but common)
-  && npm install --global yarn
+  gnupg
+
+# Install Node.js 20.x and Yarn
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+  apt-get install -y nodejs && \
+  npm install -g yarn
 
 # Set working directory
 WORKDIR /app
