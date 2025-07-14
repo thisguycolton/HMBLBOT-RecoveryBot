@@ -1,5 +1,4 @@
   <%= vite_javascript_tag "entrypoints/topicificator.jsx" %>
-  <%= stylesheet_link_tag "tailwind" , data: { turbo_track: "reload" }%>
 
 <style>
   
@@ -26,5 +25,5 @@
   }
 
 </style>
-
+<%= vite_javascript_tag "entrypoints/topicificator.jsx" , data: { turbo_track: "reload" } %>
 <div id="topicificator-root" class="pt-5"></div>

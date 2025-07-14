@@ -8,6 +8,7 @@
     "@tabler/icons-react": "^3.34.0",
     "@tailwindcss/cli": "^4.1.11",
     "@tailwindcss/postcss": "^4.1.11",
+    "@tailwindcss/vite": "^4.1.11",
     "axios": "^1.10.0",
     "cheerio": "^1.0.0-rc.12",
     "framer-motion": "^12.23.3",
@@ -16,13 +17,18 @@
     "pixi-filters": "^6.1.0",
     "pixi.js": "^8.8.1",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "rollup": "^4.45.0",
+    "vite-plugin-rails": "^0.5.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
+    "tailwindcss-components": "^1.0.1",
+    "tailwindcss-preflight": "^1.0.1",
+    "tailwindcss-utilities": "^1.0.14",
     "vite": "^5.4.14",
     "vite-plugin-ruby": "^5.1.1"
   },
