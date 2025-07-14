@@ -124,14 +124,18 @@ function TopicificatorApp() {
       </motion.div>
     )}
   </AnimatePresence>
-  <button
-    onClick={() => setShowSettingsModal(true)}
-    className="fixed !bg-transparent !px-4 !py-4 rounded top-10 right-10 z-41 mt-5"
-  >
-    <IconSettings className="w-8 h-8" />
-  </button>
-  <div className="fixed bottom-0 w-full bg-transparent p-4 flex justify-center gap-4">
-    <div className="flex flex-wrap gap-2 justify-center mt-4 bg-cyan-950 rounded-lg p-4 shadow-lg">
+  <div className="fixed bottom-0 left-0 bg-transparent p-2 z-20">
+    <div className="flex flex-wrap gap-2 justify-center mt-4 bg-cyan-950/50 rounded-lg p-4 shadow-lg">
+      <button
+        onClick={() => setShowSettingsModal(true)}
+        className="!bg-cyan-950 px-4 py-2 rounded"
+      >
+        <IconSettings className="w-5 h-5" />
+      </button>
+    </div>
+  </div>
+  <div className="fixed bottom-0 w-full bg-transparent p-2 flex justify-center gap-4 z-19">
+    <div className="flex flex-wrap gap-2 justify-center mt-4 bg-cyan-950/50 rounded-lg p-4 shadow-lg">
       <button onClick={getRandomTopic} className="!bg-blue-600 px-4 py-2 rounded">
         <IconArrowsShuffle className="w-5 h-5" />
       </button>
@@ -200,15 +204,15 @@ function TopicificatorApp() {
         {showPreviousModal && (
           <div className="fixed top-0 left-0 w-full h-full bg-[rgba(0,0,0,0.8)] items-center flex justify-center z-40">
             <div className="bg-black text-light rounded-lg p-6 max-w-lg max-h-[80vh] overflow-y-auto shadow-xl">
-              <h2 className="text-2xl font-bold mb-4">Previously Shared Topics</h2>
-              <div className="grid gap-4">
+              <h2 className="!text-1xl font-bold mb-4 ttSans">Previously Shared Topics</h2>
+              <div className="grid gap-4 mb-4">
                 {[...coveredTopics].reverse().map((t, index) => (
                   <button
                     key={index}
-                    className="w-full text-left p-4 rounded bg-white/10 hover:bg-white/20"
+                    className="w-full text-left pt-2 rounded bg-white/10 hover:bg-white/20 "
                     onClick={() => choosePreviousTopic(t)}
                   >
-                    <p className="font-semibold">{t.title}</p>
+                    <p className="font-semibold ftSans m-0">{t.title}</p>
                   </button>
                 ))}
               </div>
