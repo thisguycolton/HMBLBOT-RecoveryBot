@@ -61,6 +61,8 @@ gem "local_time"
 
 gem "simple_calendar"
 
+gem 'rack-cors', require: 'rack/cors'
+
 # Use Sass to process CSS
 # gem "sassc-rails"
 

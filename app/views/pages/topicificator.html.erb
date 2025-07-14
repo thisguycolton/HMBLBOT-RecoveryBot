@@ -1,0 +1,30 @@
+  <%= vite_javascript_tag "entrypoints/topicificator.jsx" %>
+  <%= stylesheet_link_tag "tailwind" , data: { turbo_track: "reload" }%>
+
+<style>
+  
+  body {
+    background-color: #1a202c; /* Tailwind's gray-900 */
+    color: #f7fafc; /* Tailwind's gray-200 */
+  }
+  .container footer {
+    display: none!important;
+    width: 0!important;
+  }
+  .nav-container {
+    top: 0px;
+    position: absolute;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+  }
+  .topicificator-root{
+    position: relative;
+    width: 100%;
+    height: 100%;
+    margin-top: 50em!important;
+  }
+
+</style>
+
+<div id="topicificator-root" class="pt-5"></div>

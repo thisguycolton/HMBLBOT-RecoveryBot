@@ -9,6 +9,8 @@ class PagesController < ApplicationController
   def game
 
   end
+  def topicificator
+  end
 
   # GET /pages/1 or /pages/1.json
   def show

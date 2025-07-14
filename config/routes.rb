@@ -11,10 +11,12 @@ Rails.application.routes.draw do
     post :vote, on: :member
   end
 
-
+  get "/topicificator", to: "pages#topicificator"
   get "game_server/getting_started"
   get "game_server/plugin_faq"
   namespace :api do
+    get 'topics/random', to: 'topics#random'
+    get 'topics/:id', to: 'topics#show'
     namespace :v1 do
       # Quest Players
       resources :quest_players, only: [:create, :show, :index, :update, :destroy] do

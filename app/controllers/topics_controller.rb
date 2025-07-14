@@ -11,6 +11,10 @@ class TopicsController < ApplicationController
     else
       @topics = Topic.all.sample(4)
     end
+    respond_to do |format|
+      format.html # renders index.html.erb
+      format.json { render json: @topics }
+    end
   end
 
 def by_category
