@@ -1,27 +1,42 @@
 @import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=TikTok+Sans:opsz,wght@12..36,300..900&display=swap');
-
-@import "tailwindcss";
-
+@config "../../../tailwind.config.cjs";
 @import "tailwindcss";
 
 @source "../../../app/views/**/*.html.erb";
 @source "../../../app/views/**/*.rb";
 @source "../../../app/helpers/**/*.rb";
 
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@layer base {
+  html {
+    color-scheme: light;
+  }
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background: #ffffff;
+    color: #0f172a;
+  }
+
+  /* light */
+  html.dark body {
+    background: #0a0a0a;
+    color: #e5e7eb;
+  }
+
+  /* dark */
 }
+
+
+.prose.hb-reader {
+  max-width: 70ch;
+  /* hard cap for very wide screens */
+}
+
+
 
 a {
   font-weight: 500;
@@ -92,7 +107,6 @@ button:focus-visible {
   z-index: 30;
 
   /* keep it legible when it overlaps content */
-  background: #fff;
   /* white strip under the line+pill */
   padding-top: 6px;
   /* tiny cushion so the line isn't glued to the top */
@@ -105,12 +119,10 @@ button:focus-visible {
 
 /* optional: make only the label appear to “float” if you like */
 .page-break--default .relative {
-  background: #fff;
   /* ensure the centered line/label sit on white */
 }
 
 .page-break--default {
-  background-color: #fff;
   /* force solid white behind */
 }
 

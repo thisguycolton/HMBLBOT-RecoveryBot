@@ -30,14 +30,30 @@ import { Indent } from "../tiptap/Indent";
 import FloatingMenuExtension from "@tiptap/extension-floating-menu";
 
 function forceBlockToParagraph(editor) {
-  const { state } = editor;
-  const { $from } = state.selection;
-  const node = $from.parent;
-  if (node.type.name === 'paragraph') return;
-  // Replace the node type at selection to 'paragraph' (keeping content/attrs you care about)
-  editor.chain().focus().setNode('paragraph').run();
-}
+  if (!editor) return;
 
+  // Whatever defaults you want for a normal paragraph
+  const defaultAttrs = { page: null, indent: 0, textAlign: 'left' };
+
+  editor
+    .chain()
+    .focus()
+
+    // Unwrap lists/code/blockquote and clear heading type
+    // (clearNodes turns block nodes into paragraphs automatically)
+    .clearNodes()
+
+    // Ensure it's our paragraph node (your extension name is still 'paragraph')
+    .setParagraph()
+
+    // Normalize attrs on the paragraph node
+    .updateAttributes('paragraph', defaultAttrs)
+
+    // Optional: remove font size + text align marks so Typography sets rhythm
+    .unsetFontSize?.()                // your custom mark
+    .setTextAlign('left')             // or .unsetTextAlign() if you wrote one
+    .run();
+}
 function BlockTypeSelect({ editor }) {
   if (!editor) return null;
 

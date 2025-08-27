@@ -13,10 +13,20 @@ Rails.application.routes.draw do
   end
 
   get "/topicificator", to: "pages#topicificator"
+  get "/library(/*path)", to: "pages#library"
+
   get "game_server/getting_started"
   get "game_server/plugin_faq"
+
+
   namespace :api do
-     resources :books, param: :slug, only: [:show] do
+      resources :highlights, only: [:index, :create, :destroy] do
+        collection { post :share }   # <— enable POST /api/highlights/share
+      end
+     resources :books, param: :slug, only: [:index, :show, :new, :create, :edit, :update]  do
+      member do
+        get :manage_chapters   # admin-only manager UI (link only; you can wire the page later)
+      end
         get :export, on: :member   # GET /api/books/:slug/export
     resources :chapters, param: :slug, only: [:index, :show, :update, :create, :destroy] do
       collection do
@@ -25,7 +35,7 @@ Rails.application.routes.draw do
       end
     end
   end
-    resources :highlights, only: [:index, :create, :destroy]
+
     get 'topics/random', to: 'topics#random'
     get 'topics/:id', to: 'topics#show'
     resources :topic_sets, only: [:index]

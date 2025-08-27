@@ -16,10 +16,10 @@ export default function HighlightsModal({
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="absolute inset-x-0 bottom-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
-                      w-full sm:w-[640px] max-h-[80vh] overflow-auto rounded-2xl bg-white shadow-xl border">
-        <div className="flex items-center justify-between px-4 py-3 border-b">
+                      w-full sm:w-[640px] max-h-[80vh] overflow-auto rounded-2xl bg-white dark:bg-neutral-900 shadow-xl border border-slate-200 dark:border-slate-600">
+        <div className="flex items-center justify-between px-4 py-3 border-b  border-slate-200 dark:border-slate-600">
           <div className="font-semibold">Your highlights</div>
-          <button className="p-1 rounded border bg-white" onClick={onClose} aria-label="Close">
+          <button className="p-1 rounded border  border-slate-200 dark:border-slate-600 bg-white  dark:bg-neutral-900" onClick={onClose} aria-label="Close">
             <X size={16}/>
           </button>
         </div>
@@ -33,7 +33,7 @@ export default function HighlightsModal({
                 <span className="inline-block w-3 h-3 rounded mt-1 shrink-0" style={{ backgroundColor: color }} />
                 <button
                   type="button"
-                  className="flex-1 text-left hover:bg-gray-50 rounded px-2 py-1"
+                  className="flex-1 text-left hover:bg-gray-50 dark:hover:bg-neutral-500 rounded px-2 py-1"
                   onClick={() => { onJump(h.id); onClose(); }}
                   title="Jump to highlight"
                 >

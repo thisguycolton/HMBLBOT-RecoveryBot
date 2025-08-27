@@ -110,7 +110,9 @@ export default function ChapterNavBar({
         href={href}
         aria-label={label}
         title={label}
-        className={`${base} text-white bg-slate-400! hover:bg-gray-50 active:scale-[0.98]`}
+        className={`${base} border px-2 py-1 rounded
+                   border-slate-200 bg-white hover:bg-slate-50
+                   dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700`}
       >
         <Icon size={18} />
       </a>
@@ -120,7 +122,7 @@ export default function ChapterNavBar({
   return (
     <div
       className={[
-        "sticky z-30 w-full border-b bg-white",
+        "sticky z-30 w-full  bg-stone-100/90 dark:bg-stone-800/90 backdrop-blur text-slate-900 dark:text-neutral-100",
         "top-[calc(var(--reader-sticky-second-offset,0px))]",
         className,
       ].join(" ")}

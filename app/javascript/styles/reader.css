@@ -1,11 +1,31 @@
 /* app/javascript/styles/reader.css */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap');
 
-.prose mark {
-  background-color: inherit;
-  /* let inline style win */
-  padding: 0 .1em;
-  border-radius: 2px;
+:root {
+  --hl-yellow: #fef08a;
+  /* yellow-200 */
+  --hl-lime: #bef264;
+  /* lime-300  */
+  --hl-cyan: #a5f3fc;
+  /* cyan-200  */
+  --hl-pink: #fbcfe8;
+  /* pink-200  */
+  --hl-orange: #fed7aa;
+  /* orange-200 */
+}
+
+/* Dark-mode variants: translucent overlays work better on dark bg */
+html.dark {
+  --hl-yellow: rgba(250, 204, 21, 0.25);
+  --hl-lime: rgba(132, 204, 22, 0.25);
+  --hl-cyan: rgba(34, 211, 238, 0.25);
+  --hl-pink: rgba(244, 114, 182, 0.25);
+  --hl-orange: rgba(251, 146, 60, 0.25);
+}
+
+.ProseMirror mark.hb-hl {
+  color: #111 !important;
+  /* or #000 if you want true black */
 }
 
 .hb-reader hr.hb-pagebreak {
@@ -60,12 +80,14 @@ h1{
 
 /* Sticky header wrapper */
 .hb-sticky {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  backdrop-filter: saturate(180%) blur(6px);
   background: rgba(255, 255, 255, 0.85);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dark .hb-sticky {
+  background: rgba(23, 23, 23, 0.85);
+  /* neutral-900 */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* Progress bar at top of sticky header */
@@ -155,10 +177,17 @@ h1{
 
 /* offset under your sticky chapter header; tweak to your header height */
 :root {
-  --reader-sticky-offset: 90px;
-  --reader-sticky-second-offset: 45px;
+  --reader-sticky-offset: 140px;
+  --reader-sticky-second-offset: 99px;
 }
 
+@media (min-width: 768px) {
+  :root {
+      --reader-sticky-offset: 158px;
+      --reader-sticky-second-offset: 116px;
+    }
+
+}
 /* Make page breaks stick under the sticky title */
 /* shared sticky behavior for ANY page break */
 .page-break {
@@ -166,13 +195,15 @@ h1{
   top: var(--reader-sticky-offset);
   z-index: 30;
 
-  background: #fff;
   padding-top: 6px;
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
 
   box-shadow: none;
   /* default: no stacky shadow */
+}
+.dark .page-break,
+.dark .page-break--default {
 }
 
 .page-break__pill {
@@ -291,4 +322,8 @@ body.pnd-active .chapter-row-dropzone {
   outline-offset: 0;
   background: rgba(191, 219, 254, 0.35);
   /* blue-200 @ ~35% */
+}
+
+.hb-hl {
+  scroll-margin-top: calc(var(--reader-sticky-offset) - 48px);
 }

@@ -142,7 +142,7 @@ const getRandomTopic = async () => {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 30 }}
         transition={{ duration: 1 }}
-        className="absolute left-1/2 transform -translate-x-1/2 text-gray-200 text-5xl ttSans font-bold z-30 w-full text-center top-10 mt-5"
+        className="absolute left-1/2 transform -translate-x-1/2 text-gray-200 text-5xl ttSans font-bold z-30 w-full text-center top-15 mt-5"
       >
         THE TOPICIFICATOR <span className="!text-cyan-500">9002</span>
       </motion.div>
@@ -209,7 +209,7 @@ const getRandomTopic = async () => {
           ) : (
             <>
               <h1 className="text-4xl font-bold mb-4 ttSans">The Topicificator 9002</h1>
-              <p className="text-lg">Choose a prompt to get started</p>
+              <p className="text-lg text-center! ftSans">Choose a prompt to get started</p>
             </>
           )}
         </div>

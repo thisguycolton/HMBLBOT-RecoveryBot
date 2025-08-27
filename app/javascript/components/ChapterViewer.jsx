@@ -1,5 +1,5 @@
 // app/javascript/components/ChapterViewer.jsx
-import { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { useEffect, useState, useRef, useLayoutEffect, useCallback} from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
@@ -7,7 +7,7 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import axios from "axios";
 import { PageBreak } from "../tiptap/PageBreak";
 import TextAlign from '@tiptap/extension-text-align';
-import { Highlighter, ChevronRight, ChevronDown } from "lucide-react";
+import { Highlighter, ChevronRight, ChevronDown, Moon, Sun } from "lucide-react";
 import ReaderBubbleMenu from "../components/ReaderBubbleMenu";
 import HighlightsModal from "../components/HighlightsModal";
 import MiddleTruncate from "./MiddleTruncate";
@@ -25,6 +25,7 @@ import CodeBlock from '@tiptap/extension-code-block';
 import { ParagraphWithPage } from "../tiptap/ParagraphWithPage";
 import { FontSize } from "../tiptap/FontSize";
 import { Indent } from "../tiptap/Indent";
+import { HBHighlight } from '../tiptap/HBHighlight';
 
 
 
@@ -36,6 +37,45 @@ import { Indent } from "../tiptap/Indent";
    pink:   '#fbcfe8',
    orange: '#fed7aa',
  };
+
+
+function useHighlightShareLink(bookSlug, slug) {
+  const [shareToken, setShareToken] = useState(null);
+
+  const ensureShareToken = useCallback(async () => {
+    if (shareToken) return shareToken;
+    const { data } = await axios.post("/api/highlights/share");
+    setShareToken(data.share_token);
+    return data.share_token;
+  }, [shareToken]);
+
+  const linkFor = useCallback(
+    async (hlId) => {
+      const token = await ensureShareToken();
+      return `${location.origin}/books/${bookSlug}/chapters/${slug}?share=${encodeURIComponent(
+        token
+      )}#hl-${hlId}`;
+    },
+    [bookSlug, slug, ensureShareToken]
+  );
+
+  const copyLink = useCallback(
+    async (hlId) => {
+      const url = await linkFor(hlId);
+      try {
+        await navigator.clipboard.writeText(url);
+        console.info("Link copied:", url);
+      } catch (e) {
+        console.error("Copy failed", e);
+        window.prompt("Copy highlight link:", url);
+      }
+    },
+    [linkFor]
+  );
+
+  return { shareToken, copyLink, linkFor };
+}
+ 
 function truncateMiddle(str, maxLength = 80) {
   if (!str || str.length <= maxLength) return str;
 
@@ -156,6 +196,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const [highlights, setHighlights] = useState([]);
   const [color, setColor] = useState("yellow");
   const [progress, setProgress] = useState(0);
+  const { copyLink } = useHighlightShareLink(bookSlug, slug);
 
   const [openHighlights, setOpenHighlights] = useState(false); // collapsed by default
   const rangesRef = useRef(new Map()); // id -> { from, to }
@@ -177,7 +218,6 @@ export default function ChapterViewer({ bookSlug, slug }) {
       ParagraphWithPage,                          // <-- important
       TextStyle,
       FontSize,
-      Highlight.configure({ multicolor: true, HTMLAttributes: { class: 'rounded-[2px] px-0.5' } }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       PageBreak,
       Table.configure({ resizable: false }),
@@ -185,11 +225,41 @@ export default function ChapterViewer({ bookSlug, slug }) {
       TableRow,
       TableHeader,
       TableCell,
+      HBHighlight.configure({ multicolor: true }),
     ],
     content: chapter?.tiptap_json || chapter?.tiptap || null,
   }, [chapter]);
 
     useHideCoveredPageBreaks(editor);
+
+    const [theme, setTheme] = useState(() => {
+    // prefer saved setting; else follow system
+    return localStorage.getItem('theme') || 'system';
+  });
+  
+
+  // apply theme to <html>
+  useEffect(() => {
+  const root = document.documentElement;
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = theme === 'dark' || (theme === 'system' && systemDark);
+
+  // make this explicit, not toggle
+  root.classList.toggle('dark', isDark);
+
+  localStorage.setItem('theme', theme);
+
+  // keep theme-color meta in sync (optional)
+  const meta =
+    document.querySelector('meta[name="theme-color"]') ||
+    (() => {
+      const m = document.createElement('meta');
+      m.name = 'theme-color';
+      document.head.appendChild(m);
+      return m;
+    })();
+  meta.content = isDark ? '#0a0a0a' : '#ffffff';
+}, [theme]);
 
   // scroll progress
   useEffect(() => {
@@ -204,20 +274,59 @@ export default function ChapterViewer({ bookSlug, slug }) {
 
   // load chapter + highlights
   useEffect(() => {
-    (async () => {
-      try {
-        const ch = await axios.get(`/api/books/${bookSlug}/chapters/${slug}.json`);
-        setChapter(ch.data);
-        const hls = await axios.get(`/api/highlights`, { params: { chapter_slug: slug }});
-        setHighlights(Array.isArray(hls.data) ? hls.data : []);
-      } catch (e) {
-        console.error("Failed to load chapter", e);
-      }
-    })();
-  }, [bookSlug, slug]);
+  (async () => {
+    try {
+      const ch = await axios.get(`/api/books/${bookSlug}/chapters/${slug}.json`);
+      setChapter(ch.data);
+
+      const params = new URLSearchParams(location.search);
+      const share = params.get('share');
+
+      const hls = await axios.get(`/api/highlights`, {
+        params: { chapter_slug: slug, ...(share ? { share } : {}) }
+      });
+
+      setHighlights(Array.isArray(hls.data) ? hls.data : []);
+    } catch (e) {
+      console.error("Failed to load chapter", e);
+    }
+  })();
+}, [bookSlug, slug]);
 
   // apply highlight marks
+const [shareToken, setShareToken] = useState(null);
 
+async function ensureShareToken() {
+  if (shareToken) return shareToken;
+  try {
+    const { data } = await axios.post('/api/highlights/share');
+    setShareToken(data.share_token);
+    return data.share_token;
+  } catch (e) {
+    // 401/403 means not logged in or not allowed to create a token
+    throw new Error('LOGIN_REQUIRED');
+  }
+}
+
+async function copyShareLinkForHighlight(hlId) {
+  // If you *must* support public clicks too, you can fall back to no-token link,
+  // but that link won't show your private highlights. Better to require login here.
+  let url;
+  try {
+    const token = await ensureShareToken();
+    url = `${location.origin}/books/${bookSlug}/chapters/${slug}?share=${encodeURIComponent(token)}#hl-${hlId}`;
+    await navigator.clipboard.writeText(url);
+    toast('Link copied to clipboard'); // replace with your toast/snackbar
+  } catch (err) {
+    if (err.message === 'LOGIN_REQUIRED') {
+      toast('Log in to generate a share link');
+      return;
+    }
+    // fallback UI
+    url ||= `${location.origin}/books/${bookSlug}/chapters/${slug}#hl-${hlId}`;
+    window.prompt('Copy highlight link:', url);
+  }
+}
 // …
 
 useLayoutEffect(() => {
@@ -240,10 +349,14 @@ useLayoutEffect(() => {
     const resolved = resolveRanges(editor, highlights);
     rangesRef.current.clear();
     resolved.forEach((r) => {
-      const cssColor = PALETTE[r.color] || r.color || PALETTE.yellow;
-      rangesRef.current.set(String(r.id), { from: r.from, to: r.to });
-      tr = tr.addMark(r.from, r.to, markType.create({ color: cssColor }));
-    });
+  const cssColor = PALETTE[r.color] || r.color || PALETTE.yellow;
+  rangesRef.current.set(String(r.id), { from: r.from, to: r.to });
+  tr = tr.addMark(
+    r.from,
+    r.to,
+    markType.create({ color: cssColor, hlId: String(r.id), class: 'hb-hl' })
+  );
+});
 
     if (tr.steps.length) {
       view.dispatch(tr);
@@ -317,7 +430,7 @@ function jumpToHighlight(id) {
   tryJump(id);
 }
 
-function nudgeForSticky(offsetExtra = 45) {
+function nudgeForSticky(offsetExtra = 155) {
   const css = getComputedStyle(document.documentElement)
     .getPropertyValue('--reader-sticky-offset');
   const base = parseInt(css, 10) || 0;
@@ -344,14 +457,42 @@ function tryJump(id) {
   return true;
 }
 
+useEffect(() => {
+  if (!editor) return;
+  const root = editor.view.dom;
 
+  const onClick = async (e) => {
+    const el = e.target.closest('mark.hb-hl');
+    if (!el) return;
+
+    // avoid interfering with text selection drags
+    const sel = window.getSelection();
+    if (sel && String(sel).length > 0) return;
+
+    const id = el.getAttribute('data-hl-id');
+    if (!id) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      await copyShareLinkForHighlight(id);
+      // optional visual feedback on the mark
+      el.classList.add('animate-[pulse_0.6s_ease_1]');
+      setTimeout(() => el.classList.remove('animate-[pulse_0.6s_ease_1]'), 600);
+    } catch (_) {}
+  };
+
+  root.addEventListener('click', onClick);
+  return () => root.removeEventListener('click', onClick);
+}, [editor, bookSlug, slug, shareToken]);
 
 
 
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-3">
       {/* Progress bar */}
-      <div className="fixed top-0 left-0 w-full h-1 bg-gray-200 z-50">
+      <div className="fixed top-14 left-0 w-full h-1 bg-gray-200 z-50">
         <div
           className="h-1 bg-blue-500 transition-all"
           style={{ width: `${progress}%` }}
@@ -359,8 +500,10 @@ function tryJump(id) {
       </div>
 
       {/* Sticky chapter header */}
-      <div className="sticky top-1 bg-white z-10 flex items-center justify-between gap-3 py-1">
-        <h1 className="text-3xl! font-bold truncate text-center w-full">{chapter?.title}</h1>
+      <div className="sticky top-10 z-40 bg-stone-100/90 dark:bg-stone-800/90 backdrop-blur z-10 flex items-center justify-between gap-3 pt-6 px-2 ">
+        <h1 className="text-2xl! md:text-4xl! font-bold truncate text-center flex-1">
+          {chapter?.title}
+        </h1>
 
       </div>
       <ChapterNavBar
@@ -369,7 +512,11 @@ function tryJump(id) {
         prevSlug={chapter?.neighbors?.prev_slug}   // or however you expose neighbors
         nextSlug={chapter?.neighbors?.next_slug}
       />
-      <div className="prose max-w-none">
+      <div className="prose hb-reader
+          prose-slate
+          prose-sm md:prose lg:prose-lg xl:prose-xl 2xl:prose-2xl
+          dark:prose-invert
+          max-w-none mx-auto">
         <EditorContent editor={editor} />
       </div>
 
@@ -377,11 +524,13 @@ function tryJump(id) {
       {/* Highlights (collapsible) */}
 
         <ReaderBubbleMenu
-          colors={PALETTE}                     // object or array is fine
-          value={cssFromStored(color)}         // current CSS color
+          colors={PALETTE}
+          value={cssFromStored(color)}
           onChangeColor={(css) => setColor(css)}
           onHighlight={createHighlight}
           onOpenModal={() => setOpenHighlightsModal(true)}
+          onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}  // NEW
+          isDark={document.documentElement.classList.contains('dark')}              // NEW
         />
 
         <HighlightsModal
@@ -391,6 +540,7 @@ function tryJump(id) {
           swatchOf={(h) => cssFromStored(h?.style?.color)}
           onJump={jumpToHighlight}
           onDelete={deleteHighlight}
+          onShare={(id) => copyLink(id)}
           MiddleTruncate={MiddleTruncate}
         />
     </div>

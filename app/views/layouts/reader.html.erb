@@ -15,7 +15,26 @@
   window.$RefreshSig$ = () => (type) => type;
   window.__vite_plugin_react_preamble_installed__ = true;
 </script>
-<body class="bg-white text-slate-900 w-full">
+<script>
+  (function () {
+    var KEY = 'theme'; // must match your toggle
+    var pref = localStorage.getItem(KEY) || 'system';
+    var sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var isDark = pref === 'dark' || (pref === 'system' && sysDark);
+
+    document.documentElement.classList.toggle('dark', isDark);
+
+    // (optional) keep <meta name="theme-color"> in sync
+    var meta = document.querySelector('meta[name="theme-color"]') || (function () {
+      var m = document.createElement('meta');
+      m.name = 'theme-color';
+      document.head.appendChild(m);
+      return m;
+    })();
+    meta.content = isDark ? '#0a0a0a' : '#ffffff';
+  })();
+</script>
+<body class="min-h-screen bg-stone-100 text-slate-900 dark:bg-stone-800 dark:text-neutral-100" data-current-user="<%= user_signed_in? %>">
   <%= yield %>
 </body>
   <%= vite_client_tag %>

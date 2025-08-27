@@ -45,7 +45,7 @@ export const PageBreak = Node.create({
         // 👇 give the pill a unique class, no shadow-* utility here
         ["span", {
           class:
-            "page-break__pill absolute -top-3 inline-block rounded-full border border-gray-300 bg-white px-3 py-0.5 text-[11px] uppercase tracking-wide text-gray-600"
+            "page-break__pill absolute -top-3 inline-block rounded-full border border-slate-300 dark:border-slate-400 bg-white dark:bg-neutral-600 px-3 py-0.5 text-[11px] uppercase tracking-wide text-gray-600 dark:text-slate-200"
         },
           label || "Page Break"
         ]
