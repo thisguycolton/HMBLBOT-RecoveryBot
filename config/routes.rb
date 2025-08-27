@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  resources :topic_sets
   resources :hostificators do
     member do
       get :results
@@ -15,8 +16,20 @@ Rails.application.routes.draw do
   get "game_server/getting_started"
   get "game_server/plugin_faq"
   namespace :api do
+     resources :books, param: :slug, only: [:show] do
+        get :export, on: :member   # GET /api/books/:slug/export
+    resources :chapters, param: :slug, only: [:index, :show, :update, :create, :destroy] do
+      collection do
+        post :merge   # POST /api/books/:book_slug/chapters/merge
+        post :reorder # optional: drag/drop reorder support
+      end
+    end
+  end
+    resources :highlights, only: [:index, :create, :destroy]
     get 'topics/random', to: 'topics#random'
     get 'topics/:id', to: 'topics#show'
+    resources :topic_sets, only: [:index]
+
     namespace :v1 do
       # Quest Players
       resources :quest_players, only: [:create, :show, :index, :update, :destroy] do
@@ -49,16 +62,18 @@ Rails.application.routes.draw do
     resources :meetings
   end
   get 'host_helper/scratchpaper'
+  # config/routes.rb
+  get "/reader", to: "pages#reader"
   resources :polls do
     resources :options
   end
   mount ActionCable.server => '/cable'
   mount AhoyCaptain::Engine => '/ahoy_captain'
 
-  resources :books do
-    resources :pages, only: [:show], param: :page_number
-    resources :chapters
+  resources :books, param: :slug, only: [] do
+    resources :chapters, param: :slug, only: [:index, :show, :edit]
   end
+
   resources :topics
   devise_for :users
 

@@ -1,6 +1,6 @@
 class Book < ApplicationRecord
-	has_many :pages
-    has_many :chapters
+  has_many :chapters, dependent: :destroy
+  validates :slug, presence: true, uniqueness: true
 
     def self.ransackable_attributes(auth_object = nil)
     ["aa_approved", "author", "created_at", "id", "info", "org_approved", "pdf_url", "publicly_accessible", "published_date", "purchase_link", "title", "updated_at"]

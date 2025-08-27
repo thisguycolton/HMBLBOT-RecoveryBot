@@ -1,0 +1,2 @@
+class TopicSet < ApplicationRecord
+end

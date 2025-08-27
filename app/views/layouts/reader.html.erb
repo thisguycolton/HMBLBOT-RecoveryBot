@@ -1,0 +1,24 @@
+<!-- app/views/layouts/reader.html.erb -->
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>HumbleBot Reader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%= csrf_meta_tags %>
+
+</head>
+<script type="module">
+  import RefreshRuntime from "/vite-dev/@react-refresh";
+  RefreshRuntime.injectIntoGlobalHook(window);
+  window.$RefreshReg$ = () => { };
+  window.$RefreshSig$ = () => (type) => type;
+  window.__vite_plugin_react_preamble_installed__ = true;
+</script>
+<body class="bg-white text-slate-900 w-full">
+  <%= yield %>
+</body>
+  <%= vite_client_tag %>
+    <%= vite_javascript_tag 'topicificator.jsx' %>
+
+</html>

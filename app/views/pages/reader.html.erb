@@ -1,0 +1,12 @@
+<!-- app/views/static/reader.html.erb -->
+<script type="module">
+  import RefreshRuntime from "/vite-dev/@react-refresh";
+  RefreshRuntime.injectIntoGlobalHook(window);
+  window.$RefreshReg$ = () => {};
+  window.$RefreshSig$ = () => (type) => type;
+  window.__vite_plugin_react_preamble_installed__ = true;
+</script>
+
+<%= vite_client_tag %>
+<%= vite_javascript_tag 'topicificator.jsx' %>
+<div id="chapter-viewer" data-chapter-slug="bigbook-4e-ch01"></div>

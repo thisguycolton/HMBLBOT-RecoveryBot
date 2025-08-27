@@ -6,6 +6,8 @@ class User < ApplicationRecord
 
   has_one :user_active_group
 
+  has_many :user_highlights, dependent: :destroy
+
   # Set default values for new users
   after_initialize :set_defaults, unless: :persisted?
 

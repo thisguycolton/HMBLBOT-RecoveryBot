@@ -1,0 +1,12 @@
+<% content_for :title, "Editing topic set" %>
+
+<h1>Editing topic set</h1>
+
+<%= render "form", topic_set: @topic_set %>
+
+<br>
+
+<div>
+  <%= link_to "Show this topic set", @topic_set %> |
+  <%= link_to "Back to topic sets", topic_sets_path %>
+</div>

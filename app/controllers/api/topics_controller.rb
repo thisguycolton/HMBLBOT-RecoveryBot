@@ -1,8 +1,13 @@
 class Api::TopicsController < ApplicationController
-  def random
-    topic = Topic.all.sample
-    render json: topic
+def random
+  if params[:topic_set_id].present?
+    topics = Topic.where(topic_set_id: params[:topic_set_id])
+  else
+    topics = Topic.where(topic_set_id: 1)
   end
+
+  render json: topics.sample
+end
 
   def show
     topic = Topic.find_by(id: params[:id])

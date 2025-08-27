@@ -1,0 +1,10 @@
+<p style="color: green"><%= notice %></p>
+
+<%= render @topic_set %>
+
+<div>
+  <%= link_to "Edit this topic set", edit_topic_set_path(@topic_set) %> |
+  <%= link_to "Back to topic sets", topic_sets_path %>
+
+  <%= button_to "Destroy this topic set", @topic_set, method: :delete %>
+</div>

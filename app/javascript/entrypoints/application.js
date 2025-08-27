@@ -1,3 +1,4 @@
+// app/javascript/entrypoints/application.js
 // To see this message, add the following to the `<head>` section in your
 // views/layouts/application.html.erb
 //
@@ -21,13 +22,15 @@ console.log('Visit the guide for more information: ', 'https://vite-ruby.netlify
 // import ActiveStorage from '@rails/activestorage'
 // ActiveStorage.start()
 //
-// // Import all channels.
+// 
+// Import all channels.
 // const channels = import.meta.globEager('./**/*_channel.js')
 
 // Example: Import a stylesheet in app/frontend/index.css
 // import '~/index.css'
 import { Application } from '@hotwired/stimulus';
 import GameController from '../controllers/game_controller';
+
 
 const stimulusApp = Application.start();
 stimulusApp.register('game', GameController);

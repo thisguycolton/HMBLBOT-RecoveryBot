@@ -1,0 +1,398 @@
+// app/javascript/components/ChapterViewer.jsx
+import { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Highlight from "@tiptap/extension-highlight";
+import { TextStyle } from "@tiptap/extension-text-style";
+import axios from "axios";
+import { PageBreak } from "../tiptap/PageBreak";
+import TextAlign from '@tiptap/extension-text-align';
+import { Highlighter, ChevronRight, ChevronDown } from "lucide-react";
+import ReaderBubbleMenu from "../components/ReaderBubbleMenu";
+import HighlightsModal from "../components/HighlightsModal";
+import MiddleTruncate from "./MiddleTruncate";
+import ChapterNavBar from "../components/ChapterNavBar";
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
+import Heading from '@tiptap/extension-heading';
+import Blockquote from '@tiptap/extension-blockquote';
+import BulletList from '@tiptap/extension-bullet-list';
+import OrderedList from '@tiptap/extension-ordered-list';
+import ListItem from '@tiptap/extension-list-item';
+import CodeBlock from '@tiptap/extension-code-block';
+import { ParagraphWithPage } from "../tiptap/ParagraphWithPage";
+import { FontSize } from "../tiptap/FontSize";
+import { Indent } from "../tiptap/Indent";
+
+
+
+ // map friendly color names -> actual CSS colors (backgroundColor)
+ const PALETTE = {
+   yellow: '#fef08a', // tailwind yellow-200-ish
+   lime:   '#bef264',
+   cyan:   '#a5f3fc',
+   pink:   '#fbcfe8',
+   orange: '#fed7aa',
+ };
+function truncateMiddle(str, maxLength = 80) {
+  if (!str || str.length <= maxLength) return str;
+
+  const ellipsis = "…";
+  const keep = maxLength - ellipsis.length;
+  const front = Math.ceil(keep / 2);
+  const back = Math.floor(keep / 2);
+
+  return str.slice(0, front) + ellipsis + str.slice(str.length - back);
+}
+/** Map a plain-text offset to a ProseMirror position using textBetween + binary search */
+function offsetToPos(doc, target) {
+  // Guard rails
+  const maxPos = Math.max(1, doc.content.size - 1);
+  if (target <= 0) return 1;
+
+  let lo = 1;
+  let hi = maxPos;
+
+  // Binary search: find the smallest pos whose textBetween length >= target
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    const len = doc.textBetween(0, mid, "\n", "\n").length;
+    if (len < target) lo = mid + 1;
+    else hi = mid;
+  }
+  return Math.min(lo, maxPos);
+}
+
+function resolveRanges(editor, highlights) {
+  const text = editor.getText();
+  return (Array.isArray(highlights) ? highlights : []).map(h => {
+    const sel = h.selector || {};
+    let start = sel.position?.start, end = sel.position?.end;
+    if ((start == null || end == null) && sel.quote?.exact) {
+      const idx = text.indexOf(sel.quote.exact);
+      if (idx >= 0) { start = idx; end = idx + sel.quote.exact.length; }
+    }
+    if (start == null || end == null || end <= start) return null;
+    const from = offsetToPos(editor.state.doc, start);
+    const to   = offsetToPos(editor.state.doc, end);
+    return { id: h.id, from, to, color: (h.style && h.style.color) || "yellow" };
+  }).filter(Boolean);
+}
+
+function useHideCoveredPageBreaks(editor) {
+  useLayoutEffect(() => {
+    if (!editor) return;
+
+    const root = document.documentElement;
+    const getOffset = () => {
+      const v = getComputedStyle(root).getPropertyValue('--reader-sticky-offset');
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    let els = [];
+    const selector = '[data-page-break]';   // <-- catch header/default/footer
+
+    const indexEls = () => {
+      els = Array.from(document.querySelectorAll(selector));
+      els.forEach((el, i) => (el.dataset.pbIndex = String(i)));
+    };
+
+    const update = () => {
+      if (!els.length) return;
+      const topOffset = getOffset();
+
+      // find last page break whose top is at/above sticky line
+      let currentIdx = -1;
+      for (let i = 0; i < els.length; i++) {
+        const top = els[i].getBoundingClientRect().top;
+        if (top - topOffset <= 0) currentIdx = i;
+        else break;
+      }
+
+      els.forEach((el, i) => {
+        el.classList.toggle('is-stuck', i === currentIdx);
+        el.classList.toggle('is-covered', i < currentIdx);
+      });
+    };
+
+    // initial index + update (after paint)
+    indexEls();
+    requestAnimationFrame(() => { indexEls(); update(); });
+
+    // keep in sync on scroll/resize
+    const onScroll = () => update();
+    const onResize = () => { indexEls(); update(); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+
+    // also watch the editor DOM for page breaks being added/removed
+    const mo = new MutationObserver(() => {
+      indexEls();
+      update();
+    });
+    mo.observe(editor.view.dom, { childList: true, subtree: true });
+
+    // TipTap lifecycle events for good measure
+    const onCreate = () => { indexEls(); update(); };
+    const onUpdate = () => { indexEls(); update(); };
+    editor.on('create', onCreate);
+    editor.on('update', onUpdate);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+      mo.disconnect();
+      editor.off('create', onCreate);
+      editor.off('update', onUpdate);
+    };
+  }, [editor]);
+}
+
+export default function ChapterViewer({ bookSlug, slug }) {
+  const [chapter, setChapter] = useState(null);
+  const [highlights, setHighlights] = useState([]);
+  const [color, setColor] = useState("yellow");
+  const [progress, setProgress] = useState(0);
+
+  const [openHighlights, setOpenHighlights] = useState(false); // collapsed by default
+  const rangesRef = useRef(new Map()); // id -> { from, to }
+
+  const [openHighlightsModal, setOpenHighlightsModal] = useState(false);
+  const cssFromStored = (stored) => PALETTE[stored] || stored || PALETTE.yellow;
+
+  const [pendingJumpId, setPendingJumpId] = useState(null);
+  useEffect(() => {
+    const m = location.hash.match(/^#hl-(.+)$/);
+    if (m) setPendingJumpId(m[1]);   // keep as string
+  }, []);
+
+  const editor = useEditor({
+    editable: false,
+    extensions: [
+      StarterKit.configure({ paragraph: false }), // match editor
+      Heading,                                    // explicit (StarterKit adds it, but good to be clear)
+      ParagraphWithPage,                          // <-- important
+      TextStyle,
+      FontSize,
+      Highlight.configure({ multicolor: true, HTMLAttributes: { class: 'rounded-[2px] px-0.5' } }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      PageBreak,
+      Table.configure({ resizable: false }),
+      Indent.configure({ types: ["paragraph"], step: 24, min: 0, max: 8 }),
+      TableRow,
+      TableHeader,
+      TableCell,
+    ],
+    content: chapter?.tiptap_json || chapter?.tiptap || null,
+  }, [chapter]);
+
+    useHideCoveredPageBreaks(editor);
+
+  // scroll progress
+  useEffect(() => {
+    function handleScroll() {
+      const total = document.body.scrollHeight - window.innerHeight;
+      const pct = (window.scrollY / total) * 100;
+      setProgress(pct);
+    }
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // load chapter + highlights
+  useEffect(() => {
+    (async () => {
+      try {
+        const ch = await axios.get(`/api/books/${bookSlug}/chapters/${slug}.json`);
+        setChapter(ch.data);
+        const hls = await axios.get(`/api/highlights`, { params: { chapter_slug: slug }});
+        setHighlights(Array.isArray(hls.data) ? hls.data : []);
+      } catch (e) {
+        console.error("Failed to load chapter", e);
+      }
+    })();
+  }, [bookSlug, slug]);
+
+  // apply highlight marks
+
+// …
+
+useLayoutEffect(() => {
+  if (!editor) return;
+  const doc = editor.state?.doc;
+  if (!doc || doc.content.size <= 2) return;
+
+  const { state, view } = editor;
+  const markType = state.schema.marks.highlight;
+  if (!markType) return;
+
+  // temporarily enable to mutate marks
+  const wasEditable = editor.isEditable;
+  editor.setEditable(true);
+  try {
+    // 1) clear existing highlight marks
+    let tr = state.tr.removeMark(0, doc.content.size, markType);
+
+    // 2) resolve and apply new marks
+    const resolved = resolveRanges(editor, highlights);
+    rangesRef.current.clear();
+    resolved.forEach((r) => {
+      const cssColor = PALETTE[r.color] || r.color || PALETTE.yellow;
+      rangesRef.current.set(String(r.id), { from: r.from, to: r.to });
+      tr = tr.addMark(r.from, r.to, markType.create({ color: cssColor }));
+    });
+
+    if (tr.steps.length) {
+      view.dispatch(tr);
+    }
+  } finally {
+    editor.setEditable(wasEditable);
+  }
+
+  // 3) if there’s a pending deep-link jump, do it after DOM paints
+  if (pendingJumpId != null) {
+    // double RAF to ensure ProseMirror has flushed DOM updates
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (tryJump(pendingJumpId)) {
+          setPendingJumpId(null);
+        }
+      });
+    });
+  }
+}, [editor, highlights, pendingJumpId]);
+
+  async function createHighlight() {
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    if (from === to) return;
+    const before = editor.state.doc.textBetween(0, from, "\n", "\n");
+    const exact  = editor.state.doc.textBetween(from, to, "\n", "\n");
+    const after  = editor.state.doc.textBetween(to, editor.state.doc.content.size, "\n", "\n");
+    const start = before.length;
+    const end   = start + exact.length;
+    const payload = {
+      highlight: {
+        chapter_slug: slug,
+        style: { color },
+        selector: {
+          type: "Composite",
+          position: { type: "TextPositionSelector", start, end },
+          quote: { type: "TextQuoteSelector", exact, prefix: before.slice(-40), suffix: after.slice(0, 40) }
+        }
+      }
+    };
+    const res = await axios.post("/api/highlights", payload);
+    const newId = String(res.data.id);
+    setHighlights(prev => [...prev, { id: newId, ...payload.highlight }]);
+  }
+
+  async function deleteHighlight(id) {
+    await axios.delete(`/api/highlights/${id}`);
+    setHighlights(prev => prev.filter(h => h.id !== id));
+  }
+
+function getStickyOffset() {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--reader-sticky-offset');
+  const n = parseInt(v, 10);
+  // add a little breathing room so the text isn’t jammed under the bar
+  return (Number.isFinite(n) ? n : 0) + 45;
+}
+
+function jumpToHighlight(id) {
+  if (!editor) return;
+
+  // remember this jump in the URL so reloads work
+  if (history.replaceState) {
+    history.replaceState(null, "", `#hl-${id}`);
+  } else {
+    location.hash = `#hl-${id}`;
+  }
+  setPendingJumpId(id);
+
+  // try immediately if ranges are already resolved
+  tryJump(id);
+}
+
+function nudgeForSticky(offsetExtra = 45) {
+  const css = getComputedStyle(document.documentElement)
+    .getPropertyValue('--reader-sticky-offset');
+  const base = parseInt(css, 10) || 0;
+  return base + offsetExtra;
+}
+
+function tryJump(id) {
+  if (!editor) return false;
+  const pos = rangesRef.current.get(String(id)); // <-- string key
+  if (!pos) return false;
+
+  const view = editor.view;
+  const coords = view.coordsAtPos(pos.from);
+  const targetTop = window.scrollY + coords.top - nudgeForSticky();
+
+  window.scrollTo({ top: targetTop, left: 0, behavior: 'smooth' });
+
+  // optional: also select/flash
+  editor.chain().setTextSelection({ from: pos.from, to: pos.to }).run();
+  const root = view.dom;
+  root.classList.add('hb-flash');
+  setTimeout(() => root.classList.remove('hb-flash'), 300);
+
+  return true;
+}
+
+
+
+
+
+  return (
+    <div className="max-w-3xl mx-auto p-4 space-y-3">
+      {/* Progress bar */}
+      <div className="fixed top-0 left-0 w-full h-1 bg-gray-200 z-50">
+        <div
+          className="h-1 bg-blue-500 transition-all"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      {/* Sticky chapter header */}
+      <div className="sticky top-1 bg-white z-10 flex items-center justify-between gap-3 py-1">
+        <h1 className="text-3xl! font-bold truncate text-center w-full">{chapter?.title}</h1>
+
+      </div>
+      <ChapterNavBar
+        bookTitle={chapter?.book_title || "The Big Book of Alcoholics Anonymous"}
+        bookSlug={bookSlug}
+        prevSlug={chapter?.neighbors?.prev_slug}   // or however you expose neighbors
+        nextSlug={chapter?.neighbors?.next_slug}
+      />
+      <div className="prose max-w-none">
+        <EditorContent editor={editor} />
+      </div>
+
+      {/* Highlight list */}
+      {/* Highlights (collapsible) */}
+
+        <ReaderBubbleMenu
+          colors={PALETTE}                     // object or array is fine
+          value={cssFromStored(color)}         // current CSS color
+          onChangeColor={(css) => setColor(css)}
+          onHighlight={createHighlight}
+          onOpenModal={() => setOpenHighlightsModal(true)}
+        />
+
+        <HighlightsModal
+          open={openHighlightsModal}
+          onClose={() => setOpenHighlightsModal(false)}
+          highlights={(Array.isArray(highlights) ? highlights : [])}
+          swatchOf={(h) => cssFromStored(h?.style?.color)}
+          onJump={jumpToHighlight}
+          onDelete={deleteHighlight}
+          MiddleTruncate={MiddleTruncate}
+        />
+    </div>
+  );
+}

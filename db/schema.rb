@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_05_19_005849) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_22_051044) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -115,6 +115,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_19_005849) do
     t.boolean "publicly_accessible"
     t.string "image_url"
     t.text "description"
+    t.string "slug", default: "", null: false
+    t.string "work_key", default: "bigbook", null: false
+    t.string "edition", default: "4e", null: false
+    t.string "language", default: "en", null: false
+    t.jsonb "meta", default: {}, null: false
+    t.index ["slug"], name: "index_books_on_slug", unique: true
+    t.index ["work_key", "edition", "language"], name: "index_books_on_work_key_and_edition_and_language", unique: true
   end
 
   create_table "chapters", force: :cascade do |t|
@@ -124,6 +131,16 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_19_005849) do
     t.text "content"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "slug"
+    t.integer "index"
+    t.integer "first_page"
+    t.integer "last_page"
+    t.jsonb "tiptap_json", default: {}, null: false
+    t.string "text_hash"
+    t.string "kind", default: "chapter", null: false
+    t.string "label"
+    t.index ["book_id", "index"], name: "index_chapters_on_book_id_and_index", unique: true
+    t.index ["book_id", "slug"], name: "index_chapters_on_book_id_and_slug", unique: true
     t.index ["book_id"], name: "index_chapters_on_book_id"
   end
 
@@ -296,6 +313,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_19_005849) do
     t.integer "icon_id"
   end
 
+  create_table "topic_sets", force: :cascade do |t|
+    t.string "name"
+    t.string "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "topics", force: :cascade do |t|
     t.string "title"
     t.string "searchable_number"
@@ -304,7 +328,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_19_005849) do
     t.string "subtitle"
     t.string "link"
     t.bigint "topic_category_id"
+    t.bigint "topic_set_id", null: false
     t.index ["topic_category_id"], name: "index_topics_on_topic_category_id"
+    t.index ["topic_set_id"], name: "index_topics_on_topic_set_id"
   end
 
   create_table "user_active_groups", force: :cascade do |t|
@@ -314,6 +340,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_19_005849) do
     t.datetime "updated_at", null: false
     t.index ["group_id"], name: "index_user_active_groups_on_group_id"
     t.index ["user_id"], name: "index_user_active_groups_on_user_id"
+  end
+
+  create_table "user_highlights", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "chapter_id", null: false
+    t.jsonb "selector", default: {}, null: false
+    t.jsonb "style", default: {}, null: false
+    t.text "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chapter_id"], name: "index_user_highlights_on_chapter_id"
+    t.index ["user_id", "chapter_id"], name: "index_user_highlights_on_user_id_and_chapter_id"
+    t.index ["user_id"], name: "index_user_highlights_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -349,6 +388,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_19_005849) do
   add_foreign_key "readings", "groups"
   add_foreign_key "readings", "users"
   add_foreign_key "topics", "topic_categories"
+  add_foreign_key "topics", "topic_sets"
   add_foreign_key "user_active_groups", "groups"
   add_foreign_key "user_active_groups", "users"
+  add_foreign_key "user_highlights", "chapters"
+  add_foreign_key "user_highlights", "users"
 end

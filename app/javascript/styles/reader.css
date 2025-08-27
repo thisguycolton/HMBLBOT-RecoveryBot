@@ -1,0 +1,294 @@
+/* app/javascript/styles/reader.css */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap');
+
+.prose mark {
+  background-color: inherit;
+  /* let inline style win */
+  padding: 0 .1em;
+  border-radius: 2px;
+}
+
+.hb-reader hr.hb-pagebreak {
+  border: 0;
+  margin: 2rem 0 1rem;
+  position: relative;
+  height: 1.5rem;
+}
+
+.hb-reader hr.hb-pagebreak::before {
+  content: attr(data-title);
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: .7rem;
+  letter-spacing: .08em;
+  color: #64748b;
+  /* slate-500 */
+  text-transform: uppercase;
+}
+
+.hb-reader hr.hb-pagebreak::after {
+  content: attr(data-page);
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: .7rem;
+  color: #64748b;
+}
+
+.tiptap h2, p {
+  text-align: justify;
+  hyphens: auto;
+  font-family: "Noto Serif", serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings:
+    "wdth" 100;
+}
+
+h1{
+    font-family: "Noto Serif", serif;
+      font-optical-sizing: auto;
+      font-weight: 800;
+      font-style: normal;
+}
+.noto{
+  font-family: "Noto Serif", serif;
+  font-optical-sizing: auto;
+}
+
+/* Sticky header wrapper */
+.hb-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: saturate(180%) blur(6px);
+  background: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Progress bar at top of sticky header */
+.hb-progress {
+  height: 3px;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.hb-progress__bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #9C3848, #FFAD69);
+  transition: width 120ms linear;
+}
+
+/* Title row */
+.hb-sticky-row {
+  display: flex;
+  align-items: baseline;
+  gap: .75rem;
+  padding: .5rem 0.5rem;
+}
+
+.hb-sticky-row__title {
+  font-weight: 600;
+  font-size: 2rem;
+  line-height: 3.25rem;
+}
+
+.hb-sticky-row__meta {
+  font-size: .75rem;
+  color: #6b7280;
+}
+
+/* Keep existing page break styles */
+.hb-reader hr.hb-pagebreak {
+  border: 0;
+  margin: 2rem 0 1rem;
+  position: relative;
+  height: 1.5rem;
+}
+
+.hb-reader hr.hb-pagebreak::before {
+  content: attr(data-title);
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: .7rem;
+  letter-spacing: .08em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.hb-reader hr.hb-pagebreak::after {
+  content: attr(data-page);
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: .7rem;
+  color: #64748b;
+}
+
+
+.hb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  width: 28px;
+  background: #fff;
+  color: #111;
+  padding: 0;
+}
+
+.hb-btn:hover {
+  background: #f7f7f7;
+}
+
+.hb-btn--active {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+/* offset under your sticky chapter header; tweak to your header height */
+:root {
+  --reader-sticky-offset: 90px;
+  --reader-sticky-second-offset: 45px;
+}
+
+/* Make page breaks stick under the sticky title */
+/* shared sticky behavior for ANY page break */
+.page-break {
+  position: sticky;
+  top: var(--reader-sticky-offset);
+  z-index: 30;
+
+  background: #fff;
+  padding-top: 6px;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  box-shadow: none;
+  /* default: no stacky shadow */
+}
+
+.page-break__pill {
+  /* keep pill shadow consistent */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
+}
+
+/* when the currently “active” break is stuck */
+.page-break.is-stuck {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .1);
+}
+
+/* optionally hide covered ones, if you want */
+.page-break.is-covered {
+  visibility: hidden;
+  display: none;
+  /* or: display:none; but visibility is smoother */
+}
+
+/* you can still keep variant-specific tweaks */
+.page-break--header {
+  /* header-specific tweaks if needed */
+}
+
+.page-break--default {
+  /* default-specific tweaks if needed */
+}
+
+.page-break--footer {
+  /* footer-specific tweaks if needed */
+}
+
+.hb-flash {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .25) inset;
+  transition: box-shadow .3s ease;
+}
+/* responsive wrapper */
+.prose .hb-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* base table styling */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  /* better for equal columns + resizing */
+}
+
+.prose table th,
+.prose table td {
+  border: 1px solid #e5e7eb;
+  /* slate-200 */
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+}
+
+/* header look */
+.prose table th {
+  background: #f8fafc;
+  /* slate-50 */
+  font-weight: 600;
+  text-align: left;
+}
+
+/* TipTap resizer handle (only visible when resizable=true) */
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: rgba(59, 130, 246, 0.35);
+  /* blue-ish */
+  pointer-events: none;
+}
+
+.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
+/* only allow zones to receive events while dragging */
+body.pnd-active .chapter-row-dropzone {
+  pointer-events: auto;
+}
+
+.chapter-row-dropzone {
+  pointer-events: none;
+}
+
+/* visual hints */
+.chapter-row--before::before,
+.chapter-row--after::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgb(96 165 250);
+  /* blue-400-ish */
+  border-radius: 2px;
+}
+
+.chapter-row--before::before {
+  top: -2px;
+}
+
+.chapter-row--after::after {
+  bottom: -2px;
+}
+
+.chapter-row--merge {
+  outline: 2px dashed rgb(147 197 253);
+  /* blue-300 */
+  outline-offset: 0;
+  background: rgba(191, 219, 254, 0.35);
+  /* blue-200 @ ~35% */
+}

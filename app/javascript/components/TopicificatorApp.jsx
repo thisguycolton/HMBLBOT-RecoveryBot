@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { LavaOverlay } from "./LavaOverlay"; // Adjust the import path as necessary
+import LavaOverlay from "./LavaOverlay";
 import axios from "axios";
-import { IconCopy, IconNumbers, IconArrowsShuffle, IconHistory, IconUserCheck, IconSettings} from '@tabler/icons-react';
+import { Copy, Hash, Shuffle, History, UserCheck, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 
 
@@ -16,6 +16,8 @@ function formatTime(seconds) {
 }
 
 function TopicificatorApp() {
+  const [topicSets, setTopicSets] = useState([]);
+  const [selectedTopicSetId, setSelectedTopicSetId] = useState(null);
   const [topic, setTopic] = useState(null);
   const [timer, setTimer] = useState(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -65,13 +67,35 @@ function TopicificatorApp() {
     setTimer(timerDuration);
   };
 
-  const getRandomTopic = async () => {
-    const res = await axios.get(`${window.location.origin}/api/topics/random`);
+useEffect(() => {
+  axios
+    .get(`${window.location.origin}/api/topic_sets`)
+    .then((res) => {
+      setTopicSets(res.data);
+      if (res.data.length > 0) {
+        setSelectedTopicSetId(res.data[0].id); // default to first
+      }
+    })
+    .catch((err) => {
+      console.error("Failed to load topic sets", err);
+    });
+}, []);
+
+const getRandomTopic = async () => {
+  try {
+    const res = await axios.get(`${window.location.origin}/api/topics/random`, {
+      params: {
+        topic_set_id: selectedTopicSetId,
+      },
+    });
     setTopic(res.data);
     startTimer("random");
     setCoveredTopics((prev) => [...prev, res.data]);
     setHasStarted(true);
-  };
+  } catch (error) {
+    alert("Failed to fetch topic");
+  }
+};
 
   const openNumberModal = () => {
     setNumberInput("");
@@ -130,23 +154,23 @@ function TopicificatorApp() {
         onClick={() => setShowSettingsModal(true)}
         className="!bg-cyan-950 px-4 py-2 rounded"
       >
-        <IconSettings className="w-5 h-5" />
+        <Settings className="w-5 h-5" />
       </button>
     </div>
   </div>
   <div className="fixed bottom-0 w-full bg-transparent p-2 flex justify-center gap-4 z-19">
     <div className="flex flex-wrap gap-2 justify-center mt-4 bg-cyan-950/50 rounded-lg p-4 shadow-lg">
       <button onClick={getRandomTopic} className="!bg-blue-600 px-4 py-2 rounded">
-        <IconArrowsShuffle className="w-5 h-5" />
+        <Shuffle className="w-5 h-5" />
       </button>
       <button onClick={openNumberModal} className="!bg-green-600 px-4 py-2 rounded">
-        <IconNumbers className="w-5 h-5" />
+        <Hash className="w-5 h-5" />
       </button>
       <button onClick={getPreviousTopic} className="!bg-yellow-600 px-4 py-2 rounded">
-        <IconHistory className="w-5 h-5" />
+        <History className="w-5 h-5" />
       </button>
       <button onClick={freeShare} className="!bg-purple-600 px-4 py-2 rounded">
-        <IconUserCheck className="w-5 h-5" />
+        <UserCheck className="w-5 h-5" />
       </button>
     </div>
   </div>
@@ -171,7 +195,7 @@ function TopicificatorApp() {
             onClick={handleCopyTopics}
             className="!bg-transparent text-white px-4 py-3 !rounded-none !rounded-br-lg !rounded-tl-lg hover:text-gray-200 transition-colors duration-300"
           >
-            <IconCopy className="w-5 h-5" />
+            <Copy className="w-5 h-5" />
           </button>
         </div>
 
@@ -269,6 +293,21 @@ function TopicificatorApp() {
             onChange={(e) => setDurationInput(e.target.value)}
             className="w-full p-3 mb-4 rounded bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          <label htmlFor="topicSet" className="block mb-2 text-sm">
+            Topic Set
+          </label>
+          <select
+            id="topicSet"
+            value={selectedTopicSetId || ""}
+            onChange={(e) => setSelectedTopicSetId(Number(e.target.value))}
+            className="w-full p-3 mb-4 rounded bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {topicSets.map((set) => (
+              <option key={set.id} value={set.id}>
+                {set.name}
+              </option>
+            ))}
+          </select>
 
           <div className="flex justify-end gap-2">
             <button

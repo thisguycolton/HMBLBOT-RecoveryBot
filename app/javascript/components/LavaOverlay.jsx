@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 const LavaOverlay = ({ progress }) => {
   const blobs = useMemo(() => {
-    return Array.from({ length: 10 }).map((_, i) => {
+    return Array.from({ length: 7 }).map((_, i) => {
       const r = 80 + Math.random() * 60;
       const cx = -100 + Math.random() * 400; // Start mostly off-left-screen
       const cy = 100 + Math.random() * 400;
@@ -38,6 +38,8 @@ const LavaOverlay = ({ progress }) => {
           width: `${widthPercent}%`,
           left: `${leftPercent}%`,
           transition: 'all 1s linear',
+          willChange: 'transform',
+          transform: 'translateZ(0)', // kick in GPU acceleration
         }}
       >
         <defs>
@@ -98,4 +100,4 @@ const LavaOverlay = ({ progress }) => {
   );
 };
 
-export { LavaOverlay };
+export default LavaOverlay;

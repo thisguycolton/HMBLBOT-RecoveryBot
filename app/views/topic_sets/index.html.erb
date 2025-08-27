@@ -1,0 +1,16 @@
+<p style="color: green"><%= notice %></p>
+
+<% content_for :title, "Topic sets" %>
+
+<h1>Topic sets</h1>
+
+<div id="topic_sets">
+  <% @topic_sets.each do |topic_set| %>
+    <%= render topic_set %>
+    <p>
+      <%= link_to "Show this topic set", topic_set %>
+    </p>
+  <% end %>
+</div>
+
+<%= link_to "New topic set", new_topic_set_path %>

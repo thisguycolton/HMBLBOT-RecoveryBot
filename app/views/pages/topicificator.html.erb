@@ -1,5 +1,13 @@
-  <%= vite_javascript_tag "entrypoints/topicificator.jsx" %>
+<script type="module">
+  import RefreshRuntime from "/vite-dev/@react-refresh";
+  RefreshRuntime.injectIntoGlobalHook(window);
+  window.$RefreshReg$ = () => { };
+  window.$RefreshSig$ = () => (type) => type;
+  window.__vite_plugin_react_preamble_installed__ = true;
+</script>
 
+<%= vite_client_tag %>
+  <%= vite_javascript_tag 'topicificator.jsx' %>
 <style>
   
   body {
@@ -25,5 +33,4 @@
   }
 
 </style>
-<%= vite_javascript_tag "entrypoints/topicificator.jsx" , data: { turbo_track: "reload" } %>
 <div id="topicificator-root" class="pt-5"></div>
