@@ -124,8 +124,8 @@ function resolveRanges(editor, highlights) {
 function useHideCoveredPageBreaks(editor) {
   useLayoutEffect(() => {
     if (!editor) return;
-    const root = document.documentElement;
 
+    const root = document.documentElement;
     const stickyOffset = () => {
       const v = getComputedStyle(root).getPropertyValue('--reader-sticky-offset');
       const n = parseInt(v, 10);
@@ -148,18 +148,14 @@ function useHideCoveredPageBreaks(editor) {
         if (!els.length) { ticking = false; return; }
         const topOffset = stickyOffset();
         let idx = -1;
-        // scan until first below sticky line
         for (let i = 0; i < els.length; i++) {
           const top = els[i].getBoundingClientRect().top;
           if (top - topOffset <= 0) idx = i; else break;
         }
         if (idx !== currentIdx) {
-          // cheap class updates only when changed
           els.forEach((el, i) => {
-            const stuck = (i === idx);
-            const covered = (i < idx);
-            el.classList.toggle('is-stuck', stuck);
-            el.classList.toggle('is-covered', covered);
+            el.classList.toggle('is-stuck', i === idx);
+            el.classList.toggle('is-covered', i < idx);
           });
           currentIdx = idx;
         }
@@ -167,28 +163,38 @@ function useHideCoveredPageBreaks(editor) {
       });
     };
 
-    // initial
-    indexEls();
-    requestAnimationFrame(update);
+    // Attach the MutationObserver only when view.dom is ready
+    const mo = new MutationObserver(() => { indexEls(); update(); });
+
+    const attachDomObservers = () => {
+      const dom = editor.view?.dom;
+      if (!dom) return;
+      mo.observe(dom, { childList: true, subtree: true });
+      indexEls();
+      requestAnimationFrame(update);
+    };
+
+    // initial attempt (in case view is already there)
+    attachDomObservers();
+
+    // ensure we attach right after mount
+    const onCreate = () => attachDomObservers();
+    const onUpdate = () => { indexEls(); update(); };
+
+    editor.on('create', onCreate);
+    editor.on('update', onUpdate);
 
     const onScroll = () => update();
     const onResize = () => { indexEls(); update(); };
-
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onResize);
-
-    const mo = new MutationObserver(() => { indexEls(); update(); });
-    mo.observe(editor.view.dom, { childList: true, subtree: true });
-
-    editor.on('create', () => { indexEls(); update(); });
-    editor.on('update', () => { indexEls(); update(); });
 
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
       mo.disconnect();
-      editor.off('create');
-      editor.off('update');
+      editor.off('create', onCreate);
+      editor.off('update', onUpdate);
     };
   }, [editor]);
 }
