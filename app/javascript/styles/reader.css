@@ -28,6 +28,19 @@ html.dark {
   /* or #000 if you want true black */
 }
 
+.prose,
+.hb-reader {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.prose {
+  will-change: transform;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .hb-reader hr.hb-pagebreak {
   border: 0;
   margin: 2rem 0 1rem;
