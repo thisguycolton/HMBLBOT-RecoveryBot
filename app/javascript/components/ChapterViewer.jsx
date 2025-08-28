@@ -1,5 +1,5 @@
 // app/javascript/components/ChapterViewer.jsx
-import { useEffect, useState, useRef, useLayoutEffect, useCallback} from "react";
+import { useEffect, useState, useRef, useLayoutEffect, useCallback } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
@@ -26,43 +26,54 @@ import { ParagraphWithPage } from "../tiptap/ParagraphWithPage";
 import { FontSize } from "../tiptap/FontSize";
 import { Indent } from "../tiptap/Indent";
 import { HBHighlight } from '../tiptap/HBHighlight';
+import useHighlightClickToShare from "../utils/useHighlightClickToShare";
 
+// Map friendly color names to actual CSS colors (backgroundColor)
+const PALETTE = {
+  yellow: '#fef08a', // tailwind yellow-200-ish
+  lime: '#bef264',
+  cyan: '#a5f3fc',
+  pink: '#fbcfe8',
+  orange: '#fed7aa',
+};
 
-
- // map friendly color names -> actual CSS colors (backgroundColor)
- const PALETTE = {
-   yellow: '#fef08a', // tailwind yellow-200-ish
-   lime:   '#bef264',
-   cyan:   '#a5f3fc',
-   pink:   '#fbcfe8',
-   orange: '#fed7aa',
- };
-
-
+/**
+ * Custom hook for handling highlight sharing functionality
+ */
 function useHighlightShareLink(bookSlug, slug) {
   const [shareToken, setShareToken] = useState(null);
 
   const ensureShareToken = useCallback(async () => {
     if (shareToken) return shareToken;
-    const { data } = await axios.post("/api/highlights/share");
-    setShareToken(data.share_token);
-    return data.share_token;
+    try {
+      const { data } = await axios.post("/api/highlights/share");
+      setShareToken(data.share_token);
+      return data.share_token;
+    } catch (error) {
+      console.error("Failed to create share token:", error);
+      throw new Error("Failed to create share token");
+    }
   }, [shareToken]);
 
   const linkFor = useCallback(
     async (hlId) => {
-      const token = await ensureShareToken();
-      return `${location.origin}/books/${bookSlug}/chapters/${slug}?share=${encodeURIComponent(
-        token
-      )}#hl-${hlId}`;
+      try {
+        const token = await ensureShareToken();
+        return `${location.origin}/books/${bookSlug}/chapters/${slug}?share=${encodeURIComponent(
+          token
+        )}#hl-${hlId}`;
+      } catch (error) {
+        console.error("Failed to generate share link:", error);
+        return `${location.origin}/books/${bookSlug}/chapters/${slug}#hl-${hlId}`;
+      }
     },
     [bookSlug, slug, ensureShareToken]
   );
 
   const copyLink = useCallback(
     async (hlId) => {
-      const url = await linkFor(hlId);
       try {
+        const url = await linkFor(hlId);
         await navigator.clipboard.writeText(url);
         console.info("Link copied:", url);
       } catch (e) {
@@ -75,7 +86,10 @@ function useHighlightShareLink(bookSlug, slug) {
 
   return { shareToken, copyLink, linkFor };
 }
- 
+
+/**
+ * Truncates a string from the middle with ellipsis
+ */
 function truncateMiddle(str, maxLength = 80) {
   if (!str || str.length <= maxLength) return str;
 
@@ -86,7 +100,10 @@ function truncateMiddle(str, maxLength = 80) {
 
   return str.slice(0, front) + ellipsis + str.slice(str.length - back);
 }
-/** Map a plain-text offset to a ProseMirror position using textBetween + binary search */
+
+/**
+ * Maps a plain-text offset to a ProseMirror position using textBetween + binary search
+ */
 function offsetToPos(doc, target) {
   // Guard rails
   const maxPos = Math.max(1, doc.content.size - 1);
@@ -105,27 +122,47 @@ function offsetToPos(doc, target) {
   return Math.min(lo, maxPos);
 }
 
+/**
+ * Resolves highlight ranges to editor positions
+ */
 function resolveRanges(editor, highlights) {
+  if (!editor) return [];
+  
   const text = editor.getText();
   return (Array.isArray(highlights) ? highlights : []).map(h => {
     const sel = h.selector || {};
     let start = sel.position?.start, end = sel.position?.end;
+    
     if ((start == null || end == null) && sel.quote?.exact) {
       const idx = text.indexOf(sel.quote.exact);
-      if (idx >= 0) { start = idx; end = idx + sel.quote.exact.length; }
+      if (idx >= 0) { 
+        start = idx; 
+        end = idx + sel.quote.exact.length; 
+      }
     }
+    
     if (start == null || end == null || end <= start) return null;
+    
     const from = offsetToPos(editor.state.doc, start);
-    const to   = offsetToPos(editor.state.doc, end);
-    return { id: h.id, from, to, color: (h.style && h.style.color) || "yellow" };
+    const to = offsetToPos(editor.state.doc, end);
+    return { 
+      id: h.id, 
+      from, 
+      to, 
+      color: (h.style && h.style.color) || "yellow" 
+    };
   }).filter(Boolean);
 }
 
+/**
+ * Custom hook to hide page breaks that are covered by sticky headers
+ */
 function useHideCoveredPageBreaks(editor) {
   useLayoutEffect(() => {
     if (!editor) return;
 
     const root = document.documentElement;
+    
     const stickyOffset = () => {
       const v = getComputedStyle(root).getPropertyValue('--reader-sticky-offset');
       const n = parseInt(v, 10);
@@ -144,14 +181,22 @@ function useHideCoveredPageBreaks(editor) {
     const update = () => {
       if (ticking) return;
       ticking = true;
+      
       requestAnimationFrame(() => {
-        if (!els.length) { ticking = false; return; }
+        if (!els.length) { 
+          ticking = false; 
+          return; 
+        }
+        
         const topOffset = stickyOffset();
         let idx = -1;
+        
         for (let i = 0; i < els.length; i++) {
           const top = els[i].getBoundingClientRect().top;
-          if (top - topOffset <= 0) idx = i; else break;
+          if (top - topOffset <= 0) idx = i; 
+          else break;
         }
+        
         if (idx !== currentIdx) {
           els.forEach((el, i) => {
             el.classList.toggle('is-stuck', i === idx);
@@ -159,71 +204,87 @@ function useHideCoveredPageBreaks(editor) {
           });
           currentIdx = idx;
         }
+        
         ticking = false;
       });
     };
 
-    // Attach the MutationObserver only when view.dom is ready
-    const mo = new MutationObserver(() => { indexEls(); update(); });
-
-    const attachDomObservers = () => {
+    // Wait for editor to be fully mounted before setting up observers
+    const setupObservers = () => {
       const dom = editor.view?.dom;
       if (!dom) return;
+      
+      const mo = new MutationObserver(() => { 
+        indexEls(); 
+        update(); 
+      });
+      
       mo.observe(dom, { childList: true, subtree: true });
       indexEls();
       requestAnimationFrame(update);
+      
+      return mo;
     };
 
-    // initial attempt (in case view is already there)
-    attachDomObservers();
+    let mo;
+    const onEditorReady = () => {
+      // Small delay to ensure editor is fully mounted
+      setTimeout(() => {
+        mo = setupObservers();
+      }, 100);
+    };
 
-    // ensure we attach right after mount
-    const onCreate = () => attachDomObservers();
-    const onUpdate = () => { indexEls(); update(); };
-
-    editor.on('create', onCreate);
-    editor.on('update', onUpdate);
+    if (editor.isReady) {
+      onEditorReady();
+    } else {
+      editor.on('create', onEditorReady);
+    }
 
     const onScroll = () => update();
     const onResize = () => { indexEls(); update(); };
+    
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onResize);
 
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
-      mo.disconnect();
-      editor.off('create', onCreate);
-      editor.off('update', onUpdate);
+      if (mo) mo.disconnect();
+      editor.off('create', onEditorReady);
     };
   }, [editor]);
 }
 
+/**
+ * Main ChapterViewer component
+ */
 export default function ChapterViewer({ bookSlug, slug }) {
   const [chapter, setChapter] = useState(null);
   const [highlights, setHighlights] = useState([]);
   const [color, setColor] = useState("yellow");
-  const [progress, setProgress] = useState(0);
   const { copyLink } = useHighlightShareLink(bookSlug, slug);
 
-  const [openHighlights, setOpenHighlights] = useState(false); // collapsed by default
   const rangesRef = useRef(new Map()); // id -> { from, to }
+  const applyingRef = useRef(false);
+  const editorMountedRef = useRef(false);
 
   const [openHighlightsModal, setOpenHighlightsModal] = useState(false);
   const cssFromStored = (stored) => PALETTE[stored] || stored || PALETTE.yellow;
 
   const [pendingJumpId, setPendingJumpId] = useState(null);
-  useEffect(() => {
+  
+  useLayoutEffect(() => {
     const m = location.hash.match(/^#hl-(.+)$/);
-    if (m) setPendingJumpId(m[1]);   // keep as string
+    if (m) setPendingJumpId(m[1]); // keep as string
   }, []);
 
+  // Editor configuration
   const editor = useEditor({
     editable: false,
     extensions: [
-      StarterKit.configure({ paragraph: false }), // match editor
-      Heading,                                    // explicit (StarterKit adds it, but good to be clear)
-      ParagraphWithPage,                          // <-- important
+      StarterKit.configure({ paragraph: false }),
+      Heading,
+      ParagraphWithPage,
       TextStyle,
       FontSize,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -236,286 +297,362 @@ export default function ChapterViewer({ bookSlug, slug }) {
       HBHighlight.configure({ multicolor: true }),
     ],
     content: chapter?.tiptap_json || chapter?.tiptap || null,
+    onCreate: () => {
+      editorMountedRef.current = true;
+    },
+    onDestroy: () => {
+      editorMountedRef.current = false;
+    }
   }, [chapter]);
 
-    useHideCoveredPageBreaks(editor);
-
-    const [theme, setTheme] = useState(() => {
-    // prefer saved setting; else follow system
-    return localStorage.getItem('theme') || 'system';
-  });
+  // Safe reference to editor view
+  const viewRef = useRef(null);
   
-
-  // apply theme to <html>
-  useEffect(() => {
-  const root = document.documentElement;
-  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const isDark = theme === 'dark' || (theme === 'system' && systemDark);
-
-  // make this explicit, not toggle
-  root.classList.toggle('dark', isDark);
-
-  localStorage.setItem('theme', theme);
-
-  // keep theme-color meta in sync (optional)
-  const meta =
-    document.querySelector('meta[name="theme-color"]') ||
-    (() => {
-      const m = document.createElement('meta');
-      m.name = 'theme-color';
-      document.head.appendChild(m);
-      return m;
-    })();
-  meta.content = isDark ? '#0a0a0a' : '#ffffff';
-}, [theme]);
-
-  // scroll progress
-const progRef = useRef(null);
-const rafRef = useRef(0);
-
-// replace your scroll progress effect with:
-useEffect(() => {
-  const el = progRef.current;
-  if (!el) return;
-
-  let ticking = false;
-
-  const onScroll = () => {
-    if (ticking) return;
-    ticking = true;
-    rafRef.current = requestAnimationFrame(() => {
-      const doc = document.documentElement;
-      const total = (doc.scrollHeight - doc.clientHeight) || 1; // avoid 0
-      const pct = Math.min(1, Math.max(0, window.scrollY / total));
-      // transform = paint-only; no layout
-      el.style.transform = `scaleX(${pct})`;
-      ticking = false;
-    });
-  };
-
-  window.addEventListener('scroll', onScroll, { passive: true });
-  return () => {
-    window.removeEventListener('scroll', onScroll);
-    cancelAnimationFrame(rafRef.current);
-  };
-}, []);
-
-  // load chapter + highlights
-  useEffect(() => {
-  (async () => {
-    try {
-      const ch = await axios.get(`/api/books/${bookSlug}/chapters/${slug}.json`);
-      setChapter(ch.data);
-
-      const params = new URLSearchParams(location.search);
-      const share = params.get('share');
-
-      const hls = await axios.get(`/api/highlights`, {
-        params: { chapter_slug: slug, ...(share ? { share } : {}) }
-      });
-
-      setHighlights(Array.isArray(hls.data) ? hls.data : []);
-    } catch (e) {
-      console.error("Failed to load chapter", e);
-    }
-  })();
-}, [bookSlug, slug]);
-
-  // apply highlight marks
-const [shareToken, setShareToken] = useState(null);
-
-async function ensureShareToken() {
-  if (shareToken) return shareToken;
-  try {
-    const { data } = await axios.post('/api/highlights/share');
-    setShareToken(data.share_token);
-    return data.share_token;
-  } catch (e) {
-    // 401/403 means not logged in or not allowed to create a token
-    throw new Error('LOGIN_REQUIRED');
-  }
-}
-
-async function copyShareLinkForHighlight(hlId) {
-  // If you *must* support public clicks too, you can fall back to no-token link,
-  // but that link won't show your private highlights. Better to require login here.
-  let url;
-  try {
-    const token = await ensureShareToken();
-    url = `${location.origin}/books/${bookSlug}/chapters/${slug}?share=${encodeURIComponent(token)}#hl-${hlId}`;
-    await navigator.clipboard.writeText(url);
-    toast('Link copied to clipboard'); // replace with your toast/snackbar
-  } catch (err) {
-    if (err.message === 'LOGIN_REQUIRED') {
-      toast('Log in to generate a share link');
-      return;
-    }
-    // fallback UI
-    url ||= `${location.origin}/books/${bookSlug}/chapters/${slug}#hl-${hlId}`;
-    window.prompt('Copy highlight link:', url);
-  }
-}
-// …
-
-useLayoutEffect(() => {
-  if (!editor) return;
-  const doc = editor.state?.doc;
-  if (!doc || doc.content.size <= 2) return;
-
-  const { state, view } = editor;
-  const markType = state.schema.marks.highlight;
-  if (!markType) return;
-
-  // temporarily enable to mutate marks
-  const wasEditable = editor.isEditable;
-  editor.setEditable(true);
-  try {
-    // 1) clear existing highlight marks
-    let tr = state.tr.removeMark(0, doc.content.size, markType);
-
-    // 2) resolve and apply new marks
-    const resolved = resolveRanges(editor, highlights);
-    rangesRef.current.clear();
-    resolved.forEach((r) => {
-  const cssColor = PALETTE[r.color] || r.color || PALETTE.yellow;
-  rangesRef.current.set(String(r.id), { from: r.from, to: r.to });
-  tr = tr.addMark(
-    r.from,
-    r.to,
-    markType.create({ color: cssColor, hlId: String(r.id), class: 'hb-hl' })
-  );
-});
-
-    if (tr.steps.length) {
-      view.dispatch(tr);
-    }
-  } finally {
-    editor.setEditable(wasEditable);
-  }
-
-  // 3) if there’s a pending deep-link jump, do it after DOM paints
-  if (pendingJumpId != null) {
-    // double RAF to ensure ProseMirror has flushed DOM updates
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (tryJump(pendingJumpId)) {
-          setPendingJumpId(null);
-        }
-      });
-    });
-  }
-}, [editor, highlights, pendingJumpId]);
-
-  async function createHighlight() {
+  useLayoutEffect(() => {
     if (!editor) return;
-    const { from, to } = editor.state.selection;
-    if (from === to) return;
-    const before = editor.state.doc.textBetween(0, from, "\n", "\n");
-    const exact  = editor.state.doc.textBetween(from, to, "\n", "\n");
-    const after  = editor.state.doc.textBetween(to, editor.state.doc.content.size, "\n", "\n");
-    const start = before.length;
-    const end   = start + exact.length;
-    const payload = {
-      highlight: {
-        chapter_slug: slug,
-        style: { color },
-        selector: {
-          type: "Composite",
-          position: { type: "TextPositionSelector", start, end },
-          quote: { type: "TextQuoteSelector", exact, prefix: before.slice(-40), suffix: after.slice(0, 40) }
+    
+    const updateViewRef = () => {
+      try {
+        // Safely access the editor view
+        if (editor.view && typeof editor.view === 'object') {
+          viewRef.current = editor.view;
         }
+      } catch (error) {
+        console.warn("Could not access editor view:", error);
       }
     };
-    const res = await axios.post("/api/highlights", payload);
-    const newId = String(res.data.id);
-    setHighlights(prev => [...prev, { id: newId, ...payload.highlight }]);
-  }
+    
+    // Update initially
+    updateViewRef();
+    
+    // Listen for editor creation/updates
+    editor.on('create', updateViewRef);
+    editor.on('update', updateViewRef);
+    
+    return () => {
+      editor.off('create', updateViewRef);
+      editor.off('update', updateViewRef);
+    };
+  }, [editor]);
 
-  async function deleteHighlight(id) {
-    await axios.delete(`/api/highlights/${id}`);
-    setHighlights(prev => prev.filter(h => h.id !== id));
-  }
+  // Apply the page break hiding functionality
+  useHideCoveredPageBreaks(editor);
 
-function getStickyOffset() {
-  const v = getComputedStyle(document.documentElement).getPropertyValue('--reader-sticky-offset');
-  const n = parseInt(v, 10);
-  // add a little breathing room so the text isn’t jammed under the bar
-  return (Number.isFinite(n) ? n : 0) + 45;
-}
+  // Enable highlight click-to-share functionality
+  useHighlightClickToShare(viewRef, copyLink);
 
-function jumpToHighlight(id) {
-  if (!editor) return;
+  /**
+   * Applies highlights to the editor content
+   */
+  const applyHighlights = useCallback(() => {
+    if (!editor || applyingRef.current || !editorMountedRef.current) return;
+    
+    // Safely check if view is available
+    let view;
+    try {
+      view = editor.view;
+      if (!view || !view.state) return;
+    } catch (error) {
+      console.warn("Editor view not available for highlighting:", error);
+      return;
+    }
 
-  // remember this jump in the URL so reloads work
-  if (history.replaceState) {
-    history.replaceState(null, "", `#hl-${id}`);
-  } else {
-    location.hash = `#hl-${id}`;
-  }
-  setPendingJumpId(id);
+    const { state } = editor;
+    const doc = state.doc;
+    const markType = state.schema?.marks?.highlight;
+    
+    if (!doc || !markType) return;
 
-  // try immediately if ranges are already resolved
-  tryJump(id);
-}
-
-function nudgeForSticky(offsetExtra = 155) {
-  const css = getComputedStyle(document.documentElement)
-    .getPropertyValue('--reader-sticky-offset');
-  const base = parseInt(css, 10) || 0;
-  return base + offsetExtra;
-}
-
-function tryJump(id) {
-  if (!editor) return false;
-  const pos = rangesRef.current.get(String(id)); // <-- string key
-  if (!pos) return false;
-
-  const view = editor.view;
-  const coords = view.coordsAtPos(pos.from);
-  const targetTop = window.scrollY + coords.top - nudgeForSticky();
-
-  window.scrollTo({ top: targetTop, left: 0, behavior: 'smooth' });
-
-  // optional: also select/flash
-  editor.chain().setTextSelection({ from: pos.from, to: pos.to }).run();
-  const root = view.dom;
-  root.classList.add('hb-flash');
-  setTimeout(() => root.classList.remove('hb-flash'), 300);
-
-  return true;
-}
-
-useEffect(() => {
-  if (!editor) return;
-  const root = editor.view.dom;
-
-  const onClick = async (e) => {
-    const el = e.target.closest('mark.hb-hl');
-    if (!el) return;
-
-    // avoid interfering with text selection drags
-    const sel = window.getSelection();
-    if (sel && String(sel).length > 0) return;
-
-    const id = el.getAttribute('data-hl-id');
-    if (!id) return;
-
-    e.preventDefault();
-    e.stopPropagation();
+    applyingRef.current = true;
+    const wasEditable = editor.isEditable;
 
     try {
-      await copyShareLinkForHighlight(id);
-      // optional visual feedback on the mark
-      el.classList.add('animate-[pulse_0.6s_ease_1]');
-      setTimeout(() => el.classList.remove('animate-[pulse_0.6s_ease_1]'), 600);
-    } catch (_) {}
-  };
+      editor.setEditable(true);
+      let tr = state.tr.removeMark(0, doc.content.size, markType);
 
-  root.addEventListener('click', onClick);
-  return () => root.removeEventListener('click', onClick);
-}, [editor, bookSlug, slug, shareToken]);
+      const resolved = resolveRanges(editor, highlights);
+      rangesRef.current.clear();
+      
+      for (const r of resolved) {
+        const colorCss = PALETTE[r.color] || r.color || PALETTE.yellow;
+        rangesRef.current.set(String(r.id), { from: r.from, to: r.to });
+        
+        tr = tr.addMark(
+          r.from,
+          r.to,
+          markType.create({ 
+            color: colorCss, 
+            hlId: String(r.id), 
+            class: 'hb-hl' 
+          })
+        );
+      }
 
+      if (tr.steps.length) {
+        try {
+          view.dispatch(tr);
+        } catch (error) {
+          console.warn("Failed to dispatch highlight transaction:", error);
+        }
+      }
+    } finally {
+      editor.setEditable(wasEditable);
+      applyingRef.current = false;
+    }
+  }, [editor, highlights]);
 
+  // Apply highlights when ready or when highlights change
+  useLayoutEffect(() => {
+    if (!editor) return;
+    
+    const runHighlights = () => {
+      // Small delay to ensure editor is fully ready
+      setTimeout(applyHighlights, 50);
+    };
+    
+    if (editorMountedRef.current) {
+      runHighlights();
+    } else {
+      editor.on('create', runHighlights);
+    }
+    
+    return () => editor.off('create', runHighlights);
+  }, [editor, applyHighlights]);
+
+  // Theme management
+  const [theme, setTheme] = useState(() => {
+    // Prefer saved setting; else follow system
+    return localStorage.getItem('theme') || 'system';
+  });
+
+  // Apply theme to <html>
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = theme === 'dark' || (theme === 'system' && systemDark);
+
+    // Make this explicit, not toggle
+    root.classList.toggle('dark', isDark);
+    localStorage.setItem('theme', theme);
+
+    // Keep theme-color meta in sync (optional)
+    const meta =
+      document.querySelector('meta[name="theme-color"]') ||
+      (() => {
+        const m = document.createElement('meta');
+        m.name = 'theme-color';
+        document.head.appendChild(m);
+        return m;
+      })();
+    
+    meta.content = isDark ? '#0a0a0a' : '#ffffff';
+  }, [theme]);
+
+  // Scroll progress indicator
+  const progRef = useRef(null);
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    const el = progRef.current;
+    if (!el) return;
+
+    let ticking = false;
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      
+      rafRef.current = requestAnimationFrame(() => {
+        const doc = document.documentElement;
+        const total = (doc.scrollHeight - doc.clientHeight) || 1; // avoid 0
+        const pct = Math.min(1, Math.max(0, window.scrollY / total));
+        
+        // transform = paint-only; no layout
+        el.style.transform = `scaleX(${pct})`;
+        ticking = false;
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  // Load chapter + highlights
+  useEffect(() => {
+    let isMounted = true;
+    
+    (async () => {
+      try {
+        const ch = await axios.get(`/api/books/${bookSlug}/chapters/${slug}.json`);
+        if (isMounted) setChapter(ch.data);
+
+        const params = new URLSearchParams(location.search);
+        const share = params.get('share');
+
+        const hls = await axios.get(`/api/highlights`, {
+          params: { chapter_slug: slug, ...(share ? { share } : {}) }
+        });
+
+        if (isMounted) setHighlights(Array.isArray(hls.data) ? hls.data : []);
+      } catch (e) {
+        console.error("Failed to load chapter", e);
+      }
+    })();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [bookSlug, slug]);
+
+  // Share token management
+  const [shareToken, setShareToken] = useState(null);
+
+  async function ensureShareToken() {
+    if (shareToken) return shareToken;
+    
+    try {
+      const { data } = await axios.post('/api/highlights/share');
+      setShareToken(data.share_token);
+      return data.share_token;
+    } catch (e) {
+      // 401/403 means not logged in or not allowed to create a token
+      throw new Error('LOGIN_REQUIRED');
+    }
+  }
+
+  /**
+   * Creates a new highlight from the current selection
+   */
+  async function createHighlight() {
+    if (!editor) return;
+    
+    try {
+      const { from, to } = editor.state.selection;
+      if (from === to) return;
+      
+      const before = editor.state.doc.textBetween(0, from, "\n", "\n");
+      const exact = editor.state.doc.textBetween(from, to, "\n", "\n");
+      const after = editor.state.doc.textBetween(to, editor.state.doc.content.size, "\n", "\n");
+      
+      const start = before.length;
+      const end = start + exact.length;
+      
+      const payload = {
+        highlight: {
+          chapter_slug: slug,
+          style: { color },
+          selector: {
+            type: "Composite",
+            position: { type: "TextPositionSelector", start, end },
+            quote: { 
+              type: "TextQuoteSelector", 
+              exact, 
+              prefix: before.slice(-40), 
+              suffix: after.slice(0, 40) 
+            }
+          }
+        }
+      };
+      
+      const res = await axios.post("/api/highlights", payload);
+      const newId = String(res.data.id);
+      
+      setHighlights(prev => [...prev, { id: newId, ...payload.highlight }]);
+    } catch (error) {
+      console.error("Failed to create highlight:", error);
+    }
+  }
+
+  /**
+   * Deletes a highlight
+   */
+  async function deleteHighlight(id) {
+    try {
+      await axios.delete(`/api/highlights/${id}`);
+      setHighlights(prev => prev.filter(h => h.id !== id));
+    } catch (error) {
+      console.error("Failed to delete highlight:", error);
+    }
+  }
+
+  /**
+   * Calculates sticky offset for proper scrolling
+   */
+  function getStickyOffset() {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--reader-sticky-offset');
+    const n = parseInt(v, 10);
+    // Add a little breathing room so the text isn't jammed under the bar
+    return (Number.isFinite(n) ? n : 0) + 45;
+  }
+
+  /**
+   * Jumps to a specific highlight
+   */
+  function jumpToHighlight(id) {
+    if (!editor) return;
+
+    // Remember this jump in the URL so reloads work
+    if (history.replaceState) {
+      history.replaceState(null, "", `#hl-${id}`);
+    } else {
+      location.hash = `#hl-${id}`;
+    }
+    
+    setPendingJumpId(id);
+    // Try immediately if ranges are already resolved
+    tryJump(id);
+  }
+
+  function nudgeForSticky(offsetExtra = 155) {
+    const css = getComputedStyle(document.documentElement)
+      .getPropertyValue('--reader-sticky-offset');
+    const base = parseInt(css, 10) || 0;
+    return base + offsetExtra;
+  }
+
+  /**
+   * Attempts to jump to a highlight position
+   */
+  function tryJump(id) {
+    if (!editor) return false;
+    
+    const pos = rangesRef.current.get(String(id));
+    if (!pos) return false;
+
+    try {
+      const view = editor.view;
+      const coords = view.coordsAtPos(pos.from);
+      const targetTop = window.scrollY + coords.top - nudgeForSticky();
+
+      window.scrollTo({ top: targetTop, left: 0, behavior: 'smooth' });
+
+      // Optional: also select/flash
+      editor.chain().setTextSelection({ from: pos.from, to: pos.to }).run();
+      
+      const root = view.dom;
+      if (root) {
+        root.classList.add('hb-flash');
+        setTimeout(() => root.classList.remove('hb-flash'), 300);
+      }
+
+      return true;
+    } catch (error) {
+      console.warn("Failed to jump to highlight:", error);
+      return false;
+    }
+  }
+
+  // Try to jump to pending highlight when editor is ready
+  useEffect(() => {
+    if (pendingJumpId && editorMountedRef.current) {
+      // Small delay to ensure everything is rendered
+      setTimeout(() => tryJump(pendingJumpId), 100);
+    }
+  }, [pendingJumpId, editorMountedRef.current]);
 
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-3">
@@ -533,14 +670,15 @@ useEffect(() => {
         <h1 className="text-2xl! md:text-4xl! font-bold truncate text-center flex-1">
           {chapter?.title}
         </h1>
-
       </div>
+      
       <ChapterNavBar
         bookTitle={chapter?.book_title || "The Big Book of Alcoholics Anonymous"}
         bookSlug={bookSlug}
-        prevSlug={chapter?.neighbors?.prev_slug}   // or however you expose neighbors
+        prevSlug={chapter?.neighbors?.prev_slug}
         nextSlug={chapter?.neighbors?.next_slug}
       />
+      
       <div className="prose hb-reader
           prose-slate
           prose-sm md:prose lg:prose-lg xl:prose-xl 2xl:prose-2xl
@@ -549,29 +687,28 @@ useEffect(() => {
         <EditorContent editor={editor} />
       </div>
 
-      {/* Highlight list */}
-      {/* Highlights (collapsible) */}
+      {/* Reader bubble menu for highlights */}
+      <ReaderBubbleMenu
+        colors={PALETTE}
+        value={cssFromStored(color)}
+        onChangeColor={(css) => setColor(css)}
+        onHighlight={createHighlight}
+        onOpenModal={() => setOpenHighlightsModal(true)}
+        onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        isDark={document.documentElement.classList.contains('dark')}
+      />
 
-        <ReaderBubbleMenu
-          colors={PALETTE}
-          value={cssFromStored(color)}
-          onChangeColor={(css) => setColor(css)}
-          onHighlight={createHighlight}
-          onOpenModal={() => setOpenHighlightsModal(true)}
-          onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}  // NEW
-          isDark={document.documentElement.classList.contains('dark')}              // NEW
-        />
-
-        <HighlightsModal
-          open={openHighlightsModal}
-          onClose={() => setOpenHighlightsModal(false)}
-          highlights={(Array.isArray(highlights) ? highlights : [])}
-          swatchOf={(h) => cssFromStored(h?.style?.color)}
-          onJump={jumpToHighlight}
-          onDelete={deleteHighlight}
-          onShare={(id) => copyLink(id)}
-          MiddleTruncate={MiddleTruncate}
-        />
+      {/* Highlights modal */}
+      <HighlightsModal
+        open={openHighlightsModal}
+        onClose={() => setOpenHighlightsModal(false)}
+        highlights={(Array.isArray(highlights) ? highlights : [])}
+        swatchOf={(h) => cssFromStored(h?.style?.color)}
+        onJump={jumpToHighlight}
+        onDelete={deleteHighlight}
+        onShare={(id) => copyLink(id)}
+        MiddleTruncate={MiddleTruncate}
+      />
     </div>
   );
 }

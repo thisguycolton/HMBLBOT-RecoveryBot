@@ -69,7 +69,7 @@ export default function ReaderBubbleMenu({
           type="button"
           onClick={() => setTrayOpen((v) => !v)}
           className="size-12 grid place-items-center rounded-full border
-                     border-slate-300 bg-yellow-100 text-slate-900 shadow-xl
+                     border-slate-300 bg-stone-100 text-slate-900 shadow-xl
                      active:scale-[0.98] transition
                      dark:border-slate-500 dark:bg-neutral-600 dark:hover:bg-neutral-800 dark:text-stone-100"
           title={trayOpen ? "Close highlight options" : "Open highlight options"}
