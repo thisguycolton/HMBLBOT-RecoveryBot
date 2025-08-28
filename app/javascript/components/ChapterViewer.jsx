@@ -124,69 +124,71 @@ function resolveRanges(editor, highlights) {
 function useHideCoveredPageBreaks(editor) {
   useLayoutEffect(() => {
     if (!editor) return;
-
     const root = document.documentElement;
-    const getOffset = () => {
+
+    const stickyOffset = () => {
       const v = getComputedStyle(root).getPropertyValue('--reader-sticky-offset');
       const n = parseInt(v, 10);
       return Number.isFinite(n) ? n : 0;
     };
 
     let els = [];
-    const selector = '[data-page-break]';   // <-- catch header/default/footer
+    let currentIdx = -1;
+    let ticking = false;
 
     const indexEls = () => {
-      els = Array.from(document.querySelectorAll(selector));
+      els = Array.from(document.querySelectorAll('[data-page-break]'));
       els.forEach((el, i) => (el.dataset.pbIndex = String(i)));
     };
 
     const update = () => {
-      if (!els.length) return;
-      const topOffset = getOffset();
-
-      // find last page break whose top is at/above sticky line
-      let currentIdx = -1;
-      for (let i = 0; i < els.length; i++) {
-        const top = els[i].getBoundingClientRect().top;
-        if (top - topOffset <= 0) currentIdx = i;
-        else break;
-      }
-
-      els.forEach((el, i) => {
-        el.classList.toggle('is-stuck', i === currentIdx);
-        el.classList.toggle('is-covered', i < currentIdx);
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        if (!els.length) { ticking = false; return; }
+        const topOffset = stickyOffset();
+        let idx = -1;
+        // scan until first below sticky line
+        for (let i = 0; i < els.length; i++) {
+          const top = els[i].getBoundingClientRect().top;
+          if (top - topOffset <= 0) idx = i; else break;
+        }
+        if (idx !== currentIdx) {
+          // cheap class updates only when changed
+          els.forEach((el, i) => {
+            const stuck = (i === idx);
+            const covered = (i < idx);
+            el.classList.toggle('is-stuck', stuck);
+            el.classList.toggle('is-covered', covered);
+          });
+          currentIdx = idx;
+        }
+        ticking = false;
       });
     };
 
-    // initial index + update (after paint)
+    // initial
     indexEls();
-    requestAnimationFrame(() => { indexEls(); update(); });
+    requestAnimationFrame(update);
 
-    // keep in sync on scroll/resize
     const onScroll = () => update();
     const onResize = () => { indexEls(); update(); };
+
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onResize);
 
-    // also watch the editor DOM for page breaks being added/removed
-    const mo = new MutationObserver(() => {
-      indexEls();
-      update();
-    });
+    const mo = new MutationObserver(() => { indexEls(); update(); });
     mo.observe(editor.view.dom, { childList: true, subtree: true });
 
-    // TipTap lifecycle events for good measure
-    const onCreate = () => { indexEls(); update(); };
-    const onUpdate = () => { indexEls(); update(); };
-    editor.on('create', onCreate);
-    editor.on('update', onUpdate);
+    editor.on('create', () => { indexEls(); update(); });
+    editor.on('update', () => { indexEls(); update(); });
 
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
       mo.disconnect();
-      editor.off('create', onCreate);
-      editor.off('update', onUpdate);
+      editor.off('create');
+      editor.off('update');
     };
   }, [editor]);
 }
@@ -262,15 +264,35 @@ export default function ChapterViewer({ bookSlug, slug }) {
 }, [theme]);
 
   // scroll progress
-  useEffect(() => {
-    function handleScroll() {
-      const total = document.body.scrollHeight - window.innerHeight;
-      const pct = (window.scrollY / total) * 100;
-      setProgress(pct);
-    }
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+const progRef = useRef(null);
+const rafRef = useRef(0);
+
+// replace your scroll progress effect with:
+useEffect(() => {
+  const el = progRef.current;
+  if (!el) return;
+
+  let ticking = false;
+
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    rafRef.current = requestAnimationFrame(() => {
+      const doc = document.documentElement;
+      const total = (doc.scrollHeight - doc.clientHeight) || 1; // avoid 0
+      const pct = Math.min(1, Math.max(0, window.scrollY / total));
+      // transform = paint-only; no layout
+      el.style.transform = `scaleX(${pct})`;
+      ticking = false;
+    });
+  };
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  return () => {
+    window.removeEventListener('scroll', onScroll);
+    cancelAnimationFrame(rafRef.current);
+  };
+}, []);
 
   // load chapter + highlights
   useEffect(() => {
@@ -492,10 +514,11 @@ useEffect(() => {
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-3">
       {/* Progress bar */}
-      <div className="fixed top-14 left-0 w-full h-1 bg-gray-200 z-50">
+      <div className="fixed top-14 left-0 w-full h-1 bg-gray-200 z-50 overflow-hidden">
         <div
-          className="h-1 bg-blue-500 transition-all"
-          style={{ width: `${progress}%` }}
+          ref={progRef}
+          className="h-1 bg-blue-500 origin-left will-change-transform"
+          style={{ transform: 'scaleX(0)' }}
         />
       </div>
 
