@@ -3,32 +3,26 @@ import Highlight from '@tiptap/extension-highlight';
 
 export const HBHighlight = Highlight.extend({
   addAttributes() {
-    const parent = typeof super.addAttributes === 'function' ? super.addAttributes() : {};
     return {
-      ...parent,
+      ...this.parent?.(),
       color: {
         default: null,
-        parseHTML: el => el.getAttribute('data-color'),
-        renderHTML: attrs => {
-          const out = {};
-          if (attrs.color) {
-            out['data-color'] = attrs.color;
-            out.style = `background-color: ${attrs.color}`;
-          }
-          return out;
-        },
+        parseHTML: el => el.style.backgroundColor || null,
+        renderHTML: attrs => attrs.color ? { style: `background-color: ${attrs.color}` } : {},
       },
       hlId: {
         default: null,
         parseHTML: el => el.getAttribute('data-hl-id'),
-        renderHTML: attrs => (attrs.hlId ? { 'data-hl-id': String(attrs.hlId) } : {}),
+        renderHTML: attrs => attrs.hlId ? { 'data-hl-id': attrs.hlId } : {},
       },
-      // optional: class hook for styling
-      class: {
-        default: 'hb-hl',
-        parseHTML: el => el.className,
-        renderHTML: attrs => ({ class: attrs.class || 'hb-hl' }),
-      },
+      // If you want a class too, you can hard-code it in renderHTML below
     };
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    // Make sure the element has both the data attribute and class
+    const cls = ['hb-hl', HTMLAttributes.class].filter(Boolean).join(' ');
+    const attrs = { ...HTMLAttributes, class: cls };
+    return ['mark', attrs, 0];
   },
 });

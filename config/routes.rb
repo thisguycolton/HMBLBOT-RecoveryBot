@@ -20,25 +20,30 @@ Rails.application.routes.draw do
 
 
   namespace :api do
-      resources :highlights, only: [:index, :create, :destroy] do
-        collection { post :share }   # <— enable POST /api/highlights/share
-      end
-     resources :books, param: :slug, only: [:index, :show, :new, :create, :edit, :update]  do
-      member do
-        get :manage_chapters   # admin-only manager UI (link only; you can wire the page later)
-      end
-        get :export, on: :member   # GET /api/books/:slug/export
+  resources :highlights, only: [:index, :create, :destroy] do
+    collection { post :share }
+  end
+
+  resources :books, param: :slug do
+    collection do
+      post :import_json         # => POST /api/books/import_json
+    end
+
+    member do
+      get :export               # => GET /api/books/:slug/export
+      get :manage_chapters
+    end
+
     resources :chapters, param: :slug, only: [:index, :show, :update, :create, :destroy] do
       collection do
-        post :merge   # POST /api/books/:book_slug/chapters/merge
-        post :reorder # optional: drag/drop reorder support
+        post :merge
+        post :reorder
       end
     end
   end
 
-    get 'topics/random', to: 'topics#random'
-    get 'topics/:id', to: 'topics#show'
-    resources :topic_sets, only: [:index]
+
+  resources :topic_sets, only: [:index]
 
     namespace :v1 do
       # Quest Players
@@ -61,7 +66,16 @@ Rails.application.routes.draw do
       get '/health', to: 'health#check'
     end
   end
+namespace :api do
+  # explicit collection endpoints
+  get 'topics/by_number', to: 'topics#by_number'
+  get 'topics/random',    to: 'topics#random'
 
+  # only allow numeric IDs for :show so 'by_number' won't match here
+  resources :topics, only: [:index, :show], constraints: { id: /\d+/ }
+
+  resources :topic_sets, only: [:index, :show]
+end
   resources :topic_categories
   resources :service_readings
   resources :user_active_groups, only: %i[create update]

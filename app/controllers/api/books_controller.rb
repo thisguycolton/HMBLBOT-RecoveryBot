@@ -63,6 +63,66 @@ class Api::BooksController < ApplicationController
       disposition: "attachment")
   end
 
+    def import_json
+    payload = params[:payload]
+
+    # Handle stringified JSON sent from file uploader
+    if payload.is_a?(String)
+      begin
+        payload = JSON.parse(payload)
+      rescue JSON::ParserError => e
+        return render json: { error: "Invalid JSON: #{e.message}" }, status: :unprocessable_entity
+      end
+    end
+
+    unless payload.is_a?(Hash) && payload["book"].is_a?(Hash) && payload["chapters"].is_a?(Array)
+      return render json: { error: "Malformed payload. Expecting { book: {}, chapters: [] }" }, status: :unprocessable_entity
+    end
+
+    created = 0
+    updated = 0
+
+    ActiveRecord::Base.transaction do
+      b = Book.find_or_initialize_by(slug: payload["book"]["slug"].presence || SecureRandom.hex(6))
+      b.title        = payload["book"]["title"].presence || b.title
+      b.description  = payload["book"]["description"] if payload["book"].key?("description")
+      b.author       = payload["book"]["author"]      if payload["book"].key?("author")
+      b.image_url    = payload["book"]["image_url"]   if payload["book"].key?("image_url")
+      b.save!
+
+      payload["chapters"].each_with_index do |ch_hash, i|
+        slug        = ch_hash["slug"].presence || "chapter-#{i + 1}"
+        title       = ch_hash["title"].presence || "Chapter #{i + 1}"
+        index       = ch_hash["index"].presence || (i + 1)
+        first_page  = ch_hash["first_page"]
+        last_page   = ch_hash["last_page"]
+        tiptap_json = ch_hash["tiptap_json"].presence || ch_hash["tiptap"] || { "type" => "doc", "content" => [] }
+
+        chapter = b.chapters.find_or_initialize_by(slug: slug)
+        chapter.title       = title
+        chapter.index       = index
+        chapter.first_page  = first_page
+        chapter.last_page   = last_page
+        chapter.tiptap_json = tiptap_json
+
+        if chapter.new_record?
+          chapter.save!
+          created += 1
+        else
+          changed = chapter.changed?
+          chapter.save!
+          updated += 1 if changed
+        end
+      end
+    end
+
+    render json: { ok: true, created:, updated: }
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  rescue => e
+    render json: { error: e.message }, status: :internal_server_error
+  end
+
   private
 
   def set_book

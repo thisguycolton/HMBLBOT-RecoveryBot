@@ -745,343 +745,206 @@ async getRandomTopicFromCategory(categoryTitle) {
 
 
 showTopicPopup(topic) {
-  console.log("📌 Showing topic popup in the center of the screen...");
+  if (this.topicPopup) return;
 
-  if (this.topicPopup) {
-    console.warn("⚠️ Popup already exists, not creating another.");
-    return;
+  const camW = this.cameras.main.width;   // screen-space
+  const camH = this.cameras.main.height;
+
+  const popupWidth  = Math.floor(camW * 0.6);
+  const popupHeight = Math.floor(camH * 0.5);
+  const fontSizeTitle    = Math.max(24, Math.floor(popupWidth * 0.05));
+  const fontSizeSubtitle = Math.max(18, Math.floor(popupWidth * 0.035));
+
+  // 1) Screen-space UILayer once
+  if (!this.uiLayer) {
+    this.uiLayer = this.add.container(0, 0).setScrollFactor(0).setDepth(9999);
   }
 
-  const screenWidth = this.scale.width;
-  const screenHeight = this.scale.height;
-
-  const popupWidth = screenWidth * 0.6;  
-  const popupHeight = screenHeight * 0.5;  
-  const fontSizeTitle = Math.max(24, popupWidth * 0.05);
-  const fontSizeSubtitle = Math.max(18, popupWidth * 0.035);
-
-  // ✅ Ensure a dedicated UI container
-  if (!this.uiContainer) {
-    this.uiContainer = this.add.container(0, 0);
-    this.uiContainer.setDepth(9999); // Always on top
-    this.uiContainer.setScrollFactor(0); // ✅ Keeps it fixed to the screen
-  }
-
-  // ✅ Create the popup container and position it at the center
-  this.topicPopup = this.add.container(
-    screenWidth / 2 - popupWidth / 2, 
-    screenHeight / 2 - popupHeight / 2
-  );
-  this.topicPopup.setDepth(10000);
-  this.topicPopup.setScrollFactor(0); // Ensure it doesn't scroll with the camera
-
-  // ✅ Overlay
+  // 2) Fullscreen overlay AT (0,0), not inside the popup
   const overlay = this.add.graphics();
   overlay.fillStyle(0x000000, 0.5);
-  overlay.fillRect(-265, -300, screenWidth, screenHeight);
-  overlay.setScrollFactor(0);
-  overlay.setInteractive();
+  overlay.fillRect(0, 0, camW, camH);
+  overlay.setInteractive(
+    new Phaser.Geom.Rectangle(0, 0, camW, camH),
+    Phaser.Geom.Rectangle.Contains
+  );
   overlay.on("pointerdown", () => this.closeTopicPopup());
+  this.uiLayer.add(overlay);
 
-  // ✅ Popup Background
+  // 3) Popup container centered; overlay is a sibling
+  this.topicPopup = this.add.container(
+    (camW - popupWidth) / 2,
+    (camH - popupHeight) / 2
+  ).setScrollFactor(0).setDepth(10000);
+  // give it explicit size so later code using width/height works
+  this.topicPopup.setSize(popupWidth, popupHeight);
+  this.uiLayer.add(this.topicPopup);
+
+  // 4) Popup background
   const popupBg = this.add.graphics();
   popupBg.fillStyle(0x000000, 1);
   popupBg.fillRoundedRect(0, 0, popupWidth, popupHeight, 5);
-  popupBg.setScrollFactor(0);
   popupBg.lineStyle(4, 0xffffff);
   popupBg.strokeRoundedRect(0, 0, popupWidth, popupHeight, 5);
+  this.topicPopup.add(popupBg);
 
-  // ✅ Create a Header Container
-  const headerContainer = this.add.container(0, 0);
+  // Header container
+  const header = this.add.container(0, 0);
+  const headerBg = this.add.graphics();
+  headerBg.fillStyle(0x222222, 1);
+  headerBg.fillRect(0, 0, popupWidth, 170);
+  const headerLine = this.add.graphics();
+  headerLine.lineStyle(4, 0xffffff).beginPath();
+  headerLine.moveTo(0, 170); headerLine.lineTo(popupWidth, 170); headerLine.strokePath();
 
-  // ✅ Header Background
-  const headerBackground = this.add.graphics();
-  headerBackground.fillStyle(0x222222, 1);
-  headerBackground.fillRect(0, 0, popupWidth, 170);
-  headerBackground.setScrollFactor(0);
+  const iconKey = topic?.topicCategory?.icon?.name;
+  const catIcon = iconKey ? this.add.image(popupWidth / 2, 30, iconKey).setOrigin(0.5, 0) : null;
+  if (catIcon) catIcon.setDisplaySize(60, 60);
 
-  // ✅ Category Icon
-  const categoryIcon = this.add.image(popupWidth / 2, 30, topic.topicCategory.icon.name).setOrigin(0.5, 0);
-  categoryIcon.setDisplaySize(60, 60); // Adjust size as needed
-  categoryIcon.setScrollFactor(0);
-  
-  // ✅ Category Name
-  const categoryNameText = this.add.text(popupWidth / 2, 120, topic.topicCategory.title, {
+  const catName = this.add.text(popupWidth / 2, 120, topic?.topicCategory?.title || "", {
     fontSize: `${fontSizeTitle}px`,
     fill: "#ffffff",
     fontFamily: "Silkscreen, Arial",
     align: "center",
-  }).setOrigin(0.5).setScrollFactor(0);
+  }).setOrigin(0.5, 0.5);
 
-  // ✅ Line at Bottom of Header
-  const headerLine = this.add.graphics();
-  headerLine.lineStyle(4, 0xffffff); // White, 4px thick
-  headerLine.beginPath();
-  headerLine.moveTo(0, 170); // Start at bottom-left of header
-  headerLine.lineTo(popupWidth, 170); // Draw to bottom-right
-  headerLine.strokePath();
-  headerLine.setScrollFactor(0);
+  header.add([headerBg, headerLine]);
+  if (catIcon) header.add(catIcon);
+  header.add(catName);
+  this.topicPopup.add(header);
 
-  // ✅ Add to Header
-  headerContainer.add([headerBackground, categoryIcon, categoryNameText, headerLine]);
-
-  // ✅ Title Text
-  const titleText = this.add.text(20, 200, topic.title, {
+  // Title
+  const titleText = this.add.text(20, 200, topic.title || "Unknown Topic", {
     fontSize: `${fontSizeTitle}px`,
     fill: "#ffffff",
     fontFamily: "Silkscreen, Arial",
     align: "left",
-  }).setOrigin(0, 0.5).setScrollFactor(0);
+  }).setOrigin(0, 0.5);
+  this.topicPopup.add(titleText);
 
-  // ✅ Subtitle Handling (Typing Effect)
-  let subtitleChunks = this.splitTextIntoChunks(topic.subtitle || "", Math.floor(popupWidth / 10));
-  let currentChunkIndex = 0;
-  let isAnimating = false;
-
+  // Subtitle with typing
+  const wrapWidth = popupWidth - 40;
   const subtitleText = this.add.text(20, 230, "", {
     fontSize: `${fontSizeSubtitle}px`,
     fill: "#ffffff",
     fontFamily: "Silkscreen, Arial",
-    wordWrap: { width: popupWidth - 40, useAdvancedWrap: true },
+    wordWrap: { width: wrapWidth, useAdvancedWrap: true },
     align: "left",
-  }).setOrigin(0, 0).setScrollFactor(0);
+  }).setOrigin(0, 0);
+  this.topicPopup.add(subtitleText);
 
-  const typeText = (text, targetTextObject) => {
+  const chunks = this.splitTextIntoChunks(topic.subtitle || "", Math.floor(popupWidth / 10));
+  let idx = 0, anim = false;
+  const typeText = (text) => {
     if (this.typingInterval) clearInterval(this.typingInterval);
-
-    if (!this.topicPopup) return;
-
-    targetTextObject.text = "";
-    let index = 0;
-    isAnimating = true;
-
+    subtitleText.setText("");
+    let i = 0; anim = true;
     this.typingInterval = setInterval(() => {
-      if (!this.topicPopup) {
-        clearInterval(this.typingInterval);
-        this.typingInterval = null;
-        return;
-      }
-
-      if (index < text.length) {
-        targetTextObject.text += text[index];
-        index++;
-      } else {
-        clearInterval(this.typingInterval);
-        this.typingInterval = null;
-        isAnimating = false;
-      }
+      if (!this.topicPopup) { clearInterval(this.typingInterval); this.typingInterval = null; return; }
+      if (i < text.length) { subtitleText.text += text[i++]; }
+      else { clearInterval(this.typingInterval); this.typingInterval = null; anim = false; }
     }, 50);
   };
+  if (chunks.length) typeText(chunks[0]);
 
-  if (subtitleChunks.length > 0) {
-    typeText(subtitleChunks[0], subtitleText);
-  }
-
-  // ✅ "Next" Button for Subtitle
-  const nextButton = this.add.text(popupWidth - 40, popupHeight - 140, "Next", {
+  // Next button
+  const nextBtn = this.add.text(popupWidth - 40, popupHeight - 140, "Next", {
     fontSize: `${fontSizeSubtitle}px`,
     fill: "#90D5FF",
     fontFamily: "Silkscreen, Arial",
     align: "right",
-  }).setInteractive().setOrigin(1, 1);
-
-  nextButton.on("pointerdown", () => {
-    if (isAnimating) return;
-    currentChunkIndex++;
-    if (currentChunkIndex < subtitleChunks.length) {
-      typeText(subtitleChunks[currentChunkIndex], subtitleText);
-    } else {
-      nextButton.setVisible(false);
-    }
+  }).setOrigin(1, 1).setInteractive();
+  nextBtn.on("pointerdown", () => {
+    if (anim) return;
+    idx++;
+    if (idx < chunks.length) typeText(chunks[idx]);
+    else nextBtn.setVisible(false);
   });
-  nextButton.setVisible(subtitleChunks.length > 1);
+  nextBtn.setVisible(chunks.length > 1);
+  this.topicPopup.add(nextBtn);
 
-  // Timer Display
+  // Timer bar + controls (unchanged positioning, just add to topicPopup)
   const timerDisplay = this.add.text(20, popupHeight - 100, "3:00", {
     fontSize: "24px",
     fill: "#ffffff",
     fontFamily: "Silkscreen, Arial",
-  }).setScrollFactor(0);
+  });
+  this.topicPopup.add(timerDisplay);
 
   let timeLeft = 180;
-  let timerInterval = null;
+  const bar = this.add.container(20, popupHeight - 50);
+  const barBg = this.add.graphics().fillStyle(0x666666).fillRoundedRect(0, 0, popupWidth - 40, 20, 10);
+  const barFill = this.add.graphics().fillStyle(0x3498db).fillRect(0, 0, 1, 20);
+  const maskG = this.add.graphics().fillStyle(0xffffff).fillRoundedRect(0, 0, popupWidth - 40, 20, 10);
+  barFill.setMask(maskG.createGeometryMask()); maskG.setVisible(false);
+  bar.add([barBg, barFill]); this.topicPopup.add(bar);
 
-  // ✅ Create a container to hold the progress bar elements
-  const progressBarContainer = this.add.container(20, popupHeight - 50);
-
-  // ✅ Static Background Bar (Grey, Rounded)
-  const progressBarBg = this.add.graphics();
-  progressBarBg.fillStyle(0x666666);
-  progressBarBg.fillRoundedRect(0, 0, popupWidth - 40, 20, 10);
-  progressBarBg.setScrollFactor(0);
-  progressBarContainer.add(progressBarBg);
-
-  // ✅ Foreground Bar (Regular Rect that gets masked)
-  const progressBarFill = this.add.graphics();
-  progressBarFill.fillStyle(0x3498db);
-  progressBarFill.fillRect(0, 0, popupWidth - 40, 20);
-  progressBarFill.setScrollFactor(0);
-  progressBarContainer.add(progressBarFill);
-
-  // ✅ Create a Rounded Mask (Hidden)
-  const maskGraphics = this.add.graphics();
-  maskGraphics.fillStyle(0xffffff);
-  maskGraphics.fillRoundedRect(0, 0, popupWidth - 40, 20, 10);
-  maskGraphics.setScrollFactor(0);
-  const mask = maskGraphics.createGeometryMask();
-
-  progressBarFill.setMask(mask);
-  maskGraphics.setVisible(false);
-
-  const updateProgressBar = () => {
-    progressBarFill.clear();
-    progressBarFill.fillStyle(0x3498db);
-
-    const progressWidth = Phaser.Math.Clamp(
-      (popupWidth - 40) * (1 - timeLeft / 180),
-      1,
-      popupWidth - 40
-    );
-
-    progressBarFill.fillRect(0, 0, progressWidth, 20);
+  const updateBar = () => {
+    barFill.clear().fillStyle(0x3498db);
+    const w = Phaser.Math.Clamp((popupWidth - 40) * (1 - timeLeft / 180), 1, popupWidth - 40);
+    barFill.fillRect(0, 0, w, 20);
   };
-
-  updateProgressBar();
-
   const updateTimer = () => {
-    if (!this.topicPopup) return;
-
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = timeLeft % 60;
-    timerDisplay.setText(`${minutes}:${seconds.toString().padStart(2, "0")}`);
+    const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+    timerDisplay.setText(`${m}:${s.toString().padStart(2, "0")}`);
   };
+  updateBar(); updateTimer();
 
-  // ✅ Create Timer Controls Container (Positioned below the progress bar)
-  const timerControlsContainer = this.add.container(popupWidth - 140, popupHeight - 130);
+  const ctrls = this.add.container(popupWidth - 140, popupHeight - 130);
+  const play  = this.add.text(0, 30, "▶",  { fontSize: "24px", fill: "#90D5FF", fontFamily: "Silkscreen, Arial" }).setInteractive();
+  const pause = this.add.text(40,30, "⏸", { fontSize: "24px", fill: "#90D5FF", fontFamily: "Silkscreen, Arial" }).setInteractive();
+  const reset = this.add.text(80,30, "🔄", { fontSize: "24px", fill: "#90D5FF", fontFamily: "Silkscreen, Arial" }).setInteractive();
+  ctrls.add([play, pause, reset]); this.topicPopup.add(ctrls);
 
-  // ✅ Play Button
-  const playButton = this.add.text(0, 30, "▶", {
-    fontSize: "24px",
-    fill: "#90D5FF",
-    fontFamily: "Silkscreen, Arial",
-    align: "center",
-  }).setInteractive().setScrollFactor(0);
-  timerControlsContainer.add(playButton);
-
-  // ✅ Pause Button
-  const pauseButton = this.add.text(40, 30, "⏸", {
-    fontSize: "24px",
-    fill: "#90D5FF",
-    fontFamily: "Silkscreen, Arial",
-    align: "center",
-  }).setInteractive().setScrollFactor(0);
-  timerControlsContainer.add(pauseButton);
-
-  // ✅ Reset Button
-  const resetButton = this.add.text(80, 30, "🔄", {
-    fontSize: "24px",
-    fill: "#90D5FF",
-    fontFamily: "Silkscreen, Arial",
-    align: "center",
-  }).setInteractive().setScrollFactor(0);
-  timerControlsContainer.add(resetButton);
-
-  playButton.on("pointerdown", () => {
+  play.on("pointerdown", () => {
     if (!this.isTimerRunning) {
       this.isTimerRunning = true;
-      timerInterval = setInterval(() => {
-        if (timeLeft > 0) {
-          timeLeft--;
-          updateTimer();
-          updateProgressBar();
-        } else {
-          clearInterval(timerInterval);
-          this.isTimerRunning = false;
-          console.log("⏳ Timer complete!");
-        }
+      this.timerInterval = setInterval(() => {
+        if (timeLeft > 0) { timeLeft--; updateTimer(); updateBar(); }
+        else { clearInterval(this.timerInterval); this.isTimerRunning = false; }
       }, 1000);
     }
   });
+  pause.on("pointerdown", () => { this.isTimerRunning = false; clearInterval(this.timerInterval); });
+  reset.on("pointerdown", () => { this.isTimerRunning = false; clearInterval(this.timerInterval); timeLeft = 180; updateBar(); updateTimer(); });
 
-  pauseButton.on("pointerdown", () => {
-    this.isTimerRunning = false;
-    clearInterval(timerInterval);
-  });
-
-  resetButton.on("pointerdown", () => {
-    this.isTimerRunning = false;
-    clearInterval(timerInterval);
-    timeLeft = 180;
-    updateProgressBar();
-  });
-
-  // ✅ Close Button
-  const closeButton = this.add.text(popupWidth - 30, 30, "X", {
+  // Close
+  const closeBtn = this.add.text(popupWidth - 30, 30, "X", {
     fontSize: `${fontSizeTitle}px`,
     fill: "#ff5555",
     fontFamily: "Silkscreen, Arial",
     align: "center",
-  }).setInteractive().setOrigin(0.5).setScrollFactor(0);
+  }).setOrigin(0.5).setInteractive();
+  closeBtn.on("pointerdown", () => this.closeTopicPopup(this.currentTile));
+  this.topicPopup.add(closeBtn);
 
-  closeButton.on("pointerdown", () => this.closeTopicPopup(this.currentTile));
-
-  // ✅ "New Topic" Button (Top Left)
-  const newTopicButton = this.add.text(20, 20, "🔄 New", {
+  // New Topic
+  const newBtn = this.add.text(20, 20, "🔄 New", {
     fontSize: "20px",
     fill: "#90D5FF",
     fontFamily: "Silkscreen, Arial",
-    align: "center",
-  }).setInteractive().setOrigin(0, 0).setScrollFactor(0);
-
-  newTopicButton.on("pointerdown", async () => {
-    console.log("🔄 Fetching a new topic...");
+  }).setOrigin(0, 0).setInteractive();
+  newBtn.on("pointerdown", async () => {
     const newTopic = await this.getAnotherRandomTopicFromCategory(topic.topicCategory.title, titleText.text);
-
-    if (!newTopic || !newTopic.title) {
-      console.error("❌ Failed to fetch a valid new topic.");
-      return;
-    }
-
-    console.log(`✅ New topic fetched: ${newTopic.title}`);
-
+    if (!newTopic?.title) return;
     titleText.setText(newTopic.title);
-    subtitleChunks = this.splitTextIntoChunks(newTopic.subtitle || "", Math.floor(popupWidth / 10));
-    currentChunkIndex = 0;
-    subtitleText.setText("");
-
-    if (subtitleChunks.length > 0) {
-      typeText(subtitleChunks[0], subtitleText);
-    } else {
-      subtitleText.setText("");
-    }
-
-    nextButton.setVisible(subtitleChunks.length > 1);
+    const newChunks = this.splitTextIntoChunks(newTopic.subtitle || "", Math.floor(popupWidth / 10));
+    idx = 0; nextBtn.setVisible(newChunks.length > 1);
+    chunks.length = 0; chunks.push(...newChunks);
+    typeText(chunks[0] || "");
   });
+  this.topicPopup.add(newBtn);
 
-  // ✅ Add Elements to Popup
-  this.topicPopup.add([
-    overlay, popupBg, titleText, subtitleText, nextButton,
-    timerDisplay, progressBarContainer, timerControlsContainer, headerContainer, closeButton, newTopicButton
-  ]);
-
-  console.log("Popup successfully created!");
-
-  // ✅ Responsive Resize Handling
-  this.scale.on("resize", (gameSize) => {
-  if (this.topicPopup) {
-    const newScreenWidth = gameSize.width;
-    const newScreenHeight = gameSize.height;
-    
-    this.topicPopup.setPosition(
-      newScreenWidth / 2 - popupWidth / 2,
-      newScreenHeight / 2 - popupHeight / 2
-    );
-    
+  // Resize handler (overlay stays at 0,0; popup re-centered)
+  const onResize = ({ width, height }) => {
     overlay.clear();
     overlay.fillStyle(0x000000, 0.5);
-    overlay.fillRect(-265, -300, newScreenWidth, newScreenHeight);
-  }
-});
+    overlay.fillRect(0, 0, width, height);
+    this.topicPopup.setPosition((width - popupWidth)/2, (height - popupHeight)/2);
+  };
+  // store to remove if needed
+  this._popupResizeHandler = onResize;
+  this.scale.on("resize", onResize);
 }
 
 

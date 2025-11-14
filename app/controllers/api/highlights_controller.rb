@@ -1,30 +1,30 @@
 # app/controllers/api/highlights_controller.rb
 class Api::HighlightsController < ApplicationController
-  before_action :authenticate_user!, except: [:index] # index is public if share token present
-
+before_action :authenticate_user!, except: [:index, :share]
   # GET /api/highlights?chapter_slug=... [&share=token]
-  def index
-    chapter_slug = params.require(:chapter_slug)
+def index
+  chapter_slug = params.require(:chapter_slug)
 
-    scope =
-      if params[:share].present?
-        owner = User.find_by!(share_token: params[:share])
-        owner.user_highlights
-      else
-        authenticate_user!
-        current_user.user_highlights
-      end
+  scope =
+    if params[:share].present?
+      owner = User.find_by!(share_token: params[:share])
+      owner.user_highlights
+    elsif current_user
+      current_user.user_highlights
+    else
+      # Public reader, no share token -> return nothing (but not 401)
+      render json: [] and return
+    end
 
-    # JOIN chapters and filter by chapters.slug
-    rows = scope
-      .joins(:chapter)
-      .where(chapters: { slug: chapter_slug })
-      .order(:id)
+  rows = scope
+    .joins(:chapter)
+    .where(chapters: { slug: chapter_slug })
+    .order(:id)
 
-    render json: rows.as_json(only: [:id, :style, :selector, :created_at, :updated_at])
-  rescue ActiveRecord::RecordNotFound => e
-    render json: { error: e.message }, status: :not_found
-  end
+  render json: rows.as_json(only: [:id, :style, :selector, :created_at, :updated_at])
+rescue ActiveRecord::RecordNotFound => e
+  render json: { error: e.message }, status: :not_found
+end
 
   # POST /api/highlights
   # { highlight: { chapter_slug, style: {...}, selector: {...} } }

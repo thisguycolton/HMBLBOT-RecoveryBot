@@ -249,6 +249,47 @@ h1{
   /* footer-specific tweaks if needed */
 }
 
+
+/* single fixed indicator (cheap to paint) */
+.page-break-indicator {
+  position: fixed;
+  top: var(--reader-sticky-offset, 80px);
+  /* same offset you use */
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  /* transform-only */
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  z-index: 60;
+  pointer-events: none;
+  will-change: transform, opacity;
+  /* only on this single element if needed */
+}
+
+/* optional: subtle transition (transform/opacity only) */
+.page-break-indicator.show {
+  opacity: 1;
+  transition: transform .18s linear, opacity .18s linear;
+}
+
+.page-break-indicator.hide {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+/* page-break elements keep minimal CSS; don't use heavy filters */
+[data-page-break] {
+  /* keep it thin and static — don't animate heavy properties */
+}
+
+[data-page-break].is-covered {
+  /* maybe a tiny style change */
+  opacity: 0.65;
+  /* cheap */
+}
+
 .hb-flash {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, .25) inset;
   transition: box-shadow .3s ease;

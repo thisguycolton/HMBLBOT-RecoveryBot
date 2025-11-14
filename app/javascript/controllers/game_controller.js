@@ -381,31 +381,30 @@ async initializeGame() {
   console.log("Initializing Phaser game...");
 
   const config = {
-    type: Phaser.WEBGL,
-    width: window.innerWidth,
-    height: window.innerHeight,
+    type: Phaser.AUTO,
+    parent: "game-container",
     backgroundColor: "#1099bb",
     scene: [LoadingScene, GameScene],
-    parent: "game-container",
-    resizeTo: window,
-    scaleMode: Phaser.Scale.RESIZE_TO_FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    // ✅ Correct scale config
+    scale: {
+      mode: Phaser.Scale.RESIZE,     // canvas matches parent size
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      width: "100%",                 // respected in RESIZE mode
+      height: "100%",
+    },
+    // (optional) physics
+    // physics: { default: "arcade", arcade: { debug: false } },
   };
 
   this.game = new Phaser.Game(config);
 
-  console.log("Phaser game created. Waiting for ready event...");
-
   return new Promise((resolve) => {
     this.game.events.once(Phaser.Core.Events.READY, () => {
-      console.log("Phaser game is ready");
       this.game.scene.start("LoadingScene");
 
-      // Wait for GameScene to be created
       const checkSceneInterval = setInterval(() => {
         this.scene = this.game.scene.getScene("GameScene");
         if (this.scene) {
-          console.log("GameScene is fully loaded:", this.scene);
           clearInterval(checkSceneInterval);
           resolve();
         }
