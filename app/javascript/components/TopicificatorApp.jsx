@@ -34,30 +34,45 @@ function TopicificatorApp() {
   () => topicSets.find((set) => set.id === selectedTopicSetId),
   [topicSets, selectedTopicSetId]
 );
-  const handleCopyTopics = () => {
-    if (!coveredTopics.length) return;
-  
-    const allButLast = coveredTopics.slice(0, -1)
-      .map((t) => `• ${t.title}`)
-      .join("<br>");
-  
-    const last = coveredTopics.at(-1);
-    const lastFormatted = last
-      ? `• <strong>${last.title}</strong>`
-      : "";
-  
-    const contentHTML = [allButLast, lastFormatted].filter(Boolean).join("<br>");
-    const contentText = contentHTML.replace(/<\/?[^>]+(>|$)/g, ""); // fallback plain text
-  
-    navigator.clipboard.write([
+const handleCopyTopics = () => {
+  if (!coveredTopics.length) return;
+
+  // Header block you want to include
+  const headerHTML = `
+    <strong>The Topicificator 9002</strong><br>
+    https://aa.humblebot.io/topicificator
+  `.trim();
+
+  const allButLast = coveredTopics
+    .slice(0, -1)
+    .map((t) => `• ${t.title}`)
+    .join("<br>");
+
+  const last = coveredTopics.at(-1);
+  const lastFormatted = last ? `• <strong>${last.title}</strong>` : "";
+
+  // Combine header + list
+  const contentHTML = [
+    headerHTML,
+    allButLast,
+    lastFormatted,
+  ]
+    .filter(Boolean)
+    .join("<br>");
+
+  // Strip the HTML for plain-text fallback
+  const contentText = contentHTML.replace(/<\/?[^>]+(>|$)/g, "");
+
+  navigator.clipboard
+    .write([
       new ClipboardItem({
         "text/html": new Blob([contentHTML], { type: "text/html" }),
         "text/plain": new Blob([contentText], { type: "text/plain" }),
       }),
-    ]).then(() => {
-    }).catch((err) => {
-    });
-  };
+    ])
+    .then(() => {})
+    .catch((err) => {});
+};
 
   useEffect(() => {
     if (timer === 0 || timer === null) return;
@@ -159,14 +174,14 @@ const fetchTopicByNumber = async () => {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 30 }}
         transition={{ duration: 1 }}
-        className="absolute left-1/2 transform -translate-x-1/2 text-gray-200 text-4xl md:text-5xl ttSans font-bold z-30 w-full text-center top-5 mt-5"
+        className="absolute left-1/2 transform -translate-x-1/2 text-gray-200 text-3xl md:text-5xl ttSans font-bold z-30 w-full text-center top-5 mt-5"
       >
         THE TOPICIFICATOR <span className="!text-cyan-500">9002</span>
       </motion.div>
     )}
   </AnimatePresence>
   <div className="fixed bottom-0 left-0 bg-transparent p-2 z-20">
-    <div className="flex flex-wrap gap-2 justify-center mt-4 md:bg-cyan-950/50 rounded-lg p-4 md:shadow-lg">
+    <div className="flex flex-wrap gap-2 justify-center mt-4 md:bg-cyan-950/50 rounded-lg p-4 md:shadow-lg hidden md:block">
       <button
         onClick={() => setShowSettingsModal(true)}
         className="!bg-cyan-950 py-2 px-2 px-lg-4 py-lg-2 rounded"
@@ -262,15 +277,15 @@ const fetchTopicByNumber = async () => {
         </div>
 
         {/* Topic Display */}
-        <div className="text-center px-4 mt-8 flex-grow flex flex-col justify-center z-3">
+        <div className="text-center px-2 md:px-4 mt-8 flex-grow flex flex-col justify-center z-3">
           {topic ? (
             <>
-              <h1 className="text-4xl font-bold mb-4 ttSans">{topic.title}</h1>
-              <p className="text-2xl text-gray-200 ftSans">{topic.subtitle}</p>
+              <h1 className="text-5xl! md:text-6xl! font-bold mb-4 ttSans">{topic.title}</h1>
+              <p className="text-2xl! md:text-3xl! text-gray-200 ftSans text-center! md:text-left!">{topic.subtitle}</p>
             </>
           ) : (
             <>
-              <div className="font-bold mb-4 ttSans text-4xl md:text-5xl">THE TOPICIFICATOR <span className="!text-cyan-500">9002</span></div>
+              <div className="font-bold mb-4 ttSans text-3xl md:text-5xl">THE TOPICIFICATOR <span className="!text-cyan-500">9002</span></div>
               <p className="text-2xl text-center! ftSans">Press a button to get started</p>
             </>
           )}
