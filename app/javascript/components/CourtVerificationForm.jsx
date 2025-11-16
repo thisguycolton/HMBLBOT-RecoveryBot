@@ -41,7 +41,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
           meeting_at: meetingAtString,
           host_name: hostName,
           signer_name: signerName,
-          // topic if you decide to persist it later
+           topic: topic,
         },
       };
 
