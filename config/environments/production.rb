@@ -101,7 +101,7 @@ config.hosts << /.*\.perpetualmulti\.media/
     address:              'smtp.mail.me.com',
     port:                 587,
     domain:               'hmblbot.com',
-    user_name:            ENV['APPLE_EMAIL'], # or your @icloud.com
+    user_name:            ENV['APPLE_SMTP_USERNAME'], # or your @icloud.com
     password:             ENV['APPLE_PASSWORD'], # app-specific password
     authentication:       'plain',
     enable_starttls_auto: true
