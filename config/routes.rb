@@ -21,6 +21,8 @@ Rails.application.routes.draw do
 
 
   namespace :api do
+            resources :court_verifications, only: :create
+
   resources :highlights, only: [:index, :create, :destroy] do
     collection { post :share }
   end
@@ -41,7 +43,6 @@ Rails.application.routes.draw do
         post :reorder
       end
     end
-        resources :court_verifications, only: :create
 
   end
 
