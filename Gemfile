@@ -42,6 +42,7 @@ gem "geocoder"
 #Front end for analytics
 gem 'ahoy_captain'
 
+gem "letter_opener"
 # Use Redis adapter to run Action Cable in production
 # gem "redis", "~> 4.0"
 

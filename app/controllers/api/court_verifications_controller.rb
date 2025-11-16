@@ -10,9 +10,9 @@ module Api
 
       if @court_verification.save
         # Kick off email here (if you’ve built the mailer)
-        # CourtVerificationMailer.with(court_verification: @court_verification)
-        #                         .verification_email
-        #                         .deliver_later
+        CourtVerificationMailer.with(court_verification: @court_verification)
+                                .verification_email
+                                .deliver_later
 
         render json: { message: "Verification created" }, status: :created
       else
