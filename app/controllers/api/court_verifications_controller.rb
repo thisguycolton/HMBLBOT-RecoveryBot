@@ -1,20 +1,23 @@
+# app/controllers/api/court_verifications_controller.rb
 module Api
   class CourtVerificationsController < ApplicationController
-    protect_from_forgery with: :null_session, if: -> { request.format.json? }
+    # You’re already sending the CSRF token via axios, so this may not be needed,
+    # but if you run into CSRF issues uncomment the next line:
+    # protect_from_forgery with: :null_session
 
     def create
       @court_verification = CourtVerification.new(court_verification_params)
 
       if @court_verification.save
-        # Use deliver_later if you have ActiveJob/queue set up
-        CourtVerificationMailer.verification_email(@court_verification).deliver_later
+        # Kick off email here (if you’ve built the mailer)
+        # CourtVerificationMailer.with(court_verification: @court_verification)
+        #                         .verification_email
+        #                         .deliver_later
 
-        render json: {
-          id: @court_verification.id,
-          message: "Verification email sent."
-        }, status: :created
+        render json: { message: "Verification created" }, status: :created
       else
-        render json: { errors: @court_verification.errors.full_messages }, status: :unprocessable_entity
+        render json: { errors: @court_verification.errors.full_messages },
+               status: :unprocessable_entity
       end
     end
 
@@ -25,7 +28,9 @@ module Api
         :respondent_name,
         :respondent_email,
         :meeting_at,
-        :host_name
+        :host_name,
+        :signer_name,
+        :topic
       )
     end
   end
