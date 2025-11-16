@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_27_000000) do
+ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -142,6 +142,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_27_000000) do
     t.index ["book_id", "index"], name: "index_chapters_on_book_id_and_index", unique: true
     t.index ["book_id", "slug"], name: "index_chapters_on_book_id_and_slug", unique: true
     t.index ["book_id"], name: "index_chapters_on_book_id"
+  end
+
+  create_table "court_verifications", force: :cascade do |t|
+    t.string "respondent_name", null: false
+    t.string "respondent_email", null: false
+    t.datetime "meeting_at", null: false
+    t.string "host_name", null: false
+    t.string "signer_name", null: false
+    t.string "topic", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_at"], name: "index_court_verifications_on_meeting_at"
+    t.index ["respondent_email"], name: "index_court_verifications_on_respondent_email"
   end
 
   create_table "groups", force: :cascade do |t|

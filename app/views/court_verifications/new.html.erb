@@ -1,0 +1,39 @@
+<%# app/views/court_verifications/new.html.erb %>
+<% if Rails.env.development? %>
+  <script type="module">
+    import RefreshRuntime from "/vite-dev/@react-refresh";
+    RefreshRuntime.injectIntoGlobalHook(window);
+    window.$RefreshReg$ = () => { };
+    window.$RefreshSig$ = () => (type) => type;
+    window.__vite_plugin_react_preamble_installed__ = true;
+  </script>
+  <% end %>
+
+  <%= vite_client_tag %>
+    <%= vite_javascript_tag 'topicificator.jsx' %>
+
+      <style>
+        body {
+          background-color: #1a202c;
+          /* gray-900 */
+          color: #f7fafc;
+          /* gray-200 */
+        }
+
+        .container footer {
+          display: none !important;
+          width: 0 !important;
+        }
+
+        .nav-container {
+          top: 0px;
+          position: absolute;
+          left: 0;
+          width: 100%;
+          z-index: 1000;
+          display: none !important;
+        }
+      </style>
+
+      <div id="court-verification-root" class="w-screen h-screen" data-turbo="false">
+      </div>

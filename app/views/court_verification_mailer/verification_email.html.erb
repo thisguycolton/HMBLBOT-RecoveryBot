@@ -1,0 +1,26 @@
+<p>To whom it may concern,</p>
+
+<p>
+  This email verifies that
+  <strong>
+    <%= @court_verification.respondent_name %>
+  </strong>
+  attended an Alcoholics Anonymous meeting.
+</p>
+
+<p>
+  <strong>Meeting date/time:</strong>
+  <%= @court_verification.meeting_at.in_time_zone("America/Phoenix") .strftime("%A, %B %-d, %Y at %-I:%M %p %Z") %><br>
+    <strong>Host:</strong>
+    <%= @court_verification.host_name %><br>
+      <strong>Group:</strong> The Acid Test AA Meeting
+</p>
+
+<p>
+  If you require additional verification, please reply to this email.
+</p>
+
+<p>Sincerely,<br>
+  The Acid Test AA Meeting<br>
+  <em>Signed by <%= @court_verification.signer_name %></em>
+</p>

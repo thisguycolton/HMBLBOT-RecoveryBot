@@ -43,9 +43,6 @@ a {
   text-decoration: inherit;
 }
 
-.border{
-  border-color: (86.9% 0.022 252.894)
-}
 
 body {
   margin: 0;
@@ -146,4 +143,44 @@ button:focus-visible {
 
 .group:hover .group-hover\:opacity-100 {
   opacity: 1 !important;
+}
+
+/* === DARK THEME OVERRIDES FOR REACT-CALENDAR === */
+
+.react-calendar {
+  background: rgba(6, 182, 212, 0.3) !important;
+    /* slate-800 */
+  color: #e5e7eb !important;
+  /* gray-200 */
+  border: 1px solid #374151 !important;
+  /* slate-700 */
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  width: 100%!important;
+}
+
+.react-calendar__navigation button {
+  background: transparent !important;
+  color: #f3f4f6 !important;
+}
+
+.react-calendar__tile {
+  background: transparent !important;
+  color: #e5e7eb !important;
+}
+
+.react-calendar__tile--now {
+  background: rgba(6, 182, 212, 0.3) !important;
+  /* cyan-500/30 */
+  color: white !important;
+}
+
+.react-calendar__tile--active {
+  background: #06b6d4 !important;
+  /* cyan-500 */
+  color: black !important;
+}
+
+.react-calendar__tile:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
 }

@@ -6,6 +6,7 @@ Rails.application.routes.draw do
       post :vote
     end
   end
+  resources :court_verifications, only: :new
 
 
   resources :hostificators, only: [:new, :create, :show] do
@@ -40,6 +41,8 @@ Rails.application.routes.draw do
         post :reorder
       end
     end
+        resources :court_verifications, only: :create
+
   end
 
 

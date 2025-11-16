@@ -8,35 +8,37 @@ import ChapterEditor from "../components/ChapterEditor";
 import ChapterViewer from "../components/ChapterViewer";
 import ChapterAdmin from "../components/ChapterAdmin";
 import Navbar from "../components/Navbar";
+import CourtVerificationForm from "../components/CourtVerificationForm"; // 👈 add this
 import axios from "axios";
 
 const body = document.body;
 const isAuthenticated = body.dataset.currentUser === "true";
 
-const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+const csrf = document
+  .querySelector('meta[name="csrf-token"]')
+  ?.getAttribute("content");
 if (csrf) {
-  axios.defaults.headers.common['X-CSRF-Token'] = csrf;
+  axios.defaults.headers.common["X-CSRF-Token"] = csrf;
 }
-axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.headers.common["Accept"] = "application/json";
 
-
+// ---------------- Topicificator ----------------
 const container = document.getElementById("topicificator-root");
 if (container) {
   createRoot(container).render(
     <>
-    <Navbar isAuthenticated={isAuthenticated} />
-    <TopicificatorApp />
+      <Navbar isAuthenticated={isAuthenticated} />
+      <TopicificatorApp />
     </>
-);
+  );
 }
 
+// ---------------- Chapter Viewer ----------------
 const mount = document.getElementById("chapter-viewer");
 if (mount) {
-  // Primary: data attributes
   let bookSlug = mount.dataset.bookSlug;
   let chapterSlug = mount.dataset.chapterSlug;
 
-  // Fallback A: try to infer from URL /books/:book_slug/chapters/:slug
   if (!bookSlug) {
     const m = location.pathname.match(/\/books\/([^/]+)\/chapters\/([^/]+)/);
     if (m) {
@@ -45,7 +47,6 @@ if (mount) {
     }
   }
 
-  // Fallback B: allow meta tag or global if you want
   if (!bookSlug) {
     const meta = document.querySelector('meta[name="hb:book-slug"]');
     if (meta) bookSlug = meta.content;
@@ -54,43 +55,62 @@ if (mount) {
   console.log("[mount ChapterViewer]", { bookSlug, chapterSlug });
 
   if (!bookSlug || !chapterSlug) {
-    console.error("Missing bookSlug or chapterSlug for ChapterViewer", { bookSlug, chapterSlug });
+    console.error("Missing bookSlug or chapterSlug for ChapterViewer", {
+      bookSlug,
+      chapterSlug,
+    });
   } else {
     createRoot(mount).render(
       <>
-      <Navbar isAuthenticated={isAuthenticated} />
-      <main className="pt-[var(--nav-h,56px)] prose-headings:my-1 md:prose-headings:my-2 xl:prose-headings:my-2
-  prose-p:my-0 md:prose-p:my-1 xl:prose-p:my-1">
-      <ChapterViewer bookSlug={bookSlug} slug={chapterSlug} className="pt-16" />
-      </main>
+        <Navbar isAuthenticated={isAuthenticated} />
+        <main className="pt-[var(--nav-h,56px)] prose-headings:my-1 md:prose-headings:my-2 xl:prose-headings:my-2 prose-p:my-0 md:prose-p:my-1 xl:prose-p:my-1">
+          <ChapterViewer
+            bookSlug={bookSlug}
+            slug={chapterSlug}
+            className="pt-16"
+          />
+        </main>
       </>
     );
   }
 }
+
+// ---------------- Chapter Editor ----------------
 const edit = document.getElementById("chapter-editor");
 if (edit) {
   const bookSlug = edit.dataset.bookSlug;
   const slug = edit.dataset.chapterSlug;
   createRoot(edit).render(
-    <div className="
-  prose prose-slate
-  prose-sm md:prose lg:prose-lg xl:prose-xl
-  dark:prose-invert
-  max-w-none hb-reader
-  mx-auto
-
-  /* tighten headings and paragraphs everywhere */
-  prose-headings:my-3 md:prose-headings:my-4 xl:prose-headings:my-4
-  prose-p:my-2 md:prose-p:my-2 xl:prose-p:my-2
-">
-  <ChapterEditor bookSlug={bookSlug} slug={slug} />
-  </div>
-);
+    <div
+      className="
+        prose prose-slate
+        prose-sm md:prose lg:prose-lg xl:prose-xl
+        dark:prose-invert
+        max-w-none hb-reader
+        mx-auto
+        prose-headings:my-3 md:prose-headings:my-4 xl:prose-headings:my-4
+        prose-p:my-2 md:prose-p:my-2 xl:prose-p:my-2
+      "
+    >
+      <ChapterEditor bookSlug={bookSlug} slug={slug} />
+    </div>
+  );
 }
 
+// ---------------- Chapter Admin ----------------
 const admin = document.getElementById("chapter-admin");
 if (admin) {
   const bookSlug = admin.dataset.bookSlug;
   const slug = admin.dataset.chapterSlug;
-  createRoot(admin).render(<ChapterAdmin bookSlug={bookSlug} slug={slug} />);
+  createRoot(admin).render(
+    <ChapterAdmin bookSlug={bookSlug} slug={slug} />
+  );
+}
+
+// ---------------- Court Verification ----------------
+const verificationRoot = document.getElementById("court-verification-root");
+if (verificationRoot) {
+  createRoot(verificationRoot).render(
+    <CourtVerificationForm isAuthenticated={isAuthenticated} />
+  );
 }
