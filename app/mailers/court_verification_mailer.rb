@@ -1,8 +1,8 @@
 class CourtVerificationMailer < ApplicationMailer
-  default from: "support@hmblbot.com" # change to your real from address
+  default from: "support@hmblbot.com"
 
-  def verification_email(court_verification)
-    @court_verification = court_verification
+  def verification_email
+    @court_verification = params[:court_verification]
 
     mail(
       to: @court_verification.respondent_email,
