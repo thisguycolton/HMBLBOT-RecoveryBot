@@ -106,7 +106,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
           <h1 className="text-3xl! sm:text-4xl! lg:text-4xl! font-bold ttSans break-words">
             MEETING VERIFICATION
           </h1>
-          <p className="text-cyan-400 text-sm sm:text-base mt-1 ttSans text-center">
+          <p className="text-cyan-400 text-sm sm:text-base mt-1 ftSans text-center">
             The Acid Test AA Meeting
           </p>
         </header>
@@ -160,7 +160,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
               Day / Time of Meeting Attended
             </h5>
 
-            <p className="text-slate-300 mb-2 text-sm sm:text-base text-center">
+            <p className="text-slate-300 mb-2 text-sm sm:text-base text-center ftSans">
               Date will be recorded as{" "}
               <span className="font-semibold">{todayDisplay}</span>. <br />
               All times are in{" "}
