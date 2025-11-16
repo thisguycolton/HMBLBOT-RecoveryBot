@@ -6,6 +6,7 @@ class CourtVerificationMailer < ApplicationMailer
 
     mail(
       to: @court_verification.respondent_email,
+      cc: ENV["ACID_TEST_GROUP_EMAIL"],
       subject: "Verification of AA Meeting Attendance"
     )
   end

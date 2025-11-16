@@ -1,26 +1,119 @@
-<p>To whom it may concern,</p>
+<!DOCTYPE html>
+<html>
 
-<p>
-  This email verifies that
-  <strong>
-    <%= @court_verification.respondent_name %>
-  </strong>
-  attended an Alcoholics Anonymous meeting.
-</p>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Verification of AA Meeting Attendance</title>
+</head>
 
-<p>
-  <strong>Meeting date/time:</strong>
-  <%= @court_verification.meeting_at.in_time_zone("America/Phoenix") .strftime("%A, %B %-d, %Y at %-I:%M %p %Z") %><br>
-    <strong>Host:</strong>
-    <%= @court_verification.host_name %><br>
-      <strong>Group:</strong> The Acid Test AA Meeting
-</p>
+<body
+  style="margin:0; padding:0; background-color:#0f172a; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+    <tr>
+      <td align="center" style="padding:24px 16px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+          style="max-width:640px; background-color:#111827; border-radius:12px; overflow:hidden; border:1px solid #1f2937;">
+          <!-- Header bar -->
+          <tr>
+            <td style="background:linear-gradient(90deg,#0891b2,#22d3ee); padding:16px 24px; text-align:center;">
+              <h1
+                style="margin:0; font-size:20px; line-height:1.3; color:#ecfeff; letter-spacing:0.06em; text-transform:uppercase;">
+                The Acid Test AA Meeting
+              </h1>
+              <p style="margin:4px 0 0; font-size:12px; color:#e0f2fe;">
+                Meeting Attendance Verification
+              </p>
+            </td>
+          </tr>
 
-<p>
-  If you require additional verification, please reply to this email.
-</p>
+          <!-- Body -->
+          <tr>
+            <td style="padding:24px; color:#e5e7eb; font-size:14px; line-height:1.6;">
+              <p style="margin:0 0 16px 0;">
+                To whom it may concern,
+              </p>
 
-<p>Sincerely,<br>
-  The Acid Test AA Meeting<br>
-  <em>Signed by <%= @court_verification.signer_name %></em>
-</p>
+              <p style="margin:0 0 16px 0;">
+                This email verifies that
+                <strong style="color:#f9fafb;">
+                  <%= @court_verification.respondent_name %>
+                </strong>
+                attended an Alcoholics Anonymous meeting.
+              </p>
+
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                style="margin:0 0 16px 0; width:100%;">
+                <tr>
+                  <td style="vertical-align:top; padding:8px 0;">
+                    <span
+                      style="display:block; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:#9ca3af; margin-bottom:4px;">Meeting
+                      Date / Time</span>
+                    <span style="font-size:14px; color:#f9fafb;">
+                      <%= @court_verification .meeting_at .in_time_zone("America/Phoenix") .strftime("%A, %B %-d, %Y at
+                        %-I:%M %p %Z") %>
+                    </span>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="vertical-align:top; padding:8px 0;">
+                    <span
+                      style="display:block; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:#9ca3af; margin-bottom:4px;">Topic</span>
+                    <span style="font-size:14px; color:#f9fafb;">
+                      <%= @court_verification.topic.presence || "N/A" %>
+                    </span>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="vertical-align:top; padding:8px 0;">
+                    <span
+                      style="display:block; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:#9ca3af; margin-bottom:4px;">Host</span>
+                    <span style="font-size:14px; color:#f9fafb;">
+                      <%= @court_verification.host_name %>
+                    </span>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="vertical-align:top; padding:8px 0;">
+                    <span
+                      style="display:block; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:#9ca3af; margin-bottom:4px;">Group</span>
+                    <span style="font-size:14px; color:#f9fafb;">
+                      The Acid Test AA Meeting
+                    </span>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 16px 0;">
+                If you require additional verification, please reply to this email.
+              </p>
+
+              <p style="margin:0;">
+                Sincerely,<br />
+                <span style="color:#bae6fd;">The Acid Test AA Meeting</span><br />
+                <em style="color:#9ca3af;">
+                  Signed by <%= @court_verification.signer_name %>
+                </em>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer note -->
+          <tr>
+            <td style="padding:16px 24px; background-color:#020617; text-align:center;">
+              <p style="margin:0; font-size:11px; color:#6b7280;">
+                This verification reflects attendance at an Alcoholics Anonymous meeting and is provided
+                at the request of the participant.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>
