@@ -94,6 +94,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
         className="
           w-full max-w-xl md:max-w-3xl lg:max-w-4xl
           bg-gray-800
+          rounded-sm
           md:rounded-lg
           shadow-lg
           px-4 py-6 sm:px-6 sm:py-8
@@ -155,7 +156,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
           </div>
 
           {/* Day / Time of Meeting Attended */}
-          <section>
+          <section className="rounded-sm border border-slate-700! bg-slate-700 px-4 pt-3 pb-2">
             <h5 className="block text-sm font-medium mb-1 text-center ttSans">
               Day / Time of Meeting Attended
             </h5>
@@ -171,7 +172,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
               Meeting Time
             </h5>
 
-            <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto mb-2">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-0 max-w-lg mx-auto mb-2">
               <button
                 type="button"
                 onClick={() => setMeetingTimeSlot("09:00")}
