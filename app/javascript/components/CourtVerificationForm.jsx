@@ -176,7 +176,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
               <button
                 type="button"
                 onClick={() => setMeetingTimeSlot("09:00")}
-                className={`${timeButtonClass("09:00")} border-slate-600!`}
+                className={`${timeButtonClass("09:00")} border-slate-600! bg-cyan-600!`}
               >
                 9:00 AM
               </button>
@@ -184,7 +184,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
               <button
                 type="button"
                 onClick={() => setMeetingTimeSlot("12:00")}
-                className={`${timeButtonClass("12:00")} border-slate-600!`}
+                className={`${timeButtonClass("12:00")} border-slate-600! bg-cyan-600!`}
               >
                 12:00 PM
               </button>
@@ -192,7 +192,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
               <button
                 type="button"
                 onClick={() => setMeetingTimeSlot("18:00")}
-                className={`${timeButtonClass("18:00")} border-slate-600!`}
+                className={`${timeButtonClass("18:00")} border-slate-600! bg-cyan-600!`}
               >
                 6:00 PM
               </button>
@@ -200,7 +200,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
               <button
                 type="button"
                 onClick={() => setMeetingTimeSlot("21:00")}
-                className={`${timeButtonClass("21:00")} border-slate-600!`}
+                className={`${timeButtonClass("21:00")} border-slate-600! bg-cyan-600!`}
               >
                 9:00 PM
               </button>
@@ -251,7 +251,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-4 py-2 rounded bg-cyan-600! hover:bg-cyan-500 text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? "Sending..." : "Send Verification Email"}
             </button>
@@ -259,7 +259,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
         </form>
 
         {/* Footer text inside card */}
-        <p className="pt-10 text-xs md:text-sm text-gray-400 ftSans text-center">
+        <p className="pt-10 text-xs md:text-sm text-gray-400 ftSans text-center ">
           This tool sends an email verifying attendance at The Acid Test AA
           Meeting (9am, 12pm, 6pm, 9pm – Phoenix time).
         </p>
