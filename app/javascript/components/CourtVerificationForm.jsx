@@ -69,14 +69,17 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
     }
   };
 
-  const timeButtonClass = (slot) =>
-    [
-      "px-4 py-2 rounded text-sm font-medium border",
-      "transition-colors duration-150",
-      meetingTimeSlot === slot
-        ? "bg-cyan-600 border-cyan-400 text-white"
-        : "bg-slate-900 border-slate-600 text-slate-100 hover:bg-slate-800",
-    ].join(" ");
+const timeButtonClass = (slot) =>
+  [
+    "px-4 py-2 rounded text-sm font-medium border transition-colors duration-150",
+
+    // selected state
+    meetingTimeSlot === slot
+      ? "bg-cyan-500! text-white border-cyan-400 shadow-md scale-[1.05]"
+
+      // default state
+      : "bg-slate-900! text-slate-100 border-slate-600 hover:bg-slate-800",
+  ].join(" ");
 
   const todayDisplay = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -176,7 +179,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
               <button
                 type="button"
                 onClick={() => setMeetingTimeSlot("09:00")}
-                className={`${timeButtonClass("09:00")} border-slate-600! bg-cyan-600!`}
+                className={`${timeButtonClass("09:00")} border-slate-600! `}
               >
                 9:00 AM
               </button>
@@ -184,7 +187,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
               <button
                 type="button"
                 onClick={() => setMeetingTimeSlot("12:00")}
-                className={`${timeButtonClass("12:00")} border-slate-600! bg-cyan-600!`}
+                className={`${timeButtonClass("12:00")} border-slate-600! `}
               >
                 12:00 PM
               </button>
@@ -192,7 +195,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
               <button
                 type="button"
                 onClick={() => setMeetingTimeSlot("18:00")}
-                className={`${timeButtonClass("18:00")} border-slate-600! bg-cyan-600!`}
+                className={`${timeButtonClass("18:00")} border-slate-600! `}
               >
                 6:00 PM
               </button>
@@ -200,7 +203,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
               <button
                 type="button"
                 onClick={() => setMeetingTimeSlot("21:00")}
-                className={`${timeButtonClass("21:00")} border-slate-600! bg-cyan-600!`}
+                className={`${timeButtonClass("21:00")} border-slate-600! `}
               >
                 9:00 PM
               </button>
