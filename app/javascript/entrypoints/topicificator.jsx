@@ -7,8 +7,9 @@ import "../styles/reader.css";
 import ChapterEditor from "../components/ChapterEditor";
 import ChapterViewer from "../components/ChapterViewer";
 import ChapterAdmin from "../components/ChapterAdmin";
+import ReadingArchive from "../components/ReadingArchive";
 import Navbar from "../components/Navbar";
-import CourtVerificationForm from "../components/CourtVerificationForm"; // 👈 add this
+import CourtVerificationForm from "../components/CourtVerificationForm"; 
 import axios from "axios";
 
 const body = document.body;
@@ -112,5 +113,19 @@ const verificationRoot = document.getElementById("court-verification-root");
 if (verificationRoot) {
   createRoot(verificationRoot).render(
     <CourtVerificationForm isAuthenticated={isAuthenticated} />
+  );
+}
+
+// ---------------- Reading Archive ----------------
+const archiveRoot = document.getElementById("reading-archive-root");
+if (archiveRoot) {
+  const readings = JSON.parse(archiveRoot.dataset.readings || "[]");
+  const notice = archiveRoot.dataset.notice || "";
+
+  createRoot(archiveRoot).render(
+    <>
+      <Navbar isAuthenticated={isAuthenticated} />
+      <ReadingArchive readings={readings} notice={notice} />
+    </>
   );
 }

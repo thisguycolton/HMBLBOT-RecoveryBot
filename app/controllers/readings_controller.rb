@@ -4,14 +4,29 @@ class ReadingsController < ApplicationController
   # GET /readings or /readings.json
   def index
     @q = Reading.ransack(params[:q])
-    unless params[:q].nil?
-      @readings = @q.result(distinct: true).order(meetingDate: :desc)
-    else
-      @readings = Reading.all.order(meetingDate: :desc)
+    @readings = @q.result(distinct: true).order(meetingDate: :desc)
+
+    @readings_json = @readings.map do |reading|
+      text =
+        if reading.richer_content&.id.present?
+          reading.richer_content.to_plain_text
+        elsif reading.content.present?
+          reading.content.to_plain_text
+        else
+          ""
+        end
+
+      {
+        id: reading.id,
+        title: reading.title,
+        source: reading.source.to_s.truncate(72),
+        meeting_date: reading.meetingDate.strftime("%b-%d-%y"),
+        meeting_date_iso: reading.meetingDate.iso8601,
+        path: reading_path(reading),
+        preview: text.truncate(500)
+      }
     end
-
   end
-
   # GET /readings/1 or /readings/1.json
   def show
      ahoy.track "Viewed Reading", title: @reading.title

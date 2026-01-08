@@ -1,59 +1,51 @@
-<div class='container-fluid p-0 bg-jumbo-teal'>
-  <div class="jumbotron text-white p-5">
-    <div class="container">
-      <div class="d-flex">
-        <span class="flex-fill text-center py-5">
-          <h1 class="display-4 fw-bold tracking-widest">READING ARCHIVE</h1>
-          <p class="lead">
-            An index of the meeting readings and topics.
-          </p>
-          <p>
+<%# app/views/readings/index.html.erb %>
 
-          </p>
-        </span>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="container pt-3">
-  <div class="row justify-content-center reading-index" id="readings">
-    <div class="col-md-10 col-lg-8 col-xl-7 pt-5">
-      <% @readings.each do |reading| %>
-        <div class="col reading position-relative mb-5">
-          <div class="h-100">
-            <div class=" ">
-              <%= link_to reading, class: "text-decoration-none link-dark link-opacity-50-hover stretched-link" do %>
-                <h3 class="display-6 fw-bold tracking-widest text-uppercase" ><%= reading.title %></h3>
-              <% end %>
-              <div class="pt-3">
-                <blockquote class="blockquote pb-2">
-                  <% if reading.richer_content.id.present? %>
-                    <%= reading.richer_content.to_plain_text.truncate(500).html_safe %> <span class="fw-bold fst-italic"> 
-                      Read More
-                    </span>
-                  <% elsif reading.content.present? %>
-                    <%= reading.content.to_plain_text.truncate(500).html_safe %> <span class="fw-bold fst-italic">
-                        Read More
-                      </span>
-                  <% end %>
-                </blockquote>
-              </div>
-            </div>
-            <div class=" mt-auto">
-              <div class="row ">
-                <div class="col">
-                  <cite title="<%= reading.source %>">- <%= reading.source.truncate(36) %></cite>
-                </div>
-                <div class="col-3 text-end me-3">
-                  <span class="fw-bolder text-nowrap"><%= reading.meetingDate.strftime("%b-%d-%y") %></span>
-                </div>
-              </div>
+  <% if Rails.env.development? %>
+    <script type="module">
+      import RefreshRuntime from "/vite-dev/@react-refresh";
+      RefreshRuntime.injectIntoGlobalHook(window);
+      window.$RefreshReg$ = () => { };
+      window.$RefreshSig$ = () => (type) => type;
+      window.__vite_plugin_react_preamble_installed__ = true;
+    </script>
+    <% end %>
 
-            </div>
-          </div>
-        </div>
-      <% end %>
-    </div>
-  </div>
-</div>
-<p style="color: green"><%= notice %></p>
+      <%= vite_client_tag %>
+        <%= vite_javascript_tag "topicificator.jsx" %>
+
+          <style>
+            :root {
+              color-scheme: only dark;
+            }
+
+            html {
+              color-scheme: dark;
+            }
+
+            body {
+              background-color: #1a202c;
+              /* gray-900 */
+              color: #f7fafc;
+              /* gray-200 */
+            }
+
+            .container footer {
+              display: none !important;
+              width: 0 !important;
+            }
+
+            .nav-container {
+              top: 0px;
+              position: absolute;
+              left: 0;
+              width: 100%;
+              z-index: 1000;
+              display: none !important;
+            }
+            footer {
+              min-height: auto!important;
+            }
+          </style>
+
+          <div id="reading-archive-root" class="w-screen min-h-screen" data-turbo="false"
+            data-readings="<%= json_escape(@readings_json.to_json) %>" data-notice="<%= notice.to_s %>"></div>
