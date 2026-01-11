@@ -761,7 +761,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
       </div>
 
       {/* Sticky chapter header */}
-      <div className="sticky top-10 z-40 bg-stone-100/90 dark:bg-stone-800/90 backdrop-blur z-10 flex items-center justify-between gap-3 pt-6 px-2 ">
+      <div className="sticky top-10 z-40 bg-stone-100/90 dark:bg-stone-800/90 backdrop-blur flex items-center justify-between gap-3 pt-6 px-2 ">
         <h1
           className="text-2xl! md:text-4xl! font-bold truncate text-center flex-1 cursor-pointer"
           onClick={() => setOpenChaptersModal(true)} // header click opens modal
