@@ -1,0 +1,12 @@
+<script type="module">
+  import RefreshRuntime from "/vite-dev/@react-refresh";
+  RefreshRuntime.injectIntoGlobalHook(window);
+  window.$RefreshReg$ = () => { };
+  window.$RefreshSig$ = () => (type) => type;
+  window.__vite_plugin_react_preamble_installed__ = true;
+</script>
+
+
+<%= vite_client_tag %>
+<%= vite_javascript_tag 'topicificator.jsx' %>
+<div id="home-root" class=""></div>

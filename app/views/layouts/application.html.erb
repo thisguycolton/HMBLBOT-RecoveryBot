@@ -41,10 +41,11 @@
 
       Visit the guide for more information: https://vite-ruby.netlify.app/guide/rails
     -->
-
+<%= vite_client_tag %>
+  <%= vite_react_refresh_tag if Rails.env.development? %>
   </head>
 
-  <body>
+  <body data-layout="application">
     <div id="scroll-progress"></div>
     <div class="container-fluid bg-body-tertiary nav-container">
 

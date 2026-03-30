@@ -1,6 +1,6 @@
 class ServiceReadingsController < ApplicationController
   before_action :set_service_reading, only: %i[ show edit update destroy ]
-
+  layout "reader", only: %i[index show]
   # GET /service_readings or /service_readings.json
   def index
     @service_readings = ServiceReading.all

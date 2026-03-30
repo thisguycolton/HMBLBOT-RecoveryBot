@@ -791,7 +791,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
           prose-slate
           prose-sm md:prose lg:prose-lg xl:prose-xl 2xl:prose-2xl
           dark:prose-invert
-          max-w-none mx-auto">
+          max-w-none !mx-auto">
         <EditorContent editor={editor} />
       </div>
 

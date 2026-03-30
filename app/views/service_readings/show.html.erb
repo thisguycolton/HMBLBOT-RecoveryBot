@@ -1,142 +1,19 @@
-<style>
-  .container-lg{
-    max-width: 1140px!important;
-  }
+<script type="module">
+  import RefreshRuntime from "/vite-dev/@react-refresh";
+  RefreshRuntime.injectIntoGlobalHook(window);
+  window.$RefreshReg$ = () => { };
+  window.$RefreshSig$ = () => (type) => type;
+  window.__vite_plugin_react_preamble_installed__ = true;
+</script>
 
-  body {
-    /* min-height: 200vh; */
-  }
 
-  #scroll-progress {
-    position: fixed;
-    top: 0;
-    width: 0%;
-    height: 6px;
-    background: #5bc0de;
-    z-index: 10000;
-  }
-  .reading-container{
-    margin-top: -20px;
-  }
+<%= vite_client_tag %>
+  <%= vite_javascript_tag 'topicificator.jsx' %>
 
-</style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-<p style="color: green"><%= notice %></p>
-
-<%= render @service_reading %>
-
-<% if user_signed_in? && current_user.admin? %>
-<div class="container-fluid admin-bar-reading p-5 position-relative ">
-  <div class="row">
-    <div class="col">
-      <%= link_to edit_service_reading_path(@service_reading), class:"btn btn-outline-info w-100", data: { turbolinks: false } do %> 
-        <i class="bi bi-pencil-square"></i> 
-      <% end %>
-    </div>
-    <div class="col">
-      <%= button_to @service_reading, method: :delete, class:"btn btn-outline-danger w-100" do %> 
-        <i class="bi bi-trash"></i> 
-      <% end %>
-    </div>
-  </div>
+<div id="service-reading-show-root" data-reading="<%= json_escape({
+    id: @service_reading.id,
+    title: @service_reading.title,
+    source: @service_reading.source,
+    content_html: @service_reading.body.to_s
+  }.to_json) %>" data-notice="<%= notice.to_s %>" data-admin="<%= current_user&.admin? ? 'true' : 'false' %>">
 </div>
-<% end %>
- <div class="container-fluid  bg-light border-top border-5 border-light-subtle">
-    <div class="container py-5 ">
-      <div class="row mx-lg-5">
-        <div class="col-lg-2 text-center text-lg-start">
-          <h1 class="display-2 fw-semibold"><i class="bi bi-chat-right-quote-fill"></i></h1>
-        </div>
-        <div class="col-lg-10 text-center text-lg-start">
-          <span class="display-4"> Share Readings Easier </span>
-          <div class="montserrat mt-3 fs-4">Sign up to post your readings and share them with others with a simple click.</div>
-        </div>
-      </div>
-      <div class="row justify-content-center mt-2">
-        <div class="col-lg-8">
-          <%= link_to "Sign Up",  new_user_registration_path, class: "btn btn-primary mt-3 mb-2 fs-5 w-100 "%>
-        </div>
-      </div>
-    </div>
-  </div>
-<script type="text/javascript">
-  const scrollProgress = document.getElementById('scroll-progress');
-  const height =
-
-  document.documentElement.scrollHeight - document.documentElement.clientHeight;
-
-  window.addEventListener('scroll', () => {
-    const scrollTop =
-      document.body.scrollTop || document.documentElement.scrollTop;
-    scrollProgress.style.width = `${(scrollTop / height) * 100}%`;
-  });
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-  function copyReading<%= @service_reading.id %>() {
-    // Get the button element
-    var copyText = document.getElementById("reading_<%= @service_reading.id %>_copy_btn");
-
-    var readingTitle = "<strong style='font-size: 1.5em;'>Reading:</strong><br>" + 
-                       "<%= @service_reading.title.gsub(/"/, '\\"') %><br>";
-    var readingLink = "https://aa.humblebot.io/service_readings/<%= @service_reading.id %><br>"; // Generate the full URL
-    var source = "<%= @service_reading.source %>"; 
-    var contentToCopy = 
-      "====================<br>" +
-      readingTitle +
-      source +
-      "<br>" +
-      readingLink;
-
-    // Copy the custom text as rich text
-    navigator.clipboard.write([new ClipboardItem({
-      'text/html': new Blob([contentToCopy], {type: 'text/html'}),
-      'text/plain': new Blob([contentToCopy.replace(/<\/?[^>]+(>|$)/g, "")], {type: 'text/plain'}) // Fallback plain text
-    })]);
-
-    // Change the button's appearance
-    copyText.classList.remove('btn-outline-secondary');
-    copyText.classList.add('btn-success');
-  }
-
-  // Bind the click event to the button
-  var copyButton = document.getElementById("reading_<%= @service_reading.id %>_copy_btn");
-  copyButton.addEventListener("click", copyReading<%= @service_reading.id %>);
-});
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-
-  const jumbotron = document.querySelector(".jumbotron");
-  if (!jumbotron) {
-    return;
-  }
-
-
-  function toggleJumbotronPadding() {
-    const scrollPosition = window.scrollY; // Current scroll position
-    const triggerPoint = 30; // Position of the jumbotron
-
-    if (scrollPosition >= triggerPoint) {
-      // Add scrolled-specific classes
-      jumbotron.classList.replace("py-5", "py-3"); // Replace padding
-      jumbotron.classList.add("shadow-sm"); // Add new classes
-    } else {
-      // Restore original classes
-      jumbotron.classList.replace("py-3", "py-5"); // Restore padding
-      jumbotron.classList.remove("shadow-sm"); // Remove new classes
-    }
-  }
-
-  // Listen for scroll event
-  window.addEventListener("scroll", toggleJumbotronPadding);
-
-});
-
-
-</script>
-
-

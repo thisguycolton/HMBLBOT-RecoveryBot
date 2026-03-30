@@ -6,6 +6,12 @@ export default function BooksIndex({ isAdmin: isAdminProp }) {
   const [books, setBooks] = useState([]);
   const [isAdmin, setIsAdmin] = useState(!!isAdminProp);
 
+  async function loadBooks() {
+    const res = await fetch("/api/books");
+    const data = await res.json();
+    setBooks(Array.isArray(data) ? data : []);
+  }
+
   useEffect(() => {
     const el = document.getElementById("books-root");
     if (el?.dataset?.admin) setIsAdmin(el.dataset.admin === "true");
@@ -15,20 +21,14 @@ export default function BooksIndex({ isAdmin: isAdminProp }) {
     return () => window.removeEventListener("books:refresh", refresh);
   }, []);
 
-  async function loadBooks() {
-    const res = await fetch("/api/books");
-    const data = await res.json();
-    setBooks(Array.isArray(data) ? data : []);
-  }
-
   useEffect(() => {
     loadBooks().catch(console.error);
   }, []);
 
   return (
-    <div className="w-full mx-auto">
-      <div className="max-w-6xl px-3 py-6 w-full">
-        <div className="place-self-center absolute top-10 w-full max-w-6xl flex items-center justify-between mb-4 p-10">
+    <div className="w-screen mx-auto">
+      <div className="max-w-6xl px-3 py-6 w-full mx-auto">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Library</h1>
             <p className="text-sm text-slate-600 dark:text-slate-400">Browse available titles.</p>
@@ -46,7 +46,6 @@ export default function BooksIndex({ isAdmin: isAdminProp }) {
         </div>
       </div>
 
-      {/* Admin uploader */}
       {isAdmin && (
         <div className="max-w-6xl mx-auto px-3 pb-6">
           <AdminJsonUploader />

@@ -1,32 +1,52 @@
 class ReadingsController < ApplicationController
   before_action :set_reading, only: %i[ show edit update destroy ]
+  layout "reader", only: %i[new index show edit]
+
 
   # GET /readings or /readings.json
-  def index
-    @q = Reading.ransack(params[:q])
-    @readings = @q.result(distinct: true).order(meetingDate: :desc)
+def index
+  @readings = Reading.includes(:tags).order(created_at: :desc)
 
-    @readings_json = @readings.map do |reading|
-      text =
-        if reading.richer_content&.id.present?
-          reading.richer_content.to_plain_text
-        elsif reading.content.present?
-          reading.content.to_plain_text
-        else
-          ""
-        end
+  if params[:tag].present?
+    @selected_tag = Tag.find_by(slug: params[:tag]) || Tag.find_by(title: params[:tag])
 
-      {
-        id: reading.id,
-        title: reading.title,
-        source: reading.source.to_s.truncate(72),
-        meeting_date: reading.meetingDate.strftime("%b-%d-%y"),
-        meeting_date_iso: reading.meetingDate.iso8601,
-        path: reading_path(reading),
-        preview: text.truncate(500)
-      }
+    if @selected_tag
+      @readings = @readings
+        .joins(:tags)
+        .where(tags: { id: @selected_tag.id })
+        .distinct
+    else
+      @readings = @readings.none
     end
   end
+
+  @readings_json = @readings.map do |reading|
+    text =
+      if reading.richer_content&.id.present?
+        reading.richer_content.to_plain_text
+      elsif reading.content.present?
+        reading.content.to_plain_text
+      else
+        ""
+      end
+    {
+      id: reading.id,
+      title: reading.title,
+      source: reading.source,
+      host: reading.host,
+      meetingName: reading.meetingName,
+      meetingUrl: reading.meetingUrl,
+      meetingDate: reading.meetingDate,
+      meetingTime: reading.meetingTime&.strftime("%H:%M:%S"),
+      preview: text.truncate(500),
+      meeting_date_iso: reading.meetingDate.iso8601,
+      path: reading_path(reading),
+      tags: reading.tags.order(:title).map { |tag|
+        { id: tag.id, title: tag.title, slug: tag.slug }
+      }
+    }
+  end
+end
   # GET /readings/1 or /readings/1.json
   def show
      ahoy.track "Viewed Reading", title: @reading.title
@@ -40,35 +60,37 @@ class ReadingsController < ApplicationController
 
   # GET /readings/1/edit
   def edit
+    hour = @reading.meetingTime&.strftime("%-l")
+    minute = @reading.meetingTime&.strftime("%M")
+    meridiem = @reading.meetingTime&.strftime("%p")
+    content = @reading.content&.body&.to_html
+    topic = @reading.topic&.body&.to_s
   end
 
   # POST /readings or /readings.json
-  def create
-    @reading = Reading.new(reading_params)
+def create
+  @reading = Reading.new(reading_params)
+  @reading.user = current_user
+  @reading.group_id ||= current_user.user_active_group&.group_id
 
-    respond_to do |format|
-      if @reading.save
-        format.html { redirect_to reading_url(@reading), notice: "Reading was successfully created." }
-        format.json { render :show, status: :created, location: @reading }
-      else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @reading.errors, status: :unprocessable_entity }
-      end
-    end
+  if @reading.save
+    render json: { id: @reading.id }, status: :created
+  else
+    render json: { errors: @reading.errors.full_messages }, status: :unprocessable_entity
   end
+end
 
-  # PATCH/PUT /readings/1 or /readings/1.json
-  def update
-    respond_to do |format|
-      if @reading.update(reading_params)
-        format.html { redirect_to reading_url(@reading), notice: "Reading was successfully updated." }
-        format.json { render :show, status: :ok, location: @reading }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @reading.errors, status: :unprocessable_entity }
-      end
-    end
+def update
+  @reading = Reading.find(params[:id])
+  @reading.user = current_user
+  @reading.group_id ||= current_user.user_active_group&.group_id
+
+  if @reading.update(reading_params)
+    render json: { id: @reading.id }, status: :ok
+  else
+    render json: { errors: @reading.errors.full_messages }, status: :unprocessable_entity
   end
+end
 
   # DELETE /readings/1 or /readings/1.json
   def destroy
@@ -88,6 +110,6 @@ class ReadingsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def reading_params
-      params.require(:reading).permit(:title, :content, :topic, :user_id, :meetingTime, :meetingDate, :source, :meetingName, :meetingUrl, :host, :hour, :minute, :meridiem, :group_id, :richer_content)
+      params.require(:reading).permit(:title, :content, :topic, :user_id, :meetingTime, :meetingDate, :source, :meetingName, :meetingUrl, :host, :hour, :minute, :meridiem, :group_id, :richer_content, tag_ids: [])
     end
 end

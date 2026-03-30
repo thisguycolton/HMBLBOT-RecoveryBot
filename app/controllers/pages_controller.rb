@@ -1,13 +1,18 @@
 class PagesController < ApplicationController
   before_action :set_page, only: %i[ edit update destroy ]
-  layout "reader", only: %i[ topicificator, library ]
+  layout "reader", only: %i[topicificator library home reader]
 
   # GET /pages or /pages.json
   #
-  def library
-
-
+  #
+  def reader
+    @book_slug = params[:book_slug]
+    @chapter_slug = params[:chapter_slug]
   end
+  def library; end
+
+    def home; end
+
   def index
     @pages = Page.all
   end

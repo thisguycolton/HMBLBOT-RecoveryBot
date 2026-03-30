@@ -381,3 +381,7 @@ body.pnd-active .chapter-row-dropzone {
 .hb-hl {
   scroll-margin-top: calc(var(--reader-sticky-offset) - 48px);
 }
+
+#chapter-viewer{
+  width: 100%;
+}

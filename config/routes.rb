@@ -8,6 +8,7 @@ Rails.application.routes.draw do
   end
   resources :court_verifications, only: :new
 
+  resources :tags
 
   resources :hostificators, only: [:new, :create, :show] do
     post :vote, on: :member
@@ -91,7 +92,7 @@ end
   end
   get 'host_helper/scratchpaper'
   # config/routes.rb
-  get "/reader", to: "pages#reader"
+  get "/books/:book_slug/chapters/:chapter_slug", to: "pages#reader"
   resources :polls do
     resources :options
   end
@@ -116,5 +117,5 @@ end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Defines the root path route ("/")
-   root "topics#index"
+   root "pages#home"
 end

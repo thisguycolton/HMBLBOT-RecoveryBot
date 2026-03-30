@@ -166,7 +166,7 @@ const fetchTopicByNumber = async () => {
     startTimer("free");
   };
   return (
-<div className="  bg-gray-900 text-white relative">
+<div className=" bg-neutral-50! dark:bg-neutral-900! text-white relative">
   <AnimatePresence>
     {hasStarted && (
       <motion.div
@@ -184,7 +184,7 @@ const fetchTopicByNumber = async () => {
     <div className="flex flex-wrap gap-2 justify-center mt-4 md:bg-cyan-950/50 rounded-lg p-4 md:shadow-lg hidden md:block">
       <button
         onClick={() => setShowSettingsModal(true)}
-        className="!bg-cyan-950 py-2 px-2 px-lg-4 py-lg-2 rounded"
+        className="bg-cyan-950 py-2 px-2 px-lg-4 py-lg-2 rounded"
       >
         <Settings className="w-5 h-5" />
       </button>
@@ -202,7 +202,7 @@ const fetchTopicByNumber = async () => {
       >
         <Shuffle className="w-5 h-5" />
       </button>
-      <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition z-50">
+      <span className="pointer-events-none absolute -top-8 left-1/2 z-50 hidden -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white md:group-hover:block">
         Random Topic
       </span>
     </div>
@@ -216,7 +216,7 @@ const fetchTopicByNumber = async () => {
       >
         <Hash className="w-5 h-5" />
       </button>
-      <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition z-50">
+      <span className="pointer-events-none absolute -top-8 left-1/2 z-50 hidden -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white md:group-hover:block">
         Pick a Number
       </span>
     </div>
@@ -230,7 +230,7 @@ const fetchTopicByNumber = async () => {
       >
         <History className="w-5 h-5" />
       </button>
-      <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition z-50">
+      <span className="pointer-events-none absolute -top-8 left-1/2 z-50 hidden -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white md:group-hover:block">
         Previous Topic
       </span>
     </div>
@@ -244,14 +244,14 @@ const fetchTopicByNumber = async () => {
       >
         <UserCheck className="w-5 h-5" />
       </button>
-      <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition z-50">
+      <span className="pointer-events-none absolute -top-8 left-1/2 z-50 hidden -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white md:group-hover:block">
         Free Share / Check-In
       </span>
     </div>
 
   </div>
 </div>
-    <div className="bg-gray-900 text-white w-screen h-screen flex items-center justify-center">
+    <div className="bg-neutral-50 dark:bg-gray-900 text-white w-screen h-screen flex items-center justify-center">
 
       
       <div className="relative w-full h-full md:h-auto md:aspect-video md:max-w-5xl bg-gray-800 rounded-lg overflow-hidden flex flex-col items-center justify-between py-8 px-6 mx-auto shadow-lg">

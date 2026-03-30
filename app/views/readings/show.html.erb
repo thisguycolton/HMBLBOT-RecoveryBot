@@ -1,94 +1,45 @@
-<style>
-body {
-  /* min-height: 200vh; */
-}
+<% if Rails.env.development? %>
+  <script type="module">
+    import RefreshRuntime from "/vite-dev/@react-refresh";
+    RefreshRuntime.injectIntoGlobalHook(window);
+    window.$RefreshReg$ = () => { };
+    window.$RefreshSig$ = () => (type) => type;
+    window.__vite_plugin_react_preamble_installed__ = true;
+  </script>
+  <% end %>
 
-#scroll-progress {
-  position: fixed;
-  top: 0;
-  width: 0%;
-  height: 6px;
-  background: #5bc0de;
-  z-index: 10000;
-}
-.reading-container{
-  margin-top: -20px;
-}
-</style>
-<%- content_for(:page_title, "HMBLBOT | #{@reading.title}") %>
-<%= render @reading %>
+    <%= vite_client_tag %>
+      <%= vite_javascript_tag "topicificator.jsx" %>
 
-<% if user_signed_in? && current_user.id = @reading.user_id %>
-<div class="container-fluid admin-bar-reading p-5 position-relative ">
-  <div class="row">
-    <div class="col">
-      <%= link_to edit_reading_path(@reading), class:"btn btn-outline-info w-100", data: { turbolinks: false } do %> 
-        <i class="bi bi-pencil-square"></i> 
-      <% end %>
-    </div>
-    <div class="col">
-      <%= button_to @reading, method: :delete, class:"btn btn-outline-danger w-100" do %> 
-        <i class="bi bi-trash"></i> 
-      <% end %>
-    </div>
-  </div>
-</div>
-<% end %>
-<script type="text/javascript">
-  const scrollProgress = document.getElementById('scroll-progress');
-  const height =
+        <style>
+          html {
+            color-scheme: autolight dark;
+          }
 
-  document.documentElement.scrollHeight - document.documentElement.clientHeight;
+          .container footer {
+            display: none !important;
+            width: 0 !important;
+          }
 
-  window.addEventListener('scroll', () => {
-    const scrollTop =
-      document.body.scrollTop || document.documentElement.scrollTop;
-    scrollProgress.style.width = `${(scrollTop / height) * 100}%`;
-  });
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-  function copyReading<%= @reading.id %>() {
-    // Get the button element
-    var copyText = document.getElementById("reading_<%= @reading.id %>_copy_btn");
+          footer {
+            min-height: auto !important;
+          }
+        </style>
 
-    // Construct the content to copy with HTML formatting
-    var readingTitle = "<strong style='font-size: 1.5em;'>Reading:</strong><br>" + 
-                       "<%= @reading.title.gsub(/"/, '\\"') %><br>";
-    var readingLink = "https://aa.humblebot.io/readings/<%= @reading.id %><br>"; // Generate the full URL
-    var exampleTopics = <%= raw @reading.topic.body.to_json %>; // Use raw to avoid escaping HTML
-
-    // Ensure proper formatting of the exampleTopics
-    var formattedTopics = exampleTopics
-      .replace(/<\/?ul>/g, '') // Remove <ul> tags
-      .replace(/<\/li>/g, '<br>') // Replace </li> with newlines
-      .replace(/<li>/g, '- ') // Replace <li> with bullet points
-      .replace(/&nbsp;/g, ' ') // Convert non-breaking spaces to regular spaces
-      .trim(); // Trim any leading/trailing whitespace
-
-    // Create the final text to copy with HTML formatting, including dividers
-    var contentToCopy = 
-      "====================<br>" +
-      readingTitle + 
-      readingLink + 
-      "====================<br>" +
-      "<strong style='font-size: 1.5em;'>Example Topics For Sharing:</strong><br>Feel free to check in!<br>" + 
-      "---------------------<br>" +
-      formattedTopics;
-
-    // Copy the custom text as rich text
-    navigator.clipboard.write([new ClipboardItem({
-      'text/html': new Blob([contentToCopy], {type: 'text/html'}),
-      'text/plain': new Blob([contentToCopy.replace(/<\/?[^>]+(>|$)/g, "")], {type: 'text/plain'}) // Fallback plain text
-    })]);
-
-    // Change the button's appearance
-    copyText.classList.remove('btn-outline-secondary');
-    copyText.classList.add('btn-success');
-  }
-
-  // Bind the click event to the button
-  var copyButton = document.getElementById("reading_<%= @reading.id %>_copy_btn");
-  copyButton.addEventListener("click", copyReading<%= @reading.id %>);
-});
-</script>
+        <div id="reading-show-root" class="w-screen min-h-screen" data-reading="<%= json_escape({
+        id: @reading.id,
+        title: @reading.title,
+        source: @reading.source,
+        user_id: @reading.user_id,
+        host: @reading.host,
+        meetingName: @reading.meetingName,
+        meetingUrl: @reading.meetingUrl,
+        meetingDate: @reading.meetingDate,
+        meetingTime: @reading.meetingTime&.strftime('%H:%M:%S'),
+        content_html: @reading.content&.body&.to_s,
+        richer_content_html: @reading.richer_content&.body&.to_s,
+        topic_html: @reading.topic&.body&.to_s,
+        tags: @reading.tags.order(:title).map { |tag|
+          { id: tag.id, title: tag.title, slug: tag.slug }
+        }
+      }.to_json) %>" data-current-user="<%= json_escape(current_user ? { id: current_user.id }.to_json : '{}') %>"></div>

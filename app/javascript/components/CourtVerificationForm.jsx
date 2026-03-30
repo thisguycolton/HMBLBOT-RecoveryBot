@@ -1,7 +1,6 @@
 // app/javascript/components/CourtVerificationForm.jsx
 import React, { useState } from "react";
 import axios from "axios";
-import Navbar from "./Navbar";
 
 const CourtVerificationForm = ({ isAuthenticated }) => {
   const [respondentName, setRespondentName] = useState("");
@@ -49,12 +48,16 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
 
       if (res.status === 201 || res.status === 200) {
         setSuccessMessage("Verification email has been sent to the respondent.");
+
+        // clear only the fields that should reset each time
         setRespondentName("");
         setRespondentEmail("");
-        setHostName("");
-        setSignerName("");
-        setTopic("");
-        setMeetingTimeSlot("");
+
+        // keep these in state until a full page refresh
+        // setMeetingTimeSlot("");
+        // setHostName("");
+        // setSignerName("");
+        // setTopic("");
       } else {
         setErrorMessage("There was a problem sending the verification.");
       }
@@ -90,7 +93,6 @@ const timeButtonClass = (slot) =>
 
  return (
   <div className="bg-gray-900 text-white min-h-screen w-full overflow-x-hidden">
-    <Navbar isAuthenticated={isAuthenticated} />
 
     <main className="pt-[var(--nav-h,80px)] py-6 px-0 md:px-4 lg:px-8 flex justify-center w-full">
       <div
@@ -110,7 +112,7 @@ const timeButtonClass = (slot) =>
           <h1 className="text-3xl! sm:text-4xl! lg:text-4xl! font-bold ttSans break-words">
             MEETING VERIFICATION
           </h1>
-          <p className="text-cyan-400 text-sm sm:text-base mt-1 ftSans text-center">
+          <p className="text-cyan-400 text-2xl! sm:text-base mt-1 ftSans text-center! w-full">
             The Acid Test AA Meeting
           </p>
         </header>
@@ -132,7 +134,7 @@ const timeButtonClass = (slot) =>
         <form onSubmit={handleSubmit} className="space-y-4 max-w-full">
           {/* Respondent name */}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-lg font-medium mb-1">
               Respondent Name
             </label>
             <input
@@ -146,7 +148,7 @@ const timeButtonClass = (slot) =>
 
           {/* Respondent email */}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-lg font-medium mb-1">
               Respondent Email
             </label>
             <input
@@ -160,18 +162,18 @@ const timeButtonClass = (slot) =>
 
           {/* Day / Time of Meeting Attended */}
           <section className="rounded-sm border border-slate-700! bg-slate-700 px-4 pt-3 pb-2">
-            <h5 className="block text-sm font-medium mb-1 text-center ttSans">
+            <h5 className="block text-xl font-medium mb-1 text-center ttSans">
               Day / Time of Meeting Attended
             </h5>
 
-            <p className="text-slate-300 mb-2 text-sm sm:text-base text-center ftSans">
+            <p className="text-slate-300 mb-2 text-sm sm:text-base text-center! ftSans">
               Date will be recorded as{" "}
               <span className="font-semibold">{todayDisplay}</span>. <br />
               All times are in{" "}
               <span className="font-semibold">Phoenix, AZ (MST)</span>.
             </p>
 
-            <h5 className="block text-xs font-semibold mb-3 ttSans text-center">
+            <h5 className="block text-lg font-semibold mb-3 ttSans text-center!">
               Meeting Time
             </h5>
 
@@ -212,7 +214,7 @@ const timeButtonClass = (slot) =>
 
           {/* Topic */}
           <div>
-            <label className="block text-sm font-medium mb-1">Topic</label>
+            <label className="block text-lg font-medium mb-1">Topic</label>
             <input
               type="text"
               value={topic}
@@ -224,7 +226,7 @@ const timeButtonClass = (slot) =>
 
           {/* Host name */}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-lg font-medium mb-1">
               Host Name
             </label>
             <input
@@ -238,7 +240,7 @@ const timeButtonClass = (slot) =>
 
           {/* Signer name */}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-lg font-medium mb-1">
               Signer Name
             </label>
             <input
@@ -262,7 +264,7 @@ const timeButtonClass = (slot) =>
         </form>
 
         {/* Footer text inside card */}
-        <p className="pt-10 text-xs md:text-sm text-gray-400 ftSans text-center ">
+        <p className="pt-10 text-md md:text-sm text-gray-400 ftSans text-center! ">
           This tool sends an email verifying attendance at The Acid Test AA
           Meeting (9am, 12pm, 6pm, 9pm – Phoenix time).
         </p>
