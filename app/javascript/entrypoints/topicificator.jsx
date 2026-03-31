@@ -7,6 +7,7 @@ import "../styles/tailwind.css";
 import "../styles/reader.css";
 
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import TopicificatorApp from "../components/TopicificatorApp";
 import ChapterEditor from "../components/ChapterEditor";
 import ChapterViewer from "../components/ChapterViewer";
@@ -19,11 +20,19 @@ import CourtVerificationForm from "../components/CourtVerificationForm";
 import ScratchPaper from "../components/ScratchPaper";
 import ServiceReadingsIndex from "../components/ServiceReadingsIndex";
 import ServiceReadingShow from "../components/ServiceReadingShow";
+import Layout from "../components/Layout";
+
 
 
 // ---- shared flags/config ----
 const body = document.body;
 const isAuthenticated = body.dataset.currentUser === "true";
+
+mountReact("topicificator-root", () => (
+  <Layout isAuthenticated={isAuthenticated}>
+    <TopicificatorApp />
+  </Layout>
+));
 
 const csrf = document
   .querySelector('meta[name="csrf-token"]')
@@ -47,10 +56,9 @@ function mountReact(id, renderFn) {
 
 // ---------------- Topicificator ----------------
 mountReact("topicificator-root", () => (
-  <>
-    <Navbar isAuthenticated={isAuthenticated} />
+  <Layout isAuthenticated={isAuthenticated}>
     <TopicificatorApp />
-  </>
+  </Layout>
 ));
 
 // ---------------- Chapter Viewer ----------------
@@ -135,10 +143,9 @@ mountReact("reading-archive-root", (rootEl) => {
   const notice = rootEl.dataset.notice || "";
 
   return (
-    <>
-      <Navbar isAuthenticated={isAuthenticated} />
+    <Layout isAuthenticated={isAuthenticated}>
       <ReadingArchive readings={readings} notice={notice} />
-    </>
+    </Layout>
   );
 });
 
@@ -177,10 +184,9 @@ mountReact("reading-show-root", (rootEl) => {
 
 // ---------------- Scratch Paper ----------------
 mountReact("scratchpaper-root", () => (
-  <>
-    <Navbar isAuthenticated={isAuthenticated} />
+  <Layout isAuthenticated={isAuthenticated}>
     <ScratchPaper />
-  </>
+  </Layout>
 ));
 
 // ---------------- Service Readings Index ----------------
@@ -189,13 +195,12 @@ mountReact("service-readings-root", (rootEl) => {
   const isAdmin = rootEl.dataset.isAdmin === "true";
 
   return (
-    <>
-      <Navbar isAuthenticated={isAuthenticated} />
+    <Layout isAuthenticated={isAuthenticated}>
       <ServiceReadingsIndex
         serviceReadings={serviceReadings}
         isAdmin={isAdmin}
       />
-    </>
+    </Layout>
   );
 });
 
@@ -207,19 +212,20 @@ mountReact("service-reading-show-root", (el) => {
   const isAdmin = el.dataset.admin === "true";
 
   return (
-    <ServiceReadingShow
-      reading={reading}
-      notice={notice}
-      isAdmin={isAdmin}
-      isAuthenticated={isAuthenticated}
-    />
+    <Layout isAuthenticated={isAuthenticated}>
+      <ServiceReadingShow
+        reading={reading}
+        notice={notice}
+        isAdmin={isAdmin}
+        isAuthenticated={isAuthenticated}
+      />
+    </Layout>
   );
 });
 
 // ---------------- Home Page (Landing) ----------------
 mountReact("home-root", () => (
-  <>
-    <Navbar isAuthenticated={isAuthenticated} />
+  <Layout isAuthenticated={isAuthenticated}>
     <HomePage />
-  </>
+  </Layout>
 ));

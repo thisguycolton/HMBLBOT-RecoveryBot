@@ -170,7 +170,7 @@ export default function HostBurgerHelper() {
     <div className="min-h-screen bg-stone-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-w-screen">
       <section className="relative border-b-8 border-amber-200 bg-amber-100 shadow-sm dark:border-amber-700 dark:bg-amber-950/40">
         <div className="mx-auto max-w-6xl px-4 py-10 md:py-14">
-          <div className="flex flex-col items-center gap-4 text-center md:flex-row md:items-center md:gap-6 md:text-left pt-15">
+          <div className="flex flex-col items-center gap-4 text-center md:flex-row md:items-center md:gap-6 md:text-left pt-5">
             <div className="text-slate-900 dark:text-amber-100">
               <BurgerIcon />
             </div>

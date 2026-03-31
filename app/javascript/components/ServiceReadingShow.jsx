@@ -61,7 +61,7 @@ export default function ServiceReadingShow({
       />
 
       {/* Hero */}
-      <div className="bg-teal-500 dark:bg-teal-700 text-white py-12 text-center pt-30 border-b-8 border-cyan-200 shadow-sm dark:border-cyan-900">
+      <div className="bg-teal-500 dark:bg-teal-700 text-white py-12 text-center pt-15 border-b-8 border-cyan-200 shadow-sm dark:border-cyan-900">
         <div className="mb-4 rounded-3xl bg-white/10 size-25 mx-auto p-5.5">
           <BookOpen className="h-12 w-12 md:h-14 md:w-14" />
         </div>
@@ -72,7 +72,7 @@ export default function ServiceReadingShow({
           {reading.source}
         </p>
                 {/* Copy Button */}
-        <div className="flex justify-end mb-4 absolute top-20 right-4 z-50">
+        <div className="flex justify-end mb-4 absolute top-20 right-4 z-10">
           <button
             onClick={handleCopy}
             className={`flex items-center gap-2 px-4 py-2 rounded ${
@@ -94,7 +94,7 @@ export default function ServiceReadingShow({
         )}
 
         {/* Reading Body */}
-        <div className="prose dark:prose-invert max-w-none noto text-lg">
+        <div className="prose dark:prose-invert max-w-none noto text-xl">
           <div dangerouslySetInnerHTML={{ __html: reading.content_html }} />
         </div>
 

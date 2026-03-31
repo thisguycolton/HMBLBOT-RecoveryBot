@@ -114,12 +114,12 @@ export default function ServiceReadingsIndex({
     <div className="min-h-screen bg-stone-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-w-screen">
       <section className="border-b-8 border-cyan-200 bg-teal-700 text-white shadow-sm dark:border-cyan-900">
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
-          <div className="flex flex-col items-center text-center pt-10">
+          <div className="flex flex-col items-center text-center pt-0">
             <div className="mb-4 rounded-3xl bg-white/10 p-4">
               <BookOpen className="h-12 w-12 md:h-14 md:w-14" />
             </div>
 
-            <h1 className="text-4xl font-bold tracking-widest md:text-6xl">
+            <h1 className="text-4xl font-bold tracking-widest md:text-6xl ttSans">
               SERVICE READINGS
             </h1>
 

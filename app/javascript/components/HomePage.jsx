@@ -46,7 +46,7 @@ const features = [
     description:
       "Formats, resources, and practical meeting helpers that reduce admin friction.",
     icon: <BadgeCheck className="h-5 w-5" />,
-    href: "/tools",
+    href: "/host_helper/scratchpaper",
   },
 ];
 
@@ -184,7 +184,7 @@ export default function HomePage() {
 
       {/* Hero */}
       <div className="w-screen bg-gradient-to-r from-sky-600 to-sky-800">
-      <section className=" mx-auto max-w-6xl px-4 py-16  text-white sm:px-6 lg:px-8 mt-8">
+      <section className=" mx-auto max-w-6xl px-4 py-16  text-white sm:px-6 lg:px-8 mt-0">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <div>
             <p className="mb-3 inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 bg-white ttSans">
@@ -215,7 +215,7 @@ export default function HomePage() {
             </div>
             <div className="mt-6 text-xs text-slate-200">
               No accounts required for basic tools (if you want it that way).
-              Private features are be gated.
+              Private features are gated.
             </div>
           </div>
 
@@ -358,22 +358,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-neutral-200 dark:border-neutral-600">
-        <div className="mx-auto max-w-6xl px-4 py-10 text-sm text-slate-600 dark:text-neutral-300">
-          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-            <div>© {new Date().getFullYear()} HMBLBOT</div>
-            <div className="flex gap-4">
-              <a href="/privacy" className="hover:text-slate-900">
-                Privacy
-              </a>
-              <a href="/contact" className="hover:text-slate-900">
-                Contact
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
