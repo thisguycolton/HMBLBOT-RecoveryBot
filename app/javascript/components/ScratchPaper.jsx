@@ -267,7 +267,7 @@ export default function HostBurgerHelper() {
             <button
               type="button"
               onClick={addMilestone}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 font-semibold text-white transition hover:bg-emerald-500"
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600! dark:bg-emerald-600! px-4 py-3 font-semibold text-white transition hover:bg-emerald-500"
             >
               <Plus className="h-5 w-5" />
               Add Milestone

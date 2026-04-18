@@ -7,7 +7,7 @@ const ReadingArchive = ({ readings, notice }) => {
       {/* Hero / Jumbotron */}
       <section className="w-full bg-rose-400 text-neutral-900 dark:bg-rose-800 border-b-8 border-rose-300 shadow-sm dark:border-rose-900">
 
-        <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 lg:px-8 mt-10">
+        <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 lg:px-8 mt-0">
           <div className="mb-4 rounded-3xl bg-white/20 p-4 size-25 mx-auto p-5.5 dark:text-white">
             <BookMarked className="h-12 w-12 md:h-14 md:w-14 " />
           </div>
@@ -22,7 +22,7 @@ const ReadingArchive = ({ readings, notice }) => {
       </section>
 
       {/* Content */}
-      <main className="mx-auto flex w-full position-fixed flex-col px-4 pb-0 pt-0 h-screen sm:px-6 lg:px-8 bg-neutral-400 dark:bg-neutral-700">
+      <main className="mx-auto flex w-full position-fixed flex-col px-4 pb-0 pt-0 sm:px-6 lg:px-8 bg-neutral-400 dark:bg-neutral-700">
         <div className="mx-auto mb-0 max-w-4xl text-start text-sm text-slate-400 bg-neutral-300  dark:bg-neutral-900/50 px-4 py-2 h-full">
         {notice && notice.length > 0 && (
           <div className="mb-6 rounded-lg border-emerald-500/50 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
