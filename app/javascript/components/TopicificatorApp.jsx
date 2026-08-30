@@ -174,7 +174,7 @@ const fetchTopicByNumber = async () => {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 30 }}
         transition={{ duration: 1 }}
-        className="absolute left-1/2 transform -translate-x-1/2 dark:text-gray-200 text-gray-300 md:text-gray-700 text-3xl md:text-5xl ttSans font-bold z-30 w-full text-center top-7 mt-5"
+        className="absolute left-1/2 transform -translate-x-1/2 dark:text-gray-200 text-gray-300 md:text-gray-700 hidden md:block text-3xl md:text-5xl ttSans font-bold z-30 w-full text-center top-7 mt-5"
       >
         THE TOPICIFICATOR <span className="!text-cyan-500">9002</span>
       </motion.div>
