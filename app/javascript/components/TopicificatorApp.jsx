@@ -340,10 +340,10 @@ const fetchTopicByNumber = async () => {
             <button
               key={index}
               type="button"
-              className="w-full rounded-lg bg-neutral-800 px-4 py-3 text-left transition hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              className="w-full rounded-lg bg-neutral-800 px-4 py-3 text-left transition hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 "
               onClick={() => choosePreviousTopic(t)}
             >
-              <p className="m-0 font-semibold ftSans">
+              <p className="m-0 font-semibold ftSans dark:text-slate-100 text-slate-900">
                 {t.title}
               </p>
             </button>

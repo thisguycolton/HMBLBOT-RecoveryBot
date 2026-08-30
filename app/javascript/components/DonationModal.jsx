@@ -54,7 +54,7 @@ export default function DonationModal({ isOpen, onClose }) {
             Support HMBLBOT
           </h2>
 
-          <p className="mt-2 text-sky-100 !text-center">
+          <p className="mt-2 text-sky-100 !text-center sans">
             Help keep recovery resources free and accessible.
           </p>
         </div>
