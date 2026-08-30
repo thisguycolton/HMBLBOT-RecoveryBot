@@ -175,10 +175,10 @@ export default function HostBurgerHelper() {
               <BurgerIcon />
             </div>
             <div>
-              <h1 className="text-4xl font-bold tracking-tight md:text-6xl">
+              <h1 className="text-4xl font-bold tracking-tight md:text-6xl sans">
                 Host-burger Helper
               </h1>
-              <p className="mt-2 text-base text-slate-600 dark:text-slate-300 md:text-lg">
+              <p className="mt-2 text-base text-slate-600 dark:text-slate-300 md:text-lg sans">
                 Quick meeting helper for service roles and milestones.
               </p>
             </div>
@@ -195,7 +195,7 @@ export default function HostBurgerHelper() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold">People Doing Service</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-500 dark:text-slate-400 sans">
                   Fill in tonight’s service commitments.
                 </p>
               </div>
@@ -237,7 +237,7 @@ export default function HostBurgerHelper() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold">People Celebrating Milestones</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-500 dark:text-slate-400 sans">
                   {milestoneCount} milestone{milestoneCount === 1 ? "" : "s"} listed
                 </p>
               </div>

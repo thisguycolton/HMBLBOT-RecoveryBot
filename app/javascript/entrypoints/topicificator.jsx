@@ -29,10 +29,12 @@ const body = document.body;
 const isAuthenticated = body.dataset.currentUser === "true";
 
 mountReact("topicificator-root", () => (
-  <>
-    <Navbar isAuthenticated={isAuthenticated} />
+  <Layout
+    isAuthenticated={isAuthenticated}
+    showFooter={false}
+  >
     <TopicificatorApp />
-  </>
+  </Layout>
 ));
 
 const csrf = document
@@ -171,8 +173,11 @@ mountReact("reading-show-root", (rootEl) => {
 
   return (
     <>
-      <Navbar isAuthenticated={isAuthenticated} />
+        <Layout
+    isAuthenticated={isAuthenticated}
+  >
       <ReadingShow reading={reading} notice={notice} currentUser={currentUser}/>
+      </Layout>
     </>
   );
 });

@@ -2,7 +2,11 @@ import React from "react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 
-export default function Layout({ children, isAuthenticated }) {
+export default function Layout({
+  children,
+  isAuthenticated,
+  showFooter = true,
+}) {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar isAuthenticated={isAuthenticated} />
@@ -11,7 +15,7 @@ export default function Layout({ children, isAuthenticated }) {
         {children}
       </main>
 
-      <Footer />
+      {showFooter && <Footer />}
     </div>
   );
 }

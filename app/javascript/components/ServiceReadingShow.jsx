@@ -68,7 +68,7 @@ export default function ServiceReadingShow({
         <h1 className="text-4xl md:text-5xl font-bold tracking-widest ttSans uppercase mt-10">
           {reading.title}
         </h1>
-        <p className="mt-2 text-lg opacity-80 text-2xl! text-center! w-full">
+        <p className="mt-2 text-lg opacity-80 text-2xl! text-center! w-full sans">
           {reading.source}
         </p>
                 {/* Copy Button */}

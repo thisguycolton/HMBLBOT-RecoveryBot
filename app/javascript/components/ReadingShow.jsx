@@ -247,105 +247,204 @@ const topicHtml = renderRichContent(topicSource);
         style={{ width: `${scrollWidth}%` }}
       />
       <div className="grid grid-cols-6 lg:gap-2 !w-screen">
-      <div className="min-h-screen col-span-6 md:col-span-4 md:col-start-2 bg-stone-50 mt-10 text-slate-900 ">
+      <div className="min-h-screen col-span-6 md:col-span-4 md:col-start-2 bg-stone-50  text-slate-900 ">
         {/* HERO */}
-        <div className="bg-sky-900 text-white w-screen h-85 lg:h-75 absolute start-0 z-0 border-b-8 border-sky-200 dark:border-neutral-700"></div>
-        <section className="bg-sky-900 text-white w-full h-80 lg:h-70 relative px-5 md:px-0">
-          <div className=" max-w-5xl md:px-4 py-10 lg:py-14 ">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between ">
-              <div className="w-full">
-                <h1 className="text-4xl font-bold tracking-tight md:text-6xl ttSans">
-                  {reading.meetingName || "Meeting Reading"} 
-                </h1>
+        {/* HERO */}
+<section
+  className="
+    relative
+    left-1/2
+    w-screen
+    -translate-x-1/2
+    bg-gradient-to-r
+    from-sky-600
+    to-sky-800
+    text-white
+    border-b-8
+    border-sky-200
+    dark:border-neutral-700
+  "
+>
+  <div className="mx-auto max-w-5xl px-5 py-10 md:px-6 md:py-14 lg:py-16">
+    <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
 
-                <h2 className="mt-2 text-2xl font-semibold text-sky-100 md:text-4xl ">
-                  Meeting Reading
-                </h2>
+      {/* Reading information */}
+      <div className="min-w-0 flex-1">
+        <h1 className="text-4xl font-bold tracking-tight md:text-6xl ttSans">
+          {reading.meetingName || "Meeting Reading"}
+        </h1>
 
-                <div className="mt-4">
-                  <div className="text-xl md:text-3xl">
-                    <span>{meetingDateLabel}</span>
-                    {meetingTimeLabel && (
-                      <span className="ml-3 font-light text-sky-100">
-                        {meetingTimeLabel}
-                      </span>
-                    )}
-                  </div>
+        <h2 className="mt-2 text-2xl font-semibold text-sky-100 md:text-4xl">
+          Meeting Reading
+        </h2>
 
-                  {reading.tags?.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {reading.tags.map((tag) => (
-                        <a
-                          key={tag.id}
-                          href={`/readings?tag=${encodeURIComponent(tag.slug || tag.title)}`}
-                          className="inline-flex items-center rounded-full border border-white/30 bg-white/10 px-3 py-1 text-sm font-medium text-white hover:bg-white/20"
-                        >
-                          {tag.title}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+        <div className="mt-5">
+          <div className="text-xl md:text-3xl">
+            <span>{meetingDateLabel}</span>
 
-              <div className="flex flex-col gap-3 w-full lg:items-end">
-                <div className="flex w-full gap-2 lg:w-auto">
-                  {reading.meetingUrl && (
-                    <a
-                      href={reading.meetingUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex grow items-center justify-center gap-2 rounded-xl bg-blue-500 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-400 lg:flex-none"
-                    >
-                      <Video size={18} />
-                      <span className="hidden md:inline">Join With Zoom</span>
-                      <span className="md:hidden">Join</span>
-                    </a>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className={`inline-flex items-center justify-center rounded-xl px-4 py-3 font-semibold ${
-                      copied
-                        ? "bg-emerald-500 text-white"
-                        : "bg-white text-slate-900 hover:bg-slate-100"
-                    }`}
-                  >
-                    {copied ? <Check size={18} /> : <Copy size={18} />}
-                  </button>
-                                  {isOwner && (
-                  <div className="flex w-full gap-2 md:w-auto">
-                    <a
-                      href={`/readings/${reading.id}/edit`}
-                      className="inline-flex items-center justify-center rounded-xl border border-white/30 px-4 py-3 text-white hover:bg-white/10"
-                    >
-                      <Pencil size={18} />
-                    </a>
-
-                    {onDelete ? (
-                      <button
-                        type="button"
-                        onClick={handleDelete}
-                        className="inline-flex flex-1 items-center justify-center rounded-xl border border-red-300/40 px-4 py-3 text-white hover:bg-red-500/20"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    ) : null}
-                  </div>
-                )}
-                </div>
-
-
-              </div>
-            </div>
+            {meetingTimeLabel && (
+              <span className="ml-3 font-light text-sky-100">
+                {meetingTimeLabel}
+              </span>
+            )}
           </div>
-          
-        </section>
+
+          {reading.tags?.length > 0 && (
+  <div className="mt-5 w-full overflow-x-auto overflow-y-hidden">
+    <div className="flex w-max min-w-full flex-nowrap gap-2 pb-1">
+      {reading.tags.map((tag) => (
+        <a
+          key={tag.id}
+          href={`/readings?tag=${encodeURIComponent(
+            tag.slug || tag.title
+          )}`}
+          className="
+            inline-flex
+            shrink-0
+            items-center
+            rounded-full
+            border
+            border-white/30
+            bg-white/10
+            px-4
+            py-1.5
+            text-sm
+            font-medium
+            text-white
+            hover:!bg-white/20
+          hover:!text-white
+          focus:!text-white
+          active:!text-white
+          visited:!text-white
+            whitespace-nowrap
+            transition
+            hover:bg-white/20
+          "
+        >
+          {tag.title}
+        </a>
+      ))}
+    </div>
+  </div>
+)}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="w-full lg:w-auto lg:min-w-[220px]">
+        <div className="flex w-full flex-wrap gap-2 lg:justify-end">
+
+          {reading.meetingUrl && (
+            <a
+              href={reading.meetingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="
+                inline-flex
+                grow
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                bg-blue-500
+                px-5
+                py-3
+                text-sm
+                font-semibold
+                text-white
+                transition
+                hover:bg-blue-400
+                lg:grow-0
+              "
+            >
+              <Video size={18} />
+
+              <span className="hidden md:inline">
+                Join With Zoom
+              </span>
+
+              <span className="md:hidden">
+                Join
+              </span>
+            </a>
+          )}
+
+          <button
+            type="button"
+            onClick={handleCopy}
+            className={`
+              inline-flex
+              items-center
+              justify-center
+              rounded-xl
+              px-4
+              py-3
+              font-semibold
+              transition
+              ${
+                copied
+                  ? "bg-emerald-500 text-white"
+                  : "bg-white text-slate-900 hover:bg-slate-100"
+              }
+            `}
+          >
+            {copied ? <Check size={18} /> : <Copy size={18} />}
+          </button>
+
+          {isOwner && (
+            <>
+              <a
+                href={`/readings/${reading.id}/edit`}
+                className="
+                  inline-flex
+                  items-center
+                  justify-center
+                  rounded-xl
+                  border
+                  border-white/30
+                  px-4
+                  py-3
+                  text-white
+                  transition
+                  hover:bg-white/10
+                "
+              >
+                <Pencil size={18} />
+              </a>
+
+              {onDelete ? (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="
+                    inline-flex
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-red-300/40
+                    px-4
+                    py-3
+                    text-white
+                    transition
+                    hover:bg-red-500/20
+                  "
+                >
+                  <Trash2 size={18} />
+                </button>
+              ) : null}
+            </>
+          )}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
 
         {/* MAIN READING */}
         <section className=" bg-stone-100 dark:bg-neutral-900  dark:text-neutral-100">
-          <div className=" max-w-display px-2 py-5 md:py-14 mt-5">
+          <div className=" max-w-display px-4 py-5 md:py-14">
             <figure>
               <h1 className="mb-6 text-3xl font-bold uppercase tracking-widest md:text-5xl ttSans">
                 {reading.title}
