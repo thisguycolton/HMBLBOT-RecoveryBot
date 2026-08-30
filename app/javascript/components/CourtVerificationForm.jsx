@@ -9,9 +9,32 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
   const [hostName, setHostName] = useState("");
   const [signerName, setSignerName] = useState("");
   const [topic, setTopic] = useState("");
+  const [meetingDay, setMeetingDay] = useState("today"); // "today" | "yesterday"
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const getMeetingDate = () => {
+  const date = new Date();
+
+  if (meetingDay === "yesterday") {
+    date.setDate(date.getDate() - 1);
+  }
+
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const meetingDisplayDate = () =>
+  new Date(`${getMeetingDate()}T00:00:00`).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,12 +48,7 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
       return;
     }
 
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0");
-    const dd = String(today.getDate()).padStart(2, "0");
-    const dateStr = `${yyyy}-${mm}-${dd}`;
-    const meetingAtString = `${dateStr}T${meetingTimeSlot}:00`;
+  const meetingAtString = `${getMeetingDate()}T${meetingTimeSlot}:00`;
 
     try {
       const payload = {
@@ -84,12 +102,15 @@ const timeButtonClass = (slot) =>
       : "bg-slate-900! text-slate-100 border-slate-600 hover:bg-slate-800",
   ].join(" ");
 
-  const todayDisplay = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const dayButtonClass = (day) =>
+  [
+    "px-4 py-2 rounded text-sm font-medium border transition-colors duration-150",
+
+    meetingDay === day
+      ? "bg-cyan-500! text-white border-cyan-400 shadow-md scale-[1.05]"
+      : "bg-slate-900! text-slate-100 border-slate-600 hover:bg-slate-800",
+  ].join(" ");
+
 
  return (
   <div className="bg-gray-900 text-white min-h-screen w-full overflow-x-hidden">
@@ -166,10 +187,31 @@ const timeButtonClass = (slot) =>
               Day / Time of Meeting Attended
             </h5>
 
-            <p className="text-slate-300 mb-2 text-sm sm:text-base text-center! ftSans">
-              Date will be recorded as{" "}
-              <span className="font-semibold">{todayDisplay}</span>. <br />
-              All times are in{" "}
+            <h5 className="block text-lg font-semibold mb-3 text-center ttSans">
+              Meeting Day
+            </h5>
+
+            <div className="flex justify-center gap-3 mb-4">
+              <button
+                type="button"
+                onClick={() => setMeetingDay("yesterday")}
+                className={dayButtonClass("yesterday")}
+              >
+                Yesterday
+              </button>
+              <button
+                type="button"
+                onClick={() => setMeetingDay("today")}
+                className={dayButtonClass("today")}
+              >
+                Today
+              </button>
+            </div>
+
+            <p className="text-slate-300 mb-3 text-sm sm:text-base text-center! ftSans">
+              Recording attendance for{" "}
+              <span className="font-semibold">{meetingDisplayDate()}</span>.<br />
+              All meeting times are in{" "}
               <span className="font-semibold">Phoenix, AZ (MST)</span>.
             </p>
 

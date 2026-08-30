@@ -29,9 +29,10 @@ const body = document.body;
 const isAuthenticated = body.dataset.currentUser === "true";
 
 mountReact("topicificator-root", () => (
-  <Layout isAuthenticated={isAuthenticated}>
+  <>
+    <Navbar isAuthenticated={isAuthenticated} />
     <TopicificatorApp />
-  </Layout>
+  </>
 ));
 
 const csrf = document
@@ -54,12 +55,6 @@ function mountReact(id, renderFn) {
   root.render(renderFn(el));
 }
 
-// ---------------- Topicificator ----------------
-mountReact("topicificator-root", () => (
-  <Layout isAuthenticated={isAuthenticated}>
-    <TopicificatorApp />
-  </Layout>
-));
 
 // ---------------- Chapter Viewer ----------------
 mountReact("chapter-viewer", (mount) => {

@@ -13,6 +13,8 @@ import {
   Sun,
 } from "lucide-react";
 
+import DonationModal from "./DonationModal";
+
 export default function Navbar({
   isAuthenticated = false,
   rootPath = "/",
@@ -43,6 +45,7 @@ export default function Navbar({
       return "system";
     }
   });
+  const [donationModalOpen, setDonationModalOpen] = useState(false);
   useLayoutEffect(() => {
   const root = document.documentElement;
   const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -217,10 +220,15 @@ function LogoutButton({ className = "" }) {
             </a>
 
             <div className="ml-2 hidden md:flex items-center">
-              <NavLink href={rootPath}>Home</NavLink>
               <NavLink href={topicificatorPath}>Topicificator 9002</NavLink>
               <NavLink href={serviceReadingsPath}>Service Readings</NavLink>
-
+              <button
+                type="button"
+                onClick={() => setDonationModalOpen(true)}
+                className="px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-200 dark:hover:text-white dark:hover:bg-slate-800"
+              >
+                Donate
+              </button>
               <div className="relative" ref={extrasRef}>
                 <button
                   type="button"
@@ -296,6 +304,16 @@ function LogoutButton({ className = "" }) {
             <NavLink href={rootPath}>Home</NavLink>
             <NavLink href={topicificatorPath}>Topicificator</NavLink>
             <NavLink href={serviceReadingsPath}>Service Readings</NavLink>
+            <button
+            type="button"
+            onClick={() => {
+              setDonationModalOpen(true);
+              setMobileOpen(false);
+            }}
+            className="text-start px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-200 dark:hover:text-white dark:hover:bg-slate-800"
+          >
+            Donate
+          </button>
           </div>
 
           <div className="rounded-md">
@@ -407,6 +425,10 @@ function LogoutButton({ className = "" }) {
           </div>
         </div>
       </div>
+      <DonationModal
+  isOpen={donationModalOpen}
+  onClose={() => setDonationModalOpen(false)}
+/>
     </nav>
   );
 }

@@ -193,7 +193,7 @@ export default function HomePage() {
             <h1 className="text-4xl font-semibold tracking-tight md:text-5xl ttSans">
               HumbleBot makes group tools feel effortless.
             </h1>
-            <p className="mt-4 text-lg text-slate-200">
+            <p className="mt-4 text-lg text-slate-200 sans">
               A practical set of utilities—topics, readings, and admin
               helpers—built to reduce friction and keep the focus on the
               meeting.
@@ -235,7 +235,7 @@ export default function HomePage() {
             <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
               Everything HumbleBot can do
             </h2>
-            <p className="mt-2 text-neutral-600 dark:text-neutral-200">
+            <p className="mt-2 text-neutral-600 dark:text-neutral-200 sans">
               Pick what you need. Ignore what you don’t. Each tool stands alone.
             </p>
           </div>

@@ -35,7 +35,7 @@ function ServiceReadingCard({ group, onOpen }) {
             {title}
           </h3>
 
-          <p className="text-sm uppercase tracking-widest text-slate-500 dark:text-slate-400">
+          <p className="text-sm uppercase tracking-widest text-slate-500 dark:text-slate-400 sans">
             {hasMany ? `${readings.length} sources` : first?.source}
           </p>
 
@@ -123,7 +123,7 @@ export default function ServiceReadingsIndex({
               SERVICE READINGS
             </h1>
 
-            <p className="mt-4 max-w-2xl text-base text-cyan-50 md:text-xl">
+            <p className="mt-4 max-w-2xl text-base text-cyan-50 md:text-xl sans">
               An index of commonly used meeting readings for service work.
             </p>
           </div>
@@ -142,7 +142,7 @@ export default function ServiceReadingsIndex({
             ))}
           </div>
         ) : (
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+          <div className="sans rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
             No service readings yet.
           </div>
         )}

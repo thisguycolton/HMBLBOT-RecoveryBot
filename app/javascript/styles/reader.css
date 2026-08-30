@@ -1,6 +1,5 @@
 /* app/javascript/styles/reader.css */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400;1,700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 :root {
   --hl-yellow: #fef08a;
   /* yellow-200 */
@@ -26,6 +25,34 @@ html.dark {
 .ProseMirror mark.hb-hl {
   color: #111 !important;
   /* or #000 if you want true black */
+}
+
+pre{
+  font-family: "DM Mono", monospace;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  background-color: #2a2b2d;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  margin:2px;
+  padding:2px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-radius: 4px;
+  color: #f8fafc;
+}
+pre.dark{
+  background-color: #111;
+  color: #f8fafc;
+}
+
+blockquote.dark{
+  color: #f8fafc !important;
+  border-left: 4px solid #64748b;
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .prose,
@@ -87,7 +114,15 @@ h1{
       font-style: normal;
 }
 .noto{
-  font-family: "Noto Serif", serif;
+  font-family: "Noto Serif", serif !important;
+  font-optical-sizing: auto;
+}
+.sans{
+  font-family: "Inter", sans-serif !important;
+  font-optical-sizing: auto;
+}
+.serif{
+  font-family: "Gentium Book Plus", serif !important;
   font-optical-sizing: auto;
 }
 

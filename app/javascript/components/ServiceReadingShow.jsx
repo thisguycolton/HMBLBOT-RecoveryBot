@@ -94,7 +94,7 @@ export default function ServiceReadingShow({
         )}
 
         {/* Reading Body */}
-        <div className="prose dark:prose-invert max-w-none noto text-xl">
+        <div className="prose dark:prose-invert max-w-none serif text-xl">
           <div dangerouslySetInnerHTML={{ __html: reading.content_html }} />
         </div>
 
@@ -140,7 +140,7 @@ export default function ServiceReadingShow({
                 <h2 className="text-3xl font-semibold md:text-5xl">
                   Share Readings Easier
                 </h2>
-                <p className="mt-3 text-lg text-slate-600 dark:text-neutral-300 md:text-2xl">
+                <p className="mt-3 text-lg text-slate-600 dark:text-neutral-300 md:text-2xl sans">
                   Sign up to post your readings and share them with others with a simple click.
                 </p>
               </div>

@@ -174,7 +174,7 @@ const fetchTopicByNumber = async () => {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 30 }}
         transition={{ duration: 1 }}
-        className="absolute left-1/2 transform -translate-x-1/2 text-gray-200 text-3xl md:text-5xl ttSans font-bold z-30 w-full text-center top-5 mt-5"
+        className="absolute left-1/2 transform -translate-x-1/2 dark:text-gray-200 text-gray-300 md:text-gray-700 text-3xl md:text-5xl ttSans font-bold z-30 w-full text-center top-7 mt-5"
       >
         THE TOPICIFICATOR <span className="!text-cyan-500">9002</span>
       </motion.div>
@@ -251,18 +251,33 @@ const fetchTopicByNumber = async () => {
 
   </div>
 </div>
-    <div className="bg-neutral-50 dark:bg-gray-900 text-white w-screen h-screen flex items-center justify-center">
-
-      
-      <div className="relative w-full h-full md:h-auto md:aspect-video md:max-w-5xl bg-gray-800 rounded-lg overflow-hidden flex flex-col items-center justify-between py-8 px-6 mx-auto shadow-lg">
+    <div className="fixed inset-x-0 top-14 bottom-0 z-0 bg-neutral-50 dark:bg-gray-900 text-white flex items-center justify-center">
+      <div
+  className="
+    relative
+    w-full
+    h-full
+    md:h-auto
+    md:aspect-video
+    md:max-w-5xl
+    bg-gray-800
+    md:rounded-lg
+    overflow-hidden
+    flex
+    flex-col
+    items-center
+    justify-between
+    px-0
+    md:px-6 py-0 md:py-8 mx-0 md:mx-auto shadow-lg
+  "
+>
         {/* Timer */}
         <LavaOverlay progress={(timerDuration - timer) / timerDuration} />
-        
         {timer !== null && mode !== "free" && (
           <button
             onClick={() => startTimer(mode)}
             title="Restart Timer"
-            className="!text-2xl fw-bold !rounded-none !rounded-bl-lg !rounded-tr-lg shadow-md absolute top-0 end-0 w-30 text-center ttSans !bg-cyan-950/70 !p-3 hover:bg-cyan-950/90 transition"
+            className="!text-2xl fw-bold !rounded-none !rounded-bl-lg !md:rounded-tr-lg shadow-md absolute top-0 end-0 w-30 text-center ttSans !bg-cyan-950/70 !p-3 hover:bg-cyan-950/90 transition"
           >
             {formatTime(timer)}
           </button>
@@ -270,14 +285,14 @@ const fetchTopicByNumber = async () => {
         <div className="text-2xl fw-bold rounded-br-lg shadow-md absolute top-0 start-0 w-20 text-center ttSans bg-cyan-950/70 p-0">
           <button
             onClick={handleCopyTopics}
-            className="!bg-transparent text-white px-4 py-3 !rounded-none !rounded-br-lg !rounded-tl-lg hover:text-gray-200 transition-colors duration-300"
+            className="!bg-transparent text-white px-4 py-3 rounded-none rounded-br-lg md:rounded-tl-lg hover:text-gray-200 transition-colors duration-300"
           >
             <Copy className="w-5 h-5" />
           </button>
         </div>
 
         {/* Topic Display */}
-        <div className="text-center px-2 md:px-4 mt-8 flex-grow flex flex-col justify-center z-3">
+        <div className="text-center px-2 md:px-4 flex-1 min-h-0 flex flex-col items-center justify-center z-3">
           {topic ? (
             <>
               <h1 className="text-5xl! md:text-6xl! font-bold mb-4 ttSans">{topic.title}</h1>
@@ -300,32 +315,56 @@ const fetchTopicByNumber = async () => {
 
 
         </div>
+        
         <img src="https://humblebot.s3.us-west-2.amazonaws.com/hmblbotLOGOsmBLUE.png" alt="HumbleBot Logo" className="hidden md:block fixed bottom-7 right-0 transform -translate-x-1/2 w-15 opacity-65 hover:opacity-95" />
-
+</div>
         {showPreviousModal && (
-          <div className="fixed top-0 left-0 w-full h-full bg-[rgba(0,0,0,0.8)] items-center flex justify-center z-40">
-            <div className="bg-slate-900 text-light rounded-lg p-6 max-w-lg max-h-[80vh] overflow-y-auto shadow-xl border-2 border-slate-700">
-              <h2 className="!text-1xl font-bold mb-4 ttSans">Previously Shared Topics</h2>
-              <div className="grid gap-4 mb-4">
-                {[...coveredTopics].reverse().map((t, index) => (
-                  <button
-                    key={index}
-                    className="w-full text-left py-2 px-2 rounded bg-white/10 hover:bg-white/20 "
-                    onClick={() => choosePreviousTopic(t)}
-                  >
-                    <p className="font-semibold ftSans m-0">{t.title}</p>
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setShowPreviousModal(false)}
-                className="mt-6 !bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+    <div className="flex w-full max-w-2xl max-h-[80vh] flex-col overflow-hidden rounded-lg border-2 border-slate-700 bg-slate-900 text-white shadow-xl z-10">
+
+      {/* Header */}
+      <div className="shrink-0 border-b border-slate-700 px-6 py-5">
+        <h2 className="text-2xl font-bold ttSans">
+          Previously Shared Topics
+        </h2>
+
+        <p className="mt-1 text-sm text-slate-400">
+          Select a previous topic to return to it.
+        </p>
+      </div>
+
+      {/* Scrollable topic list */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 ">
+        <div className="grid gap-3">
+          {[...coveredTopics].reverse().map((t, index) => (
+            <button
+              key={index}
+              type="button"
+              className="w-full rounded-lg bg-neutral-800 px-4 py-3 text-left transition hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              onClick={() => choosePreviousTopic(t)}
+            >
+              <p className="m-0 font-semibold ftSans">
+                {t.title}
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="shrink-0 border-t border-slate-700 px-6 py-4">
+        <button
+          type="button"
+          onClick={() => setShowPreviousModal(false)}
+          className="!bg-red-500 px-5 py-2.5 rounded hover:!bg-red-600"
+        >
+          Cancel
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
 {showNumberModal && (
   <div className="fixed top-0 left-0 w-full h-full bg-[rgba(0,0,0,0.8)] flex items-center justify-center z-40">
     <div className="bg-slate-900 text-white rounded-lg p-6 max-w-sm w-full shadow-xl border-2 border-slate-700">
@@ -362,7 +401,7 @@ const fetchTopicByNumber = async () => {
         <button
           type="button"
           onClick={() => setShowNumberModal(false)}
-          className="bg-gray-700 px-4 py-2 rounded hover:bg-gray-600"
+          className="!bg-gray-700 px-4 py-2 rounded hover:bg-gray-600"
         >
           Cancel
         </button>
@@ -432,7 +471,6 @@ const fetchTopicByNumber = async () => {
         </div>
       </div>
     )}
-  </div>
   </div>
   );
 }

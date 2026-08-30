@@ -246,12 +246,12 @@ const topicHtml = renderRichContent(topicSource);
         className="fixed top-0 left-0 h-1.5 bg-sky-400 z-[10000] transition-[width] duration-75"
         style={{ width: `${scrollWidth}%` }}
       />
-      <div className="grid grid-cols-6 gap-4 w-screen">
-      <div className="min-h-screen col-span-4 col-start-2 w-full bg-stone-50 mt-10 text-slate-900 ">
+      <div className="grid grid-cols-6 lg:gap-2 !w-screen">
+      <div className="min-h-screen col-span-6 md:col-span-4 md:col-start-2 bg-stone-50 mt-10 text-slate-900 ">
         {/* HERO */}
-        <div className="bg-sky-900 text-white w-full h-85 lg:h-75 absolute start-0 z-0 border-b-8 border-sky-200 dark:border-neutral-700"></div>
-        <section className="bg-sky-900 text-white w-full h-80 lg:h-70 relative ">
-          <div className="mx-auto  max-w-5xl px-4 py-10 lg:py-14">
+        <div className="bg-sky-900 text-white w-screen h-85 lg:h-75 absolute start-0 z-0 border-b-8 border-sky-200 dark:border-neutral-700"></div>
+        <section className="bg-sky-900 text-white w-full h-80 lg:h-70 relative px-5 md:px-0">
+          <div className=" max-w-5xl md:px-4 py-10 lg:py-14 ">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between ">
               <div className="w-full">
                 <h1 className="text-4xl font-bold tracking-tight md:text-6xl ttSans">
@@ -344,21 +344,21 @@ const topicHtml = renderRichContent(topicSource);
         </section>
 
         {/* MAIN READING */}
-        <section className=" bg-stone-100 dark:bg-stone-900  dark:text-neutral-100">
-          <div className="mx-auto max-w-5xl px-4 py-10 md:py-14">
+        <section className=" bg-stone-100 dark:bg-neutral-900  dark:text-neutral-100">
+          <div className=" max-w-display px-2 py-5 md:py-14 mt-5">
             <figure>
               <h1 className="mb-6 text-3xl font-bold uppercase tracking-widest md:text-5xl ttSans">
                 {reading.title}
               </h1>
 
-              <blockquote className="reading-prose">
+              <blockquote className="reading-prose wrap-normal">
                 <div
                   dangerouslySetInnerHTML={{ __html: contentHtml }}
                 />
               </blockquote>
 
               {reading.source && (
-                <figcaption className="mt-6 text-xl italic text-neutral-600 dark:text-neutral-300 md:text-2xl">
+                <figcaption className="mt-6 text-xl italic text-neutral-600 dark:text-neutral-300 md:text-2xl wrap-normal">
                   {reading.source}
                 </figcaption>
               )}
@@ -367,28 +367,28 @@ const topicHtml = renderRichContent(topicSource);
         </section>
 
         {/* TOPICS */}
-        <div className="bg-sky-900 text-white w-full h-110 absolute start-0 z-0 "></div>
-        <section className="bg-sky-900 text-white w-full h-110 relative ">
-          <div className="mx-auto max-w-5xl px-4 py-12 md:py-16">
-            <h2 className="text-center text-3xl font-bold uppercase md:text-5xl">
-              Example Topics For Sharing
-            </h2>
-            <h3 className="mt-2 text-center text-xl italic text-neutral-300 dark:text-neutral-300 md:text-2xl">
-              Feel free to check in!
-            </h3>
+<section className="relative left-1/2 w-screen -translate-x-1/2 bg-sky-900 text-white grid grid-cols-6 lg:gap-2">
+  <div className="mx-auto max-w-5xl px-4 py-12 md:py-16 col-span-6 md:col-span-4 md:col-start-2">
+    <h2 className="text-center text-3xl font-bold uppercase md:text-5xl">
+      Example Topics For Sharing
+    </h2>
 
-            <div className="mt-8 rounded-[2rem] bg-white dark:bg-cyan-600 text-neutral-800 dark:text-neutral-100 px-6 py-8 shadow-sm md:px-10 md:py-10">
-              <div
-                className="reading-topics text-lg md:text-xl"
-                dangerouslySetInnerHTML={{ __html: topicHtml }}
-              />
-            </div>
-          </div>
-        </section>
+    <h3 className="mt-2 text-center text-xl italic text-neutral-300 md:text-2xl">
+      Feel free to check in!
+    </h3>
+
+    <div className="mt-8 rounded-[2rem] bg-white px-6 py-8 text-neutral-800 shadow-sm dark:bg-cyan-600 dark:text-neutral-100 md:px-10 md:py-10">
+      <div
+        className="reading-topics text-lg md:text-xl"
+        dangerouslySetInnerHTML={{ __html: topicHtml }}
+      />
+    </div>
+  </div>
+</section>
 
         {/* CTA */}
         <section className=" bg-neutral-100 dark:bg-stone-900 dark:text-neutral-100">
-          <div className="mx-auto max-w-5xl px-4 py-12 md:py-16">
+          <div className=" max-w-5xl px-4 py-12 md:py-16">
             <div className="flex flex-col items-center gap-6 text-center md:flex-row md:text-left">
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-sky-100 text-sky-800">
                 <MessageSquareQuote size={38} />
@@ -404,7 +404,7 @@ const topicHtml = renderRichContent(topicSource);
               </div>
             </div>
 
-            <div className="mt-8 mx-auto max-w-2xl">
+            <div className="mt-8  max-w-2xl">
               <a
                 href="/users/sign_up"
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-blue-500 px-6 py-4 text-lg font-semibold text-white hover:bg-blue-400"
