@@ -123,7 +123,10 @@ mountReact("chapter-editor", (edit) => {
 
 // ---------------- Chapter Admin ----------------
 mountReact("chapter-admin", (admin) => (
-  <ChapterAdmin bookSlug={admin.dataset.bookSlug} slug={admin.dataset.chapterSlug} />
+  <>
+    <Navbar isAuthenticated={isAuthenticated} />
+    <ChapterAdmin bookSlug={admin.dataset.bookSlug} slug={admin.dataset.chapterSlug} />
+  </>
 ));
 
 // ---------------- Court Verification ----------------

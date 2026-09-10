@@ -3,39 +3,84 @@ class Api::ChaptersController < ApplicationController
   before_action :set_book
   before_action :set_chapter, only: [:show, :update, :destroy]
 
-    def destroy
-      @chapter.destroy!
-      # optional: keep indices compact if you rely on strict 1..N
-      # renumber!(@book)
-      head :no_content
-    rescue => e
-      render json: { error: e.message }, status: :unprocessable_entity
-    end
+  # --------------------------------------------------------------------------
+  # DELETE /api/books/:book_slug/chapters/:slug
+  # --------------------------------------------------------------------------
 
-def create
-  p = params.require(:chapter).permit(:title, :slug, :first_page, :last_page)
-  next_index = (@book.chapters.maximum(:index) || 0) + 1
-  ch = @book.chapters.create!(
-    title:       p[:title].presence || "Untitled",
-    slug:        slugify(p[:slug].presence || "chapter-#{next_index}"),
-    index:       next_index,
-    first_page:  p[:first_page],
-    last_page:   p[:last_page],
-    tiptap_json: { "type" => "doc", "content" => [] }
-  )
-  render json: ch.slice(:id, :slug, :title, :index, :first_page, :last_page), status: :created
-end
+  def destroy
+    @chapter.destroy!
+    renumber!(@book)
+    head :no_content
+  rescue => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # --------------------------------------------------------------------------
+  # POST /api/books/:book_slug/chapters
+  # --------------------------------------------------------------------------
+
+  def create
+    p = params.require(:chapter).permit(
+      :title,
+      :slug,
+      :first_page,
+      :last_page
+    )
+
+    next_index = (@book.chapters.maximum(:index) || 0) + 1
+
+    chapter = @book.chapters.create!(
+      title: p[:title].presence || "Untitled",
+      slug: slugify(p[:slug].presence || "chapter-#{next_index}"),
+      index: next_index,
+      first_page: p[:first_page],
+      last_page: p[:last_page],
+      tiptap_json: {
+        "type" => "doc",
+        "content" => []
+      }
+    )
+
+    render json: chapter.slice(
+      :id,
+      :slug,
+      :title,
+      :index,
+      :first_page,
+      :last_page
+    ), status: :created
+
+  rescue => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # --------------------------------------------------------------------------
+  # GET /api/books/:book_slug/chapters
+  # --------------------------------------------------------------------------
 
   def index
-  chapters = @book.chapters.order(:index)
+    chapters = @book.chapters.order(:index, :id)
 
-  render json: chapters.map { |c|
-    c.as_json(
-      only: [:id, :slug, :title, :index, :first_page, :last_page],
-      methods: [:paragraph_count]
-    ).merge(book_title: @book.title)
-  }
-end
+    render json: chapters.map { |chapter|
+      chapter.as_json(
+        only: [
+          :id,
+          :slug,
+          :title,
+          :index,
+          :first_page,
+          :last_page
+        ],
+        methods: [:paragraph_count]
+      ).merge(
+        book_title: @book.title
+      )
+    }
+  end
+
+  # --------------------------------------------------------------------------
+  # GET /api/books/:book_slug/chapters/:slug
+  # --------------------------------------------------------------------------
 
   def show
     render json: {
@@ -49,242 +94,354 @@ end
     }
   end
 
+  # --------------------------------------------------------------------------
+  # PATCH /api/books/:book_slug/chapters/:slug
+  # --------------------------------------------------------------------------
+
   def update
-    # Only allow non-index attributes from this endpoint
     if @chapter.update(chapter_params)
       render json: @chapter, status: :ok
     else
-      render json: { errors: @chapter.errors.full_messages }, status: :unprocessable_entity
+      render json: {
+        errors: @chapter.errors.full_messages
+      }, status: :unprocessable_entity
     end
+
+  rescue => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
+  # ==========================================================================
+  # MERGE
+  # ==========================================================================
+  #
   # POST /api/books/:book_slug/chapters/merge
-  # params: { source_slugs: [], target_slug: 'bigbook-4e-ch22' } OR { source_slugs: [], new_title: '…', new_slug: '…' }
-# POST /api/books/:book_slug/chapters/merge
+  #
+  # {
+  #   "source_slugs": ["chapter-a", "chapter-b"],
+  #   "target_slug": "chapter-a"
+  # }
+  #
+  # Optional:
+  #   new_title
+  #   new_slug
+  #   preview
+  #
+  # The target chapter survives.
+  # All source chapters are merged INTO the target and then deleted.
+  #
+  # ==========================================================================
+
+  # POST /api/books/:book_slug/chapters/merge
+#
 # Params:
-#   source_slugs: [slug1, slug2, ...] (>= 2, order matters)
-#   target_slug: optional, merge into this existing chapter
-#   new_title:   if creating a new target
-#   new_slug:    if creating a new target
-# app/controllers/api/chapters_controller.rb
-# controllers/api/chapters_controller.rb
+#   source_slugs: [slug1, slug2, ...]
+#   target_slug: optional existing chapter to merge into
+#   new_title: optional replacement title
+#   new_slug: optional replacement slug
+#   preview: optional boolean
+#
 def merge
+  p = merge_params
+
+  source_slugs = Array(p[:source_slugs]).map(&:to_s).uniq
+
+  raise ActionController::BadRequest, "Need at least 2 chapters" if source_slugs.length < 2
+
+  book = @book
+  merge_result = nil
+
   Book.transaction do
-    p = merge_params
+    # ------------------------------------------------------------------
+    # 1. Load chapters in their actual book order
+    # ------------------------------------------------------------------
 
-    # 1) Normalize inputs
-    source_slugs = Array(p[:source_slugs]).map(&:to_s).uniq
-    raise ActionController::BadRequest, "Need at least 2 chapters" if source_slugs.size < 2
+    chapters = book.chapters
+      .where(slug: source_slugs)
+      .order(:index, :id)
+      .to_a
 
-    book = @book
-    sources = book.chapters.where(slug: source_slugs).order(:index).to_a
-    missing = source_slugs - sources.map(&:slug)
-    raise ActiveRecord::RecordNotFound, "Missing chapters: #{missing.join(', ')}" if missing.any?
+    missing = source_slugs - chapters.map(&:slug)
+
+    if missing.any?
+      raise ActiveRecord::RecordNotFound,
+        "Missing chapters: #{missing.join(', ')}"
+    end
 
     target =
       if p[:target_slug].present?
         book.chapters.find_by!(slug: p[:target_slug].to_s)
       else
-        # default: the lowest-index chapter becomes the target
-        sources.min_by(&:index)
+        chapters.first
       end
 
-    merge_sources = sources.reject { |ch| ch.id == target.id }
-    raise ActionController::BadRequest, "Nothing to merge into target" if merge_sources.empty?
-
-    # 2) Build merged doc and record offsets (plain-text lengths)
-    merged_doc        = { "type" => "doc", "content" => [] }
-    offsets_plain     = {} # chapter_id => plain length where that chapter begins
-    running_plain_len = 0
-
-    all_in_order = [target, *merge_sources].sort_by(&:index)
-
-    all_in_order.each_with_index do |src, i|
-      # record where this chapter will start in merged plain text
-      offsets_plain[src.id] = running_plain_len
-
-      if i > 0
-        merged_doc["content"] << {
-          "type"  => "pageBreak",
-          "attrs" => { "kind" => "chapterDivider", "title" => src.title, "page" => nil }
-        }
-        running_plain_len = plain_length(merged_doc)
-      end
-
-      src_doc      = src.tiptap_json.is_a?(Hash) ? src.tiptap_json : { "type" => "doc", "content" => [] }
-      src_content  = Array(src_doc["content"])
-      src_plainlen = plain_length(src_doc)
-
-      merged_doc["content"].concat(src_content)
-      running_plain_len += src_plainlen
+    unless chapters.any? { |chapter| chapter.id == target.id }
+      raise ActionController::BadRequest, "The merge target must be one of the selected chapters"
     end
 
-    first_page = all_in_order.map(&:first_page).compact.min
-    last_page  = all_in_order.map(&:last_page).compact.max
+    sources = chapters.reject { |chapter| chapter.id == target.id }
 
-    # 3) Preview mode (no writes)
+    raise ActionController::BadRequest,
+      "Nothing to merge into target" if sources.empty?
+
+    # ------------------------------------------------------------------
+    # 2. IMPORTANT:
+    #    Always merge in the ORIGINAL chapter order.
+    # ------------------------------------------------------------------
+
+    merge_chapters = [target, *sources].sort_by { |chapter| [chapter.index, chapter.id] }
+
+    # ------------------------------------------------------------------
+    # 3. Build merged TipTap document completely in memory.
+    # ------------------------------------------------------------------
+
+    merged_content = []
+
+    merge_chapters.each_with_index do |chapter, i|
+      if i > 0
+        merged_content << {
+          "type" => "pageBreak",
+          "attrs" => {
+            "kind" => "chapterDivider",
+            "title" => chapter.title,
+            "page" => nil
+          }
+        }
+      end
+
+      doc =
+        if chapter.tiptap_json.is_a?(Hash)
+          chapter.tiptap_json.deep_dup
+        else
+          {
+            "type" => "doc",
+            "content" => []
+          }
+        end
+
+      content = Array(doc["content"]).deep_dup
+
+      merged_content.concat(content)
+    end
+
+    merged_doc = {
+      "type" => "doc",
+      "content" => merged_content
+    }
+
+    # ------------------------------------------------------------------
+    # 4. Preview
+    # ------------------------------------------------------------------
+
+    first_page = merge_chapters.map(&:first_page).compact.min
+    last_page  = merge_chapters.map(&:last_page).compact.max
+
     if ActiveModel::Type::Boolean.new.cast(p[:preview])
-      render json: {
+      merge_result = {
         ok: true,
         preview: {
           target_slug: target.slug,
-          new_title:   p[:new_title].presence || target.title,
-          new_slug:    p[:new_slug].presence  || target.slug,
-          first_page:  first_page,
-          last_page:   last_page,
-          length_plain: plain_length(merged_doc),
+          new_title: p[:new_title].presence || target.title,
+          new_slug: p[:new_slug].presence || target.slug,
+          first_page: first_page,
+          last_page: last_page,
+          nodes: merged_content.length,
+          length_plain: plain_length(merged_doc)
         }
       }
+
       raise ActiveRecord::Rollback
     end
 
-    # 4) Apply changes safely
-    max_index  = (book.chapters.maximum(:index) || 0)
-    temp_index = max_index + 100_000
-    target.update_columns(index: temp_index) if target.index && target.index <= max_index
+    # ------------------------------------------------------------------
+    # 5. Save the final target values before touching indexes.
+    # ------------------------------------------------------------------
 
     new_title = p[:new_title].presence || target.title
-    new_slug  = p[:new_slug].presence  || target.slug
+    new_slug  = p[:new_slug].presence || target.slug
 
-    target.update!(
-      title:       new_title,
-      slug:        slugify(new_slug),
-      tiptap_json: merged_doc,
-      first_page:  first_page,
-      last_page:   last_page
-    )
+    final_title = new_title
+    final_slug  = slugify(new_slug)
 
-    # 5) Move highlights from non-target sources using their starting offsets
-    merge_sources.each do |src|
-      add_offset = offsets_plain[src.id] || 0
-      move_highlights!(from: src, to: target, add_offset: add_offset)
+    # ------------------------------------------------------------------
+    # 6. Move ALL indexes into a safe temporary range.
+    #
+    # This completely eliminates the unique-index collision problem.
+    # ------------------------------------------------------------------
+
+    all_chapters = book.chapters.order(:index, :id).to_a
+
+    temporary_base = -((all_chapters.map { |chapter| chapter.index.to_i.abs }.max || 0) + all_chapters.length + 1)
+
+    all_chapters.each_with_index do |chapter, i|
+      chapter.update_columns(
+        index: temporary_base - i,
+        updated_at: Time.current
+      )
     end
 
-    # 6) Delete merged sources (never delete target)
-    merge_sources.each { |src| src.destroy! }
+    # ------------------------------------------------------------------
+    # 7. Update target CONTENT while it is safely out of the way.
+    # ------------------------------------------------------------------
 
-    # 7) Renumber compactly 1..N
-    renumber!(book)
+    target.update_columns(
+      title: final_title,
+      slug: final_slug,
+      tiptap_json: merged_doc,
+      first_page: first_page,
+      last_page: last_page,
+      text_hash: Digest::SHA256.hexdigest(merged_doc.to_json),
+      updated_at: Time.current
+    )
 
-    render json: { ok: true, target_slug: target.slug }
+    # ------------------------------------------------------------------
+    # 8. Move highlights.
+    # ------------------------------------------------------------------
+
+    # For now there should be zero highlights, but keep the behavior.
+    sources.each do |source|
+      move_highlights!(
+        from: source,
+        to: target,
+        add_offset: 0
+      )
+    end
+
+    # ------------------------------------------------------------------
+    # 9. Delete source chapters.
+    # ------------------------------------------------------------------
+
+    sources.each(&:destroy!)
+
+    # ------------------------------------------------------------------
+    # 10. Rebuild the indexes from the original ordering.
+    #
+    # The target takes the position of the first chapter being merged.
+    # ------------------------------------------------------------------
+
+    # Target is currently sitting at temporary_base + its old position.
+    # Put surviving chapters back into their ORIGINAL relative order,
+    # with the target occupying the first merged chapter's position.
+
+    original_order = all_chapters.map(&:id)
+
+    deleted_ids = sources.map(&:id)
+
+    final_order = original_order
+      .reject { |id| deleted_ids.include?(id) }
+      .map { |id| id == target.id ? target.id : id }
+
+    final_order.each_with_index do |chapter_id, i|
+      book.chapters.find(chapter_id).update_columns(
+        index: i + 1,
+        updated_at: Time.current
+      )
+    end
+
+    merge_result = {
+      ok: true,
+      target_slug: target.reload.slug,
+      target_id: target.id,
+      nodes: Array(target.reload.tiptap_json&.dig("content")).length
+    }
   end
+  render json: merge_result
+rescue ActiveRecord::RecordNotUnique => e
+  Rails.logger.error("Chapter merge uniqueness failure: #{e.message}")
+
+  render json: {
+    error: "Chapter merge failed because of a chapter index conflict.",
+    detail: e.message
+  }, status: :unprocessable_entity
+rescue => e
+  Rails.logger.error(
+    "Chapter merge failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(10)&.join("\n")}"
+  )
+
+  render json: {
+    error: e.message
+  }, status: :unprocessable_entity
 end
 
+  # ==========================================================================
+  # REORDER
+  # ==========================================================================
 
+  def reorder
+    order = params.require(:order)
 
-def reorder
-  order = params.require(:order)
-  raise ArgumentError, "order must be an array" unless order.is_a?(Array)
+    unless order.is_a?(Array)
+      raise ArgumentError, "order must be an array"
+    end
 
-  slugs = order.map { |row| row[:slug] || row['slug'] }.compact
-  raise ArgumentError, "empty order" if slugs.empty?
+    final_pairs = order.map do |row|
+      slug = (row[:slug] || row["slug"]).to_s
+      index = (row[:index] || row["index"]).to_i
 
-  chapters_by_slug = @book.chapters.where(slug: slugs).index_by(&:slug)
-  missing  = slugs - chapters_by_slug.keys
-  raise ActiveRecord::RecordNotFound, "missing chapters: #{missing.join(', ')}" if missing.any?
+      raise ArgumentError, "slug cannot be blank" if slug.blank?
+      raise ArgumentError, "index must be >= 1" if index < 1
 
-  final_pairs = order.map do |row|
-    s = (row[:slug]  || row['slug']).to_s
-    i = (row[:index] || row['index']).to_i
-    raise ArgumentError, "index must be >= 1" if i < 1
-    [s, i]
-  end
+      [slug, index]
+    end
 
-  @book.with_lock do
-    ActiveRecord::Base.transaction do
-      # Ensure no NULLs (avoid partial-index surprises)
-      @book.chapters.where(index: nil).update_all(index: 0)
+    raise ArgumentError, "empty order" if final_pairs.empty?
 
-      # Move everyone out of the way (still unique inside a book)
-      @book.chapters.update_all(%q{"index" = "index" + 100000})
+    @book.with_lock do
+      ActiveRecord::Base.transaction do
+        chapters = @book.chapters.to_a
+        chapters_by_slug = chapters.index_by(&:slug)
 
-      # Apply the requested final indices
-      final_pairs.each do |slug, idx|
-        chapters_by_slug[slug].update_columns(index: idx) # columns = skip validations
+        missing =
+          final_pairs
+            .map(&:first)
+            .uniq
+            .reject { |slug| chapters_by_slug.key?(slug) }
+
+        if missing.any?
+          raise ActiveRecord::RecordNotFound,
+            "missing chapters: #{missing.join(', ')}"
+        end
+
+        # Move EVERY chapter to a safe temporary negative index.
+        chapters.each_with_index do |chapter, i|
+          chapter.update_columns(
+            index: -(i + 1),
+            updated_at: Time.current
+          )
+        end
+
+        # Apply requested order.
+        final_pairs.each do |slug, index|
+          chapters_by_slug.fetch(slug).update_columns(
+            index: index,
+            updated_at: Time.current
+          )
+        end
       end
     end
+
+    head :no_content
+
+  rescue => e
+    render json: {
+      error: e.message
+    }, status: :unprocessable_entity
   end
 
-  head :no_content
-rescue => e
-  render json: { error: e.message }, status: :unprocessable_entity
-end
+  private
 
-private
+  # ==========================================================================
+  # PARAMS
+  # ==========================================================================
 
-def merge_params
-  # top-level params (not nested)
-  params.permit(:target_slug, :new_title, :new_slug, :preview, source_slugs: [])
-end
-
-def slugify(s)
-  s.to_s.downcase.strip
-    .gsub(/['"]/, "")
-    .gsub(/[^a-z0-9]+/, "-")
-    .gsub(/^-+|-+$/, "")
-end
-
-
-
-def slugify(s)
-  s.to_s.downcase.strip.gsub(/['"]/, "").gsub(/[^a-z0-9]+/, "-").gsub(/^-+|-+$/, "")
-end
-
-def renumber!(book)
-  book.with_lock do
-    # Phase A: push everyone up to clear uniqueness constraints during rewrites
-    Chapter.where(book_id: book.id).update_all(%q{"index" = "index" + 100000})
-
-    # Phase B: write the final 1..N sequence
-    ids = book.chapters.order(:index, :id).pluck(:id)
-    ids.each_with_index do |id, i|
-      Chapter.where(id: id).update_all(index: i + 1)
-    end
-  end
-end
-
-def slugify(s)
-  s.to_s.parameterize.presence || SecureRandom.hex(4)
-end
-
-def plain_length(doc)
-  return 0 unless doc.is_a?(Hash)
-  total = 0
-  stack = Array(doc["content"])
-  while (node = stack.shift)
-    if node.is_a?(Hash)
-      total += node["text"].to_s.length if node["type"] == "text"
-      children = node["content"]
-      stack.concat(children) if children.is_a?(Array)
-    end
-  end
-  total
-end
-
-def move_highlights!(from:, to:, add_offset:)
-  return unless from.respond_to?(:user_highlights) && to.present?
-  from.user_highlights.find_each do |uh|
-    sel = JSON.parse(uh.selector || "{}") rescue {}
-    if sel.dig("position", "type") == "TextPositionSelector"
-      sel["position"]["start"] = sel["position"]["start"].to_i + add_offset
-      sel["position"]["end"]   = sel["position"]["end"].to_i + add_offset
-    end
-    to.user_highlights.create!(
-      user_id:  uh.user_id,
-      selector: sel.to_json,
-      style:    uh.style,
-      note:     uh.note
+  def merge_params
+    params.permit(
+      :target_slug,
+      :new_title,
+      :new_slug,
+      :preview,
+      source_slugs: []
     )
-    uh.destroy!
-  end
-end
-
-  def set_book
-    @book = Book.find_by!(slug: params[:book_slug])
-  end
-
-  def set_chapter
-    @chapter = @book.chapters.find_by!(slug: params[:slug])
   end
 
   def chapter_params
@@ -298,8 +455,192 @@ end
       :new_title,
       :new_slug,
       :preview,
-      tiptap: {},        # if you send tiptap JSON as `tiptap`
-      tiptap_json: {}    # or as `tiptap_json`
+      tiptap: {},
+      tiptap_json: {}
     )
+  end
+
+  # ==========================================================================
+  # BOOK / CHAPTER LOOKUP
+  # ==========================================================================
+
+  def set_book
+    @book = Book.find_by!(slug: params[:book_slug])
+  end
+
+  def set_chapter
+    @chapter = @book.chapters.find_by!(slug: params[:slug])
+  end
+
+  # ==========================================================================
+  # SLUG
+  # ==========================================================================
+
+  def slugify(value)
+    value
+      .to_s
+      .parameterize
+      .presence || SecureRandom.hex(4)
+  end
+
+  # ==========================================================================
+  # SAFE INDEX MANAGEMENT
+  # ==========================================================================
+  #
+  # Because chapters have:
+  #
+  #   UNIQUE(book_id, index)
+  #
+  # we can never safely swap indexes directly.
+  #
+  # Phase 1:
+  #
+  #   1 -> -1
+  #   2 -> -2
+  #   3 -> -3
+  #
+  # Phase 2:
+  #
+  #   -1 -> 1
+  #   -2 -> 2
+  #   -3 -> 3
+  #
+  # PostgreSQL is therefore never asked to hold duplicate positive indexes.
+  # ==========================================================================
+
+  def renumber_all_to_temporary_indices!(book)
+    chapters = book.chapters.order(:index, :id).to_a
+
+    chapters.each_with_index do |chapter, i|
+      chapter.update_columns(
+        index: -(i + 1),
+        updated_at: Time.current
+      )
+    end
+
+    chapters
+  end
+
+def renumber!(book)
+  chapters = book.chapters
+                 .order(:index, :id)
+                 .to_a
+
+  return [] if chapters.empty?
+
+  now = Time.current
+
+  # --------------------------------------------------------------------------
+  # Phase 1:
+  #
+  # Put EVERY chapter into a guaranteed unique temporary namespace.
+  #
+  # Using negative IDs means:
+  #
+  #   chapter id 220 -> index -220
+  #   chapter id 221 -> index -221
+  #
+  # IDs are unique, therefore indexes are unique.
+  #
+  # This completely avoids collisions with the final positive indexes.
+  # --------------------------------------------------------------------------
+
+  chapters.each do |chapter|
+    chapter.update_columns(
+      index: -chapter.id,
+      updated_at: now
+    )
+  end
+
+  # --------------------------------------------------------------------------
+  # Phase 2:
+  #
+  # Now assign the final contiguous indexes.
+  #
+  # There cannot be a collision because all remaining chapters currently
+  # have negative indexes.
+  # --------------------------------------------------------------------------
+
+  chapters.each_with_index do |chapter, i|
+    chapter.update_columns(
+      index: i + 1,
+      updated_at: now
+    )
+  end
+
+  chapters
+end
+
+  # ==========================================================================
+  # TIPTAP HELPERS
+  # ==========================================================================
+
+  def plain_length(doc)
+    return 0 unless doc.is_a?(Hash)
+
+    total = 0
+    stack = Array(doc["content"])
+
+    until stack.empty?
+      node = stack.shift
+
+      next unless node.is_a?(Hash)
+
+      if node["type"] == "text"
+        total += node["text"].to_s.length
+      end
+
+      children = node["content"]
+
+      if children.is_a?(Array)
+        stack.concat(children)
+      end
+    end
+
+    total
+  end
+
+  def deep_dup_json(value)
+    Marshal.load(Marshal.dump(value))
+  end
+
+  # ==========================================================================
+  # HIGHLIGHTS
+  # ==========================================================================
+
+  def move_highlights!(from:, to:, add_offset:)
+    return unless from.respond_to?(:user_highlights)
+    return unless to.present?
+
+    from.user_highlights.find_each do |highlight|
+      selector =
+        if highlight.selector.is_a?(Hash)
+          deep_dup_json(highlight.selector)
+        else
+          JSON.parse(highlight.selector.to_s)
+        end
+
+      position =
+        selector.dig("position")
+
+      if position.is_a?(Hash) &&
+         position["type"] == "TextPositionSelector"
+
+        position["start"] =
+          position["start"].to_i + add_offset
+
+        position["end"] =
+          position["end"].to_i + add_offset
+      end
+
+      to.user_highlights.create!(
+        user_id: highlight.user_id,
+        selector: selector,
+        style: highlight.style,
+        note: highlight.note
+      )
+
+      highlight.destroy!
+    end
   end
 end

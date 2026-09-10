@@ -57,15 +57,17 @@ blockquote.dark{
 
 .prose,
 .hb-reader {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
+  /* Do not transform the reader.
+     Transforms create a containing block for position: fixed. */
+  backface-visibility: visible;
+  perspective: none;
 }
 
 .prose {
-  will-change: transform;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  /* The WINDOW should be the scrolling container. */
+  overflow: visible;
+  will-change: auto;
+  -webkit-overflow-scrolling: auto;
 }
 
 .hb-reader hr.hb-pagebreak {
@@ -241,34 +243,49 @@ h1{
 .page-break {
   position: sticky;
   top: var(--reader-sticky-offset);
-  z-index: 30;
+  z-index: 50;
 
   padding-top: 6px;
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
 
   box-shadow: none;
-  /* default: no stacky shadow */
 }
 .dark .page-break,
 .dark .page-break--default {
 }
 
 .page-break__pill {
-  /* keep pill shadow consistent */
   box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
 }
 
 /* when the currently “active” break is stuck */
 .page-break.is-stuck {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .1);
+
+  position: sticky;
+
+  top: var(--reader-sticky-offset);
+
+  z-index: 50;
+
 }
 
-/* optionally hide covered ones, if you want */
+/*
+ * Once a page break has been passed, hide the ORIGINAL
+ * page-break visual without removing the node from layout.
+ *
+ */
+
 .page-break.is-covered {
   visibility: hidden;
-  display: none;
-  /* or: display:none; but visibility is smoother */
+}
+
+/*
+ * Keep the page-break's layout space intact.
+ */
+
+.page-break.is-covered .page-break__pill {
+  visibility: hidden;
 }
 
 /* you can still keep variant-specific tweaks */
@@ -285,28 +302,43 @@ h1{
 }
 
 
-/* single fixed indicator (cheap to paint) */
+
+
 .page-break-indicator {
   position: fixed;
-  top: var(--reader-sticky-offset, 80px);
-  /* same offset you use */
+  top: var(--reader-sticky-offset, 140px);
   left: 50%;
   transform: translateX(-50%) translateY(-4px);
-  /* transform-only */
+  z-index: 45;
   background: rgba(255, 255, 255, 0.92);
-  border-radius: 8px;
-  padding: 6px 10px;
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.65);
+  border-radius: 9999px;
+  padding: 6px 14px;
   font-size: 13px;
-  z-index: 60;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: .02em;
+  white-space: nowrap;
   pointer-events: none;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, .15);
+  opacity: 0;
   will-change: transform, opacity;
-  /* only on this single element if needed */
+  transition:
+    transform .18s ease,
+    opacity .18s ease;
 }
 
-/* optional: subtle transition (transform/opacity only) */
+.dark .page-break-indicator {
+  background: rgba(63, 63, 70, 0.95);
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, .65);
+}
+
 .page-break-indicator.show {
   opacity: 1;
-  transition: transform .18s linear, opacity .18s linear;
+  transform: translateX(-50%) translateY(0);
 }
 
 .page-break-indicator.hide {
@@ -314,15 +346,8 @@ h1{
   transform: translateX(-50%) translateY(-8px);
 }
 
-/* page-break elements keep minimal CSS; don't use heavy filters */
-[data-page-break] {
-  /* keep it thin and static — don't animate heavy properties */
-}
-
-[data-page-break].is-covered {
-  /* maybe a tiny style change */
-  opacity: 0.65;
-  /* cheap */
+.page-break-indicator.hidden {
+  visibility: hidden;
 }
 
 .hb-flash {

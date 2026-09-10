@@ -148,145 +148,186 @@ function useHideCoveredPageBreaks(editor) {
   useLayoutEffect(() => {
     if (!editor) return;
 
-    const root = document.documentElement;
-
-    const stickyOffset = () => {
-      const v = getComputedStyle(root).getPropertyValue('--reader-sticky-offset');
-      const n = parseInt(v, 10);
-      return Number.isFinite(n) ? n : 0;
-    };
-
+    let raf = null;
+    let resizeObserver = null;
+    let mutationObserver = null;
     let els = [];
     let currentIdx = -1;
-    let raf = null;
-    let observer = null;
-    let mo = null;
 
-    const indexEls = () => {
-      els = Array.from(document.querySelectorAll('[data-page-break]'));
-      els.forEach((el, i) => (el.dataset.pbIndex = String(i)));
+    const getStickyOffset = () => {
+      const value = getComputedStyle(document.documentElement)
+        .getPropertyValue("--reader-sticky-offset");
+
+      const parsed = parseInt(value, 10);
+
+      return Number.isFinite(parsed) ? parsed : 0;
     };
 
-    // Perform the single scan + minimal DOM updates. Called inside RAF
-    const recomputeAndApply = () => {
-      if (!els.length) return;
+    const indexElements = () => {
+      if (!editor.view?.dom) return;
 
-      const topOffset = stickyOffset();
-      let idx = -1;
-      // single scan using getBoundingClientRect once per element on IO callback
-      for (let i = 0; i < els.length; i++) {
-        const top = els[i].getBoundingClientRect().top;
-        if (top - topOffset <= 0) idx = i;
-        else break;
-      }
-
-      if (idx === currentIdx) return;
-      currentIdx = idx;
-
-      // minimal DOM writes: toggle classes only when idx changes
-      els.forEach((el, i) => {
-        // Only touch classList when it actually changes to reduce paints
-        if (i === idx) {
-          if (!el.classList.contains('is-stuck')) el.classList.add('is-stuck');
-          if (el.classList.contains('is-covered')) el.classList.remove('is-covered');
-        } else if (i < idx) {
-          if (!el.classList.contains('is-covered')) el.classList.add('is-covered');
-          if (el.classList.contains('is-stuck')) el.classList.remove('is-stuck');
-        } else {
-          if (el.classList.contains('is-covered')) el.classList.remove('is-covered');
-          if (el.classList.contains('is-stuck')) el.classList.remove('is-stuck');
-        }
-      });
-
-      // If you added the single cloned sticky pill, update it here (cheap text update + class toggle)
-      try {
-        const stickyContainer = document.getElementById('page-break-sticky');
-        const stickyPill = document.getElementById('page-break-sticky-pill');
-
-        if (idx >= 0) {
-          const el = els[idx];
-          const originalPill = el.querySelector('.page-break__pill');
-          const label = originalPill ? originalPill.textContent.trim() : `Page ${idx + 1}`;
-          if (stickyPill && stickyPill.textContent !== label) stickyPill.textContent = label;
-          if (stickyContainer) {
-            stickyContainer.classList.remove('hidden', 'hide');
-            stickyContainer.classList.add('show');
-          }
-        } else {
-          if (stickyContainer) {
-            stickyContainer.classList.remove('show');
-            stickyContainer.classList.add('hide');
-            // optionally hide after animation
-            window.setTimeout(() => stickyContainer?.classList.add('hidden'), 160);
-          }
-        }
-      } catch (e) {
-        // non-fatal; keep behavior graceful if elements missing
-        // console.warn('sticky pill update failed', e);
-      }
-    };
-
-    // Debounced entry - schedule recompute inside RAF
-    const scheduleRecompute = () => {
-      if (raf) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        recomputeAndApply();
-        raf = null;
-      });
-    };
-
-    const setupObservers = () => {
-      indexEls();
-
-      // intersection observer to wake us when page-breaks cross the sticky line
-      const rootMargin = `-${stickyOffset()}px 0px 0px 0px`;
-      observer = new IntersectionObserver(
-        (entries) => {
-          // whenever IO fires, schedule a recompute (IO calls much less than scroll)
-          scheduleRecompute();
-        },
-        { root: null, rootMargin, threshold: [0, 0.001] }
+      els = Array.from(
+        editor.view.dom.querySelectorAll("[data-page-break]")
       );
 
-      els.forEach((el) => observer.observe(el));
-
-      // small mutation observer so new page-breaks get indexed
-      const dom = editor.view?.dom || document;
-      mo = new MutationObserver(() => {
-        indexEls();
-        scheduleRecompute();
+      els.forEach((el, index) => {
+        el.dataset.pbIndex = String(index);
       });
-      mo.observe(dom, { childList: true, subtree: true });
-
-      // initial compute
-      scheduleRecompute();
     };
 
-    // Ensure we start after editor is ready
-    const onEditorReady = () => {
-      // small delay to let the editor finish layout
-      setTimeout(() => {
-        setupObservers();
-      }, 100);
+    const applyState = (idx) => {
+      if (idx === currentIdx) return;
+
+      currentIdx = idx;
+
+      els.forEach((el, index) => {
+        const isCurrent = index === idx;
+        const isCovered = index < idx;
+
+        el.classList.toggle("is-stuck", isCurrent);
+        el.classList.toggle("is-covered", isCovered);
+      });
+
+      // Update the cloned sticky pill, if present.
+      const stickyContainer =
+        document.getElementById("page-break-sticky");
+
+      const stickyPill =
+        document.getElementById("page-break-sticky-pill");
+
+      if (idx >= 0) {
+        const current = els[idx];
+
+        const originalPill =
+          current.querySelector(".page-break__pill");
+
+        const label =
+          originalPill?.textContent?.trim() ||
+          current.dataset.page ||
+          `Page ${idx + 1}`;
+
+        if (stickyPill && stickyPill.textContent !== label) {
+          stickyPill.textContent = label;
+        }
+
+        if (stickyContainer) {
+          stickyContainer.classList.remove("hidden", "hide");
+          stickyContainer.classList.add("show");
+        }
+      } else {
+        if (stickyContainer) {
+          stickyContainer.classList.remove("show");
+          stickyContainer.classList.add("hide");
+
+          window.setTimeout(() => {
+            if (
+              stickyContainer.classList.contains("hide")
+            ) {
+              stickyContainer.classList.add("hidden");
+            }
+          }, 160);
+        }
+      }
     };
 
-    if (editor.isReady) onEditorReady();
-    else editor.on('create', onEditorReady);
+    const recompute = () => {
+      raf = null;
 
-    // also watch resize (infrequent)
-    const onResize = () => {
-      indexEls();
-      scheduleRecompute();
+      if (!els.length) return;
+
+      const stickyOffset = getStickyOffset();
+
+      let idx = -1;
+
+      /*
+       * Find the last page break whose top has crossed
+       * the sticky header line.
+       */
+      for (let i = 0; i < els.length; i++) {
+        const rect = els[i].getBoundingClientRect();
+
+        if (rect.top <= stickyOffset) {
+          idx = i;
+        } else {
+          break;
+        }
+      }
+
+      applyState(idx);
     };
-    window.addEventListener('resize', onResize, { passive: true });
 
-    // cleanup
+    const schedule = () => {
+      if (raf !== null) return;
+
+      raf = requestAnimationFrame(recompute);
+    };
+
+    const setup = () => {
+      indexElements();
+      schedule();
+    };
+
+    /*
+     * IMPORTANT:
+     *
+     * Don't wait for editor.on("create").
+     * By the time this hook receives `editor`, the editor
+     * has normally already been created.
+     */
+    setup();
+
+    // Scroll is the important event here.
+    window.addEventListener("scroll", schedule, {
+      passive: true,
+    });
+
+    window.addEventListener("resize", () => {
+      indexElements();
+      schedule();
+    }, {
+      passive: true,
+    });
+
+    /*
+     * Tiptap can change its DOM when content changes.
+     * Re-index page breaks when that happens.
+     */
+    if (editor.view?.dom) {
+      mutationObserver = new MutationObserver(() => {
+        indexElements();
+        schedule();
+      });
+
+      mutationObserver.observe(editor.view.dom, {
+        childList: true,
+        subtree: true,
+      });
+
+      /*
+       * Keep the page-break calculation correct when the
+       * editor's layout changes.
+       */
+      resizeObserver = new ResizeObserver(() => {
+        schedule();
+      });
+
+      resizeObserver.observe(editor.view.dom);
+    }
+
     return () => {
-      window.removeEventListener('resize', onResize);
-      if (observer) observer.disconnect();
-      if (mo) mo.disconnect();
-      if (raf) cancelAnimationFrame(raf);
-      editor.off('create', onEditorReady);
+      window.removeEventListener("scroll", schedule);
+
+      if (raf !== null) {
+        cancelAnimationFrame(raf);
+      }
+
+      if (mutationObserver) {
+        mutationObserver.disconnect();
+      }
+
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
     };
   }, [editor]);
 }
@@ -370,8 +411,8 @@ export default function ChapterViewer({ bookSlug, slug }) {
   }, [editor]);
 
   useHideCoveredPageBreaks(editor);
-  useHighlightClickToShare(viewRef, null, bookSlug, slug);
-
+  useHighlightClickToShare(viewRef, copyLink);
+  
   /* ---------- applyHighlights (unchanged) ---------- */
   const applyHighlights = useCallback(() => {
     if (!editor || applyingRef.current || !editorMountedRef.current) return;
@@ -761,7 +802,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
       </div>
 
       {/* Sticky chapter header */}
-      <div className="sticky top-10 z-40 bg-stone-100/90 dark:bg-stone-800/90 backdrop-blur flex items-center justify-between gap-3 pt-6 px-2 ">
+      <div className="sticky top-10 z-40 bg-stone-100/90 dark:bg-stone-900/90 backdrop-blur flex items-center justify-between gap-3 pt-6 px-2 rounded-2xl sticky:rounded-none sticky:rounded-b-none">
         <h1
           className="text-2xl! md:text-4xl! font-bold truncate text-center flex-1 cursor-pointer"
           onClick={() => setOpenChaptersModal(true)} // header click opens modal

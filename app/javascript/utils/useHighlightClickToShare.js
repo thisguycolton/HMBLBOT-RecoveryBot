@@ -1,189 +1,234 @@
 // app/javascript/utils/useHighlightClickToShare.js
-import { useEffect, useRef, useCallback } from "react";
 
-const useHighlightClickToShare = (viewRef, copyShareLinkForHighlight, bookSlug, slug) => {
-  const attachedRef = useRef(false);
-  const clickHandlerRef = useRef(null);
+import { useEffect, useRef } from "react";
 
-  // Fallback function for clipboard
-  const fallbackCopyToClipboard = (text) => {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.top = '0';
-    textArea.style.left = '0';
-    textArea.style.opacity = '0';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-      const successful = document.execCommand('copy');
-      return successful;
-    } catch (err) {
-      console.error('Fallback copy failed:', err);
-      return false;
-    } finally {
-      document.body.removeChild(textArea);
-    }
-  };
+const useHighlightClickToShare = (
+  viewRef,
+  copyShareLinkForHighlight
+) => {
+  const callbackRef = useRef(copyShareLinkForHighlight);
+  const attachedRootRef = useRef(null);
 
-  const handler = useCallback(async (e) => {
-    // Safely get the root element
-    let root;
-    try {
-      root = viewRef.current?.dom;
-      if (!root || !root.addEventListener) return;
-    } catch (error) {
-      console.warn("Cannot access editor DOM:", error);
-      return;
-    }
-
-    // Get the click target safely
-    const eventTarget = e.target;
-    if (!eventTarget) return;
-
-    // Traverse up the DOM to find the highlight element
-    let currentElement = eventTarget;
-    let highlightElement = null;
-
-    while (currentElement && currentElement !== root && currentElement !== document.body) {
-      if (currentElement.hasAttribute && currentElement.hasAttribute('data-hl-id')) {
-        highlightElement = currentElement;
-        break;
-      }
-      currentElement = currentElement.parentElement;
-    }
-
-    if (!highlightElement) return;
-
-    // Don't interfere with text selection
-    const sel = window.getSelection();
-    if (sel && sel.toString().trim().length > 0) {
-      return;
-    }
-
-    const id = highlightElement.getAttribute('data-hl-id');
-    if (!id) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    try {
-      const url = `${window.location.origin}/books/${bookSlug}/chapters/${slug}#hl-${id}`;
-      
-      // Try modern clipboard API first
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        // Fallback for older browsers
-        fallbackCopyToClipboard(url);
-      }
-      
-      // Visual feedback
-      highlightElement.classList.add('hb-hl-pulse');
-      setTimeout(() => {
-        highlightElement.classList.remove('hb-hl-pulse');
-      }, 600);
-    } catch (error) {
-      console.warn("Copy failed, using fallback:", error);
-      // Final fallback - show prompt
-      const url = `${window.location.origin}/books/${bookSlug}/chapters/${slug}#hl-${id}`;
-      window.prompt("Copy this highlight link:", url);
-    }
-  }, [viewRef, bookSlug, slug]);
-
-  // Store the handler in a ref
-  clickHandlerRef.current = handler;
+  // Always keep the latest callback without having to
+  // recreate the DOM event listener.
+  useEffect(() => {
+    callbackRef.current = copyShareLinkForHighlight;
+  }, [copyShareLinkForHighlight]);
 
   useEffect(() => {
     let mounted = true;
-    let retryCount = 0;
-    const maxRetries = 10;
+    let retryTimer = null;
 
-    const tryAttachListener = () => {
+    const handleClick = async (event) => {
       if (!mounted) return;
 
+      const root = attachedRootRef.current;
+
+      if (!root) return;
+
+      let target = event.target;
+
+      if (!(target instanceof Element)) {
+        target = target?.parentElement;
+      }
+
+      if (!target) return;
+
+      const highlightElement =
+        target.closest("[data-hl-id]");
+
+      if (
+        !highlightElement ||
+        !root.contains(highlightElement)
+      ) {
+        return;
+      }
+
+      const id =
+        highlightElement.getAttribute("data-hl-id");
+
+      if (!id) return;
+
+      /*
+       * Don't steal clicks while the user is actively
+       * selecting text.
+       */
+      const selection = window.getSelection();
+
+      if (
+        selection &&
+        !selection.isCollapsed &&
+        selection.toString().trim().length > 0
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
       try {
-        const root = viewRef.current?.dom;
-        if (!root) {
-          if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(tryAttachListener, 100);
-          }
+        const copyFn = callbackRef.current;
+
+        if (typeof copyFn !== "function") {
+          console.warn(
+            "No highlight share callback available."
+          );
           return;
         }
 
-        if (attachedRef.current) {
-          root.removeEventListener('click', clickHandlerRef.current);
-        }
+        await copyFn(id);
 
-        root.addEventListener('click', clickHandlerRef.current, {
-          passive: false,
-          capture: true
-        });
+        /*
+         * Visual confirmation.
+         */
+        highlightElement.classList.add(
+          "hb-hl-pulse"
+        );
 
-        attachedRef.current = true;
-        console.log("Click listener attached successfully");
-        
+        window.setTimeout(() => {
+          highlightElement.classList.remove(
+            "hb-hl-pulse"
+          );
+        }, 600);
+
       } catch (error) {
-        console.warn("Failed to attach click listener:", error);
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(tryAttachListener, 200);
-        }
+        console.error(
+          "Failed to copy highlight link:",
+          error
+        );
       }
     };
 
-    // Initial attempt with delay
-    setTimeout(tryAttachListener, 100);
+    const attach = () => {
+      if (!mounted) return;
+
+      const root = viewRef?.current?.dom;
+
+      if (!root) {
+        retryTimer = window.setTimeout(
+          attach,
+          100
+        );
+
+        return;
+      }
+
+      /*
+       * Tiptap can replace its DOM during initialization.
+       * Make sure we aren't leaving a listener on an old
+       * editor root.
+       */
+      if (
+        attachedRootRef.current &&
+        attachedRootRef.current !== root
+      ) {
+        attachedRootRef.current.removeEventListener(
+          "click",
+          handleClick,
+          true
+        );
+
+        attachedRootRef.current = null;
+      }
+
+      if (attachedRootRef.current === root) {
+        return;
+      }
+
+      root.addEventListener(
+        "click",
+        handleClick,
+        {
+          passive: false,
+          capture: true,
+        }
+      );
+
+      attachedRootRef.current = root;
+
+      console.log(
+        "Highlight click listener attached"
+      );
+    };
+
+    attach();
 
     return () => {
       mounted = false;
-      if (attachedRef.current) {
-        try {
-          const root = viewRef.current?.dom;
-          if (root) {
-            root.removeEventListener('click', clickHandlerRef.current, {
-              capture: true
-            });
-          }
-        } catch (error) {
-          console.warn("Error removing listener:", error);
-        }
-        attachedRef.current = false;
+
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+      }
+
+      if (attachedRootRef.current) {
+        attachedRootRef.current.removeEventListener(
+          "click",
+          handleClick,
+          true
+        );
+
+        attachedRootRef.current = null;
       }
     };
   }, [viewRef]);
 
-  // Add CSS for the pulse animation
+  /*
+   * Add highlight interaction styles once.
+   */
   useEffect(() => {
-    if (!document.getElementById('hb-hl-styles')) {
-      const style = document.createElement('style');
-      style.id = 'hb-hl-styles';
-      style.textContent = `
-        .hb-hl-pulse {
-          animation: hbPulse 0.6s ease 1;
+    if (
+      document.getElementById(
+        "hb-hl-styles"
+      )
+    ) {
+      return;
+    }
+
+    const style =
+      document.createElement("style");
+
+    style.id = "hb-hl-styles";
+
+    style.textContent = `
+      [data-hl-id] {
+        cursor: pointer;
+      }
+
+      .hb-hl-pulse {
+        animation:
+          hbPulse 0.6s ease 1;
+      }
+
+      @keyframes hbPulse {
+        0% {
+          opacity: 1;
         }
-        
-        @keyframes hbPulse {
-          0% { opacity: 1; }
-          50% { opacity: 0.7; }
-          100% { opacity: 1; }
+
+        50% {
+          opacity: 0.7;
         }
-        
-        /* Safari-specific fixes */
-        @media not all and (min-resolution: 0.001dpcm) {
-          @supports (-webkit-appearance: none) {
-            [data-hl-id] {
-              -webkit-tap-highlight-color: transparent;
-              cursor: pointer;
-            }
+
+        100% {
+          opacity: 1;
+        }
+      }
+
+      @media (hover: hover) {
+        [data-hl-id]:hover {
+          filter: brightness(0.97);
+        }
+      }
+
+      @media not all and (min-resolution: 0.001dpcm) {
+        @supports (-webkit-appearance: none) {
+          [data-hl-id] {
+            -webkit-tap-highlight-color: transparent;
           }
         }
-      `;
-      document.head.appendChild(style);
-    }
+      }
+    `;
+
+    document.head.appendChild(style);
   }, []);
 };
 

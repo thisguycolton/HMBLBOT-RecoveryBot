@@ -112,7 +112,7 @@ export default function ChapterNavBar({
         title={label}
         className={`${base} border px-2 py-1 rounded
                    border-slate-200 bg-white hover:bg-slate-50
-                   dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700`}
+                   dark:border-neutral-700 dark:bg-stone-900/90 dark:hover:bg-neutral-700`}
       >
         <Icon size={18} />
       </a>
@@ -122,7 +122,7 @@ export default function ChapterNavBar({
   return (
     <div
       className={[
-        "sticky z-30 w-full  bg-stone-100/90 dark:bg-stone-800/90 backdrop-blur text-slate-900 dark:text-neutral-100",
+        "sticky z-30 w-full  bg-stone-100/90 dark:bg-stone-900/90 backdrop-blur text-slate-900 dark:text-neutral-100",
         "top-[calc(var(--reader-sticky-second-offset,0px))]",
         className,
       ].join(" ")}
@@ -133,7 +133,7 @@ export default function ChapterNavBar({
         <div className="h-12 flex items-center gap-3">
           <Btn href={prevHref} dir="prev" />
           <div
-            className="flex-1 text-center font-medium truncate select-none noto italic"
+            className="flex-1 text-center font-medium truncate select-none serif italic"
             title={loading ? "" : bookTitle}
           >
             {loading ? "…" : bookTitle}
