@@ -6,6 +6,17 @@
 @source "../../../app/views/**/*.rb";
 @source "../../../app/helpers/**/*.rb";
 
+/* Shared palette, lifted from the DateTimePicker popup */
+@theme static {
+  --color-accent: #0b6ede;
+  --color-accent-soft: #a7c7e7;
+  --color-accent-tint: color-mix(in srgb, #0b6ede 16%, white);
+  --color-accent-ink: color-mix(in srgb, #0b6ede 70%, black);
+  --color-surface-dark: #0d0d0f;
+  --shadow-panel: 0 4px 12px rgb(0 0 0 / 0.1);
+  --radius-panel: 20px;
+}
+
 
 @layer base {
   html {
