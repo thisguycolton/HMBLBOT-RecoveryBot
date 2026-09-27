@@ -35,8 +35,15 @@ const tap = async (pos, x, y, zoom = 4) => {
 };
 const modalOpen = () => page.waitForSelector('[data-quest="modal"]:not([hidden])', { timeout: 8000 }).then(() => true, () => false);
 const toolsOf = async () => (await getSession()).game_state.tools || [];
+// regular stops ask which way in first; take the default (curious)
+async function throughDial() {
+  if (!(await page.$(".quest-dial"))) return;
+  await page.keyboard.press("Enter");
+  await page.waitForSelector(".quest-path-title:has-text('Choose your path')", { timeout: 8000 });
+}
 async function finishStop() {
   await page.waitForSelector(".quest-choice, .quest-lens-prompt", { timeout: 8000 });
+  await throughDial();
   for (let k = 0; k < 2 && !(await page.$(".quest-lens-prompt")); k++) { await page.keyboard.press("1"); await page.waitForTimeout(400); }
   await page.click('button:has-text("Continue the journey")');
   await page.waitForTimeout(1300);
@@ -109,7 +116,7 @@ await load({ ...base, current_position: { x: 0, y: 0 }, tools: [],
   grid: { "0,0": { type: "start", visited: true }, "1,0": { type: "path" }, "2,0": { type: "path" }, "3,0": { type: "topic", kind: "ghost", visited: false },
     "-1,0": { type: "path" }, "-2,0": { type: "path" }, "-3,0": { type: "topic", category_id: 1, visited: false } } });
 await tap({ x: 0, y: 0 }, -3, 0); await modalOpen(); await page.waitForSelector(".quest-choice");
-await page.keyboard.press("1"); await page.waitForSelector(".quest-lens-prompt");
+await throughDial(); await page.keyboard.press("1"); await page.waitForSelector(".quest-lens-prompt");
 ok(!(await page.$('button:has-text("Someone else shares")')), "no lantern: 'someone else shares' is not offered");
 await page.click('button:has-text("Continue the journey")'); await page.waitForTimeout(1300);
 await tap({ x: -3, y: 0 }, 3, 0); await modalOpen();
@@ -126,7 +133,7 @@ console.log("lantern lets someone else share");
 await load({ ...base, current_position: { x: 0, y: 0 }, tools: [{ id: "l", type: "lantern", uses: 1, max: 1, legendary: false }],
   grid: { "0,0": { type: "start", visited: true }, "1,0": { type: "path" }, "2,0": { type: "path" }, "3,0": { type: "topic", category_id: 1, visited: false } } });
 await tap({ x: 0, y: 0 }, 3, 0); await modalOpen(); await page.waitForSelector(".quest-choice");
-await page.keyboard.press("1"); await page.waitForSelector(".quest-lens-prompt");
+await throughDial(); await page.keyboard.press("1"); await page.waitForSelector(".quest-lens-prompt");
 ok(await page.$('button:has-text("Someone else shares")'), "with a lantern the button appears");
 await page.screenshot({ path: "f4-share.png" });
 await page.click('button:has-text("Someone else shares")'); await page.waitForTimeout(300);

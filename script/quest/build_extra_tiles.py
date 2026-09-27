@@ -549,6 +549,113 @@ add("ghost_0", art(ghost))
 ghost2 = ghost[:11] + ["...WWc.WW.cWW...", "...c...c...c....", "................", "................", "................"]
 add("ghost_1", art(ghost2))
 
+# ---------- locked gate (Phase 2) ----------
+# A wooden field gate across the path with a padlock; the open gate is just its posts with
+# the two leaves swung back. _v spans a path running up/down (like the stairs), _h is rotated.
+
+gate_v = art([
+    "................",
+    "................",
+    "................",
+    ".kk..........kk.",
+    "kBbk........kbBk",
+    "kBbkkkkkkkkkkbBk",
+    "kBbddddddddddbBk",
+    "kBbbbbbkkbbbbbBk",
+    "kBbkkkkyykkkkbBk",
+    "kBbddddyyddddbBk",
+    "kBbbbbbkkbbbbbBk",
+    "kBbkkkkkkkkkkbBk",
+    "kBbk........kbBk",
+    "kBbk........kbBk",
+    ".kk..........kk.",
+    "................",
+])
+add("gate_v", gate_v)
+add("gate_h", rot(gate_v))
+
+gate_open_v = art([
+    "................",
+    "................",
+    "................",
+    ".kk..........kk.",
+    "kBbk........kbBk",
+    "kBbkk......kkbBk",
+    "kBbdk......kdbBk",
+    "kBbbk......kbbBk",
+    "kBbdk......kdbBk",
+    "kBbbk......kbbBk",
+    "kBbkk......kkbBk",
+    "kBbk........kbBk",
+    "kBbk........kbBk",
+    "kBbk........kbBk",
+    ".kk..........kk.",
+    "................",
+])
+add("gate_open_v", gate_open_v)
+add("gate_open_h", rot(gate_open_v))
+
+# ---------- memory stone (Phase 2): a standing stone whose rune glows ----------
+
+stone = [
+    "................",
+    ".......k........",
+    "......ksk.......",
+    "......kssk......",
+    ".....ksWsSk.....",
+    "....kssscsSk....",
+    "....ksscscSk....",
+    "....kscsssck....",
+    "....ksscscSk....",
+    "....kssscsSk....",
+    "...ksssssSSk....",
+    "...ksssssSSSk...",
+    "..kkSSSSSSSSDkk.",
+    ".ksSkDDDDDDDkSSk",
+    "..kk.kkkkkkk.kk.",
+    "................",
+]
+add("memory_0", art(stone))
+add("memory_1", art([r.replace("c", "W") for r in stone]))
+
+# ---------- fog (Phase 2): two drifting frames, plus thinner wisps for the edge of a bank ----
+
+def fog_tile(shift, strength, dither=False):
+    """Soft white fog with brighter wisps that drift sideways by `shift` pixels. The edge of a
+    bank is dithered (every other pixel clear), the old console way to fade something out."""
+    wisps = [
+        "................",
+        "..WWWW..........",
+        ".WWWWWWW........",
+        "...WWWW.........",
+        "................",
+        "..........WWW...",
+        "........WWWWWWW.",
+        "..........WWWW..",
+        "................",
+        "....WWW.........",
+        "..WWWWWWWW......",
+        "....WWWWW.......",
+        "................",
+        "...........WW...",
+        ".........WWWWWW.",
+        "................",
+    ]
+    t = blank()
+    for y in range(16):
+        for x in range(16):
+            bright = wisps[y][(x - shift) % 16] == "W"
+            if dither and (x + y) % 2:
+                continue
+            a = (0.62 if bright else 0.38) * strength
+            t[y][x] = (236, 236, 244, int(255 * a))
+    return t
+
+add("fog_a", fog_tile(0, 1))
+add("fog_b", fog_tile(3, 1))
+add("fog_edge_a", fog_tile(0, 0.9, dither=True))
+add("fog_edge_b", fog_tile(3, 0.9, dither=True))
+
 # ---------- item icons (white, same style as app/assets/images/icons) ----------
 
 icons = {

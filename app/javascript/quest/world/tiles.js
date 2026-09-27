@@ -62,6 +62,9 @@ export const XF = (name) => {
 };
 
 // Foliage frames with a swayed twin, as [still, swayed] tile pairs
+// Drifting fog, as [frame A, frame B] pairs (a full bank and its thinner edge)
+export const FOG_PAIRS = [[X("fog_a"), X("fog_b")], [X("fog_edge_a"), X("fog_edge_b")]];
+
 export const SWAY_PAIRS = [89, 90, 104, 105, 91, 106, 107, 108, 112, 113, 114].map((n) => [n, X(`sway_${n}`)]);
 
 export const VILLAGER_WALK = { down: [1, 2, 3, 2], side: [20, 21, 22, 21], up: [52, 53, 54, 53] };

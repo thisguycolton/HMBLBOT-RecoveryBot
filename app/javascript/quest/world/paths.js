@@ -6,6 +6,7 @@ import { smoothstep } from "./noise.js";
 // Grid tile types (state.grid, which overrides the generated world):
 //   start, path, topic, stump, bridge, stairs, ladder   walkable
 //   ford (boat), boulder (pickaxe), log (axe), climb (rope)   walkable once the item is spent
+//   gate     locked gate: walkable once the room votes to open it (becomes gate_open)
 //   stop     visit record for a building stop ({ visited, topic })
 //   water    river from older journeys, never walkable
 
@@ -20,13 +21,13 @@ export const OBSTACLE_ITEM = { ford: "boat", boulder: "pickaxe", log: "axe", cli
 export const CLEARED_AS = { ford: "bridge", boulder: "path", log: "stump", climb: "ladder" };
 export const ITEMS = ["boat", "pickaxe", "axe", "rope"];
 
-const GRID_WALKABLE = new Set(["start", "path", "topic", "stump", "bridge", "stairs", "ladder", "ford", "boulder", "log", "climb"]);
+const GRID_WALKABLE = new Set(["start", "path", "topic", "stump", "bridge", "stairs", "ladder", "ford", "boulder", "log", "climb", "gate", "gate_open"]);
 
 export const key = (x, y) => `${x},${y}`;
 export const parse = (k) => k.split(",").map(Number);
 
 // What stands at (x, y) for movement purposes:
-//   { walkable, target, obstacle, crossing, stop, topic }
+//   { walkable, target, obstacle, gate, crossing, stop, topic }
 // target = an unvisited topic or building stop (you can walk to it, not through it)
 export function nodeAt(world, grid, x, y) {
   const g = grid[key(x, y)];
@@ -37,6 +38,7 @@ export function nodeAt(world, grid, x, y) {
       target: g.type === "topic" && !g.visited,
       topic: g.type === "topic" ? g : null,
       obstacle: OBSTACLE_ITEM[g.type] ? g.type : null,
+      gate: g.type === "gate",
       crossing: g.crossing ?? null,
     };
   }
@@ -53,8 +55,9 @@ function occupied(world, grid, x, y) {
 
 // ---------- routes ----------
 
-// Cheapest route from `from` to `to` over walkable tiles. Obstacles cost a lot so routes
-// avoid them when there's another way. Returns { route, needs: { boat, pickaxe, axe, rope } }.
+// Cheapest route from `from` to `to` over walkable tiles. Obstacles
+// (and locked gates) cost a lot so routes avoid them when there's another way.
+// Returns { route, needs: { boat, pickaxe, axe, rope }, gates: [{ x, y }] }.
 export function findRoute(world, grid, from, to) {
   const start = key(from.x, from.y), goal = key(to.x, to.y);
   const cost = new Map([[start, 0]]);
@@ -72,7 +75,7 @@ export function findRoute(world, grid, from, to) {
       const node = nodeAt(world, grid, nx, ny);
       if (!node.walkable) continue;
       if (node.target && nk !== goal) continue;
-      const nc = c + 1 + (node.obstacle ? 50 : 0);
+      const nc = c + 1 + (node.obstacle || node.gate ? 50 : 0);
       if (nc < (cost.get(nk) ?? Infinity)) {
         cost.set(nk, nc);
         prev.set(nk, ck);
@@ -86,9 +89,9 @@ export function findRoute(world, grid, from, to) {
   for (let k = goal; k && k !== start; k = prev.get(k)) {
     const [x, y] = parse(k);
     const node = nodeAt(world, grid, x, y);
-    route.unshift({ x, y, obstacle: node.obstacle, crossing: node.crossing });
+    route.unshift({ x, y, obstacle: node.obstacle, gate: node.gate, crossing: node.crossing });
   }
-  return { route, needs: needsFor(route) };
+  return { route, needs: needsFor(route), gates: route.filter((s) => s.gate).map(({ x, y }) => ({ x, y })) };
 }
 
 // Items a route uses up. A river crossing takes one boat however wide it is.
@@ -299,6 +302,17 @@ export function sprinkleObstacles(cells, rng, { factor = 1 } = {}) {
   const spots = cells.filter((c, i) => c.type === "path" && i >= 1 && i < cells.length - 1 && Math.hypot(c.x, c.y) >= SAFE_RADIUS + 2);
   if (!spots.length) return;
   spots[Math.floor(rng() * spots.length)].type = rng() < 0.6 ? "boulder" : "log";
+}
+
+// Maybe lock a branch with a gate: one plain path cell becomes a gate the room can vote to
+// open. Only on branches with no other obstacle (one obstacle per branch, gates included),
+// never on the first two cells or the stop itself. Returns true when a gate was placed.
+export function placeGate(cells, rng) {
+  if (cells.some((c) => OBSTACLE_ITEM[c.type] || c.type === "gate")) return false;
+  const spots = cells.filter((c, i) => c.type === "path" && i >= 2 && i < cells.length - 1);
+  if (!spots.length) return false;
+  spots[Math.floor(rng() * spots.length)].type = "gate";
+  return true;
 }
 
 // Short land-only route from `from` to the nearest point of a settlement the traveler

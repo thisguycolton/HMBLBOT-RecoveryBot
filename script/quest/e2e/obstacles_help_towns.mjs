@@ -57,8 +57,15 @@ const inv = async () => (await getSession()).game_state.inventory;
 const settle = () => page.waitForTimeout(1300);
 const cnt = (g) => Object.fromEntries(["boat", "pickaxe", "axe", "rope"].map((t) => [t, (g.tools || []).filter((x) => x.type === t).reduce((a, x) => a + (x.legendary ? 99 : x.uses), 0)]));
 // finish a stop in the new flow: pick the first path if offered, then continue the journey
+// regular stops ask which way in first; take the default (curious)
+async function throughDial() {
+  if (!(await page.$(".quest-dial"))) return;
+  await page.keyboard.press("Enter");
+  await page.waitForSelector(".quest-path-title:has-text('Choose your path')", { timeout: 8000 });
+}
 async function finishStop() {
   await page.waitForSelector(".quest-choice, .quest-lens-prompt", { timeout: 8000 });
+  await throughDial();
   if (await page.$(".quest-choice")) { await page.keyboard.press("1"); await page.waitForSelector(".quest-lens-prompt"); }
   await page.click('button:has-text("Continue the journey")');
 }

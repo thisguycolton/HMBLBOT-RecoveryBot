@@ -16,7 +16,10 @@ Play it at `/game/game`. Generated-world overview for tuning: `/game/world?seed=
 - **Risk is voluntary.** Risky choices can earn things; declining never costs anything.
 - **No scores, rankings or judging.** Journey stats describe the trip (miles, stories, encounters).
 - **Topics always come from the Topicificator library.** The live game never invents prompts.
-- **Never more than one obstacle before any stop**, none near spawn or early in a journey.
+- **Never more than one obstacle before any stop** (a locked gate counts as one), none near
+  spawn or early in a journey.
+- **Resources are group totals and flavour only.** Courage / Connection / Hope are never shown
+  per person and never gate the core loop.
 - Keep it light. This is not meant to become a full RPG.
 
 ## Core loop and features (Phase 1, done)
@@ -56,6 +59,42 @@ Play it at `/game/game`. Generated-world overview for tuning: `/game/world?seed=
   (`classic_rpg_extra.png/json`, tool/item icons in `quest/assets/icons/`) built by
   `python3 script/quest/build_extra_tiles.py` (stdlib only; rerun after editing it).
 
+## Phase 2, part 1: gameplay (done)
+
+Decisions made with the user: gameplay before content; the dial shows *before* the topic; HUD
+counters for the resources; gates open by room vote only.
+
+- **Choice vs. risk dial** (`APPROACHES` in `quest/encounters.js`, `showDial` in
+  `topic_flow.js`): regular stops (`dial: true`: topic plates, houses, wells, castles) open on
+  "Which way in? Ask the room:" SAFE (pick 1 of 3 from the category, "Three others") /
+  CURIOUS (default, Enter) / RISKY (a topic from anywhere; no "Different topic", take it or
+  pass) / CHAOS (random topic + random lens). Pass is on the dial too. Merchant, campfire,
+  mystery, ghost and Memory Stone keep their own approach.
+- **Courage / Connection / Hope** (`quest/resources.js`, mirrored in `JourneyStats`): derived
+  from share log entries, which now carry `approach`. Courage = sharing after RISKY/CHAOS or at
+  a ghost/mystery; Connection = Connection lens, campfire, house; Hope = Looking Forward /
+  Gratitude / Change lenses or a revisit. Passes never count. Kept in `game_state.resources`
+  for the HUD (older journeys pick theirs up once from `/journey` stats) and shown on Quest
+  Complete (`hope_found`, `gates_opened` added to stats).
+- **Revisit + Memory Stone**: "Revisit an earlier topic" on the dial and lens screens (only once
+  something has been shared); the Memory Stone (`kind: "memory"`, ~6% of new stops, never
+  before a first share) opens straight on that list. Picking a topic goes to a share with a
+  lens not yet used on it (`game_state.topic_modes`), approach `revisit`. History entries now
+  store `subtitle` and `topic_category_id` for this.
+- **Locked gates** (`placeGate` in `world/paths.js`, grid types `gate` / `gate_open`): only on
+  branches to rarer stops (`GATED_KINDS`, 35%), never on the first branch from a stop, never
+  before stop 3, never alongside another obstacle. Routes avoid gates like obstacles; the fork
+  row says "· locked gate". Choosing a gated road opens a vote card (1 open / 2 find another
+  way); opening is always possible, so a gate never blocks for good. Logged as `gate`.
+- **Fog** (`fogAt` in `world/terrain.js`, `world.cell().fog`): noise banks over ~17% of the map,
+  none within 18 tiles of spawn. Unvisited stops inside show a grey closed-eye plate and read
+  "??? · Hidden in the fog" in the fork; reaching one reveals it. Fog lifts around visited
+  stops, the traveler and along carved roads. Drifting 2-frame tiles with dithered edges.
+- **Art**: `gate_{v,h}`, `gate_open_{v,h}`, `memory_{0,1}`, `fog_{a,b}`, `fog_edge_{a,b}` in
+  `build_extra_tiles.py`.
+- Also fixed: the card's pop-in animation borrowed the toast's `translate(-50%)` and slid in
+  from the left; `run_all.sh` now counts a script that crashes part way as a failure.
+
 ## Where things live
 
 | Area | Files |
@@ -66,7 +105,8 @@ Play it at `/game/game`. Generated-world overview for tuning: `/game/world?seed=
 | World generation + movement rules (no Phaser) | `app/javascript/quest/world/{noise,terrain,settlements,world,paths,names,tiles}.js` |
 | Card flow / fork panel / summary | `app/javascript/quest/ui/*.js` |
 | API | `Api::V1::QuestSessionsController` (+ `journey`, `complete`), `QuestTopicsController` (`draw`, `categories`), `SharingModesController`, `QuestLogEntriesController` |
-| Stats | `app/services/journey_stats.rb` |
+| Stats | `app/services/journey_stats.rb` (resource rules mirror `quest/resources.js`) |
+| Approaches, encounter kinds, gate odds | `app/javascript/quest/encounters.js` |
 | Category backfill | `lib/tasks/topic_categories.rake` |
 
 Game state lives in `QuestSession.game_state` (client-owned JSON: `version: 3`, `seed`, `grid`
@@ -78,12 +118,15 @@ v2 journeys (no seed) load as a flat meadow; older item counts convert to tools.
 `script/quest/e2e/run_all.sh` runs everything (needs `bin/dev` on localhost:3000, Google Chrome,
 and `npm i --no-save playwright-core`). Output and screenshots go to `tmp/quest-e2e/`.
 
-- `world_invariants.mjs`, `path_rules.mjs`, `tools_unit.mjs` — pure Node checks over 100 seeds
-  (safe zone, castle/town spacing, town connectivity, determinism, one obstacle per branch,
-  stop spacing, tool merging).
+- `world_invariants.mjs`, `path_rules.mjs`, `tools_unit.mjs`, `phase2_unit.mjs` — pure Node
+  checks over 100 seeds (safe zone, castle/town spacing, town connectivity, determinism, one
+  obstacle per branch, stop spacing, tool merging, fog placement, gates, resource rules).
 - Browser suites (`core_loop`, `encounters`, `tools_merchant_ghost_cannon`,
-  `obstacles_help_towns`, `categories`, `tool_merge`) drive the real game with handcrafted
-  states. Tip: navigate away from a board *before* PATCHing a test state — the page saves on exit.
+  `obstacles_help_towns`, `categories`, `tool_merge`, `phase2`) drive the real game with
+  handcrafted states. Tip: navigate away from a board *before* PATCHing a test state — the page
+  saves on exit. Regular stops open on the dial: press Enter (curious) to reach the lenses.
+- `soak.mjs [steps]` (not in `run_all.sh`): a long random journey on a real world; reports how
+  often gates / fog / Memory Stones came up and any page errors.
 
 ## Loose ends
 
@@ -96,20 +139,17 @@ and `npm i --no-save playwright-core`). Output and screenshots go to `tmp/quest-
 - Journeys created before the backfill keep "Open Road" on stops already on their map.
 - No auth on the quest API (as before this work): anyone with a screen name gets that player.
 
-## Phase 2 (next)
+## Phase 2, part 2: content (next)
 
-Design notes are in the Phase 2 section of the planning doc; the short list:
-
-- **Choice vs. risk dial** on topic stops: SAFE (pick of 3) / CURIOUS (random from category) /
-  RISKY (the encounter's topic) / CHAOS (random topic + lens). Voluntary risk earns Courage.
-- **Fog** (hidden destinations; fork shows "???"), **Locked gate** (room vote or a condition;
-  never blocks the only way forward).
-- **Revisit**: "Revisit" action + Memory Stone encounter; pick a topic already discussed this
-  journey, automatically with a lens not yet used on it (`game_state.topic_modes`).
-- **Resources** Courage / Connection / Hope derived from the log (flavor and gates only).
-- **Topic metadata**: `topics.difficulty`, `topic_tags` (reuse `Tag`), `topic_sharing_prompts`
-  (curated per-topic wording or disabling a lens; statuses draft/approved), admin curation page.
-- Journey log viewer for completed journeys.
+- **Topic metadata**: `topics.difficulty` (gentle / standard / deep, nullable), `topic_tags`
+  (reuse `Tag`), `topic_sharing_prompts` (`topic_id`, `sharing_mode_id`, `text`, `status`
+  draft/approved/rejected, `source` human/ai, `enabled`: curated wording or disabling a lens).
+  `pickLenses` prefers approved per-topic wording, then the generic prompt.
+- Once `difficulty` exists: RISKY and the ghost should prefer `deep` topics, campfires `gentle`.
+- **Admin curation page** (`require_admin!`, like `Api::BooksController`) for prompts,
+  difficulty and tags. Ask before bulk-editing Topicificator data.
+- **Journey log viewer** for completed journeys.
+- Not built: gates opened by a condition or by spending Courage (the user chose room vote only).
 
 ## Phase 3 (later, AI)
 

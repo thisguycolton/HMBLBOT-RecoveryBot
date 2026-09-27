@@ -1,9 +1,11 @@
 import { h } from "./topic_flow";
+import { RESOURCES } from "../resources";
 
 // QUEST COMPLETE: journey statistics (never scores) and the topics the group explored.
 // Passes are intentionally absent.
-export function renderSummary(el, summary, { modeNames, onCopy, onClose }) {
+export function renderSummary(el, summary, { modeNames, iconUrl, onCopy, onClose }) {
   const s = summary.stats;
+  const found = { courage: s.courage_found, connection: s.connections_made, hope: s.hope_found };
   const stat = (value, label) => h("div", { class: "quest-stat" }, h("strong", {}, String(value)), h("span", {}, label));
   el.replaceChildren(...[
     h("p", { class: "quest-complete-title" }, "\u{1F3C6} Quest complete"),
@@ -11,10 +13,12 @@ export function renderSummary(el, summary, { modeNames, onCopy, onClose }) {
       stat(s.miles_traveled, "miles traveled"),
       stat(s.stories_shared, "stories shared"),
       stat(s.topics_explored, "topics explored"),
-      stat(s.connections_made, "connections made"),
-      stat(s.courage_found, "acts of courage"),
       stat(s.encounters, "encounters"),
     ),
+    h("p", { class: "quest-path-title" }, "What the group gathered"),
+    h("div", { class: "quest-resources quest-resources-summary" }, ...RESOURCES.map((r) =>
+      h("span", { class: "quest-resource", title: r.name },
+        h("img", { src: iconUrl(r.icon), alt: "" }), `${r.name} ${found[r.key] || 0}`))),
     summary.topics.length
       ? h("div", { class: "quest-topic-log" },
           h("p", { class: "quest-path-title" }, "Topics explored"),

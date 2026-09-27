@@ -1,9 +1,11 @@
-import { ENCOUNTERS, MERCHANT_PRICE, OPEN_ROAD } from "../encounters";
+import { ENCOUNTERS, MERCHANT_PRICE, OPEN_ROAD, APPROACHES, DEFAULT_APPROACH } from "../encounters";
 import { describeTool } from "../tools";
 import { pickLenses, randomLens } from "../sharing";
 
-// The topic card: ENCOUNTER -> TOPIC -> CHOOSE YOUR PATH -> SHARE (as many people as want to)
-// -> CONTINUE. Pass is offered at every step and simply moves the journey on.
+// The topic card: ENCOUNTER -> (APPROACH) -> TOPIC -> CHOOSE YOUR PATH -> SHARE (as many people
+// as want to) -> CONTINUE. Pass is offered at every step and simply moves the journey on.
+// Regular stops open on the approach dial (safe / curious / risky / chaos); any of them can
+// instead revisit a topic from earlier in the journey, as the Memory Stone does.
 //
 // deps: {
 //   el: { head, icon, label, stage },          card elements
@@ -13,6 +15,7 @@ import { pickLenses, randomLens } from "../sharing";
 //   log(kind, fields)                           journey log (structured, no free text)
 //   wallet: { coins(), spend(n) -> bool }       trail coins for the merchant
 //   usedModes(topicId) -> [mode keys]           lenses already used on this topic
+//   earlier() -> [{ topic, category_id, used }]  topics shared earlier this journey, newest first
 //   rollReward() -> tool                         what the merchant's offers pay out
 //   lantern: { left(), use() }                  spirit lantern: lets someone else share
 //   onResolve({ stop, topic, passed, reward }), onLeave()
@@ -31,6 +34,7 @@ export default class TopicFlow {
     this.stop = stop;
     this.category = category;
     this.encounter = ENCOUNTERS[stop.kind] || ENCOUNTERS.topic;
+    this.approach = this.encounter.approach;
     this.topic = null;
     this.lens = null;
     this.shares = 0;
@@ -41,6 +45,8 @@ export default class TopicFlow {
     if (stop.kind !== "help") this.log("encounter", { encounter: stop.kind });
 
     if (stop.kind === "merchant") return this.showOffer();
+    if (stop.kind === "memory") return this.showRevisit({ stone: true });
+    if (this.encounter.dial) return this.showDial();
     this.loading();
     this.setTopic(await this.drawOne());
     this.log("draw", this.fields({ approach: this.encounter.approach }));
@@ -153,6 +159,109 @@ export default class TopicFlow {
     this.showLenses();
   }
 
+  // ---------- choice vs. risk ----------
+
+  // "Which way in?" The room picks how much say it wants over the topic. Enter = curious.
+  showDial() {
+    const cat = this.category?.title || OPEN_ROAD.title;
+    const choose = (a) => () => this.approachWith(a.key);
+    this.options = APPROACHES.map(choose);
+    fill(this.el.stage,
+      h("div", { class: "quest-dial" },
+        h("p", { class: "quest-path-title" }, "Which way in? Ask the room:"),
+        h("div", { class: "quest-choices" }, ...APPROACHES.map((a, i) =>
+          choice(i + 1, a.key === DEFAULT_APPROACH ? `${a.name} \u00b7 Enter` : a.name,
+            a.detail(cat) + (a.courage ? " \u00b7 earns Courage" : ""), this.iconUrl(a.icon), choose(a))))),
+      this.reward(),
+      h("div", { class: "quest-inline-actions" }, this.revisitLink(() => this.showDial())),
+      this.footer([this.passButton()]),
+    );
+  }
+
+  async approachWith(key) {
+    this.approach = key;
+    if (key === "safe") return this.showSafe();
+    this.loading();
+    this.setTopic(await this.drawOne());
+    this.log("draw", this.fields({ approach: key }));
+    if (key === "chaos") {
+      this.lens = randomLens(this.modes);
+      return this.showShare();
+    }
+    this.showLenses();
+  }
+
+  // SAFE: three topics from this stop's category; the room picks one
+  async showSafe(shown = []) {
+    this.loading();
+    const topics = await this.draw({ categoryId: this.category?.id ?? null, count: 3, exclude: [...this.exclude(), ...shown] });
+    if (!topics.length) return this.approachWith(DEFAULT_APPROACH);
+    const pickTopic = (t) => () => {
+      this.setTopic(t);
+      this.log("draw", this.fields({ approach: "safe" }));
+      this.showLenses();
+    };
+    this.options = topics.map(pickTopic);
+    fill(this.el.stage,
+      h("p", { class: "quest-path-title" }, "Choose a topic. Ask the room:"),
+      h("div", { class: "quest-choices" }, ...topics.map((t, i) => {
+        const { title, subtitle } = displayTopic(t);
+        return choice(i + 1, title, subtitle, this.iconUrl(this.category?.icon || OPEN_ROAD.icon), pickTopic(t));
+      })),
+      h("div", { class: "quest-inline-actions" },
+        h("button", { class: "quest-link", type: "button", onclick: () => this.showSafe([...shown, ...topics.map((t) => t.id)]) }, "Three others"),
+        h("button", { class: "quest-link", type: "button", onclick: () => this.showDial() }, "Back")),
+      this.footer([this.passButton()]),
+    );
+  }
+
+  // ---------- revisit ----------
+
+  earlierTopics() {
+    return (this.earlier?.() || []).filter((e) => e.topic.id !== this.topic?.id);
+  }
+
+  revisitLink(back) {
+    if (!this.earlierTopics().length) return null;
+    return h("button", { class: "quest-link", type: "button", onclick: () => this.showRevisit({ back }) }, "Revisit an earlier topic");
+  }
+
+  // Return to a topic from earlier on the road, with a way of sharing it hasn't had yet
+  showRevisit({ stone = false, back = null } = {}) {
+    const earlier = this.earlierTopics().slice(0, 4);
+    if (!earlier.length) {
+      // a Memory Stone before anything has been shared: it's just a quiet stop
+      this.approach = DEFAULT_APPROACH;
+      return this.showDial();
+    }
+    const go = (e) => () => this.revisit(e);
+    this.options = earlier.map(go);
+    fill(this.el.stage,
+      stone ? this.flavor() : null,
+      h("p", { class: "quest-path-title" }, "Return to a topic from earlier on this road"),
+      h("div", { class: "quest-choices" }, ...earlier.map((e, i) =>
+        choice(i + 1, displayTopic(e.topic).title,
+          e.used.length ? `Last time: ${e.used.map((k) => this.modes.find((m) => m.key === k)?.name || k).join(", ")}` : "",
+          this.iconUrl("icon_reset"), go(e)))),
+      h("p", { class: "quest-muted" }, "Revisiting brings Hope."),
+      back ? h("div", { class: "quest-inline-actions" }, h("button", { class: "quest-link", type: "button", onclick: back }, "Back")) : null,
+      this.footer([this.passButton()]),
+    );
+  }
+
+  revisit(e) {
+    this.approach = "revisit";
+    this.setTopic(e.topic);
+    if (!e.topic.topic_category_id && e.category_id) {
+      this.category = (this.allCategories || this.categories || []).find((c) => c.id === e.category_id) || this.category;
+      this.renderHead();
+    }
+    this.log("draw", this.fields({ approach: "revisit" }));
+    const fresh = this.modes.filter((m) => !e.used.includes(m.key));
+    this.lens = randomLens(fresh.length ? fresh : this.modes);
+    this.showShare();
+  }
+
   // Ghost: a risky, voluntary question. Taking it earns a spirit lantern; declining is fine.
   showGhost() {
     this.options = [() => this.showLenses(), () => this.pass()];
@@ -181,6 +290,8 @@ export default class TopicFlow {
 
     fill(this.el.stage, 
       this.stop.kind === "campfire" ? this.flavor() : null,
+      this.approach === "risky" && this.encounter.dial
+        ? h("p", { class: "quest-flavor" }, "The road chose this one. Take it, or pass. Either is fine.") : null,
       this.topicHeading(),
       h("p", { class: "quest-path-title" }, "Choose your path"),
       h("div", { class: "quest-choices" }, ...lenses.map((m, i) =>
@@ -188,9 +299,10 @@ export default class TopicFlow {
       this.reward(),
       h("div", { class: "quest-inline-actions" },
         h("button", { class: "quest-link", type: "button", onclick: () => this.showLenses() }, "Other paths"),
-        this.stop.kind === "merchant" ? null :
+        this.stop.kind === "merchant" || this.approach === "risky" || this.approach === "revisit" ? null :
           h("button", { class: "quest-link", type: "button", onclick: () => this.redraw() }, "Different topic"),
         checkIn,
+        this.encounter.dial ? this.revisitLink(() => this.showLenses()) : null,
       ),
       this.footer([this.passButton()]),
     );
@@ -210,7 +322,7 @@ export default class TopicFlow {
   async redraw() {
     this.loading();
     this.setTopic(await this.drawOne(true));
-    this.log("draw", this.fields({ approach: this.encounter.approach, data: { redraw: true } }));
+    this.log("draw", this.fields({ approach: this.approach, data: { redraw: true } }));
     this.showLenses();
   }
 
@@ -347,6 +459,7 @@ export default class TopicFlow {
     const n = Number(e.key);
     if (n >= 1 && n <= (this.options?.length || 0)) { this.options[n - 1](); return true; }
     if (e.key === "p" || e.key === "P") { this.pass(); return true; }
+    if (e.key === "Enter" && this.el.stage.querySelector(".quest-dial")) { this.approachWith(DEFAULT_APPROACH); return true; }
     if (e.key === " " && this.timerButton?.isConnected) { this.toggleTimer(); return true; }
     if (e.key === "Enter" && this.timerButton?.isConnected) { this.finish(); return true; }
     return false;
@@ -355,7 +468,7 @@ export default class TopicFlow {
   // ---------- helpers ----------
 
   fields(extra) {
-    return { encounter: this.stop.kind, topic_id: this.topic?.id ?? null, ...extra };
+    return { encounter: this.stop.kind, topic_id: this.topic?.id ?? null, approach: this.approach ?? null, ...extra };
   }
 
   exclude() {
@@ -367,7 +480,9 @@ export default class TopicFlow {
     if (different && this.topic?.id) exclude.push(this.topic.id);
     // the first draw at a mystery or campfire can come from anywhere; after that ("Different
     // topic") the group stays in the category of the topic they were shown
-    const anywhere = !different && (this.stop.kind === "mystery" || this.stop.kind === "campfire" || this.stop.kind === "ghost");
+    // (so can RISKY and CHAOS on the dial)
+    const anywhere = !different &&
+      (["mystery", "campfire", "ghost"].includes(this.stop.kind) || ["risky", "chaos"].includes(this.approach));
     const categoryId = anywhere ? null : this.category?.id ?? null;
     const [topic] = await this.draw({ categoryId, count: 1, exclude });
     return topic || { id: null, title: this.category?.title || "Open share", subtitle: "Share whatever is on your heart today." };

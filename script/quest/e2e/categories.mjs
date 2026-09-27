@@ -46,6 +46,12 @@ async function open(label) {
   await page.keyboard.press(String(rows.findIndex((r) => r.includes(label)) + 1));
   await page.waitForSelector('[data-quest="modal"]:not([hidden])', { timeout: 8000 });
   await page.waitForTimeout(800);
+  // regular stops ask which way in first; take the default (curious)
+  if (await page.$(".quest-dial")) {
+    await page.keyboard.press("Enter");
+    await page.waitForSelector(".quest-path-title:has-text('Choose your path')", { timeout: 8000 });
+    await page.waitForTimeout(300);
+  }
 }
 const header = async () => ({ label: await page.textContent('[data-quest="modalCategory"]'), icon: (await page.getAttribute('[data-quest="modalIcon"]', "src")).split("/").pop().split("?")[0] });
 const lensIcons = () => page.$$eval(".quest-choice img", (i) => i.map((x) => x.getAttribute("src").split("/").pop().split("?")[0]));

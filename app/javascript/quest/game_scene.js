@@ -3,11 +3,11 @@ import World from "./world/world";
 import { hash } from "./world/noise";
 import {
   DIRS, CLEARED_AS, OBSTACLE_ITEM, key, parse, nodeAt, findRoute,
-  reachableTargets, carveBranch, routeToSettlement, openDirections, spacingForAttempt,
+  reachableTargets, carveBranch, routeToSettlement, openDirections, spacingForAttempt, placeGate,
 } from "./world/paths";
-import { F, X, XF, EXTRA_GID, WATER_PAIRS, SWAY_PAIRS, VILLAGER_WALK, VILLAGER_VARIANTS, STALL, waterFrame } from "./world/tiles";
+import { F, X, XF, EXTRA_GID, WATER_PAIRS, SWAY_PAIRS, FOG_PAIRS, VILLAGER_WALK, VILLAGER_VARIANTS, STALL, waterFrame } from "./world/tiles";
 import { placeName } from "./world/names";
-import { ENCOUNTERS, rollEncounterKind, SPACING_BY_KIND, OPEN_ROAD } from "./encounters";
+import { ENCOUNTERS, rollEncounterKind, SPACING_BY_KIND, OPEN_ROAD, GATED_KINDS, GATE_CHANCE } from "./encounters";
 import {
   TOOL_TYPES, TOOL_NAMES, TOOL_A, normalizeTools, usesLeft, canAfford, missingTool, useTool, addTool, makeTool, describeTool,
 } from "./tools";
@@ -25,7 +25,11 @@ import {
 export const TILE = 16;
 export const STATE_VERSION = 3;
 
-const PLATE = { visited: 0x5d5a6e, mystery: 0xe8b33c, start: 0xf2e9c9 };
+const PLATE = { visited: 0x5d5a6e, mystery: 0xe8b33c, start: 0xf2e9c9, fog: 0x8d8a9e };
+// Fog lifts this far (tiles, in every direction) around every place the group has been
+const FOG_LIFT = 2;
+const KIND_ICONS = { mystery: "icon_interrogation", merchant: "icon_bag", campfire: "icon_light_bulb", ghost: "icon_skull", cannon: "icon_projectile", memory: "icon_gem" };
+const KIND_COLORS = { mystery: 0xe8b33c, merchant: 0x854c30, campfire: 0xd27d2c, ghost: 0x5b6ee1, cannon: 0x57546f, memory: 0x2c8c9c };
 export const ITEM_NAMES = TOOL_NAMES;
 export const ITEM_A = TOOL_A;
 const OBSTACLE_NAMES = { ford: "A river", boulder: "A boulder", log: "A fallen tree", climb: "A cliff" };
@@ -50,7 +54,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   // data: { state, sheetUrl, extraUrl, icons: { name: url }, categories: [{ id, title, color, icon }],
-  //         onArrive(stop), onChange(), onNotice(message), onBlocked(message), onNeedsHelp() }
+  //         onArrive(stop), onChange(), onNotice(message), onBlocked(message), onNeedsHelp(),
+  //         onGate(gates, open) - ask the room about locked gates on the way; open() walks on }
   init(data) {
     this.state = data.state;
     normalizeTools(this.state);
@@ -65,6 +70,7 @@ export default class GameScene extends Phaser.Scene {
     this.onNotice = data.onNotice;
     this.onBlocked = data.onBlocked;
     this.onNeedsHelp = data.onNeedsHelp;
+    this.onGate = data.onGate;
     this.onLog = data.onLog; // journey log entries: moves, obstacles, items
     this.moving = false;
     this.locked = false;
@@ -125,6 +131,19 @@ export default class GameScene extends Phaser.Scene {
         const from = this.waterPhase, to = 1 - this.waterPhase;
         WATER_PAIRS.forEach((pair) => this.waterLayer.replaceByIndex(pair[from], pair[to]));
         this.waterPhase = to;
+      },
+    });
+
+    // Fog drifts, slower than the water
+    this.fogPhase = 0;
+    this.time.addEvent({
+      delay: 1100,
+      loop: true,
+      callback: () => {
+        if (!this.fogLayer) return;
+        const from = this.fogPhase, to = 1 - from;
+        FOG_PAIRS.forEach((pair) => this.fogLayer.replaceByIndex(pair[from], pair[to]));
+        this.fogPhase = to;
       },
     });
 
@@ -206,6 +225,7 @@ export default class GameScene extends Phaser.Scene {
       this.anims.create({ key: "merchant-idle", frames: extra(["merchant_2", "merchant_2", "merchant_1", "merchant_2"]), frameRate: 2, repeat: -1 });
       this.anims.create({ key: "campfire", frames: extra(["campfire_0", "campfire_1", "campfire_2", "campfire_1"]), frameRate: 6, repeat: -1 });
       this.anims.create({ key: "ghost", frames: extra(["ghost_0", "ghost_1"]), frameRate: 3, repeat: -1 });
+      this.anims.create({ key: "memory", frames: extra(["memory_0", "memory_0", "memory_1", "memory_1"]), frameRate: 2, repeat: -1 });
       for (let v = 0; v < VILLAGER_VARIANTS; v++) {
         for (const [dir, frames] of Object.entries(VILLAGER_WALK)) {
           this.anims.create({ key: `villager${v}-${dir}`, frames: extra(frames.map((n) => `villager${v}_${n}`)), frameRate: 6, repeat: -1 });
@@ -284,7 +304,11 @@ export default class GameScene extends Phaser.Scene {
       build: layer("build", 6),
       decor: layer("decor", 7),
       decorB: layer("decorB", 7),
+      fog: layer("fog", 8),
     };
+    this.fogLayer = L.fog;
+    this.fogPhase = 0;
+    this.fogLifted = this.liftedFog();
     this.waterLayer = L.water;
     this.waterPhase = 0;
     this.decorLayers = [L.decor, L.decorB];
@@ -327,6 +351,37 @@ export default class GameScene extends Phaser.Scene {
 
     if (g) this.drawGridTile(L, g, x, y, tx, ty);
     else if (!c.part && !this.isWater(x, y)) this.placeScenery(L, x, y, tx, ty);
+
+    if (this.foggy(x, y)) {
+      const edge = DIRS.some((d) => !this.foggy(x + d.x, y + d.y));
+      L.fog.putTileAt(X(edge ? "fog_edge_a" : "fog_a"), tx, ty);
+    }
+  }
+
+  // ---------- fog ----------
+
+  // Cells where the fog has lifted: around the start, every visited stop and the traveler,
+  // and along the roads themselves (the stops at their ends stay hidden until reached)
+  liftedFog() {
+    const lifted = new Set();
+    const lift = (x, y) => {
+      for (let dy = -FOG_LIFT; dy <= FOG_LIFT; dy++) for (let dx = -FOG_LIFT; dx <= FOG_LIFT; dx++) lifted.add(key(x + dx, y + dy));
+    };
+    for (const [k, t] of Object.entries(this.grid)) {
+      if (t.visited) lift(...parse(k));
+      else if (t.type !== "topic") lifted.add(k);
+    }
+    lift(this.state.current_position.x, this.state.current_position.y);
+    return lifted;
+  }
+
+  foggy(x, y) {
+    return !!this.world.cell(x, y).fog && !this.fogLifted?.has(key(x, y));
+  }
+
+  // An unvisited stop in the fog: the group can go there, but not see what it is
+  hiddenStop(x, y) {
+    return this.foggy(x, y) && nodeAt(this.world, this.grid, x, y).target;
   }
 
   drawPart(L, p, x, y, tx, ty) {
@@ -395,6 +450,11 @@ export default class GameScene extends Phaser.Scene {
         break;
       case "stop":
         break; // visit record only; the building draws itself
+      case "gate":
+      case "gate_open":
+        this.drawDirt(L.road, x, y, tx, ty);
+        L.build.putTileAt(X(`${g.type}_${axis}`), tx, ty);
+        break;
       default:
         this.drawDirt(L.road, x, y, tx, ty);
     }
@@ -457,6 +517,14 @@ export default class GameScene extends Phaser.Scene {
       if (tile.type !== "topic" && tile.type !== "start") continue;
 
       const kind = tileKind(tile);
+      if (tile.type === "topic" && this.hiddenStop(x, y)) {
+        this.addPlate(cx, cy - 1, PLATE.fog, "icon_visibility_off", 0x3d3a4e);
+        continue;
+      }
+      if (kind === "memory") {
+        this.addSprite("extra", XF("memory_0"), cx, cy - 2, tile.visited ? 0.55 : 1, tile.visited ? null : "memory");
+        continue;
+      }
       if (kind === "merchant") {
         this.addSprite("rpg", STALL, cx + 9, cy - 4, 0.95);
         if (!tile.visited) this.addSprite("extra", XF("merchant_2"), cx - 3, cy - 3, 1, "merchant-idle");
@@ -648,6 +716,14 @@ export default class GameScene extends Phaser.Scene {
       if (branch.end) {
         let kind = rollEncounterKind(Math.random());
         if (SPACING_BY_KIND[kind] && this.kindNear(kind, branch.end, SPACING_BY_KIND[kind])) kind = "topic";
+        // a Memory Stone needs something to remember
+        if (kind === "memory" && !this.state.history?.some((h) => h.topic_id && !h.passed)) kind = "topic";
+        // A locked gate guards some of the rarer stops. Never on the first branch from a stop,
+        // so there is always another way on, and never early in the journey.
+        if (made > 0 && progress >= 0.3 && GATED_KINDS.includes(kind) && Math.random() < GATE_CHANCE) {
+          const gated = branch.cells.slice(0, -1);
+          if (placeGate(gated, Math.random)) this.writeCells(gated);
+        }
         const cat = kind === "topic" ? cats[made % cats.length] : null;
         this.grid[key(branch.end.x, branch.end.y)] = {
           type: "topic",
@@ -680,6 +756,10 @@ export default class GameScene extends Phaser.Scene {
         const stop = this.describe(t.x, t.y);
         if (!r || !stop) return null;
         const missing = missingTool(r.needs, this.tools);
+        const gate = r.gates.length ? " \u00b7 locked gate" : "";
+        if (this.hiddenStop(t.x, t.y)) {
+          return { x: t.x, y: t.y, distance: r.route.length, name: "???", hint: `Hidden in the fog${gate}`, icon: "icon_visibility_off", color: PLATE.fog, blockedBy: missing ? ITEM_NAMES[missing] : null, fog: true, gate: !!gate };
+        }
         const cat = this.categoryById.get(stop.category_id) || (stop.kind === "topic" ? OPEN_ROAD : null);
         const enc = ENCOUNTERS[stop.kind] || ENCOUNTERS.topic;
         return {
@@ -687,12 +767,11 @@ export default class GameScene extends Phaser.Scene {
           y: t.y,
           distance: r.route.length,
           name: placeName(this.world, t.x, t.y),
-          hint: this.forkHint(stop, enc, cat),
-          icon: { mystery: "icon_interrogation", merchant: "icon_bag", campfire: "icon_light_bulb", ghost: "icon_skull", cannon: "icon_projectile" }[stop.kind]
-            ?? cat?.icon ?? "icon_path_follow",
-          color: { mystery: 0xe8b33c, merchant: 0x854c30, campfire: 0xd27d2c, ghost: 0x5b6ee1, cannon: 0x57546f }[stop.kind]
-            ?? cat?.color ?? 0x597dce,
+          hint: this.forkHint(stop, enc, cat) + gate,
+          icon: KIND_ICONS[stop.kind] ?? cat?.icon ?? "icon_path_follow",
+          color: KIND_COLORS[stop.kind] ?? cat?.color ?? 0x597dce,
           blockedBy: missing ? ITEM_NAMES[missing] : null,
+          gate: !!gate,
         };
       })
       .filter(Boolean)
@@ -822,6 +901,14 @@ export default class GameScene extends Phaser.Scene {
       this.onBlocked?.(`${OBSTACLE_NAMES[blocker.obstacle]} blocks the way. You need ${ITEM_A[item]}.`);
       return;
     }
+    // A locked gate on the way: the room decides. Opening it walks on; declining stays put.
+    if (found.gates.length && this.onGate) {
+      this.onGate(found.gates, () => {
+        this.openGates(found.gates);
+        this.travelTo(x, y);
+      });
+      return;
+    }
 
     this.moving = true;
     this.cameras.main.startFollow(this.traveler, true, 0.1, 0.1);
@@ -837,6 +924,16 @@ export default class GameScene extends Phaser.Scene {
       this.onChange?.();
       this.arrive(x, y);
     });
+  }
+
+  openGates(gates) {
+    for (const g of gates) {
+      const tile = this.grid[key(g.x, g.y)];
+      if (tile?.type === "gate") tile.type = "gate_open";
+    }
+    this.onLog?.("gate", { data: { opened: true } });
+    this.redraw();
+    this.onChange?.();
   }
 
   walkStep(route, i, done) {
@@ -902,6 +999,8 @@ export default class GameScene extends Phaser.Scene {
       kind: arrival?.kind ?? "topic",
       topic_id: topic?.id ?? null,
       title: topic?.title ?? null,
+      subtitle: topic?.subtitle ?? null,
+      topic_category_id: topic?.topic_category_id ?? null,
       category_id: arrival?.category_id ?? null,
       mystery: !!arrival?.mystery,
       passed,

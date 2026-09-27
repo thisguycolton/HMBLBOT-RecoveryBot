@@ -89,6 +89,12 @@
   .quest-items { display: inline-flex; gap: 8px; }
   .quest-item { display: inline-flex; align-items: center; gap: 2px; }
   .quest-item img { width: 16px; height: 16px; image-rendering: pixelated; }
+  /* Courage / Connection / Hope: group totals, quieter than the coins */
+  .quest-resource { opacity: .9; }
+  .quest-resources-summary { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 0 0 12px; font: 15px Silkscreen, monospace; color: #dfe6ff; }
+  .quest-resources-summary .quest-resource { display: inline-flex; align-items: center; gap: 6px; }
+  .quest-resources-summary img { width: 24px; height: 24px; image-rendering: pixelated; }
+  .quest-gate-question { margin: 12px 0 6px; }
   .quest-pulse { animation: quest-pulse .5s steps(2) 6; }
   @keyframes quest-pulse { 50% { background: var(--q-accent); color: var(--q-ink); } }
   /* the help dialog sits low so the traveler and merchant stay in view */
@@ -112,7 +118,8 @@
     position: absolute; inset: 0; background: rgba(20,16,30,.55);
     display: flex; align-items: center; justify-content: center; padding: 20px;
   }
-  .quest-card { width: min(580px, 100%); max-height: 100%; overflow: auto; padding: 0; animation: quest-pop .18s steps(3) both; }
+  .quest-card { width: min(580px, 100%); max-height: 100%; overflow: auto; padding: 0; animation: quest-card-pop .18s steps(3) both; }
+  @keyframes quest-card-pop { from { transform: translateY(-8px); opacity: 0; } }
   .quest-card-head {
     padding: 10px 16px; display: flex; align-items: center; gap: 10px;
     border-bottom: 3px solid var(--q-ink);
@@ -221,7 +228,7 @@
 
   /* quest complete */
   .quest-complete-title { font: 26px Silkscreen, monospace; text-align: center; margin: 0 0 16px; text-shadow: 3px 3px 0 var(--q-ink); }
-  .quest-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .quest-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
   .quest-stat { display: grid; justify-items: center; padding: 10px 4px; background: rgba(20,16,30,.35); border-radius: 6px; text-align: center; }
   .quest-stat strong { font: 26px Silkscreen, monospace; color: var(--q-accent); }
   .quest-stat span { font-size: 14px; color: #dfe6ff; }

@@ -5,9 +5,12 @@
 # story generator would read, so it holds only structured facts (no names, no free text).
 class JourneyStats
   MILES_PER_TILE = 0.1
+  # Courage / Connection / Hope. Keep in step with app/javascript/quest/resources.js.
+  COURAGE_APPROACHES = %w[risky chaos].freeze
+  COURAGE_ENCOUNTERS = %w[ghost mystery].freeze
   CONNECTION_MODES = %w[connection].freeze
   CONNECTION_ENCOUNTERS = %w[campfire house].freeze
-  COURAGE_ENCOUNTERS = %w[mystery].freeze
+  HOPE_MODES = %w[looking_forward gratitude change].freeze
 
   def initialize(quest_session)
     @session = quest_session
@@ -21,8 +24,10 @@ class JourneyStats
       stories_shared: shares.size,
       topics_explored: shares.map(&:topic_id).compact.uniq.size,
       connections_made: shares.count { |e| CONNECTION_MODES.include?(e.sharing_mode_key) || CONNECTION_ENCOUNTERS.include?(e.encounter) },
-      courage_found: shares.count { |e| COURAGE_ENCOUNTERS.include?(e.encounter) },
+      courage_found: shares.count { |e| COURAGE_APPROACHES.include?(e.approach) || COURAGE_ENCOUNTERS.include?(e.encounter) },
+      hope_found: shares.count { |e| HOPE_MODES.include?(e.sharing_mode_key) || e.approach == "revisit" },
       encounters: of_kind("encounter").size,
+      gates_opened: of_kind("gate").count { |e| e.data["opened"] },
     }
   end
 

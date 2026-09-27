@@ -3,6 +3,7 @@ import GameScene, { newGameState, ITEM_NAMES, ITEM_A } from "./game_scene";
 import { makeTool, usesLeft, useTool, describeTool, toolIcon, TOOLBAR_SLOTS, TOOL_TYPES } from "./tools";
 import { LEGENDARY_CHANCE, OPEN_ROAD } from "./encounters";
 import JourneyLog from "./journey";
+import { RESOURCES, addResources } from "./resources";
 import TopicFlow from "./ui/topic_flow";
 import ForkPanel from "./ui/fork_panel";
 import { renderSummary, copySummary } from "./ui/journey_summary";
@@ -209,6 +210,7 @@ export default class QuestApp {
     // anything older or empty starts a fresh generated world
     this.state = session.game_state?.version >= 2 ? session.game_state : newGameState();
     this.state.coins ||= 0;
+    await this.loadResources(session);
     // pixel text on the map (category labels) needs the font before Phaser draws it
     try { await document.fonts.load("8px Silkscreen"); } catch {}
     this.state.topic_set_id ??= session.topic_set_id ?? null;
@@ -226,7 +228,7 @@ export default class QuestApp {
     this.updateHud();
 
     const icons = Object.fromEntries(
-      [...this.allCategories.map((c) => c.icon), ...Object.values(ITEM_ICONS), "icon_interrogation", "icon_flag", "icon_path_follow", "icon_skull", "icon_projectile", OPEN_ROAD.icon]
+      [...this.allCategories.map((c) => c.icon), ...Object.values(ITEM_ICONS), "icon_interrogation", "icon_flag", "icon_path_follow", "icon_skull", "icon_projectile", "icon_visibility_off", OPEN_ROAD.icon]
         .map((n) => [n, iconUrl(n)])
     );
 
@@ -248,7 +250,8 @@ export default class QuestApp {
       onArrive: (stop) => this.openStop(stop),
       onChange: () => this.save(),
       onNotice: (message) => this.notice(message),
-      onLog: (kind, fields) => this.log.add(kind, fields),
+      onLog: (kind, fields) => this.logEntry(kind, fields),
+      onGate: (gates, open) => this.openGate(gates, open),
       onBlocked: (message) => {
         this.notice(message);
         this.pulseHelp();
@@ -298,17 +301,43 @@ export default class QuestApp {
     return this.modesCache;
   }
 
+  // Courage / Connection / Hope are group totals derived from the journey log. Journeys from
+  // before they existed pick theirs up from the server's stats once.
+  async loadResources(session) {
+    if (this.state.resources) return;
+    this.state.resources = {};
+    if (!this.state.history?.length) return;
+    try {
+      const { stats } = await this.api(`/api/v1/quest_sessions/${session.id}/journey`);
+      this.state.resources = { courage: stats.courage_found || 0, connection: stats.connections_made || 0, hope: stats.hope_found || 0 };
+    } catch {}
+  }
+
+  // Every journey log entry goes through here, so shares can add to the group's resources
+  logEntry(kind, fields = {}) {
+    this.log.add(kind, fields);
+    if (kind !== "share") return;
+    addResources((this.state.resources ||= {}), { kind, ...fields });
+    this.updateHud();
+  }
+
   updateHud() {
     const stops = this.state.history?.length || 0;
     this.el.stepCount.textContent = `${stops} stop${stops === 1 ? "" : "s"}`;
-    const coin = document.createElement("span");
-    coin.className = "quest-item";
-    coin.title = "trail coins";
-    const img = document.createElement("img");
-    img.src = iconUrl("icon_coin");
-    img.alt = "trail coins";
-    coin.append(img, `×${this.state.coins || 0}`);
-    this.el.items.replaceChildren(coin);
+    const counter = (icon, title, value, cls = "quest-item") => {
+      const span = document.createElement("span");
+      span.className = cls;
+      span.title = title;
+      const img = document.createElement("img");
+      img.src = iconUrl(icon);
+      img.alt = title;
+      span.append(img, value);
+      return span;
+    };
+    this.el.items.replaceChildren(
+      counter("icon_coin", "trail coins", `×${this.state.coins || 0}`),
+      ...RESOURCES.map((r) => counter(r.icon, r.name, String(this.state.resources?.[r.key] || 0), "quest-item quest-resource")),
+    );
     this.renderToolbar();
   }
 
@@ -432,7 +461,8 @@ export default class QuestApp {
       modes: this.modes,
       itemName: (item) => ITEM_A[item],
       draw: (opts) => this.drawTopics(opts),
-      log: (kind, fields) => this.log.add(kind, fields),
+      log: (kind, fields) => this.logEntry(kind, fields),
+      earlier: () => this.earlierTopics(),
       wallet: {
         coins: () => this.state.coins || 0,
         spend: (n) => {
@@ -538,6 +568,62 @@ export default class QuestApp {
     this.showFork();
   }
 
+  // ---------- locked gates ----------
+
+  // The room votes; the Guide taps the result. Opening is always possible, so a gate never
+  // blocks the way for good, and declining just means choosing another road.
+  openGate(gates, open) {
+    this.fork.hide();
+    if (this.scene) this.scene.locked = true;
+    this.el.modal.hidden = false;
+    this.flow?.close();
+    this.el.modalBadge.style.background = "#5c3841";
+    this.el.modalBadge.classList.remove("quest-card-head-dark");
+    this.el.modalIcon.src = iconUrl("icon_lock");
+    this.el.modalCategory.textContent = "A locked gate";
+    const choose = (opened) => {
+      this.gateChoice = null;
+      this.closeCard();
+      if (opened) return open();
+      this.log.add("gate", { data: { opened: false } });
+      this.notice("The gate stays shut. Another road, then.");
+      setTimeout(() => this.showFork(), 300);
+    };
+    this.gateChoice = choose;
+    const btn = (n, label, cls, opened) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = cls;
+      b.textContent = `${n} \u00b7 ${label}`;
+      b.addEventListener("click", () => choose(opened));
+      return b;
+    };
+    const p = (text, cls) => Object.assign(document.createElement("p"), { className: cls, textContent: text });
+    const foot = document.createElement("div");
+    foot.className = "quest-card-foot";
+    foot.append(btn(1, "Open the gate", "quest-btn", true), btn(2, "Find another way", "quest-btn quest-btn-pass", false));
+    this.el.cardStage.replaceChildren(
+      p("An old wooden gate stands across the path, its latch rusted shut.", "quest-flavor"),
+      p("Ask the room: open it and go on?", "quest-topic-title quest-gate-question"),
+      p("Whatever the room decides is fine.", "quest-muted"),
+      foot
+    );
+  }
+
+  // Topics shared earlier this journey, newest first, for revisits and the Memory Stone
+  earlierTopics() {
+    const seen = new Map();
+    for (const h of [...(this.state.history || [])].reverse()) {
+      if (!h.topic_id || h.passed || seen.has(h.topic_id)) continue;
+      seen.set(h.topic_id, {
+        topic: { id: h.topic_id, title: h.title, subtitle: h.subtitle || "", topic_category_id: h.topic_category_id ?? null },
+        category_id: h.category_id ?? null,
+        used: this.usedModes(h.topic_id),
+      });
+    }
+    return [...seen.values()];
+  }
+
   // Lens history per topic, so a revisit offers a different way in
   usedModes(topicId) {
     return this.state.topic_modes?.[topicId] || [];
@@ -571,6 +657,7 @@ export default class QuestApp {
   }
 
   closeCard() {
+    this.gateChoice = null;
     this.flow?.close();
     this.el.modal.hidden = true;
     this.scene?.hideMerchant();
@@ -636,7 +723,7 @@ export default class QuestApp {
 
   finishHelp(stop, topic, passed) {
     this.log.add("help", { encounter: "help", topic_id: topic?.id ?? null, data: { mode: stop.mode, item: passed ? null : stop.item } });
-    this.state.history.push({ kind: "help", help: stop.mode, topic_id: topic?.id ?? null, title: topic?.title ?? null, category_id: stop.category_id, item: stop.item, passed, at: new Date().toISOString() });
+    this.state.history.push({ kind: "help", help: stop.mode, topic_id: topic?.id ?? null, title: topic?.title ?? null, subtitle: topic?.subtitle ?? null, topic_category_id: topic?.topic_category_id ?? null, category_id: stop.category_id, item: stop.item, passed, at: new Date().toISOString() });
     if (topic?.id) this.state.used_topic_ids.push(topic.id);
     if (passed) {
       this.notice("No problem. The offer stands whenever you're ready.");
@@ -674,6 +761,7 @@ export default class QuestApp {
       if (this.scene) this.scene.locked = true;
       renderSummary(this.el.summaryBody, summary, {
         modeNames: this.modeNames,
+        iconUrl,
         onCopy: async () => {
           await copySummary(summary);
           this.notice("Topics copied.");
@@ -694,6 +782,10 @@ export default class QuestApp {
   handleKey(e) {
     if (this.el.hud.hidden || e.target.closest?.("input, textarea")) return;
     if (e.key === "Escape" && this.scene?.aiming) return this.cancelAim();
+    if (!this.el.modal.hidden && this.gateChoice && (e.key === "1" || e.key === "2")) {
+      this.gateChoice(e.key === "1");
+      return e.preventDefault();
+    }
     const handled =
       (!this.el.modal.hidden && this.flow?.handleKey(e)) ||
       (this.el.modal.hidden && this.el.help.hidden && this.fork.handleKey(e));

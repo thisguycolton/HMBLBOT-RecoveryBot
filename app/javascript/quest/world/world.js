@@ -1,4 +1,4 @@
-import { levelAt, waterAt, SAFE_RADIUS } from "./terrain.js";
+import { levelAt, waterAt, fogAt, SAFE_RADIUS } from "./terrain.js";
 import { townInRegion, castleInRegion, TOWN_REGION, CASTLE_REGION } from "./settlements.js";
 
 export { SAFE_RADIUS };
@@ -29,6 +29,7 @@ export default class World {
   //   rim   - plateau edge bits on higher ground: N=1 E=2 W=4
   //   part  - settlement piece ({ part: "house" | "well" | "path" | ... }) or null
   //   settlement, stop
+  //   fog   - inside a fog bank (hides unvisited stops)
   // }
   cell(x, y) {
     const k = key(x, y);
@@ -50,6 +51,7 @@ export default class World {
       part,
       settlement,
       stop,
+      fog: !this.flat && fogAt(this.seed, x, y),
     };
     this.cells.set(k, c);
     return c;

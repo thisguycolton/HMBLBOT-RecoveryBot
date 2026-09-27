@@ -122,8 +122,18 @@
 "cannon_smoke": 120,
 "ghost_0": 121,
 "ghost_1": 122,
-"icon_open_road": 123,
-"icon_pickaxe": 124,
-"icon_axe": 125,
-"icon_rope": 126
+"gate_v": 123,
+"gate_h": 124,
+"gate_open_v": 125,
+"gate_open_h": 126,
+"memory_0": 127,
+"memory_1": 128,
+"fog_a": 129,
+"fog_b": 130,
+"fog_edge_a": 131,
+"fog_edge_b": 132,
+"icon_open_road": 133,
+"icon_pickaxe": 134,
+"icon_axe": 135,
+"icon_rope": 136
 }

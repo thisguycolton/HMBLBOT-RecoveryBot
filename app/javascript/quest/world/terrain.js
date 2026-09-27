@@ -48,3 +48,13 @@ export function waterAt(seed, x, y) {
   const width = (1 + smoothstep(0.25, 0.75, value(seed, x / 40, y / 40, 29)) * 3.2) * region * wildness(x, y, 14);
   return tilesFromCenter < width / 2;
 }
+
+// Fog banks: big soft patches, none near spawn. Stops inside stay hidden until reached, so
+// the fork can only say "???". Rarer early on the map, so the first steps are always clear.
+export const FOG_CLEAR_RADIUS = SAFE_RADIUS + 10;
+export function fogAt(seed, x, y) {
+  const near = smoothstep(FOG_CLEAR_RADIUS, FOG_CLEAR_RADIUS + 12, dist(x, y));
+  if (near === 0) return false;
+  const [wx, wy] = warp(seed, x, y, 71, 1 / 40, 18);
+  return fbm(seed, wx / 32, wy / 32, 73, 2) * (0.85 + 0.15 * near) > 0.66;
+}

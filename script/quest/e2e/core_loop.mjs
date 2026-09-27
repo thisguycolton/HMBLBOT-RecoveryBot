@@ -33,7 +33,10 @@ ok(forkRows.length >= 2, "fork lists several roads");
 const idx = Math.max(0, forkRows.findIndex((r) => !/Merchant|Campfire|unknown/.test(r)));
 await page.keyboard.press(String(idx + 1));
 await page.waitForSelector('[data-quest="modal"]:not([hidden])', { timeout: 10000 });
-await page.waitForSelector(".quest-choice", { timeout: 5000 });
+await page.waitForSelector(".quest-dial", { timeout: 5000 });
+ok(true, "a topic stop asks the room which way in");
+await page.keyboard.press("Enter"); // curious, the default
+await page.waitForSelector(".quest-path-title:has-text('Choose your path')", { timeout: 5000 });
 await page.waitForTimeout(300);
 const lenses = await page.$$eval(".quest-choice", (b) => b.map((x) => x.innerText.replace(/\s+/g, " ")));
 console.log("card:", await text("modalCategory"), "|", await page.textContent(".quest-topic-title"));
