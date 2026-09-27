@@ -62,7 +62,17 @@ Rails.application.routes.draw do
       # Quest Sessions
       resources :quest_sessions, only: [:create, :show, :index, :update, :destroy] do
         resources :quest_inventory, only: [:show, :update], singleton: true
+        resources :log_entries, only: [:create], controller: "quest_log_entries"
+        member do
+          get :journey
+          post :complete
+        end
       end
+
+      # ACID QUEST topic draws and sharing modes (read the Topicificator library)
+      resources :sharing_modes, only: [:index]
+      get "quest_topics/draw", to: "quest_topics#draw"
+      get "quest_topics/categories", to: "quest_topics#categories"
 
       # Join Session by Code
       post '/join_session', to: 'quest_sessions#join_by_code'
@@ -86,6 +96,7 @@ end
   resources :user_active_groups, only: %i[create update]
   resources :icons, only: [:index, :show]
   get 'game/game'
+  get 'game/world', to: 'game#world' # generated-world overview for tuning (?seed=N)
   get 'topics/by_category', to: 'topics#by_category'
   resources :groups do
     resources :meetings

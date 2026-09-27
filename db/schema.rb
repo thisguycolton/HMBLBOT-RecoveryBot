@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_27_141624) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_26_120200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -248,6 +248,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_27_141624) do
     t.index ["quest_session_id"], name: "index_quest_inventories_on_quest_session_id"
   end
 
+  create_table "quest_log_entries", force: :cascade do |t|
+    t.bigint "quest_session_id", null: false
+    t.string "kind", null: false
+    t.string "encounter"
+    t.bigint "topic_id"
+    t.string "sharing_mode_key"
+    t.string "approach"
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["quest_session_id", "kind"], name: "index_quest_log_entries_on_quest_session_id_and_kind"
+    t.index ["quest_session_id"], name: "index_quest_log_entries_on_quest_session_id"
+    t.index ["topic_id"], name: "index_quest_log_entries_on_topic_id"
+  end
+
   create_table "quest_players", force: :cascade do |t|
     t.string "screen_name"
     t.datetime "created_at", null: false
@@ -260,7 +275,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_27_141624) do
     t.datetime "updated_at", null: false
     t.string "join_code"
     t.jsonb "game_state"
+    t.bigint "topic_set_id"
+    t.string "status", default: "active", null: false
+    t.datetime "completed_at"
+    t.string "name"
     t.index ["quest_player_id"], name: "index_quest_sessions_on_quest_player_id"
+    t.index ["topic_set_id"], name: "index_quest_sessions_on_topic_set_id"
   end
 
   create_table "reading_tags", force: :cascade do |t|
@@ -325,6 +345,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_27_141624) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "icon"
+  end
+
+  create_table "sharing_modes", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "name", null: false
+    t.string "icon_name"
+    t.text "prompt", null: false
+    t.boolean "gentle", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_sharing_modes_on_key", unique: true
   end
 
   create_table "tags", force: :cascade do |t|
@@ -418,7 +451,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_27_141624) do
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
   add_foreign_key "quest_inventories", "quest_sessions"
+  add_foreign_key "quest_log_entries", "quest_sessions"
+  add_foreign_key "quest_log_entries", "topics"
   add_foreign_key "quest_sessions", "quest_players"
+  add_foreign_key "quest_sessions", "topic_sets"
   add_foreign_key "reading_tags", "readings"
   add_foreign_key "reading_tags", "tags"
   add_foreign_key "readings", "groups"

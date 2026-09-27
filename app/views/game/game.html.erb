@@ -1,57 +1,336 @@
+<% content_for(:page_title, "The Acid Quest") %>
 <%= vite_client_tag %>
-  <%= vite_javascript_tag 'application' %>
+<%= vite_javascript_tag 'quest' %>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Silkscreen&display=swap" rel="stylesheet">
 
 <style>
-  #login-screen {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.9);
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+  /* 16-bit RPG look: blue gradient windows with a double white frame, hard pixel shadows */
+  .quest-root {
+    --q-ink: #14101e;
+    --q-win-top: #3b5dc9;
+    --q-win-bottom: #1a2466;
+    --q-text: #ffffff;
+    --q-muted: #b8c4f0;
+    --q-accent: #ffd541;
+    --q-danger: #ff7a6b;
+    /* above the site-wide donate widget, which would otherwise cover the HUD buttons */
+    position: fixed; inset: 0; z-index: 2147483647;
+    background: #6aa84f; color: var(--q-text);
+    font-family: "Pixelify Sans", system-ui, sans-serif;
+    -webkit-font-smoothing: none;
+  }
+  .quest-root [hidden] { display: none !important; }
+  .quest-stage { position: absolute; inset: 0; }
+  .quest-stage canvas { display: block; image-rendering: pixelated; }
+
+  .quest-window {
+    background: linear-gradient(180deg, var(--q-win-top), var(--q-win-bottom));
+    border: 3px solid #fff;
+    border-radius: 6px;
+    box-shadow: 0 0 0 3px var(--q-ink), inset 0 0 0 2px rgba(0,0,0,.35), 6px 6px 0 3px rgba(20,16,30,.45);
+  }
+  .quest-pixel { font-family: Silkscreen, monospace; letter-spacing: .5px; }
+
+  .quest-panel {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(420px, calc(100% - 40px)); max-height: calc(100% - 40px); overflow: auto;
+    padding: 24px;
+  }
+  .quest-panel h1 { font-family: Silkscreen, monospace; font-size: 28px; line-height: 1.15; margin: 0 0 12px; text-align: center; text-shadow: 3px 3px 0 var(--q-ink); }
+  .quest-panel h2 { font-family: Silkscreen, monospace; font-size: 16px; margin: 0 0 12px; color: var(--q-accent); text-shadow: 2px 2px 0 var(--q-ink); }
+  .quest-muted { color: var(--q-muted); font-size: 16px; margin: 0; }
+  .quest-lede { text-align: center; margin-bottom: 18px; }
+
+  .quest-input {
+    width: 100%; padding: 10px 12px; margin-bottom: 14px;
+    border: 3px solid #fff; border-radius: 4px; background: var(--q-ink); color: #fff;
+    font: 18px "Pixelify Sans", system-ui, sans-serif;
+    box-shadow: inset 3px 3px 0 rgba(0,0,0,.5);
+  }
+  .quest-input:focus { outline: none; border-color: var(--q-accent); }
+
+  .quest-btn {
+    position: relative;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 14px; border: 3px solid var(--q-ink); border-radius: 4px;
+    background: #e8553d; color: #fff; cursor: pointer;
+    font: 14px Silkscreen, monospace; text-shadow: 2px 2px 0 rgba(0,0,0,.35);
+    box-shadow: inset -3px -3px 0 rgba(0,0,0,.3), inset 3px 3px 0 rgba(255,255,255,.3), 3px 3px 0 var(--q-ink);
+  }
+  .quest-btn:hover, .quest-btn:focus-visible { outline: none; filter: brightness(1.12); }
+  .quest-btn:active { transform: translate(2px, 2px); box-shadow: inset -3px -3px 0 rgba(0,0,0,.3), inset 3px 3px 0 rgba(255,255,255,.3), 1px 1px 0 var(--q-ink); }
+  .quest-btn-secondary { background: #4a5bb8; }
+  .quest-btn-block { width: 100%; }
+
+  /* RPG menu list with a pointer cursor on the focused row */
+  .quest-sessions { display: grid; gap: 6px; margin-bottom: 18px; }
+  .quest-session { display: flex; gap: 6px; }
+  .quest-session-open {
+    flex: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 8px 10px 8px 26px; background: rgba(20,16,30,.35); color: #fff;
+    border: 2px solid transparent; border-radius: 4px; cursor: pointer; text-align: left; position: relative;
+    font: 16px "Pixelify Sans", system-ui, sans-serif;
+  }
+  .quest-session-open::before { content: "▶"; position: absolute; left: 8px; font-size: 12px; color: var(--q-accent); opacity: 0; }
+  .quest-session-open:hover, .quest-session-open:focus-visible { outline: none; border-color: rgba(255,255,255,.6); }
+  .quest-session-open:hover::before, .quest-session-open:focus-visible::before { opacity: 1; }
+  .quest-code { font-family: Silkscreen, monospace; font-size: 18px; }
+  .quest-session-delete {
+    width: 40px; background: rgba(20,16,30,.35); color: var(--q-muted);
+    border: 2px solid transparent; border-radius: 4px; cursor: pointer; font: 16px Silkscreen, monospace;
+  }
+  .quest-session-delete:hover { color: #fff; border-color: var(--q-danger); }
+
+  .quest-hud { position: absolute; inset: 0; pointer-events: none; }
+  .quest-hud > * { pointer-events: auto; }
+  .quest-hud-info { position: absolute; top: 14px; left: 14px; padding: 8px 12px; font-size: 15px; }
+  .quest-hud-info strong { font-family: Silkscreen, monospace; font-size: 18px; display: block; color: var(--q-accent); text-shadow: 2px 2px 0 var(--q-ink); }
+  .quest-hud-row { display: flex; align-items: center; gap: 8px; }
+  .quest-items { display: inline-flex; gap: 8px; }
+  .quest-item { display: inline-flex; align-items: center; gap: 2px; }
+  .quest-item img { width: 16px; height: 16px; image-rendering: pixelated; }
+  .quest-pulse { animation: quest-pulse .5s steps(2) 6; }
+  @keyframes quest-pulse { 50% { background: var(--q-accent); color: var(--q-ink); } }
+  /* the help dialog sits low so the traveler and merchant stay in view */
+  .quest-modal-low { align-items: flex-end; padding-bottom: 72px; background: rgba(20,16,30,.25); }
+  .quest-help-options { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 22px 22px; }
+  .quest-help-options .quest-btn { flex: 1 1 160px; }
+  .quest-hud-actions { position: absolute; top: 14px; right: 14px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .quest-hud-actions .quest-btn { padding: 6px 10px; font-size: 13px; }
+  .quest-hint {
+    position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+    padding: 6px 14px; font-size: 15px; white-space: nowrap; pointer-events: none;
+  }
+  .quest-toast {
+    position: absolute; top: 84px; left: 50%; transform: translateX(-50%);
+    padding: 8px 16px; font-size: 17px; max-width: calc(100% - 40px); text-align: center;
+    pointer-events: none; animation: quest-pop .18s steps(3) both;
+  }
+  @keyframes quest-pop { from { transform: translate(-50%, -8px); opacity: 0; } }
+
+  .quest-modal {
+    position: absolute; inset: 0; background: rgba(20,16,30,.55);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .quest-card { width: min(580px, 100%); max-height: 100%; overflow: auto; padding: 0; animation: quest-pop .18s steps(3) both; }
+  .quest-card-head {
+    padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+    border-bottom: 3px solid var(--q-ink);
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,.25), inset 0 3px 0 rgba(255,255,255,.25);
+  }
+  .quest-card-head img { width: 32px; height: 32px; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 rgba(20,16,30,.6)); }
+  .quest-card-head-dark img { filter: brightness(0) drop-shadow(2px 2px 0 rgba(255,255,255,.3)); opacity: .8; }
+  .quest-card-category { font: 15px Silkscreen, monospace; margin-right: auto; text-shadow: 2px 2px 0 rgba(20,16,30,.6); }
+  .quest-card-head-dark .quest-card-category { color: var(--q-ink); text-shadow: none; }
+  .quest-card-close { background: none; border: 0; color: inherit; font: 20px Silkscreen, monospace; cursor: pointer; line-height: 1; }
+  .quest-card-head-dark .quest-card-close { color: var(--q-ink); }
+  .quest-card-body { padding: 22px 22px 6px; }
+  .quest-card-title { font-size: clamp(28px, 6vw, 40px); font-weight: 700; line-height: 1.1; margin: 0 0 10px; text-shadow: 3px 3px 0 var(--q-ink); }
+  .quest-card-subtitle { font-size: 20px; color: #dfe6ff; margin: 0; }
+  .quest-card-subtitle:empty { display: none; }
+  .quest-reward { margin: 12px 0 0; color: var(--q-accent); font: 13px Silkscreen, monospace; }
+  .quest-card-foot { display: flex; gap: 10px; padding: 0 22px 22px; flex-wrap: wrap; }
+  .quest-card-foot .quest-btn { flex: 1; }
+  .quest-card-body .quest-card-foot { padding: 18px 0 16px; }
+  .quest-btn-pass { flex: 0 0 auto !important; background: transparent; border-color: rgba(255,255,255,.55); box-shadow: none; color: #dfe6ff; }
+
+  /* topic + "choose your path" */
+  .quest-topic { margin-bottom: 18px; }
+  .quest-topic-title { font-size: clamp(32px, 7vw, 52px); font-weight: 700; line-height: 1.05; margin: 0; text-shadow: 3px 3px 0 var(--q-ink); }
+  .quest-topic-subtitle { font-size: 20px; color: #dfe6ff; margin: 6px 0 0; }
+  .quest-topic-small .quest-topic-title { font-size: 22px; }
+  .quest-topic-small .quest-topic-subtitle { font-size: 16px; }
+  .quest-path-title { font: 12px Silkscreen, monospace; color: var(--q-accent); margin: 4px 0 6px; text-shadow: 2px 2px 0 var(--q-ink); opacity: .9; }
+  .quest-flavor { font-style: italic; color: #dfe6ff; margin: 0 0 14px; }
+  .quest-choices { display: grid; gap: 8px; }
+  .quest-choice {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
+    padding: 6px 10px; color: #fff; background: rgba(20,16,30,.3); border: 2px solid rgba(255,255,255,.18); border-radius: 6px;
+    font: 15px "Pixelify Sans", system-ui, sans-serif;
+  }
+  .quest-choice:hover, .quest-choice:focus-visible { outline: none; border-color: var(--q-accent); background: rgba(20,16,30,.55); }
+  .quest-choice img { width: 24px; height: 24px; image-rendering: pixelated; flex: none; }
+  .quest-choice-key {
+    flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 4px;
+    background: var(--q-ink); color: var(--q-accent); font: 13px Silkscreen, monospace;
+  }
+  .quest-choice-text { display: grid; gap: 2px; }
+  .quest-choice-text strong { font: 12px Silkscreen, monospace; }
+  .quest-choice-text span { color: #dfe6ff; }
+  .quest-inline-actions { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 12px; }
+  .quest-link { background: none; border: 0; padding: 0; color: #9fd0ff; cursor: pointer; font: 15px "Pixelify Sans", system-ui, sans-serif; text-decoration: underline; }
+
+  /* the share: the chosen lens, and a quiet timer that never buzzes */
+  .quest-lens-prompt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; background: rgba(20,16,30,.3); border-radius: 6px; }
+  .quest-lens-prompt img { width: 24px; height: 24px; image-rendering: pixelated; flex: none; }
+  .quest-lens-name { font: 12px Silkscreen, monospace; color: var(--q-accent); margin: 0 0 2px; }
+  .quest-lens-text { font-size: 17px; line-height: 1.25; margin: 0; color: #dfe6ff; }
+  .quest-timer-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .quest-timer { font: 22px Silkscreen, monospace; margin-right: auto; text-shadow: 2px 2px 0 var(--q-ink); }
+  .quest-timer-done { color: var(--q-accent); font-size: 16px; }
+  .quest-timer-track { height: 6px; margin-top: 10px; background: rgba(20,16,30,.45); border-radius: 3px; overflow: hidden; }
+  .quest-timer-fill { height: 100%; width: 0; background: #9fd0ff; transition: width 1s linear; }
+
+  /* the road forks */
+  .quest-fork {
+    position: absolute; left: 14px; bottom: 14px; width: min(340px, calc(100% - 28px));
+    padding: 10px; display: grid; gap: 6px; max-height: 45vh; overflow: auto;
+  }
+  .quest-fork-title { font: 13px Silkscreen, monospace; color: var(--q-accent); margin: 2px 4px 4px; text-shadow: 2px 2px 0 var(--q-ink); }
+  .quest-fork-row {
+    display: flex; align-items: center; gap: 10px; text-align: left; cursor: pointer; color: #fff;
+    padding: 6px 8px; background: rgba(20,16,30,.35); border: 2px solid transparent; border-radius: 6px;
+    font: 15px "Pixelify Sans", system-ui, sans-serif;
+  }
+  .quest-fork-row:hover, .quest-fork-row:focus-visible { outline: none; border-color: var(--q-accent); }
+  .quest-fork-badge { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border: 2px solid var(--q-ink); border-radius: 4px; }
+  .quest-fork-badge img { width: 16px; height: 16px; image-rendering: pixelated; }
+  .quest-fork-text { display: grid; }
+  .quest-fork-text span { color: #dfe6ff; font-size: 13px; }
+
+  /* toolbar: nine slots, full-colour tools, durability under each */
+  .quest-toolbar {
+    position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+    display: grid; grid-template-columns: repeat(9, 48px); gap: 4px; padding: 6px;
+  }
+  .quest-slot {
+    position: relative; width: 48px; height: 52px; border-radius: 4px;
+    background: rgba(20,16,30,.55); box-shadow: inset 2px 2px 0 rgba(0,0,0,.45), inset -1px -1px 0 rgba(255,255,255,.12);
+    display: grid; justify-items: center; align-content: start; padding-top: 4px;
+  }
+  .quest-slot img { width: 32px; height: 32px; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 rgba(20,16,30,.6)); }
+  .quest-durability { width: 36px; height: 5px; margin-top: 5px; background: var(--q-ink); border-radius: 2px; overflow: hidden; }
+  .quest-durability div { height: 100%; background: #6ad06a; }
+  .quest-durability div.mid { background: var(--q-accent); }
+  .quest-durability div.low { background: var(--q-danger); }
+  .quest-slot-count { position: absolute; top: 1px; right: 4px; font: 10px Silkscreen, monospace; color: #fff; text-shadow: 1px 1px 0 var(--q-ink); }
+  .quest-slot-legendary { background: linear-gradient(160deg, #6b4a12, #2a1d52); box-shadow: inset 0 0 0 2px #ffd541, 0 0 8px rgba(255,213,65,.55); overflow: hidden; }
+  .quest-slot-legendary .quest-durability div { background: linear-gradient(90deg, #ffd541, #fff6c2, #7cd8eb, #ffd541); background-size: 200% 100%; animation: quest-shimmer 1.6s linear infinite; }
+  .quest-slot-legendary::after {
+    content: ""; position: absolute; inset: -40%; pointer-events: none;
+    background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.65) 50%, transparent 58%);
+    animation: quest-glint 2.4s steps(12) infinite;
+  }
+  @keyframes quest-glint { from { transform: translateX(-60%); } to { transform: translateX(60%); } }
+  @keyframes quest-shimmer { to { background-position: -200% 0; } }
+
+  .quest-aim {
+    position: absolute; bottom: 88px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; align-items: center; padding: 8px 12px; font-size: 16px;
   }
 
-  #session-list {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.9);
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+  /* quest complete */
+  .quest-complete-title { font: 26px Silkscreen, monospace; text-align: center; margin: 0 0 16px; text-shadow: 3px 3px 0 var(--q-ink); }
+  .quest-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .quest-stat { display: grid; justify-items: center; padding: 10px 4px; background: rgba(20,16,30,.35); border-radius: 6px; text-align: center; }
+  .quest-stat strong { font: 26px Silkscreen, monospace; color: var(--q-accent); }
+  .quest-stat span { font-size: 14px; color: #dfe6ff; }
+  .quest-topic-log { margin-top: 16px; }
+  .quest-topic-log ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+  .quest-error { color: var(--q-danger); }
+
+  @media (min-width: 641px) and (max-width: 1100px) {
+    .quest-fork { bottom: 88px; }
   }
 
-  #game-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
+  @media (max-width: 640px) {
+    .quest-hud-info { right: 14px; font-size: 14px; }
+    .quest-hud-info strong { display: inline; margin-right: 8px; }
+    .quest-hud-row { display: inline-flex; }
+    .quest-hud-actions { top: 64px; bottom: auto; left: 10px; right: 10px; justify-content: center; gap: 6px; flex-wrap: wrap; }
+    .quest-hud-actions .quest-btn { padding: 6px 8px; font-size: 11px; white-space: nowrap; }
+    .quest-hint { display: none; }
+    .quest-modal-low { padding-bottom: 64px; }
+    .quest-toast { top: 76px; }
+    .quest-fork { left: 10px; right: 10px; width: auto; bottom: 76px; max-height: 34vh; }
+    .quest-toolbar { grid-template-columns: repeat(9, 1fr); width: calc(100% - 20px); gap: 2px; padding: 4px; bottom: 8px; }
+    .quest-slot { width: auto; height: 46px; }
+    .quest-slot img { width: 26px; height: 26px; }
+    .quest-durability { width: 80%; }
+    .quest-toast { top: 150px; }
+    .quest-aim { bottom: 70px; width: calc(100% - 20px); font-size: 14px; }
+    .quest-stats { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 
-<link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/webfont/1.6.28/webfontloader.js"></script>
-<!-- filepath: /home/colton/Projects/acid-test/acid-test/app/views/game/game.html.erb -->
-<div data-controller="game" data-game-topics-url-value="/topics.json" data-game-topic-categories-url-value="/topic_categories.json" id="game-container" >
-  <!-- The PHASER canvas will be appended here -->
-</div>
-<div id="login-screen" style="display: none;">
-  <h2>Welcome to the Adventure Game</h2>
-  <input type="text" id="screen-name" placeholder="Enter your screen name...">
-  <button id="join-button">Join Game</button>
-</div>
+<div class="quest-root" id="quest-root">
+  <div class="quest-stage" data-quest="stage"></div>
 
-<div id="session-list" style="display: none;">
-  <h2>Your Sessions</h2>
-  <div id="session-list-container"></div>
-  <button id="create-session">Create New Session</button>
-</div>
+  <form class="quest-panel quest-window" data-quest="loginScreen" data-quest-action="submit->login" hidden>
+    <h1>The Acid Quest</h1>
+    <p class="quest-muted quest-lede">
+      Guide the traveler together. Each stop on the path is a topic for the group.
+    </p>
+    <input class="quest-input" type="text" data-quest="screenName" placeholder="Screen name" autocomplete="nickname" required>
+    <button class="quest-btn quest-btn-block" type="submit">Begin</button>
+  </form>
 
-<%= vite_javascript_tag 'controllers/game_controller.js' %>
+  <div class="quest-panel quest-window" data-quest="sessionScreen" hidden>
+    <h1 data-quest="welcome">Welcome!</h1>
+    <h2>Your journeys</h2>
+    <div class="quest-sessions" data-quest="sessionList"></div>
+    <button class="quest-btn quest-btn-block" type="button" data-quest="newJourneyButton" data-quest-action="click->newSession">New journey</button>
+    <div data-quest="topicSets" hidden>
+      <h2>Which topics should the road draw from?</h2>
+      <div class="quest-sessions" data-quest="topicSetList"></div>
+    </div>
+  </div>
+
+  <div class="quest-hud" data-quest="hud" hidden>
+    <div class="quest-hud-info quest-window">
+      <strong data-quest="joinCode"></strong>
+      <div class="quest-hud-row">
+        <span data-quest="stepCount"></span>
+        <span class="quest-items" data-quest="items"></span>
+        <span class="quest-muted" data-quest="saveStatus">Saved</span>
+      </div>
+    </div>
+    <div class="quest-hud-actions">
+      <button class="quest-btn quest-btn-secondary" type="button" data-quest-action="click->zoomOut" aria-label="Zoom out">−</button>
+      <button class="quest-btn quest-btn-secondary" type="button" data-quest-action="click->zoomIn" aria-label="Zoom in">+</button>
+      <button class="quest-btn quest-btn-secondary" type="button" data-quest-action="click->recenter">Find me</button>
+      <button class="quest-btn quest-btn-secondary" type="button" data-quest="helpButton" data-quest-action="click->openHelp">Ask for help</button>
+      <button class="quest-btn quest-btn-secondary" type="button" data-quest-action="click->openSessions">Journeys</button>
+      <button class="quest-btn" type="button" data-quest-action="click->endJourney">End journey</button>
+    </div>
+    <div class="quest-fork quest-window" data-quest="fork" hidden></div>
+    <div class="quest-toast quest-window" data-quest="toast" role="status" hidden></div>
+    <div class="quest-toolbar quest-window" data-quest="toolbar" aria-label="Tools"></div>
+    <div class="quest-aim quest-window" data-quest="aim" hidden>
+      <span>Tap any path or stop you can see to fire the cannon.</span>
+      <button class="quest-btn quest-btn-secondary" type="button" data-quest-action="click->cancelAim">Cancel</button>
+    </div>
+  </div>
+
+  <div class="quest-modal" data-quest="modal" hidden>
+    <div class="quest-card quest-window" role="dialog" aria-modal="true">
+      <div class="quest-card-head" data-quest="modalBadge">
+        <img data-quest="modalIcon" alt="">
+        <span class="quest-card-category" data-quest="modalCategory"></span>
+        <button class="quest-card-close" type="button" data-quest-action="click->closeModal" aria-label="Close">✕</button>
+      </div>
+      <div class="quest-card-body" data-quest="cardStage"></div>
+    </div>
+  </div>
+
+  <div class="quest-modal" data-quest="summary" hidden>
+    <div class="quest-card quest-window" role="dialog" aria-modal="true">
+      <div class="quest-card-body" data-quest="summaryBody"></div>
+    </div>
+  </div>
+
+  <div class="quest-modal quest-modal-low" data-quest="help" hidden>
+    <div class="quest-card quest-window" role="dialog" aria-modal="true">
+      <div class="quest-card-head" style="background: #4a5bb8;">
+        <span class="quest-card-category" data-quest="helpTitle"></span>
+        <button class="quest-card-close" type="button" data-quest-action="click->closeHelp" aria-label="Close">✕</button>
+      </div>
+      <div class="quest-card-body">
+        <p class="quest-card-subtitle" data-quest="helpBody"></p>
+      </div>
+      <div class="quest-help-options" data-quest="helpOptions" style="padding-top: 16px;"></div>
+    </div>
+  </div>
+
+  <p class="quest-panel quest-window quest-error" data-quest="error" hidden style="top: auto; bottom: 20px; transform: translateX(-50%);"></p>
+</div>

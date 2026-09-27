@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Run every ACID QUEST check. Needs: the dev server on localhost:3000 (bin/dev), Google Chrome,
+# and playwright-core (npm i --no-save playwright-core). Output: tmp/quest-e2e/.
+set -u
+cd "$(dirname "$0")"
+node --version >/dev/null || exit 1
+[ -d ../../../node_modules/playwright-core ] || { echo "Install playwright-core first: npm i --no-save playwright-core"; exit 1; }
+status=0
+run() {
+  local out; out=$(node "$1" 2>&1)
+  local pass fail; pass=$(grep -c '✓' <<<"$out"); fail=$(grep -c '✗' <<<"$out")
+  printf '%-36s %3s passed  %s failed  %s\n' "$1" "$pass" "$fail" "$(grep -o 'errors: .*' <<<"$out" | head -1)"
+  [ "$fail" = 0 ] || { status=1; grep '✗' <<<"$out"; }
+  grep -q 'all invariants hold\|max obstacles on one branch: 1' <<<"$out" && grep 'invariants\|obstacles\|closest\|crowded' <<<"$out"
+}
+run world_invariants.mjs
+run path_rules.mjs
+run tools_unit.mjs
+node find_seeds.mjs >/dev/null 2>&1   # finds a reachable town and castle for obstacles_help_towns
+for t in core_loop encounters tools_merchant_ghost_cannon obstacles_help_towns categories tool_merge; do run "$t.mjs"; done
+exit $status
