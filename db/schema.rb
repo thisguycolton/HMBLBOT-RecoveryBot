@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_26_120200) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_27_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -376,6 +376,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_26_120200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "icon_id"
+    t.string "icon_name"
   end
 
   create_table "topic_sets", force: :cascade do |t|
@@ -383,6 +384,31 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_26_120200) do
     t.string "description"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "topic_sharing_prompts", force: :cascade do |t|
+    t.bigint "topic_id", null: false
+    t.bigint "sharing_mode_id", null: false
+    t.text "text"
+    t.string "status", default: "draft", null: false
+    t.string "source", default: "human", null: false
+    t.boolean "enabled", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sharing_mode_id"], name: "index_topic_sharing_prompts_on_sharing_mode_id"
+    t.index ["status"], name: "index_topic_sharing_prompts_on_status"
+    t.index ["topic_id", "sharing_mode_id"], name: "index_topic_sharing_prompts_on_topic_id_and_sharing_mode_id", unique: true
+    t.index ["topic_id"], name: "index_topic_sharing_prompts_on_topic_id"
+  end
+
+  create_table "topic_tags", force: :cascade do |t|
+    t.bigint "topic_id", null: false
+    t.bigint "tag_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tag_id"], name: "index_topic_tags_on_tag_id"
+    t.index ["topic_id", "tag_id"], name: "index_topic_tags_on_topic_id_and_tag_id", unique: true
+    t.index ["topic_id"], name: "index_topic_tags_on_topic_id"
   end
 
   create_table "topics", force: :cascade do |t|
@@ -394,6 +420,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_26_120200) do
     t.string "link"
     t.bigint "topic_category_id"
     t.bigint "topic_set_id", null: false
+    t.string "difficulty"
+    t.index ["difficulty"], name: "index_topics_on_difficulty"
     t.index ["topic_category_id"], name: "index_topics_on_topic_category_id"
     t.index ["topic_set_id"], name: "index_topics_on_topic_set_id"
   end
@@ -459,6 +487,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_26_120200) do
   add_foreign_key "reading_tags", "tags"
   add_foreign_key "readings", "groups"
   add_foreign_key "readings", "users"
+  add_foreign_key "topic_sharing_prompts", "sharing_modes"
+  add_foreign_key "topic_sharing_prompts", "topics"
+  add_foreign_key "topic_tags", "tags"
+  add_foreign_key "topic_tags", "topics"
   add_foreign_key "topics", "topic_categories"
   add_foreign_key "topics", "topic_sets"
   add_foreign_key "user_active_groups", "groups"

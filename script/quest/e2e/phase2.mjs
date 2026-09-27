@@ -215,6 +215,19 @@ ok(/What the group gathered/.test(summary) && /Courage \d/.test(summary) && /Hop
 ok(!/pass/i.test(summary), "no passes anywhere on the summary");
 await shot("p2-12-complete.png");
 
+console.log("journey log");
+await page.click('button:has-text("Back to journeys")');
+await page.waitForSelector('[data-quest="sessionScreen"]:not([hidden])');
+await page.click(`button[aria-label="Journey log for ${session.join_code}"]`);
+await page.waitForSelector("text=The road, step by step", { timeout: 8000 });
+const log = await page.$$eval(".quest-timeline li", (l) => l.map((x) => x.innerText));
+ok(log.some((l) => /^Walked \d/.test(l)), `log has walks: ${log.slice(0, 4).join(" | ")}`);
+ok(log.some((l) => /took the risk|chaos/.test(l)), "log shows the risks the room took");
+ok(log.some((l) => /opened a locked gate/.test(l)) && log.some((l) => /another road at a locked gate/.test(l)), "log shows the gate votes");
+ok(!log.some((l) => /pass/i.test(l)), "no passes in the log");
+await shot("p2-15-journey-log.png");
+await page.click('button:has-text("Back to journeys")');
+
 console.log("mobile");
 await page.setViewportSize({ width: 390, height: 780 });
 await load({ ...base, grid: cross(), resources: { courage: 3, connection: 1, hope: 2 } });

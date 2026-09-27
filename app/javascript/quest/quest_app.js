@@ -150,6 +150,7 @@ export default class QuestApp {
           <span class="quest-code"></span>
           <span class="quest-muted"></span>
         </button>
+        <button type="button" class="quest-session-log" hidden>Log</button>
         <button type="button" class="quest-session-delete" aria-label="Delete journey">✕</button>
       `;
       row.querySelector(".quest-code").textContent = session.join_code;
@@ -159,6 +160,10 @@ export default class QuestApp {
         session.status === "completed" ? "complete" : new Date(session.updated_at).toLocaleDateString(),
       ].filter(Boolean).join(" · ");
       row.querySelector(".quest-session-open").addEventListener("click", () => this.startGame(session));
+      const logButton = row.querySelector(".quest-session-log");
+      logButton.hidden = session.status !== "completed";
+      logButton.setAttribute("aria-label", `Journey log for ${session.join_code}`);
+      logButton.addEventListener("click", () => this.showLog(session));
       row.querySelector(".quest-session-delete").addEventListener("click", async () => {
         if (!confirm(`Delete journey ${session.join_code}?`)) return;
         await this.api(`/api/v1/quest_sessions/${session.id}`, { method: "DELETE" });
@@ -461,6 +466,7 @@ export default class QuestApp {
       modes: this.modes,
       itemName: (item) => ITEM_A[item],
       draw: (opts) => this.drawTopics(opts),
+      fetchTopic: (id) => this.api(`/api/v1/quest_topics/${id}`),
       log: (kind, fields) => this.logEntry(kind, fields),
       earlier: () => this.earlierTopics(),
       wallet: {
@@ -637,8 +643,9 @@ export default class QuestApp {
     if (!used.includes(lens)) used.push(lens);
   }
 
-  async drawTopics({ categoryId, count = 1, exclude = [] }) {
+  async drawTopics({ categoryId, count = 1, exclude = [], difficulty = null }) {
     const params = new URLSearchParams({ count });
+    if (difficulty) params.set("difficulty", difficulty);
     if (this.state.topic_set_id) params.set("topic_set_id", this.state.topic_set_id);
     if (categoryId) params.set("category_id", categoryId);
     if (exclude.length) params.set("exclude_ids", exclude.join(","));
@@ -774,6 +781,26 @@ export default class QuestApp {
       this.el.summary.hidden = false;
     } catch {
       this.notice("Couldn't end the journey. Try again.");
+    }
+  }
+
+  // A finished journey, read back: Quest Complete plus the road step by step
+  async showLog(session) {
+    try {
+      this.modesCache ||= await this.api("/api/v1/sharing_modes");
+      const log = await this.api(`/api/v1/quest_sessions/${session.id}/log`);
+      renderSummary(this.el.summaryBody, log, {
+        modeNames: Object.fromEntries(this.modesCache.map((m) => [m.key, m.name])),
+        iconUrl,
+        onCopy: async () => {
+          await copySummary(log);
+          this.notice("Topics copied.");
+        },
+        onClose: () => (this.el.summary.hidden = true),
+      });
+      this.el.summary.hidden = false;
+    } catch {
+      this.showError("Couldn't load that journey's log.");
     }
   }
 

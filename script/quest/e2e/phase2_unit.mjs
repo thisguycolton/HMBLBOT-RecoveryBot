@@ -67,3 +67,24 @@ ok(Object.keys(resourcesFor({ kind: "pass", approach: "risky", encounter: "ghost
 const totals = [share({ approach: "chaos", sharing_mode_key: "connection" }), share({ approach: "revisit" }), { kind: "pass" }]
   .reduce((t, e) => addResources(t, e), {});
 ok(totals.courage === 1 && totals.connection === 1 && totals.hope === 1, `totals add up: ${JSON.stringify(totals)}`);
+
+console.log("per-topic ways to share");
+const { modesForTopic, pickLenses } = await import(`${Q}/sharing.js`);
+const MODES = [
+  { key: "story", prompt: "Tell us about a time this showed up.", gentle: false },
+  { key: "check_in", prompt: "How is this showing up today?", gentle: true },
+  { key: "funny_story", prompt: "Got a funny story?", gentle: true },
+  { key: "lesson", prompt: "What has this taught you?", gentle: false },
+];
+const curated = { id: 9, prompts: [
+  { key: "story", text: "Tell us about a time you had to let go.", enabled: true },
+  { key: "funny_story", text: null, enabled: false },
+] };
+const applied = modesForTopic(MODES, curated);
+ok(applied.find((m) => m.key === "story").prompt === "Tell us about a time you had to let go.", "approved wording replaces the generic prompt");
+ok(!applied.some((m) => m.key === "funny_story"), "a lens switched off for the topic is left out");
+ok(applied.find((m) => m.key === "lesson").prompt === MODES[3].prompt, "other lenses keep the generic prompt");
+ok(modesForTopic(MODES, { id: 1 }).length === 4 && modesForTopic(MODES, null).length === 4, "topics without curation get every lens");
+let offered = true;
+for (let i = 0; i < 50; i++) if (pickLenses(applied).some((m) => m.key === "funny_story")) offered = false;
+ok(offered, "pickLenses never offers a switched-off lens");

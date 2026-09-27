@@ -1,6 +1,6 @@
 import { ENCOUNTERS, MERCHANT_PRICE, OPEN_ROAD, APPROACHES, DEFAULT_APPROACH } from "../encounters";
 import { describeTool } from "../tools";
-import { pickLenses, randomLens } from "../sharing";
+import { pickLenses, randomLens, modesForTopic } from "../sharing";
 
 // The topic card: ENCOUNTER -> (APPROACH) -> TOPIC -> CHOOSE YOUR PATH -> SHARE (as many people
 // as want to) -> CONTINUE. Pass is offered at every step and simply moves the journey on.
@@ -11,7 +11,8 @@ import { pickLenses, randomLens } from "../sharing";
 //   el: { head, icon, label, stage },          card elements
 //   iconUrl(name), hex(color),
 //   modes: [sharing modes], categories: [...],
-//   draw({ categoryId, count, exclude }) -> [topics]
+//   draw({ categoryId, count, exclude, difficulty }) -> [topics]   (with approved per-topic prompts)
+//   fetchTopic(id) -> topic                      one topic as a draw returns it (for revisits)
 //   log(kind, fields)                           journey log (structured, no free text)
 //   wallet: { coins(), spend(n) -> bool }       trail coins for the merchant
 //   usedModes(topicId) -> [mode keys]           lenses already used on this topic
@@ -53,7 +54,7 @@ export default class TopicFlow {
     if (stop.kind === "ghost") return this.showGhost();
     if (stop.kind === "mystery") {
       // Chaos: the road picks the topic and the way in; the group can still change either
-      this.lens = randomLens(this.modes);
+      this.lens = randomLens(this.topicModes());
       return this.showShare();
     }
     this.showLenses();
@@ -185,7 +186,7 @@ export default class TopicFlow {
     this.setTopic(await this.drawOne());
     this.log("draw", this.fields({ approach: key }));
     if (key === "chaos") {
-      this.lens = randomLens(this.modes);
+      this.lens = randomLens(this.topicModes());
       return this.showShare();
     }
     this.showLenses();
@@ -249,16 +250,20 @@ export default class TopicFlow {
     );
   }
 
-  revisit(e) {
+  async revisit(e) {
     this.approach = "revisit";
-    this.setTopic(e.topic);
+    this.loading();
+    // history keeps titles only; fetch the topic for its current per-topic prompts
+    const fresh = e.topic.id && this.fetchTopic ? await this.fetchTopic(e.topic.id).catch(() => null) : null;
+    this.setTopic(fresh ? { ...e.topic, ...fresh } : e.topic);
     if (!e.topic.topic_category_id && e.category_id) {
       this.category = (this.allCategories || this.categories || []).find((c) => c.id === e.category_id) || this.category;
       this.renderHead();
     }
     this.log("draw", this.fields({ approach: "revisit" }));
-    const fresh = this.modes.filter((m) => !e.used.includes(m.key));
-    this.lens = randomLens(fresh.length ? fresh : this.modes);
+    const modes = this.topicModes();
+    const unused = modes.filter((m) => !e.used.includes(m.key));
+    this.lens = randomLens(unused.length ? unused : modes);
     this.showShare();
   }
 
@@ -277,8 +282,14 @@ export default class TopicFlow {
     );
   }
 
+  // The ways to share this topic: per-topic wording applied, switched-off lenses left out
+  topicModes() {
+    const modes = modesForTopic(this.modes, this.topic);
+    return modes.length ? modes : this.modes;
+  }
+
   showLenses() {
-    const lenses = pickLenses(this.modes, {
+    const lenses = pickLenses(this.topicModes(), {
       used: this.topic ? this.usedModes(this.topic.id) : [],
       gentleOnly: !!this.encounter.gentleOnly,
       favor: this.encounter.favor || [],
@@ -475,6 +486,14 @@ export default class TopicFlow {
     return this.excludeIds();
   }
 
+  // Curated difficulty is a preference, never a filter: the ghost and a RISKY choice lean deep,
+  // a campfire leans gentle. Unset topics count as standard.
+  preferredDifficulty() {
+    if (this.stop.kind === "campfire") return "gentle";
+    if (this.stop.kind === "ghost" || this.approach === "risky") return "deep";
+    return null;
+  }
+
   async drawOne(different = false) {
     const exclude = this.exclude();
     if (different && this.topic?.id) exclude.push(this.topic.id);
@@ -484,7 +503,7 @@ export default class TopicFlow {
     const anywhere = !different &&
       (["mystery", "campfire", "ghost"].includes(this.stop.kind) || ["risky", "chaos"].includes(this.approach));
     const categoryId = anywhere ? null : this.category?.id ?? null;
-    const [topic] = await this.draw({ categoryId, count: 1, exclude });
+    const [topic] = await this.draw({ categoryId, count: 1, exclude, difficulty: this.preferredDifficulty() });
     return topic || { id: null, title: this.category?.title || "Open share", subtitle: "Share whatever is on your heart today." };
   }
 }

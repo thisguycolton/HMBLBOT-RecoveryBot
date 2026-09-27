@@ -17,6 +17,16 @@ export function pickLenses(modes, { used = [], gentleOnly = false, favor = [], c
   return chosen;
 }
 
+// The lenses as they apply to one topic: approved per-topic wording replaces the generic
+// prompt, and a lens switched off for the topic is left out (topic.prompts, from the draw API;
+// drafts never get this far)
+export function modesForTopic(modes, topic) {
+  const custom = Object.fromEntries((topic?.prompts || []).map((p) => [p.key, p]));
+  return modes
+    .filter((m) => custom[m.key]?.enabled !== false)
+    .map((m) => (custom[m.key]?.text ? { ...m, prompt: custom[m.key].text, custom: true } : m));
+}
+
 export const randomLens = (modes, rng = Math.random) => modes[Math.floor(rng() * modes.length)];
 
 function shuffle(list, rng) {

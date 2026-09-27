@@ -1,5 +1,7 @@
 import { h } from "./topic_flow";
 import { RESOURCES } from "../resources";
+import { ENCOUNTERS } from "../encounters";
+import { describeTool } from "../tools";
 
 // QUEST COMPLETE: journey statistics (never scores) and the topics the group explored.
 // Passes are intentionally absent.
@@ -25,6 +27,11 @@ export function renderSummary(el, summary, { modeNames, iconUrl, onCopy, onClose
           h("ul", {}, ...summary.topics.map((t) =>
             h("li", {}, h("strong", {}, t.title), t.modes.length ? ` · ${t.modes.map((k) => modeNames[k] || k).join(", ")}` : ""))))
       : null,
+    summary.timeline?.length
+      ? h("div", { class: "quest-topic-log quest-timeline" },
+          h("p", { class: "quest-path-title" }, "The road, step by step"),
+          h("ol", {}, ...timelineLines(summary.timeline, modeNames).map((line) => h("li", {}, line))))
+      : null,
     h("div", { class: "quest-card-foot" },
       h("button", { class: "quest-btn quest-btn-secondary", type: "button", onclick: onCopy }, "Copy topics"),
       h("button", { class: "quest-btn", type: "button", onclick: onClose }, "Back to journeys")),
@@ -44,4 +51,41 @@ export async function copySummary(summary) {
   } catch {
     await navigator.clipboard?.writeText(text).catch(() => {});
   }
+}
+
+// The journey log as sentences. Passes are never in the timeline; walks between stops merge.
+const OBSTACLE_NAMES = { ford: "a river", boulder: "a boulder", log: "a fallen tree", climb: "a cliff" };
+const TOOL_WORDS = { ford: "boat", boulder: "pickaxe", log: "axe", climb: "rope" };
+
+export function timelineLines(timeline, modeNames = {}) {
+  const lines = [];
+  let miles = 0, cannon = false;
+  const walk = () => {
+    if (miles > 0) lines.push(cannon ? `Flew ${miles.toFixed(1)} miles by cannon` : `Walked ${miles.toFixed(1)} miles`);
+    miles = 0; cannon = false;
+  };
+  for (const e of timeline) {
+    if (e.kind === "move") { miles += (e.data?.tiles || 0) * 0.1; cannon ||= !!e.data?.cannon; continue; }
+    // plain stops aren't listed: an arrival with no share after it would show a pass
+    if (e.kind === "encounter" && !ENCOUNTERS[e.encounter]?.label) continue;
+    walk();
+    if (e.kind === "encounter") {
+      if (e.encounter === "cannon" && e.data?.fired === undefined) lines.push("Found an old cannon");
+      else if (e.encounter !== "cannon") lines.push(`Came to: ${ENCOUNTERS[e.encounter].label}`);
+    } else if (e.kind === "share") {
+      const how = { risky: " \u00b7 took the risk", chaos: " \u00b7 chaos", revisit: " \u00b7 revisited" }[e.approach] || "";
+      const mode = modeNames[e.sharing_mode] || e.sharing_mode || "A share";
+      lines.push(e.topic ? `${mode}: \u201c${e.topic}\u201d${how}` : `${mode}${how}`);
+    } else if (e.kind === "item" && e.data?.item) {
+      lines.push(`Received ${describeTool({ type: e.data.item, uses: e.data.uses ?? 1, max: e.data.uses ?? 1, legendary: !!e.data.legendary })}`);
+    } else if (e.kind === "obstacle" && e.data?.obstacle) {
+      lines.push(`Crossed ${OBSTACLE_NAMES[e.data.obstacle] || "an obstacle"} with the ${TOOL_WORDS[e.data.obstacle] || "right tool"}`);
+    } else if (e.kind === "help") {
+      lines.push(e.data?.mode === "friend" ? "A friend came to help" : "A wandering merchant helped out");
+    } else if (e.kind === "gate") {
+      lines.push(e.data?.opened ? "The room opened a locked gate" : "Chose another road at a locked gate");
+    }
+  }
+  walk();
+  return lines;
 }

@@ -1,6 +1,6 @@
 class Api::V1::QuestSessionsController < ApplicationController
   before_action :set_quest_player, only: [:index, :create]
-  before_action :set_quest_session, only: [:show, :update, :destroy, :journey, :complete]
+  before_action :set_quest_session, only: [:show, :update, :destroy, :journey, :complete, :log]
 
   def index
     @quest_sessions = @quest_player.quest_sessions.order(updated_at: :desc)
@@ -39,6 +39,12 @@ class Api::V1::QuestSessionsController < ApplicationController
   # GET /api/v1/quest_sessions/:id/journey - the journey log summary and statistics
   def journey
     render json: JourneyStats.new(@quest_session).summary
+  end
+
+  # GET /api/v1/quest_sessions/:id/log - the summary plus the journey step by step
+  def log
+    stats = JourneyStats.new(@quest_session)
+    render json: stats.summary.merge(timeline: stats.timeline)
   end
 
   # POST /api/v1/quest_sessions/:id/complete - end the journey

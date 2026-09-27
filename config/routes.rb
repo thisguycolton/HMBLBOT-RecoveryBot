@@ -65,6 +65,7 @@ Rails.application.routes.draw do
         resources :log_entries, only: [:create], controller: "quest_log_entries"
         member do
           get :journey
+          get :log
           post :complete
         end
       end
@@ -73,6 +74,7 @@ Rails.application.routes.draw do
       resources :sharing_modes, only: [:index]
       get "quest_topics/draw", to: "quest_topics#draw"
       get "quest_topics/categories", to: "quest_topics#categories"
+      get "quest_topics/:id", to: "quest_topics#show", constraints: { id: /\d+/ }
 
       # Join Session by Code
       post '/join_session', to: 'quest_sessions#join_by_code'
@@ -122,6 +124,23 @@ end
       member do
         patch :confirm
       end
+    end
+    # React app; every path below it routes on the client
+    get "topicificator(/*path)", to: "topicificator#show", as: :topicificator
+  end
+
+  # JSON behind the Topicificator admin (admins only)
+  namespace :api do
+    namespace :admin do
+      resource :meta, only: :show, controller: "meta"
+      resources :topics, only: %i[index show create update destroy] do
+        member do
+          put "prompts/:mode_key", action: :save_prompt
+          delete "prompts/:mode_key", action: :remove_prompt
+        end
+      end
+      resources :topic_sets, only: %i[create update destroy]
+      resources :topic_categories, only: %i[create update destroy]
     end
   end
   resources :readings

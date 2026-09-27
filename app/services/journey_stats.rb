@@ -52,6 +52,24 @@ class JourneyStats
     }
   end
 
+  # The journey, step by step, for the log viewer. Structured facts only; passes (and the
+  # bookkeeping kinds: draws, forks) are left out, so nobody's "no" is ever on the record.
+  TIMELINE_KINDS = %w[move encounter share item obstacle help gate].freeze
+
+  def timeline
+    @entries.select { |e| TIMELINE_KINDS.include?(e.kind) }.map do |e|
+      {
+        kind: e.kind,
+        encounter: e.encounter,
+        topic: e.topic && title(e.topic),
+        sharing_mode: e.sharing_mode_key,
+        approach: e.approach,
+        data: e.data.slice("tiles", "cannon", "item", "uses", "legendary", "obstacle", "mode", "opened"),
+        at: e.created_at,
+      }
+    end
+  end
+
   private
 
   def of_kind(kind)

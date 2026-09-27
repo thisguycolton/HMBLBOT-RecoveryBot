@@ -105,7 +105,8 @@ counters for the resources; gates open by room vote only.
 | World generation + movement rules (no Phaser) | `app/javascript/quest/world/{noise,terrain,settlements,world,paths,names,tiles}.js` |
 | Card flow / fork panel / summary | `app/javascript/quest/ui/*.js` |
 | API | `Api::V1::QuestSessionsController` (+ `journey`, `complete`), `QuestTopicsController` (`draw`, `categories`), `SharingModesController`, `QuestLogEntriesController` |
-| Stats | `app/services/journey_stats.rb` (resource rules mirror `quest/resources.js`) |
+| Stats, journey timeline | `app/services/journey_stats.rb` (resource rules mirror `quest/resources.js`) |
+| Topicificator admin (React) | `components/topicificator_admin/*`, `Api::Admin::*`, `AdminPanel::TopicificatorController` |
 | Approaches, encounter kinds, gate odds | `app/javascript/quest/encounters.js` |
 | Category backfill | `lib/tasks/topic_categories.rake` |
 
@@ -125,6 +126,8 @@ and `npm i --no-save playwright-core`). Output and screenshots go to `tmp/quest-
   `obstacles_help_towns`, `categories`, `tool_merge`, `phase2`) drive the real game with
   handcrafted states. Tip: navigate away from a board *before* PATCHing a test state — the page
   saves on exit. Regular stops open on the dial: press Enter (curious) to reach the lenses.
+- `topicificator_admin.mjs` signs in as a local test admin (`quest-e2e-admin@example.test`,
+  created by `ensure_admin.rb`, which `run_all.sh` runs) and cleans up everything it creates.
 - `soak.mjs [steps]` (not in `run_all.sh`): a long random journey on a real world; reports how
   often gates / fog / Memory Stones came up and any page errors.
 
@@ -139,16 +142,51 @@ and `npm i --no-save playwright-core`). Output and screenshots go to `tmp/quest-
 - Journeys created before the backfill keep "Open Road" on stops already on their map.
 - No auth on the quest API (as before this work): anyone with a screen name gets that player.
 
-## Phase 2, part 2: content (next)
+## Phase 2, part 2: content (done)
 
-- **Topic metadata**: `topics.difficulty` (gentle / standard / deep, nullable), `topic_tags`
-  (reuse `Tag`), `topic_sharing_prompts` (`topic_id`, `sharing_mode_id`, `text`, `status`
-  draft/approved/rejected, `source` human/ai, `enabled`: curated wording or disabling a lens).
-  `pickLenses` prefers approved per-topic wording, then the generic prompt.
-- Once `difficulty` exists: RISKY and the ghost should prefer `deep` topics, campfires `gentle`.
-- **Admin curation page** (`require_admin!`, like `Api::BooksController`) for prompts,
-  difficulty and tags. Ask before bulk-editing Topicificator data.
-- **Journey log viewer** for completed journeys.
+Decisions made with the user: difficulty is curated by hand (no bulk data changes); the old
+Bootstrap Topicificator admin pages were replaced by one React app in the current styles
+(shared `components/ui` + the `@theme` tokens, committed separately first).
+
+- **Data** (migrations `20260927120000..120200`): `topics.difficulty` (gentle / standard /
+  deep, nullable = standard), `topic_tags` (Topic ↔ the shared `Tag` vocabulary; declared on
+  Topic only), `topic_sharing_prompts` (`topic`, `sharing_mode`, `text`, `status`
+  draft/approved/rejected, `source` human/ai, `enabled`). Only **approved** rows reach the game.
+- **Game**: draws return `difficulty` and approved `prompts`; `modesForTopic` (`quest/sharing.js`)
+  swaps in per-topic wording and drops lenses switched off for the topic. `difficulty=` on
+  `/api/v1/quest_topics/draw` is a preference (topped up from the rest, never empty): the ghost
+  and RISKY lean deep, campfires lean gentle and avoid deep. Revisits fetch
+  `GET /api/v1/quest_topics/:id` for current prompts.
+- **Topicificator admin** at `/admin_panel/topicificator` (admins only; React,
+  `entrypoints/topicificator_admin.jsx`, `components/topicificator_admin/*`, JSON under
+  `/api/admin/*` in `Api::Admin::*`): topics list with search + filters (set, category,
+  difficulty, tag, drafts) in the URL; topic editor (fields, difficulty, tags incl. new ones,
+  "Ways to share": approve custom wording, save draft, reject, switch off, back to generic);
+  topic sets and categories (create/edit/delete). Categories have a Lucide icon
+  (`topic_categories.icon_name`, kebab-case like `tags.icon_name`), chosen with
+  `components/ui/IconPicker.jsx` (suggestions + search over all Lucide icons) and drawn with
+  `components/ui/LucideIcon.jsx` (loaded on demand via `lucide-react/dynamic`). The game keeps
+  its pixel icons. Sets or topics used by a journey log can't be
+  deleted; deleting a category moves its topics to the Open Road.
+- **Old pages**: `/topic_sets`, `/topic_categories` (+ `/:id`, new, edit) and `/topics/new`,
+  `/topics/:id/edit` redirect browsers to the React admin; their JSON stays (ACID QUEST reads
+  `/topic_categories.json`, the older game `/topic_categories/:id`). Writes through the old
+  controllers now require an admin (they had no auth). The public `/topics` search page is
+  unchanged except its category badge is no longer a link.
+- **Journey log viewer**: completed journeys get a "Log" button on the journeys screen: Quest
+  Complete plus "The road, step by step" (`GET /api/v1/quest_sessions/:id/log`,
+  `JourneyStats#timeline`). Passes, draws, forks and plain stop arrivals are left out so a pass
+  can't be read off the log.
+- Styling note: `reader.css` has unlayered `h1 { font-size }` and light-mode
+  `button { background-color }` rules that beat Tailwind utilities; the admin uses `!` variants.
+  The shared `SegmentedControl`'s active tint is affected by the same button rule.
+
+## Next
+
+- Phase 3 authoring can now write `topic_sharing_prompts` drafts (`source: "ai"`) and suggest
+  difficulty; the admin's "Has drafts to review" filter is the review queue.
+- Remaining Bootstrap pages (groups, meetings, polls, hostificators, books, icons, admin users,
+  game server docs, Devise screens) are still to be moved to React + the current styles.
 - Not built: gates opened by a condition or by spending Courage (the user chose room vote only).
 
 ## Phase 3 (later, AI)

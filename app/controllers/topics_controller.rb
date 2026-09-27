@@ -1,4 +1,7 @@
 class TopicsController < ApplicationController
+  include TopicificatorAdminPages
+
+  before_action :require_topicificator_admin!, only: %i[new edit create update destroy]
   before_action :set_topic, only: %i[ show edit update destroy ]
 
   # GET /topics or /topics.json
@@ -44,51 +47,33 @@ end
   end
   end
 
-  # GET /topics/new
-  def new
-    @topic = Topic.new
-  end
+  # The topic forms live in the React admin now
+  def new = redirect_to_admin("topics/new")
+  def edit = redirect_to_admin("topics/#{@topic.id}")
 
-  # GET /topics/1/edit
-  def edit
-  end
-
-  # POST /topics or /topics.json
+  # POST /topics.json
   def create
     @topic = Topic.new(topic_params)
-
-    respond_to do |format|
-      if @topic.save
-        format.html { redirect_to topic_url(@topic), notice: "Topic was successfully created." }
-        format.json { render :show, status: :created, location: @topic }
-      else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @topic.errors, status: :unprocessable_entity }
-      end
+    if @topic.save
+      render json: @topic, status: :created
+    else
+      render json: @topic.errors, status: :unprocessable_entity
     end
   end
 
-  # PATCH/PUT /topics/1 or /topics/1.json
+  # PATCH/PUT /topics/1.json
   def update
-    respond_to do |format|
-      if @topic.update(topic_params)
-        format.html { redirect_to topic_url(@topic), notice: "Topic was successfully updated." }
-        format.json { render :show, status: :ok, location: @topic }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @topic.errors, status: :unprocessable_entity }
-      end
+    if @topic.update(topic_params)
+      render json: @topic
+    else
+      render json: @topic.errors, status: :unprocessable_entity
     end
   end
 
-  # DELETE /topics/1 or /topics/1.json
+  # DELETE /topics/1.json
   def destroy
     @topic.destroy
-
-    respond_to do |format|
-      format.html { redirect_to topics_url, notice: "Topic was successfully destroyed." }
-      format.json { head :no_content }
-    end
+    head :no_content
   end
 
   private

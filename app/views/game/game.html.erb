@@ -95,6 +95,14 @@
   .quest-resources-summary .quest-resource { display: inline-flex; align-items: center; gap: 6px; }
   .quest-resources-summary img { width: 24px; height: 24px; image-rendering: pixelated; }
   .quest-gate-question { margin: 12px 0 6px; }
+  .quest-timeline ol { max-height: 34vh; overflow: auto; margin: 0; padding-left: 22px; font-size: 15px; color: #dfe6ff; }
+  .quest-timeline li { margin: 2px 0; }
+  .quest-session-log {
+    padding: 0 10px; background: rgba(20,16,30,.35); color: var(--q-accent);
+    border: 2px solid transparent; border-radius: 4px; cursor: pointer; font: 12px Silkscreen, monospace;
+  }
+  .quest-session-log:hover, .quest-session-log:focus-visible { outline: none; color: #fff; border-color: rgba(255,255,255,.6); }
+  .quest-session-log[hidden] { display: none; }
   .quest-pulse { animation: quest-pulse .5s steps(2) 6; }
   @keyframes quest-pulse { 50% { background: var(--q-accent); color: var(--q-ink); } }
   /* the help dialog sits low so the traveler and merchant stay in view */

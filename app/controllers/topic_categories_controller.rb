@@ -1,72 +1,64 @@
+# Topic categories. Browsers go to the React admin (Categories tab); JSON stays - ACID QUEST
+# reads /topic_categories.json and the older game reads /topic_categories/:id.
 class TopicCategoriesController < ApplicationController
-  before_action :set_topic_category, only: %i[ show edit update destroy ]
+  include TopicificatorAdminPages
 
-  # GET /topic_categories or /topic_categories.json
+  before_action :require_topicificator_admin!, only: %i[new edit create update destroy]
+  before_action :set_topic_category, only: %i[show edit update destroy]
+
+  # GET /topic_categories.json
   def index
     @topic_categories = TopicCategory.all
+    respond_to do |format|
+      format.json
+      format.html { redirect_to_admin("categories") }
+    end
   end
 
-  # GET /topic_categories/1 or /topic_categories/1.json
+  # GET /topic_categories/1(.json) - JSON first, so plain fetch() calls get JSON
   def show
+    respond_to do |format|
+      format.json
+      format.html { redirect_to_admin(category_id: @topic_category.id) }
+    end
   end
 
-  # GET /topic_categories/new
-  def new
-        @icons = Icon.all
-    @topic_category = TopicCategory.new
-  end
+  def new = redirect_to_admin("categories")
+  def edit = redirect_to_admin("categories")
 
-  # GET /topic_categories/1/edit
-  def edit
-    @icons = Icon.all
-  end
-
-  # POST /topic_categories or /topic_categories.json
   def create
     @topic_category = TopicCategory.new(topic_category_params)
-
-    respond_to do |format|
-      if @topic_category.save
-        format.html { redirect_to @topic_category, notice: "Topic category was successfully created." }
-        format.json { render :show, status: :created, location: @topic_category }
-      else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @topic_category.errors, status: :unprocessable_entity }
-      end
+    if @topic_category.save
+      render :show, formats: :json, status: :created
+    else
+      render json: @topic_category.errors, status: :unprocessable_entity
     end
   end
 
-  # PATCH/PUT /topic_categories/1 or /topic_categories/1.json
   def update
-    respond_to do |format|
-      if @topic_category.update(topic_category_params)
-        format.html { redirect_to @topic_category, notice: "Topic category was successfully updated." }
-        format.json { render :show, status: :ok, location: @topic_category }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @topic_category.errors, status: :unprocessable_entity }
-      end
+    if @topic_category.update(topic_category_params)
+      render :show, formats: :json
+    else
+      render json: @topic_category.errors, status: :unprocessable_entity
     end
   end
 
-  # DELETE /topic_categories/1 or /topic_categories/1.json
+  # Its topics move to the Open Road (no category)
   def destroy
-    @topic_category.destroy!
-
-    respond_to do |format|
-      format.html { redirect_to topic_categories_path, status: :see_other, notice: "Topic category was successfully destroyed." }
-      format.json { head :no_content }
+    TopicCategory.transaction do
+      @topic_category.topics.update_all(topic_category_id: nil)
+      @topic_category.destroy!
     end
+    head :no_content
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_topic_category
-      @topic_category = TopicCategory.find(params.expect(:id))
-    end
 
-    # Only allow a list of trusted parameters through.
-    def topic_category_params
-      params.expect(topic_category: [ :title, :cat, :icon_id ])
-    end
+  def set_topic_category
+    @topic_category = TopicCategory.find(params.expect(:id))
+  end
+
+  def topic_category_params
+    params.expect(topic_category: [:title, :cat, :icon_id, :icon_name])
+  end
 end
