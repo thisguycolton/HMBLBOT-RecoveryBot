@@ -5,7 +5,8 @@ import { describeTool } from "../tools";
 
 // QUEST COMPLETE: journey statistics (never scores) and the topics the group explored.
 // Passes are intentionally absent.
-export function renderSummary(el, summary, { modeNames, iconUrl, onCopy, onClose }) {
+// tale (optional): { load() -> { enabled, styles, remaining, stories }, create(style) -> story }
+export function renderSummary(el, summary, { modeNames, iconUrl, onCopy, onClose, tale }) {
   const s = summary.stats;
   const found = { courage: s.courage_found, connection: s.connections_made, hope: s.hope_found };
   const stat = (value, label) => h("div", { class: "quest-stat" }, h("strong", {}, String(value)), h("span", {}, label));
@@ -27,6 +28,7 @@ export function renderSummary(el, summary, { modeNames, iconUrl, onCopy, onClose
           h("ul", {}, ...summary.topics.map((t) =>
             h("li", {}, h("strong", {}, t.title), t.modes.length ? ` · ${t.modes.map((k) => modeNames[k] || k).join(", ")}` : ""))))
       : null,
+    tale ? taleSection(tale) : null,
     summary.timeline?.length
       ? h("div", { class: "quest-topic-log quest-timeline" },
           h("p", { class: "quest-path-title" }, "The road, step by step"),
@@ -88,4 +90,59 @@ export function timelineLines(timeline, modeNames = {}) {
   }
   walk();
   return lines;
+}
+
+// "Tell our tale": opt-in, clearly fiction. Hidden when the server has no storyteller set up.
+function taleSection(tale) {
+  const box = h("div", { class: "quest-tale", hidden: "" });
+  const list = h("div", { class: "quest-tale-list" });
+  const status = h("p", { class: "quest-muted quest-tale-status" });
+  const buttons = h("div", { class: "quest-tale-styles" });
+  let state = null;
+
+  const showStory = (story) => {
+    const text = h("div", { class: "quest-tale-body" }, ...story.body.split(/\n\s*\n/).map((p) => h("p", {}, p.trim())));
+    list.prepend(h("article", { class: "quest-tale-story" },
+      h("p", { class: "quest-tale-title" }, story.title || "Our tale"),
+      h("p", { class: "quest-tale-style" }, `${story.style_name} \u00b7 fiction`),
+      text,
+      h("button", { class: "quest-link", type: "button", onclick: () => navigator.clipboard?.writeText(`${story.title || "Our tale"}\n\n${story.body}`) }, "Copy tale")));
+  };
+
+  const renderButtons = () => {
+    buttons.replaceChildren(...state.styles.map((s) =>
+      h("button", { class: "quest-btn quest-btn-secondary", type: "button", disabled: state.remaining <= 0 ? "" : null, onclick: () => tell(s) }, s.name)));
+    status.textContent = state.remaining > 0
+      ? `Pick a style. ${state.remaining} tale${state.remaining === 1 ? "" : "s"} left for this journey.`
+      : "This journey has all its tales.";
+  };
+
+  const tell = async (style) => {
+    buttons.querySelectorAll("button").forEach((b) => (b.disabled = true));
+    status.textContent = "The storyteller gathers the threads\u2026";
+    try {
+      const story = await tale.create(style.key);
+      state.remaining -= 1;
+      showStory(story);
+    } catch (e) {
+      status.textContent = e.message || "The storyteller couldn't finish this one. Try again.";
+      buttons.querySelectorAll("button").forEach((b) => (b.disabled = false));
+      return;
+    }
+    renderButtons();
+  };
+
+  tale.load().then((s) => {
+    state = s;
+    if (!s.enabled && !s.stories.length) return;
+    s.stories.forEach(showStory);
+    if (s.enabled) renderButtons();
+    box.hidden = false;
+  }).catch(() => {});
+
+  box.append(
+    h("p", { class: "quest-path-title" }, "Tell our tale"),
+    h("p", { class: "quest-muted" }, "A made-up story of this journey, written by AI from the road alone: places, topics and ways of sharing. No names, nothing anyone said."),
+    buttons, status, list);
+  return box;
 }

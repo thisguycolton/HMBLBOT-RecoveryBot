@@ -189,10 +189,42 @@ Bootstrap Topicificator admin pages were replaced by one React app in the curren
   game server docs, Devise screens) are still to be moved to React + the current styles.
 - Not built: gates opened by a condition or by spending Courage (the user chose room vote only).
 
-## Phase 3 (later, AI)
+## Phase 3: AI on free tiers (built; live once keys are set)
 
-- Offline authoring: rake task drafts topic × lens wording with Claude (Ruby `anthropic` gem,
-  Message Batches, structured output) into `topic_sharing_prompts` as drafts; humans approve; the
-  live game only uses approved wording.
-- Post-meeting fictional story from the `/journey` JSON only (no people data exists), opt-in,
-  clearly fiction, several styles.
+Decisions with the user: no paid Claude key. Use free tiers - Google Gemini and OpenRouter's
+free models - through a provider-neutral client, with local Ollama as an option.
+
+- **`LlmClient`** (`app/services/llm_client.rb`): stdlib `Net::HTTP` client for OpenAI-compatible
+  `/chat/completions` with JSON-schema output. Each job has a **chain** of `provider:model`
+  entries and moves down it when one is busy (503 / busy shared pool), out of quota, or
+  unavailable; only the last entry retries, because every attempt spends free quota.
+  - Keys: `GEMINI_API_KEY`, `OPENROUTER_API_KEY` (or credentials `gemini.api_key` /
+    `openrouter.api_key`); entries without a key are skipped. `OLLAMA_URL` for local Ollama.
+  - Tales, `QUEST_AI_STORY_CHAIN`: gemini-3.8-flash -> openrouter dots-3-note-preview:free ->
+    gemini-3.5-flash -> openrouter nemotron-3-ultra:free.
+  - Drafting, `QUEST_AI_DRAFT_CHAIN`: gemini-3.5-flash -> dots -> nemotron-ultra (leaves Gemini
+    3.8's quota for tales).
+  - Free quotas, measured 2026-09-27: Gemini 20 requests per day per model; OpenRouter 50 free
+    requests per day per account (1,000 after a one-time $10 credit purchase), and popular free
+    models (Qwen, Gemma) are often busy upstream. Free tiers may use what's sent to improve their
+    models: only journey facts and topic titles are ever sent.
+- **Tell our tale** (`QuestStoryGenerator`, `quest_stories`, `GET/POST
+  /api/v1/quest_sessions/:id/stories`): opt-in on Quest Complete and the journey log; five
+  styles; 250-450 words; labelled fiction. Facts come only from `JourneyStats`: short topic
+  headlines, encounters, items, gates, miles and resources. Ways of sharing, share counts, passes
+  and declined gates are never sent. The rules: the party always acts as one, nobody singled
+  out, no invented or described shares, humour kept off the topics, 6-10 topics as landmarks.
+  Max 5 tales per journey and `QUEST_AI_DAILY_TALES` (default 100) per day overall. The section
+  is hidden when no provider is configured. A tale takes 5-70s, depending on how far down the
+  chain it has to go.
+- **Drafting per-topic wording** (`SharingPromptDrafter`, `bin/rails quest:draft_prompts`): one
+  request per topic for all its missing ways of sharing, saved as `draft`/`ai`; never touches
+  existing rows. Options: `SET=`, `TOPIC_IDS=`, `MODES=`, `LIMIT=` (25), `DELAY=` (5s),
+  `CHAIN=`, `DRY_RUN=1`. It stops cleanly when the quota is used up; re-run to resume. It writes
+  to the database of wherever it runs, so for production run it on the server (CapRover
+  container). Free quotas allow about 70 topics a day. Review at
+  `/admin_panel/topicificator?prompts=draft`.
+- Checked live: Gemini writes the best tales and drafts. Dots 3 Note is the best free OpenRouter
+  model for drafts; Nemotron Ultra is usable but templated, and its tale needed the "don't
+  describe shares" rule. Also tested against local Ollama. `tale.mjs` checks the hidden state
+  without AI, and writes and deletes a tale with `BASE=` pointing at a server that has AI.

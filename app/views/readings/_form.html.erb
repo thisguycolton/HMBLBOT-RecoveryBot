@@ -29,6 +29,9 @@
             }
           </style>
 
-          <div id="reading-editor-root" data-reading="<%= json_escape(@reading_payload.to_json) %>"
+          <div id="reading-editor-root" class="w-full self-start" data-reading="<%= json_escape(@reading_payload.to_json) %>"
             data-current-user="<%= json_escape(@current_user_payload.to_json) %>"
             data-tags="<%= json_escape(Tag.order(:title).select(:id, :title, :slug).as_json.to_json) %>"></div>
+
+
+  

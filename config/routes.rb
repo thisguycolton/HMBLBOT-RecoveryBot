@@ -63,6 +63,7 @@ Rails.application.routes.draw do
       resources :quest_sessions, only: [:create, :show, :index, :update, :destroy] do
         resources :quest_inventory, only: [:show, :update], singleton: true
         resources :log_entries, only: [:create], controller: "quest_log_entries"
+        resources :stories, only: [:index, :create], controller: "quest_stories"
         member do
           get :journey
           get :log
@@ -149,7 +150,9 @@ end
       end
     end
   end
-  resources :readings
+  resources :readings do
+    get :mine, on: :collection
+  end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Defines the root path route ("/")

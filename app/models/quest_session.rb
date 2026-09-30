@@ -3,6 +3,7 @@ class QuestSession < ApplicationRecord
   belongs_to :topic_set, optional: true
   has_one :quest_inventory, dependent: :destroy
   has_many :quest_log_entries, dependent: :destroy
+  has_many :quest_stories, dependent: :destroy
 
   validates :join_code, presence: true, uniqueness: true
   validates :status, inclusion: { in: %w[active completed] }

@@ -62,6 +62,7 @@ class JourneyStats
         kind: e.kind,
         encounter: e.encounter,
         topic: e.topic && title(e.topic),
+        headline: e.topic && headline(e.topic),
         sharing_mode: e.sharing_mode_key,
         approach: e.approach,
         data: e.data.slice("tiles", "cannon", "item", "uses", "legendary", "obstacle", "mode", "opened"),
@@ -78,5 +79,14 @@ class JourneyStats
 
   def title(topic)
     [topic.title, topic.subtitle].compact_blank.join(" ")
+  end
+
+  # The topic's own title, without a subtitle - unless the title was split mid-phrase on import
+  # ("Letting Go (of" / "People, Places and Things)"). Same rule as displayTopic in the game.
+  RUNS_ON = /[(,\-&]\z|\b(of|the|and|a|an|to|for|in|on|with|or|my|your|our|is|are)\z/i
+
+  def headline(topic)
+    t, sub = topic.title.to_s.squish, topic.subtitle.to_s.squish
+    sub.present? && (t.match?(RUNS_ON) || sub.match?(/\A[a-z)(]/)) ? "#{t} #{sub}" : t
   end
 end

@@ -516,39 +516,6 @@ const topicHtml = renderRichContent(topicSource);
       </div>
       </div>
 
-      <style>{`
-        .reading-prose {
-          font-family: "Gentium Book Plus", serif;
-          font-size: 1.2rem;
-          line-height: 1.8;
-        }
-
-        .reading-prose h1,
-        .reading-prose h2,
-        .reading-prose h3 {
-          font-family: "Montserrat", sans-serif;
-          margin-top: 1.5rem;
-          margin-bottom: 1rem;
-          font-weight: 700;
-        }
-
-        .reading-prose p {
-          margin-bottom: 1.25rem;
-        }
-
-        .reading-prose hr {
-          margin: 1.5rem 0;
-        }
-
-        .reading-topics ul {
-          padding-left: 1.5rem;
-          margin: 0;
-        }
-
-        .reading-topics li {
-          margin-bottom: 0.75rem;
-        }
-      `}</style>
     </>
   );
 }

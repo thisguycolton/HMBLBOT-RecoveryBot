@@ -21,5 +21,5 @@ run tools_unit.mjs
 run phase2_unit.mjs
 node find_seeds.mjs >/dev/null 2>&1   # finds a reachable town and castle for obstacles_help_towns
 (cd ../../.. && SENTRY_DSN= bin/rails runner script/quest/e2e/ensure_admin.rb) >/dev/null 2>&1   # local test admin
-for t in core_loop encounters tools_merchant_ghost_cannon obstacles_help_towns categories tool_merge phase2 topicificator_admin; do run "$t.mjs"; done
+for t in core_loop encounters tools_merchant_ghost_cannon obstacles_help_towns categories tool_merge phase2 topicificator_admin tale; do run "$t.mjs"; done
 exit $status

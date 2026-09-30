@@ -1,12 +1,4 @@
-<% if Rails.env.development? %>
-  <script type="module">
-    import RefreshRuntime from "/vite-dev/@react-refresh";
-    RefreshRuntime.injectIntoGlobalHook(window);
-    window.$RefreshReg$ = () => { };
-    window.$RefreshSig$ = () => (type) => type;
-    window.__vite_plugin_react_preamble_installed__ = true;
-  </script>
-  <% end %>
+
 
     <%= vite_client_tag %>
       <%= vite_javascript_tag "topicificator.jsx" %>
@@ -26,7 +18,7 @@
           }
         </style>
 
-<div id="reading-editor-root" data-reading="<%= json_escape({
+<div id="reading-editor-root" class="w-full self-start" data-reading="<%= json_escape({
     id: @reading.id,
     title: @reading.title,
     source: @reading.source,
@@ -36,11 +28,13 @@
     meetingDate: @reading.meetingDate,
     meetingTime: @reading.meetingTime&.strftime('%H:%M:%S'),
     group_id: @reading.group_id,
+    published_at: @reading.published_at&.iso8601,
     content: @reading.content&.body&.to_s,
     content_html: @reading.content&.body&.to_s,
     richer_content_html: @reading.richer_content&.body&.to_s,
     topic_html: @reading.topic&.body&.to_s,
-    topic: @reading.topic&.body&.to_s
+    topic: @reading.topic&.body&.to_s,
+    tag_ids: @reading.tags.pluck(:id)
   }.to_json) %>" data-current-user="<%= json_escape({
     id: current_user&.id,
     name: current_user&.name,

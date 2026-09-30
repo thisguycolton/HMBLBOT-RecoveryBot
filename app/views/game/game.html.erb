@@ -103,6 +103,16 @@
   }
   .quest-session-log:hover, .quest-session-log:focus-visible { outline: none; color: #fff; border-color: rgba(255,255,255,.6); }
   .quest-session-log[hidden] { display: none; }
+  /* Tell our tale */
+  .quest-tale[hidden] { display: none; }
+  .quest-tale { margin-bottom: 12px; }
+  .quest-tale-styles { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .quest-tale-styles .quest-btn { font-size: 11px; padding: 6px 10px; }
+  .quest-tale-story { margin-top: 10px; padding: 12px 14px; background: #f3e6c4; color: #3b2a1a; border: 2px solid #14101e; border-radius: 4px; max-height: 40vh; overflow: auto; }
+  .quest-tale-title { font: 16px Silkscreen, monospace; margin: 0; }
+  .quest-tale-style { font-size: 12px; margin: 2px 0 8px; opacity: .7; text-transform: uppercase; letter-spacing: .05em; }
+  .quest-tale-body p { margin: 0 0 8px; font-size: 15px; line-height: 1.45; }
+  .quest-tale-story .quest-link { color: #5c3841; }
   .quest-pulse { animation: quest-pulse .5s steps(2) 6; }
   @keyframes quest-pulse { 50% { background: var(--q-accent); color: var(--q-ink); } }
   /* the help dialog sits low so the traveler and merchant stay in view */

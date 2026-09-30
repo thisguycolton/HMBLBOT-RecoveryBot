@@ -15,6 +15,7 @@ import ChapterAdmin from "../components/ChapterAdmin";
 import ReadingArchive from "../components/ReadingArchive";
 import ReadingEditor from "../components/ReadingEditor";
 import ReadingShow from "../components/ReadingShow";
+import MyReadings from "../components/MyReadings";
 import HomePage from "../components/HomePage";
 import CourtVerificationForm from "../components/CourtVerificationForm";
 import ScratchPaper from "../components/ScratchPaper";
@@ -140,12 +141,25 @@ mountReact("court-verification-root", () => (
 // ---------------- Reading Archive ----------------
 mountReact("reading-archive-root", (rootEl) => {
   const readings = JSON.parse(rootEl.dataset.readings || "[]");
+  const tags = JSON.parse(rootEl.dataset.tags || "[]");
   const notice = rootEl.dataset.notice || "";
 
   return (
     <Layout isAuthenticated={isAuthenticated}>
-      <ReadingArchive readings={readings} notice={notice} />
+      <ReadingArchive readings={readings} tags={tags} notice={notice} />
     </Layout>
+  );
+});
+
+// ---------------- My Readings ----------------
+mountReact("my-readings-root", (rootEl) => {
+  const readings = JSON.parse(rootEl.dataset.readings || "[]");
+
+  return (
+    <>
+    <Navbar isAuthenticated={isAuthenticated} />
+    <MyReadings readings={readings} notice={rootEl.dataset.notice || ""} alert={rootEl.dataset.alert || ""} />
+    </>
   );
 });
 

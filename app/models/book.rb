@@ -1,5 +1,6 @@
 class Book < ApplicationRecord
   has_many :chapters, dependent: :destroy
+  has_many :pages, dependent: :delete_all
   validates :slug, presence: true, uniqueness: true
 
     def self.ransackable_attributes(auth_object = nil)

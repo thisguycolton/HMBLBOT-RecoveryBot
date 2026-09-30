@@ -769,6 +769,7 @@ export default class QuestApp {
       renderSummary(this.el.summaryBody, summary, {
         modeNames: this.modeNames,
         iconUrl,
+        tale: this.taleFor(this.session.id),
         onCopy: async () => {
           await copySummary(summary);
           this.notice("Topics copied.");
@@ -784,6 +785,24 @@ export default class QuestApp {
     }
   }
 
+  // "Tell our tale" for one journey (the server says whether a storyteller is set up)
+  taleFor(sessionId) {
+    const base = `/api/v1/quest_sessions/${sessionId}/stories`;
+    return {
+      load: () => this.api(base),
+      create: async (style) => {
+        const response = await fetch(base, {
+          method: "POST",
+          headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content },
+          body: JSON.stringify({ style }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "The storyteller couldn't finish this one. Try again.");
+        return data;
+      },
+    };
+  }
+
   // A finished journey, read back: Quest Complete plus the road step by step
   async showLog(session) {
     try {
@@ -792,6 +811,7 @@ export default class QuestApp {
       renderSummary(this.el.summaryBody, log, {
         modeNames: Object.fromEntries(this.modesCache.map((m) => [m.key, m.name])),
         iconUrl,
+        tale: this.taleFor(session.id),
         onCopy: async () => {
           await copySummary(log);
           this.notice("Topics copied.");

@@ -1,33 +1,47 @@
-<%# app/views/readings/index.html.erb %>
+    <%= vite_client_tag %>
+      <%= vite_javascript_tag "topicificator.jsx" %>
 
-  <% if Rails.env.development? %>
-    <script type="module">
-      import RefreshRuntime from "/vite-dev/@react-refresh";
-      RefreshRuntime.injectIntoGlobalHook(window);
-      window.$RefreshReg$ = () => { };
-      window.$RefreshSig$ = () => (type) => type;
-      window.__vite_plugin_react_preamble_installed__ = true;
-    </script>
-    <% end %>
+        <style>
+          html {
+            color-scheme: autolight dark;
+          }
 
-      <%= vite_client_tag %>
-        <%= vite_javascript_tag "topicificator.jsx" %>
+          .container footer {
+            display: none !important;
+            width: 0 !important;
+          }
 
-          <style>
-            html {
-              color-scheme: autolight dark;
-            }
+          footer {
+            min-height: auto !important;
+          }
+        </style>
 
-            .container footer {
-              display: none !important;
-              width: 0 !important;
-            }
-
-            footer {
-              min-height: auto !important;
-            }
-          </style>
-
-          <div id="reading-editor-root" data-reading="<%= json_escape(@reading_payload.to_json) %>"
-            data-current-user="<%= json_escape(@current_user_payload.to_json) %>"
-            data-tags="<%= json_escape(Tag.order(:title).select(:id, :title, :slug).as_json.to_json) %>"></div>
+        <div id="reading-editor-root" data-reading="<%= json_escape({
+    id: @reading.id,
+    title: @reading.title,
+    source: @reading.source,
+    host: @reading.host,
+    meetingName: @reading.meetingName,
+    meetingUrl: @reading.meetingUrl,
+    meetingDate: @reading.meetingDate,
+    meetingTime: @reading.meetingTime&.strftime('%H:%M:%S'),
+    group_id: @reading.group_id,
+    published_at: @reading.published_at&.iso8601,
+    content: @reading.content&.body&.to_s,
+    content_html: @reading.content&.body&.to_s,
+    richer_content_html: @reading.richer_content&.body&.to_s,
+    topic_html: @reading.topic&.body&.to_s,
+    topic: @reading.topic&.body&.to_s,
+    tag_ids: @reading.tags.pluck(:id)
+  }.to_json) %>" data-current-user="<%= json_escape({
+    id: current_user&.id,
+    name: current_user&.name,
+    user_active_group: current_user&.user_active_group&.group && {
+      group: {
+        id: current_user.user_active_group.group.id,
+        title: current_user.user_active_group.group.title,
+        meetingLink: current_user.user_active_group.group.meetingLink
+      }
+    }
+  }.to_json) %>" style="" class="w-full self-start"
+          data-tags="<%= json_escape(Tag.order(:title).select(:id, :title, :slug).as_json.to_json) %>"></div>

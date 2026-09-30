@@ -47,5 +47,7 @@
             }
           </style>
 
-          <div id="reading-archive-root" class="w-screen min-h-screen" data-turbo="false"
-            data-readings="<%= json_escape(@readings_json.to_json) %>" data-notice="<%= notice.to_s %>"></div>
+<div id="reading-archive-root" class="w-screen min-h-screen" data-turbo="false"
+    data-readings="<%= json_escape(@readings_json.to_json) %>" 
+    data-tags="<%= json_escape(@tags_json.to_json) %>" 
+    data-notice="<%= notice.to_s %>"></div>

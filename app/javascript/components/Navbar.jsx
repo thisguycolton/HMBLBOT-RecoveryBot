@@ -7,6 +7,7 @@ import {
   LogOut,
   Plus,
   Bookmark,
+  NotebookPen,
   Settings,
   ScrollText,
   Moon,
@@ -22,6 +23,7 @@ export default function Navbar({
   scratchpaperPath = "/host_helper/scratchpaper",
   gameServerGuidePath = "/game_server/getting_started",
   meetingReadingsPath = "/readings",
+  myReadingsPath = "/readings/mine",
   serviceReadingsPath = "/service_readings",
   newReadingPath = "/readings/new",
   accountSettingsPath = "/users/edit",
@@ -142,6 +144,12 @@ function LogoutButton({ className = "" }) {
             className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             <Plus className="inline pr-2"/> New Reading
+          </a>
+          <a
+            href={myReadingsPath}
+            className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <NotebookPen className="inline pr-2"/> My Readings
           </a>
           <a
             href={meetingReadingsPath}
@@ -364,6 +372,14 @@ function LogoutButton({ className = "" }) {
       >
         <Plus className="inline pr-2" />
         New Reading
+      </a>
+
+      <a
+        href={myReadingsPath}
+        className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+      >
+        <NotebookPen className="inline pr-2" />
+        My Readings
       </a>
 
       <a

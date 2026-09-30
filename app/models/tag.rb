@@ -5,9 +5,10 @@ class Tag < ApplicationRecord
   validates :title, presence: true, uniqueness: true
   before_validation :set_slug
 
-  private
+  scope :alphabetical, -> { order(:title) }
 
-  def set_slug
+  private
+def set_slug
     self.slug = title.to_s.parameterize if slug.blank?
-  end
+end
 end
