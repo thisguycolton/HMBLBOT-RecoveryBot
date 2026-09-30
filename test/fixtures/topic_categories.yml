@@ -2,10 +2,10 @@
 
 one:
   title: MyString
-  icon: MyString
+  icon_id: <%= ActiveRecord::FixtureSet.identify(:one) %>
   cat: MyString
 
 two:
   title: MyString
-  icon: MyString
+  icon_id: <%= ActiveRecord::FixtureSet.identify(:one) %>
   cat: MyString
