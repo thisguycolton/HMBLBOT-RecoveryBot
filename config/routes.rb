@@ -127,6 +127,9 @@ end
     end
     # React app; every path below it routes on the client
     get "topicificator(/*path)", to: "topicificator#show", as: :topicificator
+    resources :court_verifications, only: :index do
+      get :print, on: :collection
+    end
   end
 
   # JSON behind the Topicificator admin (admins only)
@@ -141,6 +144,9 @@ end
       end
       resources :topic_sets, only: %i[create update destroy]
       resources :topic_categories, only: %i[create update destroy]
+      resources :court_verifications, only: :index do
+        post :send_bundle, on: :collection
+      end
     end
   end
   resources :readings

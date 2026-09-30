@@ -1,0 +1,28 @@
+<%# One verification letter, worded like verification_email. Inline styles so it works in
+    email (bundle_email) and on paper (admin_panel/court_verifications/print). %>
+<div style="padding:28px 32px; color:#111827; font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.6;">
+  <p style="margin:0 0 4px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#0e7490;">
+    The Acid Test AA Meeting &middot; Meeting Attendance Verification
+  </p>
+  <p style="margin:16px 0;">To whom it may concern,</p>
+  <p style="margin:0 0 16px;">
+    This email verifies that <strong><%= verification.respondent_name %></strong> attended an Alcoholics Anonymous meeting.
+  </p>
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 16px; border-collapse:collapse;">
+    <% [["Meeting date / time", verification.meeting_time_label],
+        ["Topic", verification.topic.presence || "N/A"],
+        ["Host", verification.host_name],
+        ["Group", "The Acid Test AA Meeting"]].each do |label, value| %>
+      <tr>
+        <td style="padding:4px 16px 4px 0; vertical-align:top; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:#6b7280; white-space:nowrap;"><%= label %></td>
+        <td style="padding:4px 0; vertical-align:top;"><%= value %></td>
+      </tr>
+    <% end %>
+  </table>
+  <p style="margin:0 0 16px;">If you require additional verification, please email AAAcidTest@gmail.com.</p>
+  <p style="margin:0;">
+    Sincerely,<br>
+    The Acid Test AA Meeting<br>
+    <em style="color:#4b5563;">Signed by <%= verification.signer_name %></em>
+  </p>
+</div>
