@@ -9,6 +9,9 @@ Rails.application.configure do
   # Allow aa.humblebot.io
 config.hosts << "aa.humblebot.io"
 
+# Allow recoverybot.hmblbot.com
+config.hosts << "recoverybot.hmblbot.com"
+
 # Allow any subdomain of perpetualmulti.media
 config.hosts << /.*\.perpetualmulti\.media/
 
