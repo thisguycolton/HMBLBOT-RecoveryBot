@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_27_130000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_30_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -283,6 +283,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_27_130000) do
     t.index ["topic_set_id"], name: "index_quest_sessions_on_topic_set_id"
   end
 
+  create_table "quest_stories", force: :cascade do |t|
+    t.bigint "quest_session_id", null: false
+    t.string "style", null: false
+    t.string "title"
+    t.text "body", null: false
+    t.string "model"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["quest_session_id"], name: "index_quest_stories_on_quest_session_id"
+  end
+
   create_table "reading_tags", force: :cascade do |t|
     t.bigint "reading_id", null: false
     t.bigint "tag_id", null: false
@@ -305,6 +316,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_27_130000) do
     t.string "meetingUrl"
     t.string "host"
     t.bigint "group_id"
+    t.datetime "published_at"
     t.index ["group_id"], name: "index_readings_on_group_id"
     t.index ["user_id"], name: "index_readings_on_user_id"
   end
@@ -367,6 +379,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_27_130000) do
     t.string "slug"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "icon_name"
   end
 
   create_table "topic_categories", force: :cascade do |t|
@@ -483,6 +496,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_27_130000) do
   add_foreign_key "quest_log_entries", "topics"
   add_foreign_key "quest_sessions", "quest_players"
   add_foreign_key "quest_sessions", "topic_sets"
+  add_foreign_key "quest_stories", "quest_sessions"
   add_foreign_key "reading_tags", "readings"
   add_foreign_key "reading_tags", "tags"
   add_foreign_key "readings", "groups"

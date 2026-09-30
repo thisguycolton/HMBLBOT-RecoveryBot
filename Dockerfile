@@ -30,5 +30,5 @@ COPY . .
 # Build assets
 RUN yarn vite build
 
-# Start server
-CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
+# Run pending migrations, then start the server
+CMD ["sh", "-c", "bundle exec rails db:migrate && exec bundle exec puma -C config/puma.rb"]

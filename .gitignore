@@ -39,3 +39,10 @@ node_modules
 # https://vitejs.dev/guide/env-and-mode.html#env-files
 *.local
 
+# Local-only files that shouldn't ship in the image
+*.sql
+*.vsix
+session-*.md
+.cortexkit/
+.claude/
+.DS_Store
