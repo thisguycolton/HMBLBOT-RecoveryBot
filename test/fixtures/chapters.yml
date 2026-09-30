@@ -5,9 +5,13 @@ one:
   title: MyString
   number: 1
   content: MyText
+  slug: chapter-one
+  index: 1
 
 two:
   book: two
   title: MyString
   number: 1
   content: MyText
+  slug: chapter-one
+  index: 1

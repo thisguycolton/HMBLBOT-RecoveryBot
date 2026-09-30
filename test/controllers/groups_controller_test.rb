@@ -20,7 +20,7 @@ class GroupsControllerTest < ActionDispatch::IntegrationTest
       post groups_url, params: { group: { description: @group.description, location: @group.location, meetingLink: @group.meetingLink, remote: @group.remote, title: @group.title, website: @group.website } }
     end
 
-    assert_redirected_to group_url(Group.last)
+    assert_redirected_to root_url
   end
 
   test "should show group" do
@@ -39,8 +39,10 @@ class GroupsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should destroy group" do
+    # Groups that still have meetings or members can't be deleted yet, so use an empty one.
+    group = Group.create!(title: "Empty group")
     assert_difference("Group.count", -1) do
-      delete group_url(@group)
+      delete group_url(group)
     end
 
     assert_redirected_to groups_url

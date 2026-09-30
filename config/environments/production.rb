@@ -12,6 +12,9 @@ config.hosts << "aa.humblebot.io"
 # Allow any subdomain of perpetualmulti.media
 config.hosts << /.*\.perpetualmulti\.media/
 
+# Allow recoverybot.hmblbot.com
+config.hosts << "recoverybot.hmblbot.com"
+
   # Eager load code on boot. This eager loads most of Rails and
   # your application in memory, allowing both threaded web servers
   # and those relying on copy on write to perform better.
