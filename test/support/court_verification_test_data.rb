@@ -4,11 +4,17 @@ module CourtVerificationTestData
   def self.included(base)
     base.fixture_table_names = []
     base.fixture_sets = {}
+    # Rails 8 draws routes lazily, and Devise's sign_in needs the mappings they create
+    base.setup { Rails.application.reload_routes_unless_loaded }
   end
 
-  def create_user(admin:)
-    User.create!(email: "#{admin ? 'admin' : 'member'}-#{SecureRandom.hex(4)}@example.com",
-                 password: "password123", confirmed: true, admin: admin)
+  def create_user(admin:, email: "#{admin ? 'admin' : 'member'}-#{SecureRandom.hex(4)}@example.com")
+    User.create!(email: email, password: "password123", confirmed: true, admin: admin)
+  end
+
+  # the one admin allowed in (COURT_VERIFICATION_ADMIN_EMAILS)
+  def create_court_admin
+    create_user(admin: true, email: "court-admin@example.com")
   end
 
   # meeting_at given as Phoenix wall-clock time

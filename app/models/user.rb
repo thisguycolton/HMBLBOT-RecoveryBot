@@ -21,6 +21,13 @@ class User < ApplicationRecord
     super && confirmed?
   end
 
+  # Court verifications hold members' attendance records, so only the admins named in
+  # COURT_VERIFICATION_ADMIN_EMAILS (comma-separated) may look them up. Unset means nobody.
+  def court_verification_admin?
+    allowed = ENV["COURT_VERIFICATION_ADMIN_EMAILS"].to_s.split(",").map { |e| e.strip.downcase }
+    admin? && allowed.include?(email.to_s.downcase)
+  end
+
   # Provide a message if user is not confirmed
   def inactive_message
     confirmed? ? super : :unconfirmed

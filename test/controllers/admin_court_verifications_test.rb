@@ -7,12 +7,25 @@ class AdminCourtVerificationsTest < ActionDispatch::IntegrationTest
   include ActionMailer::TestHelper
 
   setup do
+    @previous_allowed = ENV["COURT_VERIFICATION_ADMIN_EMAILS"]
+    ENV["COURT_VERIFICATION_ADMIN_EMAILS"] = "someone@example.com, Court-Admin@example.com"
     # Phoenix is UTC-7 all year: 7pm on Aug 13 there is already Aug 14 in UTC
     @before = create_verification(name: "Pat Sample", meeting_at: "2026-08-13 19:00")
     @first = create_verification(name: "Pat Sample", meeting_at: "2026-08-14 07:00")
     @last = create_verification(name: "pat SAMPLE", meeting_at: "2026-09-24 23:30")
     @after = create_verification(name: "Pat Sample", meeting_at: "2026-09-25 07:00")
     @other = create_verification(name: "Someone Else", meeting_at: "2026-09-01 19:00", email: "else@example.com")
+  end
+
+  teardown { ENV["COURT_VERIFICATION_ADMIN_EMAILS"] = @previous_allowed }
+
+  test "other admins can't use it either" do
+    sign_in create_user(admin: true)
+
+    get admin_panel_court_verifications_path
+    assert_redirected_to root_path
+    get api_admin_court_verifications_path, as: :json
+    assert_response :forbidden
   end
 
   test "non-admins can't see the page, the API, the print view or send email" do
@@ -36,7 +49,7 @@ class AdminCourtVerificationsTest < ActionDispatch::IntegrationTest
   end
 
   test "filters by name, ignoring case, and by Phoenix meeting days inclusive" do
-    sign_in create_user(admin: true)
+    sign_in create_court_admin
     get api_admin_court_verifications_path(name: "sample", from: "2026-08-14", to: "2026-09-24"), as: :json
 
     assert_response :success
@@ -46,14 +59,14 @@ class AdminCourtVerificationsTest < ActionDispatch::IntegrationTest
   end
 
   test "filters by email and ignores a bad date" do
-    sign_in create_user(admin: true)
+    sign_in create_court_admin
     get api_admin_court_verifications_path(email: "ELSE@", from: "not-a-date"), as: :json
 
     assert_equal [@other.id], response.parsed_body["court_verifications"].map { |v| v["id"] }
   end
 
   test "CSV lists every match oldest first" do
-    sign_in create_user(admin: true)
+    sign_in create_court_admin
     get api_admin_court_verifications_path(format: :csv, name: "sample", from: "2026-08-14", to: "2026-09-24")
 
     assert_response :success
@@ -64,7 +77,7 @@ class AdminCourtVerificationsTest < ActionDispatch::IntegrationTest
   end
 
   test "print view renders one letter per match" do
-    sign_in create_user(admin: true)
+    sign_in create_court_admin
     get print_admin_panel_court_verifications_path(name: "sample", from: "2026-08-14", to: "2026-09-24")
 
     assert_response :success
@@ -73,7 +86,7 @@ class AdminCourtVerificationsTest < ActionDispatch::IntegrationTest
   end
 
   test "emails every match in one message" do
-    sign_in create_user(admin: true)
+    sign_in create_court_admin
 
     assert_enqueued_emails 1 do
       post send_bundle_api_admin_court_verifications_path,
@@ -84,7 +97,7 @@ class AdminCourtVerificationsTest < ActionDispatch::IntegrationTest
   end
 
   test "won't email without a valid address or with no matches" do
-    sign_in create_user(admin: true)
+    sign_in create_court_admin
 
     assert_no_enqueued_emails do
       post send_bundle_api_admin_court_verifications_path, params: { recipient: "nope" }, as: :json
