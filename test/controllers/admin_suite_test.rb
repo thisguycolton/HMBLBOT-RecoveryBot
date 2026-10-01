@@ -40,6 +40,8 @@ class AdminSuiteTest < ActionDispatch::IntegrationTest
       get path, as: :json
       assert_response :success, path
     end
+    get "/ahoy_captain"
+    assert_response :success
   end
 
   test "COURT_VERIFICATION_ADMIN_EMAILS still works when ADMIN_EMAILS is unset" do
