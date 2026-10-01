@@ -111,10 +111,9 @@ end
     resources :options
   end
   mount ActionCable.server => '/cable'
-  # Ahoy's own dashboard, for the admin suite only (User#suite_admin?)
-  authenticate :user, ->(user) { user.suite_admin? } do
-    mount AhoyCaptain::Engine => "/ahoy_captain"
-  end
+  # AhoyCaptain (Ahoy's own dashboard) isn't mounted: its charts need Groupdate, which needs
+  # ActiveRecord.default_timezone = :utc, and this app uses :local. The admin suite's
+  # Analytics page covers the same data.
 
   resources :books, param: :slug, only: [] do
     resources :chapters, param: :slug, only: [:index, :show, :edit]

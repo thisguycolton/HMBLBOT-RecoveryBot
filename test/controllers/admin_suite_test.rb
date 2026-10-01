@@ -16,7 +16,7 @@ class AdminSuiteTest < ActionDispatch::IntegrationTest
 
   teardown { ENV["ADMIN_EMAILS"], ENV["COURT_VERIFICATION_ADMIN_EMAILS"] = @previous }
 
-  test "only the listed admin gets in: pages, APIs and AhoyCaptain" do
+  test "only the listed admin gets in: pages and APIs" do
     [create_user(admin: false), create_user(admin: true)].each do |user|
       sign_in user
       %w[/admin_panel /admin_panel/users /admin_panel/analytics].each do |path|
@@ -27,8 +27,6 @@ class AdminSuiteTest < ActionDispatch::IntegrationTest
         get path, as: :json
         assert_response :forbidden, path
       end
-      get "/ahoy_captain"
-      assert_response :not_found
       sign_out user
     end
 
@@ -40,8 +38,6 @@ class AdminSuiteTest < ActionDispatch::IntegrationTest
       get path, as: :json
       assert_response :success, path
     end
-    get "/ahoy_captain"
-    assert_response :success
   end
 
   test "COURT_VERIFICATION_ADMIN_EMAILS still works when ADMIN_EMAILS is unset" do

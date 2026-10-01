@@ -23,7 +23,6 @@ const TABS = [
 // Older admin screens that live outside the suite
 export const OTHER_TOOLS = [
   { href: "/admin_panel/topicificator", label: "Topicificator admin", note: "Topics, sets, categories, ACID QUEST" },
-  { href: "/ahoy_captain", label: "AhoyCaptain", note: "Ahoy's own analytics dashboard" },
   { href: "/books", label: "Books", note: "Literature library" },
   { href: "/service_readings", label: "Service readings", note: "Readings for service positions" },
   { href: "/groups", label: "Groups & meetings", note: "Groups and their meetings" },

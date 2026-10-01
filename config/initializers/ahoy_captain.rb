@@ -168,13 +168,3 @@ AhoyCaptain.configure do |config|
   #
   # How frequently the page should refresh if the interval is realtime
 end
-
-# AhoyCaptain 1.1 asks for importmap-rails' es-module-shims tags, which importmap-rails 2 dropped
-# (browsers handle import maps natively now), so its pages raised NameError. Render them without.
-Rails.application.config.to_prepare do
-  AhoyCaptain::ApplicationHelper.prepend(Module.new do
-    def ahoy_captain_importmap_tags(entry_point = "application", shim: false)
-      super(entry_point, shim: false)
-    end
-  end)
-end
