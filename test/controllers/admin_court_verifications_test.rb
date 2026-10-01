@@ -22,7 +22,7 @@ class AdminCourtVerificationsTest < ActionDispatch::IntegrationTest
   test "other admins can't use it either" do
     sign_in create_user(admin: true)
 
-    get admin_panel_court_verifications_path
+    get "/admin_panel/court_verifications"
     assert_redirected_to root_path
     get api_admin_court_verifications_path, as: :json
     assert_response :forbidden
@@ -31,7 +31,7 @@ class AdminCourtVerificationsTest < ActionDispatch::IntegrationTest
   test "non-admins can't see the page, the API, the print view or send email" do
     sign_in create_user(admin: false)
 
-    get admin_panel_court_verifications_path
+    get "/admin_panel/court_verifications"
     assert_redirected_to root_path
     get print_admin_panel_court_verifications_path
     assert_redirected_to root_path
@@ -44,7 +44,7 @@ class AdminCourtVerificationsTest < ActionDispatch::IntegrationTest
   end
 
   test "signed-out visitors are sent to sign in" do
-    get admin_panel_court_verifications_path
+    get "/admin_panel/court_verifications"
     assert_redirected_to new_user_session_path
   end
 

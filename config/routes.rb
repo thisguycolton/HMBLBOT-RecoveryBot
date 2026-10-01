@@ -111,7 +111,10 @@ end
     resources :options
   end
   mount ActionCable.server => '/cable'
-  mount AhoyCaptain::Engine => '/ahoy_captain'
+  # Ahoy's own dashboard, for the admin suite only (User#suite_admin?)
+  authenticate :user, ->(user) { user.suite_admin? } do
+    mount AhoyCaptain::Engine => "/ahoy_captain"
+  end
 
   resources :books, param: :slug, only: [] do
     resources :chapters, param: :slug, only: [:index, :show, :edit]
@@ -121,16 +124,14 @@ end
   devise_for :users
 
   namespace :admin_panel do
-    resources :users, only: [:index] do
-      member do
-        patch :confirm
-      end
-    end
     # React app; every path below it routes on the client
     get "topicificator(/*path)", to: "topicificator#show", as: :topicificator
-    resources :court_verifications, only: :index do
+    resources :court_verifications, only: [] do
       get :print, on: :collection
     end
+    # The admin suite, another React app: everything else under /admin_panel
+    root "suite#show"
+    get "*path", to: "suite#show", as: :suite, format: false
   end
 
   # JSON behind the Topicificator admin (admins only)
@@ -148,6 +149,14 @@ end
       resources :court_verifications, only: :index do
         post :send_bundle, on: :collection
       end
+      # the admin suite (Api::Admin::SuiteController)
+      resource :overview, only: :show, controller: "overview"
+      resource :analytics, only: :show
+      resources :users, only: %i[index update] do
+        patch :confirm, on: :member
+      end
+      resources :readings, only: %i[index update destroy]
+      resources :tags, only: %i[index create update destroy]
     end
   end
   resources :readings do

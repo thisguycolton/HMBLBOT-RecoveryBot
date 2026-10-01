@@ -3,7 +3,7 @@ import { Download, FileCheck, Mail, Printer, Search } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
 import { api } from "../topicificator_admin/api";
-import { Flash, buttonClass } from "../topicificator_admin/App";
+import { buttonClass } from "../topicificator_admin/App";
 
 // Look up court attendance verifications by name, email and meeting dates, then hand the
 // matches over as a printable PDF, a CSV, or one email. Filters live in the URL so a lookup
@@ -21,11 +21,10 @@ function queryString(filters) {
   return params.toString();
 }
 
-export default function CourtVerificationsAdmin() {
+export default function CourtVerificationsPage({ notify }) {
   const [draft, setDraft] = useState(filtersFromUrl);
   const [filters, setFilters] = useState(filtersFromUrl);
   const [result, setResult] = useState(null);
-  const [flash, setFlash] = useState(null);
 
   const load = useCallback(async (current) => {
     setResult(null);
@@ -33,7 +32,7 @@ export default function CourtVerificationsAdmin() {
       const qs = queryString(current);
       setResult(await api(`/court_verifications${qs ? `?${qs}` : ""}`));
     } catch (e) {
-      setFlash({ type: "error", text: e.message });
+      notify(e.message, "error");
     }
   }, []);
 
@@ -43,7 +42,6 @@ export default function CourtVerificationsAdmin() {
     e.preventDefault();
     const qs = queryString(draft);
     window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
-    setFlash(null);
     setFilters({ ...draft });
   }
 
@@ -52,62 +50,42 @@ export default function CourtVerificationsAdmin() {
   const total = result?.total ?? 0;
 
   return (
-    <>
-      <header className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-6 pt-20 pb-8 w-full mt-6">
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-accent-tint dark:bg-accent/30 shadow-panel flex items-center justify-center shrink-0">
-            <FileCheck className="w-5 h-5 text-accent dark:text-white" strokeWidth={2.5} />
-          </div>
-          <div>
-            <h1 className="!text-xl !leading-tight font-semibold text-slate-900 dark:text-white !font-sans">Court verifications</h1>
-            <p className="text-sm text-slate-600 dark:text-neutral-400 mt-0.5 !font-sans">
-              Find someone's attendance verifications and print, download or email them all at once.
-            </p>
-          </div>
-        </div>
-      </header>
+    <div className="space-y-6">
+      <Shell>
+        <ShellBand icon={Search} title="Find verifications" subtitle="Names and emails match partly, ignoring case. Dates are meeting days in Phoenix time, inclusive." />
+        <ShellPanel position="bottom" className="p-4">
+          <form onSubmit={search} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_2fr_1fr_1fr_auto] items-end">
+            <Field label="Name" value={draft.name} placeholder="e.g. Avelar" onChange={(name) => setDraft({ ...draft, name })} />
+            <Field label="Email" value={draft.email} placeholder="any part of it" onChange={(email) => setDraft({ ...draft, email })} />
+            <Field label="From" type="date" value={draft.from} onChange={(from) => setDraft({ ...draft, from })} />
+            <Field label="To" type="date" value={draft.to} onChange={(to) => setDraft({ ...draft, to })} />
+            <button type="submit" className={buttonClass.primary}>
+              <Search className="w-4 h-4" strokeWidth={2.5} /> Search
+            </button>
+          </form>
+        </ShellPanel>
+      </Shell>
 
-      <div className="bg-slate-50 dark:bg-neutral-950 px-4 min-[1400px]:px-8 py-6 min-h-[70vh]">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {flash && <Flash flash={flash} onClose={() => setFlash(null)} />}
-
-          <Shell>
-            <ShellBand icon={Search} title="Find verifications" subtitle="Names and emails match partly, ignoring case. Dates are meeting days in Phoenix time, inclusive." />
-            <ShellPanel position="bottom" className="p-4">
-              <form onSubmit={search} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_2fr_1fr_1fr_auto] items-end">
-                <Field label="Name" value={draft.name} placeholder="e.g. Avelar" onChange={(name) => setDraft({ ...draft, name })} />
-                <Field label="Email" value={draft.email} placeholder="any part of it" onChange={(email) => setDraft({ ...draft, email })} />
-                <Field label="From" type="date" value={draft.from} onChange={(from) => setDraft({ ...draft, from })} />
-                <Field label="To" type="date" value={draft.to} onChange={(to) => setDraft({ ...draft, to })} />
-                <button type="submit" className={buttonClass.primary}>
-                  <Search className="w-4 h-4" strokeWidth={2.5} /> Search
-                </button>
-              </form>
-            </ShellPanel>
-          </Shell>
-
-          <Shell>
-            <ShellBand
-              icon={FileCheck}
-              title={result ? `${total} ${total === 1 ? "verification" : "verifications"}` : "Loading…"}
-              subtitle={result && total > result.limit ? `Showing the newest ${result.limit}. Print, CSV and email include every match.` : "Newest meeting first"}
-            />
-            <ShellPanel position="middle" className="p-4 flex flex-wrap gap-2">
-              <a href={`/admin_panel/court_verifications/print${suffix}`} target="_blank" rel="noopener" className={`${buttonClass.secondary} ${total ? "" : "pointer-events-none opacity-50"}`}>
-                <Printer className="w-4 h-4" /> Print / Save as PDF
-              </a>
-              <a href={`/api/admin/court_verifications.csv${suffix}`} className={`${buttonClass.secondary} ${total ? "" : "pointer-events-none opacity-50"}`}>
-                <Download className="w-4 h-4" /> Download CSV
-              </a>
-              <EmailBundle filters={filters} total={total} notify={(text, type = "info") => setFlash({ type, text })} />
-            </ShellPanel>
-            <ShellPanel position="bottom" className="overflow-x-auto">
-              <Results result={result} />
-            </ShellPanel>
-          </Shell>
-        </div>
-      </div>
-    </>
+      <Shell>
+        <ShellBand
+          icon={FileCheck}
+          title={result ? `${total} ${total === 1 ? "verification" : "verifications"}` : "Loading…"}
+          subtitle={result && total > result.limit ? `Showing the newest ${result.limit}. Print, CSV and email include every match.` : "Newest meeting first"}
+        />
+        <ShellPanel position="middle" className="p-4 flex flex-wrap gap-2">
+          <a href={`/admin_panel/court_verifications/print${suffix}`} target="_blank" rel="noopener" className={`${buttonClass.secondary} ${total ? "" : "pointer-events-none opacity-50"}`}>
+            <Printer className="w-4 h-4" /> Print / Save as PDF
+          </a>
+          <a href={`/api/admin/court_verifications.csv${suffix}`} className={`${buttonClass.secondary} ${total ? "" : "pointer-events-none opacity-50"}`}>
+            <Download className="w-4 h-4" /> Download CSV
+          </a>
+          <EmailBundle filters={filters} total={total} notify={notify} />
+        </ShellPanel>
+        <ShellPanel position="bottom" className="overflow-x-auto">
+          <Results result={result} />
+        </ShellPanel>
+      </Shell>
+    </div>
   );
 }
 

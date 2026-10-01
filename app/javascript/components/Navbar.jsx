@@ -10,6 +10,7 @@ import {
   NotebookPen,
   Settings,
   ScrollText,
+  Gauge,
   Moon,
   Sun,
 } from "lucide-react";
@@ -27,6 +28,7 @@ export default function Navbar({
   serviceReadingsPath = "/service_readings",
   newReadingPath = "/readings/new",
   accountSettingsPath = "/users/edit",
+  adminPath = "/admin_panel",
   loginPath = "/users/sign_in",
   logoutPath = "/users/sign_out",
   brand = "HumbleBot",
@@ -36,6 +38,8 @@ export default function Navbar({
   const [extrasOpen, setExtrasOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
+  // set by the reader layout for User#suite_admin?; the admin suite checks again server-side
+  const isSuiteAdmin = document.body.dataset.suiteAdmin === "true";
 
   const extrasRef = useRef(null);
   const accountRef = useRef(null);
@@ -181,6 +185,14 @@ function LogoutButton({ className = "" }) {
     </>
   )}
 </button>
+          {isSuiteAdmin && (
+            <a
+              href={adminPath}
+              className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <Gauge className="inline pr-2"/> Admin
+            </a>
+          )}
           <a
             href={accountSettingsPath}
             className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -416,6 +428,15 @@ function LogoutButton({ className = "" }) {
         )}
       </button>
 
+      {isSuiteAdmin && (
+        <a
+          href={adminPath}
+          className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+        >
+          <Gauge className="inline pr-2" />
+          Admin
+        </a>
+      )}
       <a
         href={accountSettingsPath}
         className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"

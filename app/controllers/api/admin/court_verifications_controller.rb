@@ -2,13 +2,10 @@ require "csv"
 
 # Court attendance verifications for the admin lookup (AdminPanel::CourtVerificationsController).
 # Every action takes the same filters: name, email, from, to (see CourtVerification.filtered).
-class Api::Admin::CourtVerificationsController < Api::Admin::BaseController
+class Api::Admin::CourtVerificationsController < Api::Admin::SuiteController
   # the page lists this many; CSV, print and email take every match up to BUNDLE_LIMIT
   LIST_LIMIT = 200
   BUNDLE_LIMIT = 500
-
-  # stricter than the other admin APIs: see User#court_verification_admin?
-  before_action -> { render json: { error: "Admins only" }, status: :forbidden unless current_user.court_verification_admin? }
 
   def index
     respond_to do |format|

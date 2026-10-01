@@ -21,10 +21,12 @@ class User < ApplicationRecord
     super && confirmed?
   end
 
-  # Court verifications hold members' attendance records, so only the admins named in
-  # COURT_VERIFICATION_ADMIN_EMAILS (comma-separated) may look them up. Unset means nobody.
-  def court_verification_admin?
-    allowed = ENV["COURT_VERIFICATION_ADMIN_EMAILS"].to_s.split(",").map { |e| e.strip.downcase }
+  # The admin suite (/admin_panel) shows members' attendance records, visits and accounts, so
+  # being an admin isn't enough: the email must also be in ADMIN_EMAILS (comma-separated;
+  # COURT_VERIFICATION_ADMIN_EMAILS is still read for older setups). Unset means nobody.
+  def suite_admin?
+    allowed = (ENV["ADMIN_EMAILS"].presence || ENV["COURT_VERIFICATION_ADMIN_EMAILS"]).to_s
+                .split(",").map { |e| e.strip.downcase }
     admin? && allowed.include?(email.to_s.downcase)
   end
 
