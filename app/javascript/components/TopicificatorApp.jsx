@@ -40,7 +40,7 @@ const handleCopyTopics = () => {
   // Header block you want to include
   const headerHTML = `
     <strong>The Topicificator 9002</strong><br>
-    https://aa.humblebot.io/topicificator
+    ${window.location.origin}/topicificator
   `.trim();
 
   const allButLast = coveredTopics

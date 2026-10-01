@@ -98,7 +98,8 @@ config.hosts << /.*\.perpetualmulti\.media/
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
   config.active_storage.service = :amazon
-  config.action_mailer.default_url_options = { host: 'humblebot.io', protocol: 'https' }
+  # Links in emails (sign-in, approvals, password resets) point here
+  config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "recoverybot.hmblbot.com"), protocol: "https" }
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
     address:              'smtp.mail.me.com',

@@ -34,7 +34,7 @@ export default function ServiceReadingShow({
       <strong style="font-size:1.5em;">Reading:</strong><br>
       ${reading.title}<br>
       ${reading.source}<br>
-      https://aa.humblebot.io/service_readings/${reading.id}
+      ${window.location.origin}/service_readings/${reading.id}
     `;
 
     const text = html.replace(/<\/?[^>]+(>|$)/g, "");

@@ -35,7 +35,7 @@ function firstMeaningfulContent(...values) {
 export default function ReadingShow({
   reading,
   currentUser,
-  baseUrl = "https://aa.humblebot.io",
+  baseUrl = window.location.origin,
   onDelete,
 }) {
   const [scrollWidth, setScrollWidth] = useState(0);
