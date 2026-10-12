@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import BookCard from "./BookCard.jsx";
 import AdminJsonUploader from "./AdminJsonUploader.jsx";
+import "../../styles/writebook.css";
 
 export default function BooksIndex({ isAdmin: isAdminProp }) {
-  const [books, setBooks] = useState([]);
+  const [books, setBooks] = useState(null);
   const [isAdmin, setIsAdmin] = useState(!!isAdminProp);
+  const [showUploader, setShowUploader] = useState(false);
 
   async function loadBooks() {
     const res = await fetch("/api/books");
@@ -26,45 +28,39 @@ export default function BooksIndex({ isAdmin: isAdminProp }) {
   }, []);
 
   return (
-    <div className="w-screen mx-auto">
-      <div className="max-w-6xl px-3 py-6 w-full mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Library</h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">Browse available titles.</p>
-          </div>
+    <div className="wb">
+      <header className="flex items-center justify-between gap-4 pt-2">
+        <h1 className="text-3xl md:text-4xl font-extrabold m-0">Library</h1>
+        <div className="flex gap-2">
+          {document.body.dataset.currentUser === "true" && (
+            <a href="/library/highlights" className="wb-btn">My highlights</a>
+          )}
           {isAdmin && (
-            <a
-              href="/books/new"
-              className="inline-flex items-center gap-2 rounded-md px-3 py-2
-                         bg-slate-900 text-white hover:bg-slate-800
-                         dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-            >
-              + New Book
-            </a>
+            <>
+            <button type="button" className="wb-btn" onClick={() => setShowUploader((v) => !v)} aria-pressed={showUploader}>
+              Import
+            </button>
+            <a href="/books/new" className="wb-btn wb-btn--reversed">+ New book</a>
+            </>
           )}
         </div>
-      </div>
+      </header>
 
-      {isAdmin && (
-        <div className="max-w-6xl mx-auto px-3 pb-6">
+      {isAdmin && showUploader && (
+        <div className="pt-6">
           <AdminJsonUploader />
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-3">
-        {books.length ? (
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {books.map((b) => (
-              <BookCard key={b.slug} book={b} isAdmin={isAdmin} />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-6 text-slate-600 dark:text-slate-400">
-            No books yet.
-          </div>
-        )}
-      </div>
+      {books === null ? null : books.length ? (
+        <div className="wb-library">
+          {books.map((b) => (
+            <BookCard key={b.slug} book={b} isAdmin={isAdmin} />
+          ))}
+        </div>
+      ) : (
+        <p className="py-12 text-center opacity-70">No books yet.</p>
+      )}
     </div>
   );
 }

@@ -13,6 +13,7 @@ class ChaptersController < ApplicationController
 
   def edit
     @chapter = @book.chapters.find_by!(slug: params[:slug])
+    redirect_to book_chapter_path(@book.slug, @chapter.slug) unless current_user&.admin?
   end
 
   private

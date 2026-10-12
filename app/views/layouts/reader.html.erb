@@ -12,6 +12,9 @@
   <%= vite_react_refresh_tag if Rails.env.development? %>
 
   <%= render 'application/favicon' %>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400..800;1,400..800&display=swap">
 
 </head>
 
@@ -34,7 +37,7 @@
     meta.content = isDark ? '#0a0a0a' : '#ffffff';
   })();
 </script>
-<body data-layout="reader" class="min-h-screen bg-stone-100 text-slate-900 dark:bg-stone-800 dark:text-neutral-100" data-current-user="<%= user_signed_in? %>" data-suite-admin="<%= user_signed_in? && current_user.suite_admin? %>">
+<body data-layout="reader" class="min-h-screen bg-stone-100 text-slate-900 dark:bg-stone-800 dark:text-neutral-100" data-current-user="<%= user_signed_in? %>" data-suite-admin="<%= user_signed_in? && current_user.suite_admin? %>" data-admin="<%= user_signed_in? && current_user.admin? ? "true" : "false" %>">
   <%= yield %>
 </body>
 

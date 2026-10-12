@@ -1,5 +1,5 @@
 // app/javascript/components/ChapterEditor.jsx
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -19,6 +19,9 @@ import TableMenu from "./TableMenu";
 import PageBreakModal from "./PageBreakModal";
 import { updatePageBreakAt } from "../utils/pageBreak";
 import axios from "axios";
+import { ReaderBar, ChaptersDialog, ModeSwitch } from "./book/ReaderChrome";
+import { SearchDialog, useSearchHotkey } from "./book/BookSearch";
+import "../styles/writebook.css";
 
 // ⚠️ Ensure these imports match your actual export style.
 // If your files export default, switch to: `import PageBreak from '../tiptap/PageBreak'` etc.
@@ -130,18 +133,10 @@ function BlockTagBadge({ editor, container }) {
 }
 
 import {
-  Bold, Italic,
+  Bold, Italic, Heading2, Quote, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  IndentDecrease, IndentIncrease, Type, BrushCleaning, CloudCheck, Save, 
-  Table as TableIcon,
-  Columns as ColumnsIcon,
-  Rows as RowsIcon,
-  Trash2,
-  Merge,
-  Split,
-  PlusSquare,
-  MinusSquare,
-  SquareSplitVertical,
+  IndentDecrease, IndentIncrease, Type, Pilcrow, RemoveFormatting,
+  SquareSplitVertical, Undo2, Redo2, Check, Ellipsis,
 } from "lucide-react";
 
 export default function ChapterEditor({ bookSlug, slug }) {
@@ -293,202 +288,222 @@ function insertPageBreak(editor, initial = { kind: "default", title: "", page: n
 
       // Accept either tiptap_json (preferred) or tiptap
       const doc = data.tiptap_json ?? data.tiptap ?? { type: "doc", content: [] };
-      if (editor) editor.commands.setContent(doc, false);
+      if (editor) {
+        editor.commands.setContent(doc, false);
+        loadedRef.current = true;
+      }
     })().catch(err => console.error("Load chapter failed", err));
   }, [bookSlug, slug, editor]);
 
-  // Save content
-  async function saveContent() {
-    if (!editor || !chapter) return;
-    const doc = editor.getJSON();
+  // Track unsaved changes so the save button can show clean / dirty / saving.
+  const [status, setStatus] = useState("clean");
+  const loadedRef = useRef(false);
+  const statusRef = useRef(status);
+  statusRef.current = status;
+
+  useEffect(() => {
+    if (!editor) return;
+    const onUpdate = () => { if (loadedRef.current) setStatus("dirty"); };
+    editor.on("update", onUpdate);
+    return () => editor.off("update", onUpdate);
+  }, [editor]);
+
+  const save = useCallback(async () => {
+    if (!editor || !chapter || statusRef.current === "saving") return;
+    setStatus("saving");
+    try {
+      await axios.patch(
+        `/api/books/${bookSlug}/chapters/${chapter.slug}`,
+        { chapter: { title, tiptap_json: editor.getJSON() } },
+        { headers: { "Content-Type": "application/json" } }
+      );
+      setChapter((prev) => ({ ...(prev || {}), title }));
+      // Anything typed while the request was in flight is still unsaved.
+      setStatus((s) => (s === "saving" ? "clean" : s));
+    } catch (e) {
+      console.error("Save failed", e);
+      setStatus("dirty");
+      window.alert("Couldn't save this chapter. Check your connection and try again.");
+    }
+  }, [editor, chapter, bookSlug, title]);
+
+  // Autosave a few seconds after the last change, like Writebook.
+  useEffect(() => {
+    if (status !== "dirty") return;
+    const t = setTimeout(save, 3000);
+    return () => clearTimeout(t);
+  }, [status, save, title]);
+
+  // Cmd/Ctrl+S saves now; leaving with unsaved changes asks first.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); }
+    };
+    const onBeforeUnload = (e) => {
+      if (statusRef.current !== "clean") { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [save]);
+
+  // Slug changes move the chapter's URL, so they're saved on their own and reload the page.
+  async function saveSlug() {
+    if (!chapter || !chapterSlug || chapterSlug === chapter.slug) return;
+    if (statusRef.current !== "clean") await save();
     await axios.patch(
       `/api/books/${bookSlug}/chapters/${chapter.slug}`,
-      { chapter: { tiptap_json: doc } },
+      { chapter: { slug: chapterSlug } },
       { headers: { "Content-Type": "application/json" } }
     );
+    window.location.replace(`/books/${bookSlug}/chapters/${chapterSlug}/edit`);
   }
 
-  // Save meta (title + slug) then redirect if slug changed
-  async function saveMeta() {
-    if (!chapter) return;
-    const fromSlug = chapter.slug;
-    await axios.patch(
-      `/api/books/${bookSlug}/chapters/${fromSlug}`,
-      { chapter: { title, slug: chapterSlug } },
-      { headers: { "Content-Type": "application/json" } }
-    );
-    if (chapterSlug !== fromSlug) {
-      window.location.replace(`/books/${bookSlug}/chapters/${chapterSlug}/edit`);
-    } else {
-      // keep local chapter in sync
-      setChapter(prev => ({ ...(prev || {}), title, slug: chapterSlug }));
-    }
-  }
+  // Neighbors + book title for the header, chapter list and search
+  const [chapters, setChapters] = useState([]);
+  useEffect(() => {
+    axios.get(`/api/books/${bookSlug}/chapters`)
+      .then(({ data }) => setChapters(Array.isArray(data) ? [...data].sort((a, b) => (a.index ?? 0) - (b.index ?? 0)) : []))
+      .catch(() => setChapters([]));
+  }, [bookSlug]);
+  const position = chapters.findIndex((c) => c.slug === slug);
+  const prev = position > 0 ? chapters[position - 1] : null;
+  const next = position >= 0 && position < chapters.length - 1 ? chapters[position + 1] : null;
+  const bookTitle = chapters[0]?.book_title || "";
+
+  const [openChapters, setOpenChapters] = useState(false);
+  const [openSearch, setOpenSearch] = useState(false);
+  const [openMore, setOpenMore] = useState(false);
+  useSearchHotkey(useCallback(() => setOpenSearch(true), []));
+
+  useEffect(() => {
+    if (chapter?.title) document.title = `Editing ${chapter.title}`;
+  }, [chapter?.title]);
 
   if (!editor) return null;
 
   const isActive = (name, attrs) => editor.isActive(name, attrs);
+  const Tool = ({ label, active, onClick, children }) => (
+    <button
+      type="button"
+      className="wb-tool"
+      title={label}
+      aria-label={label}
+      aria-pressed={active === undefined ? undefined : !!active}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+  const run = (fn) => () => fn(editor.chain().focus()).run();
+
+  const saveLabel = status === "clean" ? "Saved" : status === "saving" ? "Saving…" : "Save (⌘S)";
 
   return (
-    <div className="mx-auto max-w-3xl p-4 space-y-3">
-      {/* Title + Slug row */}
-      <div className="flex gap-3 items-end">
-        <div className="flex-1">
-          <label className="block text-sm font-medium mb-1">Title</label>
-          <input
-            className="w-full rounded border px-3 py-2 text-xl font-semibold bg-white"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            placeholder="Chapter title"
-          />
-        </div>
-        <div className="w-80">
-          <label className="block text-sm font-medium mb-1">Slug</label>
-          <input
-            className="w-full rounded border px-3 py-2 bg-white"
-            value={chapterSlug}
-            onChange={e => setChapterSlug(e.target.value)}
-            placeholder="chapter-slug"
-          />
-        </div>
-        <button type="button" className="hb-btn" onClick={saveMeta}><Save size={16} /></button>
+    <div className="wb wb-reader wb-editor">
+      <ReaderBar
+        bookSlug={bookSlug}
+        bookTitle={bookTitle}
+        chapterTitle={title || chapter?.title}
+        prev={prev}
+        next={next}
+        editing
+        onOpenChapters={() => setOpenChapters(true)}
+        onOpenSearch={() => setOpenSearch(true)}
+      />
+
+      <div className="wb-page-toolbar" role="toolbar" aria-label="Formatting">
+        <ModeSwitch bookSlug={bookSlug} chapterSlug={slug} editing />
+        <span className="wb-page-toolbar__sep" />
+
+        <Tool label="Bold" active={isActive("bold")} onClick={run((c) => c.toggleBold())}><Bold size={18} /></Tool>
+        <Tool label="Italic" active={isActive("italic")} onClick={run((c) => c.toggleItalic())}><Italic size={18} /></Tool>
+        <Tool label="Heading" active={isActive("heading", { level: 2 })} onClick={run((c) => c.toggleHeading({ level: 2 }))}><Heading2 size={18} /></Tool>
+        <Tool label="Quote" active={isActive("blockquote")} onClick={run((c) => c.toggleBlockquote())}><Quote size={18} /></Tool>
+        <Tool label="Bulleted list" active={isActive("bulletList")} onClick={run((c) => c.toggleBulletList())}><List size={18} /></Tool>
+        <Tool label="Numbered list" active={isActive("orderedList")} onClick={run((c) => c.toggleOrderedList())}><ListOrdered size={18} /></Tool>
+        <Tool label="Insert page break" onClick={() => handleInsertBreak("default")}><SquareSplitVertical size={18} /></Tool>
+
+        <span className="relative">
+          <Tool label="More formatting" active={openMore} onClick={() => setOpenMore((v) => !v)}><Ellipsis size={18} /></Tool>
+          {openMore && (
+            <div className="wb-popover" onMouseDown={(e) => e.target.tagName !== "INPUT" && e.target.tagName !== "SELECT" && e.preventDefault()}>
+              <label>Alignment</label>
+              <div className="wb-popover__row">
+                <Tool label="Align left" active={isActive({ textAlign: "left" })} onClick={run((c) => c.setTextAlign("left"))}><AlignLeft size={18} /></Tool>
+                <Tool label="Align center" active={isActive({ textAlign: "center" })} onClick={run((c) => c.setTextAlign("center"))}><AlignCenter size={18} /></Tool>
+                <Tool label="Align right" active={isActive({ textAlign: "right" })} onClick={run((c) => c.setTextAlign("right"))}><AlignRight size={18} /></Tool>
+                <Tool label="Justify" active={isActive({ textAlign: "justify" })} onClick={run((c) => c.setTextAlign("justify"))}><AlignJustify size={18} /></Tool>
+                <Tool label="Increase indent" onClick={run((c) => c.indent())}><IndentIncrease size={18} /></Tool>
+                <Tool label="Decrease indent" onClick={run((c) => c.outdent())}><IndentDecrease size={18} /></Tool>
+              </div>
+
+              <label><Type size={12} className="inline mr-1" />Text size</label>
+              <select
+                defaultValue="default"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "default") editor.chain().focus().unsetFontSize().run();
+                  else editor.chain().focus().setFontSize(val).run();
+                }}
+              >
+                <option value="default">Default</option>
+                <option value="12px">Small</option>
+                <option value="16px">Normal</option>
+                <option value="20px">Large</option>
+                <option value="24px">X-Large</option>
+              </select>
+
+              <label>Block</label>
+              <div className="wb-popover__row items-center">
+                <Tool label="Convert to plain paragraph" onClick={() => forceBlockToParagraph(editor)}><Pilcrow size={18} /></Tool>
+                <Tool label="Clear size and indent" onClick={run((c) => c.unsetIndent().unsetFontSize())}><RemoveFormatting size={18} /></Tool>
+                <TableMenu editor={editor} />
+              </div>
+
+              <label htmlFor="chapter-slug">Address</label>
+              <div className="flex gap-2">
+                <input id="chapter-slug" value={chapterSlug} onChange={(e) => setChapterSlug(e.target.value)} placeholder="chapter-slug" />
+                <button type="button" className="wb-btn" onClick={saveSlug} disabled={!chapterSlug || chapterSlug === chapter?.slug}>Move</button>
+              </div>
+            </div>
+          )}
+        </span>
+
+        <span className="wb-page-toolbar__sep" />
+        <Tool label="Undo" onClick={run((c) => c.undo())}><Undo2 size={18} /></Tool>
+        <Tool label="Redo" onClick={run((c) => c.redo())}><Redo2 size={18} /></Tool>
+        <button
+          type="button"
+          className={`wb-tool wb-save wb-save--${status}`}
+          title={saveLabel}
+          aria-label={saveLabel}
+          onClick={save}
+          disabled={status === "saving"}
+        >
+          <Check size={18} strokeWidth={3} />
+        </button>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 border border-slate-200 rounded-sm px-1 py-1 bg-slate-100! sticky top-0 z-10">
-        {/* Bold / Italic */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`hb-btn rounded-sm ${isActive('bold') ? 'hb-btn--active' : ''}`}
-          title="Bold"
-        >
-          <Bold size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`hb-btn rounded-sm ${isActive('italic') ? 'hb-btn--active' : ''}`}
-          title="Italic"
-        >
-          <Italic size={16} />
-        </button>
+      <article className="wb-reader__page">
+        <label className="wb-editor__title-label" htmlFor="chapter-title">Title in the contents</label>
+        <input
+          id="chapter-title"
+          className="wb-editor__title"
+          value={title}
+          onChange={(e) => { setTitle(e.target.value); if (loadedRef.current) setStatus("dirty"); }}
+          placeholder="Chapter title"
+        />
+        <EditorContent
+          editor={editor}
+          className="prose hb-reader prose-slate prose-base md:prose-lg dark:prose-invert max-w-none"
+        />
+      </article>
 
-        <span className="mx-1 h-5 w-px bg-gray-200" />
-        <button
-          type="button"
-          className="hb-btn"
-          title="Convert to paragraph"
-          onClick={() => {
-            forceBlockToParagraph(editor);
-            // optional: auto-save right away
-            // saveContent();
-          }}
-        >
-          ¶
-        </button>
-        <span className="mx-1 h-5 w-px bg-gray-200" />
-        {/* Font size */}
-        <div className="flex items-center gap-1">
-          <Type size={16} className="text-gray-500" />
-          <select
-            onChange={e => {
-              const val = e.target.value;
-              if (val === "default") editor.chain().focus().unsetFontSize().run();
-              else editor.chain().focus().setFontSize(val).run();
-            }}
-            defaultValue="default"
-            className="border border-slate-200 rounded-sm text-sm px-1 py-1 bg-white"
-            title="Font size"
-          >
-            <option value="default">Size</option>
-            <option value="12px">Small</option>
-            <option value="16px">Normal</option>
-            <option value="20px">Large</option>
-            <option value="24px">X-Large</option>
-          </select>
-        </div>
-
-        <span className="mx-1 h-5 w-px bg-gray-200" />
-
-        {/* Alignment */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}
-          className={`hb-btn rounded-sm ${isActive({ textAlign: "left" }) ? "hb-btn--active" : ""}`}
-          title="Align left"
-        >
-          <AlignLeft size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}
-          className={`hb-btn rounded-sm ${isActive({ textAlign: "center" }) ? "hb-btn--active" : ""}`}
-          title="Align center"
-        >
-          <AlignCenter size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
-          className={`hb-btn rounded-sm ${isActive({ textAlign: "right" }) ? "hb-btn--active" : ""}`}
-          title="Align right"
-        >
-          <AlignRight size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
-          className={`hb-btn rounded-sm ${isActive({ textAlign: "justify" }) ? "hb-btn--active" : ""}`}
-          title="Justify"
-        >
-          <AlignJustify size={16} />
-        </button>
-
-        <span className="mx-1 h-5 w-px bg-gray-200" />
-
-        {/* Indent / Outdent */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().indent().run()}
-          className="hb-btn rounded-sm"
-          title="Increase indent"
-        >
-          <IndentIncrease size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().outdent().run()}
-          className="hb-btn rounded-sm"
-          title="Decrease indent"
-        >
-          <IndentDecrease size={16} />
-        </button>
-        <span className="mx-1 h-5 w-px bg-gray-200" />
-        <div className="flex items-center gap-2">
-          <TableMenu editor={editor} />
-        </div>
-        <span className="mx-1 h-5 w-px bg-gray-200" />
-
-        <div className="flex items-center gap-1">
-          <button type="button" className="hb-btn rounded-sm" title="Insert page break"
-            onClick={() => handleInsertBreak("default")}>
-            <SquareSplitVertical size={16} />
-          </button>
-        </div>
-        <span className="mx-1 h-5 w-px bg-gray-200" />
-        <div className="ml-auto flex gap-2">
-          <button type="button" className="hb-btn bg-sky-300! hover:bg-sky-200! rounded-sm" onClick={() => editor.chain().focus().unsetIndent().unsetFontSize().run()}>
-            <BrushCleaning size={16} />
-          </button>
-          <button type="button" className="hb-btn bg-green-300! hover:bg-green-200! rounded-sm" onClick={saveContent}>
-            <CloudCheck size={16} />
-          </button>
-        </div>
-
-      </div>
-      
-      <EditorContent editor={editor} className="prose max-w-none hb-reader border border-slate-200 rounded p-3 bg-white" />
       <BlockTagBadge editor={editor} container={floatingEl} />
       <PageBreakModal
         open={pbOpen}
@@ -496,6 +511,16 @@ function insertPageBreak(editor, initial = { kind: "default", title: "", page: n
         onClose={() => setPbOpen(false)}
         onSave={handleSavePageBreak}
       />
+      <ChaptersDialog
+        open={openChapters}
+        onClose={() => setOpenChapters(false)}
+        bookSlug={bookSlug}
+        bookTitle={bookTitle}
+        chapters={chapters}
+        currentSlug={slug}
+        editing
+      />
+      <SearchDialog open={openSearch} onClose={() => setOpenSearch(false)} bookSlug={bookSlug} bookTitle={bookTitle} />
     </div>
   );
 }

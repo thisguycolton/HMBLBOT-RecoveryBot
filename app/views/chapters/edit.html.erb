@@ -1,12 +1,2 @@
-<!-- app/views/admin_panel/chapters/edit.html.erb -->
-<style>
-  .page-break {
-  position: static!important;
-  z-index: 30;
-  background: #fff;
-  padding-top: 6px;
-  margin: 1.5rem 0;
-  box-shadow: none;
-}
-</style>
+<%= vite_javascript_tag "topicificator.jsx" %>
 <div id="chapter-editor" data-book-slug="<%= @book.slug %>" data-chapter-slug="<%= @chapter.slug %>" class="w-full"></div>

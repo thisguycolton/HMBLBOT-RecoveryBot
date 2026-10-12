@@ -24,8 +24,11 @@ Rails.application.routes.draw do
   namespace :api do
             resources :court_verifications, only: :create
 
-  resources :highlights, only: [:index, :create, :destroy] do
-    collection { post :share }
+  resources :highlights, only: [:index, :create, :update, :destroy] do
+    collection do
+      post :share
+      get :collection
+    end
   end
 
   resources :books, param: :slug do
@@ -35,6 +38,7 @@ Rails.application.routes.draw do
 
     member do
       get :export               # => GET /api/books/:slug/export
+      get :search               # => GET /api/books/:slug/search?q=
       get :manage_chapters
     end
 

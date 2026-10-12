@@ -11,7 +11,8 @@ import {
 import Navbar from "../components/Navbar";
 import BooksIndex from "../components/book/BooksIndex";
 import BookEdit from "../components/book/BookEdit";
-import ChapterViewer from "../components/ChapterViewer";
+import BookToc from "../components/book/BookToc";
+import HighlightsPage from "../components/book/HighlightsPage";
 
 import "../styles/tailwind.css";
 import "../styles/reader.css";
@@ -53,11 +54,10 @@ const router = createBrowserRouter(
       errorElement: <ErrorBoundary />,
       children: [
         { index: true, element: <BooksIndex /> },
+        { path: "highlights", element: <HighlightsPage /> },
+        { path: "highlights/:token", element: <HighlightsPage /> },
+        { path: ":slug", element: <BookToc /> },
         { path: ":slug/edit", element: <BookEdit /> },
-
-        // If you actually want to render a reader here, ChapterViewer needs route params.
-        // For now you can remove this route until you wire it properly:
-        // { path: ":slug", element: <ChapterViewer /> },
       ],
     },
   ],

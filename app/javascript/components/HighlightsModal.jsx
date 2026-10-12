@@ -1,58 +1,85 @@
 // app/javascript/components/HighlightsModal.jsx
-import { X } from "lucide-react";
+import { useEffect } from "react";
+import { Link2, NotebookText, X } from "lucide-react";
+import Markdown from "./book/Markdown";
 
+// The highlights in this chapter. Tapping one jumps to it in the text; the
+// reader who made them can also share one, or every highlight they've made.
 export default function HighlightsModal({
   open,
   onClose,
   highlights,
   swatchOf,         // (h) => cssColor
   onJump,           // (id) => void
-  onDelete,         // (id) => void
-  MiddleTruncate,   // pass your component for responsive truncation
+  onShare,          // (h) => void
+  onShareAll,       // () => void
+  sharedBy,         // first name when viewing someone else's highlights
+  signedIn = true,
 }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
+  const mine = highlights.some((h) => h.mine);
+  const title = sharedBy !== undefined && !mine ? `${sharedBy || "Shared"}${sharedBy ? "'s" : ""} highlights` : "Your highlights";
+
   return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="absolute inset-x-0 bottom-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
-                      w-full sm:w-[640px] max-h-[80vh] overflow-auto rounded-2xl bg-white dark:bg-neutral-900 shadow-xl border border-slate-200 dark:border-slate-600">
-        <div className="flex items-center justify-between px-4 py-3 border-b  border-slate-200 dark:border-slate-600">
-          <div className="font-semibold">Your highlights</div>
-          <button className="p-1 rounded border  border-slate-200 dark:border-slate-600 bg-white  dark:bg-neutral-900" onClick={onClose} aria-label="Close">
-            <X size={16}/>
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="wb wb-hl-card relative w-full sm:max-w-2xl max-h-[85vh] overflow-auto shadow-xl bg-white dark:bg-neutral-900">
+        <div className="wb-hl-card__head">
+          <span className="wb-hl-card__title">{title}</span>
+          <button type="button" className="wb-btn wb-btn--icon" onClick={onClose} aria-label="Close">
+            <X size={18} />
           </button>
         </div>
 
-        <ul className="p-3 space-y-1">
-          {highlights.map((h) => {
-            const color = swatchOf(h);
-            const text  = h.selector?.quote?.exact || "…";
-            return (
-              <li key={h.id} className="flex items-start gap-3">
-                <span className="inline-block w-3 h-3 rounded mt-1 shrink-0" style={{ backgroundColor: color }} />
-                <button
-                  type="button"
-                  className="flex-1 text-left hover:bg-gray-50 dark:hover:bg-neutral-500 rounded px-2 py-1"
-                  onClick={() => { onJump(h.id); onClose(); }}
-                  title="Jump to highlight"
+        <ul className="wb-hl-list">
+          {highlights.map((h) => (
+            <li key={h.id} className="wb-hl-item">
+              <div className="flex-1 min-w-0">
+                <a
+                  href={`#hl-${h.id}`}
+                  className="wb-hl-quote"
+                  onClick={(e) => { e.preventDefault(); onClose(); onJump(h.id); }}
+                  title="Go to this highlight"
                 >
-                  <MiddleTruncate text={text} className="block min-w-0 w-full" paddingPx={8} />
-                </button>
-                <button
-                  type="button"
-                  className="text-red-600 hover:underline shrink-0 mt-1"
-                  onClick={() => onDelete(h.id)}
-                >
-                  delete
-                </button>
-              </li>
-            );
-          })}
+                  <mark style={{ "--hl": swatchOf(h) }}>{h.selector?.quote?.exact || "…"}</mark>
+                </a>
+                {h.note && <Markdown source={h.note} className="wb-hl-item__note" />}
+              </div>
+              {h.mine && onShare && (
+                <div className="wb-hl-actions">
+                  <button type="button" className="wb-btn" onClick={() => onShare(h)} aria-label="Share this highlight">
+                    <Link2 size={14} aria-hidden="true" /> Share
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
           {highlights.length === 0 && (
-            <li className="text-sm text-slate-500 px-2 py-6 text-center">No highlights yet</li>
+            <li className="wb-hl-item justify-center opacity-70">No highlights in this chapter yet. Select some text to add one.</li>
           )}
         </ul>
+
+        {signedIn && (mine || sharedBy === undefined) ? (
+          <div className="wb-hl-card__foot">
+            <a className="wb-btn" href="/library/highlights">
+              <NotebookText size={15} aria-hidden="true" /> All my highlights
+            </a>
+            <span className="flex-1" />
+            {onShareAll && (
+              <button type="button" className="wb-btn wb-btn--reversed" onClick={onShareAll}>
+                <Link2 size={15} aria-hidden="true" /> Share all my highlights
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );
