@@ -19,7 +19,7 @@
   --wb-font-medium: clamp(1rem, 2.5cqi, 1.4rem);
 
   /* Reading typeface. Loaded in layouts/reader.html.erb; swap both together. */
-  --wb-font-reading: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --wb-font-reading: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 
   color: var(--wb-ink);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
