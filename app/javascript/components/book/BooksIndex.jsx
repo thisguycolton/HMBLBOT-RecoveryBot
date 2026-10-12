@@ -31,14 +31,19 @@ export default function BooksIndex({ isAdmin: isAdminProp }) {
     <div className="wb">
       <header className="flex items-center justify-between gap-4 pt-2">
         <h1 className="text-3xl md:text-4xl font-extrabold m-0">Library</h1>
-        {isAdmin && (
-          <div className="flex gap-2">
+        <div className="flex gap-2">
+          {document.body.dataset.currentUser === "true" && (
+            <a href="/library/highlights" className="wb-btn">My highlights</a>
+          )}
+          {isAdmin && (
+            <>
             <button type="button" className="wb-btn" onClick={() => setShowUploader((v) => !v)} aria-pressed={showUploader}>
               Import
             </button>
             <a href="/books/new" className="wb-btn wb-btn--reversed">+ New book</a>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </header>
 
       {isAdmin && showUploader && (

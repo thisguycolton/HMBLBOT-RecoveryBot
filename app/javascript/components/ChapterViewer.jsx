@@ -9,7 +9,6 @@ import { PageBreak } from "../tiptap/PageBreak";
 import TextAlign from '@tiptap/extension-text-align';
 import ReaderBubbleMenu from "../components/ReaderBubbleMenu";
 import HighlightsModal from "../components/HighlightsModal";
-import MiddleTruncate from "./MiddleTruncate";
 import { ReaderBar, ReaderFooter, ChaptersDialog, ModeSwitch, useChapterHotkeys, chapterHref, tocHref, isAdminViewer } from "./book/ReaderChrome";
 import { SearchDialog, SearchBanner, useInTextSearch, useSearchHotkey } from "./book/BookSearch";
 import { rememberLastRead } from "./book/readingProgress";
@@ -27,66 +26,9 @@ import { ParagraphWithPage } from "../tiptap/ParagraphWithPage";
 import { FontSize } from "../tiptap/FontSize";
 import { Indent } from "../tiptap/Indent";
 import { HBHighlight } from '../tiptap/HBHighlight';
-import useHighlightClickToShare from "../utils/useHighlightClickToShare";
-
-// Map friendly color names to actual CSS colors (backgroundColor)
-const PALETTE = {
-  yellow: '#fef08a', // tailwind yellow-200-ish
-  lime: '#bef264',
-  cyan: '#a5f3fc',
-  pink: '#fbcfe8',
-  orange: '#fed7aa',
-};
-
-/* ---------- (snip) unchanged helpers: useHighlightShareLink, truncateMiddle, offsetToPos, resolveRanges ---------- */
-/* (I left them exactly as you had them above — omitted here for brevity in this example) */
-
-function useHighlightShareLink(bookSlug, slug) {
-  const [shareToken, setShareToken] = useState(null);
-
-  const ensureShareToken = useCallback(async () => {
-    if (shareToken) return shareToken;
-    try {
-      const { data } = await axios.post("/api/highlights/share");
-      setShareToken(data.share_token);
-      return data.share_token;
-    } catch (error) {
-      console.error("Failed to create share token:", error);
-      throw new Error("Failed to create share token");
-    }
-  }, [shareToken]);
-
-  const linkFor = useCallback(
-    async (hlId) => {
-      try {
-        const token = await ensureShareToken();
-        return `${location.origin}/books/${bookSlug}/chapters/${slug}?share=${encodeURIComponent(
-          token
-        )}#hl-${hlId}`;
-      } catch (error) {
-        console.error("Failed to generate share link:", error);
-        return `${location.origin}/books/${bookSlug}/chapters/${slug}#hl-${hlId}`;
-      }
-    },
-    [bookSlug, slug, ensureShareToken]
-  );
-
-  const copyLink = useCallback(
-    async (hlId) => {
-      try {
-        const url = await linkFor(hlId);
-        await navigator.clipboard.writeText(url);
-        console.info("Link copied:", url);
-      } catch (e) {
-        console.error("Copy failed", e);
-        window.prompt("Copy highlight link:", url);
-      }
-    },
-    [linkFor]
-  );
-
-  return { shareToken, copyLink, linkFor };
-}
+import HighlightCard, { HIGHLIGHT_PALETTE as PALETTE, highlightCss } from "./book/HighlightCard";
+import { highlightUrl, allHighlightsUrl, shareLink, useToast } from "./book/highlightSharing";
+import { MessageSquareText } from "lucide-react";
 
 function offsetToPos(doc, target) {
   const maxPos = Math.max(1, doc.content.size - 1);
@@ -107,16 +49,25 @@ function offsetToPos(doc, target) {
 function resolveRanges(editor, highlights) {
   if (!editor) return [];
   
-  const text = editor.getText();
+  // Same separators as createHighlight, so offsets line up.
+  const doc = editor.state.doc;
+  const text = doc.textBetween(0, doc.content.size, "\n", "\n");
   return (Array.isArray(highlights) ? highlights : []).map(h => {
     const sel = h.selector || {};
     let start = sel.position?.start, end = sel.position?.end;
-    
-    if ((start == null || end == null) && sel.quote?.exact) {
-      const idx = text.indexOf(sel.quote.exact);
-      if (idx >= 0) { 
-        start = idx; 
-        end = idx + sel.quote.exact.length; 
+    const exact = sel.quote?.exact;
+
+    // If the chapter was edited since, the offsets drift: find the quote again,
+    // preferring the copy that follows the stored prefix.
+    if (exact && (start == null || end == null || text.slice(start, end) !== exact)) {
+      const prefix = sel.quote.prefix || "";
+      let idx = prefix ? text.indexOf(prefix + exact) : -1;
+      idx = idx >= 0 ? idx + prefix.length : text.indexOf(exact);
+      if (idx >= 0) {
+        start = idx;
+        end = idx + exact.length;
+      } else {
+        start = end = null;
       }
     }
     
@@ -128,7 +79,8 @@ function resolveRanges(editor, highlights) {
       id: h.id, 
       from, 
       to, 
-      color: (h.style && h.style.color) || "yellow" 
+      color: (h.style && h.style.color) || "yellow",
+      hasNote: !!h.note,
     };
   }).filter(Boolean);
 }
@@ -328,7 +280,24 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const [chapter, setChapter] = useState(null);
   const [highlights, setHighlights] = useState([]);
   const [color, setColor] = useState("yellow");
-  const { copyLink } = useHighlightShareLink(bookSlug, slug);
+  const [toast, toastNode] = useToast();
+  const signedIn = document.body.dataset.currentUser === "true";
+
+  // ?hl=SHARE_ID shows one shared highlight, ?share=TOKEN all of a reader's.
+  const [sharedParams] = useState(() => {
+    const p = new URLSearchParams(location.search);
+    return { hl: p.get("hl"), share: p.get("share") };
+  });
+  const sharedView = !!(sharedParams.hl || sharedParams.share);
+
+  // The highlight card (tap a highlight) and whether it opens straight into the note editor.
+  const [cardId, setCardId] = useState(null);
+  const [cardEditing, setCardEditing] = useState(false);
+  const cardHighlight = cardId ? highlights.find((h) => String(h.id) === String(cardId)) : null;
+  const openCard = useCallback((id, { edit = false } = {}) => {
+    setCardEditing(edit);
+    setCardId(String(id));
+  }, []);
 
   const rangesRef = useRef(new Map()); // id -> { from, to }
   const applyingRef = useRef(false);
@@ -337,13 +306,13 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const [openHighlightsModal, setOpenHighlightsModal] = useState(false);
   const [openChaptersModal, setOpenChaptersModal] = useState(false); // <-- new: chapter modal open state
   const [chaptersList, setChaptersList] = useState(null); // <-- fetched list of chapters
-  const cssFromStored = (stored) => PALETTE[stored] || stored || PALETTE.yellow;
+  const cssFromStored = highlightCss;
 
-  const [pendingJumpId, setPendingJumpId] = useState(null);
-  
+  // A #hl-ID in the URL waits here until the highlights are drawn, then we scroll to it.
+  const pendingJumpRef = useRef(null);
   useLayoutEffect(() => {
     const m = location.hash.match(/^#hl-(.+)$/);
-    if (m) setPendingJumpId(m[1]); // keep as string
+    if (m) pendingJumpRef.current = { id: m[1], open: sharedView };
   }, []);
 
   /* ---------- editor configuration (unchanged, except onCreate sets mounted ref) ---------- */
@@ -401,7 +370,6 @@ export default function ChapterViewer({ bookSlug, slug }) {
   }, [editor]);
 
   useHideCoveredPageBreaks(editor);
-  useHighlightClickToShare(viewRef, copyLink);
   
   /* ---------- applyHighlights (unchanged) ---------- */
   const applyHighlights = useCallback(() => {
@@ -442,6 +410,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
           markType.create({ 
             color: colorCss, 
             hlId: String(r.id), 
+            hasNote: r.hasNote,
             class: 'hb-hl' 
           })
         );
@@ -457,6 +426,15 @@ export default function ChapterViewer({ bookSlug, slug }) {
     } finally {
       editor.setEditable(wasEditable);
       applyingRef.current = false;
+    }
+
+    const pending = pendingJumpRef.current;
+    if (pending && rangesRef.current.has(String(pending.id))) {
+      pendingJumpRef.current = null;
+      setTimeout(() => {
+        tryJump(pending.id);
+        if (pending.open) openCard(pending.id);
+      }, 60);
     }
   }, [editor, highlights]);
 
@@ -541,11 +519,13 @@ export default function ChapterViewer({ bookSlug, slug }) {
         const ch = await axios.get(`/api/books/${bookSlug}/chapters/${slug}.json`);
         if (isMounted) setChapter(ch.data);
 
-        const params = new URLSearchParams(location.search);
-        const share = params.get('share');
-
+        const { hl, share } = sharedParams;
         const hls = await axios.get(`/api/highlights`, {
-          params: { chapter_slug: slug, ...(share ? { share } : {}) }
+          params: {
+            chapter_slug: slug,
+            book_slug: bookSlug,
+            ...(hl ? { hl } : share ? { share } : {}),
+          }
         });
 
         if (isMounted) setHighlights(Array.isArray(hls.data) ? hls.data : []);
@@ -559,70 +539,150 @@ export default function ChapterViewer({ bookSlug, slug }) {
     };
   }, [bookSlug, slug]);
 
-  // Share token management (unchanged)
-  const [shareToken, setShareToken] = useState(null);
+  /* ------------------ Creating and sharing highlights ------------------ */
 
-  async function ensureShareToken() {
-    if (shareToken) return shareToken;
-    
-    try {
-      const { data } = await axios.post('/api/highlights/share');
-      setShareToken(data.share_token);
-      return data.share_token;
-    } catch (e) {
-      throw new Error('LOGIN_REQUIRED');
-    }
-  }
+  // The last text selection inside the chapter, kept so a tap on the
+  // popover (which can collapse the selection on phones) still knows what to highlight.
+  const lastSelectionRef = useRef(null);
+  const [selectionPop, setSelectionPop] = useState(null); // { x, y } in page coordinates
 
-  // createHighlight / deleteHighlight (unchanged)
-  async function createHighlight() {
+  useEffect(() => {
+    if (!editor || sharedView) return;
+    let raf = 0;
+    const onSelectionChange = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        let view;
+        try { view = editor.view; } catch { return; }
+        const sel = window.getSelection();
+        if (!view?.dom || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
+          setSelectionPop(null);
+          return;
+        }
+        const range = sel.getRangeAt(0);
+        if (!view.dom.contains(range.commonAncestorContainer) || !sel.toString().trim()) {
+          setSelectionPop(null);
+          return;
+        }
+        try {
+          const a = view.posAtDOM(range.startContainer, range.startOffset);
+          const b = view.posAtDOM(range.endContainer, range.endOffset);
+          lastSelectionRef.current = { from: Math.min(a, b), to: Math.max(a, b) };
+        } catch {
+          return;
+        }
+        const rect = range.getBoundingClientRect();
+        const half = 150;
+        const x = Math.min(Math.max(rect.left + rect.width / 2, half), window.innerWidth - half);
+        const below = window.matchMedia?.("(pointer: coarse)").matches;
+        setSelectionPop({ x: x + window.scrollX, y: (below ? rect.bottom : rect.top) + window.scrollY, below });
+      });
+    };
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("selectionchange", onSelectionChange);
+    };
+  }, [editor, sharedView]);
+
+  async function createHighlight(colorName = color, { withNote = false } = {}) {
     if (!editor) return;
-    
-    try {
-      const { from, to } = editor.state.selection;
-      if (from === to) return;
-      
-      const before = editor.state.doc.textBetween(0, from, "\n", "\n");
-      const exact = editor.state.doc.textBetween(from, to, "\n", "\n");
-      const after = editor.state.doc.textBetween(to, editor.state.doc.content.size, "\n", "\n");
-      
-      const start = before.length;
-      const end = start + exact.length;
-      
-      const payload = {
-        highlight: {
-          chapter_slug: slug,
-          style: { color },
-          selector: {
-            type: "Composite",
-            position: { type: "TextPositionSelector", start, end },
-            quote: { 
-              type: "TextQuoteSelector", 
-              exact, 
-              prefix: before.slice(-40), 
-              suffix: after.slice(0, 40) 
-            }
+    if (!signedIn) {
+      toast("Sign in to save highlights");
+      return;
+    }
+
+    const sel = lastSelectionRef.current || editor.state.selection;
+    const { from, to } = sel || {};
+    if (from == null || from === to) {
+      toast("Select some text first");
+      return;
+    }
+
+    const doc = editor.state.doc;
+    const before = doc.textBetween(0, from, "\n", "\n");
+    const exact = doc.textBetween(from, to, "\n", "\n");
+    const after = doc.textBetween(to, doc.content.size, "\n", "\n");
+    if (!exact.trim()) return;
+
+    const start = before.length;
+    const end = start + exact.length;
+    // The palette names are what we store; older code stored raw CSS colors.
+    const name = Object.keys(PALETTE).find((k) => k === colorName || PALETTE[k] === colorName) || "yellow";
+
+    const payload = {
+      highlight: {
+        chapter_slug: slug,
+        book_slug: bookSlug,
+        style: { color: name },
+        selector: {
+          type: "Composite",
+          position: { type: "TextPositionSelector", start, end },
+          quote: {
+            type: "TextQuoteSelector",
+            exact,
+            prefix: before.slice(-40),
+            suffix: after.slice(0, 40)
           }
         }
-      };
-      
-      const res = await axios.post("/api/highlights", payload);
-      const newId = String(res.data.id);
-      
-      setHighlights(prev => [...prev, { id: newId, ...payload.highlight }]);
+      }
+    };
+
+    try {
+      const { data } = await axios.post("/api/highlights", payload);
+      const created = { ...payload.highlight, mine: true, ...data, id: String(data.id) };
+      setHighlights((prev) => [...prev, created]);
+      setColor(name);
+      lastSelectionRef.current = null;
+      window.getSelection()?.removeAllRanges();
+      setSelectionPop(null);
+      if (withNote) openCard(created.id, { edit: true });
     } catch (error) {
-      console.error("Failed to create highlight:", error);
+      if (error?.response?.status === 401) toast("Sign in to save highlights");
+      else {
+        console.error("Failed to create highlight:", error);
+        toast("Couldn't save that highlight");
+      }
     }
   }
 
   async function deleteHighlight(id) {
     try {
       await axios.delete(`/api/highlights/${id}`);
-      setHighlights(prev => prev.filter(h => h.id !== id));
+      setHighlights((prev) => prev.filter((h) => String(h.id) !== String(id)));
+      setCardId(null);
+      toast("Highlight deleted");
     } catch (error) {
       console.error("Failed to delete highlight:", error);
+      toast("Couldn't delete that highlight");
     }
   }
+
+  const updateHighlight = useCallback((next) => {
+    setHighlights((prev) => prev.map((h) => (String(h.id) === String(next.id) ? { ...h, ...next, id: h.id } : h)));
+  }, []);
+
+  async function shareOne(h) {
+    const quote = h.selector?.quote?.exact || "";
+    const result = await shareLink(highlightUrl(bookSlug, slug, h), {
+      title: chapter?.title,
+      text: quote ? `“${quote.slice(0, 140)}${quote.length > 140 ? "…" : ""}”` : undefined,
+    });
+    if (result === "copied") toast("Link to this highlight copied");
+  }
+
+  async function shareAll() {
+    try {
+      const url = await allHighlightsUrl();
+      const result = await shareLink(url, { title: "My highlights" });
+      if (result === "copied") toast("Link to all your highlights copied");
+    } catch (e) {
+      toast(e?.response?.status === 401 ? "Sign in to share highlights" : "Couldn't make a share link");
+    }
+  }
+
+  const sharedBy = sharedView ? (highlights.find((h) => !h.mine)?.by ?? null) : undefined;
+  const sharedMine = sharedView && highlights.length > 0 && highlights.every((h) => h.mine);
 
   // Sticky offset helper
   function nudgeForSticky(offsetExtra = 155) {
@@ -637,12 +697,11 @@ export default function ChapterViewer({ bookSlug, slug }) {
     if (!editor) return;
 
     if (history.replaceState) {
-      history.replaceState(null, "", `#hl-${id}`);
+      history.replaceState(null, "", `${location.pathname}${location.search}#hl-${id}`);
     } else {
       location.hash = `#hl-${id}`;
     }
     
-    setPendingJumpId(id);
     tryJump(id);
   }
 
@@ -659,13 +718,9 @@ export default function ChapterViewer({ bookSlug, slug }) {
 
       window.scrollTo({ top: targetTop, left: 0, behavior: 'smooth' });
 
-      editor.chain().setTextSelection({ from: pos.from, to: pos.to }).run();
-      
-      const root = view.dom;
-      if (root) {
-        root.classList.add('hb-flash');
-        setTimeout(() => root.classList.remove('hb-flash'), 300);
-      }
+      const marks = view.dom?.querySelectorAll(`[data-hl-id="${CSS.escape(String(id))}"]`) || [];
+      marks.forEach((m) => m.classList.add('hb-hl-pulse'));
+      setTimeout(() => marks.forEach((m) => m.classList.remove('hb-hl-pulse')), 1200);
 
       return true;
     } catch (error) {
@@ -673,13 +728,6 @@ export default function ChapterViewer({ bookSlug, slug }) {
       return false;
     }
   }
-
-  // Try pending jump when ready (unchanged)
-  useEffect(() => {
-    if (pendingJumpId && editorMountedRef.current) {
-      setTimeout(() => tryJump(pendingJumpId), 100);
-    }
-  }, [pendingJumpId, editorMountedRef.current]);
 
   /* ------------------ Chapter list + neighbors ------------------ */
 
@@ -719,6 +767,22 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(location.search).get("search") || "");
   const [pageEl, setPageEl] = useState(null);
   const inText = useInTextSearch(pageEl, searchQuery);
+
+  // Tapping a highlight opens its card (note, share, color, delete). Listening on
+  // the page rather than the editor survives TipTap swapping its DOM on load.
+  useEffect(() => {
+    if (!pageEl) return;
+    const onClick = (e) => {
+      const mark = e.target instanceof Element ? e.target.closest("[data-hl-id]") : null;
+      if (!mark || !pageEl.contains(mark)) return;
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && sel.toString().trim()) return;
+      e.preventDefault();
+      openCard(mark.getAttribute("data-hl-id"));
+    };
+    pageEl.addEventListener("click", onClick);
+    return () => pageEl.removeEventListener("click", onClick);
+  }, [pageEl, openCard]);
   useSearchHotkey(useCallback(() => setOpenSearch(true), []));
 
   function clearSearch() {
@@ -766,6 +830,19 @@ export default function ChapterViewer({ bookSlug, slug }) {
         />
       )}
 
+      {sharedView && (
+        <div className="wb-shared-banner" role="status">
+          <span>
+            {sharedMine
+              ? `You're viewing your shared ${sharedParams.hl ? "highlight" : "highlights"}.`
+              : `You're viewing ${sharedBy ? `${sharedBy}'s` : "a shared"} ${sharedParams.hl ? "highlight" : "highlights"}.`}
+            {sharedParams.hl && highlights.some((h) => h.note) && " Tap it to read the note."}
+          </span>
+          {signedIn && <a href={location.pathname}>Show mine</a>}
+          {sharedParams.share && <a href={`/library/highlights/${encodeURIComponent(sharedParams.share)}`}>See them all</a>}
+        </div>
+      )}
+
       {isAdminViewer() && (
         <div className="wb-reader__mode">
           <ModeSwitch bookSlug={bookSlug} chapterSlug={slug} editing={false} />
@@ -789,12 +866,46 @@ export default function ChapterViewer({ bookSlug, slug }) {
         colors={PALETTE}
         value={cssFromStored(color)}
         onChangeColor={(css) => setColor(css)}
-        onHighlight={createHighlight}
+        onHighlight={() => createHighlight(color)}
         onOpenModal={() => setOpenHighlightsModal(true)}
         onOpenChapters={() => setOpenChaptersModal(true)}
         onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
         isDark={document.documentElement.classList.contains('dark')}
       />
+
+      {/* Over selected text: tap a color to highlight, or start a note */}
+      {selectionPop && (
+        <div
+          className={`wb wb-selection-pop ${selectionPop.below ? "wb-selection-pop--below" : ""}`}
+          style={{ left: selectionPop.x, top: selectionPop.y }}
+          onPointerDown={(e) => e.preventDefault()}
+          onMouseDown={(e) => e.preventDefault()}
+          role="toolbar"
+          aria-label="Highlight selection"
+        >
+          {signedIn ? (
+            <>
+              {Object.entries(PALETTE).map(([name, css]) => (
+                <button
+                  key={name}
+                  type="button"
+                  className="wb-selection-pop__swatch"
+                  style={{ backgroundColor: css }}
+                  aria-label={`Highlight ${name}`}
+                  aria-pressed={cssFromStored(color) === css}
+                  onClick={() => createHighlight(name)}
+                />
+              ))}
+              <span className="wb-selection-pop__sep" aria-hidden="true" />
+              <button type="button" className="wb-selection-pop__btn" onClick={() => createHighlight(color, { withNote: true })}>
+                <MessageSquareText size={15} aria-hidden="true" /> Note
+              </button>
+            </>
+          ) : (
+            <a className="wb-selection-pop__btn" href="/users/sign_in">Sign in to highlight</a>
+          )}
+        </div>
+      )}
 
       {/* Highlights modal */}
       <HighlightsModal
@@ -803,10 +914,25 @@ export default function ChapterViewer({ bookSlug, slug }) {
         highlights={(Array.isArray(highlights) ? highlights : [])}
         swatchOf={(h) => cssFromStored(h?.style?.color)}
         onJump={jumpToHighlight}
-        onDelete={deleteHighlight}
-        onShare={(id) => copyLink(id)}
-        MiddleTruncate={MiddleTruncate}
+        onShare={shareOne}
+        onShareAll={signedIn ? shareAll : null}
+        sharedBy={sharedBy}
+        signedIn={signedIn}
       />
+
+      <HighlightCard
+        key={cardId || "none"}
+        highlight={cardHighlight}
+        startEditing={cardEditing}
+        onClose={() => setCardId(null)}
+        bookSlug={bookSlug}
+        chapterSlug={slug}
+        onChange={updateHighlight}
+        onDelete={deleteHighlight}
+        toast={toast}
+      />
+
+      {toastNode}
 
       <SearchDialog
         open={openSearch}

@@ -8,4 +8,5 @@ class UserHighlight < ApplicationRecord
 
   validates :selector, presence: true
   validates :style, presence: true
+  validates :note, length: { maximum: 10_000 }
 end

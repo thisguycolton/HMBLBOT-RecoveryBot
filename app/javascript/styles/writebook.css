@@ -924,3 +924,401 @@ body:has(.wb) {
   background-color: oklch(70% 0.2 44);
   color: #000;
 }
+
+/* ---------- Highlights ---------- */
+
+.wb-toast {
+  align-items: center;
+  background: var(--wb-ink);
+  border-radius: 2em;
+  bottom: 5.5rem;
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.4);
+  color: var(--wb-bg);
+  display: flex;
+  font-size: 0.95rem;
+  font-weight: 600;
+  gap: 0.4rem;
+  left: 50%;
+  padding: 0.6rem 1.1rem;
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 80;
+}
+
+/* Pops up over selected text: pick a color to highlight, or share the quote. */
+.wb-selection-pop {
+  align-items: center;
+  background: var(--wb-ink);
+  border-radius: 2em;
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.45);
+  color: var(--wb-bg);
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  z-index: 45;
+}
+
+.wb-selection-pop__swatch {
+  border: 2px solid transparent;
+  border-radius: 50%;
+  height: 1.6rem;
+  width: 1.6rem;
+}
+
+.wb-selection-pop__swatch[aria-pressed="true"] {
+  border-color: var(--wb-bg);
+}
+
+.wb-selection-pop__sep {
+  align-self: stretch;
+  background: color-mix(in oklab, var(--wb-bg) 30%, transparent);
+  margin-inline: 0.15rem;
+  width: 1px;
+}
+
+.wb-selection-pop__btn {
+  align-items: center;
+  border-radius: 2em;
+  color: inherit;
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+}
+
+.wb-selection-pop__btn:hover {
+  background: color-mix(in oklab, var(--wb-bg) 18%, transparent);
+}
+
+.wb-shared-banner {
+  align-items: center;
+  background: var(--wb-subtle-light);
+  border-radius: 2em;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+  gap: 0.25rem 0.75rem;
+  justify-content: center;
+  margin: 0.75rem auto 0;
+  padding: 0.4rem 1rem;
+  width: fit-content;
+}
+
+.wb-shared-banner a {
+  color: var(--wb-link);
+  font-weight: 600;
+}
+
+/* Highlights list (modal and the collection page) */
+.wb-hl-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wb-hl-item {
+  align-items: flex-start;
+  border-top: 1px solid var(--wb-subtle);
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 0.25rem;
+}
+
+.wb-hl-item:first-child {
+  border-top: 0;
+}
+
+.wb-hl-quote {
+  color: inherit;
+  flex: 1;
+  font-family: var(--wb-font-reading);
+  line-height: 1.45;
+  min-width: 0;
+  text-align: start;
+  text-decoration: none;
+}
+
+.wb-hl-quote mark {
+  background: var(--hl, oklch(92.62% 0.1 91.5));
+  border-radius: 0.15em;
+  box-decoration-break: clone;
+  color: #000;
+  padding: 0.05em 0.15em;
+}
+
+.wb-hl-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.25rem;
+}
+
+.wb-hl-actions .wb-btn {
+  font-size: 0.85rem;
+  padding: 0.35em 0.7em;
+}
+
+/* A highlight with a note gets a small dot after it */
+.wb-reader mark.hb-hl[data-note]::after {
+  background: oklch(55% 0.17 44);
+  border-radius: 50%;
+  content: "";
+  display: inline-block;
+  height: 0.4em;
+  margin-inline-start: 0.15em;
+  vertical-align: super;
+  width: 0.4em;
+}
+
+.wb-reader mark.hb-hl.hb-hl-pulse {
+  animation: wb-hl-pulse 1.2s ease 1;
+}
+
+@keyframes wb-hl-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  30% { box-shadow: 0 0 0 4px oklch(70% 0.2 44 / 0.55); }
+}
+
+/* Highlight card and highlights list dialog */
+.wb-hl-card {
+  border-radius: 1rem 1rem 0 0;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .wb-hl-card { border-radius: 0.75rem; }
+}
+
+.wb-hl-card__head {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.wb-hl-card__title {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.wb-hl-card__quote {
+  border: 0;
+  display: block;
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+.wb-hl-card__foot {
+  align-items: center;
+  border-top: 1px solid var(--wb-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+}
+
+.wb-hl-card__swatches {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.wb-hl-card__swatch {
+  border-color: var(--wb-subtle);
+}
+
+.wb-hl-card__swatch[aria-pressed="true"] {
+  border-color: var(--wb-ink);
+}
+
+.wb-hl-card__delete,
+.wb-hl-note__delete {
+  color: oklch(55% 0.2 27);
+}
+
+/* Notes */
+.wb-hl-note {
+  background: var(--wb-subtle-light);
+  border-radius: 0.6rem;
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.8rem;
+}
+
+.wb-hl-note--editing {
+  background: transparent;
+  padding: 0;
+}
+
+.wb-hl-note__label {
+  align-items: center;
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 700;
+  gap: 0.5rem;
+  letter-spacing: 0.02em;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.wb-hl-note__edit,
+.wb-hl-note__add {
+  align-items: center;
+  color: var(--wb-link);
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 0.3rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.wb-hl-note__edit { margin-inline-start: auto; }
+.wb-hl-note__add { margin-top: 0.5rem; }
+
+.wb-hl-note__input {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle);
+  border-radius: 0.6rem;
+  color: inherit;
+  font: inherit;
+  line-height: 1.5;
+  min-height: 7rem;
+  padding: 0.6rem 0.75rem;
+  resize: vertical;
+  width: 100%;
+}
+
+.wb-hl-note__input:focus {
+  border-color: var(--wb-link);
+  outline: none;
+}
+
+.wb-hl-note__actions {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.wb-hl-note__error {
+  color: oklch(55% 0.2 27);
+  font-size: 0.9rem;
+  margin: 0.4rem 0 0;
+}
+
+.wb-hl-item__note {
+  font-size: 0.92rem;
+  margin-top: 0.35rem;
+  opacity: 0.85;
+}
+
+/* Rendered Markdown in notes */
+.wb-md {
+  font-family: var(--wb-font-reading);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.wb-md > * { margin: 0.4em 0 0 !important; font-family: inherit !important; }
+.wb-md > :first-child { margin-top: 0 !important; }
+.wb-md p { font-size: inherit !important; line-height: inherit !important; }
+.wb-md h3, .wb-md h4, .wb-md h5 { font-size: 1.05em; font-weight: 800; }
+.wb-md ul { list-style: disc; padding-inline-start: 1.3em; }
+.wb-md ol { list-style: decimal; padding-inline-start: 1.3em; }
+.wb-md blockquote { border-inline-start: 3px solid var(--wb-subtle); padding-inline-start: 0.7em; }
+.wb-md code { background: var(--wb-subtle); border-radius: 0.25em; font-size: 0.9em; padding: 0.05em 0.3em; }
+.wb-md pre { background: var(--wb-subtle); border-radius: 0.4em; overflow-x: auto; padding: 0.5em 0.7em; }
+.wb-md pre code { background: none; padding: 0; }
+.wb-md a { color: var(--wb-link); text-decoration: underline; }
+
+/* /library/highlights */
+.wb-hl-page {
+  margin-inline: auto;
+  max-width: 44rem;
+}
+
+.wb-hl-page__head {
+  align-items: flex-end;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.wb-hl-page__title {
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+  font-weight: 800;
+  margin: 0;
+}
+
+.wb-hl-page__meta {
+  margin: 0.2rem 0 0;
+  opacity: 0.7;
+}
+
+.wb-hl-page__book { margin-top: 2rem; }
+
+.wb-hl-page__book-title {
+  border-bottom: 2px solid var(--wb-ink);
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.3rem;
+}
+
+.wb-hl-page__chapter-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 1rem 0 0.25rem;
+  opacity: 0.8;
+}
+
+.wb-hl-page h2 a, .wb-hl-page h3 a { color: inherit; text-decoration: none; }
+.wb-hl-page h2 a:hover, .wb-hl-page h3 a:hover { text-decoration: underline; }
+
+.wb-reader mark.hb-hl[data-hl-id] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wb-selection-pop .wb-selection-pop__btn,
+.wb-selection-pop .wb-selection-pop__swatch {
+  box-shadow: none;
+}
+
+.wb-selection-pop .wb-selection-pop__btn {
+  background: transparent;
+  border: 0;
+  color: var(--wb-bg);
+  text-decoration: none;
+}
+
+/* On touch screens the system's copy menu sits above the selection, so ours goes below. */
+.wb-selection-pop--below {
+  transform: translate(-50%, 10px);
+}
+
+.wb-md *,
+.wb-hl-page p {
+  font-family: inherit !important;
+}
+
+.wb .wb-hl-note__edit,
+.wb .wb-hl-note__add {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.wb-hl-list .wb-hl-quote {
+  display: block;
+}
+
+.wb-hl-page .wb-hl-page__book-title { font-weight: 800; }
+.wb-hl-page .wb-hl-page__chapter-title { font-weight: 700; }

@@ -12,6 +12,7 @@ import Navbar from "../components/Navbar";
 import BooksIndex from "../components/book/BooksIndex";
 import BookEdit from "../components/book/BookEdit";
 import BookToc from "../components/book/BookToc";
+import HighlightsPage from "../components/book/HighlightsPage";
 
 import "../styles/tailwind.css";
 import "../styles/reader.css";
@@ -53,6 +54,8 @@ const router = createBrowserRouter(
       errorElement: <ErrorBoundary />,
       children: [
         { index: true, element: <BooksIndex /> },
+        { path: "highlights", element: <HighlightsPage /> },
+        { path: "highlights/:token", element: <HighlightsPage /> },
         { path: ":slug", element: <BookToc /> },
         { path: ":slug/edit", element: <BookEdit /> },
       ],

@@ -15,6 +15,12 @@ export const HBHighlight = Highlight.extend({
         parseHTML: el => el.getAttribute('data-hl-id'),
         renderHTML: attrs => attrs.hlId ? { 'data-hl-id': attrs.hlId } : {},
       },
+      // Marks a highlight that carries a note, so readers can tell it has one.
+      hasNote: {
+        default: false,
+        parseHTML: el => el.hasAttribute('data-note'),
+        renderHTML: attrs => attrs.hasNote ? { 'data-note': '' } : {},
+      },
       // If you want a class too, you can hard-code it in renderHTML below
     };
   },
