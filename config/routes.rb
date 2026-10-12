@@ -35,6 +35,7 @@ Rails.application.routes.draw do
 
     member do
       get :export               # => GET /api/books/:slug/export
+      get :search               # => GET /api/books/:slug/search?q=
       get :manage_chapters
     end
 

@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, LayoutGrid, List, BookOpen } from "lucide-react";
 import BookCover from "./BookCover.jsx";
 import { lastReadFor } from "./readingProgress.js";
+import { SearchButton, SearchDialog, useSearchHotkey } from "./BookSearch.jsx";
 import "../../styles/writebook.css";
 
 const VIEW_KEY = "hb:toc-view";
@@ -42,6 +43,8 @@ export default function BookToc() {
   const [error, setError] = useState("");
   const [view, setView] = useState(readView);
   const lastRead = useMemo(() => lastReadFor(slug), [slug]);
+  const [openSearch, setOpenSearch] = useState(false);
+  useSearchHotkey(useCallback(() => setOpenSearch(true), []));
 
   useEffect(() => {
     let alive = true;
@@ -141,6 +144,7 @@ export default function BookToc() {
               <ArrowLeft size={20} />
             </Link>
             <span className="wb-toolbar__spacer" />
+            <SearchButton onClick={() => setOpenSearch(true)} />
             <button
               type="button"
               className="wb-btn wb-btn--icon"
@@ -170,6 +174,8 @@ export default function BookToc() {
           )}
         </section>
       </div>
+
+      <SearchDialog open={openSearch} onClose={() => setOpenSearch(false)} bookSlug={slug} bookTitle={book.title} />
     </div>
   );
 }

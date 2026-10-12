@@ -1,9 +1,36 @@
 import React, { useEffect } from "react";
-import { ArrowLeft, ArrowRight, ListOrdered, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, ListOrdered, Pencil, RotateCcw, X } from "lucide-react";
+import { SearchButton } from "./BookSearch.jsx";
 import "../../styles/writebook.css";
 
-export function chapterHref(bookSlug, chapter) {
-  return `/books/${bookSlug}/chapters/${chapter.slug}`;
+export function chapterHref(bookSlug, chapter, { editing = false } = {}) {
+  return `/books/${bookSlug}/chapters/${chapter.slug}${editing ? "/edit" : ""}`;
+}
+
+export function isAdminViewer() {
+  return document.body?.dataset?.admin === "true";
+}
+
+// Writebook's eye · switch · pencil toggle between reading and editing a chapter.
+export function ModeSwitch({ bookSlug, chapterSlug, editing, onBeforeLeave }) {
+  const href = chapterHref(bookSlug, { slug: chapterSlug }, { editing: !editing });
+  return (
+    <a
+      className="wb-mode-switch"
+      href={href}
+      role="switch"
+      aria-checked={editing}
+      aria-label={editing ? "Editing: switch back to reading" : "Reading: switch to editing"}
+      title={editing ? "Back to reading" : "Edit this chapter"}
+      onClick={(e) => {
+        if (onBeforeLeave && onBeforeLeave() === false) e.preventDefault();
+      }}
+    >
+      <Eye size={22} aria-hidden="true" />
+      <span className="wb-mode-switch__track" aria-hidden="true" />
+      <Pencil size={20} aria-hidden="true" />
+    </a>
+  );
 }
 
 export function tocHref(bookSlug) {
@@ -28,9 +55,9 @@ export function useChapterHotkeys(prevHref, nextHref) {
   }, [prevHref, nextHref]);
 }
 
-export function ReaderBar({ bookSlug, bookTitle, chapterTitle, prev, next, onOpenChapters }) {
-  const prevHref = prev ? chapterHref(bookSlug, prev) : tocHref(bookSlug);
-  const nextHref = next ? chapterHref(bookSlug, next) : null;
+export function ReaderBar({ bookSlug, bookTitle, chapterTitle, prev, next, onOpenChapters, onOpenSearch, editing = false }) {
+  const prevHref = prev ? chapterHref(bookSlug, prev, { editing }) : tocHref(bookSlug);
+  const nextHref = next ? chapterHref(bookSlug, next, { editing }) : null;
 
   return (
     <nav className="wb-reader__bar" aria-label="Chapter navigation">
@@ -50,6 +77,8 @@ export function ReaderBar({ bookSlug, bookTitle, chapterTitle, prev, next, onOpe
         <span className="wb-breadcrumbs__sep" aria-hidden="true">▸</span>
         <strong className="wb-ellipsis">{chapterTitle || "…"}</strong>
       </div>
+
+      {onOpenSearch && <SearchButton onClick={onOpenSearch} />}
 
       <button
         type="button"
@@ -92,7 +121,7 @@ export function ReaderFooter({ bookSlug, bookTitle, next }) {
   );
 }
 
-export function ChaptersDialog({ open, onClose, bookSlug, bookTitle, chapters, currentSlug }) {
+export function ChaptersDialog({ open, onClose, bookSlug, bookTitle, chapters, currentSlug, editing = false }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -117,7 +146,7 @@ export function ChaptersDialog({ open, onClose, bookSlug, bookTitle, chapters, c
           <ol className="wb-toc wb-toc--list">
             {chapters.map((c) => (
               <li key={c.slug} className={`wb-toc__leaf ${c.slug === currentSlug ? "wb-toc__leaf--last-read" : ""}`}>
-                <a className="wb-toc__title" href={chapterHref(bookSlug, c)} aria-current={c.slug === currentSlug ? "page" : undefined}>
+                <a className="wb-toc__title" href={chapterHref(bookSlug, c, { editing })} aria-current={c.slug === currentSlug ? "page" : undefined}>
                   <span className="wb-ellipsis">{c.title}</span>
                 </a>
                 {c.first_page != null && <small className="wb-toc__meta">{c.first_page}</small>}

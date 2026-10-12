@@ -101,26 +101,14 @@ mountReact("chapter-viewer", (mount) => {
 });
 
 // ---------------- Chapter Editor ----------------
-mountReact("chapter-editor", (edit) => {
-  const bookSlug = edit.dataset.bookSlug;
-  const slug = edit.dataset.chapterSlug;
-
-  return (
-    <div
-      className="
-        prose prose-slate
-        prose-sm md:prose lg:prose-lg xl:prose-xl
-        dark:prose-invert
-        max-w-none hb-reader
-        mx-auto
-        prose-headings:my-3 md:prose-headings:my-4 xl:prose-headings:my-4
-        prose-p:my-2 md:prose-p:my-2 xl:prose-p:my-2
-      "
-    >
-      <ChapterEditor bookSlug={bookSlug} slug={slug} />
-    </div>
-  );
-});
+mountReact("chapter-editor", (edit) => (
+  <>
+    <Navbar isAuthenticated={isAuthenticated} />
+    <main className="pt-[var(--nav-h,56px)]">
+      <ChapterEditor bookSlug={edit.dataset.bookSlug} slug={edit.dataset.chapterSlug} />
+    </main>
+  </>
+));
 
 // ---------------- Chapter Admin ----------------
 mountReact("chapter-admin", (admin) => (

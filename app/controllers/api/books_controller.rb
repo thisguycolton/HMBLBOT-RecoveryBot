@@ -1,7 +1,7 @@
 require "digest"
 
 class Api::BooksController < ApplicationController
-  before_action :set_book, only: [:show, :update, :export]
+  before_action :set_book, only: [:show, :update, :export, :search]
   before_action :authenticate_user!, only: [:create, :update, :import_json]
   before_action :require_admin!, only: [:create, :update, :import_json]
 
@@ -43,6 +43,28 @@ class Api::BooksController < ApplicationController
   def update
     @book.update!(book_params)
     render json: { ok: true, slug: @book.slug }
+  end
+
+  # GET /api/books/:slug/search?q=...
+  # Matches across every chapter of the book, with a few snippets per chapter.
+  def search
+    query = params[:q].to_s.squish
+    return render json: { query: query, results: [] } if query.length < 2
+
+    results = @book.chapters.ordered.filter_map do |chapter|
+      matches = chapter.search(query)
+      next if matches.empty?
+
+      {
+        slug: chapter.slug,
+        title: chapter.title,
+        first_page: chapter.first_page,
+        count: matches.size,
+        snippets: matches.first(3)
+      }
+    end
+
+    render json: { query: query, results: results }
   end
 
     def export

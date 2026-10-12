@@ -10,7 +10,8 @@ import TextAlign from '@tiptap/extension-text-align';
 import ReaderBubbleMenu from "../components/ReaderBubbleMenu";
 import HighlightsModal from "../components/HighlightsModal";
 import MiddleTruncate from "./MiddleTruncate";
-import { ReaderBar, ReaderFooter, ChaptersDialog, useChapterHotkeys, chapterHref, tocHref } from "./book/ReaderChrome";
+import { ReaderBar, ReaderFooter, ChaptersDialog, ModeSwitch, useChapterHotkeys, chapterHref, tocHref, isAdminViewer } from "./book/ReaderChrome";
+import { SearchDialog, SearchBanner, useInTextSearch, useSearchHotkey } from "./book/BookSearch";
 import { rememberLastRead } from "./book/readingProgress";
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
@@ -712,6 +713,21 @@ export default function ChapterViewer({ bookSlug, slug }) {
     listReady ? (nextChapter ? chapterHref(bookSlug, nextChapter) : tocHref(bookSlug)) : null
   );
 
+  /* ------------------ Search ------------------ */
+
+  const [openSearch, setOpenSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(location.search).get("search") || "");
+  const [pageEl, setPageEl] = useState(null);
+  const inText = useInTextSearch(pageEl, searchQuery);
+  useSearchHotkey(useCallback(() => setOpenSearch(true), []));
+
+  function clearSearch() {
+    setSearchQuery("");
+    const url = new URL(location.href);
+    url.searchParams.delete("search");
+    history.replaceState(null, "", url);
+  }
+
   useEffect(() => {
     if (chapter?.title) document.title = bookTitle ? `${chapter.title} | ${bookTitle}` : chapter.title;
   }, [chapter?.title, bookTitle]);
@@ -736,9 +752,27 @@ export default function ChapterViewer({ bookSlug, slug }) {
         prev={prevChapter}
         next={nextChapter}
         onOpenChapters={() => setOpenChaptersModal(true)}
+        onOpenSearch={() => setOpenSearch(true)}
       />
 
-      <article className="wb-reader__page">
+      {searchQuery && (
+        <SearchBanner
+          query={searchQuery}
+          count={inText.count}
+          current={inText.current}
+          onNext={inText.next}
+          onPrev={inText.prev}
+          onClear={clearSearch}
+        />
+      )}
+
+      {isAdminViewer() && (
+        <div className="wb-reader__mode">
+          <ModeSwitch bookSlug={bookSlug} chapterSlug={slug} editing={false} />
+        </div>
+      )}
+
+      <article className="wb-reader__page" ref={setPageEl}>
         <div className="prose hb-reader
             prose-slate
             prose-base md:prose-lg
@@ -772,6 +806,14 @@ export default function ChapterViewer({ bookSlug, slug }) {
         onDelete={deleteHighlight}
         onShare={(id) => copyLink(id)}
         MiddleTruncate={MiddleTruncate}
+      />
+
+      <SearchDialog
+        open={openSearch}
+        onClose={() => setOpenSearch(false)}
+        bookSlug={bookSlug}
+        bookTitle={bookTitle}
+        initialQuery={searchQuery}
       />
 
       <ChaptersDialog

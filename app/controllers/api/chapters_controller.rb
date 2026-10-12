@@ -2,6 +2,9 @@
 class Api::ChaptersController < ApplicationController
   before_action :set_book
   before_action :set_chapter, only: [:show, :update, :destroy]
+  # Reading is public; changing a book's chapters is for admins only.
+  before_action :authenticate_user!, except: [:index, :show]
+  before_action :require_admin!, except: [:index, :show]
 
   # --------------------------------------------------------------------------
   # DELETE /api/books/:book_slug/chapters/:slug
@@ -431,6 +434,10 @@ end
   end
 
   private
+
+  def require_admin!
+    head :forbidden unless current_user&.admin?
+  end
 
   # ==========================================================================
   # PARAMS
