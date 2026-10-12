@@ -332,7 +332,7 @@
   border-radius: 0.3em;
   color: var(--wb-ink);
   display: block;
-  font-family: "Noto Serif", ui-serif, serif;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: clamp(0.45rem, 5.5cqi, 0.75rem);
   line-height: 1.45;
   margin-bottom: 0.6rem;
@@ -527,10 +527,69 @@ html:has(.wb-reader) {
 }
 
 .wb-reader__page {
+  /* Writebook's reading size: grows with the window from 1rem to 1.4rem,
+     and the 67ch measure grows with it. */
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
   margin-inline: auto;
   max-width: 100vw;
   padding: 2rem clamp(1ch, 5%, 3ch) 0;
   width: min(67ch, 100%);
+}
+
+/* Writebook typography for chapter text: the app's sans, left-aligned, 1.4
+   line height. Scoped tightly enough to beat the prose plugin and reader.css's
+   serif/justified defaults; inline alignment set in the editor still wins. */
+.wb-reader__page .hb-reader,
+.wb-reader__page .hb-reader .ProseMirror {
+  color: var(--wb-ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 1em;
+  line-height: 1.4;
+}
+
+.wb-reader__page .hb-reader :is(p, li, blockquote, td, th) {
+  font-family: inherit;
+  font-size: inherit;
+  hyphens: auto;
+  letter-spacing: -0.005ch;
+  line-height: 1.4;
+  text-align: start;
+  text-wrap: pretty;
+}
+
+.wb-reader__page .hb-reader p {
+  margin-block: 0.65lh;
+}
+
+.wb-reader__page .hb-reader :is(h1, h2, h3, h4, h5, h6) {
+  color: inherit;
+  font-family: inherit;
+  font-weight: 800;
+  hyphens: auto;
+  letter-spacing: -0.02ch;
+  line-height: 1.1;
+  margin-block: 0.65em;
+  text-wrap: balance;
+}
+
+.wb-reader__page .hb-reader h1 { font-size: 2em; }
+.wb-reader__page .hb-reader h2 { font-size: 1.5em; }
+.wb-reader__page .hb-reader h3 { font-size: 1.17em; }
+.wb-reader__page .hb-reader h4 { font-size: 1em; }
+
+.wb-reader__page .hb-reader blockquote {
+  border: 0;
+  font-style: italic;
+  margin: 0 3ch;
+  padding: 0;
+}
+
+.wb-reader__page .hb-reader :is(ul, ol) {
+  margin-block: 0.65lh;
+}
+
+.wb-reader__page .hb-reader li {
+  margin-block: 0.2lh;
 }
 
 .wb-reader__chapter-title {
