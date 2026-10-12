@@ -18,6 +18,9 @@
   --wb-block-space: 1rem;
   --wb-font-medium: clamp(1rem, 2.5cqi, 1.4rem);
 
+  /* Reading typeface. Loaded in layouts/reader.html.erb; swap both together. */
+  --wb-font-reading: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
   color: var(--wb-ink);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -332,7 +335,7 @@
   border-radius: 0.3em;
   color: var(--wb-ink);
   display: block;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--wb-font-reading);
   font-size: clamp(0.45rem, 5.5cqi, 0.75rem);
   line-height: 1.45;
   margin-bottom: 0.6rem;
@@ -542,7 +545,8 @@ html:has(.wb-reader) {
 .wb-reader__page .hb-reader,
 .wb-reader__page .hb-reader .ProseMirror {
   color: var(--wb-ink);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--wb-font-reading);
+  font-optical-sizing: auto;
   font-size: 1em;
   line-height: 1.4;
 }
