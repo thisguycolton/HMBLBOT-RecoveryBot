@@ -23,7 +23,15 @@ class Api::BooksController < ApplicationController
   end
   def show
     book = Book.find_by!(slug: params[:slug])
-    render json: { id: book.id, slug: book.slug, title: book.title }
+    render json: {
+      id: book.id,
+      slug: book.slug,
+      title: book.title,
+      author: book.author,
+      description: book.description,
+      image_url: book.image_url,
+      chapter_count: book.chapters.count
+    }
   end
 
     def create

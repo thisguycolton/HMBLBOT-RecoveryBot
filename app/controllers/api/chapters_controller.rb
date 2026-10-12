@@ -69,9 +69,11 @@ class Api::ChaptersController < ApplicationController
           :title,
           :index,
           :first_page,
-          :last_page
+          :last_page,
+          :kind,
+          :label
         ],
-        methods: [:paragraph_count]
+        methods: [:paragraph_count, :preview, :word_count]
       ).merge(
         book_title: @book.title
       )

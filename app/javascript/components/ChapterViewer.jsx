@@ -7,11 +7,11 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import axios from "axios";
 import { PageBreak } from "../tiptap/PageBreak";
 import TextAlign from '@tiptap/extension-text-align';
-import { Highlighter, ChevronRight, ChevronDown, Moon, Sun, Search } from "lucide-react"; // <-- added Search
 import ReaderBubbleMenu from "../components/ReaderBubbleMenu";
 import HighlightsModal from "../components/HighlightsModal";
 import MiddleTruncate from "./MiddleTruncate";
-import ChapterNavBar from "../components/ChapterNavBar";
+import { ReaderBar, ReaderFooter, ChaptersDialog, useChapterHotkeys, chapterHref, tocHref } from "./book/ReaderChrome";
+import { rememberLastRead } from "./book/readingProgress";
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
@@ -85,17 +85,6 @@ function useHighlightShareLink(bookSlug, slug) {
   );
 
   return { shareToken, copyLink, linkFor };
-}
-
-function truncateMiddle(str, maxLength = 80) {
-  if (!str || str.length <= maxLength) return str;
-
-  const ellipsis = "…";
-  const keep = maxLength - ellipsis.length;
-  const front = Math.ceil(keep / 2);
-  const back = Math.floor(keep / 2);
-
-  return str.slice(0, front) + ellipsis + str.slice(str.length - back);
 }
 
 function offsetToPos(doc, target) {
@@ -634,13 +623,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
     }
   }
 
-  // Sticky offset helpers (unchanged)
-  function getStickyOffset() {
-    const v = getComputedStyle(document.documentElement).getPropertyValue('--reader-sticky-offset');
-    const n = parseInt(v, 10);
-    return (Number.isFinite(n) ? n : 0) + 45;
-  }
-
+  // Sticky offset helper
   function nudgeForSticky(offsetExtra = 155) {
     const css = getComputedStyle(document.documentElement)
       .getPropertyValue('--reader-sticky-offset');
@@ -697,144 +680,75 @@ export default function ChapterViewer({ bookSlug, slug }) {
     }
   }, [pendingJumpId, editorMountedRef.current]);
 
-  /* ------------------ NEW: chapters listing + jump logic ------------------ */
+  /* ------------------ Chapter list + neighbors ------------------ */
 
-  // Fetch a list of chapters for the book (tries a couple of sensible endpoints)
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      try {
-        // Try a few endpoints; adjust depending on your API
-        const endpoints = [
-          `/api/books/${bookSlug}/chapters`, // common restful index
-          `/api/books/${bookSlug}/chapters.json`,
-          `/api/books/${bookSlug}/toc`, // sometimes used
-        ];
-        for (const ep of endpoints) {
-          try {
-            const res = await axios.get(ep);
-            const data = res.data;
-            if (mounted && Array.isArray(data) && data.length) {
-              setChaptersList(data);
-              break;
-            }
-          } catch (e) {
-            // ignore and try next
-          }
-        }
-      } catch (e) {
-        console.warn("Could not fetch chapters list", e);
-      }
-    })();
-    return () => (mounted = false);
+    axios
+      .get(`/api/books/${bookSlug}/chapters`)
+      .then(({ data }) => {
+        if (mounted && Array.isArray(data)) setChaptersList(data);
+      })
+      .catch((e) => console.warn("Could not fetch chapters list", e));
+    return () => { mounted = false; };
   }, [bookSlug]);
 
-  // Try to locate a page DOM node by page number
-  function findPageElementByNumber(pageNum) {
-    if (!pageNum && pageNum !== 0) return null;
-    // common attributes:
-    return document.querySelector(
-      `[data-page="${pageNum}"], [data-page-number="${pageNum}"], [data-page-break="${pageNum}"]`
-    );
-  }
+  useEffect(() => {
+    rememberLastRead(bookSlug, slug);
+  }, [bookSlug, slug]);
 
-  // Jump to a chapter object (tries several strategies)
-  async function jumpToChapter(ch) {
-    if (!ch) return;
+  const ordered = Array.isArray(chaptersList)
+    ? [...chaptersList].sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+    : [];
+  const position = ordered.findIndex((c) => c.slug === slug);
+  const prevChapter = position > 0 ? ordered[position - 1] : null;
+  const nextChapter = position >= 0 && position < ordered.length - 1 ? ordered[position + 1] : null;
+  const bookTitle = ordered[0]?.book_title || chapter?.book_title || "";
 
-    // 1) If chapter has selector text positions, map them to pos
-    const sel = ch.selector || ch.start_selector || ch.position;
-    if (sel && typeof sel.start === 'number') {
-      try {
-        const fromPos = offsetToPos(editor?.state?.doc, sel.start);
-        const toPos = offsetToPos(editor?.state?.doc, sel.end || sel.start + 1);
-        const coords = editor.view.coordsAtPos(fromPos);
-        const targetTop = window.scrollY + coords.top - nudgeForSticky(155);
-        window.scrollTo({ top: targetTop, left: 0, behavior: 'smooth' });
-        editor.chain().setTextSelection({ from: fromPos, to: toPos }).run();
-        return;
-      } catch (e) {
-        // fallthrough
-        console.warn("Failed to jump using selector:", e);
-      }
-    }
+  // Before the chapter list loads, the hotkeys stay off rather than guessing.
+  const listReady = position >= 0;
+  useChapterHotkeys(
+    listReady ? (prevChapter ? chapterHref(bookSlug, prevChapter) : tocHref(bookSlug)) : null,
+    listReady ? (nextChapter ? chapterHref(bookSlug, nextChapter) : tocHref(bookSlug)) : null
+  );
 
-    // 2) If chapter supplies page_start, try to find page element
-    const pageStart = ch.page_start || ch.start_page || (ch.page_range && ch.page_range[0]);
-    if (pageStart != null) {
-      const el = findPageElementByNumber(pageStart);
-      if (el) {
-        const top = el.getBoundingClientRect().top + window.scrollY - getStickyOffset();
-        window.scrollTo({ top, left: 0, behavior: 'smooth' });
-        return;
-      }
-    }
+  useEffect(() => {
+    if (chapter?.title) document.title = bookTitle ? `${chapter.title} | ${bookTitle}` : chapter.title;
+  }, [chapter?.title, bookTitle]);
 
-    // 3) If chapter has an intro quote that exists in text, find that offset
-    if (ch.extract || ch.intro || ch.preview) {
-      const text = editor?.getText?.();
-      const q = ch.extract || ch.intro || ch.preview;
-      const idx = text ? text.indexOf(q) : -1;
-      if (idx >= 0) {
-        const pos = offsetToPos(editor.state.doc, idx);
-        const coords = editor.view.coordsAtPos(pos);
-        const targetTop = window.scrollY + coords.top - nudgeForSticky(155);
-        window.scrollTo({ top: targetTop, left: 0, behavior: 'smooth' });
-        return;
-      }
-    }
-
-    // 4) fallback: navigate to the chapter page
-    window.location.href = `/books/${bookSlug}/chapters/${ch.slug || ch.id}`;
-  }
-
-  /* ------------------ UI: header + modal ------------------ */
+  /* ------------------ UI ------------------ */
 
   return (
-    <div className="max-w-3xl mx-auto p-4 space-y-3">
+    <div className="wb wb-reader">
       {/* Progress bar */}
-      <div className="fixed top-14 left-0 w-full h-1 bg-gray-200 z-50 overflow-hidden">
+      <div className="fixed top-14 left-0 w-full h-0.5 z-50 overflow-hidden pointer-events-none">
         <div
           ref={progRef}
-          className="h-1 bg-blue-500 origin-left will-change-transform"
+          className="h-0.5 bg-[oklch(70%_0.2_44)] origin-left will-change-transform"
           style={{ transform: 'scaleX(0)' }}
         />
       </div>
 
-      {/* Sticky chapter header */}
-      <div className="sticky top-10 z-40 bg-stone-100/90 dark:bg-stone-900/90 backdrop-blur flex items-center justify-between gap-3 pt-6 px-2 rounded-2xl sticky:rounded-none sticky:rounded-b-none">
-        <h1
-          className="text-2xl! md:text-4xl! font-bold truncate text-center flex-1 cursor-pointer"
-          onClick={() => setOpenChaptersModal(true)} // header click opens modal
-          title="Open chapter index"
-        >
-          {chapter?.title}
-        </h1>
-
-        {/* Magnifier button (also opens modal) */}
-        <button
-          aria-label="Open chapters"
-          className="ml-3 p-2 rounded hover:bg-stone-200 dark:hover:bg-stone-700"
-          onClick={() => setOpenChaptersModal(true)}
-        >
-          <Search size={18} />
-        </button>
-      </div>
-      
-      <ChapterNavBar
-        bookTitle={chapter?.book_title || "The Big Book of Alcoholics Anonymous"}
+      <ReaderBar
         bookSlug={bookSlug}
-        prevSlug={chapter?.neighbors?.prev_slug}
-        nextSlug={chapter?.neighbors?.next_slug}
+        bookTitle={bookTitle}
+        chapterTitle={chapter?.title}
+        prev={prevChapter}
+        next={nextChapter}
+        onOpenChapters={() => setOpenChaptersModal(true)}
       />
-      
-      <div className="prose hb-reader
-          prose-slate
-          prose-sm md:prose lg:prose-lg xl:prose-xl 2xl:prose-2xl
-          dark:prose-invert
-          max-w-none !mx-auto">
-        <EditorContent editor={editor} />
-      </div>
+
+      <article className="wb-reader__page">
+        <div className="prose hb-reader
+            prose-slate
+            prose-base md:prose-lg
+            dark:prose-invert
+            max-w-none !mx-auto">
+          <EditorContent editor={editor} />
+        </div>
+      </article>
+
+      {listReady && <ReaderFooter bookSlug={bookSlug} bookTitle={bookTitle} next={nextChapter} />}
 
       {/* Reader bubble menu for highlights */}
       <ReaderBubbleMenu
@@ -843,7 +757,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
         onChangeColor={(css) => setColor(css)}
         onHighlight={createHighlight}
         onOpenModal={() => setOpenHighlightsModal(true)}
-        onOpenChapters={() => setOpenChaptersModal(true)} // <-- new optional prop
+        onOpenChapters={() => setOpenChaptersModal(true)}
         onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
         isDark={document.documentElement.classList.contains('dark')}
       />
@@ -860,55 +774,14 @@ export default function ChapterViewer({ bookSlug, slug }) {
         MiddleTruncate={MiddleTruncate}
       />
 
-      {/* ---------- NEW: Chapters modal ---------- */}
-      {openChaptersModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setOpenChaptersModal(false)}
-          />
-          <div className="relative bg-white dark:bg-stone-900 rounded-xl shadow-xl max-h-[80vh] overflow-auto w-full max-w-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">Chapters</h2>
-              <button
-                className="p-2 rounded hover:bg-stone-200 dark:hover:bg-stone-800"
-                onClick={() => setOpenChaptersModal(false)}
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {Array.isArray(chaptersList) ? (
-                chaptersList.map((c) => (
-                  <button
-                    key={c.id || c.slug || c.title}
-                    onClick={() => {
-                      setOpenChaptersModal(false);
-                      setTimeout(() => jumpToChapter(c), 50);
-                    }}
-                    className="w-full text-left p-3 rounded hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-medium">{c.title || c.name}</div>
-                      <div className="text-sm text-stone-500 dark:text-stone-400">
-                        {c.page_start != null || c.page_end != null
-                          ? `pages ${c.page_start || '?'}${c.page_end ? `–${c.page_end}` : ''}`
-                          : c.preview
-                          ? truncateMiddle(c.preview, 80)
-                          : c.subtitle || ''}
-                      </div>
-                    </div>
-                    <ChevronRight />
-                  </button>
-                ))
-              ) : (
-                <div className="text-sm text-stone-500">No chapter index available.</div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <ChaptersDialog
+        open={openChaptersModal}
+        onClose={() => setOpenChaptersModal(false)}
+        bookSlug={bookSlug}
+        bookTitle={bookTitle}
+        chapters={ordered}
+        currentSlug={slug}
+      />
     </div>
   );
 }
