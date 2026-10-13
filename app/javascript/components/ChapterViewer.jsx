@@ -96,6 +96,9 @@ function useHideCoveredPageBreaks(editor) {
     let mutationObserver = null;
     let els = [];
     let currentIdx = -1;
+    const stateStyle = document.createElement("style");
+    stateStyle.dataset.pageBreakState = "";
+    document.head.appendChild(stateStyle);
 
     // Where a break actually sticks: its own computed `top`, falling back to the CSS variable.
     const getStickyOffset = () => {
@@ -110,12 +113,22 @@ function useHideCoveredPageBreaks(editor) {
       return Number.isFinite(parsed) ? parsed : 0;
     };
 
-    const indexElements = () => {
-      if (!editor.view?.dom) return;
+    // The editor's DOM. Tiptap throws on editor.view until the editor is mounted,
+    // and the chapter's content (with its page breaks) arrives after that.
+    const editorDom = () => {
+      try {
+        return editor.view?.dom || null;
+      } catch {
+        return null;
+      }
+    };
 
-      els = Array.from(
-        editor.view.dom.querySelectorAll("[data-page-break]")
-      );
+    const indexElements = () => {
+      const dom = editorDom();
+      if (!dom) return;
+
+      els = Array.from(dom.querySelectorAll("[data-page-break]"));
+      currentIdx = -2; // force applyState to rewrite the classes on the new elements
 
       els.forEach((el, index) => {
         el.dataset.pbIndex = String(index);
@@ -127,13 +140,15 @@ function useHideCoveredPageBreaks(editor) {
 
       currentIdx = idx;
 
-      els.forEach((el, index) => {
-        const isCurrent = index === idx;
-        const isCovered = index < idx;
-
-        el.classList.toggle("is-stuck", isCurrent);
-        el.classList.toggle("is-covered", isCovered);
-      });
+      // Hide the breaks already scrolled past, so only the current one stays pinned.
+      // ProseMirror owns these nodes and puts back their class attribute when it
+      // redraws them, so the rule lives in a <style> of our own instead of on the nodes.
+      // The pinned one drops its rule so its pill hangs off the reader bar's border.
+      const nth = (n) => `.hb-reader [data-page-break]:nth-child(${n} of [data-page-break])`;
+      stateStyle.textContent = [
+        idx > 0 && `${nth(`-n + ${idx}`)} { visibility: hidden; }`,
+        idx >= 0 && `${nth(idx + 1)} .h-px { visibility: hidden; }`,
+      ].filter(Boolean).join("\n");
 
       // Update the cloned sticky pill, if present.
       const stickyContainer =
@@ -180,6 +195,8 @@ function useHideCoveredPageBreaks(editor) {
     const recompute = () => {
       raf = null;
 
+      // Breaks that left the DOM (content swapped) or none found yet: look again.
+      if (!els.length || !els[0].isConnected) indexElements();
       if (!els.length) return;
 
       const stickyOffset = getStickyOffset();
@@ -239,30 +256,29 @@ function useHideCoveredPageBreaks(editor) {
      * Tiptap can change its DOM when content changes.
      * Re-index page breaks when that happens.
      */
-    if (editor.view?.dom) {
-      mutationObserver = new MutationObserver(() => {
-        indexElements();
-        schedule();
-      });
+    // Re-index when the content changes (the chapter loads after the editor mounts).
+    const onContent = () => {
+      indexElements();
+      schedule();
+    };
+    editor.on("create", onContent);
+    editor.on("update", onContent);
 
-      mutationObserver.observe(editor.view.dom, {
-        childList: true,
-        subtree: true,
-      });
+    const dom = editorDom();
+    if (dom) {
+      mutationObserver = new MutationObserver(onContent);
+      mutationObserver.observe(dom, { childList: true, subtree: true });
 
-      /*
-       * Keep the page-break calculation correct when the
-       * editor's layout changes.
-       */
-      resizeObserver = new ResizeObserver(() => {
-        schedule();
-      });
-
-      resizeObserver.observe(editor.view.dom);
+      // Keep the page-break calculation correct when the editor's layout changes.
+      resizeObserver = new ResizeObserver(schedule);
+      resizeObserver.observe(dom);
     }
 
     return () => {
       window.removeEventListener("scroll", schedule);
+      editor.off("create", onContent);
+      editor.off("update", onContent);
+      stateStyle.remove();
 
       if (raf !== null) {
         cancelAnimationFrame(raf);
