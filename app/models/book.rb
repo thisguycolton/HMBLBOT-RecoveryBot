@@ -1,7 +1,30 @@
 class Book < ApplicationRecord
+  # Writebook's cover colors (BookCover.jsx draws them). No color picks one from the slug.
+  COVER_COLORS = %w[black blue green magenta orange violet white].freeze
+
   has_many :chapters, dependent: :destroy
   has_many :pages, dependent: :delete_all
+  has_one_attached :cover_image
   validates :slug, presence: true, uniqueness: true
+  validates :cover_color, inclusion: { in: COVER_COLORS }, allow_nil: true
+
+  # Books are public unless "Everyone" is switched off on the edit page; then only admins see them.
+  scope :visible_to, ->(user) { user&.admin? ? all : where(publicly_accessible: [true, nil]) }
+
+  def public?
+    publicly_accessible != false
+  end
+
+  def visible_to?(user)
+    public? || user&.admin?
+  end
+
+  # An uploaded cover wins over a pasted image URL.
+  def cover_url
+    return Rails.application.routes.url_helpers.rails_blob_path(cover_image, only_path: true) if cover_image.attached?
+
+    image_url.presence
+  end
 
     def self.ransackable_attributes(auth_object = nil)
     ["aa_approved", "author", "created_at", "id", "info", "org_approved", "pdf_url", "publicly_accessible", "published_date", "purchase_link", "title", "updated_at"]

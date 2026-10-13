@@ -1434,3 +1434,324 @@ body:has(.wb) {
 .wb-md code {
   font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
 }
+
+/* ---------- Book edit page ----------
+ * Writebook's open layout, with HMBLBOT's panel look: a soft gray tray holding white cells
+ * with concentric corners, small uppercase labels, and the accent blue for focus and toggles.
+ */
+
+.wb-edit {
+  --wb-tray: oklch(92.2% 0 0);
+  --wb-cell: #fff;
+  --wb-accent: var(--color-accent, #0b6ede);
+  --wb-tray-pad: 0.375rem;
+  --wb-cell-radius: var(--radius-panel, 20px);
+
+  margin-inline: auto;
+  max-width: 60rem;
+  padding-block: 1rem 3rem;
+}
+
+.dark .wb-edit {
+  --wb-tray: oklch(26.9% 0 0);
+  --wb-cell: var(--color-surface-dark, #0d0d0f);
+}
+
+.wb-edit__status {
+  color: var(--wb-ink-soft);
+  font-size: 0.85rem;
+  margin-inline-end: 0.25rem;
+}
+
+.wb-edit__status--dirty::before {
+  background: var(--wb-accent);
+  border-radius: 50%;
+  content: "";
+  display: inline-block;
+  height: 0.5rem;
+  margin-inline-end: 0.4rem;
+  vertical-align: 0.1em;
+  width: 0.5rem;
+}
+
+.wb-edit__main {
+  align-items: center;
+  display: grid;
+  gap: 1.5rem 2rem;
+  grid-template-columns: auto minmax(9rem, 14rem) 1fr;
+  padding-block: 2rem;
+}
+
+/* The tray: the shell's gray frame, reduced to a soft container. */
+.wb-edit__tray,
+.wb-edit__group {
+  background: var(--wb-tray);
+  padding: var(--wb-tray-pad);
+}
+
+.wb-edit__swatches {
+  border-radius: 999px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.wb-edit__swatch {
+  align-items: center;
+  background: var(--swatch) !important;
+  border: 1px solid rgb(0 0 0 / 0.12);
+  border-radius: 50%;
+  color: #fff;
+  display: inline-flex;
+  height: 2.2rem;
+  justify-content: center;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  width: 2.2rem;
+}
+
+.wb-edit__swatch:hover {
+  transform: scale(1.08);
+}
+
+.wb-edit__swatch[aria-checked="true"] {
+  box-shadow: 0 0 0 3px var(--wb-tray), 0 0 0 5px var(--wb-accent);
+}
+
+.wb-edit__swatch--white {
+  border-color: var(--wb-subtle-dark);
+  color: #000;
+}
+
+.wb-edit__cover {
+  padding-bottom: 1.4rem;
+  position: relative;
+}
+
+.wb-edit__cover-actions {
+  bottom: 0;
+  display: flex;
+  gap: 0.5rem;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.wb-edit__camera {
+  align-items: center;
+  background: var(--wb-accent) !important;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--wb-bg), 0 4px 12px rgb(0 0 0 / 0.2);
+  color: #fff;
+  display: inline-flex;
+  height: 2.8rem;
+  justify-content: center;
+  width: 2.8rem;
+}
+
+.wb-edit__camera--soft {
+  background: var(--wb-cell) !important;
+  color: var(--wb-ink);
+}
+
+/* Cells stack inside a tray; outer corners follow the panel radius, inner ones stay tight. */
+.wb-edit__group {
+  border-radius: calc(var(--wb-cell-radius) + var(--wb-tray-pad));
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-tray-pad);
+}
+
+.wb-edit__cell {
+  background: var(--wb-cell);
+  border-radius: 6px;
+  box-shadow: var(--shadow-panel, 0 4px 12px rgb(0 0 0 / 0.1));
+  display: block;
+  padding: 0.7rem 1rem 0.8rem;
+  transition: box-shadow 150ms ease;
+}
+
+.wb-edit__cell:first-child {
+  border-top-left-radius: var(--wb-cell-radius);
+  border-top-right-radius: var(--wb-cell-radius);
+}
+
+.wb-edit__cell:last-child {
+  border-bottom-left-radius: var(--wb-cell-radius);
+  border-bottom-right-radius: var(--wb-cell-radius);
+}
+
+.wb-edit__cell:focus-within {
+  box-shadow: 0 0 0 2px var(--wb-accent);
+}
+
+.wb-edit__label {
+  color: var(--wb-ink-soft);
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.15rem;
+  text-transform: uppercase;
+}
+
+.wb-edit__input {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--wb-ink);
+  font-size: 1.1rem;
+  outline: none;
+  padding: 0;
+  resize: vertical;
+  width: 100%;
+}
+
+.wb-edit__input::placeholder {
+  color: var(--wb-subtle-dark);
+}
+
+.wb-edit__input--title {
+  font-size: clamp(1.5rem, 3.6vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.02ch;
+  line-height: 1.15;
+  field-sizing: content; /* long titles wrap instead of scrolling */
+  resize: none;
+}
+
+.wb-edit__settings {
+  margin-inline: auto;
+  max-width: 44rem;
+}
+
+.wb-edit__row {
+  align-items: center;
+  display: flex;
+  font-family: var(--wb-font-reading);
+  gap: 0.9rem;
+  padding: 0.9rem 1.1rem;
+}
+
+.wb-edit__row strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.wb-edit__icon {
+  align-items: center;
+  background: color-mix(in srgb, var(--wb-accent) 12%, transparent);
+  border-radius: 50%;
+  color: var(--wb-accent);
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 2.2rem;
+  justify-content: center;
+  width: 2.2rem;
+}
+
+.wb-edit__hint {
+  color: var(--wb-ink-soft);
+  font-family: var(--wb-font-reading);
+  font-size: 0.85rem;
+  margin: 0.1rem 0 0;
+}
+
+.wb-edit__leader {
+  align-self: center;
+  border-bottom: 2px dotted var(--wb-subtle-dark);
+  flex: 1;
+  min-width: 1rem;
+}
+
+.wb-edit__slug {
+  align-items: baseline;
+  color: var(--wb-ink-soft);
+  display: flex;
+  font-size: 0.95rem;
+  gap: 0.1rem;
+  margin-top: 0.1rem;
+}
+
+.wb-edit__slug .wb-edit__input {
+  font-size: 0.95rem;
+}
+
+.wb-edit__switch {
+  background: var(--wb-subtle-dark) !important;
+  border-radius: 2em;
+  flex-shrink: 0;
+  height: 2rem;
+  position: relative;
+  transition: background-color 200ms ease;
+  width: 3.4rem;
+}
+
+.wb-edit__switch[aria-checked="true"] {
+  background: var(--wb-accent) !important;
+}
+
+.wb-edit__switch span {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  height: 1.6rem;
+  left: 0.2rem;
+  position: absolute;
+  top: 0.2rem;
+  transition: transform 200ms ease;
+  width: 1.6rem;
+}
+
+.wb-edit__switch[aria-checked="true"] span {
+  transform: translateX(1.4rem);
+}
+
+.wb-edit__error {
+  color: oklch(55% 0.2 27);
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.wb-edit .wb-btn--reversed:disabled {
+  background: var(--wb-tray) !important;
+  border-color: transparent;
+  color: var(--wb-ink-soft) !important;
+  cursor: default;
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .wb-edit__main {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding-block: 1.25rem;
+  }
+
+  .wb-edit__swatches {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .wb-edit__cover {
+    width: min(12rem, 60%);
+  }
+
+  .wb-edit__fields {
+    justify-self: stretch;
+  }
+
+  .wb-edit__leader {
+    display: none;
+  }
+
+  .wb-edit__row > div {
+    flex: 1;
+  }
+
+  .wb-edit__status {
+    display: none;
+  }
+}

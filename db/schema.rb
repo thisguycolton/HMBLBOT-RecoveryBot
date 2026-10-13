@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_01_020000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_13_070000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -120,6 +120,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_01_020000) do
     t.string "edition", default: "4e", null: false
     t.string "language", default: "en", null: false
     t.jsonb "meta", default: {}, null: false
+    t.string "cover_color"
     t.index ["slug"], name: "index_books_on_slug", unique: true
     t.index ["work_key", "edition", "language"], name: "index_books_on_work_key_and_edition_and_language", unique: true
   end

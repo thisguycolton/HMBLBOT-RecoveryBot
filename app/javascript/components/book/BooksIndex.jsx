@@ -40,12 +40,9 @@ export default function BooksIndex({ isAdmin: isAdminProp }) {
             <a href="/library/highlights" className="wb-btn">My highlights</a>
           )}
           {isAdmin && (
-            <>
             <button type="button" className="wb-btn" onClick={() => setShowUploader((v) => !v)} aria-pressed={showUploader}>
               Import
             </button>
-            <a href="/books/new" className="wb-btn wb-btn--reversed">+ New book</a>
-            </>
           )}
         </div>
       </header>

@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, LayoutGrid, List, BookOpen } from "lucide-react";
+import { ArrowLeft, LayoutGrid, List, BookOpen, Pencil } from "lucide-react";
 import BookCover from "./BookCover.jsx";
 import { lastReadFor } from "./readingProgress.js";
 import { SearchButton, SearchDialog, useSearchHotkey } from "./BookSearch.jsx";
 import "../../styles/writebook.css";
 
-const VIEW_KEY = "hb:toc-view";
+const VIEW_KEY = "hb:toc-view-v2"; // v2: cards became the default
 
 const GROUP_LABELS = {
   preface: "Front matter",
@@ -48,7 +48,7 @@ function Bookmark() {
 }
 
 function readView() {
-  try { return localStorage.getItem(VIEW_KEY) || "list"; } catch { return "list"; }
+  try { return localStorage.getItem(VIEW_KEY) || "grid"; } catch { return "grid"; }
 }
 
 export default function BookToc() {
@@ -59,6 +59,7 @@ export default function BookToc() {
   const [view, setView] = useState(readView);
   const lastRead = useMemo(() => lastReadFor(slug), [slug]);
   const [openSearch, setOpenSearch] = useState(false);
+  const isAdmin = document.getElementById("books-root")?.dataset.admin === "true";
   useSearchHotkey(useCallback(() => setOpenSearch(true), []));
 
   useEffect(() => {
@@ -159,6 +160,11 @@ export default function BookToc() {
               <ArrowLeft size={20} />
             </Link>
             <span className="wb-toolbar__spacer" />
+            {isAdmin && (
+              <Link to={`/${slug}/edit`} className="wb-btn wb-btn--icon" aria-label="Edit this book" title="Edit book">
+                <Pencil size={18} />
+              </Link>
+            )}
             <SearchButton onClick={() => setOpenSearch(true)} />
             <button
               type="button"
