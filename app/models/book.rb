@@ -19,9 +19,11 @@ class Book < ApplicationRecord
     public? || user&.admin?
   end
 
-  # An uploaded cover wins over a pasted image URL.
+  # An uploaded cover wins over a pasted image URL. The cover is proxied through
+  # the app rather than redirected to a short-lived signed S3 URL, which Safari
+  # showed as a broken image after a reload.
   def cover_url
-    return Rails.application.routes.url_helpers.rails_blob_path(cover_image, only_path: true) if cover_image.attached?
+    return Rails.application.routes.url_helpers.rails_storage_proxy_path(cover_image, only_path: true) if cover_image.attached?
 
     image_url.presence
   end
