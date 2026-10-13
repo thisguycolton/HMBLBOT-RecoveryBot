@@ -9,12 +9,18 @@
 # Dockerfile skips its own Vite build when it finds them.
 #
 # Only committed code is deployed. Override the target with CAPROVER_NAME and
-# CAPROVER_APP. If CapRover says the auth token isn't valid, run `caprover login`.
+# CAPROVER_APP.
+#
+# Set CAPROVER_APP_TOKEN (CapRover → recoverybot → Deployment → Enable App Token)
+# to deploy with the app's token instead of the saved `caprover login`. The
+# token doesn't expire when CapRover restarts, so no more re-logging in.
+# Without it, if CapRover says the auth token isn't valid, run `caprover login`.
 set -euo pipefail
 
 ref="${1:-HEAD}"
 name="${CAPROVER_NAME:-captain-01}"
 app="${CAPROVER_APP:-recoverybot}"
+url="${CAPROVER_URL:-https://captain.hmblbot.com}"
 
 cd "$(git rev-parse --show-toplevel)"
 sha="$(git rev-parse --short "$ref")"
@@ -35,5 +41,10 @@ echo "==> Packing"
 tarball="$work/deploy-$sha.tar.gz"
 tar -czf "$tarball" -C "$src" --exclude=./node_modules .
 
-echo "==> Deploying $sha to $app on $name"
-caprover deploy -n "$name" -a "$app" -t "$tarball"
+if [ -n "${CAPROVER_APP_TOKEN:-}" ]; then
+  echo "==> Deploying $sha to $app on $url (app token)"
+  caprover deploy -u "$url" -a "$app" -t "$tarball"   # the CLI reads CAPROVER_APP_TOKEN itself
+else
+  echo "==> Deploying $sha to $app on $name"
+  caprover deploy -n "$name" -a "$app" -t "$tarball"
+fi
