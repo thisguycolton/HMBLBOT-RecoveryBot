@@ -24,7 +24,12 @@ module AcidTest
 
 
 
-    # The login page is a React page in the reader layout (app/views/devise/sessions/new.html.erb)
-    config.to_prepare { Devise::SessionsController.layout "reader" }
+    # Log in, sign up and the password pages are React pages in the reader layout
+    # (app/views/devise/shared/_auth_page.html.erb). Account settings keep the old layout.
+    config.to_prepare do
+      Devise::SessionsController.layout "reader"
+      Devise::PasswordsController.layout "reader"
+      Devise::RegistrationsController.layout ->(c) { %w[new create].include?(c.action_name) ? "reader" : "application" }
+    end
   end
 end

@@ -1,0 +1,8 @@
+<%# A Devise page drawn by React (app/javascript/components/auth/AuthPages.jsx).
+    locals: page (login | sign_up | forgot_password | reset_password), props (hash) %>
+<% content_for(:page_title) { "#{title} | HumbleBot" } %>
+<%# w-full: the reader styles make <body> a centring flexbox %>
+<div id="auth-page" class="w-full" data-page="<%= page %>"
+     data-props="<%= props.merge(authenticity_token: form_authenticity_token,
+                                 errors: resource.errors.full_messages).to_json %>"></div>
+<%= vite_javascript_tag "auth.jsx" %>
