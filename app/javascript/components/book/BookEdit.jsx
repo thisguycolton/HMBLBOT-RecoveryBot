@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, BookOpen, Camera, Check, Eye, EyeOff, Link2, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, Check, Eye, EyeOff, Link2, Trash2 } from "lucide-react";
 import BookCover, { COVER_COLORS, coverColorName } from "./BookCover.jsx";
-import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
-import { inputClass, labelClass } from "../ui/styles";
 import "../../styles/writebook.css";
 
 function csrfToken() {
@@ -11,7 +9,7 @@ function csrfToken() {
 }
 
 // Writebook's edit page: color swatches, the cover, and the title/subtitle/author fields side by
-// side, then who can read the book. Laid out in HMBLBOT's shell panels.
+// side, then who can read the book. Grouped in soft trays borrowed from HMBLBOT's panels.
 export default function BookEdit() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -119,6 +117,11 @@ export default function BookEdit() {
           <ArrowLeft size={20} />
         </Link>
         <span className="wb-toolbar__spacer" />
+        {(notice || dirty) && (
+          <span className={`wb-edit__status ${notice ? "" : "wb-edit__status--dirty"}`} role="status">
+            {notice || "Unsaved changes"}
+          </span>
+        )}
         <Link to={`/${slug}`} className="wb-btn">Cancel</Link>
         <button type="submit" form="book-edit" className="wb-btn wb-btn--reversed" disabled={saving || !dirty}>
           <Check size={18} aria-hidden="true" />
@@ -127,55 +130,69 @@ export default function BookEdit() {
       </div>
 
       <form id="book-edit" onSubmit={save}>
-        <Shell className="mt-4">
-          <ShellBand icon={BookOpen} title="Edit book" subtitle={notice || (dirty ? "Unsaved changes" : saved.title)} />
+        <div className="wb-edit__main">
+          <div className="wb-edit__tray wb-edit__swatches" role="radiogroup" aria-label="Cover color">
+            {Object.entries(COVER_COLORS).map(([name, value]) => (
+              <button
+                key={name}
+                type="button"
+                role="radio"
+                aria-checked={color === name}
+                aria-label={name}
+                title={name}
+                className={`wb-edit__swatch ${name === "white" ? "wb-edit__swatch--white" : ""}`}
+                style={{ "--swatch": value }}
+                onClick={() => pickColor(name)}
+              >
+                {color === name && <Check size={16} strokeWidth={3} aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
 
-          <ShellPanel position="middle" className="wb-edit__main">
-            <div className="wb-edit__swatches" role="radiogroup" aria-label="Cover color">
-              {Object.entries(COVER_COLORS).map(([name, value]) => (
-                <button
-                  key={name}
-                  type="button"
-                  role="radio"
-                  aria-checked={color === name}
-                  aria-label={name}
-                  title={name}
-                  className={`wb-edit__swatch ${name === "white" ? "wb-edit__swatch--white" : ""}`}
-                  style={{ "--swatch": value }}
-                  onClick={() => pickColor(name)}
-                >
-                  {color === name && <Check size={18} strokeWidth={3} aria-hidden="true" />}
+          <div className="wb-edit__cover">
+            <BookCover book={preview} />
+            <div className="wb-edit__cover-actions">
+              <button type="button" className="wb-edit__camera" onClick={() => fileRef.current?.click()} title="Upload a cover image" aria-label="Upload a cover image">
+                <Camera size={20} />
+              </button>
+              {imageUrl && (
+                <button type="button" className="wb-edit__camera wb-edit__camera--soft" onClick={dropCover} title="Remove the cover image" aria-label="Remove the cover image">
+                  <Trash2 size={18} />
                 </button>
-              ))}
+              )}
             </div>
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickFile} />
+          </div>
 
-            <div className="wb-edit__cover">
-              <BookCover book={preview} />
-              <div className="wb-edit__cover-actions">
-                <button type="button" className="wb-edit__camera" onClick={() => fileRef.current?.click()} title="Upload a cover image" aria-label="Upload a cover image">
-                  <Camera size={20} />
-                </button>
-                {imageUrl && (
-                  <button type="button" className="wb-edit__camera wb-edit__camera--soft" onClick={dropCover} title="Remove the cover image" aria-label="Remove the cover image">
-                    <Trash2 size={18} />
-                  </button>
-                )}
-              </div>
-              <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickFile} />
-            </div>
+          <div className="wb-edit__group wb-edit__fields">
+            <label className="wb-edit__cell">
+              <span className="wb-edit__label">Title</span>
+              <textarea
+                className="wb-edit__input wb-edit__input--title"
+                rows={1}
+                value={book.title}
+                onChange={set("title")}
+                onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+                placeholder="Title"
+                required
+              />
+            </label>
+            <label className="wb-edit__cell">
+              <span className="wb-edit__label">Subtitle</span>
+              <textarea className="wb-edit__input" rows={3} value={book.description} onChange={set("description")} placeholder="A line or two about the book" />
+            </label>
+            <label className="wb-edit__cell">
+              <span className="wb-edit__label">Author</span>
+              <input className="wb-edit__input" value={book.author} onChange={set("author")} placeholder="Author" />
+            </label>
+          </div>
+        </div>
 
-            <div className="wb-edit__fields">
-              <label className="sr-only" htmlFor="book-title">Title</label>
-              <input id="book-title" className="wb-edit__input wb-edit__input--title" value={book.title} onChange={set("title")} placeholder="Title" required />
-              <label className="sr-only" htmlFor="book-subtitle">Subtitle</label>
-              <textarea id="book-subtitle" className="wb-edit__input" rows={3} value={book.description} onChange={set("description")} placeholder="Subtitle" />
-              <label className="sr-only" htmlFor="book-author">Author</label>
-              <input id="book-author" className="wb-edit__input" value={book.author} onChange={set("author")} placeholder="Author" />
-            </div>
-          </ShellPanel>
-
-          <ShellPanel position="middle" className="wb-edit__row">
-            {book.publicly_accessible ? <Eye size={22} aria-hidden="true" /> : <EyeOff size={22} aria-hidden="true" />}
+        <div className="wb-edit__group wb-edit__settings">
+          <div className="wb-edit__cell wb-edit__row">
+            <span className="wb-edit__icon">
+              {book.publicly_accessible ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
+            </span>
             <div className="min-w-0">
               <strong>Everyone</strong>
               <p className="wb-edit__hint">
@@ -189,23 +206,23 @@ export default function BookEdit() {
               aria-checked={book.publicly_accessible}
               aria-label="Everyone can read this book"
               className="wb-edit__switch"
-              onClick={() => setBook({ ...book, publicly_accessible: !book.publicly_accessible })}
+              onClick={() => { setBook({ ...book, publicly_accessible: !book.publicly_accessible }); setNotice(""); }}
             >
               <span />
             </button>
-          </ShellPanel>
+          </div>
 
-          <ShellPanel position="bottom" className="wb-edit__row wb-edit__row--field">
-            <Link2 size={22} aria-hidden="true" />
-            <label className="min-w-0 flex-1">
-              <span className={labelClass}>Web address</span>
-              <span className="flex items-center gap-1 text-sm">
-                <span className="opacity-60 shrink-0">/library/</span>
-                <input className={inputClass} value={book.slug} onChange={set("slug")} pattern="[a-z0-9\-]+" title="Lowercase letters, numbers and dashes" required />
+          <label className="wb-edit__cell wb-edit__row">
+            <span className="wb-edit__icon"><Link2 size={18} aria-hidden="true" /></span>
+            <div className="min-w-0 flex-1">
+              <strong>Web address</strong>
+              <span className="wb-edit__slug">
+                <span>/library/</span>
+                <input className="wb-edit__input" value={book.slug} onChange={set("slug")} pattern="[a-z0-9\-]+" title="Lowercase letters, numbers and dashes" required />
               </span>
-            </label>
-          </ShellPanel>
-        </Shell>
+            </div>
+          </label>
+        </div>
       </form>
 
       {error && <p className="wb-edit__error" role="alert">{error}</p>}
