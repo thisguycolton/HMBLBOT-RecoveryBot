@@ -384,6 +384,18 @@ h1{
   text-align: left;
 }
 
+/* dark mode: the light header fill made white header text unreadable */
+.dark .prose table th,
+.dark .prose table td {
+  border-color: #3f3f46;
+  /* zinc-700 */
+}
+
+.dark .prose table th {
+  background: rgb(255 255 255 / 0.06);
+  color: inherit;
+}
+
 /* TipTap resizer handle (only visible when resizable=true) */
 .ProseMirror .column-resize-handle {
   position: absolute;
