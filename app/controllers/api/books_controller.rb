@@ -2,36 +2,31 @@ require "digest"
 
 class Api::BooksController < ApplicationController
   before_action :set_book, only: [:show, :update, :export, :search]
+  before_action :hide_private_book!, only: [:show, :export, :search]
   before_action :authenticate_user!, only: [:create, :update, :import_json]
   before_action :require_admin!, only: [:create, :update, :import_json]
 
 
 
   def index
-    books = Book.includes(:chapters).order(:title)
+    books = Book.visible_to(current_user).includes(:chapters, cover_image_attachment: :blob).order(:title)
     render json: books.map { |b|
       {
         slug: b.slug,
         title: b.title,
         description: b.try(:description),
         author: b.try(:author),
-        image_url: b.try(:image_url),
+        image_url: b.cover_url,
+        cover_color: b.cover_color,
+        public: b.public?,
         chapter_count: b.chapters.size,
-        first_chapter_slug: b.chapters.order(:index, :id).limit(1).pluck(:slug).first
+        first_chapter_slug: b.chapters.min_by { |c| [c.index.to_i, c.id] }&.slug
       }
     }
   end
+
   def show
-    book = Book.find_by!(slug: params[:slug])
-    render json: {
-      id: book.id,
-      slug: book.slug,
-      title: book.title,
-      author: book.author,
-      description: book.description,
-      image_url: book.image_url,
-      chapter_count: book.chapters.count
-    }
+    render json: book_json(@book)
   end
 
     def create
@@ -40,9 +35,20 @@ class Api::BooksController < ApplicationController
     render json: { ok: true, slug: book.slug }, status: :created
   end
 
+  # PATCH /api/books/:slug — JSON, or multipart when a cover image is uploaded.
+  # remove_cover_image=1 drops both an uploaded cover and a pasted image URL.
   def update
-    @book.update!(book_params)
-    render json: { ok: true, slug: @book.slug }
+    attrs = book_params
+    attrs[:cover_color] = attrs[:cover_color].presence if attrs.key?(:cover_color)
+    @book.assign_attributes(attrs)
+    remove_cover = ActiveModel::Type::Boolean.new.cast(params.dig(:book, :remove_cover_image))
+    @book.image_url = nil if remove_cover
+    @book.cover_image.attach(params[:book][:cover_image]) if !remove_cover && params.dig(:book, :cover_image).present?
+    @book.save!
+    @book.cover_image.purge if remove_cover && @book.cover_image.attached?
+    render json: book_json(@book).merge(ok: true)
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   end
 
   # GET /api/books/:slug/search?q=...
@@ -60,7 +66,7 @@ class Api::BooksController < ApplicationController
     query = params[:q].to_s.squish
     return render json: { query: query, results: [] } if query.length < 2
 
-    results = Book.order(:title).filter_map do |book|
+    results = Book.visible_to(current_user).order(:title).filter_map do |book|
       chapters = book.search(query, snippets: 2)
       next if chapters.empty?
 
@@ -206,12 +212,32 @@ class Api::BooksController < ApplicationController
     @book = Book.find_by!(slug: params[:slug])
   end
 
+  def hide_private_book!
+    head :not_found unless @book.visible_to?(current_user)
+  end
+
+  def book_json(book)
+    {
+      id: book.id,
+      slug: book.slug,
+      title: book.title,
+      author: book.author,
+      description: book.description,
+      image_url: book.cover_url,
+      has_uploaded_cover: book.cover_image.attached?,
+      cover_color: book.cover_color,
+      public: book.public?,
+      chapter_count: book.chapters.count
+    }
+  end
+
   def require_admin!
     head :forbidden unless current_user&.admin?
   end
 
   def book_params
-    params.require(:book).permit(:title, :slug, :description, :image_url, :author, :published_at)
+    params.require(:book).permit(:title, :slug, :description, :image_url, :author, :published_at, :cover_color,
+                                 :publicly_accessible)
   end
 
   def normalize_imported_chapters(chapters)

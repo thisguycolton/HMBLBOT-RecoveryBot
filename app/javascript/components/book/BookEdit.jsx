@@ -1,72 +1,108 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Camera, Check, Eye, EyeOff, Link2, Trash2 } from "lucide-react";
+import BookCover, { COVER_COLORS, coverColorName } from "./BookCover.jsx";
+import "../../styles/writebook.css";
 
+function csrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content || "";
+}
+
+// Writebook's edit page: color swatches, the cover, and the title/subtitle/author fields side by
+// side, then who can read the book. Grouped in soft trays borrowed from HMBLBOT's panels.
 export default function BookEdit() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const fileRef = useRef(null);
 
-  const [book, setBook] = useState({
-    title: "",
-    slug: "",
-    description: "",
-    image_url: "",   // UI name
-    author: "",
-  });
+  const [saved, setSaved] = useState(null);   // the book as the server last returned it
+  const [book, setBook] = useState(null);     // the form
+  const [coverFile, setCoverFile] = useState(null);
+  const [removeCover, setRemoveCover] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  // fetch details
   useEffect(() => {
+    let alive = true;
     (async () => {
-      setError("");
       const res = await fetch(`/api/books/${encodeURIComponent(slug)}`);
-      if (!res.ok) { setError("Failed to load book"); return; }
+      if (!res.ok) throw new Error(res.status === 404 ? "That book isn't in the library." : "Couldn't load this book.");
       const data = await res.json();
-      setBook({
-        title: data.title || "",
-        slug: data.slug || "",
-        description: data.description || "",
-        image_url: data.image_url || data.cover_url || "", // <- accept either
-        author: data.author || "",
-      });
-    })().catch(e => setError(String(e)));
+      if (!alive) return;
+      setSaved(data);
+      setBook(formFrom(data));
+      document.title = `Edit ${data.title} | HMBLBOT`;
+    })().catch((e) => alive && setError(e.message));
+    return () => { alive = false; };
   }, [slug]);
 
-  function csrfToken() {
-    const m = document.querySelector('meta[name="csrf-token"]');
-    return m ? m.content : "";
+  // Preview the picked file without uploading it yet.
+  const previewUrl = useMemo(() => (coverFile ? URL.createObjectURL(coverFile) : null), [coverFile]);
+  useEffect(() => () => previewUrl && URL.revokeObjectURL(previewUrl), [previewUrl]);
+
+  if (error && !book) {
+    return (
+      <div className="wb py-12 text-center">
+        <p>{error}</p>
+        <Link to="/" className="wb-btn mt-4">Back to the library</Link>
+      </div>
+    );
+  }
+  if (!book) return <div className="wb" />;
+
+  const set = (field) => (e) => { setBook({ ...book, [field]: e.target.value }); setNotice(""); };
+  const imageUrl = removeCover ? null : previewUrl || saved.image_url;
+  const preview = { ...book, image_url: imageUrl };
+  const color = coverColorName(book);
+  const dirty =
+    coverFile || removeCover || JSON.stringify(book) !== JSON.stringify(formFrom(saved));
+
+  function pickColor(name) {
+    setBook({ ...book, cover_color: name });
+    setNotice("");
   }
 
-  async function save() {
+  function pickFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setCoverFile(file);
+    setRemoveCover(false);
+    setNotice("");
+  }
+
+  function dropCover() {
+    setCoverFile(null);
+    setRemoveCover(true);
+    setNotice("");
+  }
+
+  async function save(e) {
+    e.preventDefault();
     setSaving(true);
     setError("");
     try {
-      // Map UI field -> API field
-      const payloadBook = {
-        title: book.title,
-        slug: book.slug,
-        description: book.description,
-        image_url: book.image_url, // <- server expects cover_url
-        author: book.author,
-      };
+      const body = new FormData();
+      for (const [key, value] of Object.entries(book)) body.append(`book[${key}]`, value ?? "");
+      if (coverFile) body.append("book[cover_image]", coverFile);
+      if (removeCover) body.append("book[remove_cover_image]", "1");
 
       const res = await fetch(`/api/books/${encodeURIComponent(slug)}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken(),
-        },
-        body: JSON.stringify({ book: payloadBook }),
+        headers: { "X-CSRF-Token": csrfToken(), Accept: "application/json" },
+        body,
         credentials: "same-origin",
       });
-      if (!res.ok) throw new Error(`Save failed (${res.status})`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Couldn't save (${res.status}).`);
 
-      const data = await res.json();
-
-      // if slug changed, navigate to new edit URL in your SPA
-      if (data.slug && data.slug !== slug) {
-        navigate(`/library/${data.slug}/edit`, { replace: true });
-      }
+      setSaved(data);
+      setBook(formFrom(data));
+      setCoverFile(null);
+      setRemoveCover(false);
+      setNotice("Saved.");
+      if (data.slug !== slug) navigate(`/${data.slug}/edit`, { replace: true });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -75,107 +111,132 @@ export default function BookEdit() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-3 py-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Edit Book</h1>
-        <Link
-          className="text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-          to="/library"
-        >
-          Back
+    <div className="wb wb-edit">
+      <div className="wb-toolbar">
+        <Link to={`/${slug}`} className="wb-btn wb-btn--icon" aria-label={`Back to ${saved.title}`} title="Back to the book">
+          <ArrowLeft size={20} />
         </Link>
+        <span className="wb-toolbar__spacer" />
+        {(notice || dirty) && (
+          <span className={`wb-edit__status ${notice ? "" : "wb-edit__status--dirty"}`} role="status">
+            {notice || "Unsaved changes"}
+          </span>
+        )}
+        <Link to={`/${slug}`} className="wb-btn">Cancel</Link>
+        <button type="submit" form="book-edit" className="wb-btn wb-btn--reversed" disabled={saving || !dirty}>
+          <Check size={18} aria-hidden="true" />
+          {saving ? "Saving…" : "Save"}
+        </button>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-red-700">
-          {error}
+      <form id="book-edit" onSubmit={save}>
+        <div className="wb-edit__main">
+          <div className="wb-edit__tray wb-edit__swatches" role="radiogroup" aria-label="Cover color">
+            {Object.entries(COVER_COLORS).map(([name, value]) => (
+              <button
+                key={name}
+                type="button"
+                role="radio"
+                aria-checked={color === name}
+                aria-label={name}
+                title={name}
+                className={`wb-edit__swatch ${name === "white" ? "wb-edit__swatch--white" : ""}`}
+                style={{ "--swatch": value }}
+                onClick={() => pickColor(name)}
+              >
+                {color === name && <Check size={16} strokeWidth={3} aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+
+          <div className="wb-edit__cover">
+            <BookCover book={preview} />
+            <div className="wb-edit__cover-actions">
+              <button type="button" className="wb-edit__camera" onClick={() => fileRef.current?.click()} title="Upload a cover image" aria-label="Upload a cover image">
+                <Camera size={20} />
+              </button>
+              {imageUrl && (
+                <button type="button" className="wb-edit__camera wb-edit__camera--soft" onClick={dropCover} title="Remove the cover image" aria-label="Remove the cover image">
+                  <Trash2 size={18} />
+                </button>
+              )}
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickFile} />
+          </div>
+
+          <div className="wb-edit__group wb-edit__fields">
+            <label className="wb-edit__cell">
+              <span className="wb-edit__label">Title</span>
+              <textarea
+                className="wb-edit__input wb-edit__input--title"
+                rows={1}
+                value={book.title}
+                onChange={set("title")}
+                onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+                placeholder="Title"
+                required
+              />
+            </label>
+            <label className="wb-edit__cell">
+              <span className="wb-edit__label">Subtitle</span>
+              <textarea className="wb-edit__input" rows={3} value={book.description} onChange={set("description")} placeholder="A line or two about the book" />
+            </label>
+            <label className="wb-edit__cell">
+              <span className="wb-edit__label">Author</span>
+              <input className="wb-edit__input" value={book.author} onChange={set("author")} placeholder="Author" />
+            </label>
+          </div>
         </div>
-      )}
 
-      <div className="space-y-6">
-        <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Title">
-            <input
-              className="mt-1 w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-neutral-900 dark:text-slate-100"
-              value={book.title}
-              onChange={(e) => setBook({ ...book, title: e.target.value })}
-            />
-          </Field>
-          <Field label="Slug">
-            <input
-              className="mt-1 w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-neutral-900 dark:text-slate-100"
-              value={book.slug}
-              onChange={(e) => setBook({ ...book, slug: e.target.value })}
-            />
-          </Field>
+        <div className="wb-edit__group wb-edit__settings">
+          <div className="wb-edit__cell wb-edit__row">
+            <span className="wb-edit__icon">
+              {book.publicly_accessible ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
+            </span>
+            <div className="min-w-0">
+              <strong>Everyone</strong>
+              <p className="wb-edit__hint">
+                {book.publicly_accessible ? "Anyone can find and read this book." : "Hidden: only admins can see this book."}
+              </p>
+            </div>
+            <span className="wb-edit__leader" aria-hidden="true" />
+            <button
+              type="button"
+              role="switch"
+              aria-checked={book.publicly_accessible}
+              aria-label="Everyone can read this book"
+              className="wb-edit__switch"
+              onClick={() => { setBook({ ...book, publicly_accessible: !book.publicly_accessible }); setNotice(""); }}
+            >
+              <span />
+            </button>
+          </div>
+
+          <label className="wb-edit__cell wb-edit__row">
+            <span className="wb-edit__icon"><Link2 size={18} aria-hidden="true" /></span>
+            <div className="min-w-0 flex-1">
+              <strong>Web address</strong>
+              <span className="wb-edit__slug">
+                <span>/library/</span>
+                <input className="wb-edit__input" value={book.slug} onChange={set("slug")} pattern="[a-z0-9\-]+" title="Lowercase letters, numbers and dashes" required />
+              </span>
+            </div>
+          </label>
         </div>
+      </form>
 
-        <Field label="Author">
-          <input
-            className="mt-1 w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-neutral-900 dark:text-slate-100"
-            value={book.author}
-            onChange={(e) => setBook({ ...book, author: e.target.value })}
-          />
-        </Field>
-
-        <Field label="Image URL">
-          <input
-            className="mt-1 w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-neutral-900 dark:text-slate-100"
-            value={book.image_url}
-            onChange={(e) => setBook({ ...book, image_url: e.target.value })}
-            placeholder="https://…"
-          />
-          {/* Optional preview */}
-          {book.image_url && (
-            <img
-              src={book.image_url}
-              alt="Cover preview"
-              className="mt-2 h-40 w-auto rounded border border-slate-200 object-cover"
-              onError={(e) => (e.currentTarget.style.display = "none")}
-            />
-          )}
-        </Field>
-
-        <Field label="Description">
-          <textarea
-            rows={4}
-            className="mt-1 w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-neutral-900 dark:text-slate-100"
-            value={book.description}
-            onChange={(e) => setBook({ ...book, description: e.target.value })}
-          />
-        </Field>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={save}
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-md px-3 py-2
-                       bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-          >
-            {saving ? "Saving…" : "Save"}
-          </button>
-          <Link
-            to="/library"
-            className="inline-flex items-center gap-2 rounded-md px-3 py-2
-                       border border-slate-200 text-slate-700 hover:bg-slate-50
-                       dark:border-slate-700 dark:text-slate-200 dark:hover:bg-neutral-800"
-          >
-            Cancel
-          </Link>
-        </div>
-      </div>
+      {error && <p className="wb-edit__error" role="alert">{error}</p>}
     </div>
   );
 }
 
-function Field({ label, children }) {
-  return (
-    <label className="block">
-      <span className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
+function formFrom(data) {
+  return {
+    title: data.title || "",
+    description: data.description || "",
+    author: data.author || "",
+    slug: data.slug || "",
+    cover_color: data.cover_color || "",
+    publicly_accessible: data.public !== false,
+  };
 }

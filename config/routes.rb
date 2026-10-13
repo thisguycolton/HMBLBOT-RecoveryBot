@@ -112,6 +112,9 @@ end
   get 'host_helper/scratchpaper'
   # config/routes.rb
   get "/books/:book_slug/chapters/:chapter_slug", to: "pages#reader"
+  # A book's own page lives in the library; /books/<slug> used to 404.
+  get "/books", to: redirect("/library")
+  get "/books/:slug", to: redirect("/library/%{slug}"), constraints: { slug: /(?!new\z)[^\/]+/ }
   resources :polls do
     resources :options
   end

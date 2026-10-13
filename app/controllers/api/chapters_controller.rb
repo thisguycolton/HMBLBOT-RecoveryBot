@@ -475,6 +475,7 @@ end
 
   def set_book
     @book = Book.find_by!(slug: params[:book_slug])
+    head :not_found unless @book.visible_to?(current_user)
   end
 
   def set_chapter
