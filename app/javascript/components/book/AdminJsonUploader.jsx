@@ -49,7 +49,8 @@ export default function AdminJsonUploader() {
       if (!res.ok) {
         setMsg(data.error || "Upload failed.");
       } else {
-        setMsg(`Imported: ${data.book?.title || "Book"} (${data.created_chapters} new / ${data.updated_chapters} updated)`);
+        const warnings = data.warnings?.length ? ` ${data.warnings.join(" ")}` : "";
+        setMsg(`Imported: ${data.book?.title || "Book"} (${data.created_chapters} new / ${data.updated_chapters} updated)${warnings}`);
         // optional: refresh list
         window.dispatchEvent(new CustomEvent("books:refresh"));
       }

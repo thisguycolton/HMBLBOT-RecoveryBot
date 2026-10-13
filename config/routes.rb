@@ -34,6 +34,7 @@ Rails.application.routes.draw do
   resources :books, param: :slug do
     collection do
       post :import_json         # => POST /api/books/import_json
+      get :search, action: :search_all  # => GET /api/books/search?q=
     end
 
     member do

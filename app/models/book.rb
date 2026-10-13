@@ -11,6 +11,23 @@ class Book < ApplicationRecord
     ["chapters", "pages"]
     end
 
+  # Chapters matching `query`, in reading order, each with its match count and
+  # the first few snippets.
+  def search(query, snippets: 3)
+    chapters.ordered.filter_map do |chapter|
+      matches = chapter.search(query)
+      next if matches.empty?
+
+      {
+        slug: chapter.slug,
+        title: chapter.title,
+        first_page: chapter.first_page,
+        count: matches.size,
+        snippets: matches.first(snippets)
+      }
+    end
+  end
+
 	# validates :pdf_url, presence: true
 
 	#   after_create :extract_and_save_pages_from_pdf
