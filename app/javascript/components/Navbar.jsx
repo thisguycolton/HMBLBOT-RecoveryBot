@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import DonationModal from "./DonationModal";
+import NotificationBell from "./NotificationBell";
 
 export default function Navbar({
   isAuthenticated = false,
@@ -286,6 +287,7 @@ function LogoutButton({ className = "" }) {
           </div>
 
           <div className="flex items-center gap-2">
+            {isAuthenticated && <NotificationBell />}
             <div className="hidden md:block">
               {isAuthenticated ? (
                 <AccountMenu />

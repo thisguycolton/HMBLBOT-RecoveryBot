@@ -127,9 +127,7 @@
       </div>
     </div>
     <% end %>
-    <div class="position-fixed start-50 translate-middle alert-container">
-      <%= render_flash_messages class: "alert-toast"%>
-    </div>
+    <%= render "application/toasts" %>
     <div class="page-container">
       <%= yield %>
     </div>

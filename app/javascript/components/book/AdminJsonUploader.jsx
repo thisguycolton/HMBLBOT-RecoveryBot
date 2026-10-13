@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { showToast } from "../../lib/toast";
 
 function getCsrf() {
   const m = document.querySelector('meta[name="csrf-token"]');
@@ -48,9 +49,11 @@ export default function AdminJsonUploader() {
 
       if (!res.ok) {
         setMsg(data.error || "Upload failed.");
+        showToast(data.error || "Upload failed.", { tone: "error" });
       } else {
         const warnings = data.warnings?.length ? ` ${data.warnings.join(" ")}` : "";
         setMsg(`Imported: ${data.book?.title || "Book"} (${data.created_chapters} new / ${data.updated_chapters} updated)${warnings}`);
+        showToast(`Imported ${data.book?.title || "the book"}.`, { tone: "success" });
         // optional: refresh list
         window.dispatchEvent(new CustomEvent("books:refresh"));
       }

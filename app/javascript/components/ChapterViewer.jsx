@@ -628,7 +628,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
   async function createHighlight(colorName = color, { withNote = false } = {}) {
     if (!editor) return;
     if (!signedIn) {
-      toast("Sign in to save highlights");
+      toast("Sign in to save highlights", { tone: "error" });
       return;
     }
 
@@ -656,10 +656,10 @@ export default function ChapterViewer({ bookSlug, slug }) {
       setSelectionPop(null);
       if (withNote) openCard(created.id, { edit: true });
     } catch (error) {
-      if (error?.response?.status === 401) toast("Sign in to save highlights");
+      if (error?.response?.status === 401) toast("Sign in to save highlights", { tone: "error" });
       else {
         console.error("Failed to create highlight:", error);
-        toast("Couldn't save that highlight");
+        toast("Couldn't save that highlight", { tone: "error" });
       }
     }
   }
@@ -672,7 +672,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
       toast("Highlight deleted");
     } catch (error) {
       console.error("Failed to delete highlight:", error);
-      toast("Couldn't delete that highlight");
+      toast("Couldn't delete that highlight", { tone: "error" });
     }
   }
 

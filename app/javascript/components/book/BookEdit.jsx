@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { showToast } from "../../lib/toast";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Camera, Check, Eye, EyeOff, Link2, Trash2 } from "lucide-react";
 import BookCover, { COVER_COLORS, coverColorName } from "./BookCover.jsx";
@@ -102,9 +103,11 @@ export default function BookEdit() {
       setCoverFile(null);
       setRemoveCover(false);
       setNotice("Saved.");
+      showToast("Changes saved.", { tone: "success" });
       if (data.slug !== slug) navigate(`/${data.slug}/edit`, { replace: true });
     } catch (e) {
       setError(e.message);
+      showToast(e.message, { tone: "error" });
     } finally {
       setSaving(false);
     }

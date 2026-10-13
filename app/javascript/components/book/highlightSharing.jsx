@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback } from "react";
 import axios from "axios";
-import { Check } from "lucide-react";
+import { showToast } from "../../lib/toast";
 
 // Links:
 //   one highlight   /books/:book/chapters/:chapter?hl=SHARE_ID#hl-ID   (reveals only that highlight)
@@ -35,18 +35,9 @@ export async function shareLink(url, { title, text } = {}) {
   return "copied";
 }
 
+// The reader's toasts go through the app-wide queue (components/Toasts.jsx).
+// Returns [toast, node] like before; node is null because <Toasts /> draws them.
 export function useToast() {
-  const [message, setMessage] = useState(null);
-  useEffect(() => {
-    if (!message) return;
-    const t = setTimeout(() => setMessage(null), 2600);
-    return () => clearTimeout(t);
-  }, [message]);
-  const toast = useCallback((m) => setMessage(m), []);
-  const node = message ? (
-    <div className="wb-toast" role="status" aria-live="polite">
-      <Check size={16} aria-hidden="true" /> {message}
-    </div>
-  ) : null;
-  return [toast, node];
+  const toast = useCallback((m, options) => showToast(m, { tone: "success", ...options }), []);
+  return [toast, null];
 }

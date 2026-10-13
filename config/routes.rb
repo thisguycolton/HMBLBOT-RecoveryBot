@@ -25,6 +25,10 @@ Rails.application.routes.draw do
             resources :court_verifications, only: :create
 
   resources :text_reports, only: :create
+  resources :notifications, only: :index do
+    post :read, on: :member
+    post :read_all, on: :collection
+  end
   resources :highlights, only: [:index, :create, :update, :destroy] do
     collection do
       post :share

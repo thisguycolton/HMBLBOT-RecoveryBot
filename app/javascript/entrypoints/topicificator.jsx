@@ -130,11 +130,10 @@ mountReact("court-verification-root", () => (
 mountReact("reading-archive-root", (rootEl) => {
   const readings = JSON.parse(rootEl.dataset.readings || "[]");
   const tags = JSON.parse(rootEl.dataset.tags || "[]");
-  const notice = rootEl.dataset.notice || "";
 
   return (
     <Layout isAuthenticated={isAuthenticated}>
-      <ReadingArchive readings={readings} tags={tags} notice={notice} />
+      <ReadingArchive readings={readings} tags={tags} />
     </Layout>
   );
 });
@@ -146,7 +145,7 @@ mountReact("my-readings-root", (rootEl) => {
   return (
     <>
     <Navbar isAuthenticated={isAuthenticated} />
-    <MyReadings readings={readings} notice={rootEl.dataset.notice || ""} alert={rootEl.dataset.alert || ""} />
+    <MyReadings readings={readings} />
     </>
   );
 });
@@ -172,7 +171,6 @@ mountReact("reading-editor-root", (rootEl) => {
 // ---------------- Reading Show ----------------
 mountReact("reading-show-root", (rootEl) => {
   const reading = JSON.parse(rootEl.dataset.reading || "{}");
-  const notice = rootEl.dataset.notice || "";
   const currentUser = JSON.parse(rootEl.dataset.currentUser || "null");
 
 
@@ -181,7 +179,7 @@ mountReact("reading-show-root", (rootEl) => {
         <Layout
     isAuthenticated={isAuthenticated}
   >
-      <ReadingShow reading={reading} notice={notice} currentUser={currentUser}/>
+      <ReadingShow reading={reading} currentUser={currentUser}/>
       </Layout>
     </>
   );
@@ -213,14 +211,12 @@ mountReact("service-readings-root", (rootEl) => {
 
 mountReact("service-reading-show-root", (el) => {
   const reading = JSON.parse(el.dataset.reading || "{}");
-  const notice = el.dataset.notice || "";
   const isAdmin = el.dataset.admin === "true";
 
   return (
     <Layout isAuthenticated={isAuthenticated}>
       <ServiceReadingShow
         reading={reading}
-        notice={notice}
         isAdmin={isAdmin}
         isAuthenticated={isAuthenticated}
       />

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { showToast } from "../lib/toast";
 import {
   BookMarked,
   CalendarDays,
@@ -9,7 +10,6 @@ import {
   Plus,
   Search,
   Trash2,
-  X,
 } from "lucide-react";
 import { Shell, ShellPanel } from "./ui/Shell";
 import SegmentedControl from "./ui/SegmentedControl";
@@ -55,11 +55,11 @@ function csrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
 }
 
-export default function MyReadings({ readings: initialReadings = [], notice = "", alert = "" }) {
+export default function MyReadings({ readings: initialReadings = [] }) {
   const [readings, setReadings] = useState(initialReadings);
   const [filter, setFilter] = useState(initialFilter);
   const [query, setQuery] = useState("");
-  const [flash, setFlash] = useState(alert ? { type: "error", text: alert } : notice ? { type: "info", text: notice } : null);
+
   const [deletingId, setDeletingId] = useState(null);
 
   // Keep the chosen tab in the URL so reloads and back-navigation land on it
@@ -108,10 +108,10 @@ export default function MyReadings({ readings: initialReadings = [], notice = ""
         withCredentials: true,
       });
       setReadings((prev) => prev.filter((r) => r.id !== reading.id));
-      setFlash({ type: "info", text: "Reading deleted." });
+      showToast("Reading deleted.", { tone: "success" });
     } catch (error) {
       const message = error?.response?.data?.errors?.[0] || "Something went wrong while deleting.";
-      setFlash({ type: "error", text: message });
+      showToast(message, { tone: "error" });
     } finally {
       setDeletingId(null);
     }
@@ -161,20 +161,6 @@ export default function MyReadings({ readings: initialReadings = [], notice = ""
 
       <div className="bg-slate-50 dark:bg-neutral-950 px-4 min-[1400px]:px-8 py-6 min-h-[60vh]">
         <div className="max-w-7xl mx-auto space-y-6">
-          {flash && (
-            <div
-              className={`flex items-start gap-3 rounded-panel px-4 py-3 text-sm shadow-panel ${
-                flash.type === "error"
-                  ? "bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-200"
-                  : "bg-accent-tint text-accent-ink dark:bg-accent/30 dark:text-white"
-              }`}
-            >
-              <span className="flex-1 !font-sans">{flash.text}</span>
-              <button type="button" onClick={() => setFlash(null)} className="opacity-60 hover:opacity-100" aria-label="Dismiss">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
 
           {/* Filters */}
           <Shell>

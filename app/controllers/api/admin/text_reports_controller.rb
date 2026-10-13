@@ -55,7 +55,7 @@ class Api::Admin::TextReportsController < Api::Admin::SuiteController
       reporter: person(r.user),
       book: { slug: book.slug, title: book.title },
       chapter: { slug: chapter.slug, title: chapter.title },
-      path: "/books/#{book.slug}/chapters/#{chapter.slug}",
+      path: r.reader_path,
       comments: r.comments.map { |c| { id: c.id, body: c.body, created_at: c.created_at.iso8601, by: person(c.user) } },
     }
   end

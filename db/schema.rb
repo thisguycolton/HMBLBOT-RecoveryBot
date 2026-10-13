@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_13_190000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_13_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -214,6 +214,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_13_190000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["group_id"], name: "index_meetings_on_group_id"
+  end
+
+  create_table "notifications", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "kind", null: false
+    t.string "title", null: false
+    t.text "body"
+    t.string "url"
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "created_at"], name: "index_notifications_on_user_id_and_created_at"
+    t.index ["user_id", "read_at"], name: "index_notifications_on_user_id_and_read_at"
+    t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
   create_table "options", force: :cascade do |t|
@@ -516,6 +530,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_13_190000) do
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"
   add_foreign_key "meetings", "groups"
+  add_foreign_key "notifications", "users"
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
   add_foreign_key "quest_inventories", "quest_sessions"

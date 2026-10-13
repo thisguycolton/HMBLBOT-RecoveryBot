@@ -39,6 +39,7 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
     user = User.find(params[:id])
     if user.update(confirmed: true)
       UserMailer.approval_notification(user).deliver_later
+      Notification.deliver(user, kind: "user.approved", title: "Your account was approved. Welcome to HumbleBot!")
       render json: user_json(user)
     else
       render_errors(user)

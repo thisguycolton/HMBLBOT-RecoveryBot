@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { BrowserRouter, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import React from "react";
+import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
 import { ArrowUpRight, Gauge } from "lucide-react";
-import { Flash } from "../topicificator_admin/App";
+import { showToast } from "../../lib/toast";
 import OverviewPage from "./OverviewPage";
 import AnalyticsPage from "./AnalyticsPage";
 import UsersPage from "./UsersPage";
@@ -41,10 +41,8 @@ export default function AdminSuite() {
 }
 
 function SuiteShell() {
-  const [flash, setFlash] = useState(null);
-  const location = useLocation();
-  useEffect(() => setFlash(null), [location.pathname]);
-  const notify = (text, type = "info") => setFlash({ type, text });
+  // Pages report results as toasts: notify("Saved.") or notify(message, "error")
+  const notify = (text, type = "info") => showToast(text, { tone: type === "error" ? "error" : "success" });
 
   return (
     <>
@@ -82,7 +80,6 @@ function SuiteShell() {
 
       <div className="bg-slate-50 dark:bg-neutral-950 px-4 min-[1400px]:px-8 py-6 min-h-[70vh]">
         <div className="max-w-7xl mx-auto space-y-6">
-          {flash && <Flash flash={flash} onClose={() => setFlash(null)} />}
           <Routes>
             <Route path="/" element={<OverviewPage notify={notify} />} />
             <Route path="/analytics" element={<AnalyticsPage notify={notify} />} />

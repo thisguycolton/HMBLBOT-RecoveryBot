@@ -36,7 +36,7 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
       await axios.patch(`/api/highlights/${highlight.id}`, { highlight: { style: { color: name } } });
     } catch {
       onChange?.(previous);
-      toast?.("Couldn't change the color");
+      toast?.("Couldn't change the color", { tone: "error" });
     }
   }
 

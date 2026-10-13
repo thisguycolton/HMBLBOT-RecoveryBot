@@ -1,0 +1,117 @@
+/* Toasts (components/Toasts.jsx). Plain CSS so they look the same in the
+   Tailwind pages and the older Bootstrap ones. */
+.hb-toasts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  left: 0;
+  margin: 0 auto;
+  max-width: 24rem;
+  padding: 0 1rem;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 4rem;
+  z-index: 2000;
+}
+
+@media (min-width: 640px) {
+  .hb-toasts {
+    left: auto;
+    padding: 0;
+    right: 1rem;
+    width: 24rem;
+  }
+}
+
+.hb-toast {
+  --hb-toast-bg: #fff;
+  --hb-toast-ink: #0f172a;
+  --hb-toast-ring: rgb(15 23 42 / 0.1);
+  align-items: center;
+  animation: hb-toast-in 0.18s ease-out;
+  background: var(--hb-toast-bg);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px -10px rgb(0 0 0 / 0.35), 0 0 0 1px var(--hb-toast-ring);
+  color: var(--hb-toast-ink);
+  display: flex;
+  font-family: "Public Sans", system-ui, sans-serif;
+  gap: 0.75rem;
+  padding: 0.75rem 0.5rem 0.75rem 0.75rem;
+  pointer-events: auto;
+}
+
+html.dark .hb-toast {
+  --hb-toast-bg: #262626;
+  --hb-toast-ink: #f5f5f4;
+  --hb-toast-ring: rgb(255 255 255 / 0.1);
+}
+
+.hb-toast__icon {
+  align-items: center;
+  border-radius: 0.5rem;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+}
+
+.hb-toast--success .hb-toast__icon { background: rgb(22 163 74 / 0.15); color: #16a34a; }
+.hb-toast--info .hb-toast__icon { background: rgb(37 99 235 / 0.15); color: #2563eb; }
+.hb-toast--warning .hb-toast__icon { background: rgb(217 119 6 / 0.2); color: #d97706; }
+.hb-toast--error .hb-toast__icon { background: rgb(220 38 38 / 0.15); color: #dc2626; }
+
+.hb-toast svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hb-toast__icon svg { height: 1.25rem; stroke-width: 2.5; width: 1.25rem; }
+
+.hb-toast__message {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.hb-toast__message a { color: inherit; text-decoration: none; }
+.hb-toast__message a:hover { text-decoration: underline; }
+
+.hb-toast__close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0.5rem;
+  color: inherit;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 2rem;
+  justify-content: center;
+  opacity: 0.5;
+  width: 2rem;
+}
+
+.hb-toast__close:hover { background: rgb(127 127 127 / 0.15); opacity: 1; }
+.hb-toast__close svg { height: 1rem; stroke-width: 2; width: 1rem; }
+
+.hb-sr-only {
+  clip: rect(0 0 0 0);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+@keyframes hb-toast-in {
+  from { opacity: 0; transform: translateY(-0.5rem); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-toast { animation: none; }
+}

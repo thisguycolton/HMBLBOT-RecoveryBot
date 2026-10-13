@@ -69,7 +69,7 @@ export default function HighlightsPage() {
       setData((d) => ({ ...d, highlights: d.highlights.filter((x) => x.id !== h.id) }));
       toast("Highlight deleted");
     } catch {
-      toast("Couldn't delete that highlight");
+      toast("Couldn't delete that highlight", { tone: "error" });
     }
   }
 
@@ -83,7 +83,7 @@ export default function HighlightsPage() {
       const result = await shareLink(await allHighlightsUrl(), { title: "My highlights" });
       if (result === "copied") toast("Link to all your highlights copied");
     } catch {
-      toast("Couldn't make a share link");
+      toast("Couldn't make a share link", { tone: "error" });
     }
   }
 
