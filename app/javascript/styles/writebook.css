@@ -878,6 +878,7 @@ body:has(.wb) {
 }
 
 .wb-search__scope button {
+  background: transparent;
   border: 1px solid var(--wb-subtle-dark);
   border-radius: 2em;
   color: var(--wb-ink);
@@ -900,19 +901,49 @@ body:has(.wb) {
 }
 
 .wb-search__book + .wb-search__book {
-  margin-top: 0.75rem;
+  margin-top: 1.25rem;
 }
 
+/* Each book's name stays pinned above its results while they scroll by */
 .wb-search__book-title {
-  align-items: baseline;
+  align-items: center;
+  background: var(--wb-subtle-light);
+  border: 1px solid var(--wb-subtle);
+  border-radius: 0.6rem;
   display: flex;
-  font-size: 0.8rem;
+  font-size: 1rem;
   font-weight: 700;
-  gap: 0.75rem;
-  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.wb-search__book-title svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.wb-search__book-title .wb-ellipsis {
+  flex: 1;
+}
+
+.wb-search__here {
+  background: var(--wb-ink);
+  border-radius: 2em;
+  color: var(--wb-bg);
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  padding: 0.5rem 0.5rem 0.4rem;
+  padding: 0.15em 0.6em;
   text-transform: uppercase;
+}
+
+.wb-search__book-title + .wb-search__result {
+  border-top: 0;
 }
 
 .wb-search__result {

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import "../../styles/writebook.css";
 
 export function searchHref(bookSlug, chapterSlug, query) {
@@ -170,7 +170,9 @@ export function SearchDialog({ open, onClose, bookSlug, bookTitle, initialQuery 
                 ? results.map((book) => (
                     <section key={book.slug} className="wb-search__book">
                       <h3 className="wb-search__book-title">
+                        <BookOpen size={18} aria-hidden="true" />
                         <span className="wb-ellipsis">{book.title}</span>
+                        {book.slug === bookSlug && <span className="wb-search__here">This book</span>}
                         <small className="wb-toc__meta">{plural(book.count, "match", "matches")}</small>
                       </h3>
                       {book.chapters.map((ch) => (
