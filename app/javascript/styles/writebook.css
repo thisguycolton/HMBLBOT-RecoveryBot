@@ -900,19 +900,53 @@ body:has(.wb) {
 }
 
 .wb-search__book + .wb-search__book {
-  margin-top: 0.75rem;
+  margin-top: 1.25rem;
 }
 
+/* Book headers stay pinned while scrolling that book's results, so it's always
+   clear which book a hit comes from. Opaque, so results slide underneath. */
 .wb-search__book-title {
-  align-items: baseline;
+  align-items: center;
+  background: color-mix(in oklab, var(--wb-link) 16%, var(--wb-bg));
+  border-left: 4px solid var(--wb-link);
+  border-radius: 0.5rem;
+  box-shadow: 0 6px 8px -6px rgb(0 0 0 / 0.35);
   display: flex;
-  font-size: 0.8rem;
-  font-weight: 700;
-  gap: 0.75rem;
-  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 800;
+  gap: 0.5rem;
   letter-spacing: 0.04em;
-  padding: 0.5rem 0.5rem 0.4rem;
+  padding: 0.6rem 0.75rem;
+  position: sticky;
   text-transform: uppercase;
+  top: 0;
+  z-index: 1;
+}
+
+.wb-search__book-title[data-current] {
+  background: color-mix(in oklab, var(--wb-ink) 8%, var(--wb-bg));
+  border-left-color: var(--wb-ink-soft);
+}
+
+.wb-search__book-tag {
+  background: var(--wb-link);
+  border-radius: 2em;
+  color: var(--wb-bg);
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  padding: 0.15em 0.6em;
+}
+
+.wb-search__book-title[data-current] .wb-search__book-tag {
+  background: var(--wb-ink-soft);
+}
+
+.wb-search__book-count {
+  color: var(--wb-ink-soft);
+  flex-shrink: 0;
+  font-weight: 600;
+  margin-left: auto;
 }
 
 .wb-search__result {
