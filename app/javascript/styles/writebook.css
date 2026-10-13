@@ -871,6 +871,50 @@ body:has(.wb) {
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--wb-link) 25%, transparent);
 }
 
+.wb-search__scope {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.wb-search__scope button {
+  border: 1px solid var(--wb-subtle-dark);
+  border-radius: 2em;
+  color: var(--wb-ink);
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 600;
+  max-width: 60%;
+  min-width: 0;
+  padding: 0.25em 0.9em;
+}
+
+.wb-search__scope button:hover {
+  background: var(--wb-subtle-light);
+}
+
+.wb-search__scope button[aria-pressed="true"] {
+  background: var(--wb-ink);
+  border-color: var(--wb-ink);
+  color: var(--wb-bg);
+}
+
+.wb-search__book + .wb-search__book {
+  margin-top: 0.75rem;
+}
+
+.wb-search__book-title {
+  align-items: baseline;
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 700;
+  gap: 0.75rem;
+  justify-content: space-between;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0.5rem 0.4rem;
+  text-transform: uppercase;
+}
+
 .wb-search__result {
   border-top: 1px solid var(--wb-subtle);
   color: inherit;

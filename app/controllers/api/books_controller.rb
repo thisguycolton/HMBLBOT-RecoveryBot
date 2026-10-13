@@ -51,17 +51,20 @@ class Api::BooksController < ApplicationController
     query = params[:q].to_s.squish
     return render json: { query: query, results: [] } if query.length < 2
 
-    results = @book.chapters.ordered.filter_map do |chapter|
-      matches = chapter.search(query)
-      next if matches.empty?
+    render json: { query: query, results: @book.search(query) }
+  end
 
-      {
-        slug: chapter.slug,
-        title: chapter.title,
-        first_page: chapter.first_page,
-        count: matches.size,
-        snippets: matches.first(3)
-      }
+  # GET /api/books/search?q=...
+  # The same search across every book in the library, grouped by book.
+  def search_all
+    query = params[:q].to_s.squish
+    return render json: { query: query, results: [] } if query.length < 2
+
+    results = Book.order(:title).filter_map do |book|
+      chapters = book.search(query, snippets: 2)
+      next if chapters.empty?
+
+      { slug: book.slug, title: book.title, count: chapters.sum { |c| c[:count] }, chapters: chapters }
     end
 
     render json: { query: query, results: results }
@@ -115,6 +118,8 @@ class Api::BooksController < ApplicationController
     book_slug = book_attrs["slug"].presence
 
     return render json: { error: "The import must include a book slug." }, status: :unprocessable_entity if book_slug.blank?
+
+    return import_litconv(payload) if payload.key?("schema_version")
 
     if payload.dig("document", "pages").is_a?(Array)
       return import_literature_extraction(payload, book_slug)
@@ -232,6 +237,28 @@ class Api::BooksController < ApplicationController
     raise ArgumentError, "Duplicate chapter slugs: #{duplicate_slugs.join(', ')}" if duplicate_slugs.any?
 
     normalized
+  end
+
+  # A litconv artifact (db/imports/*.json): the same import as `rails literature_json:import`.
+  def import_litconv(payload)
+    result = LiteratureJsonImporter.import!(
+      payload,
+      replace: ActiveModel::Type::Boolean.new.cast(params[:replace_chapters])
+    )
+    render json: {
+      ok: true,
+      book: { slug: result.book.slug, title: result.book.title },
+      created: result.chapters_created,
+      updated: result.chapters_updated,
+      created_chapters: result.chapters_created,
+      updated_chapters: result.chapters_updated,
+      deleted_chapters: result.chapters_deleted,
+      chapter_count: result.book.chapters.count,
+      warnings: result.warnings,
+      source_format: "litconv"
+    }
+  rescue LiteratureJsonImporter::Error, ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def import_literature_extraction(payload, book_slug)
