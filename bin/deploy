@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Deploy to CapRover with the Vite assets built on this machine.
+#
+#   bin/deploy [ref]    # defaults to HEAD
+#
+# The server can't build the assets itself: the Vite build runs the droplet
+# out of memory and takes CapRover down. So this exports the committed code
+# at <ref>, builds the assets here, and uploads both as one tarball. The
+# Dockerfile skips its own Vite build when it finds them.
+#
+# Only committed code is deployed. Override the target with CAPROVER_NAME and
+# CAPROVER_APP. If CapRover says the auth token isn't valid, run `caprover login`.
+set -euo pipefail
+
+ref="${1:-HEAD}"
+name="${CAPROVER_NAME:-captain-01}"
+app="${CAPROVER_APP:-recoverybot}"
+
+cd "$(git rev-parse --show-toplevel)"
+sha="$(git rev-parse --short "$ref")"
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+src="$work/src"
+mkdir -p "$src"
+
+echo "==> Exporting $ref ($sha)"
+git archive "$ref" | tar -x -C "$src"
+
+echo "==> Building Vite assets"
+(cd "$src" && npm ci --no-audit --no-fund && npx vite build)
+test -f "$src/public/vite/.vite/manifest.json" || { echo "Vite build produced no manifest" >&2; exit 1; }
+
+echo "==> Packing"
+tarball="$work/deploy-$sha.tar.gz"
+tar -czf "$tarball" -C "$src" --exclude=./node_modules .
+
+echo "==> Deploying $sha to $app on $name"
+caprover deploy -n "$name" -a "$app" -t "$tarball"

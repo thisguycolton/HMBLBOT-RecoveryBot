@@ -96,7 +96,11 @@ function useHideCoveredPageBreaks(editor) {
     let els = [];
     let currentIdx = -1;
 
+    // Where a break actually sticks: its own computed `top`, falling back to the CSS variable.
     const getStickyOffset = () => {
+      const own = els[0] ? parseFloat(getComputedStyle(els[0]).top) : NaN;
+      if (Number.isFinite(own)) return own;
+
       const value = getComputedStyle(document.documentElement)
         .getPropertyValue("--reader-sticky-offset");
 
@@ -188,7 +192,7 @@ function useHideCoveredPageBreaks(editor) {
       for (let i = 0; i < els.length; i++) {
         const rect = els[i].getBoundingClientRect();
 
-        if (rect.top <= stickyOffset) {
+        if (rect.top <= stickyOffset + 1) {
           idx = i;
         } else {
           break;
