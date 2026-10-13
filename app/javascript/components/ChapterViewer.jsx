@@ -28,7 +28,8 @@ import { Indent } from "../tiptap/Indent";
 import { HBHighlight } from '../tiptap/HBHighlight';
 import HighlightCard, { HIGHLIGHT_PALETTE as PALETTE, highlightCss } from "./book/HighlightCard";
 import { highlightUrl, allHighlightsUrl, shareLink, useToast } from "./book/highlightSharing";
-import { MessageSquareText } from "lucide-react";
+import { MessageSquareText, TriangleAlert } from "lucide-react";
+import TextReportDialog from "./book/TextReportDialog";
 
 function offsetToPos(doc, target) {
   const maxPos = Math.max(1, doc.content.size - 1);
@@ -296,6 +297,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
 
   // The highlight card (tap a highlight) and whether it opens straight into the note editor.
   const [cardId, setCardId] = useState(null);
+  const [reporting, setReporting] = useState(null); // selector of text being reported
   const [cardEditing, setCardEditing] = useState(false);
   const cardHighlight = cardId ? highlights.find((h) => String(h.id) === String(cardId)) : null;
   const openCard = useCallback((id, { edit = false } = {}) => {
@@ -589,6 +591,40 @@ export default function ChapterViewer({ bookSlug, slug }) {
     };
   }, [editor, sharedView]);
 
+  // The current selection as a W3C-style selector (text offsets + quote), or null.
+  function selectionSelector() {
+    const sel = lastSelectionRef.current || editor.state.selection;
+    const { from, to } = sel || {};
+    if (from == null || from === to) {
+      toast("Select some text first");
+      return null;
+    }
+
+    const doc = editor.state.doc;
+    const before = doc.textBetween(0, from, "\n", "\n");
+    const exact = doc.textBetween(from, to, "\n", "\n");
+    const after = doc.textBetween(to, doc.content.size, "\n", "\n");
+    if (!exact.trim()) return null;
+
+    const start = before.length;
+    return {
+      type: "Composite",
+      position: { type: "TextPositionSelector", start, end: start + exact.length },
+      quote: { type: "TextQuoteSelector", exact, prefix: before.slice(-40), suffix: after.slice(0, 40) },
+    };
+  }
+
+  // Opens the "report a problem" dialog for the selected text.
+  function startReport() {
+    if (!editor) return;
+    const selector = selectionSelector();
+    if (!selector) return;
+    setReporting(selector);
+    lastSelectionRef.current = null;
+    window.getSelection()?.removeAllRanges();
+    setSelectionPop(null);
+  }
+
   async function createHighlight(colorName = color, { withNote = false } = {}) {
     if (!editor) return;
     if (!signedIn) {
@@ -596,21 +632,8 @@ export default function ChapterViewer({ bookSlug, slug }) {
       return;
     }
 
-    const sel = lastSelectionRef.current || editor.state.selection;
-    const { from, to } = sel || {};
-    if (from == null || from === to) {
-      toast("Select some text first");
-      return;
-    }
-
-    const doc = editor.state.doc;
-    const before = doc.textBetween(0, from, "\n", "\n");
-    const exact = doc.textBetween(from, to, "\n", "\n");
-    const after = doc.textBetween(to, doc.content.size, "\n", "\n");
-    if (!exact.trim()) return;
-
-    const start = before.length;
-    const end = start + exact.length;
+    const selector = selectionSelector();
+    if (!selector) return;
     // The palette names are what we store; older code stored raw CSS colors.
     const name = Object.keys(PALETTE).find((k) => k === colorName || PALETTE[k] === colorName) || "yellow";
 
@@ -619,16 +642,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
         chapter_slug: slug,
         book_slug: bookSlug,
         style: { color: name },
-        selector: {
-          type: "Composite",
-          position: { type: "TextPositionSelector", start, end },
-          quote: {
-            type: "TextQuoteSelector",
-            exact,
-            prefix: before.slice(-40),
-            suffix: after.slice(0, 40)
-          }
-        }
+        selector,
       }
     };
 
@@ -900,6 +914,15 @@ export default function ChapterViewer({ bookSlug, slug }) {
                   onClick={() => createHighlight(name)}
                 />
               ))}
+              <button
+                type="button"
+                className="wb-selection-pop__swatch wb-selection-pop__report"
+                aria-label="Report a problem with this text"
+                title="Report a problem with this text"
+                onClick={startReport}
+              >
+                <TriangleAlert size={14} aria-hidden="true" />
+              </button>
               <span className="wb-selection-pop__sep" aria-hidden="true" />
               <button type="button" className="wb-selection-pop__btn" onClick={() => createHighlight(color, { withNote: true })}>
                 <MessageSquareText size={15} aria-hidden="true" /> Note
@@ -934,6 +957,14 @@ export default function ChapterViewer({ bookSlug, slug }) {
         onChange={updateHighlight}
         onDelete={deleteHighlight}
         toast={toast}
+      />
+
+      <TextReportDialog
+        selector={reporting}
+        bookSlug={bookSlug}
+        chapterSlug={slug}
+        onClose={() => setReporting(null)}
+        onSent={() => { setReporting(null); toast("Thanks. An admin will review it."); }}
       />
 
       {toastNode}

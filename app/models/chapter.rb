@@ -1,6 +1,7 @@
 class Chapter < ApplicationRecord
   belongs_to :book
   has_many :user_highlights, dependent: :destroy
+  has_many :text_reports, dependent: :destroy
 
   validates :slug, presence: true, uniqueness: { scope: :book_id }
   validates :index, presence: true

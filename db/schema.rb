@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_13_070000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_13_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -383,6 +383,32 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_13_070000) do
     t.string "icon_name"
   end
 
+  create_table "text_report_comments", force: :cascade do |t|
+    t.bigint "text_report_id", null: false
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["text_report_id"], name: "index_text_report_comments_on_text_report_id"
+    t.index ["user_id"], name: "index_text_report_comments_on_user_id"
+  end
+
+  create_table "text_reports", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "chapter_id", null: false
+    t.jsonb "selector", default: {}, null: false
+    t.text "message", null: false
+    t.string "status", default: "open", null: false
+    t.datetime "resolved_at"
+    t.bigint "resolved_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chapter_id"], name: "index_text_reports_on_chapter_id"
+    t.index ["resolved_by_id"], name: "index_text_reports_on_resolved_by_id"
+    t.index ["status", "created_at"], name: "index_text_reports_on_status_and_created_at"
+    t.index ["user_id"], name: "index_text_reports_on_user_id"
+  end
+
   create_table "topic_categories", force: :cascade do |t|
     t.string "title"
     t.string "icon"
@@ -502,6 +528,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_13_070000) do
   add_foreign_key "reading_tags", "tags"
   add_foreign_key "readings", "groups"
   add_foreign_key "readings", "users"
+  add_foreign_key "text_report_comments", "text_reports"
+  add_foreign_key "text_report_comments", "users"
+  add_foreign_key "text_reports", "chapters"
+  add_foreign_key "text_reports", "users"
+  add_foreign_key "text_reports", "users", column: "resolved_by_id"
   add_foreign_key "topic_sharing_prompts", "sharing_modes"
   add_foreign_key "topic_sharing_prompts", "topics"
   add_foreign_key "topic_tags", "tags"

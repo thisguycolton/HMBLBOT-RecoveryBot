@@ -1077,6 +1077,14 @@ body:has(.wb) {
   border-color: var(--wb-bg);
 }
 
+.wb-selection-pop__report {
+  align-items: center;
+  background: #f59e0b;
+  color: #1c1917;
+  display: inline-flex;
+  justify-content: center;
+}
+
 .wb-selection-pop__sep {
   align-self: stretch;
   background: color-mix(in oklab, var(--wb-bg) 30%, transparent);

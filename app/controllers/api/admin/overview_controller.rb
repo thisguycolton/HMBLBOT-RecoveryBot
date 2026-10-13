@@ -20,6 +20,7 @@ class Api::Admin::OverviewController < Api::Admin::SuiteController
         visitors_7_days: Ahoy::Visit.where(started_at: 7.days.ago..).distinct.count(:visitor_token),
       },
       tags: Tag.count,
+      text_reports: { open: TextReport.unresolved.count, resolved: TextReport.resolved.count },
     }
   end
 end

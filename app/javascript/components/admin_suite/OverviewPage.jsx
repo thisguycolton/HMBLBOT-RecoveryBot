@@ -22,6 +22,8 @@ export default function OverviewPage({ notify }) {
           detail={`${formatCount(data.readings.scheduled)} scheduled, ${formatCount(data.readings.drafts)} drafts`} />
         <StatTile to="/court_verifications" label="Verifications this month" value={formatCount(data.court_verifications.this_month)}
           detail={`${formatCount(data.court_verifications.total)} all time`} />
+        <StatTile to="/text_reports" label="Open text reports" value={formatCount(data.text_reports.open)}
+          detail={`${formatCount(data.text_reports.resolved)} resolved`} />
       </div>
 
       <section className="space-y-3">

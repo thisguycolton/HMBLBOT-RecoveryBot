@@ -8,6 +8,7 @@ import UsersPage from "./UsersPage";
 import ReadingsPage from "./ReadingsPage";
 import TagsPage from "./TagsPage";
 import CourtVerificationsPage from "./CourtVerificationsPage";
+import TextReportsPage from "./TextReportsPage";
 
 export const BASE = "/admin_panel";
 
@@ -17,6 +18,7 @@ const TABS = [
   { to: "/users", label: "Users" },
   { to: "/readings", label: "Readings" },
   { to: "/tags", label: "Tags" },
+  { to: "/text_reports", label: "Text reports" },
   { to: "/court_verifications", label: "Court verifications" },
 ];
 
@@ -54,7 +56,7 @@ function SuiteShell() {
             </div>
             <div>
               <h1 className="!text-xl !leading-tight font-semibold text-slate-900 dark:text-white !font-sans">Admin</h1>
-              <p className="text-sm text-slate-600 dark:text-neutral-400 mt-0.5 !font-sans">Visits, members, readings, tags and court verifications.</p>
+              <p className="text-sm text-slate-600 dark:text-neutral-400 mt-0.5 !font-sans">Visits, members, readings, tags, text reports and court verifications.</p>
             </div>
           </div>
           <nav className="flex flex-wrap items-stretch rounded-panel overflow-hidden shadow-panel bg-white dark:bg-surface-dark divide-x divide-neutral-200 dark:divide-neutral-700">
@@ -87,6 +89,7 @@ function SuiteShell() {
             <Route path="/users" element={<UsersPage notify={notify} />} />
             <Route path="/readings" element={<ReadingsPage notify={notify} />} />
             <Route path="/tags" element={<TagsPage notify={notify} />} />
+            <Route path="/text_reports" element={<TextReportsPage notify={notify} />} />
             <Route path="/court_verifications" element={<CourtVerificationsPage notify={notify} />} />
             <Route path="*" element={<p className="py-16 text-center text-slate-500 !font-sans">No admin page here.</p>} />
           </Routes>

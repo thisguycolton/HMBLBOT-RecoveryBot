@@ -24,6 +24,7 @@ Rails.application.routes.draw do
   namespace :api do
             resources :court_verifications, only: :create
 
+  resources :text_reports, only: :create
   resources :highlights, only: [:index, :create, :update, :destroy] do
     collection do
       post :share
@@ -164,6 +165,9 @@ end
       end
       resources :readings, only: %i[index update destroy]
       resources :tags, only: %i[index create update destroy]
+      resources :text_reports, only: %i[index update destroy] do
+        post :comment, on: :member
+      end
     end
   end
   resources :readings do

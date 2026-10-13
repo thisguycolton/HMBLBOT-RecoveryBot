@@ -7,6 +7,9 @@ class User < ApplicationRecord
   has_one :user_active_group
 
   has_many :user_highlights, dependent: :destroy
+  has_many :text_reports, dependent: :destroy
+  has_many :text_report_comments, dependent: :destroy
+  has_many :resolved_text_reports, class_name: "TextReport", foreign_key: :resolved_by_id, dependent: :nullify
 
   # Set default values for new users
   after_initialize :set_defaults, unless: :persisted?

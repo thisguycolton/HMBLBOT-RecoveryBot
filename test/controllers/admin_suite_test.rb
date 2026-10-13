@@ -6,7 +6,8 @@ class AdminSuiteTest < ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
   include ActionMailer::TestHelper
 
-  API_GETS = %w[/api/admin/overview /api/admin/analytics /api/admin/users /api/admin/readings /api/admin/tags].freeze
+  API_GETS = %w[/api/admin/overview /api/admin/analytics /api/admin/users /api/admin/readings /api/admin/tags
+                /api/admin/text_reports].freeze
 
   setup do
     @previous = ENV.values_at("ADMIN_EMAILS", "COURT_VERIFICATION_ADMIN_EMAILS")
