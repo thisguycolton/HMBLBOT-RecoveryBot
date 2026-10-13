@@ -23,5 +23,8 @@ module AcidTest
     config.secret_key_base = ENV['SECRET_KEY_BASE'] || Rails.application.credentials.secret_key_base || 'fallback_key'
 
 
+
+    # The login page is a React page in the reader layout (app/views/devise/sessions/new.html.erb)
+    config.to_prepare { Devise::SessionsController.layout "reader" }
   end
 end
