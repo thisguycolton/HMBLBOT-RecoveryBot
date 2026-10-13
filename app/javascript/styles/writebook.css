@@ -991,12 +991,20 @@ body:has(.wb) {
   display: flex;
   font-size: 0.95rem;
   gap: 0.5rem;
-  margin: 0.75rem auto 0;
+  /* Left edge, so it doesn't sit on top of the centred sticky page marker. */
+  margin: 0.75rem 0 0 1rem;
   padding: 0.3rem 0.4rem 0.3rem 1rem;
   position: sticky;
   top: calc(var(--nav-h, 56px) + 62px);
   width: fit-content;
   z-index: 35;
+}
+
+/* On narrow screens the page pill reaches the left edge, so sit just below it. */
+@media (max-width: 639px) {
+  .wb-search-banner {
+    top: calc(var(--nav-h, 56px) + 74px);
+  }
 }
 
 .wb-search-banner button {
