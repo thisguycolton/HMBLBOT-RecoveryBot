@@ -1233,7 +1233,9 @@ body:has(.wb) {
 .wb-md ol { list-style: decimal; padding-inline-start: 1.3em; }
 .wb-md blockquote { border-inline-start: 3px solid var(--wb-subtle); padding-inline-start: 0.7em; }
 .wb-md code { background: var(--wb-subtle); border-radius: 0.25em; font-size: 0.9em; padding: 0.05em 0.3em; }
-.wb-md pre { background: var(--wb-subtle); border-radius: 0.4em; overflow-x: auto; padding: 0.5em 0.7em; }
+/* reader.css styles every bare pre as a light-on-dark block; notes follow the card's colors */
+.wb-md pre { background: var(--wb-subtle); border-radius: 0.4em; color: inherit; overflow-x: auto; padding: 0.5em 0.7em; }
+.wb-md > pre, .wb-md code { font-family: "DM Mono", ui-monospace, monospace !important; }
 .wb-md pre code { background: none; padding: 0; }
 .wb-md a { color: var(--wb-link); text-decoration: underline; }
 
