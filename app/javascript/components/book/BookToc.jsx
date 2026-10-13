@@ -8,7 +8,22 @@ import "../../styles/writebook.css";
 
 const VIEW_KEY = "hb:toc-view";
 
-const GROUP_LABELS = { foreword: "Front matter", chapter: "Chapters" };
+const GROUP_LABELS = {
+  preface: "Front matter",
+  foreword: "Front matter",
+  chapter: "Chapters",
+  story: "Personal stories",
+  appendix: "Appendices",
+};
+
+// Chapters labelled "Step" or "Tradition" (the Twelve and Twelve) group under their label.
+const CHAPTER_LABEL_GROUPS = { Step: "The Twelve Steps", Tradition: "The Twelve Traditions" };
+
+function groupOf(ch) {
+  const kind = ch.kind || "chapter";
+  if (kind === "chapter" && CHAPTER_LABEL_GROUPS[ch.label]) return CHAPTER_LABEL_GROUPS[ch.label];
+  return GROUP_LABELS[kind] || kind;
+}
 
 function chapterHref(bookSlug, chapter) {
   return `/books/${bookSlug}/chapters/${chapter.slug}`;
@@ -86,18 +101,18 @@ export default function BookToc() {
 
   const resume = lastRead && chapters.find((c) => c.slug === lastRead);
   const startWith = resume || chapters[0];
-  const groups = new Set(chapters.map((c) => c.kind || "chapter"));
+  const groups = new Set(chapters.map(groupOf));
   const showGroups = groups.size > 1;
 
   const items = [];
   let currentGroup = null;
   for (const ch of chapters) {
-    const kind = ch.kind || "chapter";
-    if (showGroups && kind !== currentGroup) {
-      currentGroup = kind;
+    const group = groupOf(ch);
+    if (showGroups && group !== currentGroup) {
+      currentGroup = group;
       items.push(
-        <li key={`group-${kind}-${ch.slug}`} className="wb-toc__group">
-          {GROUP_LABELS[kind] || kind}
+        <li key={`group-${ch.slug}`} className="wb-toc__group">
+          {group}
         </li>
       );
     }
