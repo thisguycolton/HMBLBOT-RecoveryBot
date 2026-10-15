@@ -38,6 +38,7 @@ function AdminShell() {
   }, []);
 
   useEffect(() => { reloadMeta(); }, [reloadMeta]);
+  const section = TABS.find((t) => (t.end ? location.pathname === "/" || location.pathname.startsWith("/topics") : location.pathname.startsWith(t.to)))?.label;
   // Pages report results as toasts: notify("Saved.") or notify(message, "error")
   const notify = (text, type = "info") => showToast(text, { tone: type === "error" ? "error" : "success" });
   const page = { meta, reloadMeta, notify };
