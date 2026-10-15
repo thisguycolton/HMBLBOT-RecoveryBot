@@ -11,6 +11,9 @@ class User < ApplicationRecord
   has_many :notifications, dependent: :destroy
   has_many :text_report_comments, dependent: :destroy
   has_many :resolved_text_reports, class_name: "TextReport", foreign_key: :resolved_by_id, dependent: :nullify
+  has_many :schedule_polls, dependent: :destroy
+  has_many :schedule_poll_members, dependent: :destroy
+  has_many :schedule_poll_ballots, dependent: :nullify
 
   # Set default values for new users
   after_initialize :set_defaults, unless: :persisted?

@@ -17,6 +17,10 @@ Rails.application.routes.draw do
   get "/topicificator", to: "pages#topicificator"
   get "/library(/*path)", to: "pages#library"
 
+  # Schedule polls: a React app (app/javascript/entrypoints/schedule_polls.jsx)
+  get "/schedule_polls", to: "schedule_polls#app", as: :schedule_polls
+  get "/schedule_polls/:token(/*path)", to: "schedule_polls#app", as: :schedule_poll
+
   get "game_server/getting_started"
   get "game_server/plugin_faq"
 
@@ -25,6 +29,16 @@ Rails.application.routes.draw do
             resources :court_verifications, only: :create
 
   resources :text_reports, only: :create
+  get "schedule_polls/people", to: "schedule_polls#people"
+  resources :schedule_polls, only: %i[index show create update destroy], param: :token do
+    member do
+      post :close
+      post :reopen
+      put :ballot, action: :vote
+      delete :ballot, action: :unvote
+      delete "ballots/:id", action: :remove_ballot
+    end
+  end
   resources :notifications, only: :index do
     post :read, on: :member
     post :read_all, on: :collection

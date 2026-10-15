@@ -11,6 +11,7 @@ import {
   Settings,
   ScrollText,
   Gauge,
+  CalendarClock,
   Moon,
   Sun,
 } from "lucide-react";
@@ -30,6 +31,7 @@ export default function Navbar({
   newReadingPath = "/readings/new",
   accountSettingsPath = "/users/edit",
   adminPath = "/admin_panel",
+  schedulePollsPath = "/schedule_polls",
   loginPath = "/users/sign_in",
   logoutPath = "/users/sign_out",
   brand = "HumbleBot",
@@ -192,6 +194,14 @@ function LogoutButton({ className = "" }) {
               className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               <Gauge className="inline pr-2"/> Admin
+            </a>
+          )}
+          {isSuiteAdmin && (
+            <a
+              href={schedulePollsPath}
+              className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <CalendarClock className="inline pr-2"/> Schedule polls
             </a>
           )}
           <a
@@ -437,6 +447,15 @@ function LogoutButton({ className = "" }) {
         >
           <Gauge className="inline pr-2" />
           Admin
+        </a>
+      )}
+      {isSuiteAdmin && (
+        <a
+          href={schedulePollsPath}
+          className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+        >
+          <CalendarClock className="inline pr-2" />
+          Schedule polls
         </a>
       )}
       <a
