@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_13_200000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_15_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -365,6 +365,56 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_13_200000) do
     t.index ["record_type", "record_id"], name: "index_richer_text_rich_texts_on_record"
   end
 
+  create_table "schedule_poll_ballots", force: :cascade do |t|
+    t.bigint "schedule_poll_id", null: false
+    t.bigint "user_id"
+    t.string "voter_name"
+    t.string "voter_token", null: false
+    t.string "ip_digest"
+    t.jsonb "choices", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["schedule_poll_id", "ip_digest"], name: "index_schedule_poll_ballots_on_schedule_poll_id_and_ip_digest"
+    t.index ["schedule_poll_id", "user_id"], name: "index_schedule_poll_ballots_on_schedule_poll_id_and_user_id", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["schedule_poll_id", "voter_token"], name: "idx_on_schedule_poll_id_voter_token_4f9b648c21", unique: true
+    t.index ["schedule_poll_id"], name: "index_schedule_poll_ballots_on_schedule_poll_id"
+    t.index ["user_id"], name: "index_schedule_poll_ballots_on_user_id"
+  end
+
+  create_table "schedule_poll_members", force: :cascade do |t|
+    t.bigint "schedule_poll_id", null: false
+    t.bigint "user_id", null: false
+    t.string "role", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["schedule_poll_id", "user_id"], name: "index_schedule_poll_members_on_schedule_poll_id_and_user_id", unique: true
+    t.index ["schedule_poll_id"], name: "index_schedule_poll_members_on_schedule_poll_id"
+    t.index ["user_id"], name: "index_schedule_poll_members_on_user_id"
+  end
+
+  create_table "schedule_polls", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "token", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.date "starts_on", null: false
+    t.date "ends_on", null: false
+    t.integer "duration_minutes", default: 60, null: false
+    t.integer "choices_count", default: 3, null: false
+    t.integer "slot_minutes", default: 30, null: false
+    t.integer "day_start_minute", default: 480, null: false
+    t.integer "day_end_minute", default: 1380, null: false
+    t.string "results_visibility", default: "after_vote", null: false
+    t.jsonb "blocks", default: [], null: false
+    t.datetime "closes_at", null: false
+    t.datetime "closed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token"], name: "index_schedule_polls_on_token", unique: true
+    t.index ["user_id"], name: "index_schedule_polls_on_user_id"
+  end
+
   create_table "service_readings", force: :cascade do |t|
     t.string "title"
     t.string "short_title"
@@ -543,6 +593,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_13_200000) do
   add_foreign_key "reading_tags", "tags"
   add_foreign_key "readings", "groups"
   add_foreign_key "readings", "users"
+  add_foreign_key "schedule_poll_ballots", "schedule_polls"
+  add_foreign_key "schedule_poll_ballots", "users"
+  add_foreign_key "schedule_poll_members", "schedule_polls"
+  add_foreign_key "schedule_poll_members", "users"
+  add_foreign_key "schedule_polls", "users"
   add_foreign_key "text_report_comments", "text_reports"
   add_foreign_key "text_report_comments", "users"
   add_foreign_key "text_reports", "chapters"
