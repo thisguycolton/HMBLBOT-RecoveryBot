@@ -299,46 +299,53 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Every tool, by category (the same groups as the nav) */}
+      {/* Every tool, by category (the same groups as the nav): one card per group, tools as rows;
+          the long Meetings list fills the left column and the rest stack on the right */}
       <section id="features" className="bg-slate-50 dark:bg-neutral-950">
-        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-          <h2 className="!text-2xl md:!text-3xl font-semibold tracking-tight text-slate-900 dark:text-white !font-sans">
-            Everything RecoveryBot can do
-          </h2>
-          <p className="sans !text-left !hyphens-none mt-2 text-slate-600 dark:text-neutral-300">Pick what you need. Each tool stands alone.</p>
-          <div className="mt-8 grid gap-8 lg:grid-cols-3">
-            {NAV_CATEGORIES.map((category) => (
-              <div key={category.key}>
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400 !font-sans">
-                  {category.label} · {category.blurb}
-                </h3>
-                <div className="mt-3 grid gap-2">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
+            <h2 className="!text-2xl md:!text-3xl font-semibold tracking-tight text-slate-900 dark:text-white !font-sans">
+              Everything RecoveryBot can do
+            </h2>
+            <p className="sans !text-left !hyphens-none !mb-0 text-sm text-slate-500 dark:text-neutral-400">Pick what you need. Each tool stands alone.</p>
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-2 md:grid-flow-col md:grid-rows-[auto_1fr]">
+            {NAV_CATEGORIES.map((category, index) => (
+              <div
+                key={category.key}
+                className={`${index === 0 ? "md:row-span-2" : ""} overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900`}
+              >
+                <div className="flex items-baseline justify-between gap-2 border-b border-neutral-200 bg-sky-50/70 px-4 py-2.5 dark:border-neutral-800 dark:bg-sky-950/30">
+                  <h3 className="!text-sm font-semibold text-sky-900 dark:text-sky-200 !font-sans">{category.label}</h3>
+                  <span className="text-xs text-slate-500 dark:text-neutral-400">{category.blurb}</span>
+                </div>
+                <ul className="divide-y divide-neutral-100 dark:divide-neutral-800 !m-0 !p-0 list-none">
                   {category.items.map((item) => {
                     const Icon = item.icon;
                     return (
-                      <a
-                        key={item.href}
-                        href={item.href}
-                        className="group flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-4 transition hover:border-sky-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-sky-700"
-                      >
-                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-neutral-800 dark:text-neutral-200">
-                          <Icon className="h-4 w-4" />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-2 font-medium text-slate-900 dark:text-white">
-                            {item.label}
-                            {item.auth && (
-                              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800 dark:bg-sky-900/50 dark:text-sky-200">
-                                Members
-                              </span>
-                            )}
+                      <li key={item.href}>
+                        <a
+                          href={item.href}
+                          className="group flex items-center gap-3 px-4 py-2.5 !no-underline transition hover:bg-slate-50 dark:hover:bg-neutral-800/60"
+                        >
+                          <Icon className="h-4 w-4 shrink-0 text-sky-700 dark:text-sky-300" />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
+                              {item.label}
+                              {item.auth && (
+                                <span className="rounded-full bg-sky-100 px-1.5 py-px text-[10px] font-semibold text-sky-800 dark:bg-sky-900/50 dark:text-sky-200">
+                                  Members
+                                </span>
+                              )}
+                            </span>
+                            <span className="block text-xs text-slate-500 dark:text-neutral-400">{item.note}</span>
                           </span>
-                          <span className="block text-sm text-slate-600 dark:text-neutral-400">{item.note}</span>
-                        </span>
-                      </a>
+                          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-sky-600 dark:text-neutral-600" />
+                        </a>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               </div>
             ))}
           </div>

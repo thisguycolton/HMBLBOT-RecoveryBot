@@ -52,7 +52,7 @@
 
       <nav class="navbar navbar-expand-lg ">
         <div class="container-fluid">
-          <a href="/" class="navbar-brand d-inline-flex align-items-center gap-2 fw-bolder text-dark text-decoration-none" style="letter-spacing:-0.02em"><%= image_tag "recoverybot-mark.svg", alt: "", height: 28 %>Recovery<span style="color:#4c7ba6">Bot</span></a>
+          <a href="/" class="navbar-brand d-inline-flex align-items-center gap-2 fw-bolder text-dark text-decoration-none" style="letter-spacing:-0.02em"><%= image_tag "recoverybot-mark.svg", alt: "", height: 28 %><span style="position:relative;top:0.15em;line-height:1">Recovery<span style="color:#4c7ba6">Bot</span></span></a>
           <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon fs-6"></span>
           </button>
@@ -155,9 +155,9 @@
 
         <a href="/" class=" col-12 col-md-4 d-flex align-items-center justify-content-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none mt-4 mt-md-0 mb-2 mb-md-0">
           <div class="text-center text-light pb-2">
-            <img src="https://humblebot.s3.us-west-2.amazonaws.com/hmblbotLOGOsmBLUE.png" class="hmblbot-logo">
-            <p class="hmblbot-text pb-0 mb-0 fw-light tracking-wide">Powered By</p>
-            <p class="hmblbot-brand tracking-widest">HMBLBOT</p>
+            <%= image_tag "recoverybot-mark.svg", alt: "", class: "hmblbot-logo", style: "filter:invert(1)" %>
+            <p class="fw-bolder fs-5 mb-0" style="letter-spacing:-0.02em">Recovery<span style="color:#7ea7cc">Bot</span></p>
+            <p class="hmblbot-text pb-0 mb-0 fw-light tracking-wide">by HMBLBOT</p>
           </div>
         </a>
         <ul class="nav col-6 offset-3 offset-md-0 col-md-3 col-lg-2 ms-md-auto">

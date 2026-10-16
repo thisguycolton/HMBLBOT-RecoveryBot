@@ -93,7 +93,7 @@ export default function Navbar({
             <a href={rootPath} className="inline-flex items-center gap-2 !text-slate-900 dark:!text-white" aria-label="RecoveryBot home">
               <RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-lg" />
               {brandSubtitle && (
-                <span className="hidden sm:inline text-xs font-medium text-slate-500 dark:text-slate-400">{brandSubtitle}</span>
+                <span className="relative top-[0.15em] hidden sm:inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">{brandSubtitle}</span>
               )}
             </a>
 

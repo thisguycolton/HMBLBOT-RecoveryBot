@@ -40,7 +40,8 @@ export function RecoveryBotLogo({ className = "", markClassName = "h-7 w-auto", 
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <RecoveryBotMark className={markClassName} />
-      <span className={`font-extrabold tracking-tight leading-none ${textClassName}`}>
+      {/* the antennae make the head sit low in the mark's box, so drop the word to the head's middle */}
+      <span className={`relative top-[0.15em] font-extrabold tracking-tight leading-none ${textClassName}`}>
         Recovery<span className="text-brand dark:text-brand-light">Bot</span>
       </span>
     </span>
