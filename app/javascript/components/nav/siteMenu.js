@@ -2,7 +2,6 @@ import {
   BookHeart,
   Bookmark,
   CalendarClock,
-  ClipboardCheck,
   Gamepad2,
   Gauge,
   Highlighter,
@@ -30,7 +29,6 @@ export const NAV_CATEGORIES = [
       { label: "Service Readings", href: "/service_readings", icon: BookHeart, note: "Preamble, Steps and Traditions, ready to read aloud" },
       { label: "Reading Archive", href: "/readings", icon: Bookmark, note: "Past meeting readings and topics" },
       { label: "Host-burger Helper", href: "/host_helper/scratchpaper", icon: ScrollText, note: "Service roles and milestones for the host" },
-      { label: "Court Verification", href: "/court_verifications/new", icon: ClipboardCheck, note: "Send proof of attendance" },
     ],
   },
   {
