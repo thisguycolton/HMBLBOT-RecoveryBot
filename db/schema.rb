@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_15_020000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_16_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -437,6 +437,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_15_020000) do
     t.index ["key"], name: "index_sharing_modes_on_key", unique: true
   end
 
+  create_table "site_notices", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "summary"
+    t.text "body"
+    t.string "tone", default: "info", null: false
+    t.string "link_url"
+    t.string "link_label"
+    t.string "audience", default: "everyone", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "starts_at"
+    t.datetime "ends_at"
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active", "starts_at", "ends_at"], name: "index_site_notices_on_active_and_starts_at_and_ends_at"
+    t.index ["user_id"], name: "index_site_notices_on_user_id"
+  end
+
   create_table "tags", force: :cascade do |t|
     t.string "title"
     t.text "description"
@@ -598,6 +616,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_15_020000) do
   add_foreign_key "schedule_poll_members", "schedule_polls"
   add_foreign_key "schedule_poll_members", "users"
   add_foreign_key "schedule_polls", "users"
+  add_foreign_key "site_notices", "users", on_delete: :nullify
   add_foreign_key "text_report_comments", "text_reports"
   add_foreign_key "text_report_comments", "users"
   add_foreign_key "text_reports", "chapters"

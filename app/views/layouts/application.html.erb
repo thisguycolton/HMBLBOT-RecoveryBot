@@ -3,8 +3,9 @@
   <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><%= content_for(:page_title) || "| HUMBLEBOT |" %></title>
+    <title><%= content_for(:page_title) || "RecoveryBot" %></title>
 
+    <%= render "application/favicon" %>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
@@ -52,37 +53,27 @@
 
       <nav class="navbar navbar-expand-lg ">
         <div class="container-fluid">
-          <span class="navbar-brand fw-bold brand-accent-text tracking-widest">HUMBLEBOT<span class="fw-semibold text-dark">.IO</span><span class=" fw-normal text-secondary tracking-norma d-none d-md-block">BETA <span class="align-baseline ps-0 fw-light">0.3</span></span></span>
+          <a href="/" class="navbar-brand d-inline-flex align-items-center gap-2 fw-bolder text-dark text-decoration-none" style="letter-spacing:-0.02em"><%= image_tag "recoverybot-mark.svg", alt: "", height: 28 %><span style="position:relative;top:0.15em;line-height:1">Recovery<span style="color:#4c7ba6">Bot</span></span></a>
           <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon fs-6"></span>
           </button>
           <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav mb-2 mb-lg-0 d-flex w-100">
-              <li class="nav-item justify-content-start position-relative mt-0 ">
-                <%= link_to topics_url, class:"nav-link text-uppercase" do %>
-                  <span class=" <% if current_page?('/') || current_page?('/topics') %> fw-semibold <% end %>">Topicificator 9000</span>
-                <% end %>
-              </li>
-              <li class="nav-item justify-content-start border-start" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="NEW FEATURE">
-                <%= link_to service_readings_url, class:"nav-link text-uppercase position-relative" do %>
-                  <span class="<% if current_page?('/service_readings') %> fw-semibold <% end %>"> Service Readings </span>
-                  </span>
-                <% end %>
-              </li>
-              
-              <li class="nav-item dropdown  border-start">
-                <a class="nav-link dropdown-toggle text-uppercase me-4" href="#" role="button" data-bs-toggle="dropdown"
-                  data-turbo="false" aria-expanded="false">
-                  Extras
-                </a>
-                <ul class="dropdown-menu">
-                  <li><%= link_to host_helper_scratchpaper_url, class:"dropdown-item text-uppercase" do %>
-                    <span class="<% if current_page?('/host_helper/scratchpaper') %> fw-semibold text-black <% end %>"> Host Helper </span>
-                    <% end%></li>
-                  <li><%= link_to game_server_getting_started_url, class:"dropdown-item text-uppercase" do %>
-                    <span class="<% if current_page?('/game_server/faq') %> fw-semibold text-black <% end %>"> Minecraft Server </span>
-                    <% end %></li>
-                </ul> </li>
+              <%# Same groups as the React nav (app/javascript/components/nav/siteMenu.js) %>
+              <% [
+                ["Meetings", [["Topicificator 9002", "/topicificator"], ["Service Readings", "/service_readings"], ["Reading Archive", "/readings"], ["Host-burger Helper", "/host_helper/scratchpaper"]]],
+                ["Library", [["All books", "/library"]] + (user_signed_in? ? [["My highlights", "/library/highlights"]] : [])],
+                ["Extras", [["The Acid Quest", "/game/game"], ["Minecraft Server", "/game_server/getting_started"]]],
+              ].each_with_index do |(label, links), i| %>
+                <li class="nav-item dropdown <%= "border-start" if i.positive? %>">
+                  <a class="nav-link dropdown-toggle text-uppercase" href="#" role="button" data-bs-toggle="dropdown" data-turbo="false" aria-expanded="false"><%= label %></a>
+                  <ul class="dropdown-menu">
+                    <% links.each do |title, href| %>
+                      <li><%= link_to title, href, class: "dropdown-item text-uppercase #{"fw-semibold" if current_page?(href)}" %></li>
+                    <% end %>
+                  </ul>
+                </li>
+              <% end %>
             </ul>
               <div class="d-flex">
               <% if user_signed_in? %>
@@ -118,6 +109,7 @@
           <%= link_to host_helper_scratchpaper_url, class:"list-group-item list-group-item-action" do %><span class="<% if current_page?('/host_helper/scratchpaper') %> fw-semibold <% end %>"><i class="bi bi-cake"></i> Host-Burger Helper </span><% end %>
           <%= link_to edit_user_registration_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('/users/edit') %> fw-semibold <% end %>"><i class="bi bi-gear-wide-connected"></i> Account Settings<% end %>
           <% if current_user.suite_admin? %><%= link_to admin_panel_root_path, class:"list-group-item list-group-item-action " do %><i class="bi bi-speedometer2"></i> Admin<% end %><% end %>
+          <% if current_user.suite_admin? %><%= link_to "/admin_panel/notices", class:"list-group-item list-group-item-action " do %><i class="bi bi-megaphone"></i> Site Notices<% end %><% end %>
           <% if current_user.suite_admin? %><%= link_to schedule_polls_path, class:"list-group-item list-group-item-action " do %><i class="bi bi-calendar2-week"></i> Schedule Polls<% end %><% end %>
           <%= link_to readings_path, class:"list-group-item list-group-item-action " do %><span class="<% if current_page?('readings/') %> fw-semibold <% end %>"><i class="bi bi-bookmark-heart"></i> Reading Archive <% end %>
 
@@ -164,9 +156,9 @@
 
         <a href="/" class=" col-12 col-md-4 d-flex align-items-center justify-content-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none mt-4 mt-md-0 mb-2 mb-md-0">
           <div class="text-center text-light pb-2">
-            <img src="https://humblebot.s3.us-west-2.amazonaws.com/hmblbotLOGOsmBLUE.png" class="hmblbot-logo">
-            <p class="hmblbot-text pb-0 mb-0 fw-light tracking-wide">Powered By</p>
-            <p class="hmblbot-brand tracking-widest">HMBLBOT</p>
+            <%= image_tag "recoverybot-mark.svg", alt: "", class: "hmblbot-logo", style: "filter:invert(1)" %>
+            <p class="fw-bolder fs-5 mb-0" style="letter-spacing:-0.02em">Recovery<span style="color:#7ea7cc">Bot</span></p>
+            <p class="hmblbot-text pb-0 mb-0 fw-light tracking-wide">by HMBLBOT</p>
           </div>
         </a>
         <ul class="nav col-6 offset-3 offset-md-0 col-md-3 col-lg-2 ms-md-auto">

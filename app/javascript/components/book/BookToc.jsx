@@ -76,7 +76,7 @@ export default function BookToc() {
         if (!alive) return;
         setBook(bookData);
         setChapters(Array.isArray(chapterData) ? chapterData : []);
-        document.title = `${bookData.title} | HMBLBOT`;
+        document.title = `${bookData.title} | RecoveryBot`;
       } catch (e) {
         if (alive) setError(e.message);
       }

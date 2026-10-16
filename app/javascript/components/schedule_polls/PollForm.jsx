@@ -126,7 +126,7 @@ export default function PollForm() {
             <ShellPanel position="middle" className="space-y-4 p-4">
               <Field label="Title" id="title">
                 <input id="title" required className={inputClass} value={form.title} maxLength={120}
-                  placeholder="HumbleBot workshop: what's new" onChange={(e) => set({ title: e.target.value })} />
+                  placeholder="RecoveryBot workshop: what's new" onChange={(e) => set({ title: e.target.value })} />
               </Field>
               <Field label="Details (optional)" id="description">
                 <textarea id="description" rows={3} className={inputClass} value={form.description}
@@ -265,7 +265,7 @@ function Field({ label, id, hint, children }) {
   );
 }
 
-// Tag HumbleBot accounts: collaborators help run the poll, voters are asked to vote.
+// Tag RecoveryBot accounts: collaborators help run the poll, voters are asked to vote.
 // Both get a notification and an email when the poll is saved.
 function People({ members, onChange }) {
   const [q, setQ] = useState("");
@@ -289,7 +289,7 @@ function People({ members, onChange }) {
       <p className={labelClass}><UserPlus className="mr-1 inline h-3.5 w-3.5" /> Tag people</p>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input className={`${inputClass} !pl-9`} value={q} placeholder="Search HumbleBot accounts" onChange={(e) => setQ(e.target.value)}
+        <input className={`${inputClass} !pl-9`} value={q} placeholder="Search RecoveryBot accounts" onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (found[0]) add(found[0]); } }} />
         {found.length > 0 && (
           <ul className="absolute inset-x-0 top-full z-50 mt-1 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5 dark:bg-neutral-900">

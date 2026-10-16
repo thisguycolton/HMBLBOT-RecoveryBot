@@ -1,4 +1,6 @@
 class PagesController < ApplicationController
+  include KeepsRobotsOut
+  keep_robots_out(only: %i[library reader])
   before_action :set_page, only: %i[ edit update destroy ]
   layout "reader", only: %i[topicificator library home reader]
 

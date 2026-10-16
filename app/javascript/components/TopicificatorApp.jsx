@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 
 import { useMemo } from "react";
+import { RecoveryBotMark } from "./brand/Logo";
 
 
 
@@ -316,7 +317,7 @@ const fetchTopicByNumber = async () => {
 
         </div>
         
-        <img src="https://humblebot.s3.us-west-2.amazonaws.com/hmblbotLOGOsmBLUE.png" alt="HumbleBot Logo" className="hidden md:block fixed bottom-7 right-0 transform -translate-x-1/2 w-15 opacity-65 hover:opacity-95" />
+        <RecoveryBotMark className="hidden md:block fixed bottom-7 right-0 transform -translate-x-1/2 w-15 h-auto text-slate-300 opacity-65 hover:opacity-95" />
 </div>
         {showPreviousModal && (
   <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">

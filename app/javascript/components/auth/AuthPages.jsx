@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { BookOpen, CircleCheck, Highlighter, KeyRound, LogIn, Mail, Shuffle, UserPlus } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
+import { RecoveryBotLogo } from "../brand/Logo";
 
 // Devise's pages in the house panel style. Each posts a plain HTML form, so Devise
 // handles the session, redirects and flash (shown as toasts) exactly as before.
@@ -14,13 +15,13 @@ const FEATURES = [
 
 const linkClass = "font-medium text-accent hover:underline";
 
-// Two columns on wide screens (what HumbleBot does, then the form); just the form on phones.
+// Two columns on wide screens (what RecoveryBot does, then the form); just the form on phones.
 function AuthFrame({ icon, title, subtitle, children, footer }) {
   return (
     <div className="bg-slate-50 dark:bg-neutral-950 min-h-[calc(100vh-56px)] px-4 py-10 sm:py-16 !font-sans [&_*]:!font-sans">
       <div className="mx-auto grid max-w-5xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <section className="hidden lg:block space-y-8">
-          <a href="/" className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">HumbleBot</a>
+          <a href="/" className="inline-block !text-slate-900 dark:!text-white"><RecoveryBotLogo markClassName="h-9 w-auto" textClassName="text-2xl" /></a>
           <ul className="space-y-6">
             {FEATURES.map(({ icon: Icon, title: t, text }) => (
               <li key={t} className="flex gap-3">
@@ -37,7 +38,7 @@ function AuthFrame({ icon, title, subtitle, children, footer }) {
         </section>
 
         <div className="mx-auto w-full max-w-md">
-          <a href="/" className="mb-6 block text-center text-2xl font-semibold tracking-tight text-slate-900 dark:text-white lg:hidden">HumbleBot</a>
+          <a href="/" className="mb-6 flex justify-center !text-slate-900 dark:!text-white lg:hidden"><RecoveryBotLogo markClassName="h-9 w-auto" textClassName="text-2xl" /></a>
           <Shell>
             <ShellBand icon={icon} title={title} subtitle={subtitle} />
             <ShellPanel position="bottom" className="p-5">
@@ -88,7 +89,7 @@ const passwordHint = (min) => (min ? `At least ${min} characters` : null);
 
 export function LoginPage({ email = "", remember = true, forgot_path, sign_up_path, ...form }) {
   return (
-    <AuthFrame icon={LogIn} title="Welcome back" subtitle="Log in to your HumbleBot account"
+    <AuthFrame icon={LogIn} title="Welcome back" subtitle="Log in to your RecoveryBot account"
       footer={sign_up_path && <>Don't have an account yet? <a href={sign_up_path} className={linkClass}>Sign up</a></>}>
       <AuthForm {...form} submitLabel="Log in" busyLabel="Logging in…">
         <Field id="user_email" label="Email" type="email" name="user[email]" defaultValue={email} autoComplete="email" autoFocus required placeholder="you@example.com" />
