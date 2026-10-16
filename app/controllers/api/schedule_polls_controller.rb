@@ -26,9 +26,13 @@ class Api::SchedulePollsController < ApplicationController
 
   # POST /api/schedule_polls
   def create
-    return render(json: { error: "Only admins can make schedule polls for now." }, status: :forbidden) unless current_user.suite_admin?
+    # Admins, and the people running an event (for a poll that picks its time)
+    event = params.dig(:poll, :event_token).presence && Event.find_by(token: params[:poll][:event_token])
+    unless current_user.suite_admin? || event&.editable_by?(current_user)
+      return render(json: { error: "Only admins can make schedule polls for now." }, status: :forbidden)
+    end
 
-    @poll = current_user.schedule_polls.new
+    @poll = current_user.schedule_polls.new(event: event)
     save_poll(status: :created)
   end
 
@@ -75,6 +79,8 @@ class Api::SchedulePollsController < ApplicationController
     ballot.voter_name = params[:voter_name].to_s.strip.first(60) if params.key?(:voter_name)
     ballot.save!
     @viewer_ballot = ballot
+    # Voting with an account follows the poll's event, so its updates reach you
+    @poll.event&.follow!(current_user)
 
     if first_vote
       @poll.notify_organizers(kind: "schedule_poll.vote", title: "#{ballot.display_name} voted in “#{@poll.title}”",

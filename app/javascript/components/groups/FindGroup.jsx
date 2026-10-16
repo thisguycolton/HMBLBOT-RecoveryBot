@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Compass, Search, Sparkles } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import SegmentedControl from "../ui/SegmentedControl";
-import { inputClass, labelClass } from "../ui/styles";
+import { inputClass, labelClass, selectClass } from "../ui/styles";
+import { TimeField } from "../ui/DateFields";
 import { DAYS, ZONES, api, fromTimeValue } from "./lib";
 import { Card, ErrorNote, Pill, Tray, primaryButton, quietButton } from "./ui";
 
@@ -114,17 +115,17 @@ export default function FindGroup() {
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <label htmlFor="f-day" className={labelClass}>Day</label>
-                <select id="f-day" className={inputClass} value={day} onChange={(e) => setDay(e.target.value)}>
+                <select id="f-day" className={selectClass} value={day} onChange={(e) => setDay(e.target.value)}>
                   {DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
                 </select>
               </div>
               <div>
                 <label htmlFor="f-time" className={labelClass}>Starts at</label>
-                <input id="f-time" type="time" className={inputClass} value={time} onChange={(e) => setTime(e.target.value)} />
+                <TimeField id="f-time" clearable placeholder="Any time" value={time} onChange={setTime} />
               </div>
               <div>
                 <label htmlFor="f-zone" className={labelClass}>Your time zone</label>
-                <select id="f-zone" className={inputClass} value={zone} onChange={(e) => setZone(e.target.value)}>
+                <select id="f-zone" className={selectClass} value={zone} onChange={(e) => setZone(e.target.value)}>
                   {ZONES.map(([z, label]) => <option key={z} value={z}>{label}</option>)}
                 </select>
               </div>

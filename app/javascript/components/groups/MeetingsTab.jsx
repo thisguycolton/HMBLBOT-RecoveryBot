@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarPlus, Check, DownloadCloud, ExternalLink, Link2, Link2Off, Pencil, Phone, Plus, RefreshCw, Search, Trash2, Video, X } from "lucide-react";
-import { inputClass, labelClass } from "../ui/styles";
+import { inputClass, labelClass, selectClass } from "../ui/styles";
+import { DateTimeField, TimeField } from "../ui/DateFields";
 import SegmentedControl from "../ui/SegmentedControl";
 import { DAYS, ZONES, api, clock, fromTimeValue, localHint, toTimeValue, typeLabel, zoneLabel } from "./lib";
 import { Card, ErrorNote, Pill, Tray, dangerButton, primaryButton, quietButton } from "./ui";
@@ -357,11 +358,11 @@ function MeetingEditor({ group, series, onClose, onSaved }) {
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <label htmlFor="m-start" className={labelClass}>Starts</label>
-                <input id="m-start" type="time" className={inputClass} value={toTimeValue(form.start_minute)} onChange={(e) => set({ start_minute: fromTimeValue(e.target.value) })} />
+                <TimeField id="m-start" value={toTimeValue(form.start_minute)} onChange={(v) => set({ start_minute: fromTimeValue(v) })} />
               </div>
               <div>
                 <label htmlFor="m-end" className={labelClass}>Ends</label>
-                <input id="m-end" type="time" className={inputClass} value={toTimeValue(form.end_minute)} onChange={(e) => set({ end_minute: fromTimeValue(e.target.value) })} />
+                <TimeField id="m-end" clearable value={toTimeValue(form.end_minute)} onChange={(v) => set({ end_minute: fromTimeValue(v) })} />
               </div>
               <ZoneSelect value={form.time_zone} onChange={(time_zone) => set({ time_zone })} />
             </div>
@@ -370,11 +371,11 @@ function MeetingEditor({ group, series, onClose, onSaved }) {
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <label htmlFor="m-starts-at" className={labelClass}>Starts</label>
-                <input id="m-starts-at" type="datetime-local" className={inputClass} value={form.starts_at || ""} onChange={(e) => set({ starts_at: e.target.value })} />
+                <DateTimeField id="m-starts-at" value={form.starts_at || ""} onChange={(starts_at) => set({ starts_at })} />
               </div>
               <div>
                 <label htmlFor="m-ends-at" className={labelClass}>Ends</label>
-                <input id="m-ends-at" type="datetime-local" className={inputClass} value={form.ends_at || ""} min={form.starts_at} onChange={(e) => set({ ends_at: e.target.value })} />
+                <DateTimeField id="m-ends-at" clearable value={form.ends_at || ""} min={form.starts_at} onChange={(ends_at) => set({ ends_at })} />
               </div>
               <ZoneSelect value={form.time_zone} onChange={(time_zone) => set({ time_zone })} />
             </div>
@@ -473,7 +474,7 @@ function ZoneSelect({ value, onChange }) {
   return (
     <div>
       <label htmlFor="m-zone" className={labelClass}>Time zone</label>
-      <select id="m-zone" className={inputClass} value={value} onChange={(e) => onChange(e.target.value)}>
+      <select id="m-zone" className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
         {!known && <option value={value}>{zoneLabel(value)}</option>}
         {ZONES.map(([z, label]) => <option key={z} value={z}>{label}</option>)}
       </select>

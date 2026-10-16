@@ -1,0 +1,17 @@
+<%= @event.group.title %> · <%= @event.title %>
+
+<%= @update.title %>
+<% if @update.body.present? %>
+
+<%= @update.body %>
+<% end %>
+<% if @event.when_label %>
+
+<%= @event.when_label %><% if @event.location.present? %>
+<%= @event.location %><% end %>
+<% end %>
+
+See the event: <%= @url %>
+
+You're getting this because you RSVP'd to or are following this event on RecoveryBot.
+Stop updates for this event: <%= @stop_url %>

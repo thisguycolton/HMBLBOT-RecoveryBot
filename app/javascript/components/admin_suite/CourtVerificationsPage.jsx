@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Download, FileCheck, Mail, Printer, Search } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
+import { DateField } from "../ui/DateFields";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 
@@ -89,11 +90,15 @@ export default function CourtVerificationsPage({ notify }) {
   );
 }
 
-function Field({ label, onChange, ...props }) {
+function Field({ label, onChange, type, ...props }) {
   return (
     <label className="block">
       <span className={labelClass}>{label}</span>
-      <input className={inputClass} onChange={(e) => onChange(e.target.value)} {...props} />
+      {type === "date" ? (
+        <DateField clearable placeholder="Any" onChange={onChange} {...props} />
+      ) : (
+        <input className={inputClass} type={type} onChange={(e) => onChange(e.target.value)} {...props} />
+      )}
     </label>
   );
 }

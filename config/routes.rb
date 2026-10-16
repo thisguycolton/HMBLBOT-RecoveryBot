@@ -22,6 +22,10 @@ Rails.application.routes.draw do
   get "/schedule_polls", to: "schedule_polls#app", as: :schedule_polls
   get "/schedule_polls/:token(/*path)", to: "schedule_polls#app", as: :schedule_poll
 
+  # Events: a React app (app/javascript/entrypoints/events.jsx) with the HMBLBOT Editor
+  get "/events/:token/unsubscribe", to: "events#unsubscribe", as: :event_unsubscribe
+  get "/events/:token(/*path)", to: "events#app", as: :event, format: false
+
   get "game_server/getting_started"
   get "game_server/plugin_faq"
 
@@ -48,12 +52,26 @@ Rails.application.routes.draw do
     end
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
     resources :books, controller: "group_books", only: %i[create update destroy]
+    resources :events, controller: "group_events", only: %i[index create]
     resources :meetings, controller: "group_meetings", only: %i[create update destroy] do
       post :unlink, on: :member
       collection do
         post :import
         post :refresh
       end
+    end
+  end
+  resources :events, only: %i[show update destroy], param: :token do
+    member do
+      post :images
+      get :people
+      post :collaborators, action: :add_collaborator
+      delete "collaborators/:user_id", action: :remove_collaborator
+      get :poll_options
+      post :polls, action: :link_poll
+      delete "polls/:poll_token", action: :unlink_poll
+      put :rsvp
+      delete :rsvp, action: :unrsvp
     end
   end
   get "schedule_polls/people", to: "schedule_polls#people"

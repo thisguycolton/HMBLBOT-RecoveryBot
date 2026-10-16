@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Users } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
-import { inputClass, labelClass } from "../ui/styles";
+import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { api, ZONES } from "./lib";
 import { ErrorNote, Loading, Message, dangerButton, primaryButton, quietButton } from "./ui";
 
@@ -81,7 +81,7 @@ export default function GroupForm() {
             </div>
             <div>
               <label htmlFor="zone" className={labelClass}>Time zone</label>
-              <select id="zone" className={inputClass} value={form.time_zone} onChange={(e) => set({ time_zone: e.target.value })}>
+              <select id="zone" className={selectClass} value={form.time_zone} onChange={(e) => set({ time_zone: e.target.value })}>
                 {ZONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </div>

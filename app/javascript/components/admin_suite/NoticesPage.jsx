@@ -3,6 +3,8 @@ import { Check, Eye, Megaphone, Pencil, Plus, Trash2 } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass, labelClass } from "../ui/styles";
+import { DateTimeField } from "../ui/DateFields";
+import Toggle from "../ui/Toggle";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { NoticeCard, NoticeModal } from "../SiteNotices";
@@ -228,17 +230,15 @@ function NoticeForm({ notice, onSave, onCancel }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className={labelClass}>Starts (blank = now)</span>
-          <input type="datetime-local" className={inputClass} value={toLocalInput(v.starts_at)} onChange={(e) => setV((p) => ({ ...p, starts_at: fromLocalInput(e.target.value) }))} />
+          <DateTimeField clearable placeholder="Now" value={toLocalInput(v.starts_at)} onChange={(value) => setV((p) => ({ ...p, starts_at: fromLocalInput(value) }))} />
         </label>
         <label className="block">
           <span className={labelClass}>Ends (blank = until turned off)</span>
-          <input type="datetime-local" className={inputClass} value={toLocalInput(v.ends_at)} onChange={(e) => setV((p) => ({ ...p, ends_at: fromLocalInput(e.target.value) }))} />
+          <DateTimeField clearable placeholder="Until turned off" value={toLocalInput(v.ends_at)} onChange={(value) => setV((p) => ({ ...p, ends_at: fromLocalInput(value) }))} />
         </label>
       </div>
-      <label className="inline-flex items-center gap-2 text-sm text-slate-800 dark:text-neutral-200">
-        <input type="checkbox" checked={v.active} onChange={(e) => setV((p) => ({ ...p, active: e.target.checked }))} />
-        On (uncheck to save it as a draft)
-      </label>
+      <Toggle checked={v.active} onChange={(active) => setV((p) => ({ ...p, active }))}
+        label={v.active ? "On" : "Draft"} description={v.active ? "People see it during the dates above." : "Saved, but nobody sees it until you turn it on."} />
       <div>
         <span className={labelClass}>Preview</span>
         <div className="max-w-sm hb-notice-preview">

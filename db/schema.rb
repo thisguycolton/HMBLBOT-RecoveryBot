@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_16_130000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -160,6 +160,69 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_130000) do
     t.index ["meeting_at"], name: "index_court_verifications_on_meeting_at"
     t.index ["meeting_id"], name: "index_court_verifications_on_meeting_id"
     t.index ["respondent_email"], name: "index_court_verifications_on_respondent_email"
+  end
+
+  create_table "event_collaborators", force: :cascade do |t|
+    t.bigint "event_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "added_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["added_by_id"], name: "index_event_collaborators_on_added_by_id"
+    t.index ["event_id", "user_id"], name: "index_event_collaborators_on_event_id_and_user_id", unique: true
+    t.index ["event_id"], name: "index_event_collaborators_on_event_id"
+    t.index ["user_id"], name: "index_event_collaborators_on_user_id"
+  end
+
+  create_table "event_rsvps", force: :cascade do |t|
+    t.bigint "event_id", null: false
+    t.bigint "user_id"
+    t.string "email"
+    t.string "name"
+    t.string "status", default: "going", null: false
+    t.string "token", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "event_id, lower((email)::text)", name: "index_event_rsvps_on_event_and_guest_email", unique: true, where: "(user_id IS NULL)"
+    t.index ["event_id", "user_id"], name: "index_event_rsvps_on_event_id_and_user_id", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["event_id"], name: "index_event_rsvps_on_event_id"
+    t.index ["token"], name: "index_event_rsvps_on_token", unique: true
+    t.index ["user_id"], name: "index_event_rsvps_on_user_id"
+  end
+
+  create_table "event_updates", force: :cascade do |t|
+    t.bigint "event_id", null: false
+    t.bigint "created_by_id"
+    t.string "block_id"
+    t.string "kind", null: false
+    t.string "title", null: false
+    t.text "body"
+    t.integer "recipients_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_event_updates_on_created_by_id"
+    t.index ["event_id"], name: "index_event_updates_on_event_id"
+  end
+
+  create_table "events", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.string "token", null: false
+    t.string "title", null: false
+    t.string "short_description"
+    t.string "layout", default: "main_side", null: false
+    t.string "status", default: "draft", null: false
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.datetime "starts_at"
+    t.datetime "ends_at"
+    t.string "location"
+    t.jsonb "blocks", default: [], null: false
+    t.datetime "published_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_events_on_created_by_id"
+    t.index ["group_id"], name: "index_events_on_group_id"
+    t.index ["token"], name: "index_events_on_token", unique: true
   end
 
   create_table "group_books", force: :cascade do |t|
@@ -492,6 +555,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_130000) do
     t.datetime "closed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "event_id"
+    t.index ["event_id"], name: "index_schedule_polls_on_event_id"
     t.index ["token"], name: "index_schedule_polls_on_token", unique: true
     t.index ["user_id"], name: "index_schedule_polls_on_user_id"
   end
@@ -681,6 +746,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_130000) do
   add_foreign_key "chapters", "books"
   add_foreign_key "court_verifications", "groups"
   add_foreign_key "court_verifications", "meetings", on_delete: :nullify
+  add_foreign_key "event_collaborators", "events"
+  add_foreign_key "event_collaborators", "users"
+  add_foreign_key "event_collaborators", "users", column: "added_by_id", on_delete: :nullify
+  add_foreign_key "event_rsvps", "events"
+  add_foreign_key "event_rsvps", "users"
+  add_foreign_key "event_updates", "events"
+  add_foreign_key "event_updates", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "events", "groups"
+  add_foreign_key "events", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "group_books", "books"
   add_foreign_key "group_books", "groups"
   add_foreign_key "group_memberships", "groups"
@@ -707,6 +781,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_130000) do
   add_foreign_key "schedule_poll_ballots", "users"
   add_foreign_key "schedule_poll_members", "schedule_polls"
   add_foreign_key "schedule_poll_members", "users"
+  add_foreign_key "schedule_polls", "events"
   add_foreign_key "schedule_polls", "users"
   add_foreign_key "site_notices", "users", on_delete: :nullify
   add_foreign_key "text_report_comments", "text_reports"

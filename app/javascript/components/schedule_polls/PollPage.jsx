@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowDown, ArrowUp, CalendarClock, Check, Copy, Flame, Lock, LockOpen, Pencil, Trash2, Users, X } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
+import Toggle from "../ui/Toggle";
 import { showToast } from "../../lib/toast";
 import WeekGrid, { buildHeat } from "./WeekGrid";
 import { VISIBILITY_LABELS, api, clock, dayParts, describeStart, makeNow, parseStart } from "./lib";
@@ -135,6 +136,11 @@ export default function PollPage() {
           subtitle={`${poll.organizer.name} · ${poll.duration_minutes} minutes · ${dayParts(poll.starts_on).long} – ${dayParts(poll.ends_on).long}`}
         />
         <ShellPanel position="bottom" className="space-y-3 p-4">
+          {poll.event && (
+            <a href={poll.event.path} className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent hover:bg-accent/15 dark:bg-accent/25 dark:text-sky-200">
+              Picking a time for {poll.event.title} →
+            </a>
+          )}
           {poll.description && <p className="whitespace-pre-line text-sm text-slate-700 dark:text-neutral-300">{poll.description}</p>}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-neutral-400">
             <span className={`inline-flex items-center gap-1 font-medium ${open ? "text-emerald-700 dark:text-emerald-400" : "text-slate-500"}`}>
@@ -172,10 +178,8 @@ export default function PollPage() {
             <span className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-neutral-300 dark:bg-neutral-600" /> Doesn't work</span>
               {results && (
-                <label className="inline-flex cursor-pointer items-center gap-1">
-                  <input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} className="accent-[var(--color-accent)]" />
-                  <Flame className="h-3.5 w-3.5 text-accent" /> Heat map
-                </label>
+                <Toggle checked={showHeat} onChange={setShowHeat}
+                  label={<span className="inline-flex items-center gap-1"><Flame className="h-3.5 w-3.5 text-accent" /> Heat map</span>} />
               )}
             </span>
           </div>
