@@ -115,3 +115,28 @@ html.dark .hb-toast {
 @media (prefers-reduced-motion: reduce) {
   .hb-toast { animation: none; }
 }
+
+/* Site notices (components/SiteNotices.jsx): an accent edge, a title, an optional
+   line and a link to the write-up. They stay until closed. */
+.hb-toast--notice {
+  align-items: flex-start;
+  border-left: 4px solid var(--hb-notice-edge, #2563eb);
+}
+
+.hb-toast--notice.hb-toast--success { --hb-notice-edge: #16a34a; }
+.hb-toast--notice.hb-toast--warning { --hb-notice-edge: #d97706; }
+
+.hb-notice__title { font-size: 0.9rem; font-weight: 700; margin: 0.25rem 0 0; }
+.hb-notice__summary { font-weight: 400; margin: 0.25rem 0 0; opacity: 0.85; }
+
+.hb-toast__message a.hb-notice__link {
+  color: var(--hb-notice-edge, #2563eb);
+  display: inline-block;
+  font-weight: 600;
+  margin-top: 0.4rem;
+}
+
+html.dark .hb-toast--notice.hb-toast--info a.hb-notice__link { color: #7dd3fc; }
+
+/* the reader styles set every <p> in a justified serif */
+.hb-toast p { font-family: inherit; hyphens: none; text-align: left; }

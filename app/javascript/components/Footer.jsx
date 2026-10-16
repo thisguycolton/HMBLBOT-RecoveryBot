@@ -44,6 +44,14 @@ export default function Footer() {
             Service Readings
           </a>
 
+          <a href="/library" className="block hover:text-white">
+            Library
+          </a>
+
+          <a href="/game/game" className="block hover:text-white">
+            The Acid Quest
+          </a>
+
           <a href="/host_helper/scratchpaper" className="block hover:text-white">
             Scratchpaper
           </a>

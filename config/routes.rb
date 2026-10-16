@@ -15,6 +15,8 @@ Rails.application.routes.draw do
   end
 
   get "/topicificator", to: "pages#topicificator"
+  # A site notice's write-up (SiteNotice; the toast's "Read more" link)
+  get "/notices/:id", to: "notices#show", as: :notice
   get "/library(/*path)", to: "pages#library"
 
   # Schedule polls: a React app (app/javascript/entrypoints/schedule_polls.jsx)
@@ -29,6 +31,7 @@ Rails.application.routes.draw do
             resources :court_verifications, only: :create
 
   resources :text_reports, only: :create
+  resources :site_notices, only: :index
   get "schedule_polls/people", to: "schedule_polls#people"
   resources :schedule_polls, only: %i[index show create update destroy], param: :token do
     member do
@@ -183,6 +186,7 @@ end
       end
       resources :readings, only: %i[index update destroy]
       resources :tags, only: %i[index create update destroy]
+      resources :site_notices, only: %i[index create update destroy]
       resources :text_reports, only: %i[index update destroy] do
         post :comment, on: :member
       end

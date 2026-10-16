@@ -1,5 +1,6 @@
 import React from "react";
 import { dismissToast, useToasts } from "../lib/toast";
+import { NoticeCard, useSiteNotices } from "./SiteNotices";
 import "../styles/toasts.css";
 
 // A card with a tinted icon, the message and a close button (ported from metr).
@@ -28,12 +29,15 @@ function ToastCard({ toast }) {
   );
 }
 
-// Top center on phones (under the nav), top right on wider screens
+// Top center on phones (under the nav), top right on wider screens. Admins' site
+// notices sit on top and stay until dismissed.
 export default function Toasts() {
   const toasts = useToasts();
-  if (toasts.length === 0) return null;
+  const [notices, dismissNotice] = useSiteNotices();
+  if (toasts.length === 0 && notices.length === 0) return null;
   return (
     <div aria-live="polite" className="hb-toasts">
+      {notices.map((notice) => <NoticeCard key={notice.id} notice={notice} onDismiss={dismissNotice} />)}
       {toasts.map((toast) => <ToastCard key={toast.id} toast={toast} />)}
     </div>
   );
