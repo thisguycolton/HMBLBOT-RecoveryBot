@@ -1,16 +1,17 @@
 require "net/http"
 
-# OIAA's meeting directory, read from its Meeting Guide JSON feed
-# (https://github.com/code4recovery/spec) into OiaaMeeting rows.
+# AA Intergroup's (OIAA's) meeting directory, read from its Meeting Guide JSON feed
+# (https://github.com/code4recovery/spec) into OiaaMeeting rows. People see it as "AA Intergroup".
 #
-# The feed URL is OIAA_FEED_URL when set. Otherwise it's found the way the spec asks
-# sites to advertise it: a <link title="Meetings Feed"> on OIAA's meetings page.
+# The feed is https://data.aa-intergroup.org/ (it rebuilds the JSON and links to it), or
+# AA_INTERGROUP_FEED_URL / the older OIAA_FEED_URL when set. It's about 8 MB and slow, so
+# it's fetched in the background: once at boot and whenever it's a week old (STALE_AFTER).
 #
 # OiaaFeed.sync!               fetch the feed now and refresh linked meetings
 # OiaaFeed.refresh_if_stale    the same, in a background thread, when the cache is old
-# OiaaFeed.matches(...)        likely OIAA listings for a meeting someone is creating
+# OiaaFeed.matches(...)        likely listings for a meeting someone is creating
 module OiaaFeed
-  MEETINGS_PAGE = "https://aa-intergroup.org/meetings/".freeze
+  DEFAULT_FEED = "https://data.aa-intergroup.org/".freeze
   USER_AGENT = "RecoveryBot (https://recoverybot.hmblbot.com)".freeze
   MATCH_THRESHOLD = 35
 
@@ -18,32 +19,28 @@ module OiaaFeed
 
   module_function
 
-  def feed_url
-    ENV["MEETING_GUIDE_FEED_URL"].presence || ENV["OIAA_FEED_URL"].presence || Rails.cache.fetch("oiaa_feed/url", expires_in: 1.day) { discover(MEETINGS_PAGE) } ||
-      raise(Error, "Couldn't find the Meeting Guide feed. Set MEETING_GUIDE_FEED_URL.")
-  end
+  def feed_url = ENV["AA_INTERGROUP_FEED_URL"].presence || ENV["OIAA_FEED_URL"].presence || DEFAULT_FEED
 
-  # The href of <link ... title="Meetings Feed" ...> on a page, made absolute
-  def discover(page_url)
-    html = get(page_url)
-    tag = html.scan(/<link\b[^>]*>/i).find { |t| t =~ /title=["']Meetings Feed["']/i }
-    href = tag && tag[/href=["']([^"']+)["']/i, 1]
-    href && URI.join(page_url, CGI.unescapeHTML(href)).to_s
-  rescue StandardError => e
-    Rails.logger.warn("[oiaa] couldn't discover the feed: #{e.message}")
-    nil
+  # data.aa-intergroup.org rebuilds its export when asked (a few seconds), then answers with a
+  # small HTML page linking to the fresh .json; a feed URL that is the JSON itself works too
+  def fetch_feed(url = feed_url)
+    body = get(url)
+    return body if body.lstrip.start_with?("[", "{")
+
+    href = body[/href=["']([^"']+\.json[^"']*)["']/i, 1] or raise Error, "#{url} didn't link to a JSON feed."
+    get(URI.join(url, CGI.unescapeHTML(href)).to_s)
   end
 
   def last_synced_at = OiaaMeeting.maximum(:last_seen_at)
   def stale? = last_synced_at.nil? || last_synced_at < OiaaMeeting::STALE_AFTER.ago
 
   def sync!(json = nil)
-    records = JSON.parse(json || get(feed_url))
-    raise Error, "The Meeting Guide feed isn't a list of meetings." unless records.is_a?(Array)
+    records = JSON.parse(json || fetch_feed)
+    raise Error, "AA Intergroup's feed isn't a list of meetings." unless records.is_a?(Array)
 
     now = Time.current
     rows = records.filter_map { |r| normalize(r, now) }.uniq { |r| r[:slug] }
-    raise Error, "The Meeting Guide feed had no meetings in it." if rows.empty?
+    raise Error, "AA Intergroup's feed had no meetings in it." if rows.empty?
 
     rows.each_slice(1000) { |batch| OiaaMeeting.upsert_all(batch, unique_by: :slug, update_only: batch.first.keys - %i[slug created_at updated_at]) }
     # read back from the database: it keeps microseconds, so `now` itself would compare as newer
@@ -187,7 +184,7 @@ module OiaaFeed
 
   def get(url, redirects: 3)
     uri = URI(url)
-    response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 10, read_timeout: 60) do |http|
+    response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 30, read_timeout: 600) do |http|
       http.request(Net::HTTP::Get.new(uri, "User-Agent" => USER_AGENT, "Accept" => "application/json, text/html"))
     end
     case response

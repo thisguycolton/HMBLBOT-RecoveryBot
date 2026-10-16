@@ -29,7 +29,7 @@ An API-driven system for tracking game state, inventories, and player progress.
 
 ### 🤝 Groups & Meetings
 - **Models**: `Group`, `GroupMembership` (roles `admin`/`member`, status `active`/`requested`), `Meeting` (weekly: one row per weekday, or once), `GroupBook` (approved literature), `OiaaMeeting` (cached OIAA directory).
-- **Meeting Guide**: called "Meeting Guide" everywhere people see it (internally still `Oiaa*`). `OiaaFeed` reads a Meeting Guide JSON feed (`MEETING_GUIDE_FEED_URL`, or the older `OIAA_FEED_URL`, else discovered from aa-intergroup.org/meetings) into `oiaa_meetings`. Meetings linked by `oiaa_slug` refresh from it; `bin/rails meeting_guide:sync` fetches it by hand.
+- **AA Intergroup**: called "AA Intergroup" everywhere people see it (internally still `Oiaa*`). `OiaaFeed` reads its Meeting Guide JSON feed (https://data.aa-intergroup.org/, or `AA_INTERGROUP_FEED_URL`) into `oiaa_meetings`, in the background at boot and when a week old. Meetings linked by `oiaa_slug` refresh from it; `bin/rails aa_intergroup:sync` fetches it by hand.
 - **Access**: admin-only while it's tried out (`Group.feature_open_to?`); `GROUPS_FOR_EVERYONE=1` opens it to every account. People already in a group always see it.
 - **Frontend**: React app at `/groups` (`entrypoints/groups.jsx`, `components/groups/`), JSON under `/api/groups`. The profile page (`/users/edit`) is `entrypoints/profile.jsx`.
 - **Court verifications**: `/court_verifications/new?group=<slug>` is a group's own form (unlinked, like the plain one).

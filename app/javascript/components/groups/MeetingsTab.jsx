@@ -11,7 +11,7 @@ const COMMON_TYPES = ["O", "C", "D", "SP", "B", "ST", "LIT", "12x12", "MED", "BE
 const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 
-// Weekly meetings are stored one per day (as Meeting Guide lists them); the same meeting on
+// Weekly meetings are stored one per day (as AA Intergroup lists them); the same meeting on
 // several days shows as one card
 const seriesKey = (m) =>
   [m.name, m.start_minute, m.end_minute, m.time_zone, m.conference_url || "", m.conference_url_notes || "", m.oiaa_slug || "",
@@ -46,7 +46,7 @@ function scheduleLabel(series) {
 }
 
 // A group's meetings: weekly by weekday, then one-time ones. Group admins add them by
-// hand (with Meeting Guide matches offered as they type), import them from Meeting Guide, and refresh.
+// hand (with AA Intergroup matches offered as they type), import them from AA Intergroup, and refresh.
 export default function MeetingsTab({ group, setGroup, reload, isNew }) {
   const [editing, setEditing] = useState(null); // "new" | [meetings of one series]
   const [importing, setImporting] = useState(isNew && group.meetings.length === 0);
@@ -83,16 +83,16 @@ export default function MeetingsTab({ group, setGroup, reload, isNew }) {
             <Plus className="h-4 w-4" /> Add a meeting
           </button>
           <button type="button" onClick={() => { setImporting(true); setEditing(null); }} className={quietButton}>
-            <DownloadCloud className="h-4 w-4" /> Import from Meeting Guide
+            <DownloadCloud className="h-4 w-4" /> Import from AA Intergroup
           </button>
           {linkedCount > 0 && (
             <button type="button" disabled={refreshing} onClick={refresh} className={quietButton}>
-              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> {refreshing ? "Refreshing…" : "Refresh from Meeting Guide"}
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> {refreshing ? "Refreshing…" : "Refresh from AA Intergroup"}
             </button>
           )}
           {group.oiaa_synced_at && linkedCount > 0 && (
             <span className="text-xs text-slate-500 dark:text-neutral-400">
-              Meeting Guide checked {new Date(group.oiaa_synced_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+              AA Intergroup checked {new Date(group.oiaa_synced_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
             </span>
           )}
         </div>
@@ -114,7 +114,7 @@ export default function MeetingsTab({ group, setGroup, reload, isNew }) {
       {group.meetings.length === 0 && !editing && !importing && (
         <Card className="p-6 text-center text-sm text-slate-600 dark:text-neutral-400">
           <CalendarPlus className="mx-auto mb-2 h-6 w-6 text-slate-400" />
-          No meetings yet.{manage ? " Add one, or import the group's meetings from Meeting Guide." : ""}
+          No meetings yet.{manage ? " Add one, or import the group's meetings from AA Intergroup." : ""}
         </Card>
       )}
 
@@ -164,7 +164,7 @@ function MeetingCard({ series, group, manage, onEdit, onChanged }) {
     }
   };
   const unlink = () =>
-    window.confirm("Stop following Meeting Guide for this meeting? Its details stay, and you can edit them yourself.") &&
+    window.confirm("Stop following AA Intergroup for this meeting? Its details stay, and you can edit them yourself.") &&
     each((m) => api(`/groups/${group.slug}/meetings/${m.id}/unlink`, { method: "POST" }));
   const remove = () =>
     window.confirm(`Delete “${meeting.name}” (${label})?`) &&
@@ -183,10 +183,10 @@ function MeetingCard({ series, group, manage, onEdit, onChanged }) {
         <div className="flex flex-wrap items-center gap-1.5">
           {meeting.oiaa_slug && !meeting.oiaa_missing && (
             meeting.oiaa_url ? (
-              <a href={meeting.oiaa_url} target="_blank" rel="noreferrer"><Pill tone="green"><Link2 className="h-3 w-3" /> Meeting Guide</Pill></a>
-            ) : <Pill tone="green"><Link2 className="h-3 w-3" /> Meeting Guide</Pill>
+              <a href={meeting.oiaa_url} target="_blank" rel="noreferrer"><Pill tone="green"><Link2 className="h-3 w-3" /> AA Intergroup</Pill></a>
+            ) : <Pill tone="green"><Link2 className="h-3 w-3" /> AA Intergroup</Pill>
           )}
-          {meeting.oiaa_missing && <Pill tone="amber"><AlertTriangle className="h-3 w-3" /> No longer listed on Meeting Guide</Pill>}
+          {meeting.oiaa_missing && <Pill tone="amber"><AlertTriangle className="h-3 w-3" /> No longer listed on AA Intergroup</Pill>}
         </div>
       </div>
 
@@ -217,7 +217,7 @@ function MeetingCard({ series, group, manage, onEdit, onChanged }) {
       {manage && (
         <div className="mt-3 flex flex-wrap gap-1 border-t border-neutral-100 pt-2 dark:border-neutral-800">
           <button type="button" onClick={onEdit} className={`${quietButton} !py-1`}><Pencil className="h-3.5 w-3.5" /> Edit</button>
-          {meeting.oiaa_slug && <button type="button" onClick={unlink} className={`${quietButton} !py-1`}><Link2Off className="h-3.5 w-3.5" /> Unlink from Meeting Guide</button>}
+          {meeting.oiaa_slug && <button type="button" onClick={unlink} className={`${quietButton} !py-1`}><Link2Off className="h-3.5 w-3.5" /> Unlink from AA Intergroup</button>}
           <button type="button" onClick={remove} className={`${dangerButton} !py-1`}><Trash2 className="h-3.5 w-3.5" /> Delete</button>
         </div>
       )}
@@ -233,8 +233,8 @@ const blankMeeting = (group) => ({
 });
 
 // Add or edit a meeting (a weekly one can be on several days). While the details are
-// typed, likely Meeting Guide listings show underneath; picking one links the meeting and fills it
-// in from Meeting Guide.
+// typed, likely AA Intergroup listings show underneath; picking one links the meeting and fills it
+// in from AA Intergroup.
 function MeetingEditor({ group, series, onClose, onSaved }) {
   const meeting = series?.[0] || null;
   const [form, setForm] = useState(() =>
@@ -304,7 +304,7 @@ function MeetingEditor({ group, series, onClose, onSaved }) {
     if (added.length) await api(base, { method: "POST", body: { meeting: fields, days: added } });
   });
 
-  // Link to a Meeting Guide listing: it brings its own days and details; our notes and place stay
+  // Link to an AA Intergroup listing: it brings its own days and details; our notes and place stay
   const useListing = (match) => run(async () => {
     await api(base, { method: "POST", body: { meeting: fields, oiaa_slug: match.slug } });
     if (series) await Promise.all(series.map((m) => api(`${base}/${m.id}`, { method: "DELETE" })));
@@ -319,7 +319,7 @@ function MeetingEditor({ group, series, onClose, onSaved }) {
 
       {linked ? (
         <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
-          This meeting's schedule and links come from Meeting Guide and stay in step with it. You can add your own notes and location here,
+          This meeting's schedule and links come from AA Intergroup and stay in step with it. You can add your own notes and location here,
           or unlink it to edit everything yourself.
         </p>
       ) : (
@@ -428,7 +428,7 @@ function MeetingEditor({ group, series, onClose, onSaved }) {
 
       {!linked && matches.length > 0 && (
         <div className="rounded-xl bg-neutral-100 p-1.5 dark:bg-neutral-800/70">
-          <p className="px-2 pb-1.5 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Is it one of these on Meeting Guide?</p>
+          <p className="px-2 pb-1.5 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Is it one of these on AA Intergroup?</p>
           <div className="space-y-1.5">
             {matches.map((m) => {
               const taken = alreadyHere.has(m.slug) && !series?.some((x) => x.oiaa_slug === m.slug);
@@ -452,7 +452,7 @@ function MeetingEditor({ group, series, onClose, onSaved }) {
             })}
           </div>
           <p className="px-2 pb-1 pt-2 text-xs text-slate-500 dark:text-neutral-400">
-            Using a listing fills in its details from Meeting Guide and keeps them up to date. Your notes and place are kept.
+            Using a listing fills in its details from AA Intergroup and keeps them up to date. Your notes and place are kept.
           </p>
         </div>
       )}
@@ -481,7 +481,7 @@ function ZoneSelect({ value, onChange }) {
   );
 }
 
-// Search Meeting Guide's directory and import ticked listings, one weekly meeting per day listed
+// Search AA Intergroup's directory and import ticked listings, one weekly meeting per day listed
 function ImportPanel({ group, onClose, onImported }) {
   const [q, setQ] = useState(group.title);
   const [results, setResults] = useState(null);
@@ -525,8 +525,8 @@ function ImportPanel({ group, onClose, onImported }) {
     <Card className="space-y-3 p-4 ring-2 ring-accent/30">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="!text-base font-semibold text-slate-900 dark:text-white">Import from Meeting Guide</h2>
-          <p className="text-sm text-slate-500 dark:text-neutral-400">Search Meeting Guide by meeting name, or paste a Zoom link or meeting ID.</p>
+          <h2 className="!text-base font-semibold text-slate-900 dark:text-white">Import from AA Intergroup</h2>
+          <p className="text-sm text-slate-500 dark:text-neutral-400">Search AA Intergroup by meeting name, or paste a Zoom link or meeting ID.</p>
         </div>
         <button type="button" onClick={onClose} className="!bg-transparent p-1 text-slate-400 hover:text-slate-700" aria-label="Close"><X className="h-5 w-5" /></button>
       </div>
@@ -540,7 +540,7 @@ function ImportPanel({ group, onClose, onImported }) {
       <ErrorNote error={error} />
       {results && results.meetings.length === 0 && (
         <p className="text-sm text-slate-500 dark:text-neutral-400">
-          {results.synced_at ? "Nothing on Meeting Guide matches that." : "Meeting Guide's list hasn't loaded yet. Try again in a minute."}
+          {results.synced_at ? "Nothing on AA Intergroup matches that." : "AA Intergroup's list hasn't loaded yet. Try again in a minute."}
         </p>
       )}
       {results && results.meetings.length > 0 && (
@@ -558,7 +558,7 @@ function ImportPanel({ group, onClose, onImported }) {
                     </span>
                   </span>
                   {m.url && (
-                    <a href={m.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="ml-auto shrink-0 text-slate-400 hover:text-accent" aria-label="Open on Meeting Guide">
+                    <a href={m.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="ml-auto shrink-0 text-slate-400 hover:text-accent" aria-label="Open on AA Intergroup">
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   )}
