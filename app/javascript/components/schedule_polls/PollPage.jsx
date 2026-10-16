@@ -136,6 +136,11 @@ export default function PollPage() {
           subtitle={`${poll.organizer.name} · ${poll.duration_minutes} minutes · ${dayParts(poll.starts_on).long} – ${dayParts(poll.ends_on).long}`}
         />
         <ShellPanel position="bottom" className="space-y-3 p-4">
+          {poll.event && (
+            <a href={poll.event.path} className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent hover:bg-accent/15 dark:bg-accent/25 dark:text-sky-200">
+              Picking a time for {poll.event.title} →
+            </a>
+          )}
           {poll.description && <p className="whitespace-pre-line text-sm text-slate-700 dark:text-neutral-300">{poll.description}</p>}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-neutral-400">
             <span className={`inline-flex items-center gap-1 font-medium ${open ? "text-emerald-700 dark:text-emerald-400" : "text-slate-500"}`}>

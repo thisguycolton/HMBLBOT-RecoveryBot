@@ -16,6 +16,7 @@ class Group < ApplicationRecord
   has_many :books, through: :group_books
   has_many :readings, dependent: :nullify
   has_many :court_verifications, dependent: :nullify
+  has_many :events, dependent: :destroy
 
   before_validation :assign_slug
   before_validation { self.join_token ||= self.class.new_token }

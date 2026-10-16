@@ -9,6 +9,8 @@ class SchedulePoll < ApplicationRecord
   DAY_MINUTES = 24 * 60
 
   belongs_to :user
+  # The event this poll picks a time for (Event#schedule_polls); voting follows the event
+  belongs_to :event, optional: true
   has_many :members, class_name: "SchedulePollMember", dependent: :destroy
   has_many :member_users, through: :members, source: :user
   has_many :ballots, class_name: "SchedulePollBallot", dependent: :destroy
@@ -114,6 +116,7 @@ class SchedulePoll < ApplicationRecord
       ballots_count: ballots.size,
       can_manage: manager?(viewer), can_delete: deletable_by?(viewer),
       members: members.includes(:user).map(&:as_api_json),
+      event: event&.published? || event&.editable_by?(viewer) ? { token: event.token, title: event.title, path: event.path } : nil,
     }.tap do |json|
       json[:results] = include_results ? tally : nil
       json[:voters] = ballots.order(:created_at).map(&:as_api_json) if manager?(viewer)

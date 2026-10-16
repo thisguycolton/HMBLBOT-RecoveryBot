@@ -1,0 +1,36 @@
+/* Events and the HMBLBOT Editor. The reader styles set serif, justified paragraphs and
+   headings site-wide; events use the sans UI font throughout. */
+.ev-root, .ev-root * { font-family: "Public Sans", "Inter", ui-sans-serif, system-ui, sans-serif; }
+.ev-root p, .ev-root h1, .ev-root h2, .ev-root h3, .ev-root h4 { text-align: inherit; hyphens: manual; }
+.ev-root .ev-heading { overflow-wrap: anywhere; }
+
+/* Markdown in notes, guidelines and updates */
+.ev-md { line-height: 1.6; color: rgb(51 65 85); overflow-wrap: anywhere; }
+.dark .ev-md { color: rgb(212 212 212); }
+.ev-md > * + * { margin-top: 0.6em; }
+.ev-md h3, .ev-md h4, .ev-md h5 { color: rgb(15 23 42); font-weight: 700; line-height: 1.3; }
+.dark .ev-md h3, .dark .ev-md h4, .dark .ev-md h5 { color: white; }
+.ev-md h3 { font-size: 1.3em; }
+.ev-md h4 { font-size: 1.12em; }
+.ev-md h5 { font-size: 1em; }
+.ev-md ul { list-style: disc; padding-inline-start: 1.3em; }
+.ev-md ol { list-style: decimal; padding-inline-start: 1.3em; }
+.ev-md li + li { margin-top: 0.25em; }
+.ev-md li::marker { color: var(--color-accent); }
+.ev-md a { color: var(--color-accent); text-decoration: underline; }
+.ev-md blockquote { border-inline-start: 3px solid rgb(203 213 225); padding-inline-start: 0.8em; color: rgb(71 85 105); }
+.ev-md code { background: rgb(241 245 249); border-radius: 0.25em; font-size: 0.9em; padding: 0.05em 0.3em; }
+.dark .ev-md code { background: rgb(38 38 38); }
+.ev-md p { font-size: inherit; line-height: inherit; }
+
+/* Editor canvas */
+/* Each block keeps a row on top for its toolbar, so the toolbar never covers what's in it */
+.ev-block { position: relative; padding-top: 2.4rem; border-radius: 1.1rem; outline: 2px solid transparent; outline-offset: 4px; transition: outline-color 0.12s; }
+.ev-block .ev-tools, .ev-block .ev-resize { opacity: 0; transition: opacity 0.12s; }
+.ev-block:hover .ev-tools, .ev-block[data-selected="true"] .ev-tools, .ev-block:focus-within .ev-tools { opacity: 1; }
+.ev-block:hover .ev-resize { opacity: 0.5; }
+.ev-block[data-selected="true"] .ev-resize { opacity: 1; }
+.ev-block:hover { outline-color: color-mix(in srgb, var(--color-accent) 35%, transparent); }
+.ev-block[data-selected="true"] { outline-color: var(--color-accent); }
+.ev-block[data-dragging="true"] { opacity: 0.35; }
+.ev-region-empty { min-height: 7rem; }
