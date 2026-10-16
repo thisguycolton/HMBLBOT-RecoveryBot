@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_16_100100) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_16_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -199,6 +199,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_100100) do
     t.string "join_token"
     t.string "status", default: "active", null: false
     t.bigint "created_by_id"
+    t.string "court_email_subject"
+    t.text "court_email_body"
+    t.string "court_email_reply_to"
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true

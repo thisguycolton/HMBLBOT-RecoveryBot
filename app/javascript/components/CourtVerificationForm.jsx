@@ -1,6 +1,7 @@
 // app/javascript/components/CourtVerificationForm.jsx
 import React, { useState } from "react";
 import axios from "axios";
+import CourtLetterPreview from "./CourtLetterPreview";
 
 // The four daily Acid Test meetings, used when the form isn't opened from a group's link
 const DEFAULT_SLOTS = [
@@ -118,6 +119,17 @@ const meetingDisplayDate = () =>
         .filter((m) => m.dates.includes(getMeetingDate()))
         .map((m) => ({ value: String(m.id), label: m.name === group.title ? m.time_label : `${m.time_label} · ${m.name}` }))
     : DEFAULT_SLOTS;
+
+  // The group's email, filled in as the host completes the form
+  const chosenMeeting = group && group.meetings.find((m) => String(m.id) === meetingTimeSlot);
+  const letterValues = group && {
+    attendee: respondentName.trim(),
+    meeting_time: chosenMeeting ? `${meetingDisplayDate()} at ${chosenMeeting.time_label}` : "",
+    topic: topic.trim(),
+    host: hostName.trim(),
+    signer: signerName.trim(),
+    group: group.title,
+  };
 
 const timeButtonClass = (slot) =>
   [
@@ -307,6 +319,19 @@ const timeButtonClass = (slot) =>
               required
             />
           </div>
+
+          {group?.email && (
+            <section className="pt-2">
+              <h5 className="block text-lg font-semibold mb-2 ttSans text-center!">The email they'll get</h5>
+              <CourtLetterPreview
+                groupTitle={group.title}
+                subject={group.email.subject}
+                body={group.email.body}
+                fields={group.email.fields}
+                values={letterValues}
+              />
+            </section>
+          )}
 
           <div className="pt-2 flex justify-end">
             <button

@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { Copy, ExternalLink } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Copy, ExternalLink, Plus, RotateCcw } from "lucide-react";
 import { api } from "./lib";
-import { Card, ErrorNote, Tray, copy, quietButton } from "./ui";
+import { Card, ErrorNote, Tray, copy, primaryButton, quietButton } from "./ui";
+import CourtLetterPreview from "../CourtLetterPreview";
 
 // Group admins: this group's court verification form link (not linked anywhere public)
 // and the verifications sent from it
-export default function CourtTab({ group }) {
+export default function CourtTab({ group, setGroup }) {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -31,6 +32,8 @@ export default function CourtTab({ group }) {
           </div>
         </Card>
       </Tray>
+
+      <CourtEmailEditor group={group} setGroup={setGroup} />
 
       <ErrorNote error={error} />
       <Tray label="Sent from this group">
@@ -64,5 +67,123 @@ export default function CourtTab({ group }) {
         )}
       </Tray>
     </div>
+  );
+}
+
+const fieldClass =
+  "w-full rounded-xl border-0 bg-white px-3 py-2 text-sm text-slate-900 ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent dark:bg-neutral-900 dark:text-white dark:ring-neutral-700";
+
+// The group's court verification email: subject and body with {{placeholders}} on the left,
+// and the email as it will arrive on the right, with a chip where each form value will go
+function CourtEmailEditor({ group, setGroup }) {
+  const email = group.court_email;
+  const [subject, setSubject] = useState(email.subject);
+  const [body, setBody] = useState(email.body);
+  const [replyTo, setReplyTo] = useState(email.reply_to || "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(null);
+  const bodyRef = useRef(null);
+  const lastFocus = useRef("body");
+  const subjectRef = useRef(null);
+
+  const dirty = subject !== email.subject || body !== email.body || replyTo !== (email.reply_to || "");
+  const isDefault = subject === email.default_subject && body.trim() === email.default_body.trim();
+
+  // Put {{key}} where the cursor was, in whichever box was last used
+  const insert = (key) => {
+    const token = `{{${key}}}`;
+    const inSubject = lastFocus.current === "subject";
+    const el = inSubject ? subjectRef.current : bodyRef.current;
+    const value = inSubject ? subject : body;
+    const start = el?.selectionStart ?? value.length;
+    const end = el?.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + token + value.slice(end);
+    (inSubject ? setSubject : setBody)(next);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(start + token.length, start + token.length);
+    });
+  };
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await api(`/groups/${group.slug}`, {
+        method: "PATCH",
+        body: { group: { court_email_subject: subject, court_email_body: body, court_email_reply_to: replyTo } },
+      });
+      setGroup(updated);
+      setSubject(updated.court_email.subject);
+      setBody(updated.court_email.body);
+      setReplyTo(updated.court_email.reply_to || "");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Tray label="The email attendees get">
+      <form onSubmit={save} className="grid gap-1.5 lg:grid-cols-2">
+        <Card className="space-y-3 p-3">
+          <p className="text-sm text-slate-700 dark:text-neutral-200">
+            Write the letter the way you want it. The highlighted fields are filled in from the form when a host sends it.
+          </p>
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Subject</span>
+            <input ref={subjectRef} value={subject} onFocus={() => (lastFocus.current = "subject")} onChange={(e) => setSubject(e.target.value)} maxLength={200} className={fieldClass} />
+          </label>
+          <div className="space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Letter</span>
+            <div className="flex flex-wrap gap-1">
+              {Object.entries(email.fields).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => insert(key)}
+                  className="inline-flex items-center gap-1 rounded-full !bg-cyan-50 px-2 py-0.5 text-xs font-medium text-cyan-800 ring-1 ring-cyan-200 hover:!bg-cyan-100 dark:!bg-cyan-950/50 dark:text-cyan-200 dark:ring-cyan-800"
+                >
+                  <Plus className="h-3 w-3" /> {label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              ref={bodyRef}
+              value={body}
+              onFocus={() => (lastFocus.current = "body")}
+              onChange={(e) => setBody(e.target.value)}
+              rows={16}
+              maxLength={5000}
+              aria-label="Letter"
+              className={`${fieldClass} font-mono !text-[13px] leading-relaxed`}
+            />
+          </div>
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Group email (optional)</span>
+            <input type="email" value={replyTo} onChange={(e) => setReplyTo(e.target.value)} placeholder="ourgroup@example.com" className={fieldClass} />
+            <span className="block text-xs text-slate-500 dark:text-neutral-400">Gets a copy of every letter, and replies from attendees or courts go here.</span>
+          </label>
+          <ErrorNote error={error} />
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="submit" disabled={saving || !dirty} className={primaryButton}>{saving ? "Saving…" : saved ? "Saved" : "Save email"}</button>
+            {!isDefault && (
+              <button type="button" onClick={() => { setSubject(email.default_subject); setBody(email.default_body); }} className={quietButton}>
+                <RotateCcw className="h-4 w-4" /> Start over from the standard letter
+              </button>
+            )}
+          </div>
+        </Card>
+        <div className="lg:sticky lg:top-20 lg:self-start">
+          <CourtLetterPreview groupTitle={group.title} subject={subject} body={body} fields={email.fields} values={{ group: group.title }} />
+        </div>
+      </form>
+    </Tray>
   );
 }

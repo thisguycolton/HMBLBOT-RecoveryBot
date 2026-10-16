@@ -25,6 +25,7 @@ class CourtVerificationsController < ApplicationController
       { id: m.id, name: m.name, dates: starts.map { |t| t.to_date.iso8601 }, time_label: starts.first.strftime("%-I:%M %p %Z") }
     end
     { slug: group.slug, title: group.title, today: today.iso8601, meetings: meetings,
+      email: group.court_email_json.slice(:subject, :body, :fields),
       time_zone_label: "#{group.time_zone.split('/').last.tr('_', ' ')} time (#{group.zone.now.strftime('%Z')})" }
   end
 end

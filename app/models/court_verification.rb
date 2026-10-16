@@ -42,6 +42,8 @@ class CourtVerification < ApplicationRecord
   DEFAULT_GROUP_LABEL = "The Acid Test AA Meeting".freeze
   def group_label = group&.title.presence || DEFAULT_GROUP_LABEL
 
+  def letter = CourtLetter.new(self)
+
   def as_admin_json
     {
       id: id,
