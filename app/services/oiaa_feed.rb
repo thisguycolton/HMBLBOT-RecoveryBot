@@ -19,8 +19,8 @@ module OiaaFeed
   module_function
 
   def feed_url
-    ENV["OIAA_FEED_URL"].presence || Rails.cache.fetch("oiaa_feed/url", expires_in: 1.day) { discover(MEETINGS_PAGE) } ||
-      raise(Error, "Couldn't find OIAA's meeting feed. Set OIAA_FEED_URL.")
+    ENV["MEETING_GUIDE_FEED_URL"].presence || ENV["OIAA_FEED_URL"].presence || Rails.cache.fetch("oiaa_feed/url", expires_in: 1.day) { discover(MEETINGS_PAGE) } ||
+      raise(Error, "Couldn't find the Meeting Guide feed. Set MEETING_GUIDE_FEED_URL.")
   end
 
   # The href of <link ... title="Meetings Feed" ...> on a page, made absolute
@@ -39,11 +39,11 @@ module OiaaFeed
 
   def sync!(json = nil)
     records = JSON.parse(json || get(feed_url))
-    raise Error, "OIAA's feed isn't a list of meetings." unless records.is_a?(Array)
+    raise Error, "The Meeting Guide feed isn't a list of meetings." unless records.is_a?(Array)
 
     now = Time.current
     rows = records.filter_map { |r| normalize(r, now) }.uniq { |r| r[:slug] }
-    raise Error, "OIAA's feed had no meetings in it." if rows.empty?
+    raise Error, "The Meeting Guide feed had no meetings in it." if rows.empty?
 
     rows.each_slice(1000) { |batch| OiaaMeeting.upsert_all(batch, unique_by: :slug, update_only: batch.first.keys - %i[slug created_at updated_at]) }
     # read back from the database: it keeps microseconds, so `now` itself would compare as newer

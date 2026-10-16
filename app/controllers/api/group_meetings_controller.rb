@@ -80,7 +80,7 @@ class Api::GroupMeetingsController < ApplicationController
     OiaaFeed.sync!
     render json: { meetings: @group.meetings.reload.ordered.map(&:as_api_json), oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601 }
   rescue OiaaFeed::Error, SocketError, SystemCallError, Net::OpenTimeout, Net::ReadTimeout, JSON::ParserError, OpenSSL::SSL::SSLError => e
-    render json: { error: "Couldn't reach OIAA's directory: #{e.message}" }, status: :bad_gateway
+    render json: { error: "Couldn't reach Meeting Guide: #{e.message}" }, status: :bad_gateway
   end
 
   private

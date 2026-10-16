@@ -40,7 +40,7 @@ export default function GroupForm() {
     setError(null);
     try {
       const saved = await api(slug ? `/groups/${slug}` : "/groups", { method: slug ? "PATCH" : "POST", body: { group: form } });
-      // a new group opens on its meetings, which offers its OIAA listings
+      // a new group opens on its meetings, which offers its Meeting Guide listings
       navigate(`/${saved.slug}${slug ? "" : "?new=1"}`);
     } catch (err) {
       setError(err.message);
