@@ -53,6 +53,10 @@ Rails.application.routes.draw do
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
+    resource :page, controller: "group_pages", only: %i[show update] do
+      post :images
+      delete "timeline/:note_id", action: :remove_note
+    end
     resources :meetings, controller: "group_meetings", only: %i[create update destroy] do
       post :unlink, on: :member
       collection do
@@ -61,6 +65,11 @@ Rails.application.routes.draw do
       end
     end
   end
+  resource :group_page_template, only: %i[show update] do
+    post :images
+  end
+  get "intergroup_pages/:oiaa_slug", to: "intergroup_pages#show", constraints: { oiaa_slug: %r{[^/]+} }, format: false
+  resources :timeline_notes, only: %i[index create update destroy]
   resources :events, only: %i[show update destroy], param: :token do
     member do
       post :images

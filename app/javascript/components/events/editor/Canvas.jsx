@@ -5,12 +5,13 @@ import { CSS } from "@dnd-kit/utilities";
 import { ArrowLeftRight, Copy, GripVertical, Trash2 } from "lucide-react";
 import BlockView, { HeadingView, isCompact } from "../BlockView";
 import { LayoutColumns, blockWrapClass } from "../EventLayout";
-import { BLOCK_INFO, SPANS, nearestSpan } from "../lib";
+import { BLOCK_INFO, SPANS, nearestSpan, tone } from "../lib";
 
 // The editor's canvas: the event's regions as drop zones, each block a sortable card that
 // can be selected, dragged (within or between columns), resized by its right edge, and,
-// for text blocks, typed into right on the page.
-export default function Canvas({ layout, blocks, polls, selected, onSelect, onChange, onRemove, onDuplicate, activeId }) {
+// for text blocks, typed into right on the page. `context` is a group page's group, for
+// its own blocks; `blockInfo` names the blocks (the event's or a group page's).
+export default function Canvas({ layout, blocks, polls, context, blockInfo = BLOCK_INFO, selected, onSelect, onChange, onRemove, onDuplicate, activeId }) {
   const renderRegion = (region) => {
     const list = blocks.filter((b) => b.region === region);
     return (
@@ -21,6 +22,8 @@ export default function Canvas({ layout, blocks, polls, selected, onSelect, onCh
             block={block}
             layout={layout}
             polls={polls}
+            context={context}
+            info={blockInfo[block.type]}
             selected={selected === block.id}
             dragging={activeId === block.id}
             onSelect={() => onSelect(block.id)}
@@ -59,11 +62,10 @@ function Region({ region, layout, ids, children }) {
   );
 }
 
-function SortableBlock({ block, layout, polls, selected, dragging, onSelect, onChange, onRemove, onDuplicate }) {
+function SortableBlock({ block, layout, polls, context, info, selected, dragging, onSelect, onChange, onRemove, onDuplicate }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition } = useSortable({ id: block.id });
   const wrapRef = useRef(null);
   const compact = isCompact(block, layout);
-  const info = BLOCK_INFO[block.type];
   const otherRegion = block.region === "main" ? "side" : "main";
   const tool = "grid size-7 place-items-center rounded-lg !bg-transparent text-slate-500 hover:!bg-slate-100 hover:text-slate-900 dark:text-neutral-400 dark:hover:!bg-neutral-800 dark:hover:text-white";
 
@@ -114,7 +116,7 @@ function SortableBlock({ block, layout, polls, selected, dragging, onSelect, onC
           <button type="button" className={`${tool} hover:!text-rose-600`} onClick={(e) => { e.stopPropagation(); onRemove(); }} title="Delete" aria-label="Delete"><Trash2 className="size-3.5" /></button>
         </div>
 
-        <InlineBlock block={block} compact={compact} polls={polls} selected={selected} onChange={onChange} />
+        <InlineBlock block={block} compact={compact} polls={polls} context={context} selected={selected} onChange={onChange} />
 
         <div
           role="separator"
@@ -130,13 +132,13 @@ function SortableBlock({ block, layout, polls, selected, dragging, onSelect, onC
 }
 
 // Headings, notes and guidelines are typed into right on the page once selected
-function InlineBlock({ block, compact, polls, selected, onChange }) {
+function InlineBlock({ block, compact, polls, context, selected, onChange }) {
   if (selected && block.type === "heading") {
     return <InlineHeading block={block} compact={compact} onChange={onChange} />;
   }
   if (selected && (block.type === "notes" || block.type === "guidelines")) {
     return (
-      <div className={`rounded-2xl p-1 ${block.type === "guidelines" ? "bg-amber-50 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:ring-amber-900/60" : "bg-white shadow-panel dark:bg-neutral-800/70 dark:ring-1 dark:ring-white/5"}`}>
+      <div className={`rounded-2xl p-1 ${tone(block).card}`}>
         <AutoTextarea
           value={block.markdown}
           onChange={(markdown) => onChange({ markdown })}
@@ -147,7 +149,7 @@ function InlineBlock({ block, compact, polls, selected, onChange }) {
       </div>
     );
   }
-  return <BlockView block={block} compact={compact} editing polls={polls} />;
+  return <BlockView block={block} compact={compact} editing polls={polls} context={context} />;
 }
 
 function InlineHeading({ block, compact, onChange }) {
@@ -161,7 +163,7 @@ function InlineHeading({ block, compact, onChange }) {
         value={block.text}
         onChange={(text) => onChange({ text: text.replace(/\n/g, " ") })}
         rows={1}
-        className={`ev-heading absolute inset-0 w-full resize-none overflow-hidden !bg-transparent p-0 tracking-tight text-slate-900 outline-none dark:text-white ${
+        className={`ev-heading absolute inset-0 w-full resize-none overflow-hidden !bg-transparent p-0 tracking-tight outline-none ${tone(block).text} ${
           compact ? { 1: "text-2xl font-extrabold", 2: "text-xl font-bold", 3: "text-base font-semibold" }[block.level] : { 1: "text-4xl sm:text-5xl font-extrabold", 2: "text-2xl sm:text-3xl font-bold", 3: "text-xl font-semibold" }[block.level]
         } ${{ left: "text-left", center: "text-center", right: "text-right" }[block.align]}`}
       />

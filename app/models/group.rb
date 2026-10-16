@@ -6,6 +6,8 @@
 class Group < ApplicationRecord
   TIME_ZONES = SchedulePoll::TIME_ZONES
   STATUSES = %w[active pending].freeze
+  # Paths in the Groups app (app/javascript/entrypoints/groups.jsx) a group can't be named
+  RESERVED_SLUGS = %w[new find default-page timeline].freeze
 
   belongs_to :created_by, class_name: "User", optional: true
   has_many :memberships, class_name: "GroupMembership", dependent: :destroy
@@ -17,9 +19,18 @@ class Group < ApplicationRecord
   has_many :readings, dependent: :nullify
   has_many :court_verifications, dependent: :nullify
   has_many :events, dependent: :destroy
+  has_many :timeline_note_shares, dependent: :destroy
+  has_many :timeline_notes, through: :timeline_note_shares
+
+  # The group's page (Api::GroupPagesController): page_blocks stays nil until the group
+  # saves its own, and until then it shows the default page (GroupPageTemplate)
+  has_one_attached :cover
+  # Pictures placed in the page's blocks
+  has_many_attached :page_images
 
   before_validation :assign_slug
   before_validation { self.join_token ||= self.class.new_token }
+  before_validation { self.page_blocks = EventBlocks.normalize(page_blocks, types: EventBlocks::GROUP_TYPES) unless page_blocks.nil? }
   # Text left at the default is stored as blank, so it follows later changes to the default
   before_validation do
     self.court_email_subject = nil if court_email_subject.to_s.squish == CourtLetter::DEFAULT_SUBJECT
@@ -27,7 +38,8 @@ class Group < ApplicationRecord
   end
 
   validates :title, presence: true, length: { maximum: 120 }
-  validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9-]+\z/ }
+  validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9-]+\z/ }, exclusion: { in: RESERVED_SLUGS }
+  validates :page_layout, inclusion: { in: Event::LAYOUTS }
   validates :time_zone, inclusion: { in: TIME_ZONES }
   validates :status, inclusion: { in: STATUSES }
   validates :description, length: { maximum: 1000 }
@@ -64,6 +76,11 @@ class Group < ApplicationRecord
   def visible_to?(user) = !!user && (user.suite_admin? || member?(user) || (active? && self.class.feature_open_to?(user)))
   def active? = status == "active"
   def admins = members.merge(GroupMembership.admins)
+  def custom_page? = !page_blocks.nil?
+
+  # Notes members shared to the group, newest first; a note stops showing when its author
+  # leaves
+  def shared_notes = timeline_notes.where(user_id: members.select(:id)).includes(user: { avatar_attachment: :blob }).newest_first
 
   # Readings members tagged to this group; drafts and scheduled ones stay with their author
   def shared_readings = readings.published.includes(:user).order(published_at: :desc)
@@ -100,7 +117,7 @@ class Group < ApplicationRecord
     base = title.parameterize.first(60).presence || "group"
     candidate = base
     n = 1
-    candidate = "#{base}-#{n += 1}" while self.class.where.not(id: id).exists?(slug: candidate)
+    candidate = "#{base}-#{n += 1}" while RESERVED_SLUGS.include?(candidate) || self.class.where.not(id: id).exists?(slug: candidate)
     self.slug = candidate
   end
 end

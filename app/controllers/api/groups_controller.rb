@@ -209,6 +209,8 @@ class Api::GroupsController < ApplicationController
       is_member: !!membership&.active?, can_manage: manager, is_site_admin: current_user.suite_admin?,
       meetings: @group.meetings.ordered.map(&:as_api_json),
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
+      members_count: @group.members.count,
+      cover_url: @group.cover.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.cover, only_path: true) : nil,
     }
     if member
       json[:members] = @group.active_memberships.includes(user: { avatar_attachment: :blob }).sort_by { |m| [m.admin? ? 0 : 1, m.user.display_name.downcase] }

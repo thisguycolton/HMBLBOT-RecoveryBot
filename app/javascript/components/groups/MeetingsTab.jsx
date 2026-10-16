@@ -18,7 +18,7 @@ const seriesKey = (m) =>
   [m.name, m.start_minute, m.end_minute, m.time_zone, m.conference_url || "", m.conference_url_notes || "", m.oiaa_slug ? "linked" : "",
     (m.types || []).join(","), m.notes || "", m.location || "", m.oiaa_missing].join("|");
 
-function toSeries(weekly) {
+export function toSeries(weekly) {
   const byKey = new Map();
   weekly.forEach((m) => {
     const key = seriesKey(m);
@@ -39,7 +39,7 @@ export function daysLabel(days) {
   return set.map((d) => SHORT_DAYS[d]).join(", ");
 }
 
-function scheduleLabel(series) {
+export function scheduleLabel(series) {
   const m = series[0];
   if (series.length === 1 || m.recurrence !== "weekly") return m.schedule_label;
   const zone = m.schedule_label.split(" ").pop();
