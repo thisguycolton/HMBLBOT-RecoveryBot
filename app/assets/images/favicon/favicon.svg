@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><title>RecoveryBot</title>
-<rect width="120" height="120" rx="26" fill="#17191c"/>
-<defs><mask id="face"><rect width="100" height="80" fill="white"/><circle cx="50" cy="42" r="10" fill="black"/><circle cx="50" cy="42" r="5.6" fill="white"/><circle cx="30" cy="61" r="5.8" fill="black"/><circle cx="70" cy="61" r="5.8" fill="black"/></mask></defs>
-<g transform="translate(14 22) scale(0.92)" fill="#ffffff">
-<g mask="url(#face)"><path d="M12 36 Q12 27 20 25 Q50 19 80 25 Q88 27 88 36 V69 Q88 78 79 78 H21 Q12 78 12 69 Z"/></g>
-<path d="M8 43 H5 Q1 43 1 47 V61 Q1 65 5 65 H8 Z"/><path d="M92 43 H95 Q99 43 99 47 V61 Q99 65 95 65 H92 Z"/>
-<rect x="48" y="12" width="4" height="10"/><circle cx="50" cy="9" r="7.4"/>
-<rect x="17.2" y="18" width="2.8" height="8"/><circle cx="18.6" cy="17" r="5"/>
-<rect x="80" y="18" width="2.8" height="8"/><circle cx="81.4" cy="17" r="5"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><title>RecoveryBot</title>
+<rect width="16" height="16" rx="3.5" fill="#4c7ba6"/>
+<defs><mask id="f"><rect width="16" height="16" fill="white"/><circle cx="8" cy="9" r="1.6" fill="black"/><circle cx="5.5" cy="11.5" r="1" fill="black"/><circle cx="10.5" cy="11.5" r="1" fill="black"/></mask></defs>
+<g fill="#fff">
+<rect mask="url(#f)" x="3" y="6" width="10" height="7.5" rx="1.75"/>
+<rect x="2" y="8" width="1" height="3"/><rect x="13" y="8" width="1" height="3"/>
+<rect x="7.5" y="4" width="1" height="2"/><circle cx="8" cy="3.5" r="1.5"/>
+<rect x="4.5" y="5" width="1" height="1"/><rect x="10.5" y="5" width="1" height="1"/>
+</g></svg>
