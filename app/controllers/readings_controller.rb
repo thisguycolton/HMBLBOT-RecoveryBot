@@ -28,10 +28,11 @@ class ReadingsController < ApplicationController
       end
     end
   
-    @tags = Tag.order(:title)
-    # Pass all tags for theme browsing
-    @tags_json = @tags.map do |tag|
-        { id: tag.id, title: tag.title, slug: tag.slug, icon_name: tag.icon_name }
+    # Themes to browse: the ones with published readings, with how many each has (the
+    # archive shows the most used first and the rest behind "Show more")
+    counts = Tag.joins(:readings).merge(Reading.published).group("tags.id").distinct.count("readings.id")
+    @tags_json = Tag.where(id: counts.keys).or(Tag.where(id: @selected_tag&.id)).order(:title).map do |tag|
+      { id: tag.id, title: tag.title, slug: tag.slug, icon_name: tag.icon_name, count: counts[tag.id].to_i }
     end
 
     @readings_json = @readings.map { |reading| reading_card_json(reading) }

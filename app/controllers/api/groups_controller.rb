@@ -186,7 +186,7 @@ class Api::GroupsController < ApplicationController
   end
 
   def group_params
-    params.require(:group).permit(:title, :description, :website, :time_zone)
+    params.require(:group).permit(:title, :description, :website, :time_zone, :court_email_subject, :court_email_body, :court_email_reply_to)
   end
 
   def group_card(group, membership)
@@ -224,6 +224,7 @@ class Api::GroupsController < ApplicationController
       json[:requests] = @group.memberships.requested.includes(user: { avatar_attachment: :blob }).map { |m| m.user.as_member_json(email: true).merge(membership_id: m.id) }
       json[:invite_url] = "#{request.base_url}/groups/join/#{@group.join_token}"
       json[:court_form_url] = "#{request.base_url}/court_verifications/new?group=#{@group.slug}"
+      json[:court_email] = @group.court_email_json
     end
     json
   end

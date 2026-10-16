@@ -19,12 +19,21 @@ class Group < ApplicationRecord
 
   before_validation :assign_slug
   before_validation { self.join_token ||= self.class.new_token }
+  # Text left at the default is stored as blank, so it follows later changes to the default
+  before_validation do
+    self.court_email_subject = nil if court_email_subject.to_s.squish == CourtLetter::DEFAULT_SUBJECT
+    self.court_email_body = nil if court_email_body.to_s.strip == CourtLetter.default_body(self).strip
+  end
 
   validates :title, presence: true, length: { maximum: 120 }
   validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9-]+\z/ }
   validates :time_zone, inclusion: { in: TIME_ZONES }
   validates :status, inclusion: { in: STATUSES }
   validates :description, length: { maximum: 1000 }
+  validates :court_email_subject, length: { maximum: 200 }
+  validates :court_email_body, length: { maximum: 5000 }
+  validates :court_email_reply_to, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
+  validate :court_email_placeholders_known
 
   scope :active, -> { where(status: "active") }
 
@@ -58,12 +67,31 @@ class Group < ApplicationRecord
   # Readings members tagged to this group; drafts and scheduled ones stay with their author
   def shared_readings = readings.published.includes(:user).order(published_at: :desc)
 
+  # The court verification email as its editor shows it: what the group wrote, or the default
+  def court_email_json
+    {
+      subject: court_email_subject.presence || CourtLetter::DEFAULT_SUBJECT,
+      body: court_email_body.presence || CourtLetter.default_body(self),
+      reply_to: court_email_reply_to,
+      default_subject: CourtLetter::DEFAULT_SUBJECT,
+      default_body: CourtLetter.default_body(self),
+      fields: CourtLetter::FIELDS,
+    }
+  end
+
   def notify_admins(kind:, title:, body: nil, url: "/groups/#{slug}")
     recipients = admins.to_a.presence || User.suite_admins
     Notification.deliver(recipients, kind: kind, title: title, body: body, url: url)
   end
 
   private
+
+  def court_email_placeholders_known
+    %i[court_email_subject court_email_body].each do |attr|
+      unknown = CourtLetter.unknown_placeholders(self[attr])
+      errors.add(attr, "uses #{unknown.map { |k| "{{#{k}}}" }.to_sentence}, which the form doesn't fill in") if unknown.any?
+    end
+  end
 
   def assign_slug
     return if slug.present? || title.blank?

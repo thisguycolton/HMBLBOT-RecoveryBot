@@ -12,7 +12,7 @@ const viewerZone = () => {
   return ZONES.some(([z]) => z === zone) ? zone : "America/Phoenix";
 };
 
-// /groups/find: "Which meeting do you go to?" Searches the groups here, and OIAA's
+// /groups/find: "Which meeting do you go to?" Searches the groups here, and AA Intergroup's
 // directory to recognize the meeting; a meeting with no group here yet can start one.
 export default function FindGroup() {
   const navigate = useNavigate();
@@ -155,10 +155,10 @@ export default function FindGroup() {
             )}
           </Tray>
 
-          <Tray label="On OIAA's meeting list">
+          <Tray label="On AA Intergroup">
             {results.oiaa.length === 0 ? (
               <Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">
-                {results.oiaa_ready ? "No OIAA meeting matches that." : "OIAA's meeting list is loading. Try again in a minute."}
+                {results.oiaa_ready ? "No AA Intergroup meeting matches that." : "AA Intergroup's list is loading. Try again in a minute."}
               </Card>
             ) : (
               <div className="space-y-1.5">

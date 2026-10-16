@@ -202,4 +202,25 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
     get "/api/groups/#{group.slug}/court_verifications", as: :json
     assert_equal ["R"], response.parsed_body["verifications"].map { |v| v["respondent_name"] }
   end
+
+  test "group admins edit the court verification email; members can't" do
+    group = create_group
+    get "/api/groups/#{group.slug}", as: :json
+    assert_equal CourtLetter::DEFAULT_SUBJECT, response.parsed_body.dig("court_email", "subject")
+
+    patch "/api/groups/#{group.slug}", params: { group: { court_email_subject: "{{group}} letter", court_email_body: "{{attendee}} came." } }, as: :json
+    assert_response :success
+    assert_equal "{{attendee}} came.", response.parsed_body.dig("court_email", "body")
+
+    patch "/api/groups/#{group.slug}", params: { group: { court_email_body: "{{nope}}" } }, as: :json
+    assert_response :unprocessable_entity
+
+    group.memberships.create!(user: @member, role: "member", status: "active")
+    sign_in @member
+    get "/api/groups/#{group.slug}", as: :json
+    assert_nil response.parsed_body["court_email"]
+    patch "/api/groups/#{group.slug}", params: { group: { court_email_body: "Hacked" } }, as: :json
+    assert_response :forbidden
+    assert_equal "{{attendee}} came.", group.reload.court_email_body
+  end
 end

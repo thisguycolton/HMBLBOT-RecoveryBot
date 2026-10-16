@@ -41,3 +41,11 @@ pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
+
+# Load AA Intergroup's meeting directory in the background once the server is up, if it's
+# missing or a week old (it's a slow ~8 MB download; see OiaaFeed)
+on_booted do
+  OiaaFeed.refresh_if_stale if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[oiaa] couldn't start the refresh: #{e.message}"
+end

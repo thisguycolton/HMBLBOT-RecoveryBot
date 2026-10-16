@@ -3,6 +3,7 @@ import { Camera, Check, Trash2 } from "lucide-react";
 import { inputClass, labelClass } from "../ui/styles";
 import { api } from "../groups/lib";
 import Avatar from "../groups/Avatar";
+import { soberFor } from "../groups/lib";
 import { Card, ErrorNote, Pill, Tray, dangerButton, primaryButton, quietButton } from "../groups/ui";
 
 const BIO_MAX = 280;
@@ -32,7 +33,7 @@ function squareJpeg(file) {
 // email and password
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
-  const [form, setForm] = useState({ name: "", bio: "" });
+  const [form, setForm] = useState({ name: "", bio: "", sobriety_date: "", show_sobriety_date: false });
   const [account, setAccount] = useState({ email: "", password: "", password_confirmation: "", current_password: "" });
   const [picture, setPicture] = useState(null); // { blob, url }
   const [removePicture, setRemovePicture] = useState(false);
@@ -44,7 +45,7 @@ export default function ProfilePage() {
 
   const load = (p) => {
     setProfile(p);
-    setForm({ name: p.name || "", bio: p.bio || "" });
+    setForm({ name: p.name || "", bio: p.bio || "", sobriety_date: p.sobriety_date || "", show_sobriety_date: !!p.show_sobriety_date });
     setAccount({ email: p.email, password: "", password_confirmation: "", current_password: "" });
     setPicture(null);
     setRemovePicture(false);
@@ -79,6 +80,8 @@ export default function ProfilePage() {
     const body = new FormData();
     body.append("profile[name]", form.name);
     body.append("profile[bio]", form.bio);
+    body.append("profile[sobriety_date]", form.sobriety_date);
+    body.append("profile[show_sobriety_date]", form.show_sobriety_date ? "1" : "0");
     if (picture) body.append("profile[avatar]", picture.blob, "avatar.jpg");
     if (removePicture) body.append("profile[remove_avatar]", "1");
     try {
@@ -142,7 +145,20 @@ export default function ProfilePage() {
                 <span className={`text-xs ${form.bio.length > BIO_MAX ? "text-rose-600" : "text-slate-400"}`}>{form.bio.length}/{BIO_MAX}</span>
               </div>
               <textarea id="p-bio" rows={3} className={inputClass} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                placeholder="A line or two: your home group, your sobriety date, what you're reading…" />
+                placeholder="A line or two: your home group, what you're reading…" />
+            </div>
+            <div>
+              <label htmlFor="p-sober" className={labelClass}>Sobriety date</label>
+              <div className="flex flex-wrap items-center gap-3">
+                <input id="p-sober" type="date" max={new Date().toISOString().slice(0, 10)} className={`${inputClass} !w-auto`} value={form.sobriety_date}
+                  onChange={(e) => setForm({ ...form, sobriety_date: e.target.value })} />
+                {form.sobriety_date && <span className="text-sm text-slate-600 dark:text-neutral-300">{soberFor(form.sobriety_date)}</span>}
+              </div>
+              <label className="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-200">
+                <input type="checkbox" checked={form.show_sobriety_date} disabled={!form.sobriety_date}
+                  onChange={(e) => setForm({ ...form, show_sobriety_date: e.target.checked })} className="h-4 w-4 rounded accent-accent" />
+                Show it to the people in my groups
+              </label>
             </div>
             <ErrorNote error={error} />
             <div className="flex items-center justify-end gap-3">

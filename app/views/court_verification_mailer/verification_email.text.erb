@@ -1,15 +1,1 @@
-To whom it may concern,
-This email verifies that <%= @court_verification.respondent_name %> attended
-an Alcoholics Anonymous meeting.
-Meeting date/time:
-<%= @court_verification.meeting_time_label %>
-Topic:
-<%= @court_verification.topic %>
-Host:
-<%= @court_verification.host_name %>
-Group:
-<%= @court_verification.group_label %>
-If you require additional verification, please email AAAcidTest@gmail.com.
-Sincerely,
-<%= @court_verification.group_label %>
-Signed by <%= @court_verification.signer_name %>
+<%= @letter.text %>

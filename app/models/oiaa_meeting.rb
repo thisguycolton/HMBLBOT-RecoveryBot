@@ -2,7 +2,7 @@
 # search these to import or link their meetings; nothing here is edited by hand.
 class OiaaMeeting < ApplicationRecord
   # Linked meetings refresh when the cache is older than this
-  STALE_AFTER = 12.hours
+  STALE_AFTER = 1.week
 
   scope :listed, -> { where(last_seen_at: (OiaaFeed.last_synced_at || Time.at(0))..) }
 

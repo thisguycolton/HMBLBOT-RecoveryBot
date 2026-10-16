@@ -58,10 +58,20 @@ class OiaaFeedTest < ActiveSupport::TestCase
     assert_empty OiaaFeed.matches(name: "zzz")
   end
 
-  test "the feed URL is found from the meetings page's link tag" do
-    page = %(<html><head><link rel="alternate" type="application/json" title="Meetings Feed" href="/feed/meetings.json"></head></html>)
-    OiaaFeed.stub(:get, page) do
-      assert_equal "https://aa-intergroup.org/feed/meetings.json", OiaaFeed.discover("https://aa-intergroup.org/meetings/")
+  test "the feed is found through the page data.aa-intergroup.org answers with" do
+    pages = { "https://data.aa-intergroup.org/" => %(done! <a href="6436f5a3.json">view json</a>),
+              "https://data.aa-intergroup.org/6436f5a3.json" => "[]" }
+    OiaaFeed.stub(:get, ->(url) { pages.fetch(url) }) do
+      assert_equal "[]", OiaaFeed.fetch_feed("https://data.aa-intergroup.org/")
+      assert_equal "[]", OiaaFeed.fetch_feed("https://data.aa-intergroup.org/6436f5a3.json")
     end
+  end
+
+  test "the feed is AA Intergroup's own unless one is set" do
+    assert_equal "https://data.aa-intergroup.org/", OiaaFeed.feed_url
+    ENV["AA_INTERGROUP_FEED_URL"] = "https://example.com/feed.json"
+    assert_equal "https://example.com/feed.json", OiaaFeed.feed_url
+  ensure
+    ENV.delete("AA_INTERGROUP_FEED_URL")
   end
 end

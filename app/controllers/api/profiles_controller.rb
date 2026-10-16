@@ -8,17 +8,17 @@ class Api::ProfilesController < ApplicationController
   end
 
   # PATCH /api/profile (multipart when a picture is uploaded)
-  # name, bio, avatar, remove_avatar=1; email or password also need current_password
+  # name, bio, avatar, remove_avatar=1, sobriety_date, show_sobriety_date; email or password also need current_password
   def update
     user = current_user
-    attrs = params.require(:profile).permit(:name, :bio, :avatar, :email, :password, :password_confirmation, :current_password)
+    attrs = params.require(:profile).permit(:name, :bio, :avatar, :sobriety_date, :show_sobriety_date, :email, :password, :password_confirmation, :current_password)
     user.avatar.purge_later if ActiveModel::Type::Boolean.new.cast(params.dig(:profile, :remove_avatar)) && attrs[:avatar].blank?
 
     account_change = attrs[:email].present? && attrs[:email].strip.casecmp?(user.email) == false || attrs[:password].present?
     saved = if account_change
-              user.update_with_password(attrs.slice(:name, :bio, :avatar, :email, :password, :password_confirmation, :current_password))
+              user.update_with_password(attrs.slice(:name, :bio, :avatar, :sobriety_date, :show_sobriety_date, :email, :password, :password_confirmation, :current_password))
             else
-              user.update(attrs.slice(:name, :bio, :avatar))
+              user.update(attrs.slice(:name, :bio, :avatar, :sobriety_date, :show_sobriety_date))
             end
     return render(json: { error: user.errors.full_messages.to_sentence }, status: :unprocessable_entity) unless saved
 
@@ -32,6 +32,7 @@ class Api::ProfilesController < ApplicationController
     u = current_user.reload
     {
       name: u.name, email: u.email, bio: u.bio, avatar_url: u.avatar_url,
+      sobriety_date: u.sobriety_date&.iso8601, show_sobriety_date: u.show_sobriety_date,
       groups: u.group_memberships.includes(:group).map { |m| { slug: m.group.slug, title: m.group.title, role: m.role, status: m.status } },
       groups_open: Group.feature_open_to?(u),
     }

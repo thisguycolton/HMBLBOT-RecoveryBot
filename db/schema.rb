@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_16_100100) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_16_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -199,6 +199,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_100100) do
     t.string "join_token"
     t.string "status", default: "active", null: false
     t.bigint "created_by_id"
+    t.string "court_email_subject"
+    t.text "court_email_body"
+    t.string "court_email_reply_to"
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -666,6 +669,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_100100) do
     t.string "share_token"
     t.string "bio"
     t.datetime "group_prompt_dismissed_at"
+    t.date "sobriety_date"
+    t.boolean "show_sobriety_date", default: false, null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["share_token"], name: "index_users_on_share_token", unique: true

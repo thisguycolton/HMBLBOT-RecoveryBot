@@ -37,4 +37,17 @@ class Api::ProfilesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "new@example.com", @user.reload.email
   end
+
+  test "sobriety date is private unless they show it to their groups" do
+    patch "/api/profile", params: { profile: { sobriety_date: "2019-03-14", show_sobriety_date: "0" } }
+    assert_response :success
+    assert_equal "2019-03-14", response.parsed_body["sobriety_date"]
+    assert_nil @user.reload.as_member_json[:sobriety_date]
+
+    patch "/api/profile", params: { profile: { show_sobriety_date: "1" } }
+    assert_equal "2019-03-14", @user.reload.as_member_json[:sobriety_date]
+
+    patch "/api/profile", params: { profile: { sobriety_date: (Date.current + 10).iso8601 } }
+    assert_response :unprocessable_entity
+  end
 end

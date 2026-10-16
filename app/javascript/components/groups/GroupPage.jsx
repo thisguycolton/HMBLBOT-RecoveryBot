@@ -134,7 +134,7 @@ export default function GroupPage() {
       {current.key === "readings" && <ReadingsTab group={group} />}
       {current.key === "literature" && <LiteratureTab group={group} reload={load} />}
       {current.key === "members" && <MembersTab group={group} reload={load} setGroup={setGroup} />}
-      {current.key === "court" && <CourtTab group={group} />}
+      {current.key === "court" && <CourtTab group={group} setGroup={setGroup} />}
     </div>
   );
 }
