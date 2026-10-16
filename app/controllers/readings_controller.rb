@@ -5,6 +5,7 @@ class ReadingsController < ApplicationController
   before_action :set_reading, only: %i[ show edit update destroy ]
   before_action :authorize_owner!, only: %i[ edit update destroy ]
   layout "reader", only: %i[new index show edit mine]
+  READINGS_PER_PAGE = 24
 
 
   def index
@@ -12,7 +13,8 @@ class ReadingsController < ApplicationController
 
     # Qualify columns: the tag filter below joins `tags`, which also has a `title`
     if params[:q].present?
-      @readings = @readings.where("readings.title ILIKE ?", "%#{Reading.sanitize_sql_like(params[:q])}%")
+      like = "%#{Reading.sanitize_sql_like(params[:q].strip)}%"
+      @readings = @readings.where("readings.title ILIKE :q OR readings.source ILIKE :q", q: like)
     end
 
     if params[:tag].present?
@@ -35,7 +37,13 @@ class ReadingsController < ApplicationController
       { id: tag.id, title: tag.title, slug: tag.slug, icon_name: tag.icon_name, count: counts[tag.id].to_i }
     end
 
-    @readings_json = @readings.map { |reading| reading_card_json(reading) }
+    # A page of cards at a time, with their text loaded in bulk
+    @total = @readings.count
+    @pages = [(@total / READINGS_PER_PAGE.to_f).ceil, 1].max
+    @page = params[:page].to_i.clamp(1, @pages)
+    @readings_json = @readings.includes(:rich_text_content, :richer_text_richer_content)
+                              .offset((@page - 1) * READINGS_PER_PAGE).limit(READINGS_PER_PAGE)
+                              .map { |reading| reading_card_json(reading) }
   end
 
   # GET /readings/mine

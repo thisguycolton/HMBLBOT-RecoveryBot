@@ -14,7 +14,7 @@ const LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 // Weekly meetings are stored one per day (as AA Intergroup lists them); the same meeting on
 // several days shows as one card
 const seriesKey = (m) =>
-  [m.name, m.start_minute, m.end_minute, m.time_zone, m.conference_url || "", m.conference_url_notes || "", m.oiaa_slug || "",
+  [m.name, m.start_minute, m.end_minute, m.time_zone, m.conference_url || "", m.conference_url_notes || "", m.oiaa_slug ? "linked" : "",
     (m.types || []).join(","), m.notes || "", m.location || "", m.oiaa_missing].join("|");
 
 function toSeries(weekly) {
@@ -481,39 +481,78 @@ function ZoneSelect({ value, onChange }) {
   );
 }
 
-// Search AA Intergroup's directory and import ticked listings, one weekly meeting per day listed
+// AA Intergroup lists each day and time as its own listing; roll the ones that are the same
+// meeting (name, time, zone and video link) into one row: "Every day, 9:00 AM MST"
+function listingSeries(meetings) {
+  const byKey = new Map();
+  meetings.forEach((m) => {
+    const key = [m.name, m.start_time, m.end_time, m.time_zone, m.conference_url].join("|");
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key).push(m);
+  });
+  return [...byKey.values()]
+    .map((listings) => {
+      const first = listings[0];
+      const days = [...new Set(listings.flatMap((m) => m.days))].sort();
+      const zone = first.schedule_label.split(" ").pop();
+      const [h, min] = (first.start_time || "").split(":").map(Number);
+      const start = Number.isFinite(h) ? h * 60 + (min || 0) : null;
+      return {
+        key: listings.map((m) => m.slug).join(","),
+        slugs: listings.map((m) => m.slug),
+        name: first.name,
+        group_name: first.group_name,
+        url: first.url,
+        start,
+        label: `${days.length ? daysLabel(days) : "No day listed"}, ${start == null ? "any time" : clock(start)} ${zone}`,
+      };
+    })
+    .sort((a, b) => (a.start ?? 9999) - (b.start ?? 9999) || a.name.localeCompare(b.name));
+}
+
+// This group's listings on AA Intergroup (by its name there), rolled up by time, to import
+// in one go; a search finds listings under another name. Each day listed becomes a weekly
+// meeting.
 function ImportPanel({ group, onClose, onImported }) {
-  const [q, setQ] = useState(group.title);
+  const [q, setQ] = useState("");
+  const [searched, setSearched] = useState(false);
   const [results, setResults] = useState(null);
   const [picked, setPicked] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const already = new Set(group.meetings.map((m) => m.oiaa_slug).filter(Boolean));
 
-  const search = async (e) => {
-    e?.preventDefault();
+  const load = async (query) => {
     setError(null);
     try {
-      const data = await api(`/oiaa/search?q=${encodeURIComponent(q)}`);
+      const path = query ? `/oiaa/search?q=${encodeURIComponent(query)}` : `/oiaa/search?group_name=${encodeURIComponent(group.title)}`;
+      const data = await api(path);
       setResults(data);
+      setSearched(Boolean(query));
+      setPicked(new Set());
     } catch (err) {
       setError(err.message);
     }
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { search(); }, []);
+  useEffect(() => { load(""); }, []);
 
-  const toggle = (slug) => setPicked((s) => {
+  const series = results ? listingSeries(results.meetings) : [];
+  const isHere = (row) => row.slugs.every((slug) => already.has(slug));
+  const open = series.filter((row) => !isHere(row));
+  const pickedSlugs = series.filter((row) => picked.has(row.key)).flatMap((row) => row.slugs.filter((slug) => !already.has(slug)));
+
+  const toggle = (key) => setPicked((s) => {
     const next = new Set(s);
-    next.has(slug) ? next.delete(slug) : next.add(slug);
+    next.has(key) ? next.delete(key) : next.add(key);
     return next;
   });
 
-  const doImport = async () => {
+  const doImport = async (slugs) => {
     setBusy(true);
     setError(null);
     try {
-      const data = await api(`/groups/${group.slug}/meetings/import`, { method: "POST", body: { slugs: [...picked] } });
+      const data = await api(`/groups/${group.slug}/meetings/import`, { method: "POST", body: { slugs } });
       onImported(data.meetings);
     } catch (err) {
       setError(err.message);
@@ -526,39 +565,39 @@ function ImportPanel({ group, onClose, onImported }) {
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="!text-base font-semibold text-slate-900 dark:text-white">Import from AA Intergroup</h2>
-          <p className="text-sm text-slate-500 dark:text-neutral-400">Search AA Intergroup by meeting name, or paste a Zoom link or meeting ID.</p>
+          <p className="text-sm text-slate-500 dark:text-neutral-400">
+            {searched ? "Listings matching your search." : `${group.title}'s meetings on AA Intergroup.`}
+          </p>
         </div>
         <button type="button" onClick={onClose} className="!bg-transparent p-1 text-slate-400 hover:text-slate-700" aria-label="Close"><X className="h-5 w-5" /></button>
       </div>
-      <form onSubmit={search} className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input className={`${inputClass} pl-9`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Meeting or group name" />
-        </div>
-        <button type="submit" className={quietButton}>Search</button>
-      </form>
       <ErrorNote error={error} />
-      {results && results.meetings.length === 0 && (
+      {!results ? (
+        <p className="text-sm text-slate-500 dark:text-neutral-400">Loading…</p>
+      ) : series.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-neutral-400">
-          {results.synced_at ? "Nothing on AA Intergroup matches that." : "AA Intergroup's list hasn't loaded yet. Try again in a minute."}
+          {!results.synced_at
+            ? "AA Intergroup's list hasn't loaded yet. Try again in a minute."
+            : searched
+              ? "Nothing on AA Intergroup matches that."
+              : `AA Intergroup doesn't list a group called ${group.title}. Search for it by another name below.`}
         </p>
-      )}
-      {results && results.meetings.length > 0 && (
+      ) : (
         <ul className="max-h-96 divide-y divide-neutral-100 overflow-y-auto rounded-xl ring-1 ring-neutral-200 dark:divide-neutral-800 dark:ring-neutral-700">
-          {results.meetings.map((m) => {
-            const here = already.has(m.slug);
+          {series.map((row) => {
+            const here = isHere(row);
             return (
-              <li key={m.slug}>
+              <li key={row.key}>
                 <label className={`flex items-start gap-3 p-3 ${here ? "opacity-60" : "cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/60"}`}>
-                  <input type="checkbox" className="mt-1 accent-[var(--color-accent)]" disabled={here} checked={here || picked.has(m.slug)} onChange={() => toggle(m.slug)} />
+                  <input type="checkbox" className="mt-1 accent-[var(--color-accent)]" disabled={here} checked={here || picked.has(row.key)} onChange={() => toggle(row.key)} />
                   <span className="min-w-0">
-                    <span className="block font-medium text-slate-900 dark:text-white">{m.name}</span>
+                    <span className="block font-medium text-slate-900 dark:text-white">{row.label}</span>
                     <span className="block text-xs text-slate-500 dark:text-neutral-400">
-                      {m.schedule_label}{m.group_name ? ` · ${m.group_name}` : ""}{here ? " · already imported" : ""}
+                      {row.name}{row.group_name && row.group_name !== row.name ? ` · ${row.group_name}` : ""}{here ? " · already imported" : ""}
                     </span>
                   </span>
-                  {m.url && (
-                    <a href={m.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="ml-auto shrink-0 text-slate-400 hover:text-accent" aria-label="Open on AA Intergroup">
+                  {row.url && (
+                    <a href={row.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="ml-auto shrink-0 text-slate-400 hover:text-accent" aria-label="Open on AA Intergroup">
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   )}
@@ -568,10 +607,23 @@ function ImportPanel({ group, onClose, onImported }) {
           })}
         </ul>
       )}
-      <div className="flex justify-end gap-2">
+      <form onSubmit={(e) => { e.preventDefault(); load(q.trim()); }} className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input className={`${inputClass} pl-9`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Listed under another name? Search, or paste a Zoom link" />
+        </div>
+        <button type="submit" className={quietButton}>Search</button>
+        {searched && <button type="button" onClick={() => { setQ(""); load(""); }} className={quietButton}>Back</button>}
+      </form>
+      <div className="flex flex-wrap justify-end gap-2">
         <button type="button" onClick={onClose} className={quietButton}>Cancel</button>
-        <button type="button" disabled={busy || picked.size === 0} onClick={doImport} className={primaryButton}>
-          <DownloadCloud className="h-4 w-4" /> {busy ? "Importing…" : `Import ${picked.size || ""}`.trim()}
+        {!searched && open.length > 1 && (
+          <button type="button" disabled={busy} onClick={() => doImport(open.flatMap((row) => row.slugs.filter((slug) => !already.has(slug))))} className={quietButton}>
+            Import all {open.length}
+          </button>
+        )}
+        <button type="button" disabled={busy || pickedSlugs.length === 0} onClick={() => doImport(pickedSlugs)} className={primaryButton}>
+          <DownloadCloud className="h-4 w-4" /> {busy ? "Importing…" : picked.size ? `Import ${picked.size}` : "Import"}
         </button>
       </div>
     </Card>

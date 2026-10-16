@@ -5,8 +5,10 @@ class Api::OiaaController < ApplicationController
   before_action { OiaaFeed.refresh_if_stale }
 
   # GET /api/oiaa/search?q= (a name, or a Zoom link or meeting ID)
+  # GET /api/oiaa/search?group_name= -> that group's own listings, all of them
   def search
-    render json: { meetings: OiaaMeeting.search(params[:q]).map(&:as_api_json), synced_at: OiaaFeed.last_synced_at&.iso8601 }
+    found = params[:group_name].present? ? OiaaMeeting.for_group(params[:group_name]) : OiaaMeeting.search(params[:q])
+    render json: { meetings: found.map(&:as_api_json), synced_at: OiaaFeed.last_synced_at&.iso8601 }
   end
 
   # GET /api/oiaa/matches?name=&group_name=&conference_url=&day=&start_minute=&time_zone=

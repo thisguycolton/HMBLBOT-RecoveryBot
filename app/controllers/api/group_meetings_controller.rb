@@ -60,7 +60,7 @@ class Api::GroupMeetingsController < ApplicationController
 
   # POST /api/groups/:slug/meetings/import { slugs: [...] } -> one weekly meeting per day listed
   def import
-    records = OiaaMeeting.listed.where(slug: Array(params[:slugs]).first(50))
+    records = OiaaMeeting.listed.where(slug: Array(params[:slugs]).first(200))
     created = 0
     Meeting.transaction do
       records.each do |record|

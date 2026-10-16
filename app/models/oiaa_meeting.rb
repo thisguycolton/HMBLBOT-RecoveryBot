@@ -6,7 +6,7 @@ class OiaaMeeting < ApplicationRecord
 
   scope :listed, -> { where(last_seen_at: (OiaaFeed.last_synced_at || Time.at(0))..) }
 
-  def self.search(query, limit: 25)
+  def self.search(query, limit: 100)
     words = query.to_s.downcase.scan(/[[:alnum:]']+/).first(6)
     id = OiaaFeed.conference_id(query)
     scope = listed
@@ -19,6 +19,16 @@ class OiaaMeeting < ApplicationRecord
       end
     end
     scope.order(:name).limit(limit)
+  end
+
+  # A group's own listings: the ones AA Intergroup files under its name (the feed's
+  # "group"), else ones named exactly like it, else a name search
+  def self.for_group(title, limit: 200)
+    name = title.to_s.squish.downcase
+    return none if name.empty?
+
+    [listed.where("lower(oiaa_meetings.group_name) = ?", name), listed.where("lower(oiaa_meetings.name) = ?", name)]
+      .find(&:exists?)&.order(:start_time, :name)&.limit(limit) || search(title, limit: limit)
   end
 
   def zone = ActiveSupport::TimeZone[time_zone.presence || "America/New_York"]
