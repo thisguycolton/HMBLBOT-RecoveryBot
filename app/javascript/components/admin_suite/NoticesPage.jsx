@@ -5,7 +5,7 @@ import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass, labelClass } from "../ui/styles";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
-import { NoticeCard } from "../SiteNotices";
+import { NoticeCard, NoticeModal } from "../SiteNotices";
 
 const TONES = [
   { value: "info", label: "Info" },
@@ -44,10 +44,11 @@ function status(notice) {
 }
 
 // Site-wide notices: a toast on every page (components/SiteNotices.jsx) that readers can
-// close for a day, with an optional write-up page at /notices/:id.
+// close for a day, with an optional write-up that opens in a modal.
 export default function NoticesPage({ notify }) {
   const [notices, setNotices] = useState(null);
   const [editing, setEditing] = useState(null); // notice id, or "new"
+  const [previewing, setPreviewing] = useState(null); // a notice whose write-up modal is open
 
   async function load() {
     try {
@@ -75,7 +76,7 @@ export default function NoticesPage({ notify }) {
   }
 
   async function destroy(notice) {
-    if (!window.confirm(`Delete the notice “${notice.title}”? Its write-up page goes too.`)) return;
+    if (!window.confirm(`Delete the notice “${notice.title}”? Its write-up goes too.`)) return;
     try {
       await api(`/site_notices/${notice.id}`, { method: "DELETE" });
       notify("Notice deleted.");
@@ -89,6 +90,8 @@ export default function NoticesPage({ notify }) {
 
   const live = notices.filter((n) => n.live).length;
   return (
+    <>
+    {previewing && <NoticeModal notice={previewing} onClose={() => setPreviewing(null)} />}
     <Shell className="max-w-3xl">
       <ShellBand
         icon={Megaphone}
@@ -122,9 +125,9 @@ export default function NoticesPage({ notify }) {
                   </div>
                 </div>
                 {notice.body && (
-                  <a href={`/notices/${notice.id}`} className={buttonClass.secondary} aria-label="View the write-up" title="View the write-up">
+                  <button type="button" onClick={() => setPreviewing(notice)} className={buttonClass.secondary} aria-label="View the write-up" title="View the write-up">
                     <Eye className="w-4 h-4" />
-                  </a>
+                  </button>
                 )}
                 <button type="button" className={buttonClass.secondary} onClick={() => toggle(notice)}>
                   {notice.active ? "Turn off" : "Turn on"}
@@ -150,6 +153,7 @@ export default function NoticesPage({ notify }) {
         )}
       </ShellPanel>
     </Shell>
+    </>
   );
 }
 
@@ -173,10 +177,11 @@ function NoticeForm({ notice, onSave, onCancel }) {
   };
 
   // what the toast will look like
+  const [showModal, setShowModal] = useState(false);
   const preview = {
     id: "preview", title: v.title || "Your headline", summary: v.summary, tone: v.tone,
-    url: v.body.trim() ? "#" : v.link_url || null,
-    link_label: v.body.trim() ? "Read more" : v.link_label || "Open",
+    body: v.body.trim() || null, link_url: v.link_url || null, link_label: v.link_label || null,
+    published_at: v.starts_at || new Date().toISOString(),
   };
 
   return (
@@ -201,7 +206,7 @@ function NoticeForm({ notice, onSave, onCancel }) {
           className={`${inputClass} min-h-40 font-mono`}
           value={v.body}
           onChange={set("body")}
-          placeholder={"The longer story, shown on its own page. The toast links to it.\n\n**Bold**, *italic*, [links](https://…), - lists and # headings work."}
+          placeholder={"The longer story. The toast's \"Read more\" opens it in a pop-up.\n\n**Bold**, *italic*, [links](https://…), - lists and # headings work."}
         />
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -237,7 +242,8 @@ function NoticeForm({ notice, onSave, onCancel }) {
       <div>
         <span className={labelClass}>Preview</span>
         <div className="max-w-sm hb-notice-preview">
-          <NoticeCard notice={preview} onDismiss={() => {}} />
+          <NoticeCard notice={preview} onDismiss={() => {}} onOpen={() => setShowModal(true)} />
+          {showModal && <NoticeModal notice={preview} onClose={() => setShowModal(false)} />}
         </div>
       </div>
       <div className="flex gap-2">

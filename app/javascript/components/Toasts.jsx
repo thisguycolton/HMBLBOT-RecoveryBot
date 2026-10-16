@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { dismissToast, useToasts } from "../lib/toast";
-import { NoticeCard, useSiteNotices } from "./SiteNotices";
+import { NoticeCard, NoticeModal, useSiteNotices } from "./SiteNotices";
 import "../styles/toasts.css";
 
 // A card with a tinted icon, the message and a close button (ported from metr).
@@ -34,11 +34,15 @@ function ToastCard({ toast }) {
 export default function Toasts() {
   const toasts = useToasts();
   const [notices, dismissNotice] = useSiteNotices();
-  if (toasts.length === 0 && notices.length === 0) return null;
+  const [reading, setReading] = useState(null); // the notice whose write-up is open
+  if (toasts.length === 0 && notices.length === 0 && !reading) return null;
   return (
-    <div aria-live="polite" className="hb-toasts">
-      {notices.map((notice) => <NoticeCard key={notice.id} notice={notice} onDismiss={dismissNotice} />)}
-      {toasts.map((toast) => <ToastCard key={toast.id} toast={toast} />)}
-    </div>
+    <>
+      <div aria-live="polite" className="hb-toasts">
+        {notices.map((notice) => <NoticeCard key={notice.id} notice={notice} onDismiss={dismissNotice} onOpen={setReading} />)}
+        {toasts.map((toast) => <ToastCard key={toast.id} toast={toast} />)}
+      </div>
+      {reading && <NoticeModal notice={reading} onClose={() => setReading(null)} onDismiss={dismissNotice} />}
+    </>
   );
 }

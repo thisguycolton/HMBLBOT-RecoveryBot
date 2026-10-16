@@ -22,7 +22,6 @@ import ScratchPaper from "../components/ScratchPaper";
 import ServiceReadingsIndex from "../components/ServiceReadingsIndex";
 import ServiceReadingShow from "../components/ServiceReadingShow";
 import Layout from "../components/Layout";
-import NoticePage from "../components/NoticePage";
 
 
 
@@ -229,11 +228,5 @@ mountReact("service-reading-show-root", (el) => {
 mountReact("home-root", () => (
   <Layout isAuthenticated={isAuthenticated}>
     <HomePage />
-  </Layout>
-));
-// ---------------- Site notice write-up ----------------
-mountReact("notice-root", (el) => (
-  <Layout isAuthenticated={isAuthenticated}>
-    <NoticePage notice={JSON.parse(el.dataset.notice || "{}")} />
   </Layout>
 ));

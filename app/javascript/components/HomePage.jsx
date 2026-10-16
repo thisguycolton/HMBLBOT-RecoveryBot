@@ -303,7 +303,7 @@ export default function HomePage() {
       <section id="features" className="bg-slate-50 dark:bg-neutral-950">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
           <h2 className="!text-2xl md:!text-3xl font-semibold tracking-tight text-slate-900 dark:text-white !font-sans">
-            Everything HumbleBot can do
+            Everything RecoveryBot can do
           </h2>
           <p className="sans !text-left !hyphens-none mt-2 text-slate-600 dark:text-neutral-300">Pick what you need. Each tool stands alone.</p>
           <div className="mt-8 grid gap-8 lg:grid-cols-3">

@@ -34,29 +34,14 @@ class Api::SiteNoticesTest < ActionDispatch::IntegrationTest
     assert_equal %w[Members Everyone], titles
   end
 
-  test "the toast links to the write-up, or to the admin's link when there isn't one" do
-    with_body = SiteNotice.create!(title: "Story", body: "The **long** version", link_url: "/library", link_label: "Open the library")
-    link_only = SiteNotice.create!(title: "Link", link_url: "https://example.com", link_label: "Go")
+  test "a notice carries its write-up for the modal, and the admin's link" do
+    SiteNotice.create!(title: "Story", body: "The **long** version", link_url: "/library", link_label: "Open the library")
+    SiteNotice.create!(title: "Link", link_url: "https://example.com", link_label: "Go")
     get "/api/site_notices", as: :json
     by_title = response.parsed_body.index_by { |n| n["title"] }
-    assert_equal ["/notices/#{with_body.id}", "Read more"], by_title["Story"].values_at("url", "link_label")
-    assert_equal ["https://example.com", "Go"], by_title["Link"].values_at("url", "link_label")
+    assert_equal ["The **long** version", "/library", "Open the library"], by_title["Story"].values_at("body", "link_url", "link_label")
+    assert_equal [nil, "https://example.com", "Go"], by_title["Link"].values_at("body", "link_url", "link_label")
     assert by_title["Story"]["version"].positive?
-  end
-
-  test "the write-up page shows started notices, and admins can preview any" do
-    notice = SiteNotice.create!(title: "Story", body: "Hello")
-    get "/notices/#{notice.id}"
-    assert_response :success
-    assert_includes response.body, "notice-root"
-
-    draft = SiteNotice.create!(title: "Draft", body: "Soon", active: false)
-    get "/notices/#{draft.id}"
-    assert_redirected_to root_path
-
-    sign_in @admin
-    get "/notices/#{draft.id}"
-    assert_response :success
   end
 
   test "only suite admins manage notices" do

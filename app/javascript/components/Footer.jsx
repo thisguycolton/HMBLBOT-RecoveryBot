@@ -1,4 +1,5 @@
 import React from "react";
+import { RecoveryBotLogo } from "./brand/Logo";
 
 export default function Footer() {
   return (
@@ -9,15 +10,10 @@ export default function Footer() {
 
       {/* HMBLBOT */}
       <div>
-        <img
-          src="https://humblebot.s3.us-west-2.amazonaws.com/hmblbotLOGOsmBLUE.png"
-          className="w-16 mb-4"
-          alt="HumbleBot Logo"
-        />
-
-        <h3 className="font-bold text-lg">
-          HMBLBOT
-        </h3>
+        <a href="/" className="inline-block !text-white">
+          <RecoveryBotLogo markClassName="h-9 w-auto" textClassName="text-xl" />
+        </a>
+        <p className="mt-2 text-xs text-neutral-500">by HMBLBOT</p>
 
         <p className="mt-2 text-xs text-neutral-400 sans">
           Tools for people in recovery, built to make meetings,

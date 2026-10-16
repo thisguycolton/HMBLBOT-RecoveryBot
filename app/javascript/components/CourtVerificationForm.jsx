@@ -313,11 +313,6 @@ const timeButtonClass = (slot) =>
       </div>
     </main>
 
-    <img
-      src="https://humblebot.s3.us-west-2.amazonaws.com/hmblbotLOGOsmBLUE.png"
-      alt="HumbleBot Logo"
-      className="hidden fixed bottom-7 right-4 w-16 opacity-70 hover:opacity-95"
-    />
   </div>
   );
 };

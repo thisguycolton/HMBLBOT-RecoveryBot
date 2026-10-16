@@ -4,6 +4,7 @@ import { ChevronDown, Heart, LogIn, LogOut, Menu, Moon, Sun, UserPlus, X } from 
 import DonationModal from "./DonationModal";
 import NotificationBell from "./NotificationBell";
 import { ACCOUNT_ITEMS, ADMIN_ITEMS, NAV_CATEGORIES, currentHref } from "./nav/siteMenu";
+import { RecoveryBotLogo } from "./brand/Logo";
 
 // !bg: the reader styles give every <button> a gray fill
 const linkTone =
@@ -17,8 +18,7 @@ export default function Navbar({
   loginPath = "/users/sign_in",
   signupPath = "/users/sign_up",
   logoutPath = "/users/sign_out",
-  brand = "HumbleBot",
-  brandSubtitle = "Beta v0.6",
+  brandSubtitle = "Beta",
 }) {
   const [openMenu, setOpenMenu] = useState(null); // a category key, "account", or null
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -90,10 +90,10 @@ export default function Navbar({
       <div className="mx-auto max-w-6xl px-3">
         <div className="flex h-14 items-center justify-between">
           <div className="flex items-center gap-3">
-            <a href={rootPath} className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-              <span>{brand}</span>
+            <a href={rootPath} className="inline-flex items-center gap-2 !text-slate-900 dark:!text-white" aria-label="RecoveryBot home">
+              <RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-lg" />
               {brandSubtitle && (
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 ps-2">{brandSubtitle}</span>
+                <span className="hidden sm:inline text-xs font-medium text-slate-500 dark:text-slate-400">{brandSubtitle}</span>
               )}
             </a>
 
@@ -114,12 +114,6 @@ export default function Navbar({
                     {items.map((item) => (
                       <MenuItem key={item.href} item={item} current={item.href === here} />
                     ))}
-                    {category.key === "extras" && (
-                      <MenuItem
-                        item={{ label: "Donate", icon: Heart, note: "Help keep the site running" }}
-                        onClick={openDonation}
-                      />
-                    )}
                   </Dropdown>
                 );
               })}
@@ -127,6 +121,14 @@ export default function Navbar({
           </div>
 
           <div className="flex items-center gap-1">
+            {/* always in view, phones included */}
+            <button
+              type="button"
+              onClick={openDonation}
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-semibold !bg-rose-50 !text-rose-700 ring-1 ring-rose-200 hover:!bg-rose-100 dark:!bg-rose-950/40 dark:!text-rose-300 dark:ring-rose-900 mr-1"
+            >
+              <Heart size={16} className="fill-current" /> Donate
+            </button>
             <button
               type="button"
               onClick={toggleTheme}
@@ -199,9 +201,6 @@ export default function Navbar({
               {visible(category.items).map((item) => (
                 <MenuItem key={item.href} item={item} current={item.href === here} compact />
               ))}
-              {category.key === "extras" && (
-                <MenuItem item={{ label: "Donate", icon: Heart }} onClick={openDonation} compact />
-              )}
             </section>
           ))}
           {isAuthenticated && (

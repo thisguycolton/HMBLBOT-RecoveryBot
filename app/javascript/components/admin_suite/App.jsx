@@ -32,6 +32,7 @@ import TagsPage from "./TagsPage";
 import CourtVerificationsPage from "./CourtVerificationsPage";
 import TextReportsPage from "./TextReportsPage";
 import NoticesPage from "./NoticesPage";
+import { RecoveryBotLogo } from "../brand/Logo";
 
 export const BASE = "/admin_panel";
 
@@ -113,7 +114,7 @@ function SuiteShell() {
   const sidebar = (
     <div className="flex h-full flex-col !font-sans">
       <a href={BASE} className="flex items-center gap-2 px-6 py-6">
-        <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">HumbleBot</span>
+        <span className="!text-slate-900 dark:!text-white"><RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-lg" /></span>
         <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold !text-white">Admin</span>
       </a>
       <nav className="flex-1 overflow-y-auto px-4 pb-6" aria-label="Admin">
@@ -176,7 +177,7 @@ function SuiteShell() {
       <div className="border-t border-slate-200 dark:border-neutral-800 p-4">
         <a href="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium !text-slate-700 dark:!text-neutral-300 hover:bg-slate-100 dark:hover:bg-neutral-800">
           <ArrowLeft className="size-5 opacity-70" />
-          Back to HumbleBot
+          Back to RecoveryBot
         </a>
       </div>
     </div>
@@ -208,7 +209,7 @@ function SuiteShell() {
           <button type="button" className={`lg:hidden ${iconButton} !rounded-lg`} aria-label="Open menu" onClick={() => setDrawer(true)}>
             <Menu className="size-4" />
           </button>
-          <a href={BASE} className="lg:hidden font-semibold text-slate-900 dark:text-white">HumbleBot</a>
+          <a href={BASE} className="lg:hidden !text-slate-900 dark:!text-white"><RecoveryBotLogo markClassName="h-6 w-auto" textClassName="text-base" /></a>
           <div className="flex-1" />
           <button type="button" className={iconButton} onClick={() => setDark((d) => !d)} aria-label={dark ? "Light mode" : "Dark mode"} title={dark ? "Light mode" : "Dark mode"}>
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}

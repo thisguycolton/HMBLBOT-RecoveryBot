@@ -1,6 +1,6 @@
 # A site-wide announcement from an admin. It shows as a toast on every page until the
 # reader dismisses it, then stays hidden in that browser for a day (components/SiteNotices.jsx).
-# A notice with a body has its own write-up page at /notices/:id that the toast links to.
+# A notice with a body (Markdown) opens it in a modal from the toast's "Read more".
 class SiteNotice < ApplicationRecord
   TONES = %w[info success warning].freeze
   AUDIENCES = %w[everyone members guests].freeze
@@ -34,28 +34,20 @@ class SiteNotice < ApplicationRecord
 
   def write_up? = body.present?
 
-  # The toast's "Read more" link: the write-up page, or the admin's own link
-  def read_more_url
-    write_up? ? "/notices/#{id}" : link_url.presence
-  end
-
+  # What the toast and its modal need. With a write-up, "Read more" opens the modal and the
+  # admin's link becomes a button at its end; without one, the toast links straight out.
   def as_api_json
     {
-      id: id, title: title, summary: summary, tone: tone, url: read_more_url,
-      # the toast's link text; an admin's link text labels the button on the write-up instead
-      link_label: write_up? ? "Read more" : link_label.presence || "Open",
+      id: id, title: title, summary: summary, tone: tone, body: body.presence,
+      link_url: link_url.presence, link_label: link_label.presence,
+      published_at: (starts_at || created_at).iso8601,
       # a dismissal is remembered against this, so editing a notice shows it again
       version: updated_at.to_i,
     }
   end
 
-  def as_page_json
-    as_api_json.merge(body: body, link_url: link_url.presence, link_label: link_label.presence,
-                      published_at: (starts_at || created_at).iso8601)
-  end
-
   def as_admin_json
-    as_page_json.merge(
+    as_api_json.merge(
       link_label: link_label, audience: audience, active: active, live: live?,
       starts_at: starts_at&.iso8601, ends_at: ends_at&.iso8601,
       author: user&.name.presence || user&.email, created_at: created_at.iso8601, updated_at: updated_at.iso8601,

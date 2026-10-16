@@ -15,8 +15,6 @@ Rails.application.routes.draw do
   end
 
   get "/topicificator", to: "pages#topicificator"
-  # A site notice's write-up (SiteNotice; the toast's "Read more" link)
-  get "/notices/:id", to: "notices#show", as: :notice
   get "/library(/*path)", to: "pages#library"
 
   # Schedule polls: a React app (app/javascript/entrypoints/schedule_polls.jsx)
