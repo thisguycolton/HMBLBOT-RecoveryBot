@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_16_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_16_100100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -154,8 +154,35 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000000) do
     t.string "topic", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "group_id"
+    t.bigint "meeting_id"
+    t.index ["group_id"], name: "index_court_verifications_on_group_id"
     t.index ["meeting_at"], name: "index_court_verifications_on_meeting_at"
+    t.index ["meeting_id"], name: "index_court_verifications_on_meeting_id"
     t.index ["respondent_email"], name: "index_court_verifications_on_respondent_email"
+  end
+
+  create_table "group_books", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "book_id", null: false
+    t.string "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["book_id"], name: "index_group_books_on_book_id"
+    t.index ["group_id", "book_id"], name: "index_group_books_on_group_id_and_book_id", unique: true
+    t.index ["group_id"], name: "index_group_books_on_group_id"
+  end
+
+  create_table "group_memberships", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "user_id", null: false
+    t.string "role", default: "member", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
+    t.index ["group_id"], name: "index_group_memberships_on_group_id"
+    t.index ["user_id"], name: "index_group_memberships_on_user_id"
   end
 
   create_table "groups", force: :cascade do |t|
@@ -167,6 +194,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000000) do
     t.string "meetingLink"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "slug"
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.string "join_token"
+    t.string "status", default: "active", null: false
+    t.bigint "created_by_id"
+    t.index ["created_by_id"], name: "index_groups_on_created_by_id"
+    t.index ["join_token"], name: "index_groups_on_join_token", unique: true
+    t.index ["slug"], name: "index_groups_on_slug", unique: true
   end
 
   create_table "host_props", force: :cascade do |t|
@@ -213,7 +248,28 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000000) do
     t.bigint "group_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "name"
+    t.string "recurrence", default: "weekly", null: false
+    t.integer "day_of_week"
+    t.integer "start_minute"
+    t.integer "end_minute"
+    t.datetime "starts_at"
+    t.datetime "ends_at"
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.string "conference_url"
+    t.string "conference_url_notes"
+    t.string "conference_phone"
+    t.string "location"
+    t.string "formatted_address"
+    t.string "types", default: [], null: false, array: true
+    t.text "notes"
+    t.string "source", default: "manual", null: false
+    t.string "oiaa_slug"
+    t.string "oiaa_url"
+    t.datetime "oiaa_synced_at"
+    t.boolean "oiaa_missing", default: false, null: false
     t.index ["group_id"], name: "index_meetings_on_group_id"
+    t.index ["oiaa_slug"], name: "index_meetings_on_oiaa_slug"
   end
 
   create_table "notifications", force: :cascade do |t|
@@ -228,6 +284,28 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000000) do
     t.index ["user_id", "created_at"], name: "index_notifications_on_user_id_and_created_at"
     t.index ["user_id", "read_at"], name: "index_notifications_on_user_id_and_read_at"
     t.index ["user_id"], name: "index_notifications_on_user_id"
+  end
+
+  create_table "oiaa_meetings", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "name", null: false
+    t.string "group_name"
+    t.integer "days", default: [], null: false, array: true
+    t.string "start_time"
+    t.string "end_time"
+    t.string "time_zone"
+    t.string "conference_url"
+    t.string "conference_url_notes"
+    t.string "conference_phone"
+    t.string "conference_id"
+    t.string "types", default: [], null: false, array: true
+    t.text "notes"
+    t.string "url"
+    t.datetime "last_seen_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conference_id"], name: "index_oiaa_meetings_on_conference_id"
+    t.index ["slug"], name: "index_oiaa_meetings_on_slug", unique: true
   end
 
   create_table "options", force: :cascade do |t|
@@ -586,6 +664,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000000) do
     t.boolean "admin"
     t.boolean "confirmed"
     t.string "share_token"
+    t.string "bio"
+    t.datetime "group_prompt_dismissed_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["share_token"], name: "index_users_on_share_token", unique: true
@@ -594,6 +674,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "chapters", "books"
+  add_foreign_key "court_verifications", "groups"
+  add_foreign_key "court_verifications", "meetings", on_delete: :nullify
+  add_foreign_key "group_books", "books"
+  add_foreign_key "group_books", "groups"
+  add_foreign_key "group_memberships", "groups"
+  add_foreign_key "group_memberships", "users"
+  add_foreign_key "groups", "users", column: "created_by_id"
   add_foreign_key "host_props", "hostificators"
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"

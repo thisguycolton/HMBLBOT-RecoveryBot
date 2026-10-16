@@ -82,7 +82,8 @@ class ReadingsController < ApplicationController
 def create
   @reading = Reading.new(reading_params)
   @reading.user = current_user
-  @reading.group_id ||= current_user.user_active_group&.group_id
+  @reading.group_id = reading_group_id(@reading.group_id) || default_group_id
+  remember_group(@reading.group_id)
 
   if @reading.save
     render json: { id: @reading.id }, status: :created
@@ -92,9 +93,11 @@ def create
 end
 
 def update
-  @reading.group_id ||= current_user.user_active_group&.group_id
+  @reading.assign_attributes(reading_params)
+  @reading.group_id = reading_group_id(@reading.group_id) if @reading.group_id_changed?
+  remember_group(@reading.group_id) if @reading.group_id_changed?
 
-  if @reading.update(reading_params)
+  if @reading.save
     render json: { id: @reading.id }, status: :ok
   else
     render json: { errors: @reading.errors.full_messages }, status: :unprocessable_entity
@@ -112,6 +115,44 @@ end
   end
 
   private
+
+  # A reading can only be tagged to a group its author is in (admins: any group)
+  def reading_group_id(id)
+    return nil if id.blank?
+    return id if current_user.suite_admin? && Group.exists?(id)
+
+    current_user.groups.where(id: id).pick(:id)
+  end
+
+  # The group new readings default to: the last one used, else their only group
+  def default_group_id
+    active = current_user.user_active_group&.group_id
+    return active if active && current_user.groups.exists?(id: active)
+
+    ids = current_user.groups.limit(2).pluck(:id)
+    ids.one? ? ids.first : nil
+  end
+
+  def remember_group(group_id)
+    return unless group_id && current_user.groups.exists?(id: group_id)
+
+    active = UserActiveGroup.find_or_initialize_by(user: current_user)
+    active.update!(group_id: group_id)
+  end
+
+  helper_method def reading_editor_user_json
+    groups = current_user.groups.includes(:meetings).order(:title)
+    active_id = (@reading&.group_id if @reading&.persisted?) || default_group_id
+    {
+      id: current_user.id,
+      name: current_user.name,
+      groups: groups.map { |g| { id: g.id, title: g.title, meetingLink: g.meetings.map(&:conference_url).compact.first } },
+      groups_open: Group.feature_open_to?(current_user),
+      user_active_group: (g = groups.find { |x| x.id == active_id }) && {
+        group: { id: g.id, title: g.title, meetingLink: g.meetings.map(&:conference_url).compact.first },
+      },
+    }
+  end
     # Use callbacks to share common setup or constraints between actions.
     def set_reading
       @reading = Reading.find(params[:id])

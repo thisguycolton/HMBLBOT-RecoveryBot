@@ -1,0 +1,33 @@
+# Shared by the Groups API controllers: JSON errors, finding the group from :group_slug or
+# :slug, and who may see or run it (see Group#visible_to? and #manageable_by?).
+module GroupScoped
+  extend ActiveSupport::Concern
+
+  included do
+    before_action :authenticate_user!
+    rescue_from ActiveRecord::RecordNotFound, with: -> { render json: { error: "Not found." }, status: :not_found }
+  end
+
+  private
+
+  def set_group
+    @group = Group.find_by!(slug: params[:group_slug] || params[:slug])
+    render json: { error: "Not found." }, status: :not_found unless @group.visible_to?(current_user)
+  end
+
+  def require_manager
+    return if @group.manageable_by?(current_user)
+
+    render json: { error: "Only this group's admins can do that." }, status: :forbidden
+  end
+
+  def require_member
+    return if current_user.suite_admin? || @group.member?(current_user)
+
+    render json: { error: "Only members of this group can see that." }, status: :forbidden
+  end
+
+  def render_errors(record)
+    render json: { error: record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+end
