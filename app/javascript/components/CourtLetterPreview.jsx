@@ -17,7 +17,7 @@ function fill(text, values, fields, keyBase) {
     const key = match[1];
     const value = values?.[key];
     if (value) {
-      out.push(<span key={`${keyBase}-${i++}`} className="text-white">{value}</span>);
+      out.push(<span key={`${keyBase}-${i++}`} className="text-slate-900 dark:text-white">{value}</span>);
     } else {
       const known = fields && key in fields;
       out.push(
@@ -25,7 +25,9 @@ function fill(text, values, fields, keyBase) {
           key={`${keyBase}-${i++}`}
           title={known ? `Filled in from the form: ${fields[key]}` : "The form doesn't fill this in"}
           className={`mx-0.5 inline-block rounded-md px-1.5 py-px align-baseline font-sans text-[0.8em] font-semibold ${
-            known ? "bg-cyan-400/20 text-cyan-200 ring-1 ring-cyan-400/40" : "bg-rose-500/25 text-rose-200 ring-1 ring-rose-400/50"
+            known
+              ? "bg-accent/10 text-accent ring-1 ring-accent/30 dark:bg-accent/25 dark:text-white dark:ring-accent/50"
+              : "bg-rose-50 text-rose-700 ring-1 ring-rose-200 dark:bg-rose-950/50 dark:text-rose-200 dark:ring-rose-800"
           }`}
         >
           {known ? fields[key] : `{{${key}}}`}
@@ -46,41 +48,38 @@ export default function CourtLetterPreview({ groupTitle, subject, body, values =
     .filter((p) => p.length);
 
   return (
-    <div className={`overflow-hidden rounded-xl border border-slate-800 bg-slate-950 text-left ${className}`}>
-      <div className="border-b border-slate-800 px-4 py-2 font-sans text-xs text-slate-400">
-        <span className="text-slate-500">Subject:</span> <span className="text-slate-200">{fill(subject || "", values, fields, "s")}</span>
+    <div className={`overflow-hidden rounded-xl bg-white text-left shadow-panel dark:bg-neutral-900 ${className}`}>
+      <div className="border-b border-neutral-100 px-4 py-2.5 text-sm dark:border-neutral-800">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Subject</span>{" "}
+        <span className="text-slate-900 dark:text-white">{fill(subject || "", values, fields, "s")}</span>
       </div>
-      <div className="p-3 sm:p-4">
-        <div className="overflow-hidden rounded-lg border border-slate-800 bg-gray-900">
-          <div className="bg-gradient-to-r from-cyan-600 to-cyan-400 px-4 py-3 text-center font-sans">
-            <div className="text-base font-semibold uppercase tracking-wider text-cyan-50">{groupTitle}</div>
-            <div className="text-xs text-sky-100">Meeting Attendance Verification</div>
+      <div className="border-b border-neutral-100 px-5 py-3 dark:border-neutral-800">
+        <div className="text-base font-semibold text-slate-900 dark:text-white">{groupTitle}</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-accent">Meeting attendance verification</div>
+      </div>
+      <div className="space-y-4 px-5 py-5 text-sm leading-relaxed text-slate-700 dark:text-neutral-300">
+        {paragraphs.map((lines, pi) => (
+          <div key={pi}>
+            {lines.map((line, li) => {
+              const m = line.match(LABEL_LINE);
+              return (
+                <div key={li}>
+                  {m ? (
+                    <>
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">{m[1]}:</span>{" "}
+                      {fill(m[2], values, fields, `${pi}-${li}`)}
+                    </>
+                  ) : (
+                    fill(line, values, fields, `${pi}-${li}`)
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <div className="space-y-4 px-5 py-5 font-sans text-sm leading-relaxed text-gray-200">
-            {paragraphs.map((lines, pi) => (
-              <div key={pi}>
-                {lines.map((line, li) => {
-                  const m = line.match(LABEL_LINE);
-                  return (
-                    <div key={li}>
-                      {m ? (
-                        <>
-                          <span className="text-xs uppercase tracking-wider text-gray-400">{m[1]}:</span>{" "}
-                          {fill(m[2], values, fields, `${pi}-${li}`)}
-                        </>
-                      ) : (
-                        fill(line, values, fields, `${pi}-${li}`)
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-          <div className="bg-slate-950 px-4 py-3 text-center font-sans text-[11px] text-gray-500">
-            This verification reflects attendance at an Alcoholics Anonymous meeting and is provided at the request of the participant.
-          </div>
-        </div>
+        ))}
+      </div>
+      <div className="border-t border-neutral-100 px-5 py-3 text-xs text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
+        This verification reflects attendance at an Alcoholics Anonymous meeting and is provided at the request of the participant.
       </div>
     </div>
   );

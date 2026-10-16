@@ -148,7 +148,7 @@ function CourtEmailEditor({ group, setGroup }) {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => insert(key)}
-                  className="inline-flex items-center gap-1 rounded-full !bg-cyan-50 px-2 py-0.5 text-xs font-medium text-cyan-800 ring-1 ring-cyan-200 hover:!bg-cyan-100 dark:!bg-cyan-950/50 dark:text-cyan-200 dark:ring-cyan-800"
+                  className="inline-flex items-center gap-1 rounded-full !bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent ring-1 ring-accent/30 hover:!bg-accent/20 dark:!bg-accent/25 dark:text-white dark:ring-accent/50"
                 >
                   <Plus className="h-3 w-3" /> {label}
                 </button>
@@ -181,6 +181,7 @@ function CourtEmailEditor({ group, setGroup }) {
           </div>
         </Card>
         <div className="lg:sticky lg:top-20 lg:self-start">
+          <p className="px-2 pb-1.5 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Preview</p>
           <CourtLetterPreview groupTitle={group.title} subject={subject} body={body} fields={email.fields} values={{ group: group.title }} />
         </div>
       </form>

@@ -1,7 +1,10 @@
 // app/javascript/components/CourtVerificationForm.jsx
 import React, { useState } from "react";
 import axios from "axios";
+import { Send } from "lucide-react";
 import CourtLetterPreview from "./CourtLetterPreview";
+import { Card, ErrorNote, Tray, primaryButton, quietButton } from "./groups/ui";
+import { inputClass, labelClass } from "./ui/styles";
 
 // The four daily Acid Test meetings, used when the form isn't opened from a group's link
 const DEFAULT_SLOTS = [
@@ -131,198 +134,98 @@ const meetingDisplayDate = () =>
     group: group.title,
   };
 
-const timeButtonClass = (slot) =>
-  [
-    "px-4 py-2 rounded text-sm font-medium border transition-colors duration-150",
+  const choice = (active) =>
+    `rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+      active
+        ? "!bg-white text-slate-900 shadow-sm dark:!bg-neutral-700 dark:text-white"
+        : "!bg-transparent text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white"
+    }`;
+  const slotClass = (value) =>
+    meetingTimeSlot === value
+      ? "inline-flex items-center rounded-xl !bg-accent px-3.5 py-2 text-sm font-semibold !text-white shadow-panel"
+      : quietButton;
+  const title = group ? group.title : "The Acid Test AA Meeting";
 
-    // selected state
-    meetingTimeSlot === slot
-      ? "bg-cyan-500! text-white border-cyan-400 shadow-md scale-[1.05]"
-
-      // default state
-      : "bg-slate-900! text-slate-100 border-slate-600 hover:bg-slate-800",
-  ].join(" ");
-
-  const dayButtonClass = (day) =>
-  [
-    "px-4 py-2 rounded text-sm font-medium border transition-colors duration-150",
-
-    meetingDay === day
-      ? "bg-cyan-500! text-white border-cyan-400 shadow-md scale-[1.05]"
-      : "bg-slate-900! text-slate-100 border-slate-600 hover:bg-slate-800",
-  ].join(" ");
-
-
- return (
-  <div className="bg-gray-900 text-white min-h-screen w-full overflow-x-hidden">
-
-    <main className="pt-[var(--nav-h,80px)] py-6 px-0 md:px-4 lg:px-8 flex justify-center w-full">
-      <div
-        className="
-          w-full max-w-xl md:max-w-3xl lg:max-w-4xl
-          bg-gray-800
-          rounded-sm
-          md:rounded-lg
-          shadow-lg
-          px-4 py-6 sm:px-6 sm:py-8
-          mx-auto
-        "
-      >
-        {/* Title */}
-        <header className="mb-6 text-center px-2">
-          {/* smaller on mobile so it doesn't push width */}
-          <h1 className="text-3xl! sm:text-4xl! lg:text-4xl! font-bold ttSans break-words">
-            MEETING VERIFICATION
-          </h1>
-          <p className="text-cyan-400 text-2xl! sm:text-base mt-1 ftSans text-center! w-full">
-            {group ? group.title : "The Acid Test AA Meeting"}
+  return (
+    <main className="w-full pt-[var(--nav-h,56px)]">
+      <div className="mx-auto max-w-2xl space-y-6 px-4 py-6 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
+        <header className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">Meeting verification</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h1>
+          <p className="text-sm text-slate-600 dark:text-neutral-400">
+            {group
+              ? `Sends an email verifying attendance at a meeting of ${group.title}.`
+              : "Sends an email verifying attendance at The Acid Test AA Meeting (9am, 12pm, 6pm and 9pm, Phoenix time)."}
           </p>
         </header>
 
-        {/* Alerts */}
         {successMessage && (
-          <div className="mb-4 p-3 rounded border border-emerald-500 text-emerald-300 text-sm bg-emerald-900/20">
-            {successMessage}
-          </div>
+          <p role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{successMessage}</p>
         )}
+        <ErrorNote error={errorMessage} />
 
-        {errorMessage && (
-          <div className="mb-4 p-3 rounded border border-red-500 text-red-300 text-sm bg-red-900/20">
-            {errorMessage}
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 max-w-full">
-          {/* Respondent name */}
-          <div>
-            <label className="block text-lg font-medium mb-1">
-              Respondent Name
-            </label>
-            <input
-              type="text"
-              value={respondentName}
-              onChange={(e) => setRespondentName(e.target.value)}
-              className="w-full max-w-full border border-slate-600! bg-slate-900 rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-cyan-500"
-              required
-            />
-          </div>
-
-          {/* Respondent email */}
-          <div>
-            <label className="block text-lg font-medium mb-1">
-              Respondent Email
-            </label>
-            <input
-              type="email"
-              value={respondentEmail}
-              onChange={(e) => setRespondentEmail(e.target.value)}
-              className="w-full max-w-full border border-slate-600! bg-slate-900 rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-cyan-500"
-              required
-            />
-          </div>
-
-          {/* Day / Time of Meeting Attended */}
-          <section className="rounded-sm border border-slate-700! bg-slate-700 px-4 pt-3 pb-2">
-            <h5 className="block text-xl font-medium mb-1 text-center ttSans">
-              Day / Time of Meeting Attended
-            </h5>
-
-            <h5 className="block text-lg font-semibold mb-3 text-center ttSans">
-              Meeting Day
-            </h5>
-
-            <div className="flex justify-center gap-3 mb-4">
-              <button
-                type="button"
-                onClick={() => pickDay("yesterday")}
-                className={dayButtonClass("yesterday")}
-              >
-                Yesterday
-              </button>
-              <button
-                type="button"
-                onClick={() => pickDay("today")}
-                className={dayButtonClass("today")}
-              >
-                Today
-              </button>
-            </div>
-
-            <p className="text-slate-300 mb-3 text-sm sm:text-base text-center! ftSans">
-              Recording attendance for{" "}
-              <span className="font-semibold">{meetingDisplayDate()}</span>.<br />
-              All meeting times are in{" "}
-              <span className="font-semibold">{group ? group.time_zone_label : "Phoenix, AZ (MST)"}</span>.
-            </p>
-
-            <h5 className="block text-lg font-semibold mb-3 ttSans text-center!">
-              Meeting Time
-            </h5>
-
-            {slots.length === 0 ? (
-              <p className="text-slate-300 mb-3 text-sm text-center! ftSans">
-                {group.title} has no meeting on that day.
-              </p>
-            ) : (
-              <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto mb-2">
-                {slots.map((slot) => (
-                  <button
-                    key={slot.value}
-                    type="button"
-                    onClick={() => setMeetingTimeSlot(slot.value)}
-                    className={`${timeButtonClass(slot.value)} border-slate-600! `}
-                  >
-                    {slot.label}
-                  </button>
-                ))}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Tray label="Attendee">
+            <Card className="grid gap-4 p-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="cv-name" className={labelClass}>Name</label>
+                <input id="cv-name" type="text" value={respondentName} onChange={(e) => setRespondentName(e.target.value)} className={inputClass} required />
               </div>
-            )}
-          </section>
+              <div>
+                <label htmlFor="cv-email" className={labelClass}>Email</label>
+                <input id="cv-email" type="email" value={respondentEmail} onChange={(e) => setRespondentEmail(e.target.value)} className={inputClass} required />
+              </div>
+            </Card>
+          </Tray>
 
-          {/* Topic */}
-          <div>
-            <label className="block text-lg font-medium mb-1">Topic</label>
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              className="w-full max-w-full border border-slate-600! bg-slate-900 rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-cyan-500"
-              required
-            />
-          </div>
+          <Tray label="Meeting attended">
+            <Card className="space-y-4 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="inline-flex rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800">
+                  <button type="button" onClick={() => pickDay("yesterday")} className={choice(meetingDay === "yesterday")}>Yesterday</button>
+                  <button type="button" onClick={() => pickDay("today")} className={choice(meetingDay === "today")}>Today</button>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-neutral-400">
+                  <span className="font-medium text-slate-900 dark:text-white">{meetingDisplayDate()}</span>
+                  {" · "}{group ? group.time_zone_label : "Phoenix time (MST)"}
+                </p>
+              </div>
+              <div>
+                <span className={labelClass}>Meeting time</span>
+                {slots.length === 0 ? (
+                  <p className="text-sm text-slate-600 dark:text-neutral-400">{group.title} has no meeting on that day.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {slots.map((slot) => (
+                      <button key={slot.value} type="button" aria-pressed={meetingTimeSlot === slot.value} onClick={() => setMeetingTimeSlot(slot.value)} className={slotClass(slot.value)}>
+                        {slot.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </Tray>
 
-          {/* Host name */}
-          <div>
-            <label className="block text-lg font-medium mb-1">
-              Host Name
-            </label>
-            <input
-              type="text"
-              value={hostName}
-              onChange={(e) => setHostName(e.target.value)}
-              className="w-full max-w-full border border-slate-600! bg-slate-900 rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-cyan-500"
-              required
-            />
-          </div>
-
-          {/* Signer name */}
-          <div>
-            <label className="block text-lg font-medium mb-1">
-              Signer Name
-            </label>
-            <input
-              type="text"
-              value={signerName}
-              onChange={(e) => setSignerName(e.target.value)}
-              className="w-full max-w-full border border-slate-600! bg-slate-900 rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-cyan-500"
-              required
-            />
-          </div>
+          <Tray label="Meeting details">
+            <Card className="grid gap-4 p-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="cv-topic" className={labelClass}>Topic</label>
+                <input id="cv-topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className={inputClass} required />
+              </div>
+              <div>
+                <label htmlFor="cv-host" className={labelClass}>Host</label>
+                <input id="cv-host" type="text" value={hostName} onChange={(e) => setHostName(e.target.value)} className={inputClass} required />
+              </div>
+              <div>
+                <label htmlFor="cv-signer" className={labelClass}>Signer</label>
+                <input id="cv-signer" type="text" value={signerName} onChange={(e) => setSignerName(e.target.value)} className={inputClass} required />
+              </div>
+            </Card>
+          </Tray>
 
           {group?.email && (
-            <section className="pt-2">
-              <h5 className="block text-lg font-semibold mb-2 ttSans text-center!">The email they'll get</h5>
+            <Tray label="The email they'll get">
               <CourtLetterPreview
                 groupTitle={group.title}
                 subject={group.email.subject}
@@ -330,30 +233,17 @@ const timeButtonClass = (slot) =>
                 fields={group.email.fields}
                 values={letterValues}
               />
-            </section>
+            </Tray>
           )}
 
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center px-4 py-2 rounded bg-cyan-600! hover:bg-cyan-500 text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {submitting ? "Sending..." : "Send Verification Email"}
+          <div className="flex justify-end">
+            <button type="submit" disabled={submitting} className={primaryButton}>
+              <Send className="h-4 w-4" /> {submitting ? "Sending…" : "Send verification email"}
             </button>
           </div>
         </form>
-
-        {/* Footer text inside card */}
-        <p className="pt-10 text-md md:text-sm text-gray-400 ftSans text-center! ">
-          {group
-            ? `This tool sends an email verifying attendance at a meeting of ${group.title}.`
-            : "This tool sends an email verifying attendance at The Acid Test AA Meeting (9am, 12pm, 6pm, 9pm – Phoenix time)."}
-        </p>
       </div>
     </main>
-
-  </div>
   );
 };
 
