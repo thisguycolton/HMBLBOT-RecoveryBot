@@ -35,16 +35,6 @@
     topic_html: @reading.topic&.body&.to_s,
     topic: @reading.topic&.body&.to_s,
     tag_ids: @reading.tags.pluck(:id)
-  }.to_json) %>" data-current-user="<%= json_escape({
-    id: current_user&.id,
-    name: current_user&.name,
-    user_active_group: current_user&.user_active_group&.group && {
-      group: {
-        id: current_user.user_active_group.group.id,
-        title: current_user.user_active_group.group.title,
-        meetingLink: current_user.user_active_group.group.meetingLink
-      }
-    }
-  }.to_json) %>"
+  }.to_json) %>" data-current-user="<%= json_escape(reading_editor_user_json.to_json) %>"
   style="margin-top:0px;" data-tags="<%= json_escape(Tag.order(:title).select(:id, :title, :slug).as_json.to_json) %>"
 ></div>

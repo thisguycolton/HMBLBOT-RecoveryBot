@@ -1,17 +1,17 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
-  title: MyString
-  description: MyString
-  location: MyString
-  website: MyString
-  remote: false
-  meetingLink: MyString
+  title: Sunrise Serenity
+  description: Early birds
+  website: https://example.com
+  slug: sunrise-serenity
+  join_token: joinone12345
+  time_zone: America/Phoenix
 
 two:
-  title: MyString
-  description: MyString
-  location: MyString
-  website: MyString
-  remote: false
-  meetingLink: MyString
+  title: Night Owls
+  description: Late meeting
+  website: https://example.com
+  slug: night-owls
+  join_token: jointwo12345
+  time_zone: America/Phoenix

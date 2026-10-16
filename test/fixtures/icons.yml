@@ -2,10 +2,10 @@
 
 one:
   name: MyString
-  file_path: MyString
+  file_path: icons/canon.png
   category: MyString
 
 two:
   name: MyString
-  file_path: MyString
+  file_path: icons/canon.png
   category: MyString

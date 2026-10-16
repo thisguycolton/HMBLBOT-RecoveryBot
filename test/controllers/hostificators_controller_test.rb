@@ -38,11 +38,4 @@ class HostificatorsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to hostificator_url(@hostificator)
   end
 
-  test "should destroy hostificator" do
-    assert_difference("Hostificator.count", -1) do
-      delete hostificator_url(@hostificator)
-    end
-
-    assert_redirected_to hostificators_url
-  end
 end

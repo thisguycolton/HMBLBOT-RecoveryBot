@@ -5,9 +5,13 @@ one:
   author: MyString
   published_date: 2023-12-11
   purchase_link: MyString
+  slug: book-one
+  edition: 1e
 
 two:
-  title: MyString
+  title: MyString2
   author: MyString
   published_date: 2023-12-11
   purchase_link: MyString
+  slug: book-two
+  edition: 2e

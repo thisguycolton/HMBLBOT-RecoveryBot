@@ -2,6 +2,12 @@
 
 one:
   title: MyString
+  user: one
+  meetingDate: 2025-01-01
+  meetingTime: "19:00:00"
 
 two:
   title: MyString
+  user: one
+  meetingDate: 2025-01-01
+  meetingTime: "19:00:00"

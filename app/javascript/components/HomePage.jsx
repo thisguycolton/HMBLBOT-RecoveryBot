@@ -13,6 +13,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { NAV_CATEGORIES } from "./nav/siteMenu";
+import GroupNudge from "./GroupNudge";
 
 const MIN_SKELETON_MS = 350;
 const FADE_MS = 180;
@@ -265,6 +266,8 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+
+      <GroupNudge />
 
       {/* What's new */}
       <section className="border-b border-neutral-200 dark:border-neutral-800">

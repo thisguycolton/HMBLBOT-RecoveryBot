@@ -18,6 +18,7 @@ import {
   Tag,
   User,
   Globe,
+  Users,
   Share2,
   ChevronDown,
   X
@@ -446,6 +447,7 @@ export default function ReadingForm({
 const safeReading = reading || EMPTY_OBJECT;
 const safeCurrentUser = currentUser || EMPTY_OBJECT;
 const activeGroup = safeCurrentUser?.user_active_group?.group || EMPTY_OBJECT;
+const groups = Array.isArray(safeCurrentUser?.groups) ? safeCurrentUser.groups : EMPTY_ARRAY;
 
 const [localErrors, setLocalErrors] = useState(errors || []);
 const hydratedReadingIdRef = useRef(reading?.id ?? "new");
@@ -506,6 +508,19 @@ useEffect(() => {
   const [availableTags, setAvailableTags] = useState(tags || []);
   const [newTagName, setNewTagName] = useState("");
   const [creatingTag, setCreatingTag] = useState(false);
+
+  // Picking a group also fills in its name and video link when those still hold the
+  // previous group's (or are empty)
+  function pickGroup(value) {
+    const next = groups.find((g) => String(g.id) === value);
+    const prev = groups.find((g) => String(g.id) === String(formData.groupId));
+    setFormData((f) => ({
+      ...f,
+      groupId: next ? next.id : "",
+      meetingName: next && (!f.meetingName || f.meetingName === prev?.title) ? next.title : f.meetingName,
+      meetingUrl: next?.meetingLink && (!f.meetingUrl || f.meetingUrl === prev?.meetingLink) ? next.meetingLink : f.meetingUrl,
+    }));
+  }
 
   function updateField(field, value) {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -924,6 +939,35 @@ async function handleSubmit(e) {
                 <ShellBand icon={CalendarIcon} title="Meeting Information" />
 
                 <ShellPanel position="bottom" className="p-4 space-y-4 max-lg:p-5 max-lg:space-y-5">
+                  {/* Which of your groups the reading is for (Groups: app/models/group.rb) */}
+                  {groups.length > 0 ? (
+                    <div data-field="groupId">
+                      <label htmlFor="reading_group" className={labelClass}>
+                        Share with
+                      </label>
+                      <div className="relative">
+                        <Users className={iconInputClass} />
+                        <select
+                          id="reading_group"
+                          className={`${inputClass} pl-9 max-lg:py-3 max-lg:text-base`}
+                          value={formData.groupId ? String(formData.groupId) : ""}
+                          onChange={(e) => pickGroup(e.target.value)}
+                        >
+                          <option value="">No group (just the archive)</option>
+                          {groups.map((g) => (
+                            <option key={g.id} value={String(g.id)}>{g.title}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ) : safeCurrentUser?.groups_open ? (
+                    <p className="text-sm text-slate-500 dark:text-neutral-400">
+                      Not in a group yet?{" "}
+                      <a href="/groups/find" className="font-medium text-accent hover:underline">Find your group</a>{" "}
+                      to share readings with it.
+                    </p>
+                  ) : null}
+
                   {/* Group Name */}
                   <div data-field="meetingName">
                     <label htmlFor="meeting_name" className={labelClass}>

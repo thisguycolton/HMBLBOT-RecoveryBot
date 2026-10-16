@@ -2,6 +2,10 @@ class CourtVerification < ApplicationRecord
   # Meetings are in Phoenix; letters, filters and exports all use its time
   TIME_ZONE = "America/Phoenix".freeze
 
+  # Set when the form was opened from a group's link (/court_verifications/new?group=slug)
+  belongs_to :group, optional: true
+  belongs_to :meeting, optional: true
+
   validates :respondent_name, :respondent_email, :meeting_at, :host_name, presence: true
   validates :respondent_email, format: { with: URI::MailTo::EMAIL_REGEXP }
 
@@ -29,15 +33,23 @@ class CourtVerification < ApplicationRecord
 
   # "Thursday, August 14, 2026 at 7:00 PM MST", as in the verification email
   def meeting_time_label
-    meeting_at.in_time_zone(TIME_ZONE).strftime("%A, %B %-d, %Y at %-I:%M %p %Z")
+    meeting_at.in_time_zone(zone).strftime("%A, %B %-d, %Y at %-I:%M %p %Z")
   end
+
+  def zone = meeting&.zone || TIME_ZONE
+
+  # The name on the letter: the group's when it came from a group's form
+  DEFAULT_GROUP_LABEL = "The Acid Test AA Meeting".freeze
+  def group_label = group&.title.presence || DEFAULT_GROUP_LABEL
 
   def as_admin_json
     {
       id: id,
       respondent_name: respondent_name,
       respondent_email: respondent_email,
-      meeting_at: meeting_at.in_time_zone(TIME_ZONE).iso8601,
+      meeting_at: meeting_at.in_time_zone(zone).iso8601,
+      group: group&.title,
+      meeting: meeting&.name,
       meeting_time_label: meeting_time_label,
       topic: topic,
       host_name: host_name,

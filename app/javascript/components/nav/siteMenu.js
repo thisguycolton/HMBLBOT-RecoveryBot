@@ -14,6 +14,7 @@ import {
   Settings,
   Sparkles,
   Tags,
+  Users,
 } from "lucide-react";
 
 // The site's tools, grouped the way the nav shows them. The navbar's dropdowns, the
@@ -56,7 +57,8 @@ export const ACCOUNT_ITEMS = [
   { label: "New Reading", href: "/readings/new", icon: Plus },
   { label: "My Readings", href: "/readings/mine", icon: NotebookPen },
   { label: "My highlights", href: "/library/highlights", icon: Highlighter },
-  { label: "Account Settings", href: "/users/edit", icon: Settings },
+  { label: "My groups", href: "/groups", icon: Users, groups: true },
+  { label: "Profile & account", href: "/users/edit", icon: Settings },
 ];
 
 // Shown only to User#suite_admin? (the server checks again on every page)

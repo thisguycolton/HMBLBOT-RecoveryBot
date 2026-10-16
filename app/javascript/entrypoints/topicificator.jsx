@@ -119,10 +119,10 @@ mountReact("chapter-admin", (admin) => (
 ));
 
 // ---------------- Court Verification ----------------
-mountReact("court-verification-root", () => (
+mountReact("court-verification-root", (rootEl) => (
   <>
   <Navbar isAuthenticated={isAuthenticated} />
-  <CourtVerificationForm />
+  <CourtVerificationForm group={rootEl.dataset.group ? JSON.parse(rootEl.dataset.group) : null} />
   </>
 ));
 

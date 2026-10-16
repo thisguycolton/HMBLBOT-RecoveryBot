@@ -2,7 +2,23 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-const CourtVerificationForm = ({ isAuthenticated }) => {
+// The four daily Acid Test meetings, used when the form isn't opened from a group's link
+const DEFAULT_SLOTS = [
+  { value: "09:00", label: "9:00 AM" },
+  { value: "12:00", label: "12:00 PM" },
+  { value: "18:00", label: "6:00 PM" },
+  { value: "21:00", label: "9:00 PM" },
+];
+
+const addDaysIso = (iso, n) => {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+// `group` comes from /court_verifications/new?group=<slug>: the group's name, its meetings
+// and today's date in its time zone. Without it the form is the Acid Test's, as before.
+const CourtVerificationForm = ({ isAuthenticated, group = null }) => {
   const [respondentName, setRespondentName] = useState("");
   const [respondentEmail, setRespondentEmail] = useState("");
   const [meetingTimeSlot, setMeetingTimeSlot] = useState(""); // "09:00", "12:00", "18:00", "21:00"
@@ -10,11 +26,16 @@ const CourtVerificationForm = ({ isAuthenticated }) => {
   const [signerName, setSignerName] = useState("");
   const [topic, setTopic] = useState("");
   const [meetingDay, setMeetingDay] = useState("today"); // "today" | "yesterday"
+  const pickDay = (day) => {
+    setMeetingDay(day);
+    if (group) setMeetingTimeSlot("");
+  };
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   const getMeetingDate = () => {
+  if (group) return meetingDay === "yesterday" ? addDaysIso(group.today, -1) : group.today;
   const date = new Date();
 
   if (meetingDay === "yesterday") {
@@ -52,10 +73,11 @@ const meetingDisplayDate = () =>
 
     try {
       const payload = {
+        ...(group ? { group_slug: group.slug, meeting_id: meetingTimeSlot, meeting_date: getMeetingDate() } : {}),
         court_verification: {
           respondent_name: respondentName,
           respondent_email: respondentEmail,
-          meeting_at: meetingAtString,
+          ...(group ? {} : { meeting_at: meetingAtString }),
           host_name: hostName,
           signer_name: signerName,
            topic: topic,
@@ -89,6 +111,13 @@ const meetingDisplayDate = () =>
       setSubmitting(false);
     }
   };
+
+  // A group's meetings on the chosen day (their id is the slot), or the Acid Test's four
+  const slots = group
+    ? group.meetings
+        .filter((m) => m.dates.includes(getMeetingDate()))
+        .map((m) => ({ value: String(m.id), label: m.name === group.title ? m.time_label : `${m.time_label} · ${m.name}` }))
+    : DEFAULT_SLOTS;
 
 const timeButtonClass = (slot) =>
   [
@@ -134,7 +163,7 @@ const timeButtonClass = (slot) =>
             MEETING VERIFICATION
           </h1>
           <p className="text-cyan-400 text-2xl! sm:text-base mt-1 ftSans text-center! w-full">
-            The Acid Test AA Meeting
+            {group ? group.title : "The Acid Test AA Meeting"}
           </p>
         </header>
 
@@ -194,14 +223,14 @@ const timeButtonClass = (slot) =>
             <div className="flex justify-center gap-3 mb-4">
               <button
                 type="button"
-                onClick={() => setMeetingDay("yesterday")}
+                onClick={() => pickDay("yesterday")}
                 className={dayButtonClass("yesterday")}
               >
                 Yesterday
               </button>
               <button
                 type="button"
-                onClick={() => setMeetingDay("today")}
+                onClick={() => pickDay("today")}
                 className={dayButtonClass("today")}
               >
                 Today
@@ -212,46 +241,31 @@ const timeButtonClass = (slot) =>
               Recording attendance for{" "}
               <span className="font-semibold">{meetingDisplayDate()}</span>.<br />
               All meeting times are in{" "}
-              <span className="font-semibold">Phoenix, AZ (MST)</span>.
+              <span className="font-semibold">{group ? group.time_zone_label : "Phoenix, AZ (MST)"}</span>.
             </p>
 
             <h5 className="block text-lg font-semibold mb-3 ttSans text-center!">
               Meeting Time
             </h5>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-0 max-w-lg mx-auto mb-2">
-              <button
-                type="button"
-                onClick={() => setMeetingTimeSlot("09:00")}
-                className={`${timeButtonClass("09:00")} border-slate-600! `}
-              >
-                9:00 AM
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setMeetingTimeSlot("12:00")}
-                className={`${timeButtonClass("12:00")} border-slate-600! `}
-              >
-                12:00 PM
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setMeetingTimeSlot("18:00")}
-                className={`${timeButtonClass("18:00")} border-slate-600! `}
-              >
-                6:00 PM
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setMeetingTimeSlot("21:00")}
-                className={`${timeButtonClass("21:00")} border-slate-600! `}
-              >
-                9:00 PM
-              </button>
-            </div>
+            {slots.length === 0 ? (
+              <p className="text-slate-300 mb-3 text-sm text-center! ftSans">
+                {group.title} has no meeting on that day.
+              </p>
+            ) : (
+              <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto mb-2">
+                {slots.map((slot) => (
+                  <button
+                    key={slot.value}
+                    type="button"
+                    onClick={() => setMeetingTimeSlot(slot.value)}
+                    className={`${timeButtonClass(slot.value)} border-slate-600! `}
+                  >
+                    {slot.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Topic */}
@@ -307,8 +321,9 @@ const timeButtonClass = (slot) =>
 
         {/* Footer text inside card */}
         <p className="pt-10 text-md md:text-sm text-gray-400 ftSans text-center! ">
-          This tool sends an email verifying attendance at The Acid Test AA
-          Meeting (9am, 12pm, 6pm, 9pm – Phoenix time).
+          {group
+            ? `This tool sends an email verifying attendance at a meeting of ${group.title}.`
+            : "This tool sends an email verifying attendance at The Acid Test AA Meeting (9am, 12pm, 6pm, 9pm – Phoenix time)."}
         </p>
       </div>
     </main>

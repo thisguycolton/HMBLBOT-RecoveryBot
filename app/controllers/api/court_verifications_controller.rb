@@ -7,6 +7,7 @@ module Api
 
     def create
       @court_verification = CourtVerification.new(court_verification_params)
+      assign_group_meeting if params[:group_slug].present?
 
       if @court_verification.save
         # Kick off email here (if you’ve built the mailer)
@@ -22,6 +23,16 @@ module Api
     end
 
     private
+
+    # From a group's form: the meeting it picked on the given day, timed in the meeting's zone
+    def assign_group_meeting
+      group = Group.active.find_by(slug: params[:group_slug].to_s)
+      meeting = group&.meetings&.find_by(id: params[:meeting_id])
+      date = Date.iso8601(params[:meeting_date].to_s) rescue nil
+      @court_verification.group = group
+      @court_verification.meeting = meeting
+      @court_verification.meeting_at = meeting && date && meeting.start_on(date)
+    end
 
     def court_verification_params
       params.require(:court_verification).permit(

@@ -1,70 +1,27 @@
+# The page that holds the Groups React app (app/javascript/entrypoints/groups.jsx), and
+# invite links. Groups is admin-only for now; see Group.feature_open_to?.
 class GroupsController < ApplicationController
-  before_action :set_group, only: %i[ show edit update destroy ]
+  layout "reader"
+  before_action :authenticate_user!, except: :join
+  after_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }
 
-  # GET /groups or /groups.json
-  def index
-    @groups = Group.all
+  def app
+    return if Group.feature_open_to?(current_user) || current_user.group_memberships.exists?
+
+    redirect_to root_path, alert: "Groups isn't open yet."
   end
 
-  # GET /groups/1 or /groups/1.json
-  def show
-  end
+  # GET /groups/join/:token -> join now, or after signing in (the token waits in a cookie)
+  def join
+    group = Group.find_by(join_token: params[:token].to_s)
+    return redirect_to(root_path, alert: "That invite link doesn't work anymore. Ask the group for a new one.") unless group
 
-  # GET /groups/new
-  def new
-    @group = Group.new
-  end
-
-  # GET /groups/1/edit
-  def edit
-  end
-
-  # POST /groups or /groups.json
-  def create
-    @group = Group.new(group_params)
-
-    respond_to do |format|
-      if @group.save
-        format.html { redirect_to root_path, notice: "Group was successfully created." }
-        format.json { render :show, status: :created, location: @group }
-      else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @group.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # PATCH/PUT /groups/1 or /groups/1.json
-  def update
-    respond_to do |format|
-      if @group.update(group_params)
-        format.html { redirect_to group_url(@group), notice: "Group was successfully updated." }
-        format.json { render :show, status: :ok, location: @group }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @group.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # DELETE /groups/1 or /groups/1.json
-  def destroy
-    @group.destroy
-
-    respond_to do |format|
-      format.html { redirect_to groups_url, notice: "Group was successfully destroyed." }
-      format.json { head :no_content }
-    end
-  end
-
-  private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_group
-      @group = Group.find(params[:id])
+    unless user_signed_in?
+      cookies.signed[:group_invite] = { value: group.join_token, expires: 30.days, httponly: true }
+      return redirect_to(new_user_registration_path, notice: "Make an account (or log in) to join #{group.title}.")
     end
 
-    # Only allow a list of trusted parameters through.
-    def group_params
-      params.require(:group).permit(:title, :description, :location, :website, :remote, :meetingLink, meetings_attributes: [ :datetime, :host, :reocurring, :frequency, :group_id, :_destroy])
-    end
+    JoinsGroupFromInvite.call(current_user, group.join_token)
+    redirect_to "/groups/#{group.slug}", notice: "Welcome to #{group.title}."
+  end
 end

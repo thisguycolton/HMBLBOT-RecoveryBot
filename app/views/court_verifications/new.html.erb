@@ -41,5 +41,5 @@
         }
       </style>
 
-      <div id="court-verification-root" class="w-screen h-screen" data-turbo="false">
+      <div id="court-verification-root" class="w-screen h-screen" data-turbo="false"<% if @group_json %> data-group="<%= json_escape(@group_json.to_json) %>"<% end %>>
       </div>

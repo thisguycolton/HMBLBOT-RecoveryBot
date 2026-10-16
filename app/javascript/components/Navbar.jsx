@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronDown, Heart, LogIn, LogOut, Menu, Moon, Sun, UserPlus, X } from "lucide-react";
+import { ChevronDown, Heart, LogIn, LogOut, Menu, Moon, Sun, UserPlus, Users, X } from "lucide-react";
 
 import DonationModal from "./DonationModal";
 import NotificationBell from "./NotificationBell";
@@ -294,10 +294,24 @@ function MenuItem({ item, current = false, compact = false, onClick }) {
   );
 }
 
+// Set by the reader layout: Groups is open to them (or they're in one), and whether to
+// nudge them toward a group (User#needs_group?)
+const hasGroups = () => document.body.dataset.groups === "true";
+const needsGroup = () => document.body.dataset.needsGroup === "true";
+
 function AccountLinks({ isSuiteAdmin, here, compact = false }) {
   return (
     <>
-      {ACCOUNT_ITEMS.map((item) => (
+      {needsGroup() && (
+        <a
+          href="/groups/find"
+          className="mb-2 flex items-center gap-2 rounded-md bg-accent/10 px-3 py-2 text-sm text-slate-700 hover:bg-accent/15 dark:text-slate-200"
+        >
+          <Users size={16} className="shrink-0 text-accent" />
+          <span>You're not in a group yet · <span className="font-semibold text-accent">Find your group</span></span>
+        </a>
+      )}
+      {ACCOUNT_ITEMS.filter((item) => !item.groups || hasGroups()).map((item) => (
         <MenuItem key={item.href} item={item} current={item.href === here} compact />
       ))}
       {isSuiteAdmin && (

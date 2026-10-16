@@ -27,8 +27,12 @@ An API-driven system for tracking game state, inventories, and player progress.
 - **Models**: `QuestPlayer`, `QuestSession`, `QuestInventory`
 - **API Endpoints**: Located in `app/controllers/api/v1`. Handles player creation, session joining (via `join_code`), and game state persistence (grid position, points, inventory).
 
-### 🤝 Meetings & Groups
-- **Logic**: Meetings are associated with Groups (`Group` has many `Meeting`). This allows for organizing recurring meetings by group.
+### 🤝 Groups & Meetings
+- **Models**: `Group`, `GroupMembership` (roles `admin`/`member`, status `active`/`requested`), `Meeting` (weekly: one row per weekday, or once), `GroupBook` (approved literature), `OiaaMeeting` (cached OIAA directory).
+- **OIAA**: `OiaaFeed` reads OIAA's Meeting Guide JSON feed (`OIAA_FEED_URL`, else discovered from aa-intergroup.org/meetings) into `oiaa_meetings`. Meetings linked by `oiaa_slug` refresh from it; `bin/rails oiaa:sync` fetches it by hand.
+- **Access**: admin-only while it's tried out (`Group.feature_open_to?`); `GROUPS_FOR_EVERYONE=1` opens it to every account. People already in a group always see it.
+- **Frontend**: React app at `/groups` (`entrypoints/groups.jsx`, `components/groups/`), JSON under `/api/groups`. The profile page (`/users/edit`) is `entrypoints/profile.jsx`.
+- **Court verifications**: `/court_verifications/new?group=<slug>` is a group's own form (unlinked, like the plain one).
 
 ### 🛠 Services
 Business logic for complex operations (e.g., importing literature) is encapsulated in `app/services`.

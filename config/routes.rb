@@ -31,6 +31,31 @@ Rails.application.routes.draw do
 
   resources :text_reports, only: :create
   resources :site_notices, only: :index
+  resource :profile, only: %i[show update]
+  get "oiaa/search", to: "oiaa#search"
+  get "oiaa/matches", to: "oiaa#matches"
+  get "groups/find", to: "groups#find"
+  post "groups/start", to: "groups#start"
+  post "groups/join_with_token", to: "groups#join_with_token"
+  post "groups/dismiss_prompt", to: "groups#dismiss_prompt"
+  resources :groups, param: :slug, only: %i[index show create update destroy] do
+    member do
+      post :join
+      post :leave
+      post :approve
+      post :regenerate_invite
+      get :court_verifications
+    end
+    resources :memberships, controller: "group_memberships", only: %i[create update destroy]
+    resources :books, controller: "group_books", only: %i[create update destroy]
+    resources :meetings, controller: "group_meetings", only: %i[create update destroy] do
+      post :unlink, on: :member
+      collection do
+        post :import
+        post :refresh
+      end
+    end
+  end
   get "schedule_polls/people", to: "schedule_polls#people"
   resources :schedule_polls, only: %i[index show create update destroy], param: :token do
     member do
@@ -122,14 +147,14 @@ namespace :api do
 end
   resources :topic_categories
   resources :service_readings
-  resources :user_active_groups, only: %i[create update]
   resources :icons, only: [:index, :show]
   get 'game/game'
   get 'game/world', to: 'game#world' # generated-world overview for tuning (?seed=N)
   get 'topics/by_category', to: 'topics#by_category'
-  resources :groups do
-    resources :meetings
-  end
+  # Groups: a React app (app/javascript/entrypoints/groups.jsx); invite links join on the server
+  get "/groups/join/:token", to: "groups#join", as: :join_group
+  get "/groups", to: "groups#app", as: :groups
+  get "/groups/*path", to: "groups#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb
   get "/books/:book_slug/chapters/:chapter_slug", to: "pages#reader"
@@ -149,6 +174,8 @@ end
   end
 
   resources :topics
+  # Your profile (React, app/javascript/entrypoints/profile.jsx) replaces Devise's edit page
+  get "/users/edit", to: "profiles#show", as: :edit_profile
   devise_for :users
 
   namespace :admin_panel do
