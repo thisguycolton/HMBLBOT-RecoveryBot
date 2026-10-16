@@ -33,7 +33,7 @@ export default function BookEdit() {
       if (!alive) return;
       setSaved(data);
       setBook(formFrom(data));
-      document.title = `Edit ${data.title} | HMBLBOT`;
+      document.title = `Edit ${data.title} | RecoveryBot`;
     })().catch((e) => alive && setError(e.message));
     return () => { alive = false; };
   }, [slug]);

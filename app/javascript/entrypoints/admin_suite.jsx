@@ -5,14 +5,10 @@ import { createRoot } from "react-dom/client";
 import "../styles/tailwind.css";
 import "../styles/reader.css";
 
-import Layout from "../components/Layout";
 import AdminSuite from "../components/admin_suite/App";
 
 const root = document.getElementById("admin-suite");
 if (root) {
-  createRoot(root).render(
-    <Layout isAuthenticated={document.body.dataset.currentUser === "true"} showFooter={false}>
-      <AdminSuite />
-    </Layout>
-  );
+  // its own chrome (sidebar and top bar, metr-style) instead of the site nav
+  createRoot(root).render(<AdminSuite />);
 }

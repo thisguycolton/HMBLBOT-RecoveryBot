@@ -1,4 +1,6 @@
 class ServiceReadingsController < ApplicationController
+  include KeepsRobotsOut
+  keep_robots_out
   before_action :set_service_reading, only: %i[ show edit update destroy ]
   layout "reader", only: %i[index show]
   # GET /service_readings or /service_readings.json

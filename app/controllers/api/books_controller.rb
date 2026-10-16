@@ -1,6 +1,8 @@
 require "digest"
 
 class Api::BooksController < ApplicationController
+  include KeepsRobotsOut
+  keep_robots_out
   before_action :set_book, only: [:show, :update, :export, :search]
   before_action :hide_private_book!, only: [:show, :export, :search]
   before_action :authenticate_user!, only: [:create, :update, :import_json]

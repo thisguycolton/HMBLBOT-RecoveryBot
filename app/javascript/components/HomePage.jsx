@@ -1,54 +1,18 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import {
-  Sparkles,
-  Timer,
-  BookOpen,
-  BadgeCheck,
-  ClipboardCheck,
   ArrowRight,
+  Bell,
+  BookOpen,
+  Check,
+  Gamepad2,
+  Highlighter,
   RefreshCw,
-  BookHeart,
+  Search,
+  Share2,
+  UserPlus,
 } from "lucide-react";
-
-const features = [
-  {
-    title: "Topicificator",
-    description:
-      "Four ways to generate prompts: random topic, pick a number, previously shared, or check-in.",
-    icon: <Sparkles className="h-5 w-5" />,
-    href: "/topicificator",
-    tag: "Popular",
-  },
-  {
-    title: "Meeting Service Readings",
-    description:
-      "A handful of Service Readings formatted for easy reading during meetings.",
-    icon: <BookHeart className="h-5 w-5" />,
-    href: "/service_readings",
-  },
-  {
-    title: "Recovery Library",
-    description:
-      "Browse readings, bookmark favorites, and share passages with your group.",
-    icon: <BookOpen className="h-5 w-5" />,
-    href: "/library",
-  },
-  {
-    title: "Court Verification",
-    description:
-      "Generate attendance verification quickly with a clean, consistent workflow.",
-    icon: <ClipboardCheck className="h-5 w-5" />,
-    href: "/court-verification",
-  },
-  {
-    title: "Group Utilities",
-    description:
-      "Formats, resources, and practical meeting helpers that reduce admin friction.",
-    icon: <BadgeCheck className="h-5 w-5" />,
-    href: "/host_helper/scratchpaper",
-  },
-];
+import { NAV_CATEGORIES } from "./nav/siteMenu";
 
 const MIN_SKELETON_MS = 350;
 const FADE_MS = 180;
@@ -178,186 +142,266 @@ function HomePreview() {
   );
 }
 
-export default function HomePage() {
+// What's new lately, newest first. Each links to where you can try it.
+const WHATS_NEW = [
+  {
+    title: "A library you can actually read in",
+    body: "The Big Book, the Twelve and Twelve, Daily Reflections and more, in a clean reader with page numbers, fonts and dark mode.",
+    icon: BookOpen,
+    href: "/library",
+    cta: "Open the library",
+  },
+  {
+    title: "Search every book at once",
+    body: "Find the passage you half remember across the whole library, then jump straight to the page.",
+    icon: Search,
+    href: "/library",
+    cta: "Search the library",
+  },
+  {
+    title: "Highlights and notes",
+    body: "Mark the lines that hit home, add your own notes, and share a passage with your group in one link.",
+    icon: Highlighter,
+    href: "/library/highlights",
+    cta: "See your highlights",
+    member: true,
+  },
+  {
+    title: "The Acid Quest",
+    body: "A pixel-art adventure where every encounter is a real meeting topic. Play solo or with your group.",
+    icon: Gamepad2,
+    href: "/game/game",
+    cta: "Play",
+  },
+];
+
+// Why make an account (shown to people who aren't signed in)
+const MEMBER_PERKS = [
+  { icon: Highlighter, text: "Save highlights and notes in every book" },
+  { icon: Share2, text: "Share passages with your home group" },
+  { icon: BookOpen, text: "Keep your own meeting readings and topics" },
+  { icon: Bell, text: "Get notified when something you asked about is done" },
+];
+
+const FAQ = [
+  { q: "Is it free?", a: "Yes. Everything here is free to use. Donations help pay for the server." },
+  {
+    q: "Do I need an account?",
+    a: "No. Topics, service readings and the whole library are open to everyone. An account adds highlights, notes, sharing and your own readings.",
+  },
+  {
+    q: "How do I get an account?",
+    a: "Sign up with your email. An admin approves new accounts before your first log in, which keeps the site for our fellowship.",
+  },
+  {
+    q: "Can I use it on my phone during a meeting?",
+    a: "That's the point: big text, dark mode, and pages that read well on a phone, a laptop or a Zoom screen share.",
+  },
+];
+
+function SignUpButton({ className = "" }) {
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-900 text-slate-900 lg:min-w-4xl">
+    <a
+      href="/users/sign_up"
+      className={`inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold !text-sky-800 shadow-sm hover:bg-sky-50 ${className}`}
+    >
+      <UserPlus className="h-4 w-4" />
+      Create a free account
+    </a>
+  );
+}
 
+export default function HomePage() {
+  const signedIn = document.body.dataset.currentUser === "true";
+
+  return (
+    <div className="min-h-screen w-full bg-white dark:bg-neutral-900 text-slate-900 !font-sans">
       {/* Hero */}
-      <div className="w-screen bg-gradient-to-r from-sky-600 to-sky-800">
-      <section className=" mx-auto max-w-6xl px-4 py-16  text-white sm:px-6 lg:px-8 mt-0">
-        <div className="grid gap-10 md:grid-cols-2 md:items-center">
-          <div>
-            <p className="mb-3 inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 bg-white ttSans">
-              Tools for meetings, readings, and group flow
-            </p>
-            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl ttSans">
-              HumbleBot makes group tools feel effortless.
-            </h1>
-            <p className="mt-4 text-lg text-slate-200 sans">
-              A practical set of utilities—topics, readings, and admin
-              helpers—built to reduce friction and keep the focus on the
-              meeting.
-            </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="/topicificator"
-                className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
-              >
-                Try the Topicificator
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
-              <a
-                href="#features"
-                className="inline-flex items-center justify-center rounded-xl border border-sky-200 px-5 py-3 text-sm font-medium text-slate-800 bg-sky-200 hover:bg-slate-50"
-              >
-                See everything it does
-              </a>
+      <div className="w-full bg-gradient-to-r from-sky-600 to-sky-800">
+        <section className="mx-auto max-w-6xl px-4 py-14 md:py-20 text-white sm:px-6 lg:px-8">
+          <div className="grid gap-10 md:grid-cols-2 md:items-center">
+            <div>
+              <p className="sans !text-left !hyphens-none mb-3 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/30">
+                New: the library, highlights and the Acid Quest
+              </p>
+              <h1 className="!text-4xl md:!text-5xl font-semibold tracking-tight !leading-tight !font-sans !text-white">
+                Everything for the meeting, and the literature in your pocket.
+              </h1>
+              <p className="sans !text-left !hyphens-none mt-4 text-lg text-sky-100">
+                Draw a topic, read the service readings aloud, and dig into the Big Book and the Twelve and Twelve with
+                highlights and notes you can share with your group.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                {signedIn ? (
+                  <a
+                    href="/library"
+                    className="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold !text-sky-800 hover:bg-sky-50"
+                  >
+                    Open the library
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                ) : (
+                  <SignUpButton />
+                )}
+                <a
+                  href="/topicificator"
+                  className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-medium !text-white hover:bg-slate-800"
+                >
+                  Try the Topicificator
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </div>
+              {!signedIn && (
+                <p className="sans !text-left !hyphens-none mt-4 text-sm text-sky-100">
+                  Free, and no account needed to look around.{" "}
+                  <a href="/users/sign_in" className="font-semibold !text-white underline underline-offset-2">
+                    Already a member? Log in
+                  </a>
+                </p>
+              )}
             </div>
-            <div className="mt-6 text-xs text-slate-200">
-              No accounts required for basic tools (if you want it that way).
-              Private features are gated.
-            </div>
-          </div>
 
-          {/* Visual placeholder */}
-          <HomePreview />
-        </div>
-      </section>
+            <HomePreview />
+          </div>
+        </section>
       </div>
 
-      {/* Features */}
-      <section
-        id="features"
-        className="border-t border-neutral-200 dark:border-neutral-900 bg-slate-50/40 dark:bg-neutral-700/40"
-      >
-        <div className="mx-auto max-w-6xl px-4 py-16 text-neutral-950 dark:text-neutral-50 sm:px-6 lg:px-8">
-          <div className="mb-10">
-            <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Everything HumbleBot can do
-            </h2>
-            <p className="mt-2 text-neutral-600 dark:text-neutral-200 sans">
-              Pick what you need. Ignore what you don’t. Each tool stands alone.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
-              <a
-                key={f.title}
-                href={f.href}
-                className="group relative rounded-2xl border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-stone-600 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                {f.tag ? (
-                  <span className="absolute right-4 top-4 rounded-full bg-slate-900 px-2.5 py-1 text-xs font-medium text-white">
-                    {f.tag}
+      {/* What's new */}
+      <section className="border-b border-neutral-200 dark:border-neutral-800">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+          <h2 className="!text-2xl md:!text-3xl font-semibold tracking-tight text-slate-900 dark:text-white !font-sans">
+            What's new
+          </h2>
+          <p className="sans !text-left !hyphens-none mt-2 text-slate-600 dark:text-neutral-300">The latest additions to the site.</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {WHATS_NEW.map((f) => {
+              const Icon = f.icon;
+              const href = f.member && !signedIn ? "/users/sign_up" : f.href;
+              return (
+                <a
+                  key={f.title}
+                  href={href}
+                  className="group flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-800"
+                >
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-200">
+                    <Icon className="h-5 w-5" />
                   </span>
-                ) : null}
+                  <span className="mt-4 font-semibold text-slate-900 dark:text-white">{f.title}</span>
+                  <span className="mt-1 flex-1 text-sm text-slate-600 dark:text-neutral-300">{f.body}</span>
+                  <span className="mt-4 inline-flex items-center text-sm font-medium text-sky-700 dark:text-sky-300">
+                    {f.member && !signedIn ? "Sign up to start" : f.cta}
+                    <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
-                <div className="flex items-start gap-3">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-800 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-200">
-                    {f.icon}
-                  </div>
-                  <div>
-                    <div className="font-medium">{f.title}</div>
-                    <div className="mt-1 text-sm text-slate-600 dark:text-neutral-100">
-                      {f.description}
-                    </div>
-                    <div className="mt-3 inline-flex items-center text-sm font-medium text-slate-900 dark:text-white">
-                      Learn more
-                      <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5" />
-                    </div>
-                  </div>
+      {/* Every tool, by category (the same groups as the nav): one card per group, tools as rows;
+          the long Meetings list fills the left column and the rest stack on the right */}
+      <section id="features" className="bg-slate-50 dark:bg-neutral-950">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
+            <h2 className="!text-2xl md:!text-3xl font-semibold tracking-tight text-slate-900 dark:text-white !font-sans">
+              Everything RecoveryBot can do
+            </h2>
+            <p className="sans !text-left !hyphens-none !mb-0 text-sm text-slate-500 dark:text-neutral-400">Pick what you need. Each tool stands alone.</p>
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-2 md:grid-flow-col md:grid-rows-[auto_1fr]">
+            {NAV_CATEGORIES.map((category, index) => (
+              <div
+                key={category.key}
+                className={`${index === 0 ? "md:row-span-2" : ""} overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900`}
+              >
+                <div className="flex items-baseline justify-between gap-2 border-b border-neutral-200 bg-sky-50/70 px-4 py-2.5 dark:border-neutral-800 dark:bg-sky-950/30">
+                  <h3 className="!text-sm font-semibold text-sky-900 dark:text-sky-200 !font-sans">{category.label}</h3>
+                  <span className="text-xs text-slate-500 dark:text-neutral-400">{category.blurb}</span>
                 </div>
-              </a>
+                <ul className="divide-y divide-neutral-100 dark:divide-neutral-800 !m-0 !p-0 list-none">
+                  {category.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <li key={item.href}>
+                        <a
+                          href={item.href}
+                          className="group flex items-center gap-3 px-4 py-2.5 !no-underline transition hover:bg-slate-50 dark:hover:bg-neutral-800/60"
+                        >
+                          <Icon className="h-4 w-4 shrink-0 text-sky-700 dark:text-sky-300" />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
+                              {item.label}
+                              {item.auth && (
+                                <span className="rounded-full bg-sky-100 px-1.5 py-px text-[10px] font-semibold text-sky-800 dark:bg-sky-900/50 dark:text-sky-200">
+                                  Members
+                                </span>
+                              )}
+                            </span>
+                            <span className="block text-xs text-slate-500 dark:text-neutral-400">{item.note}</span>
+                          </span>
+                          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-sky-600 dark:text-neutral-600" />
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <div className="w-full bg-gradient-to-r from-neutral-300 to-neutral-500 dark:from-neutral-500 dark:to-neutral-700 ">
-      <section id="how" className="mx-auto max-w-6xl px-4 py-16 ">
-        <div className="grid gap-8 md:grid-cols-3">
-          {[
-            {
-              title: "Open a tool",
-              body: "Jump straight into what you need—topics, readings, timers, or admin helpers.",
-            },
-            {
-              title: "Use it live",
-              body: "Designed to be readable and usable in real-time during meetings.",
-            },
-            {
-              title: "Share cleanly",
-              body: "Copy/share flows that look good on mobile, desktop, and Zoom screens.",
-            },
-          ].map((s) => (
-            <div
-              key={s.title}
-              className="rounded-2xl border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-stone-800 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <div className="text-lg font-semibold dark:text-neutral-100">{s.title}</div>
-              <div className="mt-2 text-slate-600 dark:text-neutral-300">{s.body}</div>
+      {/* Sign up pitch */}
+      {!signedIn && (
+        <section className="bg-gradient-to-r from-sky-700 to-sky-900 text-white">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-2 md:items-center lg:px-8">
+            <div>
+              <h2 className="!text-2xl md:!text-3xl font-semibold tracking-tight !text-white !font-sans">
+                Make it yours with a free account
+              </h2>
+              <p className="sans !text-left !hyphens-none mt-2 text-sky-100">
+                Reading is open to everyone. Members get a little more out of the library and the meetings.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <SignUpButton />
+                <a href="/users/sign_in" className="text-sm font-medium !text-white underline underline-offset-2">
+                  I already have an account
+                </a>
+              </div>
             </div>
-          ))}
-        </div>
-      </section>
-      </div>
+            <ul className="grid gap-3">
+              {MEMBER_PERKS.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+                  <Icon className="h-5 w-5 shrink-0 text-sky-200" />
+                  <span>{text}</span>
+                  <Check className="ml-auto h-4 w-4 text-emerald-300" />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
       {/* FAQ */}
-      <section id="faq" className=" border-slate-200 bg-gradient-to-r from-sky-600 to-sky-800  text-slate-50">
-        <div className="mx-auto max-w-6xl px-4 py-16">
-          <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            FAQ
+      <section id="faq" className="bg-white dark:bg-neutral-900">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+          <h2 className="!text-2xl md:!text-3xl font-semibold tracking-tight text-slate-900 dark:text-white !font-sans">
+            Questions
           </h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-2 text-slate-700 ">
-            {[
-              {
-                q: "Is this free?",
-                a: "You can keep core tools free and gate optional features—your call. The page supports either direction.",
-              },
-              {
-                q: "Do I need an account?",
-                a: "Not necessarily. Public tools can be open; private features can require sign-in.",
-              },
-              {
-                q: "Can I run this on mobile during a meeting?",
-                a: "That’s the point: big touch targets, readable layouts, and clean sharing.",
-              },
-              {
-                q: "Can tools be added later?",
-                a: "Yes—add another card + section. No editor system required.",
-              },
-            ].map((item) => (
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            {FAQ.map((item) => (
               <div
                 key={item.q}
-                className="rounded-2xl border border-slate-200 p-6 bg-slate-50 dark:bg-neutral-900 dark:border-neutral-700"
+                className="rounded-2xl border border-neutral-200 bg-slate-50 p-6 dark:border-neutral-700 dark:bg-neutral-800"
               >
-                <div className="font-medium dark:text-neutral-100">{item.q}</div>
+                <div className="font-medium text-slate-900 dark:text-neutral-100">{item.q}</div>
                 <div className="mt-2 text-slate-600 dark:text-neutral-300">{item.a}</div>
               </div>
             ))}
           </div>
-
-          <div className="mt-10 flex flex-col items-start justify-between gap-4 rounded-3xl border border-slate-200 bg-slate-50 dark:bg-neutral-900 dark:border-neutral-700 p-8 md:flex-row md:items-center">
-            <div>
-              <div className="text-lg font-semibold text-slate-600 dark:text-neutral-100">
-                Ready to see the toolbox?
-              </div>
-              <div className="mt-1 text-slate-600 dark:text-neutral-300">
-                I'll let the tools do the talking.
-              </div>
-            </div>
-            <a
-              href="/topicificator"
-              className="inline-flex items-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
-            >
-              Open Topicificator
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </a>
-          </div>
         </div>
       </section>
-
     </div>
   );
 }
