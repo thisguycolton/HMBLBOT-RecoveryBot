@@ -61,7 +61,7 @@
             <ul class="navbar-nav mb-2 mb-lg-0 d-flex w-100">
               <%# Same groups as the React nav (app/javascript/components/nav/siteMenu.js) %>
               <% [
-                ["Meetings", [["Topicificator 9002", "/topicificator"], ["Service Readings", "/service_readings"], ["Reading Archive", "/readings"], ["Host-burger Helper", "/host_helper/scratchpaper"], ["Court Verification", "/court_verifications/new"]]],
+                ["Meetings", [["Topicificator 9002", "/topicificator"], ["Service Readings", "/service_readings"], ["Reading Archive", "/readings"], ["Host-burger Helper", "/host_helper/scratchpaper"]]],
                 ["Library", [["All books", "/library"]] + (user_signed_in? ? [["My highlights", "/library/highlights"]] : [])],
                 ["Extras", [["The Acid Quest", "/game/game"], ["Minecraft Server", "/game_server/getting_started"]]],
               ].each_with_index do |(label, links), i| %>

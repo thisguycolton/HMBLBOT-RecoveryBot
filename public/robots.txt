@@ -36,3 +36,4 @@ Disallow: /readings
 Disallow: /service_readings
 Disallow: /api/
 Disallow: /admin_panel
+Disallow: /court_verifications
