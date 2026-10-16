@@ -1,134 +1,67 @@
-import React from "react";
+import React, { useState } from "react";
+import { Heart } from "lucide-react";
 import { RecoveryBotLogo } from "./brand/Logo";
+import DonationModal from "./DonationModal";
+import { NAV_CATEGORIES } from "./nav/siteMenu";
 
+const REPO = "https://github.com/thisguycolton/HMBLBOT-RecoveryBot";
+
+// The site footer: the brand and donate button, then the same tool groups as the nav
+// (components/nav/siteMenu.js) so a new tool shows up here without another edit.
 export default function Footer() {
+  const [donating, setDonating] = useState(false);
+  const signedIn = document.body.dataset.currentUser === "true";
+  const visible = (items) => items.filter((item) => !item.auth || signedIn);
+
   return (
-    <footer className="bg-neutral-950 text-white mt-auto border-t border-white/10">
-  <div className="max-w-6xl mx-auto px-4 py-12">
+    <footer className="mt-auto border-t border-white/10 bg-neutral-950 text-white !font-sans">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div className="col-span-2 md:col-span-1">
+            <a href="/" className="inline-block !text-white !no-underline" aria-label="RecoveryBot home">
+              <RecoveryBotLogo markClassName="h-8 w-auto" textClassName="text-xl" botClassName="text-brand-light" />
+            </a>
+            <div className="mt-3 max-w-xs text-sm leading-relaxed text-neutral-400">
+              Free tools for people in recovery, built to make meetings, readings and service a little easier.
+            </div>
+            <button
+              type="button"
+              onClick={() => setDonating(true)}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold !bg-rose-500/15 !text-rose-300 ring-1 ring-rose-400/30 hover:!bg-rose-500/25"
+            >
+              <Heart size={15} className="fill-current" /> Help keep it running
+            </button>
+          </div>
 
-    <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 md:grid-cols-4">
+          {NAV_CATEGORIES.map((category) => (
+            <nav key={category.key} aria-label={category.label}>
+              <h3 className="!mb-3 !text-sm font-semibold !text-white !font-sans">{category.label}</h3>
+              <ul className="!m-0 !p-0 list-none space-y-2 text-sm">
+                {visible(category.items).map((item) => (
+                  <li key={item.href}>
+                    <a href={item.href} className="!text-neutral-400 !no-underline hover:!text-white">
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
+        </div>
 
-      {/* HMBLBOT */}
-      <div>
-        <a href="/" className="inline-block !text-white">
-          <RecoveryBotLogo markClassName="h-9 w-auto" textClassName="text-xl" />
-        </a>
-        <p className="mt-2 text-xs text-neutral-500">by HMBLBOT</p>
-
-        <p className="mt-2 text-xs text-neutral-400 sans">
-          Tools for people in recovery, built to make meetings,
-          readings, and service a little easier.
-        </p>
-      </div>
-
-      {/* Tools */}
-      <div>
-        <h3 className="font-semibold mb-4">
-          Recovery Tools
-        </h3>
-
-        <div className="space-y-2 text-sm text-neutral-400">
-          <a href="/topicificator" className="block hover:text-white">
-            Topicificator 9002
-          </a>
-
-          <a href="/readings" className="block hover:text-white">
-            Reading Archive
-          </a>
-
-          <a href="/service_readings" className="block hover:text-white">
-            Service Readings
-          </a>
-
-          <a href="/library" className="block hover:text-white">
-            Library
-          </a>
-
-          <a href="/game/game" className="block hover:text-white">
-            The Acid Quest
-          </a>
-
-          <a href="/host_helper/scratchpaper" className="block hover:text-white">
-            Scratchpaper
-          </a>
+        <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+          <div>© {new Date().getFullYear()} RecoveryBot by HMBLBOT</div>
+          <div className="flex flex-wrap gap-4">
+            <a href={`${REPO}/issues/new`} target="_blank" rel="noreferrer" className="!text-neutral-500 !no-underline hover:!text-white">
+              Report a problem
+            </a>
+            <a href={REPO} target="_blank" rel="noreferrer" className="!text-neutral-500 !no-underline hover:!text-white">
+              GitHub
+            </a>
+          </div>
         </div>
       </div>
-
-      {/* Project */}
-      <div>
-        <h3 className="font-semibold mb-4">
-          Project
-        </h3>
-
-        <div className="space-y-2 text-sm text-neutral-400">
-          <a href="/about" className="block hover:text-white">
-            About HMBLBOT
-          </a>
-
-          <a href="/contact" className="block hover:text-white">
-            Contact / Feedback
-          </a>
-
-          <a href="/report" className="block hover:text-white">
-            Report a Problem
-          </a>
-
-          <a
-            href="https://github.com/thisguycolton/HMBLBOT-RecoveryBot"
-            className="block hover:text-white"
-            target="_blank"
-            rel="noreferrer"
-          >
-            GitHub
-          </a>
-        </div>
-      </div>
-
-      {/* Support */}
-      <div>
-        <h3 className="font-semibold mb-4">
-          Support HMBLBOT
-        </h3>
-
-        <p className="text-xs text-neutral-400 mb-4 sans">
-          HMBLBOT is free to use. If it has been useful to you,
-          you can help keep it running.
-        </p>
-
-        <a href="https://www.buymeacoffee.com/hmblbot" target="_blank" rel="noreferrer">
-          <img
-            src="https://img.buymeacoffee.com/button-api/?text=Support HMBLBOT&emoji=🤖&slug=hmblbot&button_colour=5F7FFF&font_colour=ffffff&font_family=Arial&outline_colour=000000&coffee_colour=FFDD00"
-            alt="Support HMBLBOT"
-          />
-        </a>
-      </div>
-
-    </div>
-
-    {/* Bottom */}
-    <div className="mt-10 border-t border-white/10 pt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between text-xs text-neutral-500">
-
-      <div>
-        © 2026 HMBLBOT
-      </div>
-
-      <div className="flex flex-wrap gap-4">
-        <a href="/privacy" className="hover:text-white">
-          Privacy
-        </a>
-
-        <a href="/terms" className="hover:text-white">
-          Terms
-        </a>
-
-        <a href="/disclaimer" className="hover:text-white">
-          Disclaimer
-        </a>
-      </div>
-
-    </div>
-
-  </div>
-</footer>
+      <DonationModal isOpen={donating} onClose={() => setDonating(false)} />
+    </footer>
   );
 }
