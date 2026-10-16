@@ -25,6 +25,7 @@
 
 <div id="reading-archive-root" class="w-full self-start" data-turbo="false"
     data-selected-tag="<%= @selected_tag&.slug %>"
+    data-page="<%= @page %>" data-pages="<%= @pages %>" data-total="<%= @total %>" data-query="<%= params[:q] %>"
     data-readings="<%= json_escape(@readings_json.to_json) %>" 
     data-tags="<%= json_escape(@tags_json.to_json) %>" 
     data-notice="<%= notice.to_s %>"></div>
