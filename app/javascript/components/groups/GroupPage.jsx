@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BookOpen, CalendarClock, ExternalLink, Gavel, NotebookPen, Pencil, Users } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarRange, ExternalLink, Gavel, NotebookPen, Pencil, Users } from "lucide-react";
 import { api, zoneLabel } from "./lib";
 import { ErrorNote, Loading, Message, Pill, primaryButton, quietButton } from "./ui";
 import MeetingsTab from "./MeetingsTab";
@@ -8,9 +8,11 @@ import MembersTab from "./MembersTab";
 import LiteratureTab from "./LiteratureTab";
 import ReadingsTab from "./ReadingsTab";
 import CourtTab from "./CourtTab";
+import EventsTab from "./EventsTab";
 
 const TABS = [
   { key: "meetings", label: "Meetings", icon: CalendarClock },
+  { key: "events", label: "Events", icon: CalendarRange },
   { key: "readings", label: "Readings", icon: NotebookPen, members: true },
   { key: "literature", label: "Literature", icon: BookOpen, members: true },
   { key: "members", label: "Members", icon: Users, members: true },
@@ -131,6 +133,7 @@ export default function GroupPage() {
       )}
 
       {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={load} isNew={searchParams.get("new") === "1"} />}
+      {current.key === "events" && <EventsTab group={group} />}
       {current.key === "readings" && <ReadingsTab group={group} />}
       {current.key === "literature" && <LiteratureTab group={group} reload={load} />}
       {current.key === "members" && <MembersTab group={group} reload={load} setGroup={setGroup} />}

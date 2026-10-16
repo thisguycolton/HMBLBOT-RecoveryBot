@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Ban, CalendarClock, CircleCheck, Plus, Search, Settings2, Trash2, UserPlus, X } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
@@ -53,6 +53,7 @@ export default function PollForm() {
   const { token } = useParams();
   const navigate = useNavigate();
   const editing = !!token;
+  const eventToken = useSearchParams()[0].get("event");
   const [form, setForm] = useState(editing ? null : blankPoll());
   const [meta, setMeta] = useState(null);
   const [error, setError] = useState(null);
@@ -60,6 +61,17 @@ export default function PollForm() {
   const closesTouched = useRef(editing);
 
   useEffect(() => {
+    if (!editing && eventToken) {
+      // A poll for an event: the people running it can make one; start from its title
+      fetch(`/api/events/${eventToken}`, { headers: { Accept: "application/json" } })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error("That event isn't here."))))
+        .then((ev) => {
+          if (!ev.can_edit) return setError("Only the people running this event can make a poll for it.");
+          setForm((f) => (f.title ? f : { ...f, title: `When should we hold ${ev.title}?` }));
+        })
+        .catch((e) => setError(e.message));
+      return;
+    }
     if (!editing) {
       api("").then((d) => !d.can_create && setError("Only admins can make schedule polls for now.")).catch((e) => setError(e.message));
       return;
@@ -105,6 +117,8 @@ export default function PollForm() {
     setSaving(true);
     try {
       const body = { poll: { ...form, members: form.members.map(({ user_id, role }) => ({ user_id, role })) } };
+      // /schedule_polls/new?event=<token>: a poll that picks a time for that event
+      if (!editing && eventToken) body.poll.event_token = eventToken;
       const data = editing ? await api(`/${token}`, { method: "PATCH", body }) : await api("", { method: "POST", body });
       showToast(editing ? "Poll saved." : "Poll created. Share the link to get votes.", { tone: "success" });
       navigate(`/${data.token}`);

@@ -23,6 +23,8 @@ class User < ApplicationRecord
   has_many :schedule_polls, dependent: :destroy
   has_many :schedule_poll_members, dependent: :destroy
   has_many :schedule_poll_ballots, dependent: :nullify
+  has_many :event_collaborators, dependent: :destroy
+  has_many :event_rsvps, dependent: :destroy
 
   # Set default values for new users
   after_initialize :set_defaults, unless: :persisted?
