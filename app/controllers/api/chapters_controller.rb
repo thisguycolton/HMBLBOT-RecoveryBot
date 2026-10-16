@@ -1,5 +1,7 @@
 # app/controllers/api/chapters_controller.rb
 class Api::ChaptersController < ApplicationController
+  include KeepsRobotsOut
+  keep_robots_out
   before_action :set_book
   before_action :set_chapter, only: [:show, :update, :destroy]
   # Reading is public; changing a book's chapters is for admins only.

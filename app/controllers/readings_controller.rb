@@ -1,4 +1,6 @@
 class ReadingsController < ApplicationController
+  include KeepsRobotsOut
+  keep_robots_out
   before_action :authenticate_user!, only: %i[ mine new create edit update destroy ]
   before_action :set_reading, only: %i[ show edit update destroy ]
   before_action :authorize_owner!, only: %i[ edit update destroy ]

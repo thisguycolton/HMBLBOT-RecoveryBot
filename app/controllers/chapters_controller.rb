@@ -1,4 +1,6 @@
 class ChaptersController < ApplicationController
+  include KeepsRobotsOut
+  keep_robots_out
   layout "reader"
     before_action :set_book
 

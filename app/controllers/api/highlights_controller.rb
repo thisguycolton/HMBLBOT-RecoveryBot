@@ -6,6 +6,8 @@
 #   * one highlight on its own, with that highlight's signed share id
 #     (?hl=SHARE_ID), which reveals nothing else.
 class Api::HighlightsController < ApplicationController
+  include KeepsRobotsOut
+  keep_robots_out
   before_action :authenticate_user!, except: [:index, :collection]
 
   # GET /api/highlights?chapter_slug=...[&book_slug=...][&share=TOKEN | &hl=SHARE_ID]

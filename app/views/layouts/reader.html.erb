@@ -37,7 +37,7 @@
     meta.content = isDark ? '#0a0a0a' : '#ffffff';
   })();
 </script>
-<body data-layout="reader" class="min-h-screen bg-stone-100 text-slate-900 dark:bg-stone-800 dark:text-neutral-100" data-current-user="<%= user_signed_in? %>" data-suite-admin="<%= user_signed_in? && current_user.suite_admin? %>" data-admin="<%= user_signed_in? && current_user.admin? ? "true" : "false" %>">
+<body data-layout="reader" class="min-h-screen bg-stone-100 text-slate-900 dark:bg-stone-800 dark:text-neutral-100" data-current-user="<%= user_signed_in? %>" data-suite-admin="<%= user_signed_in? && current_user.suite_admin? %>" data-admin="<%= user_signed_in? && current_user.admin? ? "true" : "false" %>" data-user-name="<%= current_user&.name.presence || current_user&.email %>">
   <%= yield %>
   <%= render "application/toasts" %>
 </body>
