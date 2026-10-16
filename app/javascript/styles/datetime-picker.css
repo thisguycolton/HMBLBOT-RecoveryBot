@@ -1,0 +1,1211 @@
+/* ============================================================
+   DateTimePicker Calendar
+   ============================================================ */
+
+/* ============================================================
+   THEME TOKENS
+   ============================================================ */
+
+   .react-calendar{
+    border: none!important;
+   }
+
+.react-calendar-wrapper {
+  --calendar-primary: var(--primary-color, #0b6ede);
+  --calendar-secondary: var(--secondary-color, #D4D4D4);
+
+  /* Light */
+  --calendar-surface: #ffffff;
+  --calendar-surface-border: rgba(0, 0, 0, 0.06);
+
+  --calendar-text: #1e293b;
+  --calendar-text-muted: #64748b;
+  --calendar-text-light: #94a3b8;
+
+  --calendar-border: rgba(0, 0, 0, 0.06);
+
+  --calendar-hover: rgba(13, 110, 254, 0.06);
+  --calendar-hover-strong: rgba(13, 110, 254, 0.1);
+
+  --calendar-disabled-bg: rgba(0, 0, 0, 0.04);
+  --calendar-disabled-text: #cbd5e1;
+
+  --calendar-today-bg: rgba(13, 110, 254, 0.08);
+  --calendar-nav-hover: rgba(0, 0, 0, 0.04);
+
+  --calendar-selected-text: #ffffff;
+}
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+
+.react-calendar-wrapper.dark,
+.react-calendar-wrapper[data-dark="true"],
+html.dark .react-calendar-wrapper,
+body.dark .react-calendar-wrapper {
+  --calendar-surface: #0d0d0f;
+  --calendar-surface-border: rgba(255, 255, 255, 0.1);
+
+  --calendar-text: #e4e4e7;
+  --calendar-text-muted: #a1a1aa;
+  --calendar-text-light: #71717a;
+
+  --calendar-border: rgba(255, 255, 255, 0.08);
+
+  --calendar-hover: rgba(255, 255, 255, 0.08);
+  --calendar-hover-strong: rgba(255, 255, 255, 0.14);
+
+  --calendar-disabled-bg: rgba(255, 255, 255, 0.04);
+  --calendar-disabled-text: #52525b;
+
+  --calendar-today-bg: rgba(13, 110, 254, 0.15);
+  --calendar-nav-hover: rgba(255, 255, 255, 0.08);
+
+  --calendar-selected-text: #ffffff;
+}
+
+/* ============================================================
+   CALENDAR BASE
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  margin: 0;
+  padding: 0;
+
+  border: none;
+
+  box-sizing: border-box;
+
+  font-family: inherit;
+  line-height: 1.125em;
+
+  color: var(--calendar-text);
+  background-color: transparent !important;
+}
+
+.react-calendar-wrapper .react-calendar *,
+.react-calendar-wrapper .react-calendar *::before,
+.react-calendar-wrapper .react-calendar *::after {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__navigation {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+
+  margin: 0;
+  padding: 0;
+  height: 40px;
+
+  gap: 4px;
+  background-color: var(--calendar-primary);
+}
+
+.react-calendar-wrapper .react-calendar__navigation button {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 6px;
+
+  color: var(--calendar-text-muted);
+  background: transparent;
+
+  font-size: 11px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.react-calendar-wrapper .react-calendar__navigation button:enabled:hover {
+  background-color: var(--calendar-nav-hover);
+  color: var(--calendar-text);
+}
+
+.react-calendar-wrapper .react-calendar__navigation button:disabled {
+  color: var(--calendar-disabled-text);
+  cursor: default;
+}
+
+.react-calendar-wrapper .react-calendar__navigation button svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* Month/year label */
+.react-calendar-wrapper .react-calendar__navigation .react-calendar__navigation__arrow {
+  width: 58px;
+  height: 40px;
+  background-color: #1e293b72!important;
+  border-radius: 0;
+}
+
+
+.react-calendar-wrapper .react-calendar__navigation__label {
+  flex: 1;
+
+  min-width: 0;
+
+  color: #d0d0db;
+
+  font-size: 16px !important;
+  font-weight: 600 !important;
+
+  text-align: center;
+}
+
+.react-calendar-wrapper .react-calendar__navigation__label:hover {
+  background: transparent !important;
+}
+
+.react-calendar-wrapper .react-calendar__navigation__label * {
+  color: inherit;
+}
+
+
+
+/* ============================================================
+   MONTH VIEW
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__month-view {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ============================================================
+   WEEKDAY HEADER
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__month-view__weekdays {
+  display: grid !important;
+
+  grid-template-columns: repeat(7, 40px);
+
+  width: 280px;
+  height: 24px;
+
+  margin: 0 auto 4px;
+  padding: 0;
+
+  text-align: center;
+}
+
+.react-calendar-wrapper .react-calendar__month-view__weekdays__weekday {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+
+  height: 24px;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--calendar-text-muted) !important;
+
+  font-size: 11px !important;
+  font-weight: 500 !important;
+
+  line-height: 1;
+
+  text-align: center;
+
+  text-transform: none;
+  letter-spacing: 0;
+
+  text-decoration: none !important;
+}
+
+.react-calendar-wrapper .react-calendar__month-view__weekdays__weekday abbr {
+  display: block;
+
+  color: inherit;
+
+  font-size: inherit;
+  font-weight: inherit;
+
+  text-decoration: none !important;
+}
+
+/* ============================================================
+   FIXED DAY GRID
+   ============================================================ */
+
+/*
+ * react-calendar normally uses a flex layout and places
+ * flex-basis directly on each tile.
+ *
+ * We intentionally replace that with a fixed seven-column grid.
+ */
+.react-calendar__viewContainer{
+  padding:10px;
+  background-color: var(--calendar-surface) !important;
+  border-radius: 0 0 20px 20px !important;
+}
+
+.react-calendar-wrapper .react-calendar__month-view__days {
+  display: grid !important;
+
+  grid-template-columns: repeat(7, 40px);
+  grid-auto-rows: 40px;
+
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+
+  margin: 0 auto;
+}
+
+/* ============================================================
+   DAY TILE
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__month-view__days .react-calendar__tile {
+  position: relative;
+
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+
+  flex: none !important;
+  flex-basis: auto !important;
+  flex-grow: 0 !important;
+  flex-shrink: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  box-sizing: border-box;
+
+  border: none;
+  border-radius: 50%;
+
+  color: var(--calendar-text) !important;
+  background: transparent !important;
+
+  font-family: inherit;
+  font-size: 14px !important;
+  font-weight: 400;
+
+  line-height: 1;
+
+  text-align: center;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* ============================================================
+   DATE TEXT
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__month-view__days .react-calendar__tile abbr {
+  position: relative !important;
+
+  z-index: 2;
+
+  width: auto !important;
+  height: auto !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: inherit;
+
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+
+  line-height: 1;
+
+  text-decoration: none !important;
+}
+
+/* ============================================================
+   HOVER
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__month-view__days .react-calendar__tile:enabled:hover {
+  background-color: var(--calendar-hover) !important;
+}
+
+.react-calendar-wrapper .react-calendar__month-view__days .react-calendar__tile:focus {
+  outline: none;
+}
+
+.react-calendar-wrapper .react-calendar__month-view__days .react-calendar__tile:focus-visible {
+  outline: 2px solid var(--calendar-primary);
+  outline-offset: 1px;
+}
+
+
+/* ============================================================
+   WEEKENDS
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__month-view__days__day--weekend {
+  color: var(--calendar-text) !important;
+}
+
+/* ============================================================
+   NEIGHBORING MONTH
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__month-view__days__day--neighboringMonth abbr{
+  color: #7a7e84 !important;
+}
+
+/* ============================================================
+   SELECTED DATE
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__tile.selected-tile {
+  background-color: var(--calendar-primary) !important;
+
+  color: var(--calendar-selected-text) !important;
+
+  font-weight: 600;
+
+  border-radius: 50%;
+}
+
+/*
+ * The tile itself is now the selected circle.
+ * No additional 48px indicator is necessary.
+ */
+
+.react-calendar-wrapper .react-calendar__tile.selected-tile .selected-indicator {
+  display: none;
+}
+
+/* ============================================================
+   TODAY
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__tile.today-tile:not(.selected-tile) {
+  background-color: transparent !important;
+}
+
+/*
+ * Small dot underneath today's date.
+ */
+
+.react-calendar-wrapper .react-calendar__tile.today-tile:not(.selected-tile) .today-indicator {
+  position: absolute;
+
+  left: 50%;
+  bottom: 4px;
+
+  width: 4px;
+  height: 4px;
+
+  transform: translateX(-50%);
+
+  border: none;
+  border-radius: 50%;
+
+  background-color: var(--calendar-primary);
+}
+
+/* ============================================================
+   DISABLED DATES
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__tile:disabled {
+  color: var(--calendar-disabled-text) !important;
+
+  background: transparent !important;
+
+  cursor: not-allowed;
+}
+
+.react-calendar-wrapper .react-calendar__tile:disabled:hover {
+  background: transparent !important;
+}
+
+/* ============================================================
+   RANGE SELECTION
+   ============================================================ */
+
+/*
+ * The range is deliberately rendered as a compact pill.
+ */
+
+.react-calendar-wrapper .react-calendar__tile.range-start-tile,
+.react-calendar-wrapper .react-calendar__tile.range-end-tile {
+  z-index: 1;
+
+  color: #ffffff !important;
+
+  background-color: var(--calendar-primary) !important;
+
+  font-weight: 600;
+}
+
+.react-calendar-wrapper .react-calendar__tile.range-start-tile {
+  border-radius: 50%;
+}
+
+.react-calendar-wrapper .react-calendar__tile.range-end-tile {
+  border-radius: 50%;
+}
+
+.react-calendar-wrapper .react-calendar__tile.range-between-tile {
+  border-radius: 0 !important;
+
+  background-color: var(--calendar-secondary) !important;
+
+  color: var(--calendar-text) !important;
+}
+
+/*
+ * Range indicators are no longer necessary.
+ */
+
+.react-calendar-wrapper .react-calendar__tile.range-start-tile .range-start-indicator,
+
+.react-calendar-wrapper .react-calendar__tile.range-end-tile .range-end-indicator,
+
+.react-calendar-wrapper .react-calendar__tile.range-between-tile .range-between-indicator {
+  display: none;
+}
+
+/* ============================================================
+   REACT-CALENDAR DEFAULT ACTIVE STATE
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__tile--active {
+  background-color: transparent !important;
+}
+
+.react-calendar-wrapper .react-calendar__tile--active:hover,
+.react-calendar-wrapper .react-calendar__tile--active:focus {
+  background-color: transparent !important;
+}
+
+/*
+ * Our application-level selected class wins instead.
+ */
+
+.react-calendar-wrapper .react-calendar__tile--active.selected-tile {
+  background-color: var(--calendar-primary) !important;
+
+  color: var(--calendar-selected-text) !important;
+}
+
+.react-calendar {
+  border-radius: 0 0 20px 20px;
+  overflow: hidden;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================================
+   ACTION BAR
+   ============================================================ */
+
+
+/* Inset inside the popup's padding; radius is concentric with the popup (32px - 12px padding) */
+.datetime-picker-action-bar-shadow {
+  border-radius: 20px 20px 0 0;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 8px;
+}
+
+.datetime-picker-action-bar {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border-radius: inherit;
+  background-color: #ffffff;
+
+}
+
+.datetime-picker-action-bar.dark{
+  background-color: #1e293b;
+}
+
+.datetime-picker-action-btn {
+  flex: 1;
+
+  padding: 4px 6px;
+
+  border: 0;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0;
+
+  background-color: transparent;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.datetime-picker-action-btn:hover {
+  background-color: var(--calendar-secondary);
+}
+
+.datetime-picker-action-btn {
+  color:#0d0d0f;
+}
+
+.datetime-picker-action-btn.dark {
+  color: #d0d0db;
+}
+
+.datetime-picker-action-btn:hover {
+  background-color: var(--calendar-hover);
+  border-color: var(--calendar-secondary);
+}
+
+/* Active preset: selected date matches the button's date */
+.datetime-picker-action-btn.is-active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: color-mix(in srgb, var(--calendar-primary, #0b6ede) 16%, #ffffff);
+  color: color-mix(in srgb, var(--calendar-primary, #0b6ede) 70%, #000000);
+  font-weight: 600;
+}
+
+.datetime-picker-action-btn.is-active:hover {
+  background-color: color-mix(in srgb, var(--calendar-primary, #0b6ede) 22%, #ffffff);
+}
+
+.datetime-picker-action-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: var(--calendar-primary, #0b6ede);
+}
+
+html.dark .datetime-picker-action-btn.is-active,
+body.dark .datetime-picker-action-btn.is-active {
+  background-color: color-mix(in srgb, var(--calendar-primary, #0b6ede) 35%, #1e293b);
+  color: #ffffff;
+}
+
+html.dark .datetime-picker-action-btn.is-active:hover,
+body.dark .datetime-picker-action-btn.is-active:hover {
+  background-color: color-mix(in srgb, var(--calendar-primary, #0b6ede) 45%, #1e293b);
+}
+
+html.dark .datetime-picker-action-dot,
+body.dark .datetime-picker-action-dot {
+  background-color: #ffffff;
+}
+
+.datetime-picker-confirm-btn {
+  width: 58px;
+  height: 40px;
+
+  min-width: 58px;
+
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 0;
+
+  background-color: var(--calendar-primary);
+
+  color: #ffffff;
+
+  font-size: 9px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: opacity 0.15s ease;
+}
+
+.datetime-picker-confirm-btn:hover {
+  opacity: 0.9;
+}
+
+.datetime-picker-confirm-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ============================================================
+   TIME PICKER
+   ============================================================ */
+
+.time-picker {
+  padding: 8px;
+}
+
+.time-picker-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 12px;
+}
+
+.time-picker-reset-btn {
+  padding: 6px 12px;
+
+  border: 1px solid var(--calendar-border);
+  border-radius: 6px;
+
+  background-color: transparent;
+
+  color: var(--calendar-text);
+
+  font-size: 12px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition: background-color 0.15s ease;
+}
+
+.time-picker-reset-btn:hover {
+  background-color: var(--calendar-hover);
+}
+
+.time-picker-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   TIME DISPLAY
+   ============================================================ */
+
+.time-picker-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  padding: 20px;
+  margin-bottom: 16px;
+
+  border: 2px solid var(--calendar-border);
+  border-radius: 8px;
+
+  background-color: var(--calendar-hover);
+}
+
+.time-picker-display-value {
+  font-size: 32px;
+  font-weight: 700;
+
+  font-family: "TikTok Sans"!important;
+
+  color: var(--calendar-text);
+
+  line-height: 1;
+}
+
+.time-picker-display-hour {
+  text-align: center;
+}
+
+.time-picker-display-separator {
+  font-size: 32px;
+  font-weight: 400;
+
+  color: var(--calendar-text-muted);
+
+  line-height: 1;
+}
+
+.time-picker-display-minute {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+}
+
+.time-picker-display-period {
+  padding: 8px 12px;
+
+  border: none;
+  border-radius: 6px;
+
+  background-color: var(--calendar-primary);
+
+  color: #ffffff;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: opacity 0.15s ease;
+}
+
+.time-picker-display-period:hover {
+  opacity: 0.9;
+}
+
+/* ============================================================
+   TIME STEPPERS
+   ============================================================ */
+
+.time-picker-stepper {
+  position: absolute;
+
+  padding: 4px 8px;
+
+  border: none;
+
+  background: none;
+
+  color: var(--calendar-text-muted);
+
+  font-size: 12px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition: color 0.15s ease;
+}
+
+.time-picker-stepper:hover {
+  color: var(--calendar-text);
+}
+
+.time-picker-stepper-up {
+  top: -8px;
+}
+
+.time-picker-stepper-down {
+  bottom: -8px;
+}
+
+/* ============================================================
+    DATE-TIME TIME SECTION
+    The compact time selector shown below the calendar in date-time mode.
+    ============================================================ */
+
+.datetime-picker-time-section {
+  margin-bottom: 8px;
+  padding: 16px;
+
+  background-color: var(--calendar-surface);
+  border-radius: 12px;
+}
+
+.datetime-picker-time-header {
+  text-align: center;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  color: var(--calendar-text-muted);
+
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.datetime-picker-time-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+}
+
+.datetime-picker-time-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 4px;
+}
+
+.datetime-picker-time-arrow {
+  width: 32px;
+  height: 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: var(--calendar-text-muted);
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.datetime-picker-time-arrow:hover {
+  background-color: var(--calendar-hover);
+  color: var(--calendar-text);
+}
+
+.datetime-picker-time-value {
+  width: 32px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 20px;
+  font-weight: 800;
+
+  color: var(--calendar-text);
+
+  font-family: "TikTok Sans";
+}
+
+.datetime-picker-time-separator {
+  font-size: 20px;
+  font-weight: 800;
+
+  color: var(--calendar-text-muted);
+
+  font-family: "TikTok Sans";
+
+  margin-top: -4px;
+}
+
+/* ============================================================
+   HOURS GRID
+   ============================================================ */
+
+.time-picker-hours-grid {
+  display: grid;
+
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 8px;
+}
+
+.time-picker-hour-card {
+  aspect-ratio: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 2px solid var(--calendar-border);
+  border-radius: 8px;
+
+  background-color: transparent;
+
+  color: var(--calendar-text);
+
+  font-size: 16px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.time-picker-hour-card:hover {
+  border-color: var(--calendar-primary);
+  background-color: var(--calendar-hover);
+}
+
+.time-picker-hour-card-selected {
+  border-color: var(--calendar-primary) !important;
+
+  background-color: var(--calendar-primary) !important;
+
+  color: #ffffff;
+}
+
+/* ============================================================
+   YEAR VIEW
+   Displays the 12 months
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__year-view__months {
+  display: grid !important;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.react-calendar-wrapper .react-calendar__year-view__months .react-calendar__tile {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 95px !important;
+
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+
+  padding: 8px !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: none !important;
+
+  border-radius: 8px;
+
+  color: var(--calendar-text) !important;
+
+  font-size: 14px !important;
+  font-weight: 500;
+
+  background: transparent !important;
+}
+
+.react-calendar-wrapper .react-calendar__year-view__months .react-calendar__tile:hover {
+  background-color: var(--calendar-hover) !important;
+}
+
+
+/* ============================================================
+   DECADE VIEW
+   Displays the years
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__decade-view__years {
+  display: grid !important;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.react-calendar-wrapper .react-calendar__decade-view__years .react-calendar__tile {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 95px !important;
+
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+
+  padding: 8px !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: none !important;
+
+  border-radius: 8px;
+
+  color: var(--calendar-text) !important;
+
+  font-size: 14px !important;
+  font-weight: 500;
+
+  background: transparent !important;
+}
+
+.react-calendar-wrapper .react-calendar__decade-view__years .react-calendar__tile:hover {
+  background-color: var(--calendar-hover) !important;
+}
+
+
+/* ============================================================
+   CENTURY VIEW
+   ============================================================ */
+
+.react-calendar-wrapper .react-calendar__century-view__decades {
+  display: grid !important;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.react-calendar-wrapper .react-calendar__century-view__decades .react-calendar__tile {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 75px !important;
+
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+
+  padding: 8px !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: none !important;
+
+  border-radius: 8px;
+
+  color: var(--calendar-text) !important;
+
+  font-size: 14px !important;
+  font-weight: 500;
+
+  background: transparent !important;
+}
+
+.react-calendar-wrapper .react-calendar__century-view__decades .react-calendar__tile:hover {
+  background-color: var(--calendar-hover) !important;
+}
+
+/* ============================================================
+   DATE TIME PICKER POPUP
+   ============================================================ */
+
+.datetime-picker-popup {
+  z-index: 1000;
+}
+
+.datetime-picker-panel {
+  width: max-content;
+  max-width: calc(100vw - 32px);
+
+  border-radius: 24px;
+
+  overflow: hidden;
+
+  background: #f8fafc;
+
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.18);
+}
+
+.calendar-panel-content {
+  padding: 12px;
+}
+
+
+/* ============================================================
+   MOBILE DRAWER
+   ============================================================ */
+
+@media (max-width: 640px) {
+
+  /*
+   * The portal normally positions this absolutely using the
+   * trigger's coordinates.
+   *
+   * On mobile we intentionally throw those coordinates away
+   * and anchor the picker to the bottom of the viewport.
+   */
+
+  .datetime-picker-popup {
+    position: fixed !important;
+
+    top: auto !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+
+    width: 100vw !important;
+    max-width: 100vw !important;
+
+    margin: 0 !important;
+
+    z-index: 1000;
+  }
+
+  .datetime-picker-panel {
+    position: relative;
+
+    width: 100% !important;
+    max-width: none !important;
+
+    max-height: 90dvh;
+
+    margin: 0;
+
+    border-radius: 24px 24px 0 0;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    background: #f8fafc;
+
+    box-shadow:
+      0 -12px 40px rgba(0, 0, 0, 0.22);
+
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /*
+   * Remove the desktop padding so the drawer can use the
+   * entire width.
+   */
+
+  .calendar-panel-content {
+    padding: 0;
+  }
+
+}
