@@ -1209,3 +1209,19 @@ body.dark .datetime-picker-action-dot {
   }
 
 }
+/* Today / Tomorrow bar in dark mode (the .dark classes above are never applied) */
+html.dark .datetime-picker-action-bar,
+body.dark .datetime-picker-action-bar {
+  background-color: #0d0d0f;
+}
+
+html.dark .datetime-picker-action-btn,
+body.dark .datetime-picker-action-btn {
+  color: #e4e4e7;
+  border-right-color: rgba(255, 255, 255, 0.08);
+}
+
+html.dark .datetime-picker-action-btn:not(.is-active):hover,
+body.dark .datetime-picker-action-btn:not(.is-active):hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}

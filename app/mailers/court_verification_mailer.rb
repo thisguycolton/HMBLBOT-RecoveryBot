@@ -3,12 +3,12 @@ class CourtVerificationMailer < ApplicationMailer
 
   def verification_email
     @court_verification = params[:court_verification]
+    @letter = @court_verification.letter
+    group = @court_verification.group
 
-    mail(
-      to: @court_verification.respondent_email,
-      cc: ENV["ACID_TEST_GROUP_EMAIL"],
-      subject: "Verification of AA Meeting Attendance"
-    )
+    # A group's letters copy the group's own email (and replies go there), not the Acid Test's
+    contact = group ? group.court_email_reply_to.presence : ENV["ACID_TEST_GROUP_EMAIL"]
+    mail(to: @court_verification.respondent_email, cc: contact, reply_to: group && contact, subject: @letter.subject)
   end
 
   # Several verifications in one email, for someone who needs a batch at once (sent from the

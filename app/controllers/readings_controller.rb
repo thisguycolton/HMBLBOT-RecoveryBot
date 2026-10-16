@@ -5,6 +5,7 @@ class ReadingsController < ApplicationController
   before_action :set_reading, only: %i[ show edit update destroy ]
   before_action :authorize_owner!, only: %i[ edit update destroy ]
   layout "reader", only: %i[new index show edit mine]
+  READINGS_PER_PAGE = 24
 
 
   def index
@@ -12,7 +13,8 @@ class ReadingsController < ApplicationController
 
     # Qualify columns: the tag filter below joins `tags`, which also has a `title`
     if params[:q].present?
-      @readings = @readings.where("readings.title ILIKE ?", "%#{Reading.sanitize_sql_like(params[:q])}%")
+      like = "%#{Reading.sanitize_sql_like(params[:q].strip)}%"
+      @readings = @readings.where("readings.title ILIKE :q OR readings.source ILIKE :q", q: like)
     end
 
     if params[:tag].present?
@@ -28,13 +30,20 @@ class ReadingsController < ApplicationController
       end
     end
   
-    @tags = Tag.order(:title)
-    # Pass all tags for theme browsing
-    @tags_json = @tags.map do |tag|
-        { id: tag.id, title: tag.title, slug: tag.slug, icon_name: tag.icon_name }
+    # Themes to browse: the ones with published readings, with how many each has (the
+    # archive shows the most used first and the rest behind "Show more")
+    counts = Tag.joins(:readings).merge(Reading.published).group("tags.id").distinct.count("readings.id")
+    @tags_json = Tag.where(id: counts.keys).or(Tag.where(id: @selected_tag&.id)).order(:title).map do |tag|
+      { id: tag.id, title: tag.title, slug: tag.slug, icon_name: tag.icon_name, count: counts[tag.id].to_i }
     end
 
-    @readings_json = @readings.map { |reading| reading_card_json(reading) }
+    # A page of cards at a time, with their text loaded in bulk
+    @total = @readings.count
+    @pages = [(@total / READINGS_PER_PAGE.to_f).ceil, 1].max
+    @page = params[:page].to_i.clamp(1, @pages)
+    @readings_json = @readings.includes(:rich_text_content, :richer_text_richer_content)
+                              .offset((@page - 1) * READINGS_PER_PAGE).limit(READINGS_PER_PAGE)
+                              .map { |reading| reading_card_json(reading) }
   end
 
   # GET /readings/mine
@@ -82,7 +91,8 @@ class ReadingsController < ApplicationController
 def create
   @reading = Reading.new(reading_params)
   @reading.user = current_user
-  @reading.group_id ||= current_user.user_active_group&.group_id
+  @reading.group_id = reading_group_id(@reading.group_id) || default_group_id
+  remember_group(@reading.group_id)
 
   if @reading.save
     render json: { id: @reading.id }, status: :created
@@ -92,9 +102,11 @@ def create
 end
 
 def update
-  @reading.group_id ||= current_user.user_active_group&.group_id
+  @reading.assign_attributes(reading_params)
+  @reading.group_id = reading_group_id(@reading.group_id) if @reading.group_id_changed?
+  remember_group(@reading.group_id) if @reading.group_id_changed?
 
-  if @reading.update(reading_params)
+  if @reading.save
     render json: { id: @reading.id }, status: :ok
   else
     render json: { errors: @reading.errors.full_messages }, status: :unprocessable_entity
@@ -112,6 +124,44 @@ end
   end
 
   private
+
+  # A reading can only be tagged to a group its author is in (admins: any group)
+  def reading_group_id(id)
+    return nil if id.blank?
+    return id if current_user.suite_admin? && Group.exists?(id)
+
+    current_user.groups.where(id: id).pick(:id)
+  end
+
+  # The group new readings default to: the last one used, else their only group
+  def default_group_id
+    active = current_user.user_active_group&.group_id
+    return active if active && current_user.groups.exists?(id: active)
+
+    ids = current_user.groups.limit(2).pluck(:id)
+    ids.one? ? ids.first : nil
+  end
+
+  def remember_group(group_id)
+    return unless group_id && current_user.groups.exists?(id: group_id)
+
+    active = UserActiveGroup.find_or_initialize_by(user: current_user)
+    active.update!(group_id: group_id)
+  end
+
+  helper_method def reading_editor_user_json
+    groups = current_user.groups.includes(:meetings).order(:title)
+    active_id = (@reading&.group_id if @reading&.persisted?) || default_group_id
+    {
+      id: current_user.id,
+      name: current_user.name,
+      groups: groups.map { |g| { id: g.id, title: g.title, meetingLink: g.meetings.map(&:conference_url).compact.first } },
+      groups_open: Group.feature_open_to?(current_user),
+      user_active_group: (g = groups.find { |x| x.id == active_id }) && {
+        group: { id: g.id, title: g.title, meetingLink: g.meetings.map(&:conference_url).compact.first },
+      },
+    }
+  end
     # Use callbacks to share common setup or constraints between actions.
     def set_reading
       @reading = Reading.find(params[:id])

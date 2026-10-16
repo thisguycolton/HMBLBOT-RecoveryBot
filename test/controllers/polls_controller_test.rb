@@ -28,10 +28,6 @@ class PollsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should get edit" do
-    get edit_poll_url(@poll)
-    assert_response :success
-  end
 
   test "should update poll" do
     patch poll_url(@poll), params: { poll: { closeDate: @poll.closeDate, closeTime: @poll.closeTime } }

@@ -6,8 +6,8 @@ import { getTagIcon, getAccentThemeFromIcon } from "./ReadingArchiveUtils";
  * Designed to be used within a flex container that handles overflow.
  */
 const TagBadge = ({ tag, onClick, className = "" }) => {
-  const IconComponent = getTagIcon(tag.icon_name);
-  const accentTheme = getAccentThemeFromIcon(tag.icon_name);
+  const IconComponent = getTagIcon(tag.icon_name, tag.slug || tag.title);
+  const accentTheme = getAccentThemeFromIcon(tag.icon_name, tag.slug || tag.title);
 
   return (
     <span

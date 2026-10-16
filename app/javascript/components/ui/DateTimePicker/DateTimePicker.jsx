@@ -12,7 +12,7 @@ import {
   getNextHourLocal,
   getWeekRange
 } from "./dateUtils";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Clock, X } from "lucide-react";
 import { inputClass } from "../styles";
 
 // Normalize a value (Date or date/date-time string) to a valid local Date, or null
@@ -35,6 +35,12 @@ const toLocalDate = (input) => {
  * - secondaryColor: hex color string
  * - value: the committed selected value(s)
  * - onChange: callback fired when selection is confirmed
+ * - compact: show the closed field like a plain input ("11/20/2021", "12:30 PM",
+ *   "10/16/2026, 12:30 PM") with the icon on the right
+ * - placeholder: text when there's no value (compact only)
+ * - clearable: show an × that clears the value (onChange(null))
+ * - minDate / maxDate: limit the calendar
+ * - id, disabled: passed to the field button, so a <label htmlFor> opens it
  */
 export default function DateTimePicker({
   pickerType = "date",
@@ -45,6 +51,14 @@ export default function DateTimePicker({
   value,
   onChange,
   invalid = false,
+  compact = false,
+  placeholder,
+  clearable = false,
+  minDate,
+  maxDate,
+  id,
+  disabled = false,
+  className = "",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   
@@ -82,39 +96,42 @@ export default function DateTimePicker({
       const triggerRect = triggerRef.current.getBoundingClientRect();
       const gap = 8; // Small gap between trigger and popup
       
-      // Use trigger's width as the popup width (calendar matches input width)
-      const popupWidth = triggerRect.width;
-      // Estimate popup height for edge detection
-      const estimatedPopupHeight = 300;
-      
-      // Calculate document coordinates by adding scroll offset
+      // The popup is at least as wide as the calendar, even under a narrow field
+      const popupWidth = Math.max(triggerRect.width, 320);
+      // The popup's real height once it has rendered, else a typical calendar's
+      const popupHeight = popupRef.current?.offsetHeight || 380;
+
+      // Document coordinates, so the popup scrolls with the page
       const docTop = triggerRect.top + window.scrollY;
       const docLeft = triggerRect.left + window.scrollX;
-      
-      // Calculate initial position below trigger, aligned to left edge
+
+      // Below the field, aligned to its left edge
       let top = docTop + triggerRect.height + gap;
       let left = docLeft;
-      
-      // Adjust for right edge - shift left if popup would overflow
-      const availableWidthRight = document.documentElement.clientWidth - docLeft;
-      if (availableWidthRight < popupWidth) {
-        // Shift left to fit, but don't go negative
-        const overflow = popupWidth - availableWidthRight;
-        left = Math.max(0, docLeft - overflow);
+
+      // Shift left if it would run off the right edge, but not past the left one
+      const viewportWidth = document.documentElement.clientWidth;
+      if (triggerRect.left + popupWidth > viewportWidth) {
+        left = Math.max(window.scrollX + 8, window.scrollX + viewportWidth - popupWidth - 8);
       }
-      
-      // Adjust for bottom edge - open above trigger if not enough space
-      const availableHeightBelow = document.documentElement.clientHeight - docTop;
-      if (availableHeightBelow < estimatedPopupHeight) {
-        // Open above the trigger
-        top = docTop - estimatedPopupHeight - gap;
+
+      // Open above only when it doesn't fit below and there's more room above
+      const spaceBelow = window.innerHeight - triggerRect.bottom - gap;
+      const spaceAbove = triggerRect.top - gap;
+      if (spaceBelow < popupHeight && spaceAbove > spaceBelow) {
+        top = Math.max(window.scrollY + 8, docTop - popupHeight - gap);
       }
-      
+
       setPopupPosition({ top, left, width: popupWidth });
     };
     
-    // Calculate on next frame to ensure layout is settled
-    const frameId = requestAnimationFrame(updatePosition);
+    // Calculate on next frame to ensure layout is settled, then again once the popup
+    // has rendered and its height is known
+    let secondFrame;
+    const frameId = requestAnimationFrame(() => {
+      updatePosition();
+      secondFrame = requestAnimationFrame(updatePosition);
+    });
     
     // Set up scroll handler to update position
     const handleScroll = () => {
@@ -127,6 +144,7 @@ export default function DateTimePicker({
     
     return () => {
       cancelAnimationFrame(frameId);
+      cancelAnimationFrame(secondFrame);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
     };
@@ -309,6 +327,17 @@ export default function DateTimePicker({
     setPopupPosition(null);
   };
 
+  // Closed field text in the same shape as a plain date/time input
+  const formatCompactValue = () => {
+    const date = pickerType === "time" ? (value instanceof Date ? value : null) : toLocalDate(value);
+    if (!date) return null;
+    const day = date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+    const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    if (pickerType === "time") return time;
+    if (pickerType === "date-time") return `${day}, ${time}`;
+    return day;
+  };
+
   // Format display value for trigger
   const formatDisplayValue = () => {
     // Handle time-only
@@ -361,27 +390,57 @@ export default function DateTimePicker({
     secondaryColor,
   };
 
+  const compactText = compact ? formatCompactValue() : null;
+  const FieldIcon = pickerType === "time" ? Clock : CalendarDays;
+  const showClear = clearable && !disabled && value != null && value !== "";
+
   return (
-    <div ref={triggerRef}>
+    <div ref={triggerRef} className={`relative ${className}`}>
       {/* Trigger Button */}
       <button
         type="button"
+        id={id}
+        disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         aria-invalid={invalid || undefined}
-        className={`${inputClass} relative pl-9 text-left hover:bg-slate-50 dark:hover:bg-neutral-800 ${
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        className={`${inputClass} relative text-left hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-neutral-800 ${
+          compact ? `${showClear ? "pr-14" : "pr-9"} tabular-nums` : "pl-9"
+        } ${isOpen ? "!border-accent ring-2 ring-accent" : ""} ${
           invalid ? "!border-red-400 focus:!ring-red-500 dark:!border-red-500/70" : ""
         }`}
       >
-        <CalendarDays className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        {formatDisplayValue()}
+        {compact ? (
+          <>
+            {compactText ?? <span className="text-slate-400 dark:text-neutral-500">{placeholder || "—"}</span>}
+            <FieldIcon className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+          </>
+        ) : (
+          <>
+            <CalendarDays className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            {formatDisplayValue()}
+          </>
+        )}
       </button>
+      {showClear && (
+        <button
+          type="button"
+          onClick={() => { onChange?.(null); setIsOpen(false); }}
+          aria-label="Clear"
+          title="Clear"
+          className="absolute right-8 top-1/2 -translate-y-1/2 rounded-full !bg-transparent p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
 
       {/* Picker Panel - Rendered via portal for proper positioning */}
       {isOpen && popupPosition && (
         createPortal(
           <div
             ref={popupRef}
-            className="datetime-picker-popup z-10 shadow-lg rounded-4xl overflow-hidden"
+            className="datetime-picker-popup z-[60] shadow-lg rounded-4xl overflow-hidden"
             style={{
               position: 'absolute',
               top: popupPosition.top,
@@ -406,6 +465,8 @@ export default function DateTimePicker({
                 onDateTimeChange={handleDateTimeChange}
                 primaryColor={primaryColor}
                 secondaryColor={secondaryColor}
+                minDate={minDate}
+                maxDate={maxDate}
               />
             </div>
           </div>,

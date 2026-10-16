@@ -3,6 +3,7 @@ import { BookOpen, CalendarClock, EyeOff, Pencil, Search, Send, Trash2 } from "l
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass } from "../ui/styles";
+import { DateTimeField } from "../ui/DateFields";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { formatCount } from "./App";
@@ -124,7 +125,7 @@ function ScheduleForm({ onSave, onCancel }) {
   const [at, setAt] = useState("");
   return (
     <form className="flex flex-wrap justify-end gap-2" onSubmit={(e) => { e.preventDefault(); onSave(new Date(at).toISOString()); }}>
-      <input type="datetime-local" required className={`${inputClass} !w-56`} value={at} onChange={(e) => setAt(e.target.value)} />
+      <DateTimeField className="w-60" value={at} onChange={setAt} />
       <button type="submit" className={buttonClass.primary} disabled={!at}>Schedule</button>
       <button type="button" className={buttonClass.secondary} onClick={onCancel}>Cancel</button>
     </form>

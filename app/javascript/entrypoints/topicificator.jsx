@@ -119,10 +119,10 @@ mountReact("chapter-admin", (admin) => (
 ));
 
 // ---------------- Court Verification ----------------
-mountReact("court-verification-root", () => (
+mountReact("court-verification-root", (rootEl) => (
   <>
   <Navbar isAuthenticated={isAuthenticated} />
-  <CourtVerificationForm />
+  <CourtVerificationForm group={rootEl.dataset.group ? JSON.parse(rootEl.dataset.group) : null} />
   </>
 ));
 
@@ -133,7 +133,16 @@ mountReact("reading-archive-root", (rootEl) => {
 
   return (
     <Layout isAuthenticated={isAuthenticated}>
-      <ReadingArchive readings={readings} tags={tags} />
+      <ReadingArchive
+        readings={readings}
+        tags={tags}
+        notice={rootEl.dataset.notice || null}
+        selectedTag={rootEl.dataset.selectedTag || null}
+        page={Number(rootEl.dataset.page) || 1}
+        pages={Number(rootEl.dataset.pages) || 1}
+        total={Number(rootEl.dataset.total) || readings.length}
+        query={rootEl.dataset.query || ""}
+      />
     </Layout>
   );
 });

@@ -28,6 +28,8 @@ import TimePicker from "./TimePicker";
  * - primaryColor: theme color for primary actions
  * - secondaryColor: theme color for secondary elements
  */
+const startOfDay = (d) => createLocalDate(d.getFullYear(), d.getMonth(), d.getDate());
+
 export default function CalendarPanel({
   pickerType,
   selectedDate,
@@ -43,6 +45,8 @@ export default function CalendarPanel({
   onDateTimeChange,
   primaryColor,
   secondaryColor,
+  minDate,
+  maxDate,
 }) {
   // Track the calendar's current view date for navigation
   const [calendarValue, setCalendarValue] = useState(new Date());
@@ -185,9 +189,9 @@ export default function CalendarPanel({
         { label: "Next Week", onClick: handleNextWeek, isActive: isSameRange(selectedRange, getWeekRange(todayLocal, 1)) },
       ]
     : [
-        { label: "Today", onClick: handleToday, isActive: hasSelectedDate && isSameDate(selectedDate, todayLocal) },
-        { label: "Tomorrow", onClick: handleTomorrow, isActive: hasSelectedDate && isSameDate(selectedDate, tomorrowLocal) },
-      ];
+        { label: "Today", onClick: handleToday, isActive: hasSelectedDate && isSameDate(selectedDate, todayLocal), date: todayLocal },
+        { label: "Tomorrow", onClick: handleTomorrow, isActive: hasSelectedDate && isSameDate(selectedDate, tomorrowLocal), date: tomorrowLocal },
+      ].filter(({ date }) => (!minDate || date >= startOfDay(minDate)) && (!maxDate || date <= startOfDay(maxDate)));
 
   return (
     <div className="p-3">
@@ -298,6 +302,8 @@ export default function CalendarPanel({
               value={hasSelectedDate ? selectedDate : null}
               onChange={handleCalendarChange}
               calendarType="gregory"
+              minDate={minDate || undefined}
+              maxDate={maxDate || undefined}
               tileClassName={({ date }) => {
                 // For date-range: determine range-related classes
                 if (pickerType === "date-range" && selectedRange) {

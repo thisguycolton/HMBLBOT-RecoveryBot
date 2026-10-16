@@ -7,3 +7,7 @@ export const labelClass =
   "block mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
 
 export const iconInputClass = "w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none";
+
+// A <select> that matches inputClass, with its own chevron instead of the browser's
+// (.select-field in styles/tailwind.css)
+export const selectClass = `${inputClass} select-field cursor-pointer pr-9 dark:[color-scheme:dark]`;
