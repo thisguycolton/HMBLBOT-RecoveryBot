@@ -39,7 +39,7 @@ function SortableRow({ id, children }) {
   );
 }
 
-function useUpload(token) {
+function useUpload(uploadPath) {
   const [busy, setBusy] = useState(0);
   const upload = async (files) => {
     const list = [...files];
@@ -47,7 +47,7 @@ function useUpload(token) {
     const urls = [];
     for (const file of list) {
       try {
-        urls.push(await uploadImage(token, file));
+        urls.push(await uploadImage(uploadPath, file));
       } catch (e) {
         showToast(e.message, { tone: "error" });
       } finally {
@@ -61,10 +61,10 @@ function useUpload(token) {
 
 // Agenda activities: title (needed) and queue order, plus an optional picture and short
 // description. The queue number follows the list; drag to change it.
-export function ActivitiesEditor({ token, activities, onChange }) {
+export function ActivitiesEditor({ uploadPath, activities, onChange }) {
   const [title, setTitle] = useState("");
   const [open, setOpen] = useState(null);
-  const [busy, upload] = useUpload(token);
+  const [busy, upload] = useUpload(uploadPath);
   const fileFor = useRef({});
   const numbered = (list) => list.map((a, i) => ({ ...a, queue_number: i + 1 }));
   const patch = (id, change) => onChange(numbered(activities.map((a) => (a.id === id ? { ...a, ...change } : a))));
@@ -129,8 +129,8 @@ export function ActivitiesEditor({ token, activities, onChange }) {
 }
 
 // Pictures for a Photo or Gallery block: upload several at once, caption, reorder, remove
-export function PhotosEditor({ token, photos, onChange }) {
-  const [busy, upload] = useUpload(token);
+export function PhotosEditor({ uploadPath, photos, onChange }) {
+  const [busy, upload] = useUpload(uploadPath);
   const input = useRef(null);
   const patch = (id, change) => onChange(photos.map((p) => (p.id === id ? { ...p, ...change } : p)));
 

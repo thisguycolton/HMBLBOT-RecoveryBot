@@ -24,6 +24,7 @@ class User < ApplicationRecord
   has_many :schedule_poll_members, dependent: :destroy
   has_many :schedule_poll_ballots, dependent: :nullify
   has_many :event_collaborators, dependent: :destroy
+  has_many :timeline_notes, dependent: :destroy
   has_many :event_rsvps, dependent: :destroy
 
   # Set default values for new users

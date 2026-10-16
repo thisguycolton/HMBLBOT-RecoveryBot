@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BellRing, ExternalLink, RefreshCw, Trash2 } from "lucide-react";
 import { inputClass, labelClass } from "../../ui/styles";
 import Toggle from "../../ui/Toggle";
-import { api, BLOCK_INFO, updateTitle } from "../lib";
+import { api, BLOCK_INFO, COLORS, updateTitle } from "../lib";
 import { ActivitiesEditor, PhotosEditor } from "./ListEditors";
 
 export function Field({ label, hint, children }) {
@@ -33,10 +33,13 @@ export function Choice({ options, value, onChange }) {
 
 const WIDTHS = [[3, "¼"], [4, "⅓"], [6, "½"], [8, "⅔"], [9, "¾"], [12, "Full"]];
 
-// The right-hand panel's fields for the selected block
-export default function BlockInspector({ block, token, followers, changed, onChange, onRemove }) {
+// The right-hand panel's fields for the selected block. uploadPath takes its pictures;
+// pollsFor is the event whose polls a Poll block picks from. On a group page there are no
+// followers to send updates to (announces is false), `blockInfo` names its blocks and
+// `extraFields` draws the fields of the group's own blocks.
+export default function BlockInspector({ block, uploadPath, pollsFor, announces = true, followers, changed, onChange, onRemove, blockInfo = BLOCK_INFO, extraFields, textHint }) {
   const set = (field) => (value) => onChange({ [field]: value });
-  const info = BLOCK_INFO[block.type];
+  const info = blockInfo[block.type];
   const Icon = info?.icon;
 
   return (
@@ -54,7 +57,7 @@ export default function BlockInspector({ block, token, followers, changed, onCha
 
       {block.type === "heading" && (
         <>
-          <Field label="Text"><input className={inputClass} value={block.text} onChange={(e) => set("text")(e.target.value)} maxLength={200} /></Field>
+          <Field label="Text" hint={textHint}><input className={inputClass} value={block.text} onChange={(e) => set("text")(e.target.value)} maxLength={200} /></Field>
           <Field label="Size"><Choice value={block.level} onChange={set("level")} options={[[1, "Large"], [2, "Medium"], [3, "Small"]]} /></Field>
           <Field label="Align"><Choice value={block.align} onChange={set("align")} options={[["left", "Left"], ["center", "Center"], ["right", "Right"]]} /></Field>
         </>
@@ -62,10 +65,10 @@ export default function BlockInspector({ block, token, followers, changed, onCha
 
       {block.type === "notes" && (
         <>
-          <Field label="Notes" hint="Markdown: # headline, **bold**, - lists, [links](https://…)">
+          <Field label="Notes" hint={`Markdown: # headline, **bold**, - lists, [links](https://…)${textHint ? `. ${textHint}` : ""}`}>
             <textarea className={`${inputClass} min-h-40 font-mono !text-xs`} value={block.markdown} onChange={(e) => set("markdown")(e.target.value)} />
           </Field>
-          <UpdateToggle
+          {announces && <UpdateToggle
             checked={block.update}
             onChange={set("update")}
             label="Send as an update"
@@ -73,7 +76,7 @@ export default function BlockInspector({ block, token, followers, changed, onCha
             changed={changed}
             followers={followers}
             title={updateTitle(block.markdown)}
-          />
+          />}
         </>
       )}
 
@@ -82,7 +85,7 @@ export default function BlockInspector({ block, token, followers, changed, onCha
           <Field label="Guidelines" hint="Markdown: a heading, then a list works well">
             <textarea className={`${inputClass} min-h-40 font-mono !text-xs`} value={block.markdown} onChange={(e) => set("markdown")(e.target.value)} />
           </Field>
-          <UpdateToggle
+          {announces && <UpdateToggle
             checked={block.notify}
             onChange={set("notify")}
             label="Tell participants when these change"
@@ -90,7 +93,7 @@ export default function BlockInspector({ block, token, followers, changed, onCha
             changed={changed}
             followers={followers}
             title={updateTitle(block.markdown, "The guidelines changed")}
-          />
+          />}
         </>
       )}
 
@@ -99,14 +102,14 @@ export default function BlockInspector({ block, token, followers, changed, onCha
           <Field label="Title"><input className={inputClass} value={block.title} onChange={(e) => set("title")(e.target.value)} maxLength={120} /></Field>
           <Field label="Show as" hint="The side column always shows a compact list."><Choice value={block.view} onChange={set("view")} options={[["list", "List"], ["grid", "Grid"]]} /></Field>
           <Field label={`Activities (${block.activities.length})`} hint="Drag to change the order; the number follows.">
-            <ActivitiesEditor token={token} activities={block.activities} onChange={set("activities")} />
+            <ActivitiesEditor uploadPath={uploadPath} activities={block.activities} onChange={set("activities")} />
           </Field>
         </>
       )}
 
       {block.type === "photo" && (
         <Field label="Photos" hint="Two or more turn into a carousel. Tapping a photo opens it full screen.">
-          <PhotosEditor token={token} photos={block.photos} onChange={set("photos")} />
+          <PhotosEditor uploadPath={uploadPath} photos={block.photos} onChange={set("photos")} />
         </Field>
       )}
 
@@ -114,14 +117,19 @@ export default function BlockInspector({ block, token, followers, changed, onCha
         <>
           <Field label="Title"><input className={inputClass} value={block.title} onChange={(e) => set("title")(e.target.value)} placeholder="Optional" maxLength={120} /></Field>
           <Field label="Photos" hint="Tapping a photo opens the shadow box carousel.">
-            <PhotosEditor token={token} photos={block.photos} onChange={set("photos")} />
+            <PhotosEditor uploadPath={uploadPath} photos={block.photos} onChange={set("photos")} />
           </Field>
         </>
       )}
 
-      {block.type === "poll" && <PollPicker token={token} value={block.poll_token} onChange={set("poll_token")} />}
+      {block.type === "poll" && pollsFor && <PollPicker token={pollsFor} value={block.poll_token} onChange={set("poll_token")} />}
+
+      {extraFields?.(block, set)}
 
       <div className="space-y-4 border-t border-slate-200 pt-4 dark:border-neutral-800">
+        <Field label="Color" hint="From the site's palette; it follows light and dark mode.">
+          <ColorPicker value={block.color || "default"} onChange={set("color")} />
+        </Field>
         <Field label="Column"><Choice value={block.region} onChange={set("region")} options={[["main", "Main"], ["side", "Side"]]} /></Field>
         <Field label="View" hint="Auto uses the side column's smaller view there and the larger view in the main column.">
           <Choice value={block.size || "auto"} onChange={set("size")} options={[["auto", "Auto"], ["compact", "Smaller"], ["full", "Larger"]]} />
@@ -130,6 +138,20 @@ export default function BlockInspector({ block, token, followers, changed, onCha
           <Choice value={block.span} onChange={set("span")} options={WIDTHS} />
         </Field>
       </div>
+    </div>
+  );
+}
+
+// The palette's swatches (COLORS in ../lib)
+export function ColorPicker({ value, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Color">
+      {COLORS.map((c) => (
+        <button key={c.key} type="button" role="radio" aria-checked={value === c.key} title={c.label} aria-label={c.label} onClick={() => onChange(c.key)}
+          className={`grid size-8 place-items-center rounded-full !p-0 ring-offset-2 ring-offset-white transition dark:ring-offset-neutral-900 ${c.swatch} ${value === c.key ? "ring-2 !ring-accent" : "hover:scale-110"}`}>
+          {value === c.key && <span className={`size-2.5 rounded-full ${c.key === "default" ? "bg-accent" : "bg-white"}`} />}
+        </button>
+      ))}
     </div>
   );
 }

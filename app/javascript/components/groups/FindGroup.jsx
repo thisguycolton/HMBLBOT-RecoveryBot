@@ -177,9 +177,12 @@ export default function FindGroup() {
                         <GroupAction status={m.group.status} slug={m.group.slug} busy={busy === m.group.slug} onJoin={() => join(m.group.slug)} />
                       </>
                     ) : (
-                      <button type="button" disabled={busy === m.slug} onClick={() => start(m)} className={quietButton}>
-                        <Sparkles className="h-4 w-4" /> Start this group
-                      </button>
+                      <>
+                        <Link to={`/find/${encodeURIComponent(m.slug)}`} className={quietButton}>See its page</Link>
+                        <button type="button" disabled={busy === m.slug} onClick={() => start(m)} className={quietButton}>
+                          <Sparkles className="h-4 w-4" /> Start this group
+                        </button>
+                      </>
                     )}
                   </Card>
                 ))}

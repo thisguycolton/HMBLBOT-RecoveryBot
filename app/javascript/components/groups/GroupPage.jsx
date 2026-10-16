@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BookOpen, CalendarClock, CalendarRange, ExternalLink, Gavel, NotebookPen, Pencil, Users } from "lucide-react";
-import { api, zoneLabel } from "./lib";
-import { ErrorNote, Loading, Message, Pill, primaryButton, quietButton } from "./ui";
+import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutTemplate, NotebookPen, Pencil, Users } from "lucide-react";
+import { api } from "./lib";
+import { ErrorNote, Loading, Message, Pill } from "./ui";
+import GroupHero, { heroButton, heroQuietButton } from "./page/GroupHero";
+import GroupHome from "./page/GroupHome";
 import MeetingsTab from "./MeetingsTab";
 import MembersTab from "./MembersTab";
 import LiteratureTab from "./LiteratureTab";
@@ -11,6 +13,7 @@ import CourtTab from "./CourtTab";
 import EventsTab from "./EventsTab";
 
 const TABS = [
+  { key: "home", label: "Home", icon: House },
   { key: "meetings", label: "Meetings", icon: CalendarClock },
   { key: "events", label: "Events", icon: CalendarRange },
   { key: "readings", label: "Readings", icon: NotebookPen, members: true },
@@ -19,10 +22,11 @@ const TABS = [
   { key: "court", label: "Court verifications", icon: Gavel, managers: true },
 ];
 
-// /groups/:slug(/:tab)
+// /groups/:slug(/:tab): the group's own page (Home, made in the HMBLBOT Editor) and its
+// other sections. A new group (?new=1) opens on its meetings, to bring them in.
 export default function GroupPage() {
-  const { slug, tab = "meetings" } = useParams();
   const [searchParams] = useSearchParams();
+  const { slug, tab = searchParams.get("new") === "1" ? "meetings" : "home" } = useParams();
   const navigate = useNavigate();
   const [group, setGroup] = useState(null);
   const [error, setError] = useState(null);
@@ -62,58 +66,52 @@ export default function GroupPage() {
       setBusy(false);
     }
   };
+  const pathFor = (key) => (key === "home" ? `/${slug}` : `/${slug}/${key}`);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <header className="space-y-3">
-        <Link to="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Groups</Link>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="flex flex-wrap items-center gap-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
-              {group.title}
-              {group.status === "pending" && <Pill tone="amber">Waiting for approval</Pill>}
-            </h1>
-            {group.description && <p className="mt-1 max-w-2xl text-slate-600 dark:text-neutral-300">{group.description}</p>}
-            <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-slate-500 dark:text-neutral-400">
-              <span>{zoneLabel(group.time_zone)} time</span>
-              {group.website && (
-                <a href={group.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline">
-                  Website <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-              {group.role && group.membership_status === "active" && <span>You're {group.role === "admin" ? "a group admin" : "a member"}</span>}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+    <div className="mx-auto max-w-6xl space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
+      <Link to="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Groups</Link>
+      <GroupHero
+        group={group}
+        coverUrl={group.cover_url}
+        badge={group.status === "pending" && <Pill tone="amber">Waiting for approval</Pill>}
+        actions={
+          <>
             {group.status === "pending" && group.is_site_admin && (
-              <button type="button" disabled={busy} onClick={() => act("approve")} className={primaryButton}>Approve group</button>
+              <button type="button" disabled={busy} onClick={() => act("approve")} className={heroButton}>Approve group</button>
             )}
             {!group.membership_status && (
-              <button type="button" disabled={busy} onClick={() => act("join")} className={primaryButton}>Ask to join</button>
+              <button type="button" disabled={busy} onClick={() => act("join")} className={heroButton}>Ask to join</button>
             )}
             {group.membership_status === "requested" && (
               <>
-                <Pill tone="amber">Request sent</Pill>
-                <button type="button" disabled={busy} onClick={() => act("leave")} className={quietButton}>Withdraw</button>
+                <span className={heroQuietButton}>Request sent</span>
+                <button type="button" disabled={busy} onClick={() => act("leave")} className={heroQuietButton}>Withdraw</button>
               </>
             )}
+            {group.membership_status === "active" && (
+              <span className={heroQuietButton}>You're {group.role === "admin" ? "a group admin" : "a member"}</span>
+            )}
             {group.can_manage && (
-              <Link to={`/${slug}/edit`} className={quietButton}><Pencil className="h-4 w-4" /> Edit</Link>
+              <>
+                <Link to={`/${slug}/page/edit`} className={heroButton}><LayoutTemplate className="h-4 w-4" /> Edit page</Link>
+                <Link to={`/${slug}/edit`} className={heroQuietButton}><Pencil className="h-4 w-4" /> Details</Link>
+              </>
             )}
             {group.membership_status === "active" && (
-              <button type="button" disabled={busy} onClick={() => act("leave", `Leave ${group.title}?`)} className={quietButton}>Leave</button>
+              <button type="button" disabled={busy} onClick={() => act("leave", `Leave ${group.title}?`)} className={heroQuietButton}>Leave</button>
             )}
-          </div>
-        </div>
-        <ErrorNote error={actionError} />
-      </header>
+          </>
+        }
+      />
+      <ErrorNote error={actionError} />
 
       {tabs.length > 1 && (
         <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-neutral-200 px-4 dark:border-neutral-800" aria-label="Group sections">
           {tabs.map(({ key, label, icon: Icon }) => (
             <NavLink
               key={key}
-              to={key === "meetings" ? `/${slug}` : `/${slug}/${key}`}
+              to={pathFor(key)}
               end
               className={() =>
                 `-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium ${
@@ -132,6 +130,7 @@ export default function GroupPage() {
         </nav>
       )}
 
+      {current.key === "home" && <GroupHome slug={slug} onJoin={() => act("join")} />}
       {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={load} isNew={searchParams.get("new") === "1"} />}
       {current.key === "events" && <EventsTab group={group} />}
       {current.key === "readings" && <ReadingsTab group={group} />}

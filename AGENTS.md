@@ -33,6 +33,8 @@ An API-driven system for tracking game state, inventories, and player progress.
 - **Access**: admin-only while it's tried out (`Group.feature_open_to?`); `GROUPS_FOR_EVERYONE=1` opens it to every account. People already in a group always see it.
 - **Frontend**: React app at `/groups` (`entrypoints/groups.jsx`, `components/groups/`), JSON under `/api/groups`. The profile page (`/users/edit`) is `entrypoints/profile.jsx`.
 - **Court verifications**: `/court_verifications/new?group=<slug>` is a group's own form (unlinked, like the plain one).
+- **Group pages**: a group's Home tab is laid out in the HMBLBOT Editor (`/groups/:slug/page/edit`, group admins), the same editor events use (`components/events/editor/EditorFrame.jsx`). Blocks live in `groups.page_blocks` (nil = the default page, `GroupPageTemplate`, which site admins edit at `/groups/default-page/edit`); `EventBlocks::GROUP_TYPES` adds the group's own blocks, and every block has a palette `color`. AA Intergroup groups not here yet show the default page at `/groups/find/:oiaa_slug`. `GroupPage` (app/services) builds the JSON.
+- **Timeline notes**: `TimelineNote` on a member's own timeline (`/groups/timeline`), shared to their groups (`TimelineNoteShare`); members see them in a group page's Timeline block.
 
 ### 🛠 Services
 Business logic for complex operations (e.g., importing literature) is encapsulated in `app/services`.
