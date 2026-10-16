@@ -13,6 +13,7 @@ class User < ApplicationRecord
   AVATAR_TYPES = %w[image/jpeg image/png image/webp].freeze
   validates :bio, length: { maximum: 280 }
   validate :avatar_is_an_image
+  validate :sobriety_date_is_past
 
   has_many :user_highlights, dependent: :destroy
   has_many :text_reports, dependent: :destroy
@@ -67,7 +68,8 @@ class User < ApplicationRecord
 
   # Shown in groups: first name, picture and blurb. Email only to group admins.
   def as_member_json(email: false)
-    { id: id, name: display_name, bio: bio, avatar_url: avatar_url, email: (self.email if email) }.compact
+    { id: id, name: display_name, bio: bio, avatar_url: avatar_url, email: (self.email if email),
+      sobriety_date: (sobriety_date&.iso8601 if show_sobriety_date) }.compact
   end
 
   # The "You're not in a group yet" nudge: Groups is open to them, they aren't in (or
@@ -83,6 +85,10 @@ class User < ApplicationRecord
   end
 
   private
+
+  def sobriety_date_is_past
+    errors.add(:sobriety_date, "can't be in the future") if sobriety_date && sobriety_date > Date.current + 1
+  end
 
   def avatar_is_an_image
     return unless avatar.attached?

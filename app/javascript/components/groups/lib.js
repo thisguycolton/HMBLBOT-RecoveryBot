@@ -78,3 +78,19 @@ export const TYPE_LABELS = {
 export const typeLabel = (code) => TYPE_LABELS[code] || code;
 
 export const ROLE_LABELS = { admin: "Group admin", member: "Member" };
+
+// "3 years, 2 months sober" (or "45 days sober") from a "YYYY-MM-DD" sobriety date
+export function soberFor(iso) {
+  if (!iso) return "";
+  const start = new Date(`${iso}T00:00:00`);
+  const now = new Date();
+  if (Number.isNaN(start.getTime()) || start > now) return "";
+  const days = Math.floor((now - start) / 86400000);
+  if (days < 90) return `${days} day${days === 1 ? "" : "s"} sober`;
+  let months = (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth();
+  if (now.getDate() < start.getDate()) months -= 1;
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  if (years === 0) return `${months} months sober`;
+  return `${years} year${years === 1 ? "" : "s"}${rest ? `, ${rest} month${rest === 1 ? "" : "s"}` : ""} sober`;
+}

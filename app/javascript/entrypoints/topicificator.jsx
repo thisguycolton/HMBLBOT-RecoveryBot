@@ -133,7 +133,7 @@ mountReact("reading-archive-root", (rootEl) => {
 
   return (
     <Layout isAuthenticated={isAuthenticated}>
-      <ReadingArchive readings={readings} tags={tags} />
+      <ReadingArchive readings={readings} tags={tags} notice={rootEl.dataset.notice || null} selectedTag={rootEl.dataset.selectedTag || null} />
     </Layout>
   );
 });

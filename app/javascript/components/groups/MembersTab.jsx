@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Check, Copy, RefreshCw, UserPlus, X } from "lucide-react";
 import { inputClass } from "../ui/styles";
-import { api, ROLE_LABELS } from "./lib";
+import { api, ROLE_LABELS, soberFor } from "./lib";
 import Avatar from "./Avatar";
 import { Card, ErrorNote, Pill, Tray, copy, dangerButton, primaryButton, quietButton } from "./ui";
 
@@ -101,6 +101,9 @@ export default function MembersTab({ group, reload, setGroup }) {
                   {person.role === "admin" && <Pill tone="accent">{ROLE_LABELS.admin}</Pill>}
                 </p>
                 {person.email && <p className="truncate text-xs text-slate-500 dark:text-neutral-400">{person.email}</p>}
+                {person.sobriety_date && (
+                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300" title={`Sober since ${person.sobriety_date}`}>{soberFor(person.sobriety_date)}</p>
+                )}
                 {person.bio ? (
                   <p className="mt-1 text-sm text-slate-600 dark:text-neutral-300">{person.bio}</p>
                 ) : (

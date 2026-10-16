@@ -1,243 +1,224 @@
-import { 
-  Heart, 
-  Users, 
-  Lock, 
-  Smile, 
-  Sprout, 
-  Sun, 
-  Sparkles, 
-  Zap, 
-  Waves, 
-  MessageCircle, 
-  HandHeart, 
-  Footprints,
-  HelpCircle,
-  Calendar,
-  Wallet,
-  Home,
-  Mountain,
-  ShieldCheck,
-  Sunrise,
-  HandHelping,
-  Flame,
-  ShieldAlert,
-  ClipboardList
+import {
+  Anchor, Award, Bird, BookMarked, BookOpen, Brain, Calendar, CalendarHeart, ClipboardList, Clock,
+  Cloud, CloudRain, Coffee, Compass, Crown, Ear, EyeOff, Feather, Fence, Flag, Flame, Footprints,
+  Gift, Globe, HandHeart, HandHelping, Handshake, Heart, HeartHandshake, HeartPulse, Home, Hourglass,
+  Infinity as InfinityIcon, Key, Leaf, LifeBuoy, Lightbulb, Link, ListChecks, Lock, MessageCircle,
+  MessageSquareQuote, Mic, Mountain, MountainSnow, PartyPopper, Puzzle, Quote, RefreshCw, Repeat,
+  Route, Scale, Shield, ShieldAlert, ShieldCheck, Signpost, Smile, Sparkles, Sprout, Star, Sun,
+  Sunrise, Tag, Target, Trophy, UserRound, Users, VenetianMask, Wallet, Waves, Wind, Wrench, Zap,
 } from "lucide-react";
 
-// Mapping from icon_name (stored in database) to Lucide React components
+// Icons a tag can have (icon_name, stored in the database and picked on Admin → Tags)
 export const TAG_ICONS = {
-  // Emotional/Recovery themes
   heart: Heart,
   "hand-heart": HandHeart,
+  "heart-handshake": HeartHandshake,
+  "heart-pulse": HeartPulse,
   sparkles: Sparkles,
   sprout: Sprout,
+  leaf: Leaf,
   sun: Sun,
-  
-  // Social/Community
+  sunrise: Sunrise,
+  star: Star,
   users: Users,
+  user: UserRound,
+  handshake: Handshake,
+  "hand-helping": HandHelping,
   "message-circle": MessageCircle,
-  
-  // Steps/Work
+  quote: MessageSquareQuote,
+  mic: Mic,
+  ear: Ear,
   footprints: Footprints,
+  route: Route,
+  signpost: Signpost,
+  compass: Compass,
   "clipboard-list": ClipboardList,
-  
-  // Challenges
+  "list-checks": ListChecks,
+  wrench: Wrench,
+  "book-open": BookOpen,
+  "book-marked": BookMarked,
+  lightbulb: Lightbulb,
+  brain: Brain,
   lock: Lock,
+  key: Key,
   zap: Zap,
   waves: Waves,
   flame: Flame,
+  "cloud-rain": CloudRain,
+  cloud: Cloud,
+  wind: Wind,
   "shield-alert": ShieldAlert,
-  
-  // Positive themes
-  smile: Smile,
+  shield: Shield,
   "shield-check": ShieldCheck,
-  sunrise: Sunrise,
-  
-  // Life areas
+  "eye-off": EyeOff,
+  mask: VenetianMask,
+  scale: Scale,
+  fence: Fence,
+  anchor: Anchor,
+  "life-buoy": LifeBuoy,
+  smile: Smile,
+  "party-popper": PartyPopper,
+  gift: Gift,
+  trophy: Trophy,
+  award: Award,
+  crown: Crown,
+  target: Target,
+  flag: Flag,
+  hourglass: Hourglass,
+  clock: Clock,
+  repeat: Repeat,
+  "refresh-cw": RefreshCw,
+  infinity: InfinityIcon,
+  link: Link,
+  puzzle: Puzzle,
+  feather: Feather,
+  bird: Bird,
+  coffee: Coffee,
+  globe: Globe,
   wallet: Wallet,
   home: Home,
   calendar: Calendar,
+  "calendar-heart": CalendarHeart,
   mountain: Mountain,
+  "mountain-snow": MountainSnow,
 };
 
-// Mapping from tag slug to accent color scheme
-export const TAG_SLUG_COLORS = {
-  // Emotional/Spiritual themes - rose/pink tones
-  "emotional-sobriety": "rose",
-  
-  // Gratitude - amber/gold
-  gratitude: "amber",
-  
-  // Fellowship/Community - blue tones
-  fellowship: "blue",
-  
-  // Family - violet/purple
-  family: "violet",
-  
-  // Finances/Money - emerald/green
-  "finances-money": "emerald",
-  
-  // Fun - yellow/gold
-  "fun-in-sobriety": "yellow",
-  
-  // Health - cyan/teal
-  health: "cyan",
-  
-  // Holidays - orange/warm
-  holidays: "orange",
+// A sensible icon for each theme that hasn't been given one, by slug
+const SLUG_ICONS = {
+  "aa-basics": "book-open",
+  acceptance: "hand-heart",
+  action: "footprints",
+  amends: "handshake",
+  anger: "flame",
+  anonymity: "mask",
+  "big-book": "book-marked",
+  boundaries: "fence",
+  change: "refresh-cw",
+  "character-defects": "wrench",
+  complacency: "hourglass",
+  courage: "shield",
+  denial: "eye-off",
+  "disease-concept": "heart-pulse",
+  ego: "user",
+  "emotional-sobriety": "heart",
+  expectations: "target",
+  faith: "sparkles",
+  family: "home",
+  fear: "waves",
+  fellowship: "users",
+  forgiveness: "heart-handshake",
+  friendship: "smile",
+  goals: "flag",
+  gratitude: "sparkles",
+  grief: "cloud-rain",
+  guilt: "anchor",
+  health: "heart-pulse",
+  "higher-power": "sun",
+  "hitting-bottom": "life-buoy",
+  holidays: "gift",
+  "home-group": "home",
+  honesty: "scale",
+  hope: "sunrise",
+  humility: "leaf",
+  humor: "smile",
+  inventory: "clipboard-list",
+  joy: "party-popper",
+  "letting-go": "bird",
+  loneliness: "cloud",
+  love: "heart",
+  meditation: "wind",
+  meetings: "message-circle",
+  "mental-health": "brain",
+  milestones: "trophy",
+  mindset: "lightbulb",
+  money: "wallet",
+  "finances-money": "wallet",
+  newcomers: "sprout",
+  "open-mindedness": "lightbulb",
+  "other-addictions": "link",
+  pain: "cloud-rain",
+  patience: "hourglass",
+  prayer: "feather",
+  "prayer-meditation": "sunrise",
+  "prayer-and-meditation": "sunrise",
+  "present-moment": "clock",
+  priorities: "list-checks",
+  promises: "star",
+  "relapse-prevention": "shield-check",
+  relationships: "users",
+  remembering: "calendar-heart",
+  resentment: "zap",
+  resilience: "mountain",
+  responsibility: "key",
+  "restraint-of-tongue": "lock",
+  routine: "repeat",
+  "self-care": "coffee",
+  "self-pity": "cloud",
+  "self-worth": "crown",
+  serenity: "waves",
+  "serenity-prayer": "feather",
+  service: "hand-helping",
+  sharing: "mic",
+  slogans: "quote",
+  sobriety: "award",
+  "spiritual-awakening": "sunrise",
+  "spiritual-practice": "sun",
+  spirituality: "sun",
+  sponsorship: "handshake",
+  steps: "footprints",
+  "step-work": "footprints",
+  surrender: "feather",
+  tolerance: "scale",
+  tools: "wrench",
+  traditions: "book-open",
+  triggers: "shield-alert",
+  trust: "shield-check",
+  "twelfth-step": "hand-helping",
+  unity: "infinity",
+  willingness: "signpost",
+  "your-story": "quote",
+  "fun-in-sobriety": "party-popper",
+  recovery: "sprout",
 };
 
-// Accent color definitions with Tailwind-compatible classes
+const slugify = (text) => String(text || "").toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// The icon a tag shows: the one picked for it, else one that fits its theme, else a plain tag
+export const tagIconName = (iconName, slugOrTitle) => {
+  if (iconName && TAG_ICONS[iconName]) return iconName;
+  const slug = slugify(slugOrTitle);
+  return SLUG_ICONS[slug] || (iconName && SLUG_ICONS[slugify(iconName)]) || null;
+};
+
+export const getTagIcon = (iconName, slugOrTitle) => TAG_ICONS[tagIconName(iconName, slugOrTitle)] || Tag;
+
+// Colors, readable in light and dark mode
 export const ACCENT_THEMES = {
-  rose: {
-    bg: "bg-rose-500/10",
-    border: "border-rose-500/30",
-    text: "text-rose-400",
-    iconBg: "bg-rose-500/20",
-    gradient: "from-rose-500/5",
-  },
-  amber: {
-    bg: "bg-amber-500/10",
-    border: "border-amber-500/30",
-    text: "text-amber-400",
-    iconBg: "bg-amber-500/20",
-    gradient: "from-amber-500/5",
-  },
-  blue: {
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/30",
-    text: "text-blue-400",
-    iconBg: "bg-blue-500/20",
-    gradient: "from-blue-500/5",
-  },
-  violet: {
-    bg: "bg-violet-500/10",
-    border: "border-violet-500/30",
-    text: "text-violet-400",
-    iconBg: "bg-violet-500/20",
-    gradient: "from-violet-500/5",
-  },
-  emerald: {
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/30",
-    text: "text-emerald-400",
-    iconBg: "bg-emerald-500/20",
-    gradient: "from-emerald-500/5",
-  },
-  yellow: {
-    bg: "bg-yellow-500/10",
-    border: "border-yellow-500/30",
-    text: "text-yellow-400",
-    iconBg: "bg-yellow-500/20",
-    gradient: "from-yellow-500/5",
-  },
-  cyan: {
-    bg: "bg-cyan-500/10",
-    border: "border-cyan-500/30",
-    text: "text-cyan-400",
-    iconBg: "bg-cyan-500/20",
-    gradient: "from-cyan-500/5",
-  },
-  orange: {
-    bg: "bg-orange-500/10",
-    border: "border-orange-500/30",
-    text: "text-orange-400",
-    iconBg: "bg-orange-500/20",
-    gradient: "from-orange-500/5",
-  },
-  // Fallback neutral
-  neutral: {
-    bg: "bg-slate-500/10",
-    border: "border-slate-500/30",
-    text: "text-slate-400",
-    iconBg: "bg-slate-500/20",
-    gradient: "from-slate-500/5",
-  },
+  rose: { bg: "bg-rose-50 dark:bg-rose-500/10", border: "border-rose-200 dark:border-rose-500/30", text: "text-rose-700 dark:text-rose-300", iconBg: "bg-rose-100 dark:bg-rose-500/20", gradient: "from-rose-500/5", bar: "bg-rose-500" },
+  amber: { bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-200 dark:border-amber-500/30", text: "text-amber-700 dark:text-amber-300", iconBg: "bg-amber-100 dark:bg-amber-500/20", gradient: "from-amber-500/5", bar: "bg-amber-500" },
+  blue: { bg: "bg-blue-50 dark:bg-blue-500/10", border: "border-blue-200 dark:border-blue-500/30", text: "text-blue-700 dark:text-blue-300", iconBg: "bg-blue-100 dark:bg-blue-500/20", gradient: "from-blue-500/5", bar: "bg-blue-500" },
+  violet: { bg: "bg-violet-50 dark:bg-violet-500/10", border: "border-violet-200 dark:border-violet-500/30", text: "text-violet-700 dark:text-violet-300", iconBg: "bg-violet-100 dark:bg-violet-500/20", gradient: "from-violet-500/5", bar: "bg-violet-500" },
+  emerald: { bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-200 dark:border-emerald-500/30", text: "text-emerald-700 dark:text-emerald-300", iconBg: "bg-emerald-100 dark:bg-emerald-500/20", gradient: "from-emerald-500/5", bar: "bg-emerald-500" },
+  cyan: { bg: "bg-cyan-50 dark:bg-cyan-500/10", border: "border-cyan-200 dark:border-cyan-500/30", text: "text-cyan-700 dark:text-cyan-300", iconBg: "bg-cyan-100 dark:bg-cyan-500/20", gradient: "from-cyan-500/5", bar: "bg-cyan-500" },
+  orange: { bg: "bg-orange-50 dark:bg-orange-500/10", border: "border-orange-200 dark:border-orange-500/30", text: "text-orange-700 dark:text-orange-300", iconBg: "bg-orange-100 dark:bg-orange-500/20", gradient: "from-orange-500/5", bar: "bg-orange-500" },
+  sky: { bg: "bg-sky-50 dark:bg-sky-500/10", border: "border-sky-200 dark:border-sky-500/30", text: "text-sky-700 dark:text-sky-300", iconBg: "bg-sky-100 dark:bg-sky-500/20", gradient: "from-sky-500/5", bar: "bg-sky-500" },
+  neutral: { bg: "bg-neutral-50 dark:bg-neutral-500/10", border: "border-neutral-200 dark:border-neutral-700", text: "text-slate-600 dark:text-neutral-300", iconBg: "bg-neutral-100 dark:bg-neutral-500/20", gradient: "from-slate-500/5", bar: "bg-neutral-400" },
 };
 
-// Get the Lucide component for an icon_name
-export const getTagIcon = (iconName) => {
-  if (!iconName) return HelpCircle;
-  
-  // Try direct match first
-  let icon = TAG_ICONS[iconName];
-  
-  // Try converting from slug format (e.g., "emotional-sobriety" -> try to map)
-  if (!icon) {
-    // Map some common slug patterns to icon names
-    const slugToIcon = {
-      "emotional-sobriety": "heart",
-      "acceptance": "hand-heart",
-      "step-work": "footprints",
-      "spirituality": "sun",
-      "recovery": "sprout",
-      "service": "hand-heart",
-      "fellowship": "users",
-      "gratitude": "sparkles",
-      "humor": "smile",
-      "corrections": "lock",
-      "fear": "waves",
-      "resentment": "zap",
-      "meetings": "message-circle",
-      "relationships": "users",
-      "inventory": "clipboard-list",
-    };
-    icon = TAG_ICONS[slugToIcon[iconName]];
-  }
-  
-  return icon || HelpCircle;
+// Icon families share a color, so a theme's color follows its icon
+const ICON_ACCENTS = {
+  heart: "rose", "hand-heart": "rose", "heart-handshake": "rose", "heart-pulse": "rose", "calendar-heart": "rose", "hand-helping": "rose",
+  sparkles: "amber", sun: "amber", sunrise: "amber", star: "amber", trophy: "amber", award: "amber", crown: "amber", "party-popper": "amber", gift: "amber",
+  users: "blue", user: "blue", handshake: "blue", "message-circle": "blue", quote: "blue", mic: "blue", ear: "blue", home: "blue",
+  sprout: "emerald", leaf: "emerald", "shield-check": "emerald", wallet: "emerald", bird: "emerald", coffee: "emerald",
+  footprints: "violet", route: "violet", signpost: "violet", compass: "violet", "clipboard-list": "violet", "list-checks": "violet", "book-open": "violet", "book-marked": "violet", wrench: "violet", key: "violet",
+  waves: "sky", wind: "sky", feather: "sky", cloud: "sky", "cloud-rain": "sky", infinity: "sky", lightbulb: "sky", brain: "sky",
+  flame: "orange", zap: "orange", "shield-alert": "orange", "life-buoy": "orange",
 };
 
-// Get the accent color name for a tag slug
-export const getTagAccent = (slug) => {
-  return TAG_SLUG_COLORS[slug] || "neutral";
-};
+export const getAccentThemeFromIcon = (iconName, slugOrTitle) =>
+  ACCENT_THEMES[ICON_ACCENTS[tagIconName(iconName, slugOrTitle)]] || ACCENT_THEMES.neutral;
 
-// Get accent theme object for a slug
-export const getAccentTheme = (slug) => {
-  const accentName = getTagAccent(slug);
-  return ACCENT_THEMES[accentName] || ACCENT_THEMES.neutral;
-};
-
-// Get accent theme based on icon_name (fallback when slug not available)
-export const getAccentThemeFromIcon = (iconName) => {
-  if (!iconName) return ACCENT_THEMES.neutral;
-  
-  // Map icon names to accent themes
-  const iconToAccent = {
-    heart: "rose",
-    "hand-heart": "rose",
-    sparkles: "amber",
-    sprout: "emerald",
-    sun: "amber",
-    users: "blue",
-    "message-circle": "blue",
-    footprints: "amber",
-    "clipboard-list": "indigo",
-    lock: "slate",
-    zap: "red",
-    waves: "sky",
-    flame: "orange",
-    "shield-alert": "yellow",
-    smile: "yellow",
-    "shield-check": "emerald",
-    sunrise: "amber",
-    wallet: "emerald",
-    home: "violet",
-    calendar: "purple",
-    mountain: "stone",
-  };
-  
-  const accentName = iconToAccent[iconName];
-  if (accentName && ACCENT_THEMES[accentName]) {
-    return ACCENT_THEMES[accentName];
-  }
-  
-  // Fallback based on icon category
-  if (["heart", "hand-heart"].includes(iconName)) return ACCENT_THEMES.rose;
-  if (["sparkles", "sun"].includes(iconName)) return ACCENT_THEMES.amber;
-  if (["users", "message-circle"].includes(iconName)) return ACCENT_THEMES.blue;
-  if (["sprout", "shield-check"].includes(iconName)) return ACCENT_THEMES.emerald;
-  
-  return ACCENT_THEMES.neutral;
-};
+// Kept for older callers that only know the slug
+export const getTagAccent = (slug) => ICON_ACCENTS[tagIconName(null, slug)] || "neutral";
+export const getAccentTheme = (slug) => getAccentThemeFromIcon(null, slug);

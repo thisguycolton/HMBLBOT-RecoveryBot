@@ -281,7 +281,7 @@ function MyReadingCard({ reading, deleting, onDelete }) {
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {tags.slice(0, 3).map((tag) => {
-                  const Icon = getTagIcon(tag.icon_name);
+                  const Icon = getTagIcon(tag.icon_name, tag.slug || tag.title);
                   return (
                     <span
                       key={tag.id}

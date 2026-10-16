@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { Check, HelpCircle, Pencil, Plus, Tags, Trash2 } from "lucide-react";
+import { Check, Pencil, Plus, Tags, Trash2 } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
-import { TAG_ICONS } from "../ReadingArchiveUtils";
+import { TAG_ICONS, getTagIcon } from "../ReadingArchiveUtils";
 
 // Reading tags and their icons. The picker only offers icons the reading cards can draw
-// (TAG_ICONS); anything else would show as a "?" there.
+// (TAG_ICONS); a tag without one gets an icon that fits its name (getTagIcon).
 export default function TagsPage({ notify }) {
   const [tags, setTags] = useState(null);
   const [editing, setEditing] = useState(null); // tag id, or "new"
@@ -56,12 +56,12 @@ export default function TagsPage({ notify }) {
             <TagForm tag={tag} onSave={(v) => save(tag.id, v)} onCancel={() => setEditing(null)} />
           ) : (
             <div className="flex items-center gap-3">
-              <TagIcon name={tag.icon_name} />
+              <TagIcon tag={tag} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white !font-sans">{tag.title}</p>
                 <p className="text-sm text-slate-600 dark:text-neutral-400 !font-sans">
                   {tag.readings_count} {tag.readings_count === 1 ? "reading" : "readings"}
-                  {!TAG_ICONS[tag.icon_name] && " · no icon yet"}
+                  {!TAG_ICONS[tag.icon_name] && " · icon picked automatically"}
                 </p>
               </div>
               <button type="button" className={buttonClass.secondary} onClick={() => setEditing(tag.id)} aria-label={`Edit ${tag.title}`}>
@@ -87,8 +87,8 @@ export default function TagsPage({ notify }) {
   );
 }
 
-function TagIcon({ name }) {
-  const Icon = TAG_ICONS[name] || HelpCircle;
+function TagIcon({ tag }) {
+  const Icon = getTagIcon(tag.icon_name, tag.slug || tag.title);
   return (
     <div className="w-10 h-10 rounded-xl bg-accent-tint dark:bg-accent/30 flex items-center justify-center shrink-0">
       <Icon className="w-5 h-5 text-accent dark:text-white" strokeWidth={2.5} />

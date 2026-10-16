@@ -14,40 +14,17 @@
         <%= vite_javascript_tag "topicificator.jsx" %>
 
           <style>
-            :root {
-              color-scheme: only dark;
-            }
-
-            html {
-              color-scheme: dark;
-            }
-
-            body {
-              background-color: #1a202c;
-              /* gray-900 */
-              color: #f7fafc;
-              /* gray-200 */
-            }
-
             .container footer {
               display: none !important;
               width: 0 !important;
-            }
-
-            .nav-container {
-              top: 0px;
-              position: absolute;
-              left: 0;
-              width: 100%;
-              z-index: 1000;
-              display: none !important;
             }
             footer {
               min-height: auto!important;
             }
           </style>
 
-<div id="reading-archive-root" class="w-screen min-h-screen" data-turbo="false"
+<div id="reading-archive-root" class="w-full self-start" data-turbo="false"
+    data-selected-tag="<%= @selected_tag&.slug %>"
     data-readings="<%= json_escape(@readings_json.to_json) %>" 
     data-tags="<%= json_escape(@tags_json.to_json) %>" 
     data-notice="<%= notice.to_s %>"></div>
