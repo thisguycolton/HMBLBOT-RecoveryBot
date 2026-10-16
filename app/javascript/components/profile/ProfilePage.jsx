@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, Check, Trash2 } from "lucide-react";
 import { inputClass, labelClass } from "../ui/styles";
+import { DateField, todayValue } from "../ui/DateFields";
+import Toggle from "../ui/Toggle";
 import { api } from "../groups/lib";
 import Avatar from "../groups/Avatar";
 import { soberFor } from "../groups/lib";
@@ -150,15 +152,13 @@ export default function ProfilePage() {
             <div>
               <label htmlFor="p-sober" className={labelClass}>Sobriety date</label>
               <div className="flex flex-wrap items-center gap-3">
-                <input id="p-sober" type="date" max={new Date().toISOString().slice(0, 10)} className={`${inputClass} !w-auto`} value={form.sobriety_date}
-                  onChange={(e) => setForm({ ...form, sobriety_date: e.target.value })} />
+                <DateField id="p-sober" clearable className="w-48" max={todayValue()} value={form.sobriety_date || ""}
+                  onChange={(sobriety_date) => setForm({ ...form, sobriety_date, show_sobriety_date: sobriety_date ? form.show_sobriety_date : false })} />
                 {form.sobriety_date && <span className="text-sm text-slate-600 dark:text-neutral-300">{soberFor(form.sobriety_date)}</span>}
               </div>
-              <label className="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-200">
-                <input type="checkbox" checked={form.show_sobriety_date} disabled={!form.sobriety_date}
-                  onChange={(e) => setForm({ ...form, show_sobriety_date: e.target.checked })} className="h-4 w-4 rounded accent-accent" />
-                Show it to the people in my groups
-              </label>
+              <Toggle className="mt-3" checked={form.show_sobriety_date} disabled={!form.sobriety_date}
+                onChange={(show_sobriety_date) => setForm({ ...form, show_sobriety_date })}
+                label="Show it to the people in my groups" />
             </div>
             <ErrorNote error={error} />
             <div className="flex items-center justify-end gap-3">

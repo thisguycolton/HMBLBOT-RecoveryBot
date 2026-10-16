@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BookPlus, Trash2 } from "lucide-react";
-import { inputClass, labelClass } from "../ui/styles";
+import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { api } from "./lib";
 import { Card, ErrorNote, Tray, dangerButton, primaryButton } from "./ui";
 
@@ -85,7 +85,7 @@ export default function LiteratureTab({ group, reload }) {
             <form onSubmit={add} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
               <div>
                 <label htmlFor="book" className={labelClass}>Book</label>
-                <select id="book" required className={inputClass} value={bookSlug} onChange={(e) => setBookSlug(e.target.value)}>
+                <select id="book" required className={selectClass} value={bookSlug} onChange={(e) => setBookSlug(e.target.value)}>
                   <option value="">{library ? "Pick from the library" : "Loading the library…"}</option>
                   {choices.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
                 </select>

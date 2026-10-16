@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import axios from "axios";
+import Toggle from "./ui/Toggle";
 
 export default function ChapterImportPanel({ bookSlug, onImported }) {
   const fileRef = useRef(null);
@@ -54,14 +55,7 @@ export default function ChapterImportPanel({ bookSlug, onImported }) {
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <input ref={fileRef} type="file" accept="application/json,.json" className="text-sm" />
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={replace}
-            onChange={(event) => setReplace(event.target.checked)}
-          />
-          Replace current chapters
-        </label>
+        <Toggle checked={replace} onChange={setReplace} label="Replace current chapters" />
         <button
           type="button"
           disabled={busy}

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowDown, ArrowUp, CalendarClock, Check, Copy, Flame, Lock, LockOpen, Pencil, Trash2, Users, X } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
+import Toggle from "../ui/Toggle";
 import { showToast } from "../../lib/toast";
 import WeekGrid, { buildHeat } from "./WeekGrid";
 import { VISIBILITY_LABELS, api, clock, dayParts, describeStart, makeNow, parseStart } from "./lib";
@@ -172,10 +173,8 @@ export default function PollPage() {
             <span className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-neutral-300 dark:bg-neutral-600" /> Doesn't work</span>
               {results && (
-                <label className="inline-flex cursor-pointer items-center gap-1">
-                  <input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} className="accent-[var(--color-accent)]" />
-                  <Flame className="h-3.5 w-3.5 text-accent" /> Heat map
-                </label>
+                <Toggle checked={showHeat} onChange={setShowHeat}
+                  label={<span className="inline-flex items-center gap-1"><Flame className="h-3.5 w-3.5 text-accent" /> Heat map</span>} />
               )}
             </span>
           </div>

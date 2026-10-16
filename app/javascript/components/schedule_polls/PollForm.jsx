@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Ban, CalendarClock, CircleCheck, Plus, Search, Settings2, Trash2, UserPlus, X } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
-import { inputClass, labelClass } from "../ui/styles";
+import { inputClass, labelClass, selectClass } from "../ui/styles";
+import { DateField, DateTimeField } from "../ui/DateFields";
 import { showToast } from "../../lib/toast";
 import WeekGrid from "./WeekGrid";
 import { DAY_MINUTES, VISIBILITY_LABELS, addDays, api, clock, dayParts, daysBetween, makeNow } from "./lib";
@@ -134,47 +135,47 @@ export default function PollForm() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="First day" id="starts_on">
-                  <input id="starts_on" type="date" required className={inputClass} value={form.starts_on} onChange={(e) => setStart(e.target.value)} />
+                  <DateField id="starts_on" value={form.starts_on} onChange={(v) => v && setStart(v)} />
                 </Field>
                 <Field label="Last day" id="ends_on">
-                  <input id="ends_on" type="date" required className={inputClass} value={form.ends_on} min={form.starts_on} max={addDays(form.starts_on, 13)}
-                    onChange={(e) => setEnd(e.target.value)} />
+                  <DateField id="ends_on" value={form.ends_on} min={form.starts_on} max={addDays(form.starts_on, 13)}
+                    onChange={(v) => v && setEnd(v)} />
                 </Field>
               </div>
               <Field label="Voting closes" id="closes_at" hint="Defaults to the end of the last day. People can only pick times that haven't passed yet.">
-                <input id="closes_at" type="datetime-local" required className={inputClass} value={form.closes_at}
-                  onChange={(e) => { closesTouched.current = true; set({ closes_at: e.target.value }); }} />
+                <DateTimeField id="closes_at" value={form.closes_at}
+                  onChange={(v) => { if (!v) return; closesTouched.current = true; set({ closes_at: v }); }} />
               </Field>
             </ShellPanel>
             <ShellPanel position="middle" className="space-y-4 p-4">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Event length" id="duration">
-                  <select id="duration" className={inputClass} value={form.duration_minutes} onChange={(e) => set({ duration_minutes: Number(e.target.value) })}>
+                  <select id="duration" className={selectClass} value={form.duration_minutes} onChange={(e) => set({ duration_minutes: Number(e.target.value) })}>
                     {DURATIONS.map((m) => <option key={m} value={m}>{m < 60 ? `${m} minutes` : `${m / 60} hour${m === 60 ? "" : "s"}`}</option>)}
                   </select>
                 </Field>
                 <Field label="Ranked picks" id="choices">
-                  <select id="choices" className={inputClass} value={form.choices_count} onChange={(e) => set({ choices_count: Number(e.target.value) })}>
+                  <select id="choices" className={selectClass} value={form.choices_count} onChange={(e) => set({ choices_count: Number(e.target.value) })}>
                     {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n === 1 ? "1 (no ranking)" : `Top ${n}`}</option>)}
                   </select>
                 </Field>
                 <Field label="Earliest start" id="day_start">
-                  <select id="day_start" className={inputClass} value={form.day_start_minute} onChange={(e) => set({ day_start_minute: Number(e.target.value) })}>
+                  <select id="day_start" className={selectClass} value={form.day_start_minute} onChange={(e) => set({ day_start_minute: Number(e.target.value) })}>
                     {minuteOptions(60, 0, 23 * 60).map((m) => <option key={m} value={m}>{clock(m)}</option>)}
                   </select>
                 </Field>
                 <Field label="Latest end" id="day_end">
-                  <select id="day_end" className={inputClass} value={form.day_end_minute} onChange={(e) => set({ day_end_minute: Number(e.target.value) })}>
+                  <select id="day_end" className={selectClass} value={form.day_end_minute} onChange={(e) => set({ day_end_minute: Number(e.target.value) })}>
                     {minuteOptions(60, 60, DAY_MINUTES).map((m) => <option key={m} value={m}>{clock(m)}</option>)}
                   </select>
                 </Field>
                 <Field label="Start times every" id="slot">
-                  <select id="slot" className={inputClass} value={form.slot_minutes} onChange={(e) => set({ slot_minutes: Number(e.target.value) })}>
+                  <select id="slot" className={selectClass} value={form.slot_minutes} onChange={(e) => set({ slot_minutes: Number(e.target.value) })}>
                     {[15, 30, 60].map((m) => <option key={m} value={m}>{m === 60 ? "hour" : `${m} minutes`}</option>)}
                   </select>
                 </Field>
                 <Field label="Time zone" id="zone">
-                  <select id="zone" className={inputClass} value={form.time_zone} onChange={(e) => set({ time_zone: e.target.value })}>
+                  <select id="zone" className={selectClass} value={form.time_zone} onChange={(e) => set({ time_zone: e.target.value })}>
                     {ZONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                 </Field>
@@ -206,17 +207,17 @@ export default function PollForm() {
               {form.blocks.length === 0 && <p className="text-sm text-slate-500 dark:text-neutral-400">Every time is open.</p>}
               {form.blocks.map((b, i) => (
                 <div key={i} className="flex flex-wrap items-center gap-2">
-                  <select aria-label="Which days" className={`${inputClass} !w-auto`} value={b.kind === "once" ? b.date : "daily"}
+                  <select aria-label="Which days" className={`${selectClass} !w-auto`} value={b.kind === "once" ? b.date : "daily"}
                     onChange={(e) => setBlock(i, e.target.value === "daily" ? { kind: "daily", date: undefined } : { kind: "once", date: e.target.value })}>
                     <option value="daily">Every day</option>
                     {days.map((d) => <option key={d} value={d}>{dayParts(d).long}</option>)}
                     {b.kind === "once" && !days.includes(b.date) && <option value={b.date}>{b.date}</option>}
                   </select>
-                  <select aria-label="From" className={`${inputClass} !w-auto`} value={b.start} onChange={(e) => setBlock(i, { start: Number(e.target.value) })}>
+                  <select aria-label="From" className={`${selectClass} !w-auto`} value={b.start} onChange={(e) => setBlock(i, { start: Number(e.target.value) })}>
                     {minuteOptions(15, 0, DAY_MINUTES - 15).map((m) => <option key={m} value={m}>{clock(m)}</option>)}
                   </select>
                   <span className="text-sm text-slate-500">to</span>
-                  <select aria-label="Until" className={`${inputClass} !w-auto`} value={b.end} onChange={(e) => setBlock(i, { end: Number(e.target.value) })}>
+                  <select aria-label="Until" className={`${selectClass} !w-auto`} value={b.end} onChange={(e) => setBlock(i, { end: Number(e.target.value) })}>
                     {minuteOptions(15, 15, DAY_MINUTES).map((m) => <option key={m} value={m}>{clock(m)}</option>)}
                   </select>
                   <input aria-label="Label" className={`${inputClass} !w-32 flex-1`} placeholder="Label" value={b.label || ""} maxLength={60}
@@ -311,7 +312,7 @@ function People({ members, onChange }) {
           {members.map((m) => (
             <li key={m.user_id} className="flex items-center gap-2 text-sm">
               <span className="min-w-0 flex-1 truncate text-slate-800 dark:text-neutral-100" title={m.email}>{m.name}</span>
-              <select aria-label={`${m.name}'s role`} value={m.role} className={`${inputClass} !w-auto !py-1`}
+              <select aria-label={`${m.name}'s role`} value={m.role} className={`${selectClass} !w-auto !py-1`}
                 onChange={(e) => onChange(members.map((x) => (x.user_id === m.user_id ? { ...x, role: e.target.value } : x)))}>
                 <option value="invitee">Voter</option>
                 <option value="collaborator">Collaborator</option>
