@@ -128,7 +128,11 @@ export default function FindMeeting() {
     <div ref={top} className="mx-auto max-w-6xl scroll-mt-24 space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Link to="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Groups</Link>
+          {document.body.dataset.groups === "true" ? (
+            <Link to="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Groups</Link>
+          ) : (
+            <a href="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Home</a>
+          )}
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Find a meeting</h1>
           <p className="text-sm text-slate-600 dark:text-neutral-400">
             AA Intergroup's meetings and our groups' own. Times are in your time zone ({viewerZoneName()}).

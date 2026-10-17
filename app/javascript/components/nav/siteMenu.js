@@ -30,7 +30,7 @@ export const NAV_CATEGORIES = [
     label: "Meetings",
     blurb: "Run a meeting",
     items: [
-      { label: "Find a meeting", href: "/groups/meetings", icon: MapPinned, note: "Meetings by day, time and place, with a Join link", groups: true },
+      { label: "Find a meeting", href: "/groups/meetings", icon: MapPinned, note: "Meetings by day, time and place, with a Join link" },
       { label: "Topicificator 9002", href: "/topicificator", icon: Sparkles, note: "Draw a topic for tonight's discussion" },
       { label: "Service Readings", href: "/service_readings", icon: BookHeart, note: "Preamble, Steps and Traditions, ready to read aloud" },
       { label: "Reading Archive", href: "/readings", icon: Bookmark, note: "Past meeting readings and topics" },

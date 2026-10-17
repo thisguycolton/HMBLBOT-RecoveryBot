@@ -1,11 +1,13 @@
 # A group's page (app/services/group_page.rb), and its HMBLBOT Editor
-# (app/javascript/components/groups/page/GroupPageEditor.jsx). Everyone who can see the
-# group sees the page; its admins edit it.
+# (app/javascript/components/groups/page/GroupPageEditor.jsx). Everyone sees an active
+# group's page, signed in or not; its admins edit it.
 class Api::GroupPagesController < ApplicationController
   include GroupScoped
   include TakesPageImages
 
-  before_action :set_group
+  skip_before_action :authenticate_user!, only: :show
+  before_action :set_viewable_group, only: :show
+  before_action :set_group, except: :show
   before_action :require_manager, only: %i[update images]
 
   # GET /api/groups/:group_slug/page

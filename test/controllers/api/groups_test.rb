@@ -22,12 +22,15 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
     Group.find_by!(slug: response.parsed_body["slug"])
   end
 
-  test "groups are admin-only for now: others can't see the page or make one" do
+  test "groups are admin-only for now: others can't list or make them, but see an active group's page" do
     sign_in @stranger
     get "/groups"
     assert_redirected_to root_path
     post "/api/groups", params: { group: { title: "Mine" } }, as: :json
     assert_response :forbidden
+    get "/api/groups/#{groups(:one).slug}", as: :json
+    assert_response :success, "Find a meeting opens group pages to everyone"
+    groups(:one).update!(status: "pending")
     get "/api/groups/#{groups(:one).slug}", as: :json
     assert_response :not_found
 

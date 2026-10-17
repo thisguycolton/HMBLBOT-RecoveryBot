@@ -2,7 +2,8 @@
 # literature it has approved, the readings members tag to it, and its court verifications.
 #
 # Groups are admin-only while they're tried out (see .feature_open_to?): site admins see
-# everything, and anyone already in a group sees that group.
+# everything, and anyone already in a group sees that group. An active group's page is
+# open to everyone, signed in or not (.viewable_by), for Find a meeting.
 class Group < ApplicationRecord
   TIME_ZONES = SchedulePoll::TIME_ZONES
   STATUSES = %w[active pending].freeze
@@ -58,6 +59,10 @@ class Group < ApplicationRecord
     ActiveModel::Type::Boolean.new.cast(ENV["GROUPS_FOR_EVERYONE"]) || user.suite_admin?
   end
 
+  # Anyone may see an active group's page and ask to join it, signed in or not: Find a
+  # meeting is open to everyone. The rest of Groups stays behind .visible_to.
+  def self.viewable_by(user) = user ? active.or(visible_to(user)) : active
+
   def self.visible_to(user)
     return none unless user
     return all if user.suite_admin?
@@ -75,6 +80,7 @@ class Group < ApplicationRecord
   def manageable_by?(user) = !!user && (user.suite_admin? || admin?(user))
   def visible_to?(user) = !!user && (user.suite_admin? || member?(user) || (active? && self.class.feature_open_to?(user)))
   def active? = status == "active"
+  def page_visible_to?(user) = active? || visible_to?(user)
   def admins = members.merge(GroupMembership.admins)
   def custom_page? = !page_blocks.nil?
 

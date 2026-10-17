@@ -192,6 +192,7 @@ end
   get 'topics/by_category', to: 'topics#by_category'
   # Groups: a React app (app/javascript/entrypoints/groups.jsx); invite links join on the server
   get "/groups/join/:token", to: "groups#join", as: :join_group
+  get "/groups/:slug/ask", to: "groups#ask", as: :ask_to_join_group
   get "/groups", to: "groups#app", as: :groups
   get "/meetings", to: redirect("/groups/meetings")
   # Your timeline moved to your profile

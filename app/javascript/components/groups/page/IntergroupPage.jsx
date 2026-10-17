@@ -15,6 +15,8 @@ export default function IntergroupPage({ template = false }) {
   const { oiaaSlug } = useParams();
   const navigate = useNavigate();
   const back = useLocation().state?.back;
+  // "Find your group" is for people who see Groups; everyone else came from Find a meeting
+  const canFind = document.body.dataset.groups === "true";
   const [page, setPage] = useState(null);
   const [error, setError] = useState(null);
 
@@ -45,8 +47,8 @@ export default function IntergroupPage({ template = false }) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <Link to={template ? "/" : back || "/find"} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">
-        {template ? "← Groups" : back ? "← Find a meeting" : "← Find your group"}
+      <Link to={template ? "/" : back || (canFind ? "/find" : "/meetings")} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">
+        {template ? "← Groups" : back || !canFind ? "← Find a meeting" : "← Find your group"}
       </Link>
       <GroupHero
         group={context.group}

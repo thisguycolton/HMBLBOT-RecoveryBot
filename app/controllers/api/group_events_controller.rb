@@ -3,7 +3,9 @@
 class Api::GroupEventsController < ApplicationController
   include GroupScoped
 
-  before_action :set_group
+  skip_before_action :authenticate_user!, only: :index
+  before_action :set_viewable_group, only: :index
+  before_action :set_group, except: :index
   before_action :require_manager, only: :create
 
   # GET /api/groups/:group_slug/events

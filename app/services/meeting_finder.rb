@@ -85,7 +85,12 @@ class MeetingFinder
 
   def listings
     scope = OiaaMeeting.listed.where("oiaa_meetings.attendance_option IS NULL OR oiaa_meetings.attendance_option <> 'inactive'")
-    scope = scope.matching(query) if query.present?
+    if query.present?
+      # ...or it's one of the meetings of a group here with those words in its name
+      words = query.downcase.scan(/[[:alnum:]']+/).first(6)
+      groups = words.reduce(Group.viewable_by(@viewer)) { |g, w| g.where("groups.title ILIKE ?", "%#{Group.sanitize_sql_like(w)}%") }
+      scope = scope.merge(OiaaMeeting.matching(query).or(OiaaMeeting.where(slug: Meeting.where(group_id: groups.select(:id)).select(:oiaa_slug))))
+    end
     scope = scope.where("oiaa_meetings.types @> ARRAY[?]::varchar[]", type) if type
     case attendance
     when "online" then scope = scope.where("oiaa_meetings.attendance_option IS NULL OR oiaa_meetings.attendance_option IN ('online', 'hybrid')")
@@ -116,7 +121,7 @@ class MeetingFinder
   end
 
   def own_meetings
-    scope = Meeting.where(oiaa_slug: nil, group_id: Group.visible_to(@viewer).select(:id)).joins(:group)
+    scope = Meeting.where(oiaa_slug: nil, group_id: Group.viewable_by(@viewer).select(:id)).joins(:group)
     scope = scope.where.not(start_minute: nil).or(scope.where.not(starts_at: nil))
     id = OiaaFeed.conference_id(query)
     query.to_s.downcase.scan(/[[:alnum:]']+/).first(6).each do |w|
@@ -230,14 +235,14 @@ class MeetingFinder
   end
 
   # The group here that a listing belongs to: one of its meetings is linked to it, or it
-  # has the listing's name; only groups the viewer may see
+  # has the listing's name; only groups whose page the viewer may see
   def groups_for(records)
     linked = Meeting.where(oiaa_slug: records.map(&:slug)).includes(group: { cover_attachment: :blob }).to_h { |m| [m.oiaa_slug, m.group] }
     names = records.flat_map { |r| [r.group_name, r.name] }.compact.map(&:downcase).uniq
     by_title = Group.where("LOWER(title) IN (?)", names.presence || [""]).includes(cover_attachment: :blob).index_by { |g| g.title.downcase }
     records.each_with_object({}) do |r, found|
       group = linked[r.slug] || by_title[r.group_name.to_s.downcase] || by_title[r.name.downcase]
-      found[r.slug] = group if group&.visible_to?(@viewer)
+      found[r.slug] = group if group&.page_visible_to?(@viewer)
     end
   end
 

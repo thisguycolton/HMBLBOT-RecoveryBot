@@ -42,10 +42,52 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
     ].to_json)
   end
 
-  test "only people who see Groups can search" do
-    sign_in @stranger
-    get "/api/meeting_search", as: :json
-    assert_response :forbidden
+  test "no account needed: search, the pages it opens, and asking to join signs you up first" do
+    at_monday_evening do
+      sync
+      get "/groups/meetings"
+      assert_response :success
+      assert_equal "noindex, nofollow", response.headers["X-Robots-Tag"]
+      assert_equal 4, find["total"]
+
+      group = groups(:one)
+      get "/groups/#{group.slug}"
+      assert_response :success
+      get "/api/groups/#{group.slug}", as: :json
+      assert_response :success
+      assert_equal [false, false, nil], response.parsed_body.values_at("signed_in", "is_member", "members")
+      get "/api/groups/#{group.slug}/page", as: :json
+      assert_response :success
+      get "/api/groups/#{group.slug}/events", as: :json
+      assert_response :success
+      get "/api/intergroup_pages/mon-530pm", as: :json
+      assert_response :success
+
+      # Groups itself still needs an account
+      get "/groups"
+      assert_redirected_to new_user_session_path
+      get "/groups/#{group.slug}/edit"
+      assert_redirected_to new_user_session_path
+      post "/api/groups/#{group.slug}/join", as: :json
+      assert_response :unauthorized
+
+      # Ask to join -> make an account -> back on the group's page, which sends the request
+      get "/groups/#{group.slug}/ask"
+      assert_redirected_to new_user_registration_path
+      post user_registration_path, params: { user: { name: "New Person", email: "new@example.com", password: "password123", password_confirmation: "password123" } }
+      User.find_by!(email: "new@example.com").update!(confirmed: true) # a site admin confirms new accounts
+      post user_session_path, params: { user: { email: "new@example.com", password: "password123" } }
+      assert_redirected_to "/groups/#{group.slug}?ask=1"
+      post "/api/groups/#{group.slug}/join", as: :json
+      assert_response :success
+      assert_equal "requested", response.parsed_body["membership_status"]
+
+      # A group waiting for approval stays hidden
+      group.update!(status: "pending")
+      sign_out :user
+      get "/api/groups/#{group.slug}", as: :json
+      assert_response :not_found
+    end
   end
 
   test "the coming week, soonest first, with what's on now" do
@@ -104,6 +146,7 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
       assert_equal ["in_person", "Fellowship Hall"], [step["attendance"], step["place"]]
       assert_includes keys(body), "meeting-#{group.meetings.find_by!(name: 'Picnic').id}"
       assert_equal %w[Sunrise\ Step\ Study], find(q: "step study")["meetings"].map { |m| m["name"] }
+      assert_includes keys(find(q: "sunrise serenity")), "oiaa-mon-7pm", "found by the name of its group here"
     end
   end
 
