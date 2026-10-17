@@ -70,6 +70,17 @@ Rails.application.routes.draw do
   end
   get "intergroup_pages/:oiaa_slug", to: "intergroup_pages#show", constraints: { oiaa_slug: %r{[^/]+} }, format: false
   resources :timeline_notes, only: %i[index create update destroy]
+  get "people", to: "people#index"
+  resources :people, param: :username, only: :show, constraints: { username: %r{[^/]+} } do
+    member do
+      get :feed
+      post :follow
+      delete :follow, action: :unfollow
+    end
+  end
+  resource :profile_page, only: :update do
+    post :images
+  end
   resources :events, only: %i[show update destroy], param: :token do
     member do
       post :images
@@ -181,7 +192,12 @@ end
   # Groups: a React app (app/javascript/entrypoints/groups.jsx); invite links join on the server
   get "/groups/join/:token", to: "groups#join", as: :join_group
   get "/groups", to: "groups#app", as: :groups
+  # Your timeline moved to your profile
+  get "/groups/timeline", to: redirect("/people/me")
   get "/groups/*path", to: "groups#app", format: false
+  # Profiles: a React app (app/javascript/entrypoints/people.jsx)
+  get "/people", to: "people#app", as: :people
+  get "/people/*path", to: "people#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb
   get "/books/:book_slug/chapters/:chapter_slug", to: "pages#reader"

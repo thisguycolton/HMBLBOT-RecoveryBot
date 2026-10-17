@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Camera, Check, Trash2 } from "lucide-react";
+import { Camera, Check, ExternalLink, Trash2 } from "lucide-react";
+import { VISIBILITY } from "../notes/lib";
 import { inputClass, labelClass } from "../ui/styles";
 import { DateField, todayValue } from "../ui/DateFields";
 import Toggle from "../ui/Toggle";
@@ -35,7 +36,7 @@ function squareJpeg(file) {
 // email and password
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
-  const [form, setForm] = useState({ name: "", bio: "", sobriety_date: "", show_sobriety_date: false });
+  const [form, setForm] = useState({ name: "", username: "", bio: "", sobriety_date: "", show_sobriety_date: false });
   const [account, setAccount] = useState({ email: "", password: "", password_confirmation: "", current_password: "" });
   const [picture, setPicture] = useState(null); // { blob, url }
   const [removePicture, setRemovePicture] = useState(false);
@@ -47,7 +48,7 @@ export default function ProfilePage() {
 
   const load = (p) => {
     setProfile(p);
-    setForm({ name: p.name || "", bio: p.bio || "", sobriety_date: p.sobriety_date || "", show_sobriety_date: !!p.show_sobriety_date });
+    setForm({ name: p.name || "", username: p.username || "", bio: p.bio || "", sobriety_date: p.sobriety_date || "", show_sobriety_date: !!p.show_sobriety_date });
     setAccount({ email: p.email, password: "", password_confirmation: "", current_password: "" });
     setPicture(null);
     setRemovePicture(false);
@@ -82,6 +83,7 @@ export default function ProfilePage() {
     const body = new FormData();
     body.append("profile[name]", form.name);
     body.append("profile[bio]", form.bio);
+    if (profile.profiles_open) body.append("profile[username]", form.username);
     body.append("profile[sobriety_date]", form.sobriety_date);
     body.append("profile[show_sobriety_date]", form.show_sobriety_date ? "1" : "0");
     if (picture) body.append("profile[avatar]", picture.blob, "avatar.jpg");
@@ -110,13 +112,27 @@ export default function ProfilePage() {
     }
   };
 
+  // Who sees new highlights and notes on your profile; saved as soon as it's picked
+  const saveDefault = async (key, value) => {
+    setError(null);
+    try {
+      load(await api("/profile", { method: "PATCH", body: { profile: { [key]: value } } }));
+      flash(key);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const shownPerson = { name: form.name || profile.email, avatar_url: removePicture ? null : picture?.url || profile.avatar_url };
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Your profile</h1>
-        <p className="text-sm text-slate-600 dark:text-neutral-400">Your name, picture and blurb show to the people in your groups.</p>
+        <p className="text-sm text-slate-600 dark:text-neutral-400">Your name, picture and blurb show to the people in your groups{profile.profiles_open ? " and on your profile" : ""}.</p>
+        {profile.profiles_open && (
+          <a href={profile.profile_path} className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">See your profile <ExternalLink className="h-3.5 w-3.5" /></a>
+        )}
       </div>
 
       <form onSubmit={saveProfile}>
@@ -141,6 +157,17 @@ export default function ProfilePage() {
               <input id="p-name" className={inputClass} value={form.name} maxLength={80} onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="First name, or first name and last initial" />
             </div>
+            {profile.profiles_open && (
+              <div>
+                <label htmlFor="p-username" className={labelClass}>Username</label>
+                <div className="flex items-center rounded-xl ring-1 ring-neutral-200 focus-within:ring-2 focus-within:ring-accent dark:ring-neutral-700">
+                  <span className="shrink-0 pl-3 text-sm text-slate-400">{location.host}/people/</span>
+                  <input id="p-username" className="min-w-0 flex-1 rounded-r-xl border-0 bg-transparent py-2 pl-0.5 pr-3 text-sm text-slate-900 focus:ring-0 dark:text-white" value={form.username} maxLength={30}
+                    onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} />
+                </div>
+                <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Lowercase letters, numbers and dashes. Only people signed in to RecoveryBot can see profiles.</p>
+              </div>
+            )}
             <div>
               <div className="flex items-baseline justify-between">
                 <label htmlFor="p-bio" className={labelClass}>About you</label>
@@ -170,6 +197,40 @@ export default function ProfilePage() {
           </Card>
         </Tray>
       </form>
+
+      {profile.profiles_open && (
+        <Tray label="Privacy">
+          <Card className="space-y-5 p-4">
+            <p className="text-sm text-slate-600 dark:text-neutral-400">
+              Who sees new things on your profile. You can still change each note or highlight on its own, and share notes to your groups.
+            </p>
+            {[["default_highlight_visibility", "New highlights"], ["default_note_visibility", "New notes"]].map(([key, label]) => (
+              <fieldset key={key}>
+                <legend className={`${labelClass} flex items-center gap-2`}>
+                  {label}
+                  {saved === key && <span className="inline-flex items-center gap-1 text-xs font-normal text-emerald-700 dark:text-emerald-300"><Check className="h-3.5 w-3.5" /> Saved</span>}
+                </legend>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {VISIBILITY.map((v) => {
+                    const Icon = v.icon;
+                    const on = profile[key] === v.value;
+                    return (
+                      <button key={v.value} type="button" aria-pressed={on} onClick={() => !on && saveDefault(key, v.value)}
+                        className={`flex items-start gap-2 rounded-xl p-3 text-left ring-1 ${on ? "!bg-accent/10 ring-2 ring-accent dark:!bg-accent/20" : "!bg-transparent ring-neutral-200 hover:!bg-neutral-50 dark:ring-neutral-700 dark:hover:!bg-neutral-800"}`}>
+                        <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${on ? "text-accent" : "text-slate-500"}`} />
+                        <span>
+                          <span className="block text-sm font-semibold text-slate-900 dark:text-white">{v.label}</span>
+                          <span className="block text-xs text-slate-500 dark:text-neutral-400">{v.note}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            ))}
+          </Card>
+        </Tray>
+      )}
 
       {profile.groups_open || profile.groups.length > 0 ? (
         <Tray label="Your groups" action={<a href="/groups/find" className="text-sm font-medium text-accent hover:underline">Find a group</a>}>

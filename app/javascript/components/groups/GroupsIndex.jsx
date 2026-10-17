@@ -28,7 +28,7 @@ export default function GroupsIndex() {
           <p className="text-sm text-slate-600 dark:text-neutral-400">Your home groups: meetings, readings, literature and the people in them.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link to="/timeline" className={quietButton}><MessagesSquare className="h-4 w-4" /> Your timeline</Link>
+          <a href="/people/me" className={quietButton}><MessagesSquare className="h-4 w-4" /> Your profile</a>
           <Link to="/find" className={quietButton}><Search className="h-4 w-4" /> Find a group</Link>
           {data.can_create && (
             <>

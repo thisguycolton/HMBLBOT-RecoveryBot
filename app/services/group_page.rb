@@ -30,7 +30,7 @@ class GroupPage
         group: { slug: group.slug, title: group.title, description: group.description, website: group.website,
                  time_zone: group.time_zone, status: group.status, members_count: group.members.count },
         viewer: viewer_json.merge(is_member: !!membership&.active?, membership_status: membership&.status, role: membership&.role,
-                                  can_manage: group.manageable_by?(@viewer)),
+                                  can_manage: group.manageable_by?(@viewer), default_note_visibility: @viewer&.default_note_visibility),
         meetings: group.meetings.ordered.map(&:as_api_json).reject { |m| m[:past] },
         events: group.events.published.with_attached_cover.where("starts_at IS NULL OR starts_at > ?", 12.hours.ago)
                      .upcoming_first.limit(20).map(&:card_json),

@@ -1,7 +1,8 @@
 // Groups at /groups (app/controllers/groups_controller.rb): your groups, a group's page
 // (made in the HMBLBOT Editor at /groups/:slug/page/edit) with its meetings, readings,
 // literature, members and court verifications, "Find your group" with the pages of AA
-// Intergroup groups that aren't here yet, the default page they show, and your timeline.
+// Intergroup groups that aren't here yet, and the default page they show. Your timeline
+// is on your profile (entrypoints/people.jsx).
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
@@ -9,13 +10,13 @@ import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import "../styles/tailwind.css";
 import "../styles/reader.css";
 import "../styles/events.css";
+import "../styles/writebook.css";
 
 import Navbar from "../components/Navbar";
 import GroupsIndex from "../components/groups/GroupsIndex";
 import GroupForm from "../components/groups/GroupForm";
 import GroupPage from "../components/groups/GroupPage";
 import FindGroup from "../components/groups/FindGroup";
-import TimelinePage from "../components/groups/TimelinePage";
 import IntergroupPage from "../components/groups/page/IntergroupPage";
 import GroupPageEditor from "../components/groups/page/GroupPageEditor";
 
@@ -48,7 +49,6 @@ const router = createBrowserRouter(
         { path: "find", element: <FindGroup /> },
         { path: "find/:oiaaSlug", element: <IntergroupPage /> },
         { path: "default-page", element: <IntergroupPage template /> },
-        { path: "timeline", element: <TimelinePage /> },
         { path: ":slug", element: <GroupPage /> },
         { path: ":slug/:tab", element: <GroupPage /> },
         { path: ":slug/edit", element: <GroupForm /> },
