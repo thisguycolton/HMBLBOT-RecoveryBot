@@ -16,20 +16,27 @@ class Api::GroupMotionsController < ApplicationController
   def index
     scope = Motion.visible_to(@group, current_user)
     visible = scope.pluck(:id)
+    @meetings = BusinessMeeting.visible_to(@group, current_user).pluck(:id)
     motions = (params[:q].present? ? Motion.search(scope, params[:q]) : scope).includes(:supersedes).newest_first.to_a
-    render json: { motions: motions.map { |m| m.as_api_json(replacers: replacers, visible: visible) },
+    render json: { motions: motions.map { |m| m.as_api_json(replacers: replacers, visible: visible, meetings: @meetings) },
                    can_edit: keeper?, can_delete: @group.manageable_by?(current_user) }
   end
 
   # POST /api/groups/:group_slug/motions
   def create
     @motion = @group.motions.new(motion_params.merge(created_by: current_user))
-    @motion.save ? render(json: motion_json, status: :created) : render_errors(@motion)
+    return render_errors(@motion) unless @motion.save
+
+    settle_agenda_item
+    render json: motion_json, status: :created
   end
 
   # PATCH /api/groups/:group_slug/motions/:id
   def update
-    @motion.update(motion_params) ? render(json: motion_json) : render_errors(@motion)
+    return render_errors(@motion) unless @motion.update(motion_params)
+
+    settle_agenda_item
+    render json: motion_json
   end
 
   # DELETE /api/groups/:group_slug/motions/:id (group admins). What it replaced is standing
@@ -48,11 +55,22 @@ class Api::GroupMotionsController < ApplicationController
   def replacers = @replacers ||= Motion.replacers_for(@group)
 
   def motion_json
-    @motion.reload.as_api_json(visible: Motion.visible_to(@group, current_user).pluck(:id))
+    @motion.reload.as_api_json(visible: Motion.visible_to(@group, current_user).pluck(:id),
+                               meetings: BusinessMeeting.visible_to(@group, current_user).pluck(:id))
+  end
+
+  # Deciding something on the agenda crosses it off; tabling it tables it
+  def settle_agenda_item
+    item = @motion.agenda_item
+    return unless item
+
+    status = { "passed" => "done", "failed" => "done", "tabled" => "tabled" }[@motion.status]
+    item.update(status: status) if status
   end
 
   def motion_params
     params.require(:motion).permit(:title, :text, :moved_by_name, :seconded_by_name, :status, :votes_for, :votes_against,
-                                   :abstentions, :minority_opinion, :decided_on, :category, :supersedes_id, :visibility)
+                                   :abstentions, :minority_opinion, :decided_on, :category, :supersedes_id, :visibility,
+                                   :business_meeting_id, :agenda_item_id)
   end
 end

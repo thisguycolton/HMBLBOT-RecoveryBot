@@ -17,6 +17,8 @@ class Event < ApplicationRecord
   has_many :rsvps, class_name: "EventRsvp", dependent: :destroy
   has_many :updates, class_name: "EventUpdate", dependent: :destroy
   has_many :schedule_polls, dependent: :nullify
+  # The business meeting this event announces, if it does
+  has_one :business_meeting, dependent: :nullify
 
   has_one_attached :cover
   has_one_attached :flyer

@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Globe, Lock, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { inputClass, selectClass } from "../../ui/styles";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, dangerButton, primaryButton, quietButton } from "../ui";
 import DecisionForm from "./DecisionForm";
-import { CATEGORIES, CATEGORY_INFO, MOTION_STATUS_LABELS, countLabel, dateLabel } from "./lib";
+import { CATEGORIES, CATEGORY_INFO, MOTION_STATUS_LABELS, countLabel, dateLabel, longDate, meetingsPath } from "./lib";
 
 const FILTERS = [
   ["standing", "Standing"],
@@ -15,7 +15,7 @@ const FILTERS = [
   ["tabled", "Tabled"],
 ];
 
-function Decision({ motion: m, open, canEdit, canDelete, onEdit, onDelete }) {
+function Decision({ slug, motion: m, open, canEdit, canDelete, onEdit, onDelete }) {
   const replaced = m.status === "passed" && !m.standing;
   const counts = countLabel(m);
   return (
@@ -37,6 +37,11 @@ function Decision({ motion: m, open, canEdit, canDelete, onEdit, onDelete }) {
           {(m.moved_by || m.seconded_by) && (
             <p className="text-sm text-slate-600 dark:text-neutral-300">
               {m.moved_by && <>Moved by {m.moved_by}</>}{m.moved_by && m.seconded_by && ", "}{m.seconded_by && <>seconded by {m.seconded_by}</>}
+            </p>
+          )}
+          {m.meeting && (
+            <p className="text-sm text-slate-600 dark:text-neutral-300">
+              Made at the <Link to={meetingsPath(slug, m.meeting.id)} className="text-accent hover:underline">business meeting on {longDate(m.meeting.held_on)}</Link>
             </p>
           )}
           {m.replaces && (
@@ -123,7 +128,7 @@ export default function DecisionsView({ group }) {
     editing && editing !== "new" && editing.id === m.id ? (
       <DecisionForm key={m.id} group={group} motion={m} motions={data.motions} onSaved={saved} onCancel={() => setEditing(null)} />
     ) : (
-      <Decision key={m.id} motion={m} open={m.id === openId} canEdit={canEdit} canDelete={data.can_delete} onEdit={setEditing} onDelete={remove} />
+      <Decision key={m.id} slug={slug} motion={m} open={m.id === openId} canEdit={canEdit} canDelete={data.can_delete} onEdit={setEditing} onDelete={remove} />
     )
   );
 

@@ -53,8 +53,44 @@ export const decisionsPath = (slug, open) => `/${slug}/conscience/decisions${ope
 export const NAMES_REMINDER = "First names and last initials only.";
 export const FILE_ACCEPT = ".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp,.gif"; // what may be kept as a file
 
-export const documentsPath = (slug, rest = "") => `/${slug}/conscience${rest ? `/documents/${rest}` : ""}`;
+export const documentsPath = (slug, rest = "") => `/${slug}/conscience/documents${rest ? `/${rest}` : ""}`;
+export const meetingsPath = (slug, id) => `/${slug}/conscience/meetings${id ? `/${id}` : ""}`;
+export const treasuryPath = (slug, id) => `/${slug}/conscience/treasury${id ? `/${id}` : ""}`;
+export const servicePath = (slug) => `/${slug}/conscience/service`;
 export const fileUrl = (slug, id, params = "") => `/api/groups/${slug}/documents/${id}/file${params}`;
 
 export const sizeLabel = (bytes) => (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
-export const dateLabel = (iso) => new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+// A date the server sends as "2026-03-03" is that day wherever you are; new Date("2026-03-03")
+// would be midnight UTC, the evening before for anyone west of it
+export const parseDay = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) : new Date(iso));
+export const dateLabel = (iso) => parseDay(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+export const longDate = (iso) => parseDay(iso).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+export const monthLabel = (iso) => parseDay(iso).toLocaleDateString([], { month: "long", year: "numeric" });
+
+// Money is whole cents on the server; people type dollars
+export const money = (cents) => (cents < 0 ? "-" : "") + (Math.abs(cents) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+export const moneyField = (cents) => (cents ? (cents / 100).toFixed(2) : "");
+export const parseMoney = (text) => {
+  const n = Number(String(text ?? "").replace(/[$,\s]/g, ""));
+  return String(text ?? "").trim() === "" || !Number.isFinite(n) ? null : Math.round(n * 100);
+};
+
+// Business meetings and their agendas
+export const MEETING_STATUSES = [
+  { key: "planned", label: "Planned" },
+  { key: "held", label: "Held" },
+  { key: "cancelled", label: "Cancelled" },
+];
+export const MINUTES_STATUSES = [
+  { key: "draft", label: "Draft", note: "Only record keepers see them" },
+  { key: "posted", label: "Posted", note: "Members can read them" },
+  { key: "approved", label: "Approved", note: "Members read them; the group approved them" },
+];
+export const AGENDA_KINDS = [
+  { key: "report", label: "Report" },
+  { key: "old_business", label: "Old business" },
+  { key: "new_business", label: "New business" },
+  { key: "other", label: "Other" },
+];
+export const AGENDA_KIND_LABELS = Object.fromEntries(AGENDA_KINDS.map((k) => [k.key, k.label]));
+export const AGENDA_STATUS_LABELS = { suggested: "Suggested", on_agenda: "On the agenda", tabled: "Tabled", done: "Done" };

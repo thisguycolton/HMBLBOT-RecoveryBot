@@ -76,7 +76,7 @@
 @page { margin: 0.75in; }
 @media print {
   body.doc-printing { background: #fff !important; }
-  body.doc-printing #site-nav, body.doc-printing .group-chrome, body.doc-printing .doc-chrome, body.doc-printing .doc-meta, body.doc-printing .doc-noprint { display: none !important; }
+  body.doc-printing #site-nav, body.doc-printing .group-chrome, body.doc-printing .doc-chrome, body.doc-printing .doc-meta, body.doc-printing .doc-noprint, body.doc-printing .hb-toasts { display: none !important; }
   body.doc-printing main { padding-top: 0 !important; }
   body.doc-printing main > div { max-width: none !important; padding: 0 !important; }
   body.doc-printing .doc-desk { background: #fff; margin: 0; padding: 0; }
@@ -87,3 +87,19 @@
   body.doc-printing .pdf-viewer { background: #fff; }
   body.doc-printing .pdf-viewer > div:last-child { padding: 0; gap: 0; }
 }
+
+/* Minutes: the document editor in a box */
+.doc-minutes .ProseMirror { min-height: 14rem; }
+
+/* A meeting's or report's paper copy */
+.meeting-print { color: #111; font-size: 11pt; line-height: 1.5; }
+.meeting-print h1 { font-size: 20pt; font-weight: 700; margin: 0 0 0.2em; }
+.meeting-print h2 { border-bottom: 1px solid #999; font-size: 13pt; font-weight: 700; margin: 1.4em 0 0.5em; }
+.meeting-print__meta { color: #444; margin-bottom: 1em; }
+.meeting-print__wording { color: #333; font-size: 10pt; margin-top: 0.2em; white-space: pre-line; }
+.meeting-print ul { list-style: disc; padding-inline-start: 1.4em; }
+.meeting-print li { break-inside: avoid; margin-bottom: 0.3em; }
+.meeting-print ol { list-style: none; padding: 0; }
+.meeting-print table { border-collapse: collapse; margin-top: 1em; width: 100%; }
+.meeting-print th, .meeting-print td { border: 1px solid #999; padding: 4px 8px; text-align: left; }
+.meeting-print dl > div { display: flex; justify-content: space-between; }

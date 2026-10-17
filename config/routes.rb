@@ -54,6 +54,16 @@ Rails.application.routes.draw do
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
+    resource :conscience, controller: "group_conscience", only: :show
+    resources :business_meetings, controller: "group_business_meetings", only: %i[index show create update destroy] do
+      resources :agenda_items, controller: "group_agenda_items", only: %i[create update destroy] do
+        post :reorder, on: :collection
+      end
+    end
+    resources :service_positions, controller: "group_service_positions", only: %i[index create update destroy] do
+      resources :terms, controller: "group_service_terms", only: %i[create update destroy]
+    end
+    resources :treasurer_reports, controller: "group_treasurer_reports", only: %i[index create update destroy]
     resources :motions, controller: "group_motions", only: %i[index create update destroy]
     resources :documents, controller: "group_documents", only: %i[index show create update destroy] do
       member do

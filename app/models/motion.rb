@@ -14,6 +14,9 @@ class Motion < ApplicationRecord
   belongs_to :group
   belongs_to :created_by, class_name: "User", optional: true
   belongs_to :supersedes, class_name: "Motion", optional: true
+  # Where it was decided, when it was made at a business meeting
+  belongs_to :business_meeting, optional: true
+  belongs_to :agenda_item, optional: true
   has_many :replacements, class_name: "Motion", foreign_key: :supersedes_id, inverse_of: :supersedes, dependent: :nullify
   has_many :documents, class_name: "GroupDocument", foreign_key: :approved_by_motion_id, inverse_of: :approved_by, dependent: :nullify
 
@@ -30,6 +33,7 @@ class Motion < ApplicationRecord
   validates :decided_on, presence: true, if: -> { DECIDED.include?(status) }
   validates :votes_for, :votes_against, :abstentions, numericality: { only_integer: true, in: 0..COUNT_MAX }, allow_nil: true
   validate :supersedes_is_sensible
+  validate :meeting_is_the_groups
 
   scope :passed, -> { where(status: "passed") }
   scope :newest_first, -> { order(Arel.sql("motions.decided_on DESC NULLS LAST"), id: :desc) }
@@ -54,7 +58,8 @@ class Motion < ApplicationRecord
 
   # `replacers`: passed motions of the group by what they replace ({ id => motion }), so a
   # list needn't ask once per row; `visible`: ids this viewer may see.
-  def as_api_json(replacers: nil, visible: nil)
+  # `meetings`: ids of the business meetings this viewer may see, so a link never leads nowhere
+  def as_api_json(replacers: nil, visible: nil, meetings: nil)
     replacer = (replacers || self.class.replacers_for(group))[id]
     shown = ->(m) { m && (visible.nil? || visible.include?(m.id)) }
     {
@@ -66,7 +71,9 @@ class Motion < ApplicationRecord
       # A replacement the viewer can't see still counts, but its title stays out of it
       replaced_by: replacer && { id: (replacer.id if shown.call(replacer)), title: (replacer.title if shown.call(replacer)), decided_on: replacer.decided_on&.iso8601 },
       replaces: supersedes && shown.call(supersedes) ? { id: supersedes.id, title: supersedes.title, decided_on: supersedes.decided_on&.iso8601 } : nil,
-      supersedes_id: supersedes_id,
+      supersedes_id: supersedes_id, agenda_item_id: agenda_item_id,
+      business_meeting_id: business_meeting_id,
+      meeting: business_meeting && (meetings.nil? || meetings.include?(business_meeting_id)) ? { id: business_meeting_id, held_on: business_meeting.held_on.iso8601 } : nil,
     }
   end
 
@@ -75,6 +82,12 @@ class Motion < ApplicationRecord
   end
 
   private
+
+  def meeting_is_the_groups
+    errors.add(:business_meeting, "must be one of this group's meetings") if business_meeting && business_meeting.group_id != group_id
+    errors.add(:agenda_item, "must be on one of this group's meetings") if agenda_item && agenda_item.business_meeting.group_id != group_id
+    errors.add(:agenda_item, "must be on that meeting's agenda") if agenda_item && business_meeting && agenda_item.business_meeting_id != business_meeting_id
+  end
 
   def supersedes_is_sensible
     return unless supersedes

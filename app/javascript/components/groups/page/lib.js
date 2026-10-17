@@ -1,6 +1,6 @@
 // Group pages in the HMBLBOT Editor: the blocks a group page can have (EventBlocks::GROUP_TYPES
 // on the server), its own and the event page's shared ones.
-import { AlignLeft, BookOpen, CalendarClock, CalendarRange, FileText, Scale, Heading, Image, LayoutGrid, ListChecks, MessagesSquare, NotebookPen, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { AlignLeft, BookOpen, CalendarClock, CalendarRange, FileText, Gavel, Scale, Heading, Image, LayoutGrid, ListChecks, MessagesSquare, NotebookPen, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { newBlock } from "../../events/lib";
 
 export const GROUP_BLOCK_GROUPS = [
@@ -23,6 +23,7 @@ export const GROUP_BLOCK_GROUPS = [
       { type: "readings", label: "Readings", note: "Readings members shared", icon: NotebookPen },
       { type: "documents", label: "Documents", note: "Format, guidelines and other documents", icon: FileText },
       { type: "decisions", label: "Decisions", note: "What the group has decided", icon: Scale },
+      { type: "business_meeting", label: "Business meeting", note: "The next one, its agenda, suggest an item", icon: Gavel },
     ],
   },
   {
@@ -50,6 +51,7 @@ const DEFAULTS = {
   readings: { title: "Shared readings", limit: 5 },
   documents: { title: "Documents", kind: "all", limit: 5, pinned_only: false },
   decisions: { title: "Decisions", category: "all", limit: 5 },
+  business_meeting: { title: "Next business meeting" },
   members: { title: "Members" },
   join: { title: "Join us", markdown: "Everyone with a desire to stop drinking is welcome." },
 };
@@ -79,6 +81,7 @@ export function hiddenFor(block, context) {
     case "literature": return !context.literature?.length;
     case "readings": return !context.readings?.length;
     case "documents": return !documentsFor(block, context).length && !context.viewer?.can_keep_records;
+    case "business_meeting": return !context.business_meeting && !context.viewer?.can_keep_records;
     case "decisions": return !decisionsFor(block, context).length && !context.viewer?.can_keep_records;
     case "timeline": return outside;
     case "members": return outside;

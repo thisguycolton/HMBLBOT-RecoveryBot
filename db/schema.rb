@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_17_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -56,6 +56,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
     t.string "icon"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "agenda_items", force: :cascade do |t|
+    t.bigint "business_meeting_id", null: false
+    t.bigint "submitted_by_id"
+    t.integer "position", default: 0, null: false
+    t.string "kind", default: "new_business", null: false
+    t.string "title", null: false
+    t.text "details"
+    t.string "status", default: "on_agenda", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["business_meeting_id"], name: "index_agenda_items_on_business_meeting_id"
+    t.index ["submitted_by_id"], name: "index_agenda_items_on_submitted_by_id"
   end
 
   create_table "ahoy_events", force: :cascade do |t|
@@ -123,6 +137,31 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
     t.string "cover_color"
     t.index ["slug"], name: "index_books_on_slug", unique: true
     t.index ["work_key", "edition", "language"], name: "index_books_on_work_key_and_edition_and_language", unique: true
+  end
+
+  create_table "business_meetings", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.bigint "event_id"
+    t.bigint "meeting_id"
+    t.date "held_on", null: false
+    t.datetime "starts_at"
+    t.string "status", default: "planned", null: false
+    t.string "chair_name"
+    t.string "secretary_name"
+    t.integer "attendance_count"
+    t.text "minutes"
+    t.string "minutes_status", default: "draft", null: false
+    t.datetime "minutes_posted_at"
+    t.datetime "minutes_approved_at"
+    t.string "visibility", default: "members", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_business_meetings_on_created_by_id"
+    t.index ["event_id"], name: "index_business_meetings_on_event_id"
+    t.index ["group_id", "held_on"], name: "index_business_meetings_on_group_id_and_held_on"
+    t.index ["group_id"], name: "index_business_meetings_on_group_id"
+    t.index ["meeting_id"], name: "index_business_meetings_on_meeting_id"
   end
 
   create_table "chapters", force: :cascade do |t|
@@ -414,6 +453,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
     t.string "visibility", default: "members", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "business_meeting_id"
+    t.bigint "agenda_item_id"
+    t.index ["agenda_item_id"], name: "index_motions_on_agenda_item_id"
+    t.index ["business_meeting_id"], name: "index_motions_on_business_meeting_id"
     t.index ["created_by_id"], name: "index_motions_on_created_by_id"
     t.index ["group_id", "decided_on"], name: "index_motions_on_group_id_and_decided_on"
     t.index ["group_id"], name: "index_motions_on_group_id"
@@ -648,6 +691,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
     t.index ["user_id"], name: "index_schedule_polls_on_user_id"
   end
 
+  create_table "service_positions", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.integer "term_months"
+    t.integer "sobriety_months"
+    t.integer "position", default: 0, null: false
+    t.boolean "archived", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id"], name: "index_service_positions_on_group_id"
+  end
+
   create_table "service_readings", force: :cascade do |t|
     t.string "title"
     t.string "short_title"
@@ -655,6 +711,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "icon"
+  end
+
+  create_table "service_terms", force: :cascade do |t|
+    t.bigint "service_position_id", null: false
+    t.bigint "user_id"
+    t.string "name", null: false
+    t.date "starts_on", null: false
+    t.date "ends_on"
+    t.datetime "reminded_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["service_position_id"], name: "index_service_terms_on_service_position_id"
+    t.index ["user_id"], name: "index_service_terms_on_user_id"
   end
 
   create_table "sharing_modes", force: :cascade do |t|
@@ -802,6 +871,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
     t.index ["topic_set_id"], name: "index_topics_on_topic_set_id"
   end
 
+  create_table "treasurer_reports", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.date "period_on", null: false
+    t.bigint "opening_cents", default: 0, null: false
+    t.bigint "reserve_cents", default: 0, null: false
+    t.jsonb "lines", default: [], null: false
+    t.jsonb "splits", default: [], null: false
+    t.text "notes"
+    t.string "status", default: "draft", null: false
+    t.string "visibility", default: "members", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_treasurer_reports_on_created_by_id"
+    t.index ["group_id", "period_on"], name: "index_treasurer_reports_on_group_id_and_period_on", unique: true
+    t.index ["group_id"], name: "index_treasurer_reports_on_group_id"
+  end
+
   create_table "user_active_groups", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "group_id", null: false
@@ -859,6 +946,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "agenda_items", "business_meetings", on_delete: :cascade
+  add_foreign_key "agenda_items", "users", column: "submitted_by_id", on_delete: :nullify
+  add_foreign_key "business_meetings", "events", on_delete: :nullify
+  add_foreign_key "business_meetings", "groups", on_delete: :cascade
+  add_foreign_key "business_meetings", "meetings", on_delete: :nullify
+  add_foreign_key "business_meetings", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chapters", "books"
   add_foreign_key "court_verifications", "groups"
   add_foreign_key "court_verifications", "meetings", on_delete: :nullify
@@ -889,6 +982,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"
   add_foreign_key "meetings", "groups"
+  add_foreign_key "motions", "agenda_items", on_delete: :nullify
+  add_foreign_key "motions", "business_meetings", on_delete: :nullify
   add_foreign_key "motions", "groups", on_delete: :cascade
   add_foreign_key "motions", "motions", column: "supersedes_id", on_delete: :nullify
   add_foreign_key "motions", "users", column: "created_by_id", on_delete: :nullify
@@ -911,6 +1006,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
   add_foreign_key "schedule_poll_members", "users"
   add_foreign_key "schedule_polls", "events"
   add_foreign_key "schedule_polls", "users"
+  add_foreign_key "service_positions", "groups", on_delete: :cascade
+  add_foreign_key "service_terms", "service_positions", on_delete: :cascade
+  add_foreign_key "service_terms", "users", on_delete: :nullify
   add_foreign_key "site_notices", "users", on_delete: :nullify
   add_foreign_key "text_report_comments", "text_reports"
   add_foreign_key "text_report_comments", "users"
@@ -926,6 +1024,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
   add_foreign_key "topic_tags", "topics"
   add_foreign_key "topics", "topic_categories"
   add_foreign_key "topics", "topic_sets"
+  add_foreign_key "treasurer_reports", "groups", on_delete: :cascade
+  add_foreign_key "treasurer_reports", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "user_active_groups", "groups"
   add_foreign_key "user_active_groups", "users"
   add_foreign_key "user_highlights", "chapters"

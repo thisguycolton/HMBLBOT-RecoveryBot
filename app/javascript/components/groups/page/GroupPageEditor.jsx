@@ -20,7 +20,7 @@ const PANELS = [
 const formFrom = (p) => ({ layout: p.layout, blocks: p.blocks || [] });
 const LIMITS = { events: [[1, "1"], [3, "3"], [6, "6"], [12, "12"]], timeline: [[5, "5"], [10, "10"], [20, "20"]], readings: [[3, "3"], [5, "5"], [10, "10"]] };
 // The group's own blocks; the rest are the event page's, with their own fields
-const GROUP_OWN = ["meetings", "events", "timeline", "literature", "readings", "documents", "decisions", "members", "join"];
+const GROUP_OWN = ["meetings", "events", "timeline", "literature", "readings", "documents", "decisions", "business_meeting", "members", "join"];
 const GROUP_HINT = "{{group}} is the group's name.";
 
 // The HMBLBOT Editor for a group's page (/groups/:slug/page/edit, its admins) or, with

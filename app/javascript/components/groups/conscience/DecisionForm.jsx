@@ -10,17 +10,19 @@ const today = () => new Date().toLocaleDateString("en-CA");
 const blank = () => ({
   title: "", text: "", category: "other", status: "passed", decided_on: today(), moved_by_name: "", seconded_by_name: "",
   votes_for: "", votes_against: "", abstentions: "", minority_opinion: "", supersedes_id: "", visibility: "members",
+  business_meeting_id: "", agenda_item_id: "",
 });
 
 // Recording a decision (record keepers), or changing one. `motions` are the group's other
-// decisions, for "what it replaces".
-export default function DecisionForm({ group, motion = null, motions, onSaved, onCancel }) {
+// decisions, for "what it replaces". `preset` fills it in for a decision made at a business
+// meeting (its agenda item, its date).
+export default function DecisionForm({ group, motion = null, motions, preset = null, onSaved, onCancel }) {
   const [form, setForm] = useState(() => (motion
     ? Object.fromEntries(Object.keys(blank()).map((k) => {
         const source = { moved_by_name: motion.moved_by, seconded_by_name: motion.seconded_by }[k] ?? motion[k];
         return [k, source ?? ""];
       }))
-    : blank()));
+    : { ...blank(), ...preset }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));

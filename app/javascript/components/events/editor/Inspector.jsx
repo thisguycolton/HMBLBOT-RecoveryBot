@@ -122,6 +122,10 @@ export default function BlockInspector({ block, uploadPath, pollsFor, announces 
         </>
       )}
 
+      {block.type === "conscience_agenda" && (
+        <Field label="Title" hint="Shows the agenda of the business meeting this event is linked to, to the group's members."><input className={inputClass} value={block.title || ""} onChange={(e) => set("title")(e.target.value)} maxLength={120} /></Field>
+      )}
+
       {block.type === "poll" && pollsFor && <PollPicker token={pollsFor} value={block.poll_token} onChange={set("poll_token")} />}
 
       {extraFields?.(block, set)}

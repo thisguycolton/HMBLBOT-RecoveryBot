@@ -316,3 +316,53 @@ Open question 6 was answered with Tiptap, so documents are now written like a wo
   inline; Word and Excel uploads download.
 - Not done: pictures inside a document, comments, real server-side PDF files (Save as PDF is
   the browser's print dialog), live multi-person editing.
+
+## As built: steps 3 and 4
+
+Built: business meetings (agenda, minutes, decisions made at them, event tie-in, print sheet,
+notifications, page and event blocks, Overview), service positions with terms and rotation
+reminders, and the treasurer's monthly report as numbers. Differences from the plan:
+
+- **Tabs**: Overview, Meetings, Decisions, Documents, Service, Treasury. The Overview is the
+  tab's home (`/conscience`); documents moved to `/conscience/documents`. Anyone who isn't a
+  member still lands on the public documents at `/conscience`.
+- **Minutes** are written in the same editor as documents (HTML, cleaned by `DocumentHtml`),
+  not Markdown, so a secretary gets the same ribbon. "Start from the agenda" fills in the
+  headings, each item's decisions, and who chaired and kept the minutes.
+- **Agenda details** are plain text (short), not Markdown.
+- **Visitors** never see business meetings. The `business_meeting` page block shows them the
+  date only when a *published* event announces the meeting; the agenda is for members (also
+  on the event page).
+- **Events**: only group admins can have an event made (that's the existing rule for
+  creating events); a record keeper who isn't an admin gets a clear message.
+- **Notifications** are as planned: suggestions to record keepers; scheduled meetings and
+  first-posted minutes to members. Plus one new kind, a service term nearly up
+  (`service.rotation` to record keepers, `service.term_ending` to the person serving).
+- **Service positions**: held by a name, optionally linked to a member. Past holders are kept
+  as history. There is no scheduler in this app, so reminders go out when a member opens the
+  Service tab or the Overview, and `bin/rails group_service:remind` covers every group from cron.
+- **Treasury**: money is whole cents in US dollars. The split applies to what is above the
+  prudent reserve; a month that ends under the reserve shares nothing and says how far short it
+  is. A new report starts from the last one (what it ended with, the reserve, the split and
+  the usual lines). Lines left without an amount aren't saved. Reports for members are
+  "posted"; the older "treasury" document folder still exists for scans and spreadsheets.
+- **Printing**: meetings and reports print as a clean sheet through the browser's print
+  (Save as PDF), like documents.
+
+### Not built: online voting
+
+The plan's open question 1 answered "no" by default, and I kept to that. It is a decision for
+the group, not the code, so these need answers first:
+
+1. Who may vote on a motion online: every active member, or only members past some
+   sobriety or membership time (a group's own rules often say)?
+2. Secret or open ballots? An open record fits "as counted in the room"; a secret one needs
+   the app to keep who voted apart from how.
+3. How long does a vote stay open, what is the quorum, and what majority passes it
+   (a simple majority, two thirds, or "substantial unanimity")?
+4. Does an online result replace a vote in the room or only count towards it, and may a
+   member change their vote before it closes?
+5. Does it need the Concept V minority opinion to be heard before a re-vote (a hold on the
+   result for N days)?
+
+Until then a secretary records the count as it stood, as now (`motions.votes_for` and the rest).
