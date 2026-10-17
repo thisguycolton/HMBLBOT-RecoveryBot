@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Lock, MessagesSquare, Pin, Trash2, UserPlus, Users, Video } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Lock, MessagesSquare, Pin, Scale, Trash2, UserPlus, Users, Video } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { tone } from "../../events/lib";
 import Avatar from "../Avatar";
@@ -7,8 +7,8 @@ import FeedItem from "../../notes/FeedItem";
 import NoteEditor from "../../notes/NoteEditor";
 import { api, typeLabel } from "../lib";
 import { scheduleLabel, toSeries } from "../MeetingsTab";
-import { KIND_INFO } from "../conscience/lib";
-import { documentsFor } from "./lib";
+import { CATEGORY_INFO, KIND_INFO, countLabel, dateLabel } from "../conscience/lib";
+import { decisionsFor, documentsFor } from "./lib";
 
 // How a group page's own blocks look (EventBlocks::GROUP_TYPES), filled in from `context`
 // (app/services/group_page.rb). Like the event blocks, each has a smaller view for the side
@@ -22,6 +22,7 @@ export default function GroupBlockView({ block, compact, editing, context, fill 
     case "literature": return <LiteratureBlock {...props} />;
     case "readings": return <ReadingsBlock {...props} />;
     case "documents": return <DocumentsBlock {...props} />;
+    case "decisions": return <DecisionsBlock {...props} />;
     case "members": return <MembersBlock {...props} />;
     case "join": return <JoinBlock {...props} markdown={fill(block.markdown)} />;
     default: return null;
@@ -242,6 +243,37 @@ function DocumentsBlock({ block, compact, editing, context, title }) {
                     <span className="truncate">{d.title}</span>
                   </span>
                   {!compact && (d.excerpt || d.file) && <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{d.excerpt || d.file.name}</span>}
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+// The group's standing decisions this viewer may see. Visitors only get Public ones, so a group
+// can say "this meeting is closed" on its page.
+function DecisionsBlock({ block, compact, editing, context, title }) {
+  const decisions = decisionsFor(block, context);
+  const slug = context.group?.slug;
+  return (
+    <Card block={block} compact={compact} title={title} icon={Scale}>
+      {decisions.length === 0 && (
+        <Empty>{editing || context.viewer?.can_keep_records ? "The group's standing decisions show here. Public ones show to everyone; members also see the Members ones." : "No decisions yet."}</Empty>
+      )}
+      <ul className="space-y-1">
+        {decisions.map((d) => {
+          const Icon = CATEGORY_INFO[d.category]?.icon || Scale;
+          return (
+            <li key={d.id}>
+              <a href={`/groups/${slug}/conscience/decisions?open=${d.id}`} onClick={(e) => (editing || !slug) && e.preventDefault()}
+                className="flex items-center gap-3 rounded-xl p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800/60">
+                <Icon className="size-4 shrink-0 text-slate-500 dark:text-neutral-400" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{d.title}</span>
+                  {!compact && <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{[d.decided_on && dateLabel(d.decided_on), countLabel(d)].filter(Boolean).join(" · ")}</span>}
                 </span>
               </a>
             </li>

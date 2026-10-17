@@ -19,6 +19,8 @@ class GroupDocument < ApplicationRecord
   belongs_to :group
   belongs_to :created_by, class_name: "User", optional: true
   belongs_to :updated_by, class_name: "User", optional: true
+  # The decision by which the group adopted it ("adopted by group conscience on Mar 3")
+  belongs_to :approved_by, class_name: "Motion", foreign_key: :approved_by_motion_id, optional: true, inverse_of: :documents
   has_many :versions, -> { order(created_at: :desc, id: :desc) }, class_name: "GroupDocumentVersion", dependent: :destroy
   has_one_attached :file
 
@@ -31,6 +33,7 @@ class GroupDocument < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :body, length: { maximum: BODY_MAX }
   validate :file_allowed
+  validate :approved_by_is_a_passed_decision
 
   scope :ordered, -> { order(pinned: :desc, position: :asc, title: :asc) }
 
@@ -99,11 +102,25 @@ class GroupDocument < ApplicationRecord
       file: file.attached? ? { name: file.filename.to_s, type: served_type, size: file.byte_size, inline: inline? } : nil,
       excerpt: excerpt,
     }
-    json.merge!(body: body.to_s, created_at: created_at.iso8601, created_by: created_by&.display_name) if full
+    json.merge!(body: body.to_s, created_at: created_at.iso8601, created_by: created_by&.display_name, approved_by: approved_by_json(viewer)) if full
     json
   end
 
   private
+
+  # The adopting decision, if this viewer may see it
+  def approved_by_json(viewer)
+    motion = approved_by
+    return unless motion && Motion.visible_to(group, viewer).exists?(motion.id)
+
+    { id: motion.id, title: motion.title, decided_on: motion.decided_on&.iso8601 }
+  end
+
+  def approved_by_is_a_passed_decision
+    return unless approved_by
+
+    errors.add(:approved_by, "must be a decision this group passed") unless approved_by.group_id == group_id && approved_by.passed?
+  end
 
   # The start of the text as one plain line (table dividers and Markdown marks left out)
   def excerpt

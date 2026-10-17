@@ -73,14 +73,6 @@ class Api::GroupDocumentsController < ApplicationController
     @document = GroupDocument.visible_to(@group, current_user).find(params[:id])
   end
 
-  def keeper? = @group.records_editable_by?(current_user)
-
-  def require_keeper
-    return if keeper?
-
-    render json: { error: "Only this group's record keepers can do that." }, status: :forbidden
-  end
-
   def member_version
     @document.versions.find_by(id: params[:version_id]) if @group.member_or_site_admin?(current_user)
   end
@@ -90,7 +82,7 @@ class Api::GroupDocumentsController < ApplicationController
   end
 
   def document_params
-    attrs = params.require(:document).permit(:title, :kind, :body, :visibility, :status, :pinned, :file, :remove_file)
+    attrs = params.require(:document).permit(:title, :kind, :body, :visibility, :status, :pinned, :file, :remove_file, :approved_by_motion_id)
     # A new upload with no title takes its file's name
     if attrs[:title].blank? && attrs[:file].respond_to?(:original_filename) && @document&.title.blank?
       attrs[:title] = File.basename(attrs[:file].original_filename, ".*").tr("_-", " ")

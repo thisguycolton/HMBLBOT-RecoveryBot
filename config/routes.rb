@@ -54,6 +54,7 @@ Rails.application.routes.draw do
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
+    resources :motions, controller: "group_motions", only: %i[index create update destroy]
     resources :documents, controller: "group_documents", only: %i[index show create update destroy] do
       member do
         get :file

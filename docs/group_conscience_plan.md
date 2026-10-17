@@ -1,6 +1,6 @@
 # Group Conscience organizer: plan
 
-Step 1 (Documents) is built; steps 2 and 3 are not. Written 2026-10-17. The Find a meeting work (PR #13), which sits on Profiles/Group pages (#12), Events (#11) and Groups (#10), is now merged to `main` (#14); build on `main`.
+Steps 1 (Documents) and 2 (Decisions) are built; step 3 is not. Written 2026-10-17. The Find a meeting work (PR #13), which sits on Profiles/Group pages (#12), Events (#11) and Groups (#10), is now merged to `main` (#14); build on `main`.
 
 ## What it's for
 
@@ -211,7 +211,7 @@ opens the group's page").
 
 1. **Documents** (built; see "As built" below): tables, upload + write, folders, visibility, history, search, Documents
    tab and `documents` block. Useful on day one (format, guidelines).
-2. **Decisions log**: `motions` without meetings first, backfill-able, Decisions view and
+2. **Decisions log** (built; see "As built: step 2" below): `motions` without meetings first, backfill-able, Decisions view and
    `decisions` block.
 3. **Business meetings**: meetings, agenda items (member suggestions), minutes, recording
    motions in place, Overview, notifications, `business_meeting` block, event tie-in, print view.
@@ -260,3 +260,28 @@ What differs from the plan above:
 - `Markdown` (components/book/Markdown.jsx) now renders GFM tables, for treasurer's reports.
 - Position within a folder is set on creation (last); there is no drag-to-reorder yet, and
   pinned documents lead.
+
+## As built: step 2 (Decisions)
+
+What differs from the plan above:
+
+- `motions` has no `business_meeting_id` or `agenda_item_id` yet; step 3 adds them. Until then
+  the Decisions view has no link to a meeting.
+- `group_documents.approved_by_motion_id` is added now (it waited for this step). A document
+  can only be adopted by a decision its group passed; the badge ("Adopted Mar 3 by group
+  conscience") shows only to people who may see that decision, so a Public document never
+  leaks the title of a Members-only one.
+- Vote counts are nullable, so a past decision can be typed in without one.
+- `status` defaults to `passed` and a passed, failed or tabled decision needs its date.
+- A replacement only counts once it passed: a failed or merely proposed "replaces" leaves
+  the old decision standing. A decision can't replace one of another group, itself, or
+  anything that leads back to it.
+- Visitors see Public decisions that passed. A Public decision replaced by a Members-only one
+  shows as replaced, with the date but not the new decision's title.
+- Deleting a decision (group admins) makes what it replaced standing again and un-adopts
+  documents; the confirmation says so.
+- `/conscience/decisions` is linked as `?open=<id>` from the block and from a document's
+  badge, and scrolls to and opens that decision. The section bar (Documents, Decisions) is
+  for members, and a select on phones.
+- Search is `GET /api/groups/:slug/motions?q=`; the standing/failed/tabled and kind filters
+  run in the browser over what the viewer may see.

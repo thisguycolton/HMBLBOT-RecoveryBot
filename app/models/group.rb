@@ -21,6 +21,7 @@ class Group < ApplicationRecord
   has_many :court_verifications, dependent: :nullify
   has_many :events, dependent: :destroy
   has_many :documents, class_name: "GroupDocument", dependent: :destroy
+  has_many :motions, dependent: :destroy
   has_many :timeline_note_shares, dependent: :destroy
   has_many :timeline_notes, through: :timeline_note_shares
 

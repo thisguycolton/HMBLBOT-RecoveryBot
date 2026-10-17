@@ -5,7 +5,7 @@ import Markdown from "../../book/Markdown";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Message, Tray, dangerButton, primaryButton, quietButton } from "../ui";
 import { StatusPills } from "./DocumentsView";
-import { KIND_INFO, dateLabel, documentsPath, fileUrl, sizeLabel } from "./lib";
+import { KIND_INFO, dateLabel, decisionsPath, documentsPath, fileUrl, sizeLabel } from "./lib";
 
 // One document: its text and/or file, who last changed it, and (for members) the copies
 // it had before. Record keepers edit and restore; group admins delete.
@@ -73,6 +73,11 @@ export default function DocumentView({ group, id }) {
             <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
               <StatusPills doc={doc} />
               <span>Updated {dateLabel(doc.updated_at)}{doc.updated_by ? ` by ${doc.updated_by}` : ""}</span>
+              {doc.approved_by && (
+                <Link to={decisionsPath(slug, doc.approved_by.id)} className="text-accent hover:underline">
+                  Adopted{doc.approved_by.decided_on ? ` ${dateLabel(doc.approved_by.decided_on)}` : ""} by group conscience
+                </Link>
+              )}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

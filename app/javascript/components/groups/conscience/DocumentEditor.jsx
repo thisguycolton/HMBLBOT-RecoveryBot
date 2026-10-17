@@ -6,7 +6,7 @@ import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import Toggle from "../../ui/Toggle";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Message, primaryButton, quietButton } from "../ui";
-import { FILE_ACCEPT, KINDS, NAMES_REMINDER, STATUSES, VISIBILITIES, documentsPath, sizeLabel } from "./lib";
+import { FILE_ACCEPT, KINDS, NAMES_REMINDER, STATUSES, VISIBILITIES, dateLabel, documentsPath, sizeLabel } from "./lib";
 
 const BODY_MAX = 100_000;
 
@@ -17,7 +17,8 @@ export default function DocumentEditor({ group, id = null }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [loaded, setLoaded] = useState(id ? null : {});
-  const [form, setForm] = useState({ title: "", kind: KINDS.some((k) => k.key === params.get("kind")) ? params.get("kind") : "other", body: "", visibility: "members", status: "current", pinned: false });
+  const [form, setForm] = useState({ title: "", kind: KINDS.some((k) => k.key === params.get("kind")) ? params.get("kind") : "other", body: "", visibility: "members", status: "current", pinned: false, approved_by_motion_id: "" });
+  const [passed, setPassed] = useState([]);
   const [file, setFile] = useState(null);
   const [removeFile, setRemoveFile] = useState(false);
   const [view, setView] = useState("write");
@@ -31,9 +32,14 @@ export default function DocumentEditor({ group, id = null }) {
     api(`/groups/${slug}/documents/${id}`).then((d) => {
       if (!d.can_edit) throw new Error("Only this group's record keepers can change documents.");
       setLoaded(d);
-      setForm({ title: d.title, kind: d.kind, body: d.body, visibility: d.visibility, status: d.status, pinned: d.pinned });
+      setForm({ title: d.title, kind: d.kind, body: d.body, visibility: d.visibility, status: d.status, pinned: d.pinned, approved_by_motion_id: d.approved_by?.id ?? "" });
     }).catch((e) => setError(e.message));
   }, [slug, id]);
+
+  // The decisions it could have been adopted by
+  useEffect(() => {
+    api(`/groups/${slug}/motions`).then((d) => setPassed(d.motions.filter((m) => m.status === "passed"))).catch(() => {});
+  }, [slug]);
 
   useEffect(() => {
     const warn = (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } };
@@ -110,6 +116,16 @@ export default function DocumentEditor({ group, id = null }) {
         <p className="-mt-2 text-xs text-slate-500 dark:text-neutral-400">
           {VISIBILITIES.find((v) => v.key === form.visibility).note}.{form.status === "draft" && " Drafts are only seen by record keepers."}{form.status === "archived" && " Archived documents are only seen by record keepers."}
         </p>
+        {passed.length > 0 && (
+          <div>
+            <label htmlFor="doc-adopted" className={labelClass}>Adopted by</label>
+            <select id="doc-adopted" className={selectClass} value={form.approved_by_motion_id ?? ""} onChange={(e) => set("approved_by_motion_id")(e.target.value)}>
+              <option value="">Not recorded</option>
+              {passed.map((m) => <option key={m.id} value={m.id}>{m.title}{m.decided_on ? ` (${dateLabel(m.decided_on)})` : ""}</option>)}
+            </select>
+            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">The group conscience decision that adopted it, shown on the document.</p>
+          </div>
+        )}
         <Toggle checked={form.pinned} onChange={set("pinned")} label="Pin it" description="Pinned documents lead their folder and the Documents block on the group's page." />
 
         <div>

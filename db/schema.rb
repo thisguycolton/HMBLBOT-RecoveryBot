@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_17_020000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_17_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -270,6 +270,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_020000) do
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "approved_by_motion_id"
+    t.index ["approved_by_motion_id"], name: "index_group_documents_on_approved_by_motion_id"
     t.index ["created_by_id"], name: "index_group_documents_on_created_by_id"
     t.index ["group_id", "kind", "position"], name: "index_group_documents_on_group_id_and_kind_and_position"
     t.index ["group_id"], name: "index_group_documents_on_group_id"
@@ -390,6 +392,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_020000) do
     t.boolean "oiaa_missing", default: false, null: false
     t.index ["group_id"], name: "index_meetings_on_group_id"
     t.index ["oiaa_slug"], name: "index_meetings_on_oiaa_slug"
+  end
+
+  create_table "motions", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.string "title", null: false
+    t.text "text"
+    t.string "moved_by_name"
+    t.string "seconded_by_name"
+    t.string "status", default: "passed", null: false
+    t.integer "votes_for"
+    t.integer "votes_against"
+    t.integer "abstentions"
+    t.text "minority_opinion"
+    t.date "decided_on"
+    t.string "category", default: "other", null: false
+    t.bigint "supersedes_id"
+    t.string "visibility", default: "members", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_motions_on_created_by_id"
+    t.index ["group_id", "decided_on"], name: "index_motions_on_group_id_and_decided_on"
+    t.index ["group_id"], name: "index_motions_on_group_id"
+    t.index ["supersedes_id"], name: "index_motions_on_supersedes_id"
   end
 
   create_table "notifications", force: :cascade do |t|
@@ -850,6 +876,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_020000) do
   add_foreign_key "group_document_versions", "group_documents", on_delete: :cascade
   add_foreign_key "group_document_versions", "users", on_delete: :nullify
   add_foreign_key "group_documents", "groups", on_delete: :cascade
+  add_foreign_key "group_documents", "motions", column: "approved_by_motion_id", on_delete: :nullify
   add_foreign_key "group_documents", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "group_documents", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "group_memberships", "groups"
@@ -860,6 +887,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_020000) do
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"
   add_foreign_key "meetings", "groups"
+  add_foreign_key "motions", "groups", on_delete: :cascade
+  add_foreign_key "motions", "motions", column: "supersedes_id", on_delete: :nullify
+  add_foreign_key "motions", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "notifications", "users"
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
