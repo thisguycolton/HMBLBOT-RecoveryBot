@@ -91,6 +91,21 @@ module OiaaFeed
       conference_id: conference_id(record["conference_url"]),
       types: Array(record["types"]).map(&:to_s).first(40), notes: clean(record["notes"]).presence&.first(4000),
       url: record["url"].to_s.presence&.first(1000), last_seen_at: seen_at, created_at: seen_at, updated_at: seen_at,
+      **place(record),
+    }
+  end
+
+  # Where it meets: the spec's attendance_option, and the place for in-person and hybrid
+  # meetings (formatted_address, else built from its address parts; regions is the
+  # spec's list from broad to narrow)
+  def place(record)
+    address = clean(record["formatted_address"]).presence ||
+              %w[address city state postal_code country].map { |k| clean(record[k]).presence }.compact.join(", ").presence
+    region = Array(record["regions"]).map { |r| clean(r) }.reject(&:blank?).join(" > ").presence || clean(record["region"]).presence
+    option = record["attendance_option"].to_s.strip.downcase.presence
+    {
+      attendance_option: (option if %w[online in_person hybrid inactive].include?(option)),
+      location: clean(record["location"]).presence&.first(255), formatted_address: address&.first(255), region: region&.first(255),
     }
   end
 

@@ -7,7 +7,7 @@ class Group < ApplicationRecord
   TIME_ZONES = SchedulePoll::TIME_ZONES
   STATUSES = %w[active pending].freeze
   # Paths in the Groups app (app/javascript/entrypoints/groups.jsx) a group can't be named
-  RESERVED_SLUGS = %w[new find default-page timeline].freeze
+  RESERVED_SLUGS = %w[new find default-page timeline meetings].freeze
 
   belongs_to :created_by, class_name: "User", optional: true
   has_many :memberships, class_name: "GroupMembership", dependent: :destroy

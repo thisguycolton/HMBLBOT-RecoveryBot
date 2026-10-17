@@ -3,7 +3,7 @@ import { ChevronDown, Heart, LogIn, LogOut, Menu, Moon, Sun, UserPlus, Users, X 
 
 import DonationModal from "./DonationModal";
 import NotificationBell from "./NotificationBell";
-import { ACCOUNT_ITEMS, ADMIN_ITEMS, NAV_CATEGORIES, currentHref } from "./nav/siteMenu";
+import { ACCOUNT_ITEMS, ADMIN_ITEMS, NAV_CATEGORIES, currentHref, showItem } from "./nav/siteMenu";
 import { RecoveryBotLogo } from "./brand/Logo";
 
 // !bg: the reader styles give every <button> a gray fill
@@ -68,7 +68,7 @@ export default function Navbar({
   }, []);
 
   const toggle = (key) => setOpenMenu((open) => (open === key ? null : key));
-  const visible = (items) => items.filter((item) => !item.auth || isAuthenticated);
+  const visible = (items) => items.filter((item) => showItem(item, isAuthenticated));
   const toggleTheme = () => setTheme(isDark ? "light" : "dark");
   const openDonation = () => {
     setOpenMenu(null);

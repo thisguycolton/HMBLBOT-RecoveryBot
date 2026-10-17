@@ -8,6 +8,7 @@ import {
   Gauge,
   Highlighter,
   Library,
+  MapPinned,
   Megaphone,
   NotebookPen,
   Pickaxe,
@@ -21,13 +22,15 @@ import {
 
 // The site's tools, grouped the way the nav shows them. The navbar's dropdowns, the
 // mobile menu and the home page all read this list, so a new tool goes in one place.
-// `auth: true` items only show to signed-in accounts.
+// `auth: true` items only show to signed-in accounts; `groups: true` ones only to accounts
+// that see Groups (data-groups on the page's <body>).
 export const NAV_CATEGORIES = [
   {
     key: "meetings",
     label: "Meetings",
     blurb: "Run a meeting",
     items: [
+      { label: "Find a meeting", href: "/groups/meetings", icon: MapPinned, note: "Meetings by day, time and place, with a Join link", groups: true },
       { label: "Topicificator 9002", href: "/topicificator", icon: Sparkles, note: "Draw a topic for tonight's discussion" },
       { label: "Service Readings", href: "/service_readings", icon: BookHeart, note: "Preamble, Steps and Traditions, ready to read aloud" },
       { label: "Reading Archive", href: "/readings", icon: Bookmark, note: "Past meeting readings and topics" },
@@ -72,6 +75,10 @@ export const ADMIN_ITEMS = [
   { label: "Schedule polls", href: "/schedule_polls", icon: CalendarClock },
   { label: "Topicificator admin", href: "/admin_panel/topicificator", icon: Tags },
 ];
+
+// Whether an item shows: `auth` and `groups` items only to who they're for
+export const showItem = (item, signedIn) =>
+  (!item.auth || signedIn) && (!item.groups || document.body.dataset.groups === "true");
 
 const matches = (href, path) => path === href || path.startsWith(`${href}/`);
 

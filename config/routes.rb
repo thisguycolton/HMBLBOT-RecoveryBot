@@ -39,6 +39,7 @@ Rails.application.routes.draw do
   get "oiaa/search", to: "oiaa#search"
   get "oiaa/matches", to: "oiaa#matches"
   get "groups/find", to: "groups#find"
+  get "meeting_search", to: "meeting_search#index"
   post "groups/start", to: "groups#start"
   post "groups/join_with_token", to: "groups#join_with_token"
   post "groups/dismiss_prompt", to: "groups#dismiss_prompt"
@@ -192,6 +193,7 @@ end
   # Groups: a React app (app/javascript/entrypoints/groups.jsx); invite links join on the server
   get "/groups/join/:token", to: "groups#join", as: :join_group
   get "/groups", to: "groups#app", as: :groups
+  get "/meetings", to: redirect("/groups/meetings")
   # Your timeline moved to your profile
   get "/groups/timeline", to: redirect("/people/me")
   get "/groups/*path", to: "groups#app", format: false

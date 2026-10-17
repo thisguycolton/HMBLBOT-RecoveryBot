@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutTemplate, NotebookPen, Pencil, Users } from "lucide-react";
 import { api } from "./lib";
 import { ErrorNote, Loading, Message, Pill } from "./ui";
 import GroupHero, { heroButton, heroQuietButton } from "./page/GroupHero";
+import NextMeeting from "./NextMeeting";
 import GroupHome from "./page/GroupHome";
 import MeetingsTab from "./MeetingsTab";
 import MembersTab from "./MembersTab";
@@ -28,6 +29,8 @@ export default function GroupPage() {
   const [searchParams] = useSearchParams();
   const { slug, tab = searchParams.get("new") === "1" ? "meetings" : "home" } = useParams();
   const navigate = useNavigate();
+  // Opened from Find a meeting: back goes to those results
+  const back = useLocation().state?.back;
   const [group, setGroup] = useState(null);
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
@@ -70,11 +73,12 @@ export default function GroupPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <Link to="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Groups</Link>
+      <Link to={back || "/"} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">{back ? "← Find a meeting" : "← Groups"}</Link>
       <GroupHero
         group={group}
         coverUrl={group.cover_url}
         badge={group.status === "pending" && <Pill tone="amber">Waiting for approval</Pill>}
+        next={<NextMeeting meetings={group.meetings} buttonClass={heroButton} quietClass={heroQuietButton} />}
         actions={
           <>
             {group.status === "pending" && group.is_site_admin && (
