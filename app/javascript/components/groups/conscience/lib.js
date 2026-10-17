@@ -89,7 +89,7 @@ export const FILE_ACCEPT = ".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp,.gif"; // wha
 export const documentsPath = (slug, rest = "") => `/${slug}/conscience/documents${rest ? `/${rest}` : ""}`;
 export const meetingsPath = (slug, id) => `/${slug}/conscience/meetings${id ? `/${id}` : ""}`;
 export const treasuryPath = (slug, id) => `/${slug}/conscience/treasury${id ? `/${id}` : ""}`;
-export const servicePath = (slug) => `/${slug}/conscience/service`;
+export const officialsPath = (slug) => `/${slug}/conscience/officials`;
 export const fileUrl = (slug, id, params = "") => `/api/groups/${slug}/documents/${id}/file${params}`;
 
 export const sizeLabel = (bytes) => (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);

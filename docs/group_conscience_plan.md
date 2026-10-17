@@ -396,3 +396,16 @@ follow the rules.
   print sheet say who moved, seconded and how each motion came out.
 - Not modelled: debate (who spoke, in what order), the chair's recognition, and the precedence
   stack as it happens; the chair runs those in the room.
+
+## Hosts and elected officials (added after step 4)
+
+- **Elected officials** is the old "Service" tab renamed (`/conscience/officials`; `/service` still works). Same
+  models (`ServicePosition`, `ServiceTerm`), with rotation reminders.
+- **Hosts** is its own members-only tab on the group page, because a group has dozens of weekly meetings
+  (e.g. 28), each with a Host and a Co-host. Per meeting row: host/co-host with optional start and end
+  dates, "every day this meeting runs" for the same meeting on all weekdays, one-date covers, step down/remove,
+  a print sheet, and a filter for meetings with an open place.
+- **Who schedules**: group admins, plus members switched on as "Schedules hosts" in the Members tab
+  (`can_schedule_hosts`), so the coordinator needn't be a record keeper.
+- **Assumptions**: hosts are shown to members only (anonymity); names are plain text, linked to a member when
+  one is picked, who is notified once. Not built: end-of-term reminders for hosts, members claiming open spots.

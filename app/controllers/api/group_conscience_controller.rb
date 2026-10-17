@@ -20,6 +20,7 @@ class Api::GroupConscienceController < ApplicationController
                      .select { |p| p[:rotation] }.map { |p| p.slice(:id, :title, :rotation, :current) },
     }
     json[:waiting] = waiting if keeper?
+    json[:hosts_open] = HostSchedule.new(@group, current_user).summary if @group.hosts_editable_by?(current_user)
     render json: json
   end
 

@@ -23,7 +23,7 @@ function PositionForm({ slug, position, onSaved, onCancel }) {
     <Card className="p-4">
       <form onSubmit={save} className="space-y-3">
         <ErrorNote error={error} />
-        <div><label htmlFor="sp-title" className={labelClass}>Position</label><input id="sp-title" required autoFocus maxLength={80} className={inputClass} value={form.title} onChange={set("title")} placeholder="e.g. Treasurer" /></div>
+        <div><label htmlFor="sp-title" className={labelClass}>Office</label><input id="sp-title" required autoFocus maxLength={80} className={inputClass} value={form.title} onChange={set("title")} placeholder="e.g. Treasurer" /></div>
         <div><label htmlFor="sp-desc" className={labelClass}>What it involves</label><textarea id="sp-desc" rows={3} maxLength={2000} className={inputClass} value={form.description} onChange={set("description")} /></div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div><label htmlFor="sp-term" className={labelClass}>A term lasts (months)</label><input id="sp-term" type="number" min="1" max="120" className={inputClass} value={form.term_months ?? ""} onChange={set("term_months")} placeholder="No set length" /></div>
@@ -68,8 +68,9 @@ function TermForm({ slug, position, members, onSaved, onCancel }) {
   );
 }
 
-// Service positions (/conscience/service): what each involves, who holds it and until when, with a
-// heads-up as a term ends. Record keepers change it; members read it.
+// The group's elected officials (/conscience/officials; chair, secretary, treasurer, GSR...): what each
+// office involves, who holds it and until when, with a heads-up as a term ends. Record keepers
+// change it; members read it. (Meeting hosts are a separate schedule: the Hosts tab.)
 export default function ServiceView({ group }) {
   const slug = group.slug;
   const [data, setData] = useState(null);
@@ -135,14 +136,14 @@ export default function ServiceView({ group }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300">Who serves the group, for how long. Record keepers and the person serving hear when a term is nearly up.</p>
-        {data.can_edit && editing !== "new" && <button type="button" onClick={() => setEditing("new")} className={primaryButton}><Plus className="size-4" /> Add a position</button>}
+        <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300">The group's elected officials and how long each serves. Record keepers and the person serving hear when a term is nearly up. Meeting hosts are on the Hosts tab.</p>
+        {data.can_edit && editing !== "new" && <button type="button" onClick={() => setEditing("new")} className={primaryButton}><Plus className="size-4" /> Add an office</button>}
       </div>
       <ErrorNote error={error} />
       {editing === "new" && <PositionForm slug={slug} onSaved={done} onCancel={() => setEditing(null)} />}
-      {active.length === 0 && editing !== "new" && <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">{data.can_edit ? "No service positions yet. Add the chair, secretary, treasurer, GSR and whatever else your group has." : "The group hasn't listed its service positions yet."}</Card>}
+      {active.length === 0 && editing !== "new" && <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">{data.can_edit ? "No elected officials yet. Add the chair, secretary, treasurer, GSR and whatever else your group elects." : "The group hasn't listed its elected officials yet."}</Card>}
       <div className="grid gap-3 lg:grid-cols-2 lg:items-start">{active.map(card)}</div>
-      {archived.length > 0 && <Tray label="Retired positions"><div className="grid gap-1.5 lg:grid-cols-2">{archived.map(card)}</div></Tray>}
+      {archived.length > 0 && <Tray label="Offices no longer used"><div className="grid gap-1.5 lg:grid-cols-2">{archived.map(card)}</div></Tray>}
     </div>
   );
 }

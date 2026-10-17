@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_18_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_18_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -331,6 +331,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_18_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "can_keep_records", default: false, null: false
+    t.boolean "can_schedule_hosts", default: false, null: false
     t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
     t.index ["group_id"], name: "index_group_memberships_on_group_id"
     t.index ["user_id"], name: "index_group_memberships_on_user_id"
@@ -407,6 +408,33 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_18_000000) do
     t.string "category"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "meeting_host_covers", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.bigint "user_id"
+    t.string "role", null: false
+    t.string "name", null: false
+    t.date "on", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_id", "role", "on"], name: "index_meeting_host_covers_on_meeting_id_and_role_and_on", unique: true
+    t.index ["meeting_id"], name: "index_meeting_host_covers_on_meeting_id"
+    t.index ["user_id"], name: "index_meeting_host_covers_on_user_id"
+  end
+
+  create_table "meeting_hosts", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.bigint "user_id"
+    t.string "role", null: false
+    t.string "name", null: false
+    t.date "starts_on", null: false
+    t.date "ends_on"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_id", "role", "starts_on"], name: "index_meeting_hosts_on_meeting_id_and_role_and_starts_on"
+    t.index ["meeting_id"], name: "index_meeting_hosts_on_meeting_id"
+    t.index ["user_id"], name: "index_meeting_hosts_on_user_id"
   end
 
   create_table "meetings", force: :cascade do |t|
@@ -998,6 +1026,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_18_000000) do
   add_foreign_key "host_props", "hostificators"
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"
+  add_foreign_key "meeting_host_covers", "meetings", on_delete: :cascade
+  add_foreign_key "meeting_host_covers", "users", on_delete: :nullify
+  add_foreign_key "meeting_hosts", "meetings", on_delete: :cascade
+  add_foreign_key "meeting_hosts", "users", on_delete: :nullify
   add_foreign_key "meetings", "groups"
   add_foreign_key "motions", "agenda_items", on_delete: :nullify
   add_foreign_key "motions", "business_meetings", on_delete: :nullify

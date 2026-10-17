@@ -210,7 +210,7 @@ class Api::GroupsController < ApplicationController
       slug: @group.slug, title: @group.title, description: @group.description, website: @group.website,
       time_zone: @group.time_zone, status: @group.status,
       role: membership&.role, membership_status: membership&.status,
-      is_member: !!membership&.active?, can_manage: manager, can_keep_records: @group.records_editable_by?(current_user), is_site_admin: !!current_user&.suite_admin?, signed_in: current_user.present?,
+      is_member: !!membership&.active?, can_manage: manager, can_keep_records: @group.records_editable_by?(current_user), can_schedule_hosts: @group.hosts_editable_by?(current_user), is_site_admin: !!current_user&.suite_admin?, signed_in: current_user.present?,
       meetings: @group.meetings.ordered.map(&:as_api_json),
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
       members_count: @group.members.count,
@@ -218,7 +218,7 @@ class Api::GroupsController < ApplicationController
     }
     if member
       json[:members] = @group.active_memberships.includes(user: { avatar_attachment: :blob }).sort_by { |m| [m.admin? ? 0 : 1, m.user.display_name.downcase] }
-                             .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records) }
+                             .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records, can_schedule_hosts: m.can_schedule_hosts) }
       json[:books] = @group.group_books.includes(book: { cover_image_attachment: :blob }).order(:created_at).map do |gb|
         { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color } }
       end

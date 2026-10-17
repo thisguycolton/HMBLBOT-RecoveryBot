@@ -85,6 +85,11 @@ class Group < ApplicationRecord
   def member?(user) = !!membership_for(user)&.active?
   def admin?(user) = !!membership_for(user)&.then { |m| m.active? && m.admin? }
   def manageable_by?(user) = !!user && (user.suite_admin? || admin?(user))
+  # Who schedules the hosts of its meetings: group admins, and members an admin marked in the
+  # Members tab (the person doing that needn't keep the records)
+  def hosts_editable_by?(user) = manageable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_schedule_hosts }
+  def host_schedulers = User.where(id: active_memberships.where("group_memberships.role = 'admin' OR group_memberships.can_schedule_hosts").select(:user_id))
+
   def member_or_site_admin?(user) = !!user && (user.suite_admin? || member?(user))
   # Record keepers write the group's documents (and, later, minutes and decisions): group
   # admins, site admins, and members an admin marked in the Members tab

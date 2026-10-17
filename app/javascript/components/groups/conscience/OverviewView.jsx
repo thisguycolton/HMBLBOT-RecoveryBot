@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarClock, CalendarPlus, ExternalLink, FileText, HandHelping, Scale } from "lucide-react";
+import { CalendarClock, CalendarPlus, ExternalLink, FileText, HandHelping, Scale, UserCheck } from "lucide-react";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton } from "../ui";
 import { AgendaList, SuggestForm } from "./AgendaParts";
-import { KIND_INFO, MOTION_STATUS_LABELS, countLabel, dateLabel, decisionsPath, documentsPath, longDate, meetingsPath, servicePath, treasuryPath } from "./lib";
+import { KIND_INFO, MOTION_STATUS_LABELS, countLabel, dateLabel, decisionsPath, documentsPath, longDate, meetingsPath, officialsPath, treasuryPath } from "./lib";
 
 const Row = ({ to, icon: Icon, title, note, right }) => (
   <Link to={to} className="flex items-start gap-3 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900">
@@ -63,6 +63,13 @@ export default function OverviewView({ group }) {
         </Card>
       </Tray>
 
+      {data.hosts_open && data.hosts_open.open_hosts + data.hosts_open.open_co_hosts > 0 && (
+        <Tray label="Hosts">
+          <Row to={`/${slug}/hosts`} icon={UserCheck} title={`${data.hosts_open.open_hosts + data.hosts_open.open_co_hosts} host places are open`}
+            note={`${data.hosts_open.open_hosts} hosts and ${data.hosts_open.open_co_hosts} co-hosts needed across the week`} />
+        </Tray>
+      )}
+
       {waiting && waitingCount > 0 && (
         <Tray label={`Waiting on you (${waitingCount})`}>
           <div className="space-y-1.5">
@@ -95,10 +102,10 @@ export default function OverviewView({ group }) {
             </Tray>
           )}
           {data.service.length > 0 && (
-            <Tray label="Service" action={<Link to={servicePath(slug)} className="text-xs font-medium text-accent hover:underline">All positions</Link>}>
+            <Tray label="Elected officials" action={<Link to={officialsPath(slug)} className="text-xs font-medium text-accent hover:underline">All officials</Link>}>
               <div className="space-y-1.5">
                 {data.service.map((p) => (
-                  <Row key={p.id} to={servicePath(slug)} icon={HandHelping} title={p.title}
+                  <Row key={p.id} to={officialsPath(slug)} icon={HandHelping} title={p.title}
                     note={p.rotation === "vacant" ? "Nobody serves in it now" : `${p.current.name}'s term ends ${dateLabel(p.current.ends_on)}`}
                     right={<Pill tone="amber">{p.rotation === "vacant" ? "Needs someone" : "Term ending"}</Pill>} />
                 ))}
