@@ -10,6 +10,7 @@ class GroupPage
   TIMELINE_MAX = 20
   MEMBERS_MAX = 48
   DOCUMENTS_MAX = 60
+  DECISIONS_MAX = 40
 
   def initialize(viewer)
     @viewer = viewer
@@ -38,6 +39,8 @@ class GroupPage
         literature: literature(group),
         readings: member ? readings(group) : nil,
         documents: documents(group),
+        decisions: decisions(group),
+        business_meeting: business_meeting(group),
         members: member ? members(group) : nil,
         timeline: member ? group.shared_notes.limit(TIMELINE_MAX).map { |n| n.as_api_json(viewer: @viewer, group: group) } : nil,
       }
@@ -60,7 +63,7 @@ class GroupPage
         oiaa_slug: slug,
         viewer: viewer_json,
         meetings: listings.map { |r| listing_json(r) },
-        events: [], literature: [], readings: nil, documents: [], members: nil, timeline: nil,
+        events: [], literature: [], readings: nil, documents: [], decisions: [], business_meeting: nil, members: nil, timeline: nil,
       }
     )
   end
@@ -112,6 +115,27 @@ class GroupPage
   def documents(group)
     GroupDocument.visible_to(group, @viewer).with_attached_file.ordered.limit(DOCUMENTS_MAX)
                  .map { |d| d.as_api_json.slice(:id, :title, :kind, :pinned, :excerpt, :updated_at, :file) }
+  end
+
+  # Standing decisions this viewer may see (Public ones for visitors); each block filters them again
+  def decisions(group)
+    Motion.visible_to(group, @viewer).standing.newest_first.limit(DECISIONS_MAX).map do |m|
+      m.as_api_json(replacers: {}).slice(:id, :title, :category, :decided_on, :votes_for, :votes_against, :abstentions)
+    end
+  end
+
+  # The next business meeting, as far as this viewer may know of it: members get its agenda and
+  # can suggest an item; anyone else only hears of it when a published event announces it
+  def business_meeting(group)
+    meeting = BusinessMeeting.next_for(group, @viewer)
+    if meeting
+      items = meeting.agenda_items.where(status: %w[on_agenda tabled done]).map { |i| i.as_api_json.slice(:id, :kind, :title, :status) }
+      return meeting.as_api_json.slice(:id, :held_on, :when_label, :event).merge(agenda: items, can_suggest: true)
+    end
+
+    announced = group.business_meetings.where(status: "planned").where("held_on >= ?", group.zone.today)
+                     .joins(:event).where(events: { status: "published" }).order(:held_on).first
+    announced && announced.as_api_json.slice(:held_on, :when_label, :event)
   end
 
   def readings(group)

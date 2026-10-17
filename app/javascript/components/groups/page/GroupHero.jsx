@@ -10,7 +10,7 @@ export default function GroupHero({ group, coverUrl, actions, badge, note, next 
   const chip = "inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur";
   const count = group.members_count || 0;
   return (
-    <header className={`relative overflow-hidden rounded-3xl ${coverUrl ? "bg-neutral-900" : "bg-gradient-to-br from-accent via-sky-600 to-indigo-700"}`}>
+    <header className={`group-chrome relative overflow-hidden rounded-3xl ${coverUrl ? "bg-neutral-900" : "bg-gradient-to-br from-accent via-sky-600 to-indigo-700"}`}>
       {coverUrl && <img src={coverUrl} alt="" className="absolute inset-0 size-full object-cover" />}
       <div className={`relative flex min-h-[13rem] flex-col justify-end gap-4 p-6 sm:min-h-[16rem] sm:p-10 ${coverUrl ? "bg-gradient-to-t from-black/80 via-black/35 to-transparent" : ""}`}>
         <div className="min-w-0">

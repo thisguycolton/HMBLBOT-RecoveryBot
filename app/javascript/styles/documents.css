@@ -1,0 +1,105 @@
+/* Group documents: a word processor's page (components/groups/conscience/DocumentPage.jsx).
+   The page stays white in dark mode, like paper, and prints as it looks. */
+
+.doc-desk { background: rgb(229 231 235); }
+.dark .doc-desk { background: rgb(23 23 23); }
+.doc-desk-title { font-size: 1.6rem; font-weight: 700; color: rgb(15 23 42); }
+.dark .doc-desk-title { color: white; }
+
+.doc-paper {
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18), 0 8px 24px rgb(0 0 0 / 0.08);
+  color: #1e293b;
+  min-height: 1056px; /* a Letter page at 96dpi */
+  padding: 72px 80px 96px;
+}
+@media (max-width: 720px) {
+  .doc-paper { min-height: 60vh; padding: 28px 20px 48px; }
+}
+
+.doc-title {
+  background: transparent;
+  border: 0;
+  color: #0f172a;
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  outline: none;
+  padding: 0;
+  width: 100%;
+}
+.doc-title::placeholder { color: #94a3b8; }
+.doc-meta {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  gap: 0.5rem 0.75rem;
+  margin: 0.6rem 0 1.6rem;
+}
+.doc-meta a { color: var(--color-accent); }
+
+/* The text: also used (read-only) for old copies in the history */
+.doc-prose { color: #1e293b; font-size: 15.5px; line-height: 1.7; outline: none; overflow-wrap: anywhere; }
+.doc-prose--small { font-size: 14px; }
+.doc-prose > * + * { margin-top: 0.75em; }
+.doc-prose h1 { color: #0f172a; font-size: 1.75em; font-weight: 700; line-height: 1.25; margin-top: 1.4em; }
+.doc-prose h2 { color: #0f172a; font-size: 1.4em; font-weight: 700; line-height: 1.3; margin-top: 1.3em; }
+.doc-prose h3 { color: #0f172a; font-size: 1.15em; font-weight: 700; margin-top: 1.2em; }
+.doc-prose p { font-size: inherit !important; line-height: inherit !important; text-align: inherit; hyphens: none !important; }
+.doc-prose ul { list-style: disc; padding-inline-start: 1.6em; }
+.doc-prose ol { list-style: decimal; padding-inline-start: 1.6em; }
+.doc-prose li > p { margin: 0; }
+.doc-prose li + li { margin-top: 0.25em; }
+.doc-prose li::marker { color: #64748b; }
+.doc-prose blockquote { border-inline-start: 3px solid #cbd5e1; color: #475569; margin-inline: 0; padding-inline-start: 1em; }
+.doc-prose hr { border: 0; border-top: 1px solid #cbd5e1; margin: 1.6em 0; }
+.doc-prose a { color: var(--color-accent); text-decoration: underline; cursor: pointer; }
+.doc-prose strong { font-weight: 700; }
+.doc-prose table { border-collapse: collapse; margin: 1em 0; table-layout: fixed; width: 100%; }
+.doc-prose th, .doc-prose td { border: 1px solid #cbd5e1; min-width: 3em; padding: 6px 10px; position: relative; text-align: start; vertical-align: top; }
+.doc-prose th { background: #f1f5f9; font-weight: 700; }
+.doc-prose td > p, .doc-prose th > p { margin: 0; }
+.doc-prose .selectedCell::after { background: rgb(37 99 235 / 0.15); content: ""; inset: 0; pointer-events: none; position: absolute; }
+.doc-prose p.is-editor-empty:first-child::before { color: #94a3b8; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+.doc-paper .ProseMirror { min-height: 40vh; }
+.doc-paper .ProseMirror:focus { outline: none; }
+
+/* pdf.js text layer: pages are drawn on a canvas with invisible text on top, so it can be selected */
+.pdf-viewer .textLayer { position: absolute; inset: 0; overflow: hidden; line-height: 1; opacity: 1; text-size-adjust: none; }
+.pdf-viewer .textLayer span, .pdf-viewer .textLayer br { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0 0; }
+.pdf-viewer .textLayer ::selection { background: rgb(37 99 235 / 0.3); }
+
+/* Save as PDF is the browser's print, so print shows only the page */
+@page { margin: 0.75in; }
+@media print {
+  body.doc-printing { background: #fff !important; }
+  body.doc-printing #site-nav, body.doc-printing .group-chrome, body.doc-printing .doc-chrome, body.doc-printing .doc-meta, body.doc-printing .doc-noprint, body.doc-printing .hb-toasts { display: none !important; }
+  body.doc-printing main { padding-top: 0 !important; }
+  body.doc-printing main > div { max-width: none !important; padding: 0 !important; }
+  body.doc-printing .doc-desk { background: #fff; margin: 0; padding: 0; }
+  body.doc-printing .doc-paper { box-shadow: none; min-height: 0; padding: 0; }
+  body.doc-printing .doc-prose { font-size: 11pt; }
+  body.doc-printing .doc-prose h1, body.doc-printing .doc-prose h2, body.doc-printing .doc-prose h3 { break-after: avoid; }
+  body.doc-printing .doc-prose table, body.doc-printing .doc-prose blockquote, body.doc-printing .doc-prose li { break-inside: avoid; }
+  body.doc-printing .pdf-viewer { background: #fff; }
+  body.doc-printing .pdf-viewer > div:last-child { padding: 0; gap: 0; }
+}
+
+/* Minutes: the document editor in a box */
+.doc-minutes .ProseMirror { min-height: 14rem; }
+
+/* A meeting's or report's paper copy */
+.meeting-print { color: #111; font-size: 11pt; line-height: 1.5; }
+.meeting-print h1 { font-size: 20pt; font-weight: 700; margin: 0 0 0.2em; }
+.meeting-print h2 { border-bottom: 1px solid #999; font-size: 13pt; font-weight: 700; margin: 1.4em 0 0.5em; }
+.meeting-print__meta { color: #444; margin-bottom: 1em; }
+.meeting-print__wording { color: #333; font-size: 10pt; margin-top: 0.2em; white-space: pre-line; }
+.meeting-print ul { list-style: disc; padding-inline-start: 1.4em; }
+.meeting-print li { break-inside: avoid; margin-bottom: 0.3em; }
+.meeting-print ol { list-style: none; padding: 0; }
+.meeting-print table { border-collapse: collapse; margin-top: 1em; width: 100%; }
+.meeting-print th, .meeting-print td { border: 1px solid #999; padding: 4px 8px; text-align: left; }
+.meeting-print dl > div { display: flex; justify-content: space-between; }

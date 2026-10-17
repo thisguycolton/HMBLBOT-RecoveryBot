@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Lock, MessagesSquare, Pin, Trash2, UserPlus, Users, Video } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Gavel, Lock, MessagesSquare, Pin, Scale, Trash2, UserPlus, Users, Video } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { tone } from "../../events/lib";
 import Avatar from "../Avatar";
@@ -7,8 +7,9 @@ import FeedItem from "../../notes/FeedItem";
 import NoteEditor from "../../notes/NoteEditor";
 import { api, typeLabel } from "../lib";
 import { scheduleLabel, toSeries } from "../MeetingsTab";
-import { KIND_INFO } from "../conscience/lib";
-import { documentsFor } from "./lib";
+import { AgendaList, SuggestForm } from "../conscience/AgendaParts";
+import { CATEGORY_INFO, KIND_INFO, countLabel, dateLabel, longDate } from "../conscience/lib";
+import { decisionsFor, documentsFor } from "./lib";
 
 // How a group page's own blocks look (EventBlocks::GROUP_TYPES), filled in from `context`
 // (app/services/group_page.rb). Like the event blocks, each has a smaller view for the side
@@ -22,6 +23,8 @@ export default function GroupBlockView({ block, compact, editing, context, fill 
     case "literature": return <LiteratureBlock {...props} />;
     case "readings": return <ReadingsBlock {...props} />;
     case "documents": return <DocumentsBlock {...props} />;
+    case "decisions": return <DecisionsBlock {...props} />;
+    case "business_meeting": return <BusinessMeetingBlock {...props} />;
     case "members": return <MembersBlock {...props} />;
     case "join": return <JoinBlock {...props} markdown={fill(block.markdown)} />;
     default: return null;
@@ -248,6 +251,70 @@ function DocumentsBlock({ block, compact, editing, context, title }) {
           );
         })}
       </ul>
+    </Card>
+  );
+}
+
+// The group's standing decisions this viewer may see. Visitors only get Public ones, so a group
+// can say "this meeting is closed" on its page.
+function DecisionsBlock({ block, compact, editing, context, title }) {
+  const decisions = decisionsFor(block, context);
+  const slug = context.group?.slug;
+  return (
+    <Card block={block} compact={compact} title={title} icon={Scale}>
+      {decisions.length === 0 && (
+        <Empty>{editing || context.viewer?.can_keep_records ? "The group's standing decisions show here. Public ones show to everyone; members also see the Members ones." : "No decisions yet."}</Empty>
+      )}
+      <ul className="space-y-1">
+        {decisions.map((d) => {
+          const Icon = CATEGORY_INFO[d.category]?.icon || Scale;
+          return (
+            <li key={d.id}>
+              <a href={`/groups/${slug}/conscience/decisions?open=${d.id}`} onClick={(e) => (editing || !slug) && e.preventDefault()}
+                className="flex items-center gap-3 rounded-xl p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800/60">
+                <Icon className="size-4 shrink-0 text-slate-500 dark:text-neutral-400" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{d.title}</span>
+                  {!compact && <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{[d.decided_on && dateLabel(d.decided_on), countLabel(d)].filter(Boolean).join(" · ")}</span>}
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+// The next business meeting. Everyone sees when it is (when a published event announces it);
+// members also see its agenda and can suggest an item.
+function BusinessMeetingBlock({ block, compact, editing, context, title }) {
+  const m = context.business_meeting;
+  const slug = context.group?.slug;
+  const [sent, setSent] = useState(false);
+  return (
+    <Card block={block} compact={compact} title={title} icon={Gavel}>
+      {!m ? (
+        <Empty>{editing || context.viewer?.can_keep_records ? "When a business meeting is scheduled, its date and agenda show here to members." : "No business meeting is scheduled."}</Empty>
+      ) : (
+        <div className="space-y-3">
+          <p className="font-semibold text-slate-900 dark:text-white">{m.when_label || longDate(m.held_on)}</p>
+          {m.event && (
+            <a href={m.event.path} onClick={(e) => editing && e.preventDefault()} className="inline-flex items-center gap-1 text-sm text-accent hover:underline">The event <ExternalLink className="size-3.5" /></a>
+          )}
+          {m.agenda && (
+            <>
+              <AgendaList items={m.agenda} empty="The agenda isn't set yet." />
+              {m.can_suggest && !editing && (
+                <div className="border-t border-neutral-200/70 pt-3 dark:border-neutral-700/60">
+                  <SuggestForm slug={slug} meetingId={m.id} compact onAdded={() => setSent(true)} />
+                </div>
+              )}
+              {m.id && !editing && <a href={`/groups/${slug}/conscience/meetings/${m.id}`} className="inline-block text-sm font-medium text-accent hover:underline">Open the meeting</a>}
+            </>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

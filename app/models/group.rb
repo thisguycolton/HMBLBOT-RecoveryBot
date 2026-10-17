@@ -21,6 +21,10 @@ class Group < ApplicationRecord
   has_many :court_verifications, dependent: :nullify
   has_many :events, dependent: :destroy
   has_many :documents, class_name: "GroupDocument", dependent: :destroy
+  has_many :motions, dependent: :destroy
+  has_many :business_meetings, dependent: :destroy
+  has_many :service_positions, dependent: :destroy
+  has_many :treasurer_reports, dependent: :destroy
   has_many :timeline_note_shares, dependent: :destroy
   has_many :timeline_notes, through: :timeline_note_shares
 
@@ -83,6 +87,9 @@ class Group < ApplicationRecord
   # Record keepers write the group's documents (and, later, minutes and decisions): group
   # admins, site admins, and members an admin marked in the Members tab
   def records_editable_by?(user) = manageable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_keep_records }
+  # Who keeps the group's records: its admins and the members they marked (told when members
+  # suggest agenda items, or a term is up)
+  def record_keepers = User.where(id: active_memberships.where("group_memberships.role = 'admin' OR group_memberships.can_keep_records").select(:user_id))
   def visible_to?(user) = !!user && (user.suite_admin? || member?(user) || (active? && self.class.feature_open_to?(user)))
   def active? = status == "active"
   def page_visible_to?(user) = active? || visible_to?(user)

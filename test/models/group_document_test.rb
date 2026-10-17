@@ -113,4 +113,43 @@ class GroupDocumentTest < ActiveSupport::TestCase
       @group.destroy!
     end
   end
+
+  test "written documents are cleaned of anything the editor can't make" do
+    d = doc(body: %(<h1 onclick="x()">Hi</h1><p style="position:fixed;text-align:center">a <a href="javascript:alert(1)">bad</a> <a href="https://example.com">good</a></p><script>alert(1)</script><img src=x onerror=alert(1)><iframe src="//evil"></iframe><table><tbody><tr><td colspan="2">c</td></tr></tbody></table>))
+    html = d.reload.body
+    assert_no_match(/script|onclick|onerror|iframe|<img|alert|position|javascript/i, html)
+    assert_includes html, "<h1>Hi</h1>"
+    assert_includes html, "text-align:center"
+    assert_includes html, %(href="https://example.com")
+    assert_includes html, %(rel="noopener noreferrer nofollow")
+    assert_includes html, %(colspan="2")
+  end
+
+  test "an older Markdown document is left exactly as it was written" do
+    d = doc(body: "# Hi\n\n<b>not cleaned</b> **bold**", body_format: "markdown")
+    assert_equal "# Hi\n\n<b>not cleaned</b> **bold**", d.reload.body
+    assert_equal "markdown", d.body_format
+    assert_not @group.documents.new(title: "X", body_format: "docx").valid?
+  end
+
+  test "each copy keeps the format it was written in, and a restore brings it back" do
+    d = doc(body: "# Old *text*", body_format: "markdown")
+    assert d.revise({ body: "<p>New text</p>", body_format: "html" }, @keeper)
+    assert_equal "html", d.reload.body_format
+    old = d.versions.first
+    assert_equal ["# Old *text*", "markdown"], [old.body, old.body_format]
+    assert_equal "markdown", old.as_api_json[:body_format]
+
+    d.restore(old, @leader)
+    assert_equal ["# Old *text*", "markdown"], [d.reload.body, d.body_format]
+  end
+
+  test "searching and excerpts see the words, not the tags" do
+    doc(title: "Format", body: %(<p>Read the <strong>preamble</strong> &amp; the steps</p><ul><li><p>First</p></li><li><p>Second</p></li></ul>))
+    assert_equal ["Format"], GroupDocument.search(@group.documents, "the preamble").map(&:title)
+    assert_empty GroupDocument.search(@group.documents, "strong")
+    assert_empty GroupDocument.search(@group.documents, "<p>")
+    assert_equal ["Format"], GroupDocument.search(@group.documents, "preamble & the").map(&:title)
+    assert_equal "Read the preamble & the steps First Second", @group.documents.first.as_api_json[:excerpt]
+  end
 end

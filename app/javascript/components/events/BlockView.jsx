@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { BarChart3, CalendarClock, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
 import Markdown from "../book/Markdown";
-import GroupBlockView from "../groups/page/GroupBlocks";
+import GroupBlockView, { Card as BlockCard, Empty } from "../groups/page/GroupBlocks";
+import { AgendaList } from "../groups/conscience/AgendaParts";
 import PersonBlockView from "../people/PersonBlocks";
 import Lightbox from "./Lightbox";
 import { tone } from "./lib";
@@ -28,6 +29,7 @@ export default function BlockView({ block, compact = false, editing = false, pol
     case "photo": return <PhotoView {...props} />;
     case "gallery": return <GalleryView {...props} />;
     case "poll": return <PollView {...props} poll={polls.find((p) => p.token === block.poll_token)} />;
+    case "conscience_agenda": return <ConscienceAgendaView {...props} />;
     default:
       if (context?.kind === "person") return <PersonBlockView {...props} context={context} />;
       return context ? <GroupBlockView {...props} context={context} fill={fill} /> : null;
@@ -46,6 +48,19 @@ const Frame = ({ block, compact, children }) => {
 const HEADING_SIZE = { 1: "text-4xl sm:text-5xl font-extrabold", 2: "text-2xl sm:text-3xl font-bold", 3: "text-xl font-semibold" };
 const COMPACT_HEADING_SIZE = { 1: "text-2xl font-extrabold", 2: "text-xl font-bold", 3: "text-base font-semibold" };
 const ALIGN = { left: "text-left", center: "text-center", right: "text-right" };
+
+// The live agenda of the business meeting this event announces. The server puts it in the
+// block for members of the group; everyone else is told it's for members.
+function ConscienceAgendaView({ block, compact, editing }) {
+  const items = block.agenda;
+  return (
+    <BlockCard block={block} compact={compact} title={block.title}>
+      {editing ? <Empty>The business meeting's live agenda shows here, to the group's members.</Empty>
+        : items ? <AgendaList items={items} empty="The agenda isn't set yet." />
+        : <Empty>{block.linked === false ? "No business meeting is linked to this event yet." : "Members of the group see the agenda."}</Empty>}
+    </BlockCard>
+  );
+}
 
 export function HeadingView({ block, compact, text = block.text }) {
   const Tag = `h${Math.min(Math.max(block.level || 2, 1), 3) + 1}`;

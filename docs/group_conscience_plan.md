@@ -1,6 +1,6 @@
 # Group Conscience organizer: plan
 
-Step 1 (Documents) is built; steps 2 and 3 are not. Written 2026-10-17. The Find a meeting work (PR #13), which sits on Profiles/Group pages (#12), Events (#11) and Groups (#10), is now merged to `main` (#14); build on `main`.
+Steps 1 (Documents) and 2 (Decisions) are built; step 3 is not. Written 2026-10-17. The Find a meeting work (PR #13), which sits on Profiles/Group pages (#12), Events (#11) and Groups (#10), is now merged to `main` (#14); build on `main`.
 
 ## What it's for
 
@@ -211,7 +211,7 @@ opens the group's page").
 
 1. **Documents** (built; see "As built" below): tables, upload + write, folders, visibility, history, search, Documents
    tab and `documents` block. Useful on day one (format, guidelines).
-2. **Decisions log**: `motions` without meetings first, backfill-able, Decisions view and
+2. **Decisions log** (built; see "As built: step 2" below): `motions` without meetings first, backfill-able, Decisions view and
    `decisions` block.
 3. **Business meetings**: meetings, agenda items (member suggestions), minutes, recording
    motions in place, Overview, notifications, `business_meeting` block, event tie-in, print view.
@@ -233,7 +233,7 @@ permission table above (`test/controllers`), and screenshots in
    Lets a group show its format and guidelines on its public page.
 4. **Tab name.** Default: "Group conscience". Alternative: "Business".
 5. **Who sees it?** Default: same gating as Groups (site admins unless `GROUPS_FOR_EVERYONE=1`).
-6. **Documents: Markdown or the book editor (Tiptap)?** Default: Markdown, matching notes
+6. **Documents: Markdown or the book editor (Tiptap)?** Decided: Tiptap (see "As built: documents as pages"). The original default was Markdown, matching notes
    and event blocks, with GFM tables for treasurer's reports. Tiptap is heavier but would
    give a Word-like toolbar; say if the people writing minutes would rather have that.
 7. **Uploads as-is?** Default: yes, files stay files (PDF/DOCX/XLSX shown or downloaded);
@@ -260,3 +260,109 @@ What differs from the plan above:
 - `Markdown` (components/book/Markdown.jsx) now renders GFM tables, for treasurer's reports.
 - Position within a folder is set on creation (last); there is no drag-to-reorder yet, and
   pinned documents lead.
+
+## As built: step 2 (Decisions)
+
+What differs from the plan above:
+
+- `motions` has no `business_meeting_id` or `agenda_item_id` yet; step 3 adds them. Until then
+  the Decisions view has no link to a meeting.
+- `group_documents.approved_by_motion_id` is added now (it waited for this step). A document
+  can only be adopted by a decision its group passed; the badge ("Adopted Mar 3 by group
+  conscience") shows only to people who may see that decision, so a Public document never
+  leaks the title of a Members-only one.
+- Vote counts are nullable, so a past decision can be typed in without one.
+- `status` defaults to `passed` and a passed, failed or tabled decision needs its date.
+- A replacement only counts once it passed: a failed or merely proposed "replaces" leaves
+  the old decision standing. A decision can't replace one of another group, itself, or
+  anything that leads back to it.
+- Visitors see Public decisions that passed. A Public decision replaced by a Members-only one
+  shows as replaced, with the date but not the new decision's title.
+- Deleting a decision (group admins) makes what it replaced standing again and un-adopts
+  documents; the confirmation says so.
+- `/conscience/decisions` is linked as `?open=<id>` from the block and from a document's
+  badge, and scrolls to and opens that decision. The section bar (Documents, Decisions) is
+  for members, and a select on phones.
+- Search is `GET /api/groups/:slug/motions?q=`; the standing/failed/tabled and kind filters
+  run in the browser over what the viewer may see.
+
+## As built: documents as pages (Tiptap)
+
+Open question 6 was answered with Tiptap, so documents are now written like a word processor's page.
+
+- **The page**: a document at `/conscience/documents/:id` is a white page on a grey desk
+  (`DocumentPage.jsx`). Record keepers type straight into it, with a ribbon above (undo, text
+  style, bold/italic/underline/strike, alignment, lists, quote, divider, link, tables, import).
+  Everyone else reads the same page without the ribbon. Ctrl/⌘+S or Save keeps it (one
+  version per save). `/documents/new` is a blank page; `/documents/:id/edit` is the same page.
+  Folder, who can see it, status, pin, adopted-by and the attached file are under Details.
+- **Top bar**: Share link (copies the address, says who can open it, and lets record keepers
+  change that on the spot; it isn't a new version) and Save as PDF (the browser's print, with a
+  print stylesheet that shows only the page at Letter size and 0.75in margins). A document that
+  is only a PDF shows Download PDF instead.
+- **Storage**: `body_format` is `html` (Tiptap's output, run through `DocumentHtml.sanitize`
+  on every save: only the editor's tags, `href` with http/https/mailto/relative, `colspan`,
+  `rowspan` and `text-align`) or `markdown` (documents from before). A Markdown document is
+  converted to HTML in the browser when it is opened, and saves as HTML; versions keep the
+  format they were written in. Search ignores tags (`GroupDocument.search`).
+- **Import**: in the browser. `.docx` goes through mammoth (headings, bold/italic/underline,
+  lists, tables, links; Word's paragraph alignment and pictures aren't kept). `.rtf` goes
+  through `lib/rtf.js` (headings from style names, inline styles, alignment, lists, tables,
+  Unicode and Windows-1252 accents). Old `.doc` asks for a `.docx`. In the documents list,
+  Import makes an editable document (dropping a .docx/.rtf does the same); Upload keeps a file
+  as it is.
+- **PDFs** are read in the page with pdf.js (`PdfViewer.jsx`): pages are drawn as they scroll
+  into view, with zoom, a page count and a text layer for selecting and copying. Pictures show
+  inline; Word and Excel uploads download.
+- Not done: pictures inside a document, comments, real server-side PDF files (Save as PDF is
+  the browser's print dialog), live multi-person editing.
+
+## As built: steps 3 and 4
+
+Built: business meetings (agenda, minutes, decisions made at them, event tie-in, print sheet,
+notifications, page and event blocks, Overview), service positions with terms and rotation
+reminders, and the treasurer's monthly report as numbers. Differences from the plan:
+
+- **Tabs**: Overview, Meetings, Decisions, Documents, Service, Treasury. The Overview is the
+  tab's home (`/conscience`); documents moved to `/conscience/documents`. Anyone who isn't a
+  member still lands on the public documents at `/conscience`.
+- **Minutes** are written in the same editor as documents (HTML, cleaned by `DocumentHtml`),
+  not Markdown, so a secretary gets the same ribbon. "Start from the agenda" fills in the
+  headings, each item's decisions, and who chaired and kept the minutes.
+- **Agenda details** are plain text (short), not Markdown.
+- **Visitors** never see business meetings. The `business_meeting` page block shows them the
+  date only when a *published* event announces the meeting; the agenda is for members (also
+  on the event page).
+- **Events**: only group admins can have an event made (that's the existing rule for
+  creating events); a record keeper who isn't an admin gets a clear message.
+- **Notifications** are as planned: suggestions to record keepers; scheduled meetings and
+  first-posted minutes to members. Plus one new kind, a service term nearly up
+  (`service.rotation` to record keepers, `service.term_ending` to the person serving).
+- **Service positions**: held by a name, optionally linked to a member. Past holders are kept
+  as history. There is no scheduler in this app, so reminders go out when a member opens the
+  Service tab or the Overview, and `bin/rails group_service:remind` covers every group from cron.
+- **Treasury**: money is whole cents in US dollars. The split applies to what is above the
+  prudent reserve; a month that ends under the reserve shares nothing and says how far short it
+  is. A new report starts from the last one (what it ended with, the reserve, the split and
+  the usual lines). Lines left without an amount aren't saved. Reports for members are
+  "posted"; the older "treasury" document folder still exists for scans and spreadsheets.
+- **Printing**: meetings and reports print as a clean sheet through the browser's print
+  (Save as PDF), like documents.
+
+### Not built: online voting
+
+The plan's open question 1 answered "no" by default, and I kept to that. It is a decision for
+the group, not the code, so these need answers first:
+
+1. Who may vote on a motion online: every active member, or only members past some
+   sobriety or membership time (a group's own rules often say)?
+2. Secret or open ballots? An open record fits "as counted in the room"; a secret one needs
+   the app to keep who voted apart from how.
+3. How long does a vote stay open, what is the quorum, and what majority passes it
+   (a simple majority, two thirds, or "substantial unanimity")?
+4. Does an online result replace a vote in the room or only count towards it, and may a
+   member change their vote before it closes?
+5. Does it need the Concept V minority opinion to be heard before a re-vote (a hold on the
+   result for N days)?
+
+Until then a secretary records the count as it stood, as now (`motions.votes_for` and the rest).

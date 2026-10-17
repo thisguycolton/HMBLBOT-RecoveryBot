@@ -1,19 +1,68 @@
 import React from "react";
-import { useParams } from "react-router-dom";
+import { NavLink, useNavigate, useParams } from "react-router-dom";
+import { selectClass } from "../../ui/styles";
+import DecisionsView from "./DecisionsView";
+import DocumentPage from "./DocumentPage";
 import DocumentsView from "./DocumentsView";
-import DocumentView from "./DocumentView";
-import DocumentEditor from "./DocumentEditor";
+import MeetingPage from "./MeetingPage";
+import MeetingsView from "./MeetingsView";
+import OverviewView from "./OverviewView";
+import ReportPage from "./ReportPage";
+import ServiceView from "./ServiceView";
+import TreasuryView from "./TreasuryView";
 
-// The Group conscience tab (/groups/:slug/conscience/*): for now the group's documents.
-// Members see the tab; anyone may open a Public document someone linked to.
-//   /conscience                      folders
-//   /conscience/documents/new        a new document (record keepers)
-//   /conscience/documents/:id        one document, with its history
-//   /conscience/documents/:id/edit   change it (record keepers)
+const SECTIONS = [
+  { key: "overview", label: "Overview", path: "" },
+  { key: "meetings", label: "Meetings", path: "/meetings" },
+  { key: "decisions", label: "Decisions", path: "/decisions" },
+  { key: "documents", label: "Documents", path: "/documents" },
+  { key: "service", label: "Service", path: "/service" },
+  { key: "treasury", label: "Treasury", path: "/treasury" },
+];
+
+// The Group conscience tab (/groups/:slug/conscience/*): a group's business meetings, its
+// decisions, documents, service positions and treasurer's reports. Members see the tab; anyone
+// may open a Public document or decision someone linked to.
+//   /conscience                       Overview (members; anyone else gets the documents)
+//   /conscience/meetings(/:id)        business meetings, agendas and minutes
+//   /conscience/decisions             what the group voted on
+//   /conscience/documents(/:id|/new)  document folders, and a document as a page
+//   /conscience/service               service positions and who holds them
+//   /conscience/treasury(/:id|/new)   the treasurer's monthly reports
 export default function ConscienceTab({ group }) {
-  const [view, id, action] = (useParams()["*"] || "").split("/").filter(Boolean);
-  if (view === "documents" && id === "new") return <DocumentEditor group={group} />;
-  if (view === "documents" && id && action === "edit") return <DocumentEditor group={group} id={id} />;
-  if (view === "documents" && id) return <DocumentView group={group} id={id} />;
-  return <DocumentsView group={group} />;
+  const [view, id] = (useParams()["*"] || "").split("/").filter(Boolean);
+  const navigate = useNavigate();
+  const isMember = group.is_member || group.is_site_admin;
+  const current = SECTIONS.some((s) => s.key === view) ? view : isMember ? "overview" : "documents";
+  const base = `/${group.slug}/conscience`;
+
+  let body;
+  if (!isMember && current !== "documents" && current !== "decisions") body = <DocumentsView group={group} />;
+  else if (current === "meetings") body = id ? <MeetingPage key={id} group={group} id={id} /> : <MeetingsView group={group} />;
+  else if (current === "decisions") body = <DecisionsView group={group} />;
+  else if (current === "documents") body = id === "new" ? <DocumentPage group={group} /> : id ? <DocumentPage group={group} id={id} /> : <DocumentsView group={group} />;
+  else if (current === "service") body = <ServiceView group={group} />;
+  else if (current === "treasury") body = id === "new" ? <ReportPage group={group} /> : id ? <ReportPage key={id} group={group} id={id} /> : <TreasuryView group={group} />;
+  else body = <OverviewView group={group} />;
+
+  return (
+    <div className="space-y-5">
+      {isMember && (
+        <>
+          <nav aria-label="Group conscience" className="group-chrome hidden flex-wrap gap-1 sm:flex">
+            {SECTIONS.map((s) => (
+              <NavLink key={s.key} to={`${base}${s.path}`} end
+                className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${current === s.key ? "!bg-accent !text-white" : "bg-white text-slate-700 ring-1 ring-neutral-200 hover:bg-neutral-50 dark:bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700"}`}>
+                {s.label}
+              </NavLink>
+            ))}
+          </nav>
+          <select aria-label="Group conscience" className={`${selectClass} group-chrome sm:hidden`} value={current} onChange={(e) => navigate(`${base}${SECTIONS.find((s) => s.key === e.target.value).path}`)}>
+            {SECTIONS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+        </>
+      )}
+      {body}
+    </div>
+  );
 }

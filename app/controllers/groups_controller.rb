@@ -4,8 +4,8 @@
 class GroupsController < ApplicationController
   layout "reader"
   # /groups/meetings, /groups/find/<listing>, /groups/<slug> and its public tabs, and the
-  # group's documents (the API only gives a visitor the Public ones)
-  PUBLIC_PATHS = %r{\A(meetings|find/[^/]+|(?!(new|find|default-page)\z)[a-z0-9-]+(/(home|meetings|events)|/conscience(/documents/\d+)?)?)\z}
+  # group's documents and decisions (the API only gives a visitor the Public ones)
+  PUBLIC_PATHS = %r{\A(meetings|find/[^/]+|(?!(new|find|default-page)\z)[a-z0-9-]+(/(home|meetings|events)|/conscience(/documents(/\d+)?|/decisions)?)?)\z}
 
   before_action :authenticate_user!, except: %i[app join ask]
   after_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }

@@ -27,6 +27,14 @@ module GroupScoped
     render json: { error: "Only this group's admins can do that." }, status: :forbidden
   end
 
+  def keeper? = @group.records_editable_by?(current_user)
+
+  def require_keeper
+    return if keeper?
+
+    render json: { error: "Only this group's record keepers can do that." }, status: :forbidden
+  end
+
   def require_member
     return if current_user.suite_admin? || @group.member?(current_user)
 

@@ -40,7 +40,8 @@ const TABLE_DIVIDER = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 const cells = (line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
 const isTableStart = (lines, i) => lines[i].includes("|") && i + 1 < lines.length && lines[i + 1].includes("-") && TABLE_DIVIDER.test(lines[i + 1]);
 
-function blocks(src, keyBase = "b") {
+// `base` is added to a heading's level: notes keep theirs under the page's own headings (# is h3)
+function blocks(src, keyBase = "b", base = 2) {
   const lines = src.replace(/\r\n?/g, "\n").split("\n");
   const out = [];
   let i = 0, n = 0;
@@ -61,7 +62,7 @@ function blocks(src, keyBase = "b") {
 
     const h = line.match(/^(#{1,3})\s+(.*)$/);
     if (h) {
-      const Tag = `h${h[1].length + 2}`; // # -> h3, keeps notes below the page's own headings
+      const Tag = `h${h[1].length + base}`;
       out.push(<Tag key={key()}>{inline(h[2], key())}</Tag>);
       i++;
       continue;
@@ -71,7 +72,7 @@ function blocks(src, keyBase = "b") {
       const body = [];
       while (i < lines.length && /^>\s?/.test(lines[i])) body.push(lines[i++].replace(/^>\s?/, ""));
       const k = key();
-      out.push(<blockquote key={k}>{blocks(body.join("\n"), k)}</blockquote>);
+      out.push(<blockquote key={k}>{blocks(body.join("\n"), k, base)}</blockquote>);
       continue;
     }
 
@@ -119,4 +120,12 @@ function blocks(src, keyBase = "b") {
 export default function Markdown({ source, className = "" }) {
   if (!source?.trim()) return null;
   return <div className={`wb-md ${className}`}>{blocks(source)}</div>;
+}
+
+// The same Markdown as an HTML string, with # as h1, for opening an older document in the
+// document editor
+export async function markdownToHtml(source) {
+  if (!source?.trim()) return "";
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  return renderToStaticMarkup(<>{blocks(source, "b", 0)}</>);
 }
