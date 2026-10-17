@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title><%= @subject %></title>
+</head>
+<body style="margin:0; padding:0; background-color:#f1f5f9;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+    <tr>
+      <td align="center" style="padding:24px 16px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:640px;">
+          <tr>
+            <td style="padding:0 4px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:14px; color:#334155;">
+              Below are <%= pluralize(@court_verifications.size, "verification") %> of attendance at The Acid Test AA Meeting,
+              one per meeting, oldest first.
+            </td>
+          </tr>
+          <% @court_verifications.each do |verification| %>
+            <tr>
+              <td style="padding:0 0 16px;">
+                <div style="background-color:#ffffff; border:1px solid #e2e8f0; border-radius:12px;">
+                  <%= render "court_verification_mailer/letter", verification: verification %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+          <tr>
+            <td style="padding:0 4px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:11px; color:#64748b; text-align:center;">
+              These verifications reflect attendance at Alcoholics Anonymous meetings and are provided at the request of the participant.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

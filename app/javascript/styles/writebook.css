@@ -1,0 +1,1931 @@
+/*
+ * Library + reader look adapted from Writebook by 37signals
+ * (https://github.com/basecamp/writebook), used under the MIT license.
+ * Everything is scoped under .wb so the rest of the app is untouched.
+ */
+
+.wb {
+  --wb-ink: oklch(0% 0 0);
+  --wb-ink-soft: oklch(45% 0.005 96);
+  --wb-bg: oklch(100% 0 0);
+  --wb-subtle-light: oklch(96% 0.005 96);
+  --wb-subtle: oklch(92% 0.005 96);
+  --wb-subtle-dark: oklch(75% 0.005 96);
+  --wb-link: oklch(54% 0.15 255);
+  --wb-marker: oklch(70% 0.2 44);
+
+  --wb-inline-space: 1ch;
+  --wb-block-space: 1rem;
+  --wb-font-medium: clamp(1rem, 2.5cqi, 1.4rem);
+
+  /* Reading typeface. Loaded in layouts/reader.html.erb; swap both together. */
+  --wb-font-reading: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  color: var(--wb-ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.dark .wb {
+  --wb-ink: oklch(100% 0 0);
+  --wb-ink-soft: oklch(75% 0 0);
+  --wb-bg: oklch(18% 0 0);
+  --wb-subtle-light: oklch(25.2% 0 0);
+  --wb-subtle: oklch(30.12% 0 0);
+  --wb-subtle-dark: oklch(44.95% 0 0);
+  --wb-link: oklch(72.25% 0.16 248);
+}
+
+.wb :where(h1, h2, h3) {
+  font-family: inherit;
+  letter-spacing: -0.02ch;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+/* ---------- Buttons ---------- */
+
+.wb-btn {
+  align-items: center;
+  background-color: var(--wb-btn-bg, transparent);
+  border: 1px solid var(--wb-subtle-dark);
+  border-radius: 2em;
+  color: var(--wb-btn-color, var(--wb-ink));
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 1em;
+  font-weight: 600;
+  gap: 0.5em;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.5em 1.1em;
+  text-decoration: none;
+  transition: background-color 300ms ease, border-color 300ms ease, opacity 300ms ease;
+}
+
+.wb-btn:hover {
+  background-color: var(--wb-subtle-light);
+}
+
+.wb-btn--icon {
+  aspect-ratio: 1;
+  padding: 0.5em;
+}
+
+.wb-btn--reversed {
+  --wb-btn-bg: var(--wb-ink);
+  --wb-btn-color: var(--wb-bg);
+  border-color: var(--wb-ink);
+}
+
+.wb-btn--reversed:hover {
+  background-color: var(--wb-ink);
+  opacity: 0.85;
+}
+
+.wb-btn[aria-pressed="true"] {
+  --wb-btn-bg: var(--wb-ink);
+  --wb-btn-color: var(--wb-bg);
+  border-color: var(--wb-ink);
+}
+
+.wb-btn[disabled],
+.wb-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.wb-ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Covers ---------- */
+
+.wb-cover {
+  aspect-ratio: 5 / 8;
+  background: var(--wb-cover-color, oklch(69.14% 0.174 245.01));
+  border-radius: 0.3em;
+  box-shadow: 0 0 0 1px var(--wb-subtle-dark), 0 6px 18px -8px rgb(0 0 0 / 0.35);
+  color: #fff;
+  display: block;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+/* A soft spine so generated covers read as books */
+.wb-cover::before {
+  background: linear-gradient(90deg, rgb(0 0 0 / 0.22), rgb(255 255 255 / 0.12) 3%, transparent 7%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.wb-cover img {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  position: absolute;
+  width: 100%;
+}
+
+.wb-cover__title {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  display: -webkit-box;
+  font-size: clamp(0.9rem, 13cqi, 2.6rem);
+  font-weight: 750;
+  inset: 9% 10% auto 12%;
+  letter-spacing: -0.02ch;
+  line-height: 1.05;
+  overflow: hidden;
+  position: absolute;
+  text-align: start;
+}
+
+.wb-cover__author {
+  font-size: clamp(0.65rem, 6cqi, 1.1rem);
+  font-weight: 600;
+  inset: auto 10% 8% 12%;
+  opacity: 0.85;
+  position: absolute;
+  text-align: start;
+}
+
+.wb-cover--white {
+  color: #000;
+}
+
+/* ---------- Library ---------- */
+
+.wb-library {
+  --gap: clamp(1rem, 3vw, 3rem);
+
+  display: grid;
+  gap: calc(var(--gap) * 1.2) var(--gap);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  padding-block: var(--gap);
+}
+
+.wb-library__book {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  text-align: center;
+}
+
+.wb-library__book a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.wb-library__book a:hover .wb-cover {
+  transform: translateY(-2px);
+}
+
+.wb-library__book .wb-cover {
+  transition: transform 200ms ease;
+}
+
+.wb-library__name {
+  display: flex;
+  flex-direction: column;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.wb-library__admin {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.wb-library__admin .wb-btn {
+  padding: 0.3em 0.8em;
+}
+
+/* ---------- Book / table of contents ---------- */
+
+.wb-book {
+  --space: clamp(2ch, 6%, 6ch);
+
+  column-gap: var(--space);
+  display: grid;
+  grid-template-columns: minmax(180px, 22rem) 1fr;
+  padding-block: var(--wb-block-space);
+}
+
+@media (max-width: 70ch) {
+  .wb-book {
+    grid-template-columns: 1fr;
+    row-gap: 2rem;
+  }
+}
+
+.wb-book__sidebar {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: calc(var(--nav-h, 56px) + 1.5rem);
+}
+
+@media (max-width: 70ch) {
+  .wb-book__sidebar {
+    margin-inline: auto;
+    position: static;
+    width: min(60vw, 16rem);
+  }
+}
+
+.wb-book__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 1.25rem;
+}
+
+.wb-book__title {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 800;
+}
+
+.wb-book__byline {
+  color: var(--wb-ink-soft);
+  font-size: clamp(1.1rem, 2.2vw, 1.4rem);
+  font-weight: 400;
+}
+
+.wb-book__description {
+  color: var(--wb-ink-soft);
+  font-family: inherit !important;
+  text-align: start !important;
+  line-height: 1.5;
+  margin: 0 0 1.25rem;
+  max-width: 60ch;
+}
+
+.wb-toolbar {
+  align-items: center;
+  background: color-mix(in oklab, var(--wb-bg) 85%, transparent);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  padding-block: 0.5rem;
+  position: sticky;
+  top: var(--nav-h, 56px);
+  z-index: 5;
+}
+
+.wb-toolbar__spacer {
+  flex: 1;
+}
+
+.wb-toc {
+  display: grid;
+  gap: 1.5rem 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wb-toc--list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.wb-toc__leaf {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  position: relative;
+  scroll-margin-top: 8em;
+  text-align: center;
+}
+
+.wb-toc--list .wb-toc__leaf {
+  align-items: baseline;
+  column-gap: 1ch;
+  flex-direction: row;
+  text-align: start;
+}
+
+.wb-toc__thumbnail {
+  aspect-ratio: 6 / 9;
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle-dark);
+  border-radius: 0.3em;
+  color: var(--wb-ink);
+  display: block;
+  font-family: var(--wb-font-reading);
+  font-size: clamp(0.45rem, 5.5cqi, 0.75rem);
+  line-height: 1.45;
+  margin-bottom: 0.6rem;
+  overflow: hidden;
+  padding: 10cqi;
+  position: relative;
+  text-align: start;
+  text-decoration: none;
+  transition: border-color 200ms ease, transform 200ms ease;
+}
+
+.wb-toc__thumbnail:hover {
+  border-color: var(--wb-ink);
+  transform: translateY(-2px);
+}
+
+.wb-toc__thumbnail h4 {
+  font-family: system-ui, sans-serif;
+  font-size: 1.35em;
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 0 0 0.6em;
+}
+
+.wb-toc__thumbnail p {
+  font-family: inherit !important;
+  margin: 0;
+  text-align: start;
+}
+
+/* Fade the preview out toward the bottom of the "page" */
+.wb-toc__thumbnail::after {
+  background: linear-gradient(transparent, var(--wb-bg));
+  content: "";
+  height: 35%;
+  inset: auto 0 0;
+  position: absolute;
+}
+
+.wb-toc--list .wb-toc__thumbnail {
+  display: none;
+}
+
+.wb-toc__title {
+  --title-border-color: var(--wb-subtle-dark);
+
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  font-size: 1rem;
+  font-weight: 700;
+  gap: 0.25rem;
+  line-height: 1.2;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.wb-toc--list .wb-toc__title {
+  flex-direction: row;
+  flex-grow: 1;
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.wb-toc--list .wb-toc__title:hover span {
+  text-decoration: underline;
+  text-decoration-thickness: 0.075em;
+}
+
+/* Dotted leader between title and page numbers, as in Writebook */
+.wb-toc--list .wb-toc__title::after {
+  border-bottom: 1px dotted var(--title-border-color);
+  content: "";
+  flex-grow: 1;
+  margin-bottom: 0.3em;
+  min-width: 2ch;
+}
+
+.wb-toc__meta {
+  color: var(--wb-ink-soft);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wb-toc--list .wb-toc__meta {
+  font-size: 0.9rem;
+}
+
+.wb-toc__group {
+  color: var(--wb-ink-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  grid-column: 1 / -1;
+  letter-spacing: 0.08em;
+  list-style: none;
+  margin-top: 0.75rem;
+  text-transform: uppercase;
+}
+
+.wb-toc__group:first-child {
+  margin-top: 0;
+}
+
+/* Last-read bookmark */
+.wb-toc__bookmark {
+  color: var(--wb-marker);
+  display: none;
+  height: 1.4em;
+  width: 1.4em;
+}
+
+.wb-toc__leaf--last-read .wb-toc__bookmark {
+  display: inline-flex;
+}
+
+.wb-toc__leaf--last-read .wb-toc__title {
+  --title-border-color: var(--wb-marker);
+}
+
+.wb-toc__leaf--last-read .wb-toc__bookmark {
+  left: -0.5em;
+  position: absolute;
+  top: -0.45em;
+  z-index: 2;
+}
+
+.wb-toc--list .wb-toc__leaf--last-read .wb-toc__bookmark {
+  left: -1.6em;
+  top: 0.05em;
+}
+
+/* ---------- Reader ---------- */
+
+/* The reader has one sticky bar under the site navbar; page-break pills stick below it. */
+html:has(.wb-reader) {
+  --reader-sticky-offset: 112px;
+  --reader-sticky-second-offset: 56px;
+}
+
+.wb-reader__bar {
+  align-items: center;
+  background: color-mix(in oklab, var(--wb-bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--wb-subtle);
+  display: flex;
+  gap: 0.75ch;
+  height: 56px;
+  left: 0;
+  padding-inline: max(1ch, env(safe-area-inset-left));
+  position: sticky;
+  right: 0;
+  top: var(--nav-h, 56px);
+  z-index: 40;
+}
+
+.wb-breadcrumbs {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  font-size: 0.95rem;
+  gap: 0.6ch;
+  justify-content: center;
+  min-width: 0;
+}
+
+.wb-breadcrumbs a {
+  color: inherit;
+  flex-shrink: 1;
+  text-decoration: none;
+}
+
+.wb-breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+.wb-breadcrumbs__sep {
+  color: var(--wb-ink-soft);
+  flex-shrink: 0;
+}
+
+.wb-breadcrumbs strong {
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .wb-breadcrumbs__library,
+  .wb-breadcrumbs__library + .wb-breadcrumbs__sep {
+    display: none;
+  }
+}
+
+.wb-reader__page {
+  /* Writebook's reading size: grows with the window from 1rem to 1.4rem,
+     and the 67ch measure grows with it. */
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
+  margin-inline: auto;
+  max-width: 100vw;
+  padding: 2rem clamp(1ch, 5%, 3ch) 0;
+  width: min(67ch, 100%);
+}
+
+/* Writebook typography for chapter text: the app's sans, left-aligned, 1.4
+   line height. Scoped tightly enough to beat the prose plugin and reader.css's
+   serif/justified defaults; inline alignment set in the editor still wins. */
+.wb-reader__page .hb-reader,
+.wb-reader__page .hb-reader .ProseMirror {
+  color: var(--wb-ink);
+  font-family: var(--wb-font-reading);
+  font-optical-sizing: auto;
+  font-size: 1em;
+  line-height: 1.4;
+}
+
+.wb-reader__page .hb-reader :is(p, li, blockquote, td, th) {
+  font-family: inherit;
+  font-size: inherit;
+  hyphens: auto;
+  letter-spacing: -0.005ch;
+  line-height: 1.4;
+  text-align: start;
+  text-wrap: pretty;
+}
+
+.wb-reader__page .hb-reader p {
+  margin-block: 0.65lh;
+}
+
+.wb-reader__page .hb-reader :is(h1, h2, h3, h4, h5, h6) {
+  color: inherit;
+  font-family: inherit;
+  font-weight: 800;
+  hyphens: auto;
+  letter-spacing: -0.02ch;
+  line-height: 1.1;
+  margin-block: 0.65em;
+  text-wrap: balance;
+}
+
+.wb-reader__page .hb-reader h1 { font-size: 2em; }
+.wb-reader__page .hb-reader h2 { font-size: 1.5em; }
+.wb-reader__page .hb-reader h3 { font-size: 1.17em; }
+.wb-reader__page .hb-reader h4 { font-size: 1em; }
+
+.wb-reader__page .hb-reader blockquote {
+  border: 0;
+  font-style: italic;
+  margin: 0 3ch;
+  padding: 0;
+}
+
+.wb-reader__page .hb-reader :is(ul, ol) {
+  margin-block: 0.65lh;
+}
+
+.wb-reader__page .hb-reader li {
+  margin-block: 0.2lh;
+}
+
+.wb-reader__chapter-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  margin: 1rem 0 2rem;
+  text-align: center;
+}
+
+.wb-reader__footer {
+  display: flex;
+  justify-content: center;
+  margin: 4rem auto 5rem;
+  max-width: min(50ch, 100%);
+  padding-inline: 1ch;
+}
+
+.wb-reader__footer .wb-btn {
+  font-size: clamp(1rem, 2.5vw, 1.2rem);
+  max-width: 100%;
+}
+
+/* Writebook pages sit on plain white (or near-black in dark mode), and the
+   app's global flex body would otherwise shrink-wrap them. */
+body:has(.wb) {
+  background-color: oklch(100% 0 0);
+  display: block;
+  place-items: normal;
+}
+
+.dark body:has(.wb) {
+  background-color: oklch(18% 0 0);
+}
+
+/* ---------- Edit-mode switch (eye · toggle · pencil) ---------- */
+
+.wb-mode-switch {
+  align-items: center;
+  color: var(--wb-ink);
+  display: inline-flex;
+  gap: 0.55em;
+  text-decoration: none;
+}
+
+.wb-mode-switch__track {
+  background: var(--wb-subtle-dark);
+  border-radius: 2em;
+  display: inline-block;
+  height: 1.6em;
+  position: relative;
+  transition: background-color 200ms ease;
+  width: 2.8em;
+}
+
+.wb-mode-switch__track::after {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  content: "";
+  height: 1.2em;
+  left: 0.2em;
+  position: absolute;
+  top: 0.2em;
+  transition: transform 200ms ease;
+  width: 1.2em;
+}
+
+.wb-mode-switch[aria-checked="true"] .wb-mode-switch__track {
+  background: var(--wb-link);
+}
+
+.wb-mode-switch[aria-checked="true"] .wb-mode-switch__track::after {
+  transform: translateX(1.2em);
+}
+
+.wb-reader__mode {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* ---------- Editor toolbar ---------- */
+
+.wb-page-toolbar {
+  align-items: center;
+  background: color-mix(in oklab, var(--wb-link) 12%, var(--wb-bg));
+  border-radius: 5em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  justify-content: center;
+  margin: 0.75rem auto 0;
+  max-width: calc(100vw - 2ch);
+  padding: 0.4em 1em;
+  position: sticky;
+  top: calc(var(--nav-h, 56px) + 62px);
+  width: fit-content;
+  z-index: 35;
+}
+
+.wb-page-toolbar .wb-tool {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0.5em;
+  color: var(--wb-ink);
+  cursor: pointer;
+  display: inline-flex;
+  height: 2.25rem;
+  justify-content: center;
+  min-width: 2.25rem;
+  padding: 0 0.4rem;
+}
+
+.wb-page-toolbar .wb-tool:hover {
+  background: color-mix(in oklab, var(--wb-link) 18%, var(--wb-bg));
+}
+
+.wb-page-toolbar .wb-tool[aria-pressed="true"] {
+  background: var(--wb-ink);
+  color: var(--wb-bg);
+}
+
+.wb-page-toolbar__sep {
+  align-self: stretch;
+  background: var(--wb-bg);
+  margin: -0.4em 0.4rem;
+  width: 3px;
+}
+
+@media (max-width: 640px) {
+  .wb-page-toolbar {
+    border-radius: 1.25rem;
+  }
+
+  .wb-page-toolbar__sep {
+    display: none;
+  }
+}
+
+.wb-save {
+  border-radius: 50% !important;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.wb-save--clean {
+  background: oklch(65.59% 0.234 142.49) !important;
+  color: #fff !important;
+}
+
+.wb-save--dirty {
+  background: var(--wb-link) !important;
+  color: #fff !important;
+}
+
+.wb-save--saving {
+  opacity: 0.6;
+}
+
+.wb-popover {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.35);
+  color: var(--wb-ink);
+  min-width: 15rem;
+  padding: 0.75rem;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 50;
+}
+
+.wb-popover label {
+  color: var(--wb-ink-soft);
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.wb-popover input,
+.wb-popover select {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle-dark);
+  border-radius: 0.4rem;
+  color: var(--wb-ink);
+  padding: 0.35rem 0.5rem;
+  width: 100%;
+}
+
+.wb-popover__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+}
+
+.wb-editor__title-label {
+  color: var(--wb-ink-soft);
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin-top: 1.5rem;
+  text-transform: uppercase;
+}
+
+/* The chapter's name in the contents; the page itself carries its own heading. */
+.wb-editor__title {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed var(--wb-subtle-dark);
+  color: var(--wb-ink);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0.25rem 0 1.5rem;
+  outline: none;
+  padding: 0.2rem 0;
+  width: 100%;
+}
+
+.wb-editor__title:focus {
+  border-bottom-color: var(--wb-link);
+}
+
+.wb-editor__title::placeholder {
+  color: var(--wb-subtle-dark);
+}
+
+.wb-editor .ProseMirror {
+  min-height: 50vh;
+  outline: none;
+}
+
+/* Page pills sit centered on their rule. When one sticks, its rule lines up
+   with the reader bar's bottom border, so the pill hangs off the bar and the
+   full-width rule is hidden. */
+.wb-reader .page-break {
+  top: calc(var(--reader-sticky-offset) - 6px); /* minus the 6px padding-top, so the rule meets the bar's border */
+}
+
+.wb-reader .page-break .page-break__pill {
+  top: 0;
+  transform: translateY(-50%);
+}
+
+.wb-reader .page-break.is-stuck {
+  box-shadow: none;
+}
+
+.wb-reader .page-break.is-stuck .h-px {
+  visibility: hidden;
+}
+
+/* Page pills are edited inline, so they shouldn't stick while writing */
+.wb-editor .page-break {
+  position: static !important;
+}
+
+/* ---------- Search ---------- */
+
+.wb-search__input {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle-dark);
+  border-radius: 2em;
+  color: var(--wb-ink);
+  font-size: 1.1rem;
+  outline: none;
+  padding: 0.6em 1em 0.6em 2.6em;
+  width: 100%;
+}
+
+.wb-search__input:focus {
+  border-color: var(--wb-link);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--wb-link) 25%, transparent);
+}
+
+.wb-search__scope {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.wb-search__scope button {
+  border: 1px solid var(--wb-subtle-dark);
+  border-radius: 2em;
+  color: var(--wb-ink);
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 600;
+  max-width: 60%;
+  min-width: 0;
+  padding: 0.25em 0.9em;
+}
+
+.wb-search__scope button:hover {
+  background: var(--wb-subtle-light);
+}
+
+.wb-search__scope button[aria-pressed="true"] {
+  background: var(--wb-ink);
+  border-color: var(--wb-ink);
+  color: var(--wb-bg);
+}
+
+.wb-search__book + .wb-search__book {
+  margin-top: 1.25rem;
+}
+
+/* Book headers stay pinned while scrolling that book's results, so it's always
+   clear which book a hit comes from. Opaque, so results slide underneath. */
+.wb-search__book-title {
+  align-items: center;
+  background: color-mix(in oklab, var(--wb-link) 16%, var(--wb-bg));
+  border-left: 4px solid var(--wb-link);
+  border-radius: 0.5rem;
+  box-shadow: 0 6px 8px -6px rgb(0 0 0 / 0.35);
+  display: flex;
+  font-size: 0.85rem;
+  font-weight: 800;
+  gap: 0.5rem;
+  letter-spacing: 0.04em;
+  padding: 0.6rem 0.75rem;
+  position: sticky;
+  text-transform: uppercase;
+  top: 0;
+  z-index: 1;
+}
+
+.wb-search__book-title[data-current] {
+  background: color-mix(in oklab, var(--wb-ink) 8%, var(--wb-bg));
+  border-left-color: var(--wb-ink-soft);
+}
+
+.wb-search__book-tag {
+  background: var(--wb-link);
+  border-radius: 2em;
+  color: var(--wb-bg);
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  padding: 0.15em 0.6em;
+}
+
+.wb-search__book-title[data-current] .wb-search__book-tag {
+  background: var(--wb-ink-soft);
+}
+
+.wb-search__book-count {
+  color: var(--wb-ink-soft);
+  flex-shrink: 0;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.wb-search__result {
+  border-top: 1px solid var(--wb-subtle);
+  color: inherit;
+  display: block;
+  padding: 0.75rem 0.5rem;
+  text-decoration: none;
+}
+
+.wb-search__result:hover,
+.wb-search__result:focus-visible {
+  background: var(--wb-subtle-light);
+  outline: none;
+}
+
+.wb-search p {
+  font-family: inherit !important;
+  text-align: start !important;
+}
+
+.wb-search__snippet {
+  color: var(--wb-ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin-top: 0.3rem;
+}
+
+.wb-search mark,
+.wb-search__snippet mark {
+  background: oklch(92.62% 0.1 91.5);
+  border-radius: 0.15em;
+  color: #000;
+  padding: 0 0.1em;
+}
+
+.wb-search-banner {
+  align-items: center;
+  background: oklch(92.62% 0.1 91.5);
+  border-radius: 2em;
+  color: #000;
+  display: flex;
+  font-size: 0.95rem;
+  gap: 0.5rem;
+  /* Left edge, so it doesn't sit on top of the centred sticky page marker. */
+  margin: 0.75rem 0 0 1rem;
+  padding: 0.3rem 0.4rem 0.3rem 1rem;
+  position: sticky;
+  top: calc(var(--nav-h, 56px) + 62px);
+  width: fit-content;
+  z-index: 35;
+}
+
+/* On narrow screens the page pill reaches the left edge, so sit just below it. */
+@media (max-width: 639px) {
+  .wb-search-banner {
+    top: calc(var(--nav-h, 56px) + 74px);
+  }
+}
+
+.wb-search-banner button {
+  align-items: center;
+  border-radius: 50%;
+  display: inline-flex;
+  height: 1.9rem;
+  justify-content: center;
+  width: 1.9rem;
+}
+
+.wb-search-banner button:hover {
+  background: rgb(0 0 0 / 0.08);
+}
+
+/* In-text search hits, drawn with the CSS Custom Highlight API */
+::highlight(wb-search) {
+  background-color: oklch(92.62% 0.1 91.5);
+  color: #000;
+}
+
+::highlight(wb-search-current) {
+  background-color: oklch(70% 0.2 44);
+  color: #000;
+}
+
+/* ---------- Highlights ---------- */
+
+.wb-toast {
+  align-items: center;
+  background: var(--wb-ink);
+  border-radius: 2em;
+  bottom: 5.5rem;
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.4);
+  color: var(--wb-bg);
+  display: flex;
+  font-size: 0.95rem;
+  font-weight: 600;
+  gap: 0.4rem;
+  left: 50%;
+  padding: 0.6rem 1.1rem;
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 80;
+}
+
+/* Pops up over selected text: pick a color to highlight, or share the quote. */
+.wb-selection-pop {
+  align-items: center;
+  background: var(--wb-ink);
+  border-radius: 2em;
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.45);
+  color: var(--wb-bg);
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  z-index: 45;
+}
+
+.wb-selection-pop__swatch {
+  border: 2px solid transparent;
+  border-radius: 50%;
+  height: 1.6rem;
+  width: 1.6rem;
+}
+
+.wb-selection-pop__swatch[aria-pressed="true"] {
+  border-color: var(--wb-bg);
+}
+
+.wb-selection-pop__report {
+  align-items: center;
+  background: #f59e0b;
+  color: #1c1917;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.wb-selection-pop__sep {
+  align-self: stretch;
+  background: color-mix(in oklab, var(--wb-bg) 30%, transparent);
+  margin-inline: 0.15rem;
+  width: 1px;
+}
+
+.wb-selection-pop__btn {
+  align-items: center;
+  border-radius: 2em;
+  color: inherit;
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+}
+
+.wb-selection-pop__btn:hover {
+  background: color-mix(in oklab, var(--wb-bg) 18%, transparent);
+}
+
+.wb-shared-banner {
+  align-items: center;
+  background: var(--wb-subtle-light);
+  border-radius: 2em;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+  gap: 0.25rem 0.75rem;
+  justify-content: center;
+  margin: 0.75rem auto 0;
+  padding: 0.4rem 1rem;
+  width: fit-content;
+}
+
+.wb-shared-banner a {
+  color: var(--wb-link);
+  font-weight: 600;
+}
+
+/* Highlights list (modal and the collection page) */
+.wb-hl-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wb-hl-item {
+  align-items: flex-start;
+  border-top: 1px solid var(--wb-subtle);
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 0.25rem;
+}
+
+.wb-hl-item:first-child {
+  border-top: 0;
+}
+
+.wb-hl-quote {
+  color: inherit;
+  flex: 1;
+  font-family: var(--wb-font-reading);
+  line-height: 1.45;
+  min-width: 0;
+  text-align: start;
+  text-decoration: none;
+}
+
+.wb-hl-quote mark {
+  background: var(--hl, oklch(92.62% 0.1 91.5));
+  border-radius: 0.15em;
+  box-decoration-break: clone;
+  color: #000;
+  padding: 0.05em 0.15em;
+}
+
+.wb-hl-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.25rem;
+}
+
+.wb-hl-actions .wb-btn {
+  font-size: 0.85rem;
+  padding: 0.35em 0.7em;
+}
+
+/* A highlight with a note gets a small dot after it */
+.wb-reader mark.hb-hl[data-note]::after {
+  background: oklch(55% 0.17 44);
+  border-radius: 50%;
+  content: "";
+  display: inline-block;
+  height: 0.4em;
+  margin-inline-start: 0.15em;
+  vertical-align: super;
+  width: 0.4em;
+}
+
+.wb-reader mark.hb-hl.hb-hl-pulse {
+  animation: wb-hl-pulse 1.2s ease 1;
+}
+
+@keyframes wb-hl-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  30% { box-shadow: 0 0 0 4px oklch(70% 0.2 44 / 0.55); }
+}
+
+/* Highlight card and highlights list dialog */
+.wb-hl-card {
+  border-radius: 1rem 1rem 0 0;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .wb-hl-card { border-radius: 0.75rem; }
+}
+
+.wb-hl-card__head {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.wb-hl-card__title {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.wb-hl-card__quote {
+  border: 0;
+  display: block;
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+.wb-hl-card__foot {
+  align-items: center;
+  border-top: 1px solid var(--wb-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+}
+
+.wb-hl-card__swatches {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.wb-hl-card__swatch {
+  border-color: var(--wb-subtle);
+}
+
+.wb-hl-card__swatch[aria-pressed="true"] {
+  border-color: var(--wb-ink);
+}
+
+.wb-hl-card__delete,
+.wb-hl-note__delete {
+  color: oklch(55% 0.2 27);
+}
+
+/* Notes */
+.wb-hl-note {
+  background: var(--wb-subtle-light);
+  border-radius: 0.6rem;
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.8rem;
+}
+
+.wb-hl-note--editing {
+  background: transparent;
+  padding: 0;
+}
+
+.wb-hl-note__label {
+  align-items: center;
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 700;
+  gap: 0.5rem;
+  letter-spacing: 0.02em;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.wb-hl-note__edit,
+.wb-hl-note__add {
+  align-items: center;
+  color: var(--wb-link);
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 0.3rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.wb-hl-note__edit { margin-inline-start: auto; }
+.wb-hl-note__add { margin-top: 0.5rem; }
+
+.wb-hl-note__input {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle);
+  border-radius: 0.6rem;
+  color: inherit;
+  font: inherit;
+  line-height: 1.5;
+  min-height: 7rem;
+  padding: 0.6rem 0.75rem;
+  resize: vertical;
+  width: 100%;
+}
+
+.wb-hl-note__input:focus {
+  border-color: var(--wb-link);
+  outline: none;
+}
+
+.wb-hl-note__actions {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.wb-hl-note__error {
+  color: oklch(55% 0.2 27);
+  font-size: 0.9rem;
+  margin: 0.4rem 0 0;
+}
+
+.wb-hl-item__note {
+  font-size: 0.92rem;
+  margin-top: 0.35rem;
+  opacity: 0.85;
+}
+
+/* Rendered Markdown in notes */
+.wb-md {
+  font-family: var(--wb-font-reading);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.wb-md > * { margin: 0.4em 0 0 !important; font-family: inherit !important; }
+.wb-md > :first-child { margin-top: 0 !important; }
+.wb-md p { font-size: inherit !important; line-height: inherit !important; }
+.wb-md h3, .wb-md h4, .wb-md h5 { font-size: 1.05em; font-weight: 800; }
+.wb-md ul { list-style: disc; padding-inline-start: 1.3em; }
+.wb-md ol { list-style: decimal; padding-inline-start: 1.3em; }
+.wb-md blockquote { border-inline-start: 3px solid var(--wb-subtle); padding-inline-start: 0.7em; }
+.wb-md code { background: var(--wb-subtle); border-radius: 0.25em; font-size: 0.9em; padding: 0.05em 0.3em; }
+.wb-md pre { background: var(--wb-subtle); border-radius: 0.4em; color: inherit; margin: 0.4em 0 0; overflow-x: auto; padding: 0.5em 0.7em; }
+.wb-md pre code { background: none; padding: 0; }
+.wb-md a { color: var(--wb-link); text-decoration: underline; }
+
+/* /library/highlights */
+.wb-hl-page {
+  margin-inline: auto;
+  max-width: 44rem;
+}
+
+.wb-hl-page__head {
+  align-items: flex-end;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.wb-hl-page__title {
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+  font-weight: 800;
+  margin: 0;
+}
+
+.wb-hl-page__meta {
+  margin: 0.2rem 0 0;
+  opacity: 0.7;
+}
+
+.wb-hl-page__book { margin-top: 2rem; }
+
+.wb-hl-page__book-title {
+  border-bottom: 2px solid var(--wb-ink);
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.3rem;
+}
+
+.wb-hl-page__chapter-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 1rem 0 0.25rem;
+  opacity: 0.8;
+}
+
+.wb-hl-page h2 a, .wb-hl-page h3 a { color: inherit; text-decoration: none; }
+.wb-hl-page h2 a:hover, .wb-hl-page h3 a:hover { text-decoration: underline; }
+
+.wb-reader mark.hb-hl[data-hl-id] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wb-selection-pop .wb-selection-pop__btn,
+.wb-selection-pop .wb-selection-pop__swatch {
+  box-shadow: none;
+}
+
+.wb-selection-pop .wb-selection-pop__btn {
+  background: transparent;
+  border: 0;
+  color: var(--wb-bg);
+  text-decoration: none;
+}
+
+/* On touch screens the system's copy menu sits above the selection, so ours goes below. */
+.wb-selection-pop--below {
+  transform: translate(-50%, 10px);
+}
+
+.wb-md *,
+.wb-hl-page p {
+  font-family: inherit !important;
+}
+
+.wb .wb-hl-note__edit,
+.wb .wb-hl-note__add {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.wb-hl-list .wb-hl-quote {
+  display: block;
+}
+
+.wb-hl-page .wb-hl-page__book-title { font-weight: 800; }
+.wb-hl-page .wb-hl-page__chapter-title { font-weight: 700; }
+
+/* The app's global pre is light text on a dark panel; notes use the page's colors instead. */
+.wb-md pre,
+.wb-md code {
+  font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
+}
+
+/* ---------- Book edit page ----------
+ * Writebook's open layout, with HMBLBOT's panel look: a soft gray tray holding white cells
+ * with concentric corners, small uppercase labels, and the accent blue for focus and toggles.
+ */
+
+.wb-edit {
+  --wb-tray: oklch(92.2% 0 0);
+  --wb-cell: #fff;
+  --wb-accent: var(--color-accent, #0b6ede);
+  --wb-tray-pad: 0.375rem;
+  --wb-cell-radius: var(--radius-panel, 20px);
+
+  margin-inline: auto;
+  max-width: 60rem;
+  padding-block: 1rem 3rem;
+}
+
+.dark .wb-edit {
+  --wb-tray: oklch(26.9% 0 0);
+  --wb-cell: var(--color-surface-dark, #0d0d0f);
+}
+
+.wb-edit__status {
+  color: var(--wb-ink-soft);
+  font-size: 0.85rem;
+  margin-inline-end: 0.25rem;
+}
+
+.wb-edit__status--dirty::before {
+  background: var(--wb-accent);
+  border-radius: 50%;
+  content: "";
+  display: inline-block;
+  height: 0.5rem;
+  margin-inline-end: 0.4rem;
+  vertical-align: 0.1em;
+  width: 0.5rem;
+}
+
+.wb-edit__main {
+  align-items: center;
+  display: grid;
+  gap: 1.5rem 2rem;
+  grid-template-columns: auto minmax(9rem, 14rem) 1fr;
+  padding-block: 2rem;
+}
+
+/* The tray: the shell's gray frame, reduced to a soft container. */
+.wb-edit__tray,
+.wb-edit__group {
+  background: var(--wb-tray);
+  padding: var(--wb-tray-pad);
+}
+
+.wb-edit__swatches {
+  border-radius: 999px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.wb-edit__swatch {
+  align-items: center;
+  background: var(--swatch) !important;
+  border: 1px solid rgb(0 0 0 / 0.12);
+  border-radius: 50%;
+  color: #fff;
+  display: inline-flex;
+  height: 2.2rem;
+  justify-content: center;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  width: 2.2rem;
+}
+
+.wb-edit__swatch:hover {
+  transform: scale(1.08);
+}
+
+.wb-edit__swatch[aria-checked="true"] {
+  box-shadow: 0 0 0 3px var(--wb-tray), 0 0 0 5px var(--wb-accent);
+}
+
+.wb-edit__swatch--white {
+  border-color: var(--wb-subtle-dark);
+  color: #000;
+}
+
+.wb-edit__cover {
+  padding-bottom: 1.4rem;
+  position: relative;
+}
+
+.wb-edit__cover-actions {
+  bottom: 0;
+  display: flex;
+  gap: 0.5rem;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.wb-edit__camera {
+  align-items: center;
+  background: var(--wb-accent) !important;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--wb-bg), 0 4px 12px rgb(0 0 0 / 0.2);
+  color: #fff;
+  display: inline-flex;
+  height: 2.8rem;
+  justify-content: center;
+  width: 2.8rem;
+}
+
+.wb-edit__camera--soft {
+  background: var(--wb-cell) !important;
+  color: var(--wb-ink);
+}
+
+/* Cells stack inside a tray; outer corners follow the panel radius, inner ones stay tight. */
+.wb-edit__group {
+  border-radius: calc(var(--wb-cell-radius) + var(--wb-tray-pad));
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-tray-pad);
+}
+
+.wb-edit__cell {
+  background: var(--wb-cell);
+  border-radius: 6px;
+  box-shadow: var(--shadow-panel, 0 4px 12px rgb(0 0 0 / 0.1));
+  display: block;
+  padding: 0.7rem 1rem 0.8rem;
+  transition: box-shadow 150ms ease;
+}
+
+.wb-edit__cell:first-child {
+  border-top-left-radius: var(--wb-cell-radius);
+  border-top-right-radius: var(--wb-cell-radius);
+}
+
+.wb-edit__cell:last-child {
+  border-bottom-left-radius: var(--wb-cell-radius);
+  border-bottom-right-radius: var(--wb-cell-radius);
+}
+
+.wb-edit__cell:focus-within {
+  box-shadow: 0 0 0 2px var(--wb-accent);
+}
+
+.wb-edit__label {
+  color: var(--wb-ink-soft);
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.15rem;
+  text-transform: uppercase;
+}
+
+.wb-edit__input {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--wb-ink);
+  font-size: 1.1rem;
+  outline: none;
+  padding: 0;
+  resize: vertical;
+  width: 100%;
+}
+
+.wb-edit__input::placeholder {
+  color: var(--wb-subtle-dark);
+}
+
+.wb-edit__input--title {
+  font-size: clamp(1.5rem, 3.6vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.02ch;
+  line-height: 1.15;
+  field-sizing: content; /* long titles wrap instead of scrolling */
+  resize: none;
+}
+
+.wb-edit__settings {
+  margin-inline: auto;
+  max-width: 44rem;
+}
+
+.wb-edit__row {
+  align-items: center;
+  display: flex;
+  font-family: var(--wb-font-reading);
+  gap: 0.9rem;
+  padding: 0.9rem 1.1rem;
+}
+
+.wb-edit__row strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.wb-edit__icon {
+  align-items: center;
+  background: color-mix(in srgb, var(--wb-accent) 12%, transparent);
+  border-radius: 50%;
+  color: var(--wb-accent);
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 2.2rem;
+  justify-content: center;
+  width: 2.2rem;
+}
+
+.wb-edit__hint {
+  color: var(--wb-ink-soft);
+  font-family: var(--wb-font-reading);
+  font-size: 0.85rem;
+  margin: 0.1rem 0 0;
+}
+
+.wb-edit__leader {
+  align-self: center;
+  border-bottom: 2px dotted var(--wb-subtle-dark);
+  flex: 1;
+  min-width: 1rem;
+}
+
+.wb-edit__slug {
+  align-items: baseline;
+  color: var(--wb-ink-soft);
+  display: flex;
+  font-size: 0.95rem;
+  gap: 0.1rem;
+  margin-top: 0.1rem;
+}
+
+.wb-edit__slug .wb-edit__input {
+  font-size: 0.95rem;
+}
+
+.wb-edit__switch {
+  background: var(--wb-subtle-dark) !important;
+  border-radius: 2em;
+  flex-shrink: 0;
+  height: 2rem;
+  position: relative;
+  transition: background-color 200ms ease;
+  width: 3.4rem;
+}
+
+.wb-edit__switch[aria-checked="true"] {
+  background: var(--wb-accent) !important;
+}
+
+.wb-edit__switch span {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  height: 1.6rem;
+  left: 0.2rem;
+  position: absolute;
+  top: 0.2rem;
+  transition: transform 200ms ease;
+  width: 1.6rem;
+}
+
+.wb-edit__switch[aria-checked="true"] span {
+  transform: translateX(1.4rem);
+}
+
+.wb-edit__error {
+  color: oklch(55% 0.2 27);
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.wb-edit .wb-btn--reversed:disabled {
+  background: var(--wb-tray) !important;
+  border-color: transparent;
+  color: var(--wb-ink-soft) !important;
+  cursor: default;
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .wb-edit__main {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding-block: 1.25rem;
+  }
+
+  .wb-edit__swatches {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .wb-edit__cover {
+    width: min(12rem, 60%);
+  }
+
+  .wb-edit__fields {
+    justify-self: stretch;
+  }
+
+  .wb-edit__leader {
+    display: none;
+  }
+
+  .wb-edit__row > div {
+    flex: 1;
+  }
+
+  .wb-edit__status {
+    display: none;
+  }
+}
+
+/* ---------- Timeline notes and profile feeds (components/notes) ---------- */
+
+.wb-note-editor.wb-hl-note { margin-top: 0; }
+
+.wb-note-editor__images {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.wb-note-editor__images li {
+  aspect-ratio: 1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.wb-note-editor__images img { height: 100%; object-fit: cover; width: 100%; }
+
+.wb .wb-note-editor__images button {
+  align-items: center;
+  background: rgb(0 0 0 / 0.6);
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  display: grid;
+  height: 1.5rem;
+  padding: 0;
+  place-items: center;
+  position: absolute;
+  right: 0.25rem;
+  top: 0.25rem;
+  width: 1.5rem;
+}
+
+.wb-note-editor__groups {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.wb-note-editor__groups > span { color: var(--wb-ink-soft); margin-inline-end: 0.15rem; }
+
+.wb .wb-note-editor__chip { font-size: 0.8rem; font-weight: 600; padding: 0.2em 0.75em; }
+
+.wb .wb-note-editor .wb-hl-note__actions { flex-wrap: wrap; }
+.wb .wb-note-editor .wb-hl-note__actions .wb-btn { font-size: 0.875rem; padding: 0.35em 0.9em; }
+
+@media (max-width: 30rem) {
+  .wb-note-editor__label { display: none; }
+}
+
+.wb-feed { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.wb-feed-item {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle);
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.wb-feed-item--compact { padding: 0.7rem 0.8rem; }
+
+.wb-feed-item__head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  min-width: 0;
+}
+
+.wb .wb-feed-item__author {
+  align-items: center;
+  color: var(--wb-ink);
+  display: inline-flex;
+  font-weight: 700;
+  gap: 0.5rem;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.wb .wb-feed-item__author:hover span { text-decoration: underline; }
+
+.wb-feed-item__meta { color: var(--wb-ink-soft); font-size: 0.8rem; }
+
+.wb-feed-item__body { font-size: 1rem; }
+.wb-feed-item__body--compact { font-size: 0.925rem; }
+
+.wb-feed-item__quote { display: block; font-size: 1.05rem; }
+
+.wb .wb-feed-item__source {
+  align-items: center;
+  color: var(--wb-ink-soft);
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 600;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+  text-decoration: none;
+}
+
+.wb .wb-feed-item__source:hover { color: var(--wb-link); }
+
+.wb-feed-item__images {
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.6rem;
+  overflow: hidden;
+}
+
+.wb-feed-item__images--2,
+.wb-feed-item__images--4 { grid-template-columns: 1fr 1fr; }
+.wb-feed-item__images--3 { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; }
+.wb-feed-item__images--3 > :first-child { grid-row: span 2; }
+
+.wb .wb-feed-item__images button {
+  background: var(--wb-subtle-light);
+  border: 0;
+  border-radius: 0;
+  cursor: zoom-in;
+  display: block;
+  max-height: 26rem;
+  padding: 0;
+  position: relative;
+}
+
+.wb-feed-item__images--1 button { max-height: 30rem; }
+.wb-feed-item__images:not(.wb-feed-item__images--1) button { aspect-ratio: 4 / 3; }
+.wb-feed-item__images--3 > :first-child { aspect-ratio: auto !important; }
+
+.wb-feed-item__images img { display: block; height: 100%; max-height: inherit; object-fit: cover; width: 100%; }
+
+.wb-feed-item__images button span {
+  background: rgb(0 0 0 / 0.5);
+  color: #fff;
+  display: grid;
+  font-size: 1.4rem;
+  font-weight: 700;
+  inset: 0;
+  place-items: center;
+  position: absolute;
+}
+
+.wb-feed-item__foot {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+
+.wb-feed-item__shared { color: var(--wb-ink-soft); font-size: 0.8rem; }
+.wb .wb-feed-item__foot .wb-hl-note__edit { margin-inline-start: 0; background: transparent; border: 0; padding: 0; }
+.wb .wb-feed-item__foot .wb-hl-note__delete { color: oklch(55% 0.2 27); }
+/* The reader styles give every button a fill; a picked group chip stays dark */
+.wb .wb-note-editor__chip { background-color: transparent !important; }
+.wb .wb-note-editor__chip[aria-pressed="true"] { background-color: var(--wb-ink) !important; color: var(--wb-bg) !important; }

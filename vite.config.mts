@@ -7,14 +7,27 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [
     ViteRails({
-      // If supported by your plugin version; otherwise prefer moving files.
       sourceCodeDir: 'app/javascript',
       entrypointsDir: 'app/javascript/entrypoints',
-      fullReload: { additionalPaths: ['config/routes.rb', 'app/views/**/*'], delay: 300 },
+      fullReload: {
+        additionalPaths: ['config/routes.rb', 'app/views/**/*'],
+        delay: 300,
+      },
       envVars: { RAILS_ENV: 'production' },
       envOptions: { defineOn: 'import.meta.env' },
     }),
     tailwindcss(),
-    [react({ fastRefresh: false })],
+    react({ fastRefresh: false }),
   ],
+
+  server: {
+    host: '127.0.0.1',
+    port: 3036,
+
+    hmr: {
+      host: '127.0.0.1',
+      port: 3036,
+      protocol: 'ws',
+    },
+  },
 })

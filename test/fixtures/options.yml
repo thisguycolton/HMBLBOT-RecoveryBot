@@ -2,10 +2,10 @@
 
 one:
   poll: one
-  topic_id: 1
+  topic: one
   topic_title: MyString
 
 two:
   poll: two
-  topic_id: 1
+  topic: one
   topic_title: MyString

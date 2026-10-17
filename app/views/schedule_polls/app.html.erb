@@ -1,0 +1,4 @@
+<% content_for(:page_title) { "#{@poll ? @poll.title : "Schedule polls"} | RecoveryBot" } %>
+<%= vite_javascript_tag "schedule_polls.jsx" %>
+<%# w-full: the reader styles make <body> a centring flexbox %>
+<div id="schedule-polls-root" class="w-full"></div>

@@ -1,0 +1,7 @@
+<%# Asset URLs carry a digest, so a new icon is a new URL and browsers don't keep the old one. %>
+<link rel="icon" href="<%= asset_path 'favicon/favicon.ico' %>" sizes="48x48" />
+<link rel="icon" type="image/svg+xml" href="<%= asset_path 'favicon/favicon.svg' %>" />
+<link rel="icon" type="image/png" href="<%= asset_path 'favicon/favicon-96x96.png' %>" sizes="96x96" />
+<link rel="apple-touch-icon" sizes="180x180" href="<%= asset_path 'favicon/apple-touch-icon.png' %>" />
+<meta name="apple-mobile-web-app-title" content="RecoveryBot" />
+<link rel="manifest" href="<%= pwa_manifest_path(format: :json) %>" />

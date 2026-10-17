@@ -1,0 +1,4 @@
+<% content_for(:page_title) { @event&.published? ? "#{@event.title} | RecoveryBot" : "Events | RecoveryBot" } %>
+<%= vite_javascript_tag "events.jsx" %>
+<%# w-full: the reader styles make <body> a centring flexbox %>
+<div id="events-root" class="w-full self-start"></div>

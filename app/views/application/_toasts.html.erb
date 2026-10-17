@@ -1,0 +1,3 @@
+<%# Toasts (app/javascript/entrypoints/toasts.jsx). The flash arrives as toasts. %>
+<div id="hb-toasts" data-flash="<%= flash.to_hash.slice("notice", "alert").to_json %>"></div>
+<%= vite_javascript_tag "toasts.jsx" %>

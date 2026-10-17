@@ -1,6 +1,5 @@
 /* app/javascript/styles/reader.css */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400;1,700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 :root {
   --hl-yellow: #fef08a;
   /* yellow-200 */
@@ -28,17 +27,47 @@ html.dark {
   /* or #000 if you want true black */
 }
 
+pre{
+  font-family: "DM Mono", monospace;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  background-color: #2a2b2d;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  margin:2px;
+  padding:2px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-radius: 4px;
+  color: #f8fafc;
+}
+pre.dark{
+  background-color: #111;
+  color: #f8fafc;
+}
+
+blockquote.dark{
+  color: #f8fafc !important;
+  border-left: 4px solid #64748b;
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+}
+
 .prose,
 .hb-reader {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
+  /* Do not transform the reader.
+     Transforms create a containing block for position: fixed. */
+  backface-visibility: visible;
+  perspective: none;
 }
 
 .prose {
-  will-change: transform;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  /* The WINDOW should be the scrolling container. */
+  overflow: visible;
+  will-change: auto;
+  -webkit-overflow-scrolling: auto;
 }
 
 .hb-reader hr.hb-pagebreak {
@@ -87,7 +116,15 @@ h1{
       font-style: normal;
 }
 .noto{
-  font-family: "Noto Serif", serif;
+  font-family: "Noto Serif", serif !important;
+  font-optical-sizing: auto;
+}
+.sans{
+  font-family: "Inter", sans-serif !important;
+  font-optical-sizing: auto;
+}
+.serif{
+  font-family: "Gentium Book Plus", serif !important;
   font-optical-sizing: auto;
 }
 
@@ -206,34 +243,49 @@ h1{
 .page-break {
   position: sticky;
   top: var(--reader-sticky-offset);
-  z-index: 30;
+  z-index: 50;
 
   padding-top: 6px;
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
 
   box-shadow: none;
-  /* default: no stacky shadow */
 }
 .dark .page-break,
 .dark .page-break--default {
 }
 
 .page-break__pill {
-  /* keep pill shadow consistent */
   box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
 }
 
 /* when the currently “active” break is stuck */
 .page-break.is-stuck {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .1);
+
+  position: sticky;
+
+  top: var(--reader-sticky-offset);
+
+  z-index: 50;
+
 }
 
-/* optionally hide covered ones, if you want */
+/*
+ * Once a page break has been passed, hide the ORIGINAL
+ * page-break visual without removing the node from layout.
+ *
+ */
+
 .page-break.is-covered {
   visibility: hidden;
-  display: none;
-  /* or: display:none; but visibility is smoother */
+}
+
+/*
+ * Keep the page-break's layout space intact.
+ */
+
+.page-break.is-covered .page-break__pill {
+  visibility: hidden;
 }
 
 /* you can still keep variant-specific tweaks */
@@ -250,28 +302,43 @@ h1{
 }
 
 
-/* single fixed indicator (cheap to paint) */
+
+
 .page-break-indicator {
   position: fixed;
-  top: var(--reader-sticky-offset, 80px);
-  /* same offset you use */
+  top: var(--reader-sticky-offset, 140px);
   left: 50%;
   transform: translateX(-50%) translateY(-4px);
-  /* transform-only */
+  z-index: 45;
   background: rgba(255, 255, 255, 0.92);
-  border-radius: 8px;
-  padding: 6px 10px;
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.65);
+  border-radius: 9999px;
+  padding: 6px 14px;
   font-size: 13px;
-  z-index: 60;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: .02em;
+  white-space: nowrap;
   pointer-events: none;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, .15);
+  opacity: 0;
   will-change: transform, opacity;
-  /* only on this single element if needed */
+  transition:
+    transform .18s ease,
+    opacity .18s ease;
 }
 
-/* optional: subtle transition (transform/opacity only) */
+.dark .page-break-indicator {
+  background: rgba(63, 63, 70, 0.95);
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, .65);
+}
+
 .page-break-indicator.show {
   opacity: 1;
-  transition: transform .18s linear, opacity .18s linear;
+  transform: translateX(-50%) translateY(0);
 }
 
 .page-break-indicator.hide {
@@ -279,15 +346,8 @@ h1{
   transform: translateX(-50%) translateY(-8px);
 }
 
-/* page-break elements keep minimal CSS; don't use heavy filters */
-[data-page-break] {
-  /* keep it thin and static — don't animate heavy properties */
-}
-
-[data-page-break].is-covered {
-  /* maybe a tiny style change */
-  opacity: 0.65;
-  /* cheap */
+.page-break-indicator.hidden {
+  visibility: hidden;
 }
 
 .hb-flash {
@@ -322,6 +382,18 @@ h1{
   /* slate-50 */
   font-weight: 600;
   text-align: left;
+}
+
+/* dark mode: the light header fill made white header text unreadable */
+.dark .prose table th,
+.dark .prose table td {
+  border-color: #3f3f46;
+  /* zinc-700 */
+}
+
+.dark .prose table th {
+  background: rgb(255 255 255 / 0.06);
+  color: inherit;
 }
 
 /* TipTap resizer handle (only visible when resizable=true) */
@@ -380,4 +452,8 @@ body.pnd-active .chapter-row-dropzone {
 
 .hb-hl {
   scroll-margin-top: calc(var(--reader-sticky-offset) - 48px);
+}
+
+#chapter-viewer{
+  width: 100%;
 }

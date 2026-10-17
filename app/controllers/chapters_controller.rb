@@ -1,4 +1,6 @@
 class ChaptersController < ApplicationController
+  include KeepsRobotsOut
+  keep_robots_out
   layout "reader"
     before_action :set_book
 
@@ -13,6 +15,7 @@ class ChaptersController < ApplicationController
 
   def edit
     @chapter = @book.chapters.find_by!(slug: params[:slug])
+    redirect_to book_chapter_path(@book.slug, @chapter.slug) unless current_user&.admin?
   end
 
   private

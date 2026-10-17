@@ -1,6 +1,32 @@
 class Book < ApplicationRecord
+  # Writebook's cover colors (BookCover.jsx draws them). No color picks one from the slug.
+  COVER_COLORS = %w[black blue green magenta orange violet white].freeze
+
   has_many :chapters, dependent: :destroy
+  has_many :pages, dependent: :delete_all
+  has_one_attached :cover_image
   validates :slug, presence: true, uniqueness: true
+  validates :cover_color, inclusion: { in: COVER_COLORS }, allow_nil: true
+
+  # Books are public unless "Everyone" is switched off on the edit page; then only admins see them.
+  scope :visible_to, ->(user) { user&.admin? ? all : where(publicly_accessible: [true, nil]) }
+
+  def public?
+    publicly_accessible != false
+  end
+
+  def visible_to?(user)
+    public? || user&.admin?
+  end
+
+  # An uploaded cover wins over a pasted image URL. The cover is proxied through
+  # the app rather than redirected to a short-lived signed S3 URL, which Safari
+  # showed as a broken image after a reload.
+  def cover_url
+    return Rails.application.routes.url_helpers.rails_storage_proxy_path(cover_image, only_path: true) if cover_image.attached?
+
+    image_url.presence
+  end
 
     def self.ransackable_attributes(auth_object = nil)
     ["aa_approved", "author", "created_at", "id", "info", "org_approved", "pdf_url", "publicly_accessible", "published_date", "purchase_link", "title", "updated_at"]
@@ -9,6 +35,23 @@ class Book < ApplicationRecord
     def self.ransackable_associations(auth_object = nil)
     ["chapters", "pages"]
     end
+
+  # Chapters matching `query`, in reading order, each with its match count and
+  # the first few snippets.
+  def search(query, snippets: 3)
+    chapters.ordered.filter_map do |chapter|
+      matches = chapter.search(query)
+      next if matches.empty?
+
+      {
+        slug: chapter.slug,
+        title: chapter.title,
+        first_page: chapter.first_page,
+        count: matches.size,
+        snippets: matches.first(snippets)
+      }
+    end
+  end
 
 	# validates :pdf_url, presence: true
 

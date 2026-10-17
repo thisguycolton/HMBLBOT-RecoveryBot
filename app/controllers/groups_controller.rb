@@ -1,70 +1,47 @@
+# The page that holds the Groups React app (app/javascript/entrypoints/groups.jsx), and
+# invite links. Groups is admin-only for now (see Group.feature_open_to?), except Find a
+# meeting and the group pages it opens, which need no account (PUBLIC_PATHS).
 class GroupsController < ApplicationController
-  before_action :set_group, only: %i[ show edit update destroy ]
+  layout "reader"
+  # /groups/meetings, /groups/find/<listing>, /groups/<slug> and its public tabs
+  PUBLIC_PATHS = %r{\A(meetings|find/[^/]+|(?!(new|find|default-page)\z)[a-z0-9-]+(/(home|meetings|events))?)\z}
 
-  # GET /groups or /groups.json
-  def index
-    @groups = Group.all
+  before_action :authenticate_user!, except: %i[app join ask]
+  after_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }
+
+  def app
+    return if user_signed_in? && (Group.feature_open_to?(current_user) || current_user.group_memberships.exists?)
+    return if PUBLIC_PATHS.match?(params[:path].to_s)
+    return authenticate_user! unless user_signed_in?
+
+    redirect_to root_path, alert: "Groups isn't open yet."
   end
 
-  # GET /groups/1 or /groups/1.json
-  def show
+  # GET /groups/:slug/ask -> "Ask to join" from someone signed out: make an account (or log
+  # in), then back to the group's page, which sends the request (?ask=1). New accounts wait
+  # for an admin to confirm them, so the group waits in a cookie like an invite does.
+  def ask
+    group = Group.find_by(slug: params[:slug].to_s)
+    return redirect_to("/groups/meetings", alert: "That group isn't here.") unless group&.page_visible_to?(current_user)
+
+    back = "/groups/#{group.slug}?ask=1"
+    return redirect_to(back) if user_signed_in?
+
+    cookies.signed[:group_ask] = { value: group.slug, expires: 30.days, httponly: true }
+    redirect_to new_user_registration_path, notice: "Make an account (or log in) to ask to join #{group.title}."
   end
 
-  # GET /groups/new
-  def new
-    @group = Group.new
-  end
+  # GET /groups/join/:token -> join now, or after signing in (the token waits in a cookie)
+  def join
+    group = Group.find_by(join_token: params[:token].to_s)
+    return redirect_to(root_path, alert: "That invite link doesn't work anymore. Ask the group for a new one.") unless group
 
-  # GET /groups/1/edit
-  def edit
-  end
-
-  # POST /groups or /groups.json
-  def create
-    @group = Group.new(group_params)
-
-    respond_to do |format|
-      if @group.save
-        format.html { redirect_to root_path, notice: "Group was successfully created." }
-        format.json { render :show, status: :created, location: @group }
-      else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @group.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # PATCH/PUT /groups/1 or /groups/1.json
-  def update
-    respond_to do |format|
-      if @group.update(group_params)
-        format.html { redirect_to group_url(@group), notice: "Group was successfully updated." }
-        format.json { render :show, status: :ok, location: @group }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @group.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # DELETE /groups/1 or /groups/1.json
-  def destroy
-    @group.destroy
-
-    respond_to do |format|
-      format.html { redirect_to groups_url, notice: "Group was successfully destroyed." }
-      format.json { head :no_content }
-    end
-  end
-
-  private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_group
-      @group = Group.find(params[:id])
+    unless user_signed_in?
+      cookies.signed[:group_invite] = { value: group.join_token, expires: 30.days, httponly: true }
+      return redirect_to(new_user_registration_path, notice: "Make an account (or log in) to join #{group.title}.")
     end
 
-    # Only allow a list of trusted parameters through.
-    def group_params
-      params.require(:group).permit(:title, :description, :location, :website, :remote, :meetingLink, meetings_attributes: [ :datetime, :host, :reocurring, :frequency, :group_id, :_destroy])
-    end
+    JoinsGroupFromInvite.call(current_user, group.join_token)
+    redirect_to "/groups/#{group.slug}", notice: "Welcome to #{group.title}."
+  end
 end

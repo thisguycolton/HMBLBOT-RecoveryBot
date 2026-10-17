@@ -1,0 +1,10 @@
+<% if @member.role == "collaborator" %><%= @organizer %> added you as a collaborator on the schedule poll “<%= @poll.title %>”. You can edit it, tag people and watch the votes come in.<% else %><%= @organizer %> is finding a time for “<%= @poll.title %>” and would like to know when works for you.<% end %>
+<% if @poll.description.present? %>
+
+<%= @poll.description %>
+<% end %>
+
+Pick your top <%= @poll.choices_count %> times (<%= @poll.duration_minutes %> minutes, <%= @poll.starts_on.strftime("%b %-d") %>–<%= @poll.ends_on.strftime("%b %-d") %>):
+<%= @url %>
+
+Voting closes <%= @poll.closes_at.in_time_zone(@poll.zone).strftime("%a %b %-d at %-l:%M %p %Z") %>.

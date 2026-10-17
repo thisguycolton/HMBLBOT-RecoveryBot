@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><title>RecoveryBot</title>
+<rect width="16" height="16" rx="3.5" fill="#4c7ba6"/>
+<defs><mask id="f"><rect width="16" height="16" fill="white"/><circle cx="8" cy="9" r="1.6" fill="black"/><circle cx="5.5" cy="11.5" r="1" fill="black"/><circle cx="10.5" cy="11.5" r="1" fill="black"/></mask></defs>
+<g fill="#fff">
+<rect mask="url(#f)" x="3" y="6" width="10" height="7.5" rx="1.75"/>
+<rect x="2" y="8" width="1" height="3"/><rect x="13" y="8" width="1" height="3"/>
+<rect x="7.5" y="4" width="1" height="2"/><circle cx="8" cy="3.5" r="1.5"/>
+<rect x="4.5" y="5" width="1" height="1"/><rect x="10.5" y="5" width="1" height="1"/>
+</g></svg>

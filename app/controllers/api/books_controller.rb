@@ -1,27 +1,34 @@
+require "digest"
+
 class Api::BooksController < ApplicationController
-  before_action :set_book, only: [:show, :update, :export]
-  before_action :authenticate_user!, only: [:create, :update]
-  before_action :require_admin!, only: [:create, :update]
+  include KeepsRobotsOut
+  keep_robots_out
+  before_action :set_book, only: [:show, :update, :export, :search]
+  before_action :hide_private_book!, only: [:show, :export, :search]
+  before_action :authenticate_user!, only: [:create, :update, :import_json]
+  before_action :require_admin!, only: [:create, :update, :import_json]
 
 
 
   def index
-    books = Book.includes(:chapters).order(:title)
+    books = Book.visible_to(current_user).includes(:chapters, cover_image_attachment: :blob).order(:title)
     render json: books.map { |b|
       {
         slug: b.slug,
         title: b.title,
         description: b.try(:description),
         author: b.try(:author),
-        image_url: b.try(:image_url),
+        image_url: b.cover_url,
+        cover_color: b.cover_color,
+        public: b.public?,
         chapter_count: b.chapters.size,
-        first_chapter_slug: b.chapters.order(:index, :id).limit(1).pluck(:slug).first
+        first_chapter_slug: b.chapters.min_by { |c| [c.index.to_i, c.id] }&.slug
       }
     }
   end
+
   def show
-    book = Book.find_by!(slug: params[:slug])
-    render json: { id: book.id, slug: book.slug, title: book.title }
+    render json: book_json(@book)
   end
 
     def create
@@ -30,9 +37,45 @@ class Api::BooksController < ApplicationController
     render json: { ok: true, slug: book.slug }, status: :created
   end
 
+  # PATCH /api/books/:slug — JSON, or multipart when a cover image is uploaded.
+  # remove_cover_image=1 drops both an uploaded cover and a pasted image URL.
   def update
-    @book.update!(book_params)
-    render json: { ok: true, slug: @book.slug }
+    attrs = book_params
+    attrs[:cover_color] = attrs[:cover_color].presence if attrs.key?(:cover_color)
+    @book.assign_attributes(attrs)
+    remove_cover = ActiveModel::Type::Boolean.new.cast(params.dig(:book, :remove_cover_image))
+    @book.image_url = nil if remove_cover
+    @book.cover_image.attach(params[:book][:cover_image]) if !remove_cover && params.dig(:book, :cover_image).present?
+    @book.save!
+    @book.cover_image.purge if remove_cover && @book.cover_image.attached?
+    render json: book_json(@book).merge(ok: true)
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+
+  # GET /api/books/:slug/search?q=...
+  # Matches across every chapter of the book, with a few snippets per chapter.
+  def search
+    query = params[:q].to_s.squish
+    return render json: { query: query, results: [] } if query.length < 2
+
+    render json: { query: query, results: @book.search(query) }
+  end
+
+  # GET /api/books/search?q=...
+  # The same search across every book in the library, grouped by book.
+  def search_all
+    query = params[:q].to_s.squish
+    return render json: { query: query, results: [] } if query.length < 2
+
+    results = Book.visible_to(current_user).order(:title).filter_map do |book|
+      chapters = book.search(query, snippets: 2)
+      next if chapters.empty?
+
+      { slug: book.slug, title: book.title, count: chapters.sum { |c| c[:count] }, chapters: chapters }
+    end
+
+    render json: { query: query, results: results }
   end
 
     def export
@@ -63,7 +106,7 @@ class Api::BooksController < ApplicationController
       disposition: "attachment")
   end
 
-    def import_json
+  def import_json
     payload = params[:payload]
 
     # Handle stringified JSON sent from file uploader
@@ -75,48 +118,90 @@ class Api::BooksController < ApplicationController
       end
     end
 
-    unless payload.is_a?(Hash) && payload["book"].is_a?(Hash) && payload["chapters"].is_a?(Array)
-      return render json: { error: "Malformed payload. Expecting { book: {}, chapters: [] }" }, status: :unprocessable_entity
+    unless payload.is_a?(Hash)
+      return render json: { error: "Malformed payload. Expected a JSON object." }, status: :unprocessable_entity
     end
+
+    book_attrs = payload["book"].is_a?(Hash) ? payload["book"] : {}
+    book_slug = book_attrs["slug"].presence
+
+    return render json: { error: "The import must include a book slug." }, status: :unprocessable_entity if book_slug.blank?
+
+    return import_litconv(payload) if payload.key?("schema_version")
+
+    if payload.dig("document", "pages").is_a?(Array)
+      return import_literature_extraction(payload, book_slug)
+    end
+
+    unless payload["chapters"].is_a?(Array)
+      return render json: {
+        error: 'Malformed payload. Expected an exported book ("chapters") or a repaired PDF extraction ("document.pages").'
+      }, status: :unprocessable_entity
+    end
+
+    imported_chapters = normalize_imported_chapters(payload["chapters"])
+    replace_chapters = ActiveModel::Type::Boolean.new.cast(params[:replace_chapters])
 
     created = 0
     updated = 0
 
     ActiveRecord::Base.transaction do
-      b = Book.find_or_initialize_by(slug: payload["book"]["slug"].presence || SecureRandom.hex(6))
-      b.title        = payload["book"]["title"].presence || b.title
-      b.description  = payload["book"]["description"] if payload["book"].key?("description")
-      b.author       = payload["book"]["author"]      if payload["book"].key?("author")
-      b.image_url    = payload["book"]["image_url"]   if payload["book"].key?("image_url")
+      b = Book.find_or_initialize_by(slug: book_slug)
+      b.title        = book_attrs["title"].presence || b.title || book_slug.humanize
+      b.description  = book_attrs["description"] if book_attrs.key?("description")
+      b.author       = book_attrs["author"]      if book_attrs.key?("author")
+      b.image_url    = book_attrs["image_url"]   if book_attrs.key?("image_url")
       b.save!
 
-      payload["chapters"].each_with_index do |ch_hash, i|
-        slug        = ch_hash["slug"].presence || "chapter-#{i + 1}"
-        title       = ch_hash["title"].presence || "Chapter #{i + 1}"
-        index       = ch_hash["index"].presence || (i + 1)
-        first_page  = ch_hash["first_page"]
-        last_page   = ch_hash["last_page"]
-        tiptap_json = ch_hash["tiptap_json"].presence || ch_hash["tiptap"] || { "type" => "doc", "content" => [] }
+      b.with_lock do
+        # Chapter positions are unique within a book.  First move every existing
+        # chapter out of the incoming range so an otherwise valid re-import never
+        # fails halfway through due to a transient index collision.
+        existing_order = b.chapters.order(:index, :id).to_a
+        temporary_base = -((existing_order.map { |chapter| chapter.index.to_i.abs }.max || 0) + existing_order.length + 1)
 
-        chapter = b.chapters.find_or_initialize_by(slug: slug)
-        chapter.title       = title
-        chapter.index       = index
-        chapter.first_page  = first_page
-        chapter.last_page   = last_page
-        chapter.tiptap_json = tiptap_json
+        existing_order.each_with_index do |chapter, i|
+          chapter.update_columns(index: temporary_base - i, updated_at: Time.current)
+        end
 
-        if chapter.new_record?
-          chapter.save!
-          created += 1
-        else
+        if replace_chapters
+          b.chapters.destroy_all
+        end
+
+        imported_chapters.each do |attrs|
+          chapter = b.chapters.find_or_initialize_by(slug: attrs[:slug])
+          was_new = chapter.new_record?
+          chapter.assign_attributes(attrs)
           changed = chapter.changed?
           chapter.save!
-          updated += 1 if changed
+          created += 1 if was_new
+          updated += 1 if !was_new && changed
+        end
+
+        # In non-replace mode, keep chapters that were not in the file after the
+        # imported set instead of leaving their temporary negative positions.
+        unless replace_chapters
+          imported_slugs = imported_chapters.map { |chapter| chapter[:slug] }
+          existing_order.reject { |chapter| imported_slugs.include?(chapter.slug) }.each_with_index do |chapter, i|
+            chapter.update_columns(
+              index: imported_chapters.length + i + 1,
+              updated_at: Time.current
+            )
+          end
         end
       end
     end
 
-    render json: { ok: true, created:, updated: }
+    render json: {
+      ok: true,
+      book: { slug: book_slug, title: Book.find_by!(slug: book_slug).title },
+      created: created,
+      updated: updated,
+      created_chapters: created,
+      updated_chapters: updated,
+      chapter_count: imported_chapters.length,
+      replaced: replace_chapters
+    }
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
   rescue => e
@@ -129,11 +214,106 @@ class Api::BooksController < ApplicationController
     @book = Book.find_by!(slug: params[:slug])
   end
 
+  def hide_private_book!
+    head :not_found unless @book.visible_to?(current_user)
+  end
+
+  def book_json(book)
+    {
+      id: book.id,
+      slug: book.slug,
+      title: book.title,
+      author: book.author,
+      description: book.description,
+      image_url: book.cover_url,
+      has_uploaded_cover: book.cover_image.attached?,
+      cover_color: book.cover_color,
+      public: book.public?,
+      chapter_count: book.chapters.count
+    }
+  end
+
   def require_admin!
     head :forbidden unless current_user&.admin?
   end
 
   def book_params
-    params.require(:book).permit(:title, :slug, :description, :image_url, :author, :published_at)
+    params.require(:book).permit(:title, :slug, :description, :image_url, :author, :published_at, :cover_color,
+                                 :publicly_accessible)
+  end
+
+  def normalize_imported_chapters(chapters)
+    normalized = chapters.each_with_index.map do |chapter, i|
+      raise ArgumentError, "Chapter #{i + 1} must be an object" unless chapter.is_a?(Hash)
+
+      slug = chapter["slug"].to_s.parameterize.presence || "chapter-#{i + 1}"
+      tiptap_json = chapter["tiptap_json"].presence || chapter["tiptap"] || { "type" => "doc", "content" => [] }
+      {
+        slug: slug,
+        title: chapter["title"].presence || "Chapter #{i + 1}",
+        # Imports are always made contiguous in file order. This prevents gaps,
+        # duplicates, and collisions from malformed/stale exported indexes.
+        index: i + 1,
+        first_page: chapter["first_page"],
+        last_page: chapter["last_page"],
+        tiptap_json: tiptap_json,
+        text_hash: chapter["text_hash"].presence || Digest::SHA256.hexdigest(tiptap_json.to_json)
+      }
+    end
+
+    duplicate_slugs = normalized.map { |chapter| chapter[:slug] }.tally.select { |_, count| count > 1 }.keys
+    raise ArgumentError, "Duplicate chapter slugs: #{duplicate_slugs.join(', ')}" if duplicate_slugs.any?
+
+    normalized
+  end
+
+  # A litconv artifact (db/imports/*.json): the same import as `rails literature_json:import`.
+  def import_litconv(payload)
+    result = LiteratureJsonImporter.import!(
+      payload,
+      replace: ActiveModel::Type::Boolean.new.cast(params[:replace_chapters])
+    )
+    render json: {
+      ok: true,
+      book: { slug: result.book.slug, title: result.book.title },
+      created: result.chapters_created,
+      updated: result.chapters_updated,
+      created_chapters: result.chapters_created,
+      updated_chapters: result.chapters_updated,
+      deleted_chapters: result.chapters_deleted,
+      chapter_count: result.book.chapters.count,
+      warnings: result.warnings,
+      source_format: "litconv"
+    }
+  rescue LiteratureJsonImporter::Error, ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  def import_literature_extraction(payload, book_slug)
+    unless ActiveModel::Type::Boolean.new.cast(params[:replace_chapters])
+      return render json: {
+        error: "A PDF extraction can only be re-imported with Replace current chapters enabled."
+      }, status: :unprocessable_entity
+    end
+
+    LiteratureImporter.import!(
+      book_slug: book_slug,
+      data: payload,
+      title: Book.find_by(slug: book_slug)&.title.presence || "Alcoholics Anonymous",
+      replace: true
+    )
+
+    book = Book.find_by!(slug: book_slug)
+    render json: {
+      ok: true,
+      book: { slug: book.slug, title: book.title },
+      created: book.chapters.count,
+      updated: 0,
+      chapter_count: book.chapters.count,
+      replaced: true,
+      source_format: "literature_extraction"
+    }
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 end

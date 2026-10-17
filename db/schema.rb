@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -120,6 +120,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.string "edition", default: "4e", null: false
     t.string "language", default: "en", null: false
     t.jsonb "meta", default: {}, null: false
+    t.string "cover_color"
     t.index ["slug"], name: "index_books_on_slug", unique: true
     t.index ["work_key", "edition", "language"], name: "index_books_on_work_key_and_edition_and_language", unique: true
   end
@@ -153,8 +154,119 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.string "topic", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "group_id"
+    t.bigint "meeting_id"
+    t.index ["group_id"], name: "index_court_verifications_on_group_id"
     t.index ["meeting_at"], name: "index_court_verifications_on_meeting_at"
+    t.index ["meeting_id"], name: "index_court_verifications_on_meeting_id"
     t.index ["respondent_email"], name: "index_court_verifications_on_respondent_email"
+  end
+
+  create_table "event_collaborators", force: :cascade do |t|
+    t.bigint "event_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "added_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["added_by_id"], name: "index_event_collaborators_on_added_by_id"
+    t.index ["event_id", "user_id"], name: "index_event_collaborators_on_event_id_and_user_id", unique: true
+    t.index ["event_id"], name: "index_event_collaborators_on_event_id"
+    t.index ["user_id"], name: "index_event_collaborators_on_user_id"
+  end
+
+  create_table "event_rsvps", force: :cascade do |t|
+    t.bigint "event_id", null: false
+    t.bigint "user_id"
+    t.string "email"
+    t.string "name"
+    t.string "status", default: "going", null: false
+    t.string "token", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "event_id, lower((email)::text)", name: "index_event_rsvps_on_event_and_guest_email", unique: true, where: "(user_id IS NULL)"
+    t.index ["event_id", "user_id"], name: "index_event_rsvps_on_event_id_and_user_id", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["event_id"], name: "index_event_rsvps_on_event_id"
+    t.index ["token"], name: "index_event_rsvps_on_token", unique: true
+    t.index ["user_id"], name: "index_event_rsvps_on_user_id"
+  end
+
+  create_table "event_updates", force: :cascade do |t|
+    t.bigint "event_id", null: false
+    t.bigint "created_by_id"
+    t.string "block_id"
+    t.string "kind", null: false
+    t.string "title", null: false
+    t.text "body"
+    t.integer "recipients_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_event_updates_on_created_by_id"
+    t.index ["event_id"], name: "index_event_updates_on_event_id"
+  end
+
+  create_table "events", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.string "token", null: false
+    t.string "title", null: false
+    t.string "short_description"
+    t.string "layout", default: "main_side", null: false
+    t.string "status", default: "draft", null: false
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.datetime "starts_at"
+    t.datetime "ends_at"
+    t.string "location"
+    t.jsonb "blocks", default: [], null: false
+    t.datetime "published_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_events_on_created_by_id"
+    t.index ["group_id"], name: "index_events_on_group_id"
+    t.index ["token"], name: "index_events_on_token", unique: true
+  end
+
+  create_table "follows", force: :cascade do |t|
+    t.bigint "follower_id", null: false
+    t.bigint "followed_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["followed_id"], name: "index_follows_on_followed_id"
+    t.index ["follower_id", "followed_id"], name: "index_follows_on_follower_id_and_followed_id", unique: true
+    t.index ["follower_id"], name: "index_follows_on_follower_id"
+  end
+
+  create_table "group_books", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "book_id", null: false
+    t.string "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["book_id"], name: "index_group_books_on_book_id"
+    t.index ["group_id", "book_id"], name: "index_group_books_on_group_id_and_book_id", unique: true
+    t.index ["group_id"], name: "index_group_books_on_group_id"
+  end
+
+  create_table "group_memberships", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "user_id", null: false
+    t.string "role", default: "member", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
+    t.index ["group_id"], name: "index_group_memberships_on_group_id"
+    t.index ["user_id"], name: "index_group_memberships_on_user_id"
+  end
+
+  create_table "group_page_templates", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "layout", default: "main_side", null: false
+    t.jsonb "blocks", default: [], null: false
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_group_page_templates_on_key", unique: true
+    t.index ["updated_by_id"], name: "index_group_page_templates_on_updated_by_id"
   end
 
   create_table "groups", force: :cascade do |t|
@@ -166,6 +278,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.string "meetingLink"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "slug"
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.string "join_token"
+    t.string "status", default: "active", null: false
+    t.bigint "created_by_id"
+    t.string "court_email_subject"
+    t.text "court_email_body"
+    t.string "court_email_reply_to"
+    t.string "page_layout", default: "main_side", null: false
+    t.jsonb "page_blocks"
+    t.index ["created_by_id"], name: "index_groups_on_created_by_id"
+    t.index ["join_token"], name: "index_groups_on_join_token", unique: true
+    t.index ["slug"], name: "index_groups_on_slug", unique: true
   end
 
   create_table "host_props", force: :cascade do |t|
@@ -212,7 +337,69 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.bigint "group_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "name"
+    t.string "recurrence", default: "weekly", null: false
+    t.integer "day_of_week"
+    t.integer "start_minute"
+    t.integer "end_minute"
+    t.datetime "starts_at"
+    t.datetime "ends_at"
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.string "conference_url"
+    t.string "conference_url_notes"
+    t.string "conference_phone"
+    t.string "location"
+    t.string "formatted_address"
+    t.string "types", default: [], null: false, array: true
+    t.text "notes"
+    t.string "source", default: "manual", null: false
+    t.string "oiaa_slug"
+    t.string "oiaa_url"
+    t.datetime "oiaa_synced_at"
+    t.boolean "oiaa_missing", default: false, null: false
     t.index ["group_id"], name: "index_meetings_on_group_id"
+    t.index ["oiaa_slug"], name: "index_meetings_on_oiaa_slug"
+  end
+
+  create_table "notifications", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "kind", null: false
+    t.string "title", null: false
+    t.text "body"
+    t.string "url"
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "created_at"], name: "index_notifications_on_user_id_and_created_at"
+    t.index ["user_id", "read_at"], name: "index_notifications_on_user_id_and_read_at"
+    t.index ["user_id"], name: "index_notifications_on_user_id"
+  end
+
+  create_table "oiaa_meetings", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "name", null: false
+    t.string "group_name"
+    t.integer "days", default: [], null: false, array: true
+    t.string "start_time"
+    t.string "end_time"
+    t.string "time_zone"
+    t.string "conference_url"
+    t.string "conference_url_notes"
+    t.string "conference_phone"
+    t.string "conference_id"
+    t.string "types", default: [], null: false, array: true
+    t.text "notes"
+    t.string "url"
+    t.datetime "last_seen_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "attendance_option"
+    t.string "location"
+    t.string "formatted_address"
+    t.string "region"
+    t.index ["conference_id"], name: "index_oiaa_meetings_on_conference_id"
+    t.index ["last_seen_at"], name: "index_oiaa_meetings_on_last_seen_at"
+    t.index ["slug"], name: "index_oiaa_meetings_on_slug", unique: true
   end
 
   create_table "options", force: :cascade do |t|
@@ -248,6 +435,21 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.index ["quest_session_id"], name: "index_quest_inventories_on_quest_session_id"
   end
 
+  create_table "quest_log_entries", force: :cascade do |t|
+    t.bigint "quest_session_id", null: false
+    t.string "kind", null: false
+    t.string "encounter"
+    t.bigint "topic_id"
+    t.string "sharing_mode_key"
+    t.string "approach"
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["quest_session_id", "kind"], name: "index_quest_log_entries_on_quest_session_id_and_kind"
+    t.index ["quest_session_id"], name: "index_quest_log_entries_on_quest_session_id"
+    t.index ["topic_id"], name: "index_quest_log_entries_on_topic_id"
+  end
+
   create_table "quest_players", force: :cascade do |t|
     t.string "screen_name"
     t.datetime "created_at", null: false
@@ -260,7 +462,33 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.datetime "updated_at", null: false
     t.string "join_code"
     t.jsonb "game_state"
+    t.bigint "topic_set_id"
+    t.string "status", default: "active", null: false
+    t.datetime "completed_at"
+    t.string "name"
     t.index ["quest_player_id"], name: "index_quest_sessions_on_quest_player_id"
+    t.index ["topic_set_id"], name: "index_quest_sessions_on_topic_set_id"
+  end
+
+  create_table "quest_stories", force: :cascade do |t|
+    t.bigint "quest_session_id", null: false
+    t.string "style", null: false
+    t.string "title"
+    t.text "body", null: false
+    t.string "model"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["quest_session_id"], name: "index_quest_stories_on_quest_session_id"
+  end
+
+  create_table "reading_tags", force: :cascade do |t|
+    t.bigint "reading_id", null: false
+    t.bigint "tag_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reading_id", "tag_id"], name: "index_reading_tags_on_reading_id_and_tag_id", unique: true
+    t.index ["reading_id"], name: "index_reading_tags_on_reading_id"
+    t.index ["tag_id"], name: "index_reading_tags_on_tag_id"
   end
 
   create_table "readings", force: :cascade do |t|
@@ -275,6 +503,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.string "meetingUrl"
     t.string "host"
     t.bigint "group_id"
+    t.datetime "published_at"
     t.index ["group_id"], name: "index_readings_on_group_id"
     t.index ["user_id"], name: "index_readings_on_user_id"
   end
@@ -308,6 +537,58 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.index ["record_type", "record_id"], name: "index_richer_text_rich_texts_on_record"
   end
 
+  create_table "schedule_poll_ballots", force: :cascade do |t|
+    t.bigint "schedule_poll_id", null: false
+    t.bigint "user_id"
+    t.string "voter_name"
+    t.string "voter_token", null: false
+    t.string "ip_digest"
+    t.jsonb "choices", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["schedule_poll_id", "ip_digest"], name: "index_schedule_poll_ballots_on_schedule_poll_id_and_ip_digest"
+    t.index ["schedule_poll_id", "user_id"], name: "index_schedule_poll_ballots_on_schedule_poll_id_and_user_id", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["schedule_poll_id", "voter_token"], name: "idx_on_schedule_poll_id_voter_token_4f9b648c21", unique: true
+    t.index ["schedule_poll_id"], name: "index_schedule_poll_ballots_on_schedule_poll_id"
+    t.index ["user_id"], name: "index_schedule_poll_ballots_on_user_id"
+  end
+
+  create_table "schedule_poll_members", force: :cascade do |t|
+    t.bigint "schedule_poll_id", null: false
+    t.bigint "user_id", null: false
+    t.string "role", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["schedule_poll_id", "user_id"], name: "index_schedule_poll_members_on_schedule_poll_id_and_user_id", unique: true
+    t.index ["schedule_poll_id"], name: "index_schedule_poll_members_on_schedule_poll_id"
+    t.index ["user_id"], name: "index_schedule_poll_members_on_user_id"
+  end
+
+  create_table "schedule_polls", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "token", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.date "starts_on", null: false
+    t.date "ends_on", null: false
+    t.integer "duration_minutes", default: 60, null: false
+    t.integer "choices_count", default: 3, null: false
+    t.integer "slot_minutes", default: 30, null: false
+    t.integer "day_start_minute", default: 480, null: false
+    t.integer "day_end_minute", default: 1380, null: false
+    t.string "results_visibility", default: "after_vote", null: false
+    t.jsonb "blocks", default: [], null: false
+    t.datetime "closes_at", null: false
+    t.datetime "closed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "event_id"
+    t.index ["event_id"], name: "index_schedule_polls_on_event_id"
+    t.index ["token"], name: "index_schedule_polls_on_token", unique: true
+    t.index ["user_id"], name: "index_schedule_polls_on_user_id"
+  end
+
   create_table "service_readings", force: :cascade do |t|
     t.string "title"
     t.string "short_title"
@@ -317,6 +598,94 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.string "icon"
   end
 
+  create_table "sharing_modes", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "name", null: false
+    t.string "icon_name"
+    t.text "prompt", null: false
+    t.boolean "gentle", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_sharing_modes_on_key", unique: true
+  end
+
+  create_table "site_notices", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "summary"
+    t.text "body"
+    t.string "tone", default: "info", null: false
+    t.string "link_url"
+    t.string "link_label"
+    t.string "audience", default: "everyone", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "starts_at"
+    t.datetime "ends_at"
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active", "starts_at", "ends_at"], name: "index_site_notices_on_active_and_starts_at_and_ends_at"
+    t.index ["user_id"], name: "index_site_notices_on_user_id"
+  end
+
+  create_table "tags", force: :cascade do |t|
+    t.string "title"
+    t.text "description"
+    t.string "icon"
+    t.string "slug"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "icon_name"
+  end
+
+  create_table "text_report_comments", force: :cascade do |t|
+    t.bigint "text_report_id", null: false
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["text_report_id"], name: "index_text_report_comments_on_text_report_id"
+    t.index ["user_id"], name: "index_text_report_comments_on_user_id"
+  end
+
+  create_table "text_reports", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "chapter_id", null: false
+    t.jsonb "selector", default: {}, null: false
+    t.text "message", null: false
+    t.string "status", default: "open", null: false
+    t.datetime "resolved_at"
+    t.bigint "resolved_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chapter_id"], name: "index_text_reports_on_chapter_id"
+    t.index ["resolved_by_id"], name: "index_text_reports_on_resolved_by_id"
+    t.index ["status", "created_at"], name: "index_text_reports_on_status_and_created_at"
+    t.index ["user_id"], name: "index_text_reports_on_user_id"
+  end
+
+  create_table "timeline_note_shares", force: :cascade do |t|
+    t.bigint "timeline_note_id", null: false
+    t.bigint "group_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id", "created_at"], name: "index_timeline_note_shares_on_group_id_and_created_at"
+    t.index ["group_id"], name: "index_timeline_note_shares_on_group_id"
+    t.index ["timeline_note_id", "group_id"], name: "index_timeline_note_shares_on_timeline_note_id_and_group_id", unique: true
+    t.index ["timeline_note_id"], name: "index_timeline_note_shares_on_timeline_note_id"
+  end
+
+  create_table "timeline_notes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "visibility", default: "private", null: false
+    t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_timeline_notes_on_user_id"
+  end
+
   create_table "topic_categories", force: :cascade do |t|
     t.string "title"
     t.string "icon"
@@ -324,6 +693,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "icon_id"
+    t.string "icon_name"
   end
 
   create_table "topic_sets", force: :cascade do |t|
@@ -331,6 +701,31 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.string "description"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "topic_sharing_prompts", force: :cascade do |t|
+    t.bigint "topic_id", null: false
+    t.bigint "sharing_mode_id", null: false
+    t.text "text"
+    t.string "status", default: "draft", null: false
+    t.string "source", default: "human", null: false
+    t.boolean "enabled", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sharing_mode_id"], name: "index_topic_sharing_prompts_on_sharing_mode_id"
+    t.index ["status"], name: "index_topic_sharing_prompts_on_status"
+    t.index ["topic_id", "sharing_mode_id"], name: "index_topic_sharing_prompts_on_topic_id_and_sharing_mode_id", unique: true
+    t.index ["topic_id"], name: "index_topic_sharing_prompts_on_topic_id"
+  end
+
+  create_table "topic_tags", force: :cascade do |t|
+    t.bigint "topic_id", null: false
+    t.bigint "tag_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tag_id"], name: "index_topic_tags_on_tag_id"
+    t.index ["topic_id", "tag_id"], name: "index_topic_tags_on_topic_id_and_tag_id", unique: true
+    t.index ["topic_id"], name: "index_topic_tags_on_topic_id"
   end
 
   create_table "topics", force: :cascade do |t|
@@ -342,6 +737,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.string "link"
     t.bigint "topic_category_id"
     t.bigint "topic_set_id", null: false
+    t.string "difficulty"
+    t.index ["difficulty"], name: "index_topics_on_difficulty"
     t.index ["topic_category_id"], name: "index_topics_on_topic_category_id"
     t.index ["topic_set_id"], name: "index_topics_on_topic_set_id"
   end
@@ -363,8 +760,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.text "note"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "visibility", default: "private", null: false
     t.index ["chapter_id"], name: "index_user_highlights_on_chapter_id"
     t.index ["user_id", "chapter_id"], name: "index_user_highlights_on_user_id_and_chapter_id"
+    t.index ["user_id", "created_at"], name: "index_user_highlights_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_user_highlights_on_user_id"
   end
 
@@ -384,24 +783,79 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_16_185942) do
     t.boolean "admin"
     t.boolean "confirmed"
     t.string "share_token"
+    t.string "bio"
+    t.datetime "group_prompt_dismissed_at"
+    t.date "sobriety_date"
+    t.boolean "show_sobriety_date", default: false, null: false
+    t.string "username"
+    t.string "page_layout", default: "main_side", null: false
+    t.jsonb "page_blocks"
+    t.string "default_highlight_visibility", default: "private", null: false
+    t.string "default_note_visibility", default: "private", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["share_token"], name: "index_users_on_share_token", unique: true
+    t.index ["username"], name: "index_users_on_username", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "chapters", "books"
+  add_foreign_key "court_verifications", "groups"
+  add_foreign_key "court_verifications", "meetings", on_delete: :nullify
+  add_foreign_key "event_collaborators", "events"
+  add_foreign_key "event_collaborators", "users"
+  add_foreign_key "event_collaborators", "users", column: "added_by_id", on_delete: :nullify
+  add_foreign_key "event_rsvps", "events"
+  add_foreign_key "event_rsvps", "users"
+  add_foreign_key "event_updates", "events"
+  add_foreign_key "event_updates", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "events", "groups"
+  add_foreign_key "events", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "follows", "users", column: "followed_id"
+  add_foreign_key "follows", "users", column: "follower_id"
+  add_foreign_key "group_books", "books"
+  add_foreign_key "group_books", "groups"
+  add_foreign_key "group_memberships", "groups"
+  add_foreign_key "group_memberships", "users"
+  add_foreign_key "group_page_templates", "users", column: "updated_by_id"
+  add_foreign_key "groups", "users", column: "created_by_id"
   add_foreign_key "host_props", "hostificators"
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"
   add_foreign_key "meetings", "groups"
+  add_foreign_key "notifications", "users"
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
   add_foreign_key "quest_inventories", "quest_sessions"
+  add_foreign_key "quest_log_entries", "quest_sessions"
+  add_foreign_key "quest_log_entries", "topics"
   add_foreign_key "quest_sessions", "quest_players"
+  add_foreign_key "quest_sessions", "topic_sets"
+  add_foreign_key "quest_stories", "quest_sessions"
+  add_foreign_key "reading_tags", "readings"
+  add_foreign_key "reading_tags", "tags"
   add_foreign_key "readings", "groups"
   add_foreign_key "readings", "users"
+  add_foreign_key "schedule_poll_ballots", "schedule_polls"
+  add_foreign_key "schedule_poll_ballots", "users"
+  add_foreign_key "schedule_poll_members", "schedule_polls"
+  add_foreign_key "schedule_poll_members", "users"
+  add_foreign_key "schedule_polls", "events"
+  add_foreign_key "schedule_polls", "users"
+  add_foreign_key "site_notices", "users", on_delete: :nullify
+  add_foreign_key "text_report_comments", "text_reports"
+  add_foreign_key "text_report_comments", "users"
+  add_foreign_key "text_reports", "chapters"
+  add_foreign_key "text_reports", "users"
+  add_foreign_key "text_reports", "users", column: "resolved_by_id"
+  add_foreign_key "timeline_note_shares", "groups"
+  add_foreign_key "timeline_note_shares", "timeline_notes"
+  add_foreign_key "timeline_notes", "users"
+  add_foreign_key "topic_sharing_prompts", "sharing_modes"
+  add_foreign_key "topic_sharing_prompts", "topics"
+  add_foreign_key "topic_tags", "tags"
+  add_foreign_key "topic_tags", "topics"
   add_foreign_key "topics", "topic_categories"
   add_foreign_key "topics", "topic_sets"
   add_foreign_key "user_active_groups", "groups"

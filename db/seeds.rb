@@ -185,3 +185,6 @@ CSV.foreach(
 end
 
 puts "✅ Topics upserted into set ##{TOPIC_SET_ID} — created: #{created}, updated: #{updated}"
+
+# ACID QUEST sharing modes
+load Rails.root.join("db/seeds/sharing_modes.rb")

@@ -2,6 +2,8 @@
 
 one:
   title: MyString
+  topic_set_id: <%= ActiveRecord::FixtureSet.identify(:one) %>
 
 two:
   title: MyString
+  topic_set_id: <%= ActiveRecord::FixtureSet.identify(:two) %>

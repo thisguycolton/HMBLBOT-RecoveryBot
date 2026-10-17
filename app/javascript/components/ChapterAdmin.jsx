@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { GripVertical, Save, Trash2, Pencil } from "lucide-react";
 import MergeChaptersModal from "./MergeChaptersModal";
+import ChapterImportPanel from "./ChapterImportPanel";
 
 
 // Pragmatic Drag & Drop
@@ -127,7 +128,7 @@ function Row({ ch, bookSlug, onChange, onSave, onDelete, onReorder, onMerge }) {
     <li
       ref={ref}
       className={[
-        "rounded border p-3 bg-white flex flex-col gap-2 relative",
+        "rounded  p-3 bg-white dark:bg-stone-800 text-black dark:text-white flex flex-col gap-2 relative",
         hint === 'before' && 'chapter-row--before',
         hint === 'after'  && 'chapter-row--after',
         hint === 'merge'  && 'chapter-row--merge',
@@ -153,7 +154,7 @@ function Row({ ch, bookSlug, onChange, onSave, onDelete, onReorder, onMerge }) {
       <div className="flex items-center gap-3">
         <button
           ref={handleRef}
-          className="cursor-grab p-1 rounded border bg-white text-black"
+          className="cursor-grab p-1 rounded bg-stone-200 dark:bg-stone-900 text-black dark:text-stone-100"
           title="Drag to reorder"
           type="button"
         >
@@ -162,7 +163,7 @@ function Row({ ch, bookSlug, onChange, onSave, onDelete, onReorder, onMerge }) {
         <div className="text-sm text-gray-500 w-14 shrink-0">#{ch.index}</div>
 
         <input
-          className="flex-1 rounded border px-2 py-1"
+          className="flex-1 rounded dark:bg-stone-900 px-2 py-1"
           value={ch.title || ""}
           onChange={(e) => onChange({ ...ch, title: e.target.value })}
           placeholder="Title"
@@ -173,7 +174,7 @@ function Row({ ch, bookSlug, onChange, onSave, onDelete, onReorder, onMerge }) {
         <div className="md:col-span-2">
           <label className="text-xs text-gray-500">Slug</label>
           <input
-            className="w-full rounded border px-2 py-1"
+            className="w-full rounded dark:bg-stone-900 px-2 py-1"
             value={ch.slug || ""}
             onChange={(e) => onChange({ ...ch, slug: e.target.value })}
             onBlur={(e) => onChange({ ...ch, slug: (e.target.value || "")
@@ -186,7 +187,7 @@ function Row({ ch, bookSlug, onChange, onSave, onDelete, onReorder, onMerge }) {
           <label className="text-xs text-gray-500">First page</label>
           <input
             type="number"
-            className="w-full rounded border px-2 py-1"
+            className="w-full rounded dark:bg-stone-900 px-2 py-1"
             value={ch.first_page ?? ""}
             onChange={(e) => onChange({
               ...ch,
@@ -199,7 +200,7 @@ function Row({ ch, bookSlug, onChange, onSave, onDelete, onReorder, onMerge }) {
           <label className="text-xs text-gray-500">Last page</label>
           <input
             type="number"
-            className="w-full rounded border px-2 py-1"
+            className="w-full rounded dark:bg-stone-900 px-2 py-1"
             value={ch.last_page ?? ""}
             onChange={(e) => onChange({
               ...ch,
@@ -214,7 +215,7 @@ function Row({ ch, bookSlug, onChange, onSave, onDelete, onReorder, onMerge }) {
         <button
           type="button"
           onClick={() => onSave(ch)}
-          className="px-3 py-1 border rounded bg-white text-black flex items-center gap-1"
+          className="px-3 py-1  rounded bg-white dark:bg-stone-900 text-black dark:text-white flex items-center gap-1"
           title="Save"
         >
           <Save size={16} /> Save
@@ -222,7 +223,7 @@ function Row({ ch, bookSlug, onChange, onSave, onDelete, onReorder, onMerge }) {
         <button
           type="button"
           onClick={() => { if (confirm(`Delete "${ch.title}"? This cannot be undone.`)) onDelete(ch); }}
-          className="px-3 py-1 border rounded bg-white text-black flex items-center gap-1"
+          className="px-3 py-1  rounded bg-white dark:bg-stone-900 text-black dark:text-white flex items-center gap-1"
           title="Delete"
         >
           <Trash2 size={16} /> Delete
@@ -241,9 +242,16 @@ function Row({ ch, bookSlug, onChange, onSave, onDelete, onReorder, onMerge }) {
 export default function ChapterAdmin({ bookSlug }) {
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
 
   const [mergePair, setMergePair] = useState(null); // { sourceSlug, targetSlug } | null
+
+  const loadChapters = async () => {
+    const res = await axios.get(`/api/books/${bookSlug}/chapters`);
+    const items = [...res.data].sort((a, b) => (a.index || 0) - (b.index || 0));
+    setChapters(items);
+  };
 
   const onMerge = (sourceSlug, targetSlug) => {
     setMergePair({ sourceSlug, targetSlug });
@@ -251,20 +259,16 @@ export default function ChapterAdmin({ bookSlug }) {
 
   const handleMerged = async (newTargetSlug) => {
     setMergePair(null);
-    // Easiest: refetch after merge
-    const res = await axios.get(`/api/books/${bookSlug}/chapters`);
-    const items = [...res.data].sort((a, b) => (a.index || 0) - (b.index || 0));
-    setChapters(items);
+    await loadChapters();
   };
   // fetch
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get(`/api/books/${bookSlug}/chapters`);
-        const items = [...res.data].sort((a, b) => (a.index || 0) - (b.index || 0));
-        setChapters(items);
+        await loadChapters();
       } catch (e) {
         console.error(e);
+        setError("Could not load chapters.");
       } finally {
         setLoading(false);
       }
@@ -312,17 +316,25 @@ const createOne = async () => {
       },
     };
     const targetSlug = ch.slug_original || ch.slug;
-    await axios.patch(`/api/books/${bookSlug}/chapters/${targetSlug}`, payload);
-    setChapters((prev) =>
-      prev.map((c) => (c.slug === targetSlug ? { ...ch, slug_original: ch.slug } : c))
-    );
+    try {
+      await axios.patch(`/api/books/${bookSlug}/chapters/${targetSlug}`, payload);
+      setChapters((prev) =>
+        prev.map((c) => (c.slug === targetSlug ? { ...ch, slug_original: ch.slug } : c))
+      );
+    } catch (e) {
+      setError(e.response?.data?.error || "Could not save the chapter.");
+    }
   };
 
   const deleteOne = async (ch) => {
-    await axios.delete(`/api/books/${bookSlug}/chapters/${ch.slug}`);
-    setChapters((prev) =>
-      prev.filter((c) => c.slug !== ch.slug).map((c, i) => ({ ...c, index: i + 1 }))
-    );
+    try {
+      await axios.delete(`/api/books/${bookSlug}/chapters/${ch.slug}`);
+      setChapters((prev) =>
+        prev.filter((c) => c.slug !== ch.slug).map((c, i) => ({ ...c, index: i + 1 }))
+      );
+    } catch (e) {
+      setError(e.response?.data?.error || "Could not delete the chapter.");
+    }
   };
 
   const onReorder = async (sourceId, targetId, position) => {
@@ -354,8 +366,10 @@ const createOne = async () => {
         </button>
         
       </div>
+      {error && <div className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      <ChapterImportPanel bookSlug={bookSlug} onImported={loadChapters} />
       <p className="text-sm text-gray-600">
-          Drag by the handle to reorder. Edit fields inline and press <strong>Save</strong>.
+          Drag by the handle to reorder. Drop one chapter over another to merge them, or edit fields inline and press <strong>Save</strong>.
         </p>
       <ul className="space-y-2">
         {chapters.map((ch) => (

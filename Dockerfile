@@ -27,8 +27,13 @@ RUN npm install
 # Copy the rest of the app
 COPY . .
 
-# Build assets
-RUN yarn vite build
+# Build assets, unless bin/deploy already built them on the deploying machine.
+# Building on the server runs the droplet out of memory and takes CapRover down.
+RUN if [ -f public/vite/.vite/manifest.json ]; then \
+      echo "Using prebuilt Vite assets"; \
+    else \
+      yarn vite build; \
+    fi
 
-# Start server
-CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
+# Run pending migrations, then start the server
+CMD ["sh", "-c", "bundle exec rails db:migrate && exec bundle exec puma -C config/puma.rb"]

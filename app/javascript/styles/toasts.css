@@ -1,0 +1,285 @@
+/* Toasts (components/Toasts.jsx). Plain CSS so they look the same in the
+   Tailwind pages and the older Bootstrap ones. */
+.hb-toasts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  left: 0;
+  margin: 0 auto;
+  max-width: 24rem;
+  padding: 0 1rem;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 4rem;
+  z-index: 2000;
+}
+
+@media (min-width: 640px) {
+  .hb-toasts {
+    left: auto;
+    padding: 0;
+    right: 1rem;
+    width: 24rem;
+  }
+}
+
+.hb-toast {
+  --hb-toast-bg: #fff;
+  --hb-toast-ink: #0f172a;
+  --hb-toast-ring: rgb(15 23 42 / 0.1);
+  align-items: center;
+  animation: hb-toast-in 0.18s ease-out;
+  background: var(--hb-toast-bg);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px -10px rgb(0 0 0 / 0.35), 0 0 0 1px var(--hb-toast-ring);
+  color: var(--hb-toast-ink);
+  display: flex;
+  font-family: "Public Sans", system-ui, sans-serif;
+  gap: 0.75rem;
+  padding: 0.75rem 0.5rem 0.75rem 0.75rem;
+  pointer-events: auto;
+}
+
+html.dark .hb-toast {
+  --hb-toast-bg: #262626;
+  --hb-toast-ink: #f5f5f4;
+  --hb-toast-ring: rgb(255 255 255 / 0.1);
+}
+
+.hb-toast__icon {
+  align-items: center;
+  border-radius: 0.5rem;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+}
+
+.hb-toast--success .hb-toast__icon { background: rgb(22 163 74 / 0.15); color: #16a34a; }
+.hb-toast--info .hb-toast__icon { background: rgb(37 99 235 / 0.15); color: #2563eb; }
+.hb-toast--warning .hb-toast__icon { background: rgb(217 119 6 / 0.2); color: #d97706; }
+.hb-toast--error .hb-toast__icon { background: rgb(220 38 38 / 0.15); color: #dc2626; }
+
+.hb-toast svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hb-toast__icon svg { height: 1.25rem; stroke-width: 2.5; width: 1.25rem; }
+
+.hb-toast__message {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.hb-toast__message a { color: inherit; text-decoration: none; }
+.hb-toast__message a:hover { text-decoration: underline; }
+
+.hb-toast__close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0.5rem;
+  color: inherit;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 2rem;
+  justify-content: center;
+  opacity: 0.5;
+  width: 2rem;
+}
+
+.hb-toast__close:hover { background: rgb(127 127 127 / 0.15); opacity: 1; }
+.hb-toast__close svg { height: 1rem; stroke-width: 2; width: 1rem; }
+
+.hb-sr-only {
+  clip: rect(0 0 0 0);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+@keyframes hb-toast-in {
+  from { opacity: 0; transform: translateY(-0.5rem); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-toast { animation: none; }
+}
+
+/* Site notices (components/SiteNotices.jsx): an accent edge, a title, an optional
+   line and a link to the write-up. They stay until closed. */
+.hb-toast--notice {
+  align-items: flex-start;
+  border-left: 4px solid var(--hb-notice-edge, #2563eb);
+}
+
+.hb-toast--notice.hb-toast--success { --hb-notice-edge: #16a34a; }
+.hb-toast--notice.hb-toast--warning { --hb-notice-edge: #d97706; }
+
+.hb-notice__title { font-size: 0.9rem; font-weight: 700; margin: 0.25rem 0 0; }
+.hb-notice__summary { font-weight: 400; margin: 0.25rem 0 0; opacity: 0.85; }
+
+.hb-toast__message a.hb-notice__link {
+  color: var(--hb-notice-edge, #2563eb);
+  display: inline-block;
+  font-weight: 600;
+  margin-top: 0.4rem;
+}
+
+html.dark .hb-toast--notice.hb-toast--info a.hb-notice__link { color: #7dd3fc; }
+
+/* the reader styles set every <p> in a justified serif */
+.hb-toast p { font-family: inherit; hyphens: none; text-align: left; }
+
+/* "Read more" on a notice is a button styled as its link */
+.hb-toast__message button.hb-notice__link {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+.hb-toast__message button.hb-notice__link:hover { text-decoration: underline; }
+
+/* A notice's write-up (NoticeModal) */
+.hb-notice-modal {
+  align-items: center;
+  animation: hb-fade-in 0.15s ease-out;
+  background: rgb(15 23 42 / 0.5);
+  display: flex;
+  font-family: "Public Sans", system-ui, sans-serif;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 2200;
+}
+
+.hb-notice-modal__panel {
+  --hb-notice-edge: #2563eb;
+  --hb-modal-bg: #fff;
+  --hb-modal-ink: #0f172a;
+  --hb-modal-muted: #475569;
+  --hb-modal-line: #e2e8f0;
+  background: var(--hb-modal-bg);
+  border-radius: 1.25rem;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
+  color: var(--hb-modal-ink);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 2rem);
+  max-width: 36rem;
+  overflow: hidden;
+  width: 100%;
+}
+
+html.dark .hb-notice-modal__panel {
+  --hb-modal-bg: #1c1c1e;
+  --hb-modal-ink: #f5f5f4;
+  --hb-modal-muted: #a8a29e;
+  --hb-modal-line: #333;
+}
+
+.hb-notice-modal--success { --hb-notice-edge: #16a34a; }
+.hb-notice-modal--warning { --hb-notice-edge: #d97706; }
+
+.hb-notice-modal__head {
+  background: var(--hb-notice-edge);
+  color: #fff;
+  padding: 1.25rem 3.5rem 1.25rem 1.5rem;
+  position: relative;
+}
+
+.hb-notice-modal__meta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.hb-notice-modal .hb-notice-modal__title {
+  color: #fff;
+  font-family: inherit;
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0.25rem 0 0;
+}
+
+.hb-notice-modal__summary { margin-top: 0.35rem; opacity: 0.9; }
+
+.hb-notice-modal__close {
+  align-items: center;
+  background: rgb(255 255 255 / 0.15);
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  width: 2rem;
+}
+.hb-notice-modal__close:hover { background: rgb(255 255 255 / 0.3); }
+.hb-notice-modal__close svg { fill: none; height: 1rem; stroke: currentColor; stroke-linecap: round; stroke-width: 2.25; width: 1rem; }
+
+.hb-notice-modal__body {
+  line-height: 1.6;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+}
+.hb-notice-modal__body p,
+.hb-notice-modal__body li { font-family: inherit; hyphens: none; text-align: left; }
+.hb-notice-modal__body p { margin: 0 0 0.85rem; }
+.hb-notice-modal__body ul,
+.hb-notice-modal__body ol { margin: 0 0 0.85rem; padding-left: 1.4rem; }
+.hb-notice-modal__body ul { list-style: disc; }
+.hb-notice-modal__body ol { list-style: decimal; }
+.hb-notice-modal__body h1,
+.hb-notice-modal__body h2,
+.hb-notice-modal__body h3 { font-family: inherit; font-size: 1.05rem; font-weight: 700; margin: 1rem 0 0.4rem; }
+.hb-notice-modal__body blockquote { border-left: 3px solid var(--hb-modal-line); color: var(--hb-modal-muted); margin: 0 0 0.85rem; padding-left: 0.85rem; }
+.hb-notice-modal__body a { color: var(--hb-notice-edge); font-weight: 600; }
+.hb-notice-modal__body code { background: var(--hb-modal-line); border-radius: 0.25rem; padding: 0 0.25rem; }
+
+.hb-notice-modal__foot {
+  border-top: 1px solid var(--hb-modal-line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding: 0.9rem 1.5rem;
+}
+
+.hb-notice-modal__button {
+  background: transparent;
+  border: 1px solid var(--hb-modal-line);
+  border-radius: 0.75rem;
+  color: var(--hb-modal-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+}
+.hb-notice-modal__button:hover { background: rgb(127 127 127 / 0.1); }
+.hb-notice-modal a.hb-notice-modal__button--primary { background: var(--hb-notice-edge); border-color: var(--hb-notice-edge); color: #fff; }
+.hb-notice-modal a.hb-notice-modal__button--primary:hover { filter: brightness(1.08); }
+
+@keyframes hb-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .hb-notice-modal { animation: none; } }

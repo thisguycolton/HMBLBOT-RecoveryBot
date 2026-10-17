@@ -1,0 +1,28 @@
+<% if Rails.env.development? %>
+  <script type="module">
+    import RefreshRuntime from "/vite-dev/@react-refresh";
+    RefreshRuntime.injectIntoGlobalHook(window);
+    window.$RefreshReg$ = () => { };
+    window.$RefreshSig$ = () => (type) => type;
+    window.__vite_plugin_react_preamble_installed__ = true;
+  </script>
+<% end %>
+
+<%= vite_client_tag %>
+<%= vite_javascript_tag "topicificator.jsx" %>
+
+<style>
+  .container footer {
+    display: none !important;
+    width: 0 !important;
+  }
+
+  footer {
+    min-height: auto !important;
+  }
+</style>
+
+<div id="my-readings-root" class="w-full"
+  data-readings="<%= json_escape(@readings_json.to_json) %>"
+  data-notice="<%= notice.to_s %>"
+  data-alert="<%= alert.to_s %>"></div>

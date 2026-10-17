@@ -3,6 +3,8 @@ require "test_helper"
 class ReadingsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @reading = readings(:one)
+    @user = users(:one)
+    sign_in @user
   end
 
   test "should get index" do
@@ -17,7 +19,7 @@ class ReadingsControllerTest < ActionDispatch::IntegrationTest
 
   test "should create reading" do
     assert_difference("Reading.count") do
-      post readings_url, params: { reading: { title: @reading.title } }
+      post readings_url, params: { reading: { title: @reading.title, user_id: @user.id, meetingDate: @reading.meetingDate } }
     end
 
     assert_redirected_to reading_url(Reading.last)

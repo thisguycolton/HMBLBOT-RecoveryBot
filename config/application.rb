@@ -23,5 +23,13 @@ module AcidTest
     config.secret_key_base = ENV['SECRET_KEY_BASE'] || Rails.application.credentials.secret_key_base || 'fallback_key'
 
 
+
+    # Log in, sign up and the password pages are React pages in the reader layout
+    # (app/views/devise/shared/_auth_page.html.erb). Account settings keep the old layout.
+    config.to_prepare do
+      Devise::SessionsController.layout "reader"
+      Devise::PasswordsController.layout "reader"
+      Devise::RegistrationsController.layout ->(c) { %w[new create].include?(c.action_name) ? "reader" : "application" }
+    end
   end
 end
