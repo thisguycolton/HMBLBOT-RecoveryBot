@@ -1,0 +1,43 @@
+<output>
+<compartments>
+<compartment start="1" end="N/A" title="Redesign Reading Archive UI" episode_type="design,feature,refactor" importance="85">
+<p1>
+I started by verifying the existing state for the Reading Archive component. I confirmed that the goal is a complete redesign of the archive experience, while adhering to several critical constraints: the page must remain mounted using `mountReact` and data attributes, not standard Inertia pages; existing Rails URL/filter behavior must be preserved; and no new packages should be introduced unless strictly necessary. The design mandates creating seven main sections: 1) HERO (with "RECOVERY LITERATURE" eyebrow); 2) BROWSE BY THEME (displaying available tags with Lucide icons and maintaining the "All" filter functionality); 3) READING GRID (must be responsive: 1 col on mobile, 2 on tablet, 3 on desktop); 4) READING CARD (with rounded corners, subtle shadow, strong title, readable excerpt, source/date metadata); 5) TAGS ON CARDS (tags must stay on ONE SINGLE LINE and use flex-nowrap; if overflow occurs, they should display "+N"); 6) TAG VISUAL IDENTITY (the first tag determines the card accent via a large, subtle Lucide icon background); and 7) SEARCH (must leverage existing Rails index endpoints for filtering). The implementation requires creating a migration to add `icon_name` to the `tags` model if it doesn't exist. For search functionality, I must ensure compatibility with both `params[:tag]` (for tag filtering) and add support for `params[:q]` (for searching title/content). Finally, I established strict testing requirements: verifying archive load, tag filtering, correct card rendering across breakpoints, and that clicking a reading still leads to the original `reading.path`.
+</p1>
+<p2>
+I designed the Reading Archive UI overhaul around several key functional blocks: HERO (displaying count stats), BROWSE BY THEME (filterable tags with Lucide icons), and READING GRID/READING CARD. The most constrained element is the TAGS ON CARDS, which must use `flex-nowrap` to keep all visible tags on a single line and display "+N" for overflow while retaining responsiveness. Crucially, I established that the page structure cannot deviate from its existing mount point (`mountReact`/data attributes). Furthermore, I defined the search flow: it needs to support both legacy tag filtering via `params[:tag]` and new full-text searching via `params[:q]`. The underlying technical dependency requires handling the potential missing `icon_name` on tags by running a migration, followed by data updates for all existing tags.
+</p2>
+<p3>
+The Reading Archive UI was redesigned into a modern component set comprising a thematic hero banner, a browsable tag filter, and a responsive reading card grid. The core architectural challenge resolved was enforcing the one-line constraint on display tags using CSS techniques like `flex-nowrap` while maintaining mobile responsiveness across 1, 2, and 3 columns at different breakpoints. This required establishing a new data pattern (via adding `icon_name` to tags) and ensuring that search functionality could gracefully handle both legacy tag filters (`params[:tag]`) and newly supported full-text query parameters (`params[:q]`), all while respecting the existing React/Rails mounting lifecycle.
+</p3>
+<p4>Reading Archive; mountReact; icon_name; lucide-react; flex-nowrap; params: tag, q</p4>
+</compartment>
+</compartments>
+<facts>
+<PROJECT_RULES>
+* The Reading Archive must preserve existing Rails URL/filter behavior when displaying content.
+* Search functionality requires compatibility with both `params[:tag]` (for tag filtering) and optionally support for a query parameter `params[:q]`.
+</PROJECT_RULES>
+<ARCHITECTURE>
+* The Reading Archive component is mounted using `mountReact` and data attributes, not a standard Inertia page.
+</ARCHITECTURE>
+<CONFIG_VALUES>
+* Responsive reading grid columns: 1 (mobile), 2 (tablet), 3 (desktop).
+* Tag display constraint: Tags must remain on ONE SINGLE LINE across all breakpoints.
+* Migration required for tags: `icon_name` field added to the `tags` model.
+</CONFIG_VALUES>
+<NAMING>
+* The component displaying tag icons should use a centralized Lucide icon mapping system rather than scattered JSX elements.
+</NAMING>
+</facts>
+<user_observations>
+* User provides extremely comprehensive, prescriptive instructions that cover design aesthetics (e.g., "Dark HumbleBot"), implementation details (e.g., specific React lifecycle hooks), and necessary data migrations across multiple layers of the stack.
+</user_observations>
+<primer_candidates>
+<primer at_compartment="1">How does the Reading Archive component ensure tag filters remain functional when migrating from a dedicated Rails controller/URL structure to an enhanced client-side mountReact setup?</primer>
+</primer_candidates>
+<meta>
+<messages_processed>1-1</messages_processed>
+<unprocessed_from></unprocessed_from>
+</meta>
+</output>

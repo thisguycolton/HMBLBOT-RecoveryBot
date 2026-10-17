@@ -1,0 +1,20 @@
+Looking at this chunk, I need to assess whether it represents a complete work unit:
+
+**Analysis:**
+- Message [1]: User provides extensive visual correction instructions for DateTimePicker (week start Sunday, text contrast fixes, selected date shape changes, etc.)
+- Messages [2-3]: Assistant acknowledges and begins reading the current implementation via `glob(**/DateTimePicker/**)`
+
+**Problem:** This chunk ends **mid-investigation**. The assistant just started reading files to understand the current implementation. No actual changes were made, no commits happened, and there's no resolution.
+
+**Decision:** This is an incomplete work unit that should be deferred until the full arc (investigation → implementation → verification) is available. Creating a compartment for partial investigation noise would produce low-quality memory.
+
+```xml
+<output>
+<meta>
+<messages_processed></messages_processed>
+<unprocessed_from>1</unprocessed_from>
+</meta>
+</output>
+```
+
+**Reasoning:** The work unit began at message [1] with the user's detailed instructions, but was cut off during the investigation phase (messages [2-3] show only a glob tool call). Without seeing the actual implementation work, any fixes applied, and the final outcome (commit hashes, build results), I cannot produce a meaningful compartment. The `<unprocessed_from>` field indicates that messages starting from index 1 should be deferred to the next compartmentalization pass when the complete arc is available.

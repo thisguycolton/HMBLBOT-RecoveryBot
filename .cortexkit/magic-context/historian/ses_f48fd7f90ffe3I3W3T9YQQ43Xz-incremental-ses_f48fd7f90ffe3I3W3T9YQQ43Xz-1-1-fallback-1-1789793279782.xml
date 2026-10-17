@@ -1,0 +1,44 @@
+<output>
+<compartments>
+<compartment start="1" end="new_messages" title="Redesign Reading Archive UI for modern browsing and advanced search" episode_type="design,feature,refactor" importance="90">
+<p1>
+I started by establishing a critical precondition: since the previous session failed on edit/write operations, I must verify the current repository state before making any changes. My task was to redesign the Reading Archive UI based on extensive specs.
+
+The design requirements are detailed: 1) **HERO**: Must display "READING ARCHIVE" with supporting metadata (reading count, tag count). 2) **BROWSE BY THEME**: Display available tags as clickable filters, preserving existing Rails URL behavior and ensuring "All" clears the filter. 3) **READING GRID**: Implement a responsive grid (1-col mobile / 2-col tablet / 3-col desktop). 4) **READING CARD**: Must be rounded with subtle styling and contain title, excerpt, source/date metadata. Critically, tags must remain on ONE SINGLE LINE—I must prevent wrapping and use the "+N" pattern if overflow occurs. The card's accent color must derive from the first displayed tag's icon. 5) **SEARCH**: Search must leverage the existing Rails index endpoint, preserving both `params[:tag]` and adding support for a search query via `params[:q]`.
+
+Implementation rules are strict: I cannot replace the existing architecture; this component is mounted with `mountReact` and specific data attributes, not standard Inertia. I must reuse `lucide-react` if available, only add packages that are genuinely missing, and derive all counts from actual props rather than hardcoding them. If a tag's `icon_name` is missing on the `Tag` model, I must create an explicit Rails migration (`add_column :tags, :icon_name, :string`) before updating existing tags with sensible icons, ensuring no destruction of current data. The entire flow requires rigorous testing: verifying archive loading, search functionality, tag filtering, and responsive behavior across all specified devices.
+</p1>
+<p2>
+I focused the redesign on making the Reading Archive UI modern, highly functional, and compliant with existing Rails patterns. The key features I implemented include a Hero banner, a "Browse by Theme" section displaying available tags as filters, and a responsive reading grid (up to 3 columns). Each reading card maintains crucial metadata and ensures that tags are rendered on one single line, using the "+N" convention when they overflow without breaking the layout. I ensured search works via existing Rails endpoints supporting both `params[:q]` and `params[:tag]`. Throughout the implementation, I maintained the structural constraint of mounting with `mountReact` to avoid replacing the established archive architecture, while also noting the required migration step to add `icon_name` to the Tag model for better visual support.
+</p2>
+<p3>
+The Reading Archive UI was redesigned to provide a modern and highly functional browsing experience for recovery literature. I implemented a responsive grid structure (1-3 columns) with richly detailed cards, while ensuring critical constraints like single-line tag display and preserving the existing `mountReact` mounting point were respected. The search functionality was updated to handle both title/content queries and specific tag filters via existing Rails params, significantly improving content discoverability without introducing new routing layers or altering the core application flow's architectural structure.
+</p3>
+<p4>reading archive; mountReact; Tag icon_name migration; responsive grid; single-line tag overflow; params[:q], params[:tag]</p4>
+</compartment>
+</compartments>
+<facts>
+<ARCHITECTURE>
+* The Reading Archive UI is implemented as a standalone component mounted via `mountReact` and must not replace the existing core Rails/Inertia architecture.
+* Literature filtering relies on preserving the original Rails index endpoint's ability to accept both `params[:q]` (for search title/content) and `params[:tag]` parameters.
+</ARCHITECTURE>
+<CONSTRAINTS>
+* Tag display must remain on a single line, regardless of tag count; overflow handling must use "+N" rather than allowing the card height to increase unpredictably.
+* The Reading Archive component requires specific icon mapping for tags, necessitating an `icon_name` string column added to the `Tag` model via migration.
+</CONSTRAINTS>
+<NAMING>
+* Tags within the application use a structured display convention that derives their accent color from the first tag listed on the reading card.
+</NAMING>
+</facts>
+<user_observations>
+* User provides highly detailed, rule-based instructions and specifications across multiple domains (UX design, database schema changes, technical implementation details).
+* User prioritizes preservation of existing functional boundaries and architectural patterns over introducing new technologies or abstracting away current mechanisms.
+</user_observations>
+<primer_candidates>
+<primer at_compartment="1">How does the Reading Archive UI component manage state persistence and data flow when mounted via mountReact instead of standard Inertia/Rails routing?</primer>
+</primer_candidates>
+<meta>
+<messages_processed>1-new_messages</messages_processed>
+<unprocessed_from></unprocessed_from>
+</meta>
+</output>

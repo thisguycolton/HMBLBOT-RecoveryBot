@@ -1,0 +1,38 @@
+Looking at this content, I need to understand what I'm being asked to process:
+
+**Analysis:**
+- Message [1] contains a user instruction block titled "Now make one focused visual refinement pass on the DateTimePicker"
+- This is a detailed task specification with requirements for:
+  - Changing calendar to Sunday-first week start
+  - Redesigning the DateTimePicker visual appearance (lighter theme, compact styling)
+  - Preserving existing functionality (date conversion, Today/Tomorrow buttons, etc.)
+
+**Problem:** This is **task instructions for future work**, not a record of completed work. The historian's job is to summarize what *was done*, not what *is being requested*.
+
+This appears to be the user providing me with context for a task they want done in this session — but there's no historical work here to compartmentalize yet.
+
+I'll produce output indicating this situation:
+
+```xml
+<output>
+<compartments>
+</compartments>
+<facts>
+</facts>
+<meta>
+<messages_processed>1-1</messages_processed>
+<unprocessed_from>2</unprocessed_from>
+<!-- Note: Message [1] contains task instructions for an upcoming DateTimePicker visual redesign, not completed work. No compartments formed because the described work has not yet occurred in this history slice. The instructions specify: Sunday-first calendar, lighter visual design matching a mockup, preserving existing date conversion/Today/Tomorrow functionality. Scoping constraints explicitly forbid bulk_publish implementation. This is forward-looking task specification, not backward-looking history. When the agent completes this work and the raw messages are processed in a future historian pass, proper compartments will be created at that time. -->
+</meta>
+</output>
+```
+
+**Summary for the user:**
+
+The content you provided (`<new_messages>` block) contains **task instructions** — a detailed specification for work that the primary agent is being asked to do (a DateTimePicker visual redesign).
+
+This is not historical work that was completed. The historian creates compartments from **completed** work arcs (what *was* done), not from task specifications for **future** work.
+
+If you want historian output, you need to provide a slice of raw conversation history that shows the actual work being done — design decisions made, code written, tests run, commits landed. That's what gets summarized into compartments.
+
+If this is the start of a new session and you're providing context, that's fine — but there won't be any compartments to create until work has actually been performed and recorded in the conversation history.
