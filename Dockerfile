@@ -20,9 +20,7 @@ WORKDIR /app
 COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
-# Install node modules before copying the rest, exactly as package-lock.json says. A plain
-# `npm install` without the lockfile re-resolves every package on each build and can hit npm's
-# "Cannot read properties of null (reading 'edgesOut')" crash when the registry has changed.
+# Install node modules before copying the rest
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
