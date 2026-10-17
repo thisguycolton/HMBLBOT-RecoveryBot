@@ -9,6 +9,24 @@ class User < ApplicationRecord
   has_many :created_groups, class_name: "Group", foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
   has_many :groups, -> { merge(GroupMembership.active) }, through: :group_memberships
   has_one_attached :avatar
+  # Their profile page (/people/:username, Api::PeopleController), laid out like a group's
+  has_one_attached :profile_cover
+  has_many_attached :page_images
+
+  has_many :follows_given, class_name: "Follow", foreign_key: :follower_id, dependent: :destroy, inverse_of: :follower
+  has_many :follows_received, class_name: "Follow", foreign_key: :followed_id, dependent: :destroy, inverse_of: :followed
+  has_many :following, through: :follows_given, source: :followed
+  has_many :followers, through: :follows_received, source: :follower
+
+  USERNAME = /\A[a-z0-9][a-z0-9-]{1,29}\z/
+  RESERVED_USERNAMES = %w[me edit].freeze
+
+  before_validation :assign_username, on: :create
+  before_validation { self.page_blocks = EventBlocks.normalize(page_blocks, types: EventBlocks::PROFILE_TYPES) unless page_blocks.nil? }
+  validates :username, presence: true, uniqueness: { case_sensitive: false }, exclusion: { in: RESERVED_USERNAMES },
+                       format: { with: USERNAME, message: "can use lowercase letters, numbers and dashes (2 to 30)" }
+  validates :page_layout, inclusion: { in: Event::LAYOUTS }
+  validates :default_highlight_visibility, :default_note_visibility, inclusion: { in: Visibility::LEVELS }
 
   AVATAR_TYPES = %w[image/jpeg image/png image/webp].freeze
   validates :bio, length: { maximum: 280 }
@@ -69,9 +87,19 @@ class User < ApplicationRecord
     Rails.application.routes.url_helpers.rails_storage_proxy_path(avatar, only_path: true)
   end
 
+  # Profiles and following are open to whoever can use Groups (admin-only while it's tried out)
+  def self.profiles_open_to?(user) = !!user && (Group.feature_open_to?(user) || user.group_memberships.exists?)
+
+  def profile_path = "/people/#{username}"
+  def following?(other) = !!other && follows_given.exists?(followed_id: other.id)
+  def custom_page? = !page_blocks.nil?
+
+  # Enough to show and link to them anywhere
+  def as_person_json = { id: id, name: display_name, username: username, avatar_url: avatar_url }
+
   # Shown in groups: first name, picture and blurb. Email only to group admins.
   def as_member_json(email: false)
-    { id: id, name: display_name, bio: bio, avatar_url: avatar_url, email: (self.email if email),
+    { id: id, name: display_name, username: username, bio: bio, avatar_url: avatar_url, email: (self.email if email),
       sobriety_date: (sobriety_date&.iso8601 if show_sobriety_date) }.compact
   end
 
@@ -98,5 +126,16 @@ class User < ApplicationRecord
 
     errors.add(:avatar, "must be a JPEG, PNG or WebP image") unless AVATAR_TYPES.include?(avatar.blob.content_type)
     errors.add(:avatar, "must be under 5 MB") if avatar.blob.byte_size > 5.megabytes
+  end
+
+  def assign_username
+    return if username.present?
+
+    base = (name.presence || email.to_s.split("@").first).to_s.parameterize.first(26).sub(/-+\z/, "").presence || "member"
+    base = "member" if RESERVED_USERNAMES.include?(base) || base.length < 2
+    candidate = base
+    n = 1
+    candidate = "#{base}-#{n += 1}" while self.class.where.not(id: id).exists?(username: candidate)
+    self.username = candidate
   end
 end

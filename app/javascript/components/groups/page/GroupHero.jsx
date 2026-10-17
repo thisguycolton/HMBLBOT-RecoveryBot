@@ -4,8 +4,9 @@ import { zoneLabel } from "../lib";
 
 // The top of a group's page, like an event's: its cover (or the site's blue), name,
 // description and a few facts, with `actions` (join, edit) under them. `badge` sits by the
-// name, `note` replaces the facts (the default page's editor says what it is there).
-export default function GroupHero({ group, coverUrl, actions, badge, note }) {
+// name, `note` replaces the facts (the default page's editor says what it is there), and
+// `next` (NextMeeting: the countdown and Join button) goes between them and the actions.
+export default function GroupHero({ group, coverUrl, actions, badge, note, next }) {
   const chip = "inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur";
   const count = group.members_count || 0;
   return (
@@ -32,6 +33,7 @@ export default function GroupHero({ group, coverUrl, actions, badge, note }) {
             )}
           </div>
         </div>
+        {next}
         {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
       </div>
     </header>

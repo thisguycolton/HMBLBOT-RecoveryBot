@@ -224,7 +224,7 @@ export default function GroupPageEditor({ template = false }) {
   );
 }
 
-function CoverField({ cover, setCover }) {
+export function CoverField({ cover, setCover }) {
   const input = React.useRef(null);
   return (
     <Field label="Cover photo" hint="Across the top of the page. Without one it's the site's blue.">

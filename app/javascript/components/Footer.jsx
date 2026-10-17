@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Heart } from "lucide-react";
 import { RecoveryBotLogo } from "./brand/Logo";
 import DonationModal from "./DonationModal";
-import { NAV_CATEGORIES } from "./nav/siteMenu";
+import { NAV_CATEGORIES, showItem } from "./nav/siteMenu";
 
 const REPO = "https://github.com/thisguycolton/HMBLBOT-RecoveryBot";
 
@@ -11,7 +11,7 @@ const REPO = "https://github.com/thisguycolton/HMBLBOT-RecoveryBot";
 export default function Footer() {
   const [donating, setDonating] = useState(false);
   const signedIn = document.body.dataset.currentUser === "true";
-  const visible = (items) => items.filter((item) => !item.auth || signedIn);
+  const visible = (items) => items.filter((item) => showItem(item, signedIn));
 
   return (
     <footer className="mt-auto border-t border-white/10 bg-neutral-950 text-white !font-sans">

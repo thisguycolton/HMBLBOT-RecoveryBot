@@ -6,19 +6,16 @@ class OiaaMeeting < ApplicationRecord
 
   scope :listed, -> { where(last_seen_at: (OiaaFeed.last_synced_at || Time.at(0))..) }
 
-  def self.search(query, limit: 100)
-    words = query.to_s.downcase.scan(/[[:alnum:]']+/).first(6)
+  def self.search(query, limit: 100) = listed.matching(query).order(:name).limit(limit)
+
+  # A name (every word in the name or group name), or a Zoom link or meeting ID
+  def self.matching(query)
     id = OiaaFeed.conference_id(query)
-    scope = listed
-    if id
-      scope = scope.where(conference_id: id)
-    else
-      words.each do |w|
-        like = "%#{sanitize_sql_like(w)}%"
-        scope = scope.where("oiaa_meetings.name ILIKE :q OR oiaa_meetings.group_name ILIKE :q", q: like)
-      end
+    return where(conference_id: id) if id
+
+    query.to_s.downcase.scan(/[[:alnum:]']+/).first(6).reduce(all) do |scope, w|
+      scope.where("oiaa_meetings.name ILIKE :q OR oiaa_meetings.group_name ILIKE :q", q: "%#{sanitize_sql_like(w)}%")
     end
-    scope.order(:name).limit(limit)
   end
 
   # A group's own listings: the ones AA Intergroup files under its name (the feed's
@@ -34,6 +31,29 @@ class OiaaMeeting < ApplicationRecord
   def zone = ActiveSupport::TimeZone[time_zone.presence || "America/New_York"]
   def start_minute = self.class.minutes(start_time)
   def end_minute = self.class.minutes(end_time)
+
+  # How long it runs: to its end time (past midnight too), else an hour
+  def duration_minutes = self.class.duration(start_minute, end_minute)
+
+  def self.duration(start, finish)
+    return 60 unless start && finish
+    length = (finish - start) % Meeting::DAY_MINUTES
+    length.zero? ? 60 : length
+  end
+
+  # The start and end of the meeting on now, or else its next one, over all its days
+  def upcoming(now = Time.current)
+    return unless start_minute
+
+    from = now - duration_minutes.minutes
+    start = days.map { |day| Meeting.weekly_start(day, start_minute, zone, from) }.min
+    start && [start, start + duration_minutes.minutes]
+  end
+
+  # in_person, online or hybrid: the feed's attendance option, else online (AA Intergroup
+  # lists online meetings)
+  def attendance = attendance_option.presence_in(%w[online in_person hybrid]) || "online"
+  def place = [location, formatted_address].compact_blank.uniq.join(", ").presence
 
   def self.minutes(hhmm)
     m = /\A(\d{1,2}):(\d{2})/.match(hhmm.to_s)

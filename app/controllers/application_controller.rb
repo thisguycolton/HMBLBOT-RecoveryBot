@@ -8,7 +8,8 @@ class ApplicationController < ActionController::Base
 
   protected
 
-  # An invite link followed while signed out (GroupsController#join) lands them in the group
+  # An invite link followed while signed out (GroupsController#join) lands them in the group;
+  # otherwise people land on the home page (/people) when it's open to them
   def after_sign_in_path_for(resource)
     token = cookies.signed[:group_invite]
     if token.present? && resource.is_a?(User)
@@ -16,6 +17,11 @@ class ApplicationController < ActionController::Base
       group = JoinsGroupFromInvite.call(resource, token)
       return "/groups/#{group.slug}" if group
     end
+    # Where they were headed, or the home page (notes and what's coming up) once profiles are open to them
+    stored = resource.is_a?(User) && stored_location_for(resource)
+    return stored if stored
+    return "/people" if resource.is_a?(User) && User.profiles_open_to?(resource)
+
     super
   end
 

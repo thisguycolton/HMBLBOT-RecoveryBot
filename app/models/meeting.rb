@@ -40,11 +40,38 @@ class Meeting < ApplicationRecord
   def next_start(from = Time.current)
     return starts_at&.in_time_zone(zone) if once?
 
+    self.class.weekly_start(day_of_week, start_minute, zone, from)
+  end
+
+  # The next start at or after `from` of a weekly meeting on `day` at `minute` in `zone`
+  def self.weekly_start(day, minute, zone, from)
     local = from.in_time_zone(zone)
-    days_ahead = (day_of_week - local.wday) % 7
-    start = (local.to_date + days_ahead).in_time_zone(zone) + start_minute.minutes
+    days_ahead = (day - local.wday) % 7
+    start = (local.to_date + days_ahead).in_time_zone(zone) + minute.minutes
     start < local ? start + 7.days : start
   end
+
+  def duration_minutes
+    return [((ends_at - starts_at) / 60).round, 1].max if once? && starts_at && ends_at
+    OiaaMeeting.duration(start_minute, end_minute)
+  end
+
+  # The start and end of the meeting on now, or else its next one (nil once it's over)
+  def upcoming(now = Time.current)
+    start = next_start(now - duration_minutes.minutes)
+    return unless start
+    finish = start + duration_minutes.minutes
+    finish > now ? [start, finish] : nil
+  end
+
+  def attendance
+    online = conference_url.present?
+    in_person = location.present? || formatted_address.present?
+    return "hybrid" if online && in_person
+    in_person ? "in_person" : "online"
+  end
+
+  def place = [location, formatted_address].compact_blank.uniq.join(", ").presence
 
   # The start on a given calendar day in the meeting's zone, or nil if it doesn't meet then
   def start_on(date)
@@ -94,12 +121,14 @@ class Meeting < ApplicationRecord
 
   def as_api_json
     nxt = next_start
+    now_or_next = upcoming
     {
       id: id, name: name, recurrence: recurrence, day_of_week: day_of_week,
       start_minute: start_minute, end_minute: end_minute, time_zone: time_zone,
       starts_at: starts_at&.in_time_zone(zone)&.strftime("%Y-%m-%dT%H:%M"),
       ends_at: ends_at&.in_time_zone(zone)&.strftime("%Y-%m-%dT%H:%M"),
       next_start: nxt&.iso8601, past: once? && nxt && nxt < Time.current,
+      upcoming_start: now_or_next&.first&.iso8601, upcoming_end: now_or_next&.last&.iso8601,
       schedule_label: schedule_label, conference_url: conference_url, conference_url_notes: conference_url_notes,
       conference_phone: conference_phone, location: location, formatted_address: formatted_address,
       types: types, notes: notes, oiaa_slug: oiaa_slug, oiaa_url: oiaa_url, oiaa_missing: oiaa_missing,

@@ -3,10 +3,10 @@ import { BookOpen, CalendarClock, CalendarDays, ExternalLink, Lock, MessagesSqua
 import Markdown from "../../book/Markdown";
 import { tone } from "../../events/lib";
 import Avatar from "../Avatar";
-import NoteComposer from "../NoteComposer";
+import FeedItem from "../../notes/FeedItem";
+import NoteEditor from "../../notes/NoteEditor";
 import { api, typeLabel } from "../lib";
 import { scheduleLabel, toSeries } from "../MeetingsTab";
-import { timeAgo } from "./lib";
 
 // How a group page's own blocks look (EventBlocks::GROUP_TYPES), filled in from `context`
 // (app/services/group_page.rb). Like the event blocks, each has a smaller view for the side
@@ -25,7 +25,8 @@ export default function GroupBlockView({ block, compact, editing, context, fill 
   }
 }
 
-function Card({ block, compact, title, icon: Icon, action, children }) {
+// A block's card in its palette color, with its title; profile blocks use it too
+export function Card({ block, compact, title, icon: Icon, action, children }) {
   const t = tone(block);
   return (
     <section className={`rounded-2xl ${t.card} ${compact ? "p-4" : "p-5 sm:p-6"}`}>
@@ -41,7 +42,7 @@ function Card({ block, compact, title, icon: Icon, action, children }) {
   );
 }
 
-const Empty = ({ children }) => <p className="text-sm italic text-slate-400 dark:text-neutral-500">{children}</p>;
+export const Empty = ({ children }) => <p className="text-sm italic text-slate-400 dark:text-neutral-500">{children}</p>;
 
 // Weekly meetings are a row per day; the same meeting on several days is one line
 function meetingRows(meetings) {
@@ -113,7 +114,8 @@ function EventsBlock({ block, compact, editing, context, title }) {
 // timeline too, shared to this group); everyone else sees that it's for members.
 function TimelineBlock({ block, compact, editing, context, title }) {
   const [removed, setRemoved] = useState([]);
-  const notes = context.timeline?.filter((n) => !removed.includes(n.id)).slice(0, block.limit || 10);
+  const [changed, setChanged] = useState({});
+  const notes = context.timeline?.filter((n) => !removed.includes(n.id)).map((n) => changed[n.id] || n).slice(0, block.limit || 10);
   const canPost = !editing && context.viewer?.is_member && context.group?.slug;
   const remove = async (note) => {
     if (!window.confirm(note.mine ? "Take this note off the group's timeline? It stays on yours." : "Take this note off the group's timeline?")) return;
@@ -127,35 +129,35 @@ function TimelineBlock({ block, compact, editing, context, title }) {
 
   return (
     <Card block={block} compact={compact} title={title} icon={MessagesSquare}
-      action={context.viewer?.is_member && !editing && <a href="/groups/timeline" className="shrink-0 text-xs font-medium text-accent hover:underline">Your timeline</a>}>
-      {canPost && <div className="mb-4"><NoteComposer shareTo={context.group.slug} max={context.note_max} compact={compact} onPosted={() => context.reload?.()} /></div>}
-      {!notes ? (
-        <p className="flex items-center gap-2 text-sm text-slate-500 dark:text-neutral-400">
-          <Lock className="size-4 shrink-0" /> {editing ? "Members' shared notes show here, to members." : "Members share notes with each other here."}
-        </p>
-      ) : notes.length === 0 ? (
-        <Empty>{editing ? "Notes members share to the group show here." : "No notes yet. Share the first one."}</Empty>
-      ) : (
-        <ol className="space-y-4">
-          {notes.map((n) => (
-            <li key={n.id} className="flex gap-3">
-              <Avatar person={n.author} size={compact ? 28 : 36} />
-              <div className="min-w-0 flex-1">
-                <p className="flex items-baseline gap-2 text-sm">
-                  <span className="truncate font-semibold text-slate-900 dark:text-white">{n.author.name}</span>
-                  <span className="shrink-0 text-xs text-slate-400">{timeAgo(n.created_at)}{n.edited ? " · edited" : ""}</span>
-                  {n.can_remove && !editing && (
-                    <button type="button" onClick={() => remove(n)} className="ml-auto grid size-6 shrink-0 place-items-center rounded-md !bg-transparent text-slate-400 hover:text-rose-600" title="Take it off the group's timeline" aria-label="Take it off the group's timeline">
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  )}
-                </p>
-                <p className={`whitespace-pre-line text-slate-700 [overflow-wrap:anywhere] dark:text-neutral-200 ${compact ? "text-sm" : ""}`}>{n.body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
+      action={context.viewer?.is_member && !editing && <a href="/people/me" className="shrink-0 text-xs font-medium text-accent hover:underline">Your timeline</a>}>
+      <div className="wb">
+        {canPost && (
+          <div className="mb-4">
+            <NoteEditor shareTo={context.group.slug} max={context.note_max} defaultVisibility={context.viewer.default_note_visibility}
+              placeholder={`Share something with ${context.group.title}… Markdown and photos work.`} onSaved={() => context.reload?.()} />
+          </div>
+        )}
+        {!notes ? (
+          <p className="flex items-center gap-2 text-sm text-slate-500 dark:text-neutral-400">
+            <Lock className="size-4 shrink-0" /> {editing ? "Members' shared notes show here, to members." : "Members share notes with each other here."}
+          </p>
+        ) : notes.length === 0 ? (
+          <Empty>{editing ? "Notes members share to the group show here." : "No notes yet. Share the first one."}</Empty>
+        ) : (
+          <div className="wb-feed">
+            {notes.map((n) => (
+              <FeedItem key={n.id} item={n} readOnly={editing} showAuthor compact={compact} max={context.note_max}
+                onChange={(note) => setChanged((c) => ({ ...c, [note.id]: { ...n, ...note } }))}
+                onRemove={(id) => setRemoved((list) => [...list, id])}
+                extraAction={n.can_remove && !n.mine && !editing && (
+                  <button type="button" onClick={() => remove(n)} className="grid size-6 shrink-0 place-items-center rounded-md !bg-transparent text-slate-400 hover:text-rose-600" title="Take it off the group's timeline" aria-label="Take it off the group's timeline">
+                    <Trash2 className="size-3.5" />
+                  </button>
+                )} />
+            ))}
+          </div>
+        )}
+      </div>
     </Card>
   );
 }
@@ -225,17 +227,19 @@ function MembersBlock({ block, compact, editing, context, title }) {
         </p>
       ) : compact ? (
         <div className="flex flex-wrap gap-1.5">
-          {members.map((m) => <span key={m.id} title={m.name}><Avatar person={m} size={34} /></span>)}
+          {members.map((m) => <a key={m.id} href={m.username ? `/people/${m.username}` : undefined} title={m.name} onClick={(e) => editing && e.preventDefault()}><Avatar person={m} size={34} /></a>)}
         </div>
       ) : (
         <ul className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(9rem,1fr))]">
           {members.map((m) => (
-            <li key={m.id} className="flex items-center gap-2">
+            <li key={m.id}>
+              <a href={m.username ? `/people/${m.username}` : undefined} onClick={(e) => editing && e.preventDefault()} className="flex items-center gap-2 hover:underline">
               <Avatar person={m} size={36} />
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{m.name}</span>
                 <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{m.role === "admin" ? "Group admin" : "Member"}</span>
               </span>
+              </a>
             </li>
           ))}
         </ul>

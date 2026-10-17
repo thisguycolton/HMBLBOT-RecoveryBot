@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import axios from "axios";
 import { Link2, Trash2, X } from "lucide-react";
 import HighlightNote from "./HighlightNote";
+import VisibilityPicker from "../notes/VisibilityPicker";
 import { highlightUrl, shareLink } from "./highlightSharing";
 
 export const HIGHLIGHT_PALETTE = {
@@ -37,6 +38,18 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
     } catch {
       onChange?.(previous);
       toast?.("Couldn't change the color", { tone: "error" });
+    }
+  }
+
+  // Who sees it on their profile (only once profiles are open to them)
+  async function changeVisibility(visibility) {
+    const previous = highlight;
+    onChange?.({ ...highlight, visibility });
+    try {
+      await axios.patch(`/api/highlights/${highlight.id}`, { highlight: { visibility } });
+    } catch {
+      onChange?.(previous);
+      toast?.("Couldn't change who sees it", { tone: "error" });
     }
   }
 
@@ -83,6 +96,7 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
               ))}
             </div>
             <span className="flex-1" />
+            {highlight.profiles && highlight.visibility && <VisibilityPicker value={highlight.visibility} onChange={changeVisibility} align="right" up />}
             <button type="button" className="wb-btn" onClick={share}>
               <Link2 size={15} aria-hidden="true" /> Share
             </button>

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { BarChart3, CalendarClock, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
 import Markdown from "../book/Markdown";
 import GroupBlockView from "../groups/page/GroupBlocks";
+import PersonBlockView from "../people/PersonBlocks";
 import Lightbox from "./Lightbox";
 import { tone } from "./lib";
 
@@ -14,7 +15,8 @@ export const isCompact = (block, layout) =>
 // block has a smaller view for the side column (`compact`) and a larger one for the main
 // column. `editing` turns off the shadow box so clicks select the block instead. `polls`
 // are the event's schedule polls, for Poll blocks. On a group page, `context` is the group
-// (app/services/group_page.rb): what its own blocks list, and its name for {{group}}.
+// (app/services/group_page.rb): what its own blocks list, and its name for {{group}}; on a
+// profile it's the person (app/services/profile_page.rb).
 export default function BlockView({ block, compact = false, editing = false, polls = [], context = null }) {
   const props = { block, compact, editing };
   const fill = (text) => fillGroup(text, context);
@@ -26,7 +28,9 @@ export default function BlockView({ block, compact = false, editing = false, pol
     case "photo": return <PhotoView {...props} />;
     case "gallery": return <GalleryView {...props} />;
     case "poll": return <PollView {...props} poll={polls.find((p) => p.token === block.poll_token)} />;
-    default: return context ? <GroupBlockView {...props} context={context} fill={fill} /> : null;
+    default:
+      if (context?.kind === "person") return <PersonBlockView {...props} context={context} />;
+      return context ? <GroupBlockView {...props} context={context} fill={fill} /> : null;
   }
 }
 
