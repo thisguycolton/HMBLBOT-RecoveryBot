@@ -54,6 +54,13 @@ Rails.application.routes.draw do
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
+    resources :documents, controller: "group_documents", only: %i[index show create update destroy] do
+      member do
+        get :file
+        get :versions
+        post "versions/:version_id/restore", action: :restore
+      end
+    end
     resource :page, controller: "group_pages", only: %i[show update] do
       post :images
       delete "timeline/:note_id", action: :remove_note

@@ -3,8 +3,9 @@
 # meeting and the group pages it opens, which need no account (PUBLIC_PATHS).
 class GroupsController < ApplicationController
   layout "reader"
-  # /groups/meetings, /groups/find/<listing>, /groups/<slug> and its public tabs
-  PUBLIC_PATHS = %r{\A(meetings|find/[^/]+|(?!(new|find|default-page)\z)[a-z0-9-]+(/(home|meetings|events))?)\z}
+  # /groups/meetings, /groups/find/<listing>, /groups/<slug> and its public tabs, and the
+  # group's documents (the API only gives a visitor the Public ones)
+  PUBLIC_PATHS = %r{\A(meetings|find/[^/]+|(?!(new|find|default-page)\z)[a-z0-9-]+(/(home|meetings|events)|/conscience(/documents/\d+)?)?)\z}
 
   before_action :authenticate_user!, except: %i[app join ask]
   after_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }

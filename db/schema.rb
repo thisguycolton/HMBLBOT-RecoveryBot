@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_17_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -246,6 +246,36 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.index ["group_id"], name: "index_group_books_on_group_id"
   end
 
+  create_table "group_document_versions", force: :cascade do |t|
+    t.bigint "group_document_id", null: false
+    t.bigint "user_id"
+    t.string "title", null: false
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_document_id"], name: "index_group_document_versions_on_group_document_id"
+    t.index ["user_id"], name: "index_group_document_versions_on_user_id"
+  end
+
+  create_table "group_documents", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.string "title", null: false
+    t.string "kind", default: "other", null: false
+    t.text "body"
+    t.string "visibility", default: "members", null: false
+    t.string "status", default: "current", null: false
+    t.boolean "pinned", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_group_documents_on_created_by_id"
+    t.index ["group_id", "kind", "position"], name: "index_group_documents_on_group_id_and_kind_and_position"
+    t.index ["group_id"], name: "index_group_documents_on_group_id"
+    t.index ["updated_by_id"], name: "index_group_documents_on_updated_by_id"
+  end
+
   create_table "group_memberships", force: :cascade do |t|
     t.bigint "group_id", null: false
     t.bigint "user_id", null: false
@@ -253,6 +283,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.string "status", default: "active", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "can_keep_records", default: false, null: false
     t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
     t.index ["group_id"], name: "index_group_memberships_on_group_id"
     t.index ["user_id"], name: "index_group_memberships_on_user_id"
@@ -816,6 +847,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "group_books", "books"
   add_foreign_key "group_books", "groups"
+  add_foreign_key "group_document_versions", "group_documents", on_delete: :cascade
+  add_foreign_key "group_document_versions", "users", on_delete: :nullify
+  add_foreign_key "group_documents", "groups", on_delete: :cascade
+  add_foreign_key "group_documents", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "group_documents", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_page_templates", "users", column: "updated_by_id"

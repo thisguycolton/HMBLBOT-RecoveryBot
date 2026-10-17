@@ -1,6 +1,6 @@
 # Group Conscience organizer: plan
 
-Planning only, nothing built yet. Written 2026-10-17. The Find a meeting work (PR #13), which sits on Profiles/Group pages (#12), Events (#11) and Groups (#10), is now merged to `main` (#14); build on `main`.
+Step 1 (Documents) is built; steps 2 and 3 are not. Written 2026-10-17. The Find a meeting work (PR #13), which sits on Profiles/Group pages (#12), Events (#11) and Groups (#10), is now merged to `main` (#14); build on `main`.
 
 ## What it's for
 
@@ -209,7 +209,7 @@ opens the group's page").
 
 ## Build order
 
-1. **Documents**: tables, upload + write, folders, visibility, history, search, Documents
+1. **Documents** (built; see "As built" below): tables, upload + write, folders, visibility, history, search, Documents
    tab and `documents` block. Useful on day one (format, guidelines).
 2. **Decisions log**: `motions` without meetings first, backfill-able, Decisions view and
    `decisions` block.
@@ -238,3 +238,25 @@ permission table above (`test/controllers`), and screenshots in
    give a Word-like toolbar; say if the people writing minutes would rather have that.
 7. **Uploads as-is?** Default: yes, files stay files (PDF/DOCX/XLSX shown or downloaded);
    no conversion of Word documents into Markdown in v1.
+
+## As built: step 1 (Documents)
+
+What differs from the plan above:
+
+- `group_documents.approved_by_motion_id` waits for step 2 (there are no motions yet).
+- The tab is `Group conscience` with the documents view only; the secondary bar (Overview,
+  Business meetings, Decisions) arrives with those steps. `/conscience` shows the folders.
+- Search is `GET /api/groups/:slug/documents?q=` (ILIKE over titles and text); the group-wide
+  `conscience_search` comes when there is more than documents to search.
+- Version rows hold the copy a save replaced (its author and date), so the History list is
+  "what it was before each change"; restoring is a new save. A save that leaves title,
+  text and file alone (visibility, pinning...) makes no version.
+- Visitors read Public documents at `/groups/:slug/conscience/documents/:id` (in
+  `GroupsController::PUBLIC_PATHS`); the History view is for members.
+- Files are served by `GET .../documents/:id/file` (not a storage URL), so changing a
+  document from Public to Members takes effect at once. PDFs and pictures show inline;
+  Word and Excel files download.
+- Drafts and archived documents are only seen by record keepers.
+- `Markdown` (components/book/Markdown.jsx) now renders GFM tables, for treasurer's reports.
+- Position within a folder is set on creation (last); there is no drag-to-reorder yet, and
+  pinned documents lead.

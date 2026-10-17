@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, CalendarClock, CalendarDays, ExternalLink, Lock, MessagesSquare, Trash2, UserPlus, Users, Video } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Lock, MessagesSquare, Pin, Trash2, UserPlus, Users, Video } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { tone } from "../../events/lib";
 import Avatar from "../Avatar";
@@ -7,6 +7,8 @@ import FeedItem from "../../notes/FeedItem";
 import NoteEditor from "../../notes/NoteEditor";
 import { api, typeLabel } from "../lib";
 import { scheduleLabel, toSeries } from "../MeetingsTab";
+import { KIND_INFO } from "../conscience/lib";
+import { documentsFor } from "./lib";
 
 // How a group page's own blocks look (EventBlocks::GROUP_TYPES), filled in from `context`
 // (app/services/group_page.rb). Like the event blocks, each has a smaller view for the side
@@ -19,6 +21,7 @@ export default function GroupBlockView({ block, compact, editing, context, fill 
     case "timeline": return <TimelineBlock {...props} />;
     case "literature": return <LiteratureBlock {...props} />;
     case "readings": return <ReadingsBlock {...props} />;
+    case "documents": return <DocumentsBlock {...props} />;
     case "members": return <MembersBlock {...props} />;
     case "join": return <JoinBlock {...props} markdown={fill(block.markdown)} />;
     default: return null;
@@ -211,6 +214,40 @@ function ReadingsBlock({ block, compact, editing, context, title }) {
           ))}
         </ul>
       )}
+    </Card>
+  );
+}
+
+// The group's documents this viewer may see: visitors only get the Public ones, which is how
+// a group puts its format and guidelines on its page. Record keepers get a hint when empty.
+function DocumentsBlock({ block, compact, editing, context, title }) {
+  const docs = documentsFor(block, context);
+  const slug = context.group?.slug;
+  return (
+    <Card block={block} compact={compact} title={title} icon={FileText}>
+      {docs.length === 0 && (
+        <Empty>{editing || context.viewer?.can_keep_records ? "Documents you mark Public show here to everyone; members also see the Members ones." : "No documents yet."}</Empty>
+      )}
+      <ul className="space-y-1">
+        {docs.map((d) => {
+          const Icon = KIND_INFO[d.kind]?.icon || FileText;
+          return (
+            <li key={d.id}>
+              <a href={`/groups/${slug}/conscience/documents/${d.id}`} onClick={(e) => (editing || !slug) && e.preventDefault()}
+                className="flex items-center gap-3 rounded-xl p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800/60">
+                <Icon className="size-4 shrink-0 text-slate-500 dark:text-neutral-400" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-white">
+                    {d.pinned && <Pin className="size-3 shrink-0 text-amber-600" aria-label="Pinned" />}
+                    <span className="truncate">{d.title}</span>
+                  </span>
+                  {!compact && (d.excerpt || d.file) && <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{d.excerpt || d.file.name}</span>}
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
     </Card>
   );
 }

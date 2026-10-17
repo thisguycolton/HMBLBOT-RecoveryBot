@@ -1,6 +1,6 @@
 // Group pages in the HMBLBOT Editor: the blocks a group page can have (EventBlocks::GROUP_TYPES
 // on the server), its own and the event page's shared ones.
-import { AlignLeft, BookOpen, CalendarClock, CalendarRange, Heading, Image, LayoutGrid, ListChecks, MessagesSquare, NotebookPen, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { AlignLeft, BookOpen, CalendarClock, CalendarRange, FileText, Heading, Image, LayoutGrid, ListChecks, MessagesSquare, NotebookPen, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { newBlock } from "../../events/lib";
 
 export const GROUP_BLOCK_GROUPS = [
@@ -21,6 +21,7 @@ export const GROUP_BLOCK_GROUPS = [
       { type: "members", label: "Members", note: "Who's in the group", icon: Users },
       { type: "literature", label: "Literature", note: "Books the group approved", icon: BookOpen },
       { type: "readings", label: "Readings", note: "Readings members shared", icon: NotebookPen },
+      { type: "documents", label: "Documents", note: "Format, guidelines and other documents", icon: FileText },
     ],
   },
   {
@@ -46,6 +47,7 @@ const DEFAULTS = {
   timeline: { title: "From our members", limit: 10 },
   literature: { title: "Our literature" },
   readings: { title: "Shared readings", limit: 5 },
+  documents: { title: "Documents", kind: "all", limit: 5, pinned_only: false },
   members: { title: "Members" },
   join: { title: "Join us", markdown: "Everyone with a desire to stop drinking is welcome." },
 };
@@ -56,6 +58,12 @@ export function newGroupBlock(type, region = "main") {
   return DEFAULTS[type] ? { ...block, ...DEFAULTS[type] } : block;
 }
 
+// The documents a Documents block lists: the viewer's own (context.documents), narrowed to its folder
+export const documentsFor = (block, context) =>
+  (context.documents || [])
+    .filter((d) => (block.kind && block.kind !== "all" ? d.kind === block.kind : true) && (!block.pinned_only || d.pinned))
+    .slice(0, block.limit || 5);
+
 // Group blocks with nothing to show this viewer stay off the page (the editor shows them
 // all). Members' blocks still show to everyone else in a group, as a way in.
 export function hiddenFor(block, context) {
@@ -64,6 +72,7 @@ export function hiddenFor(block, context) {
     case "events": return !context.events?.length;
     case "literature": return !context.literature?.length;
     case "readings": return !context.readings?.length;
+    case "documents": return !documentsFor(block, context).length && !context.viewer?.can_keep_records;
     case "timeline": return outside;
     case "members": return outside;
     case "meetings": return !context.meetings?.length;

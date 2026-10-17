@@ -22,6 +22,10 @@
 .ev-md code { background: rgb(241 245 249); border-radius: 0.25em; font-size: 0.9em; padding: 0.05em 0.3em; }
 .dark .ev-md code { background: rgb(38 38 38); }
 .ev-md p { font-size: inherit; line-height: inherit; }
+.ev-md .wb-md__table th, .ev-md .wb-md__table td { border-color: rgb(226 232 240); }
+.ev-md .wb-md__table th { background: rgb(241 245 249); color: rgb(15 23 42); }
+.dark .ev-md .wb-md__table th, .dark .ev-md .wb-md__table td { border-color: rgb(64 64 64); }
+.dark .ev-md .wb-md__table th { background: rgb(38 38 38); color: white; }
 
 /* Editor canvas */
 /* Each block keeps a row on top for its toolbar, so the toolbar never covers what's in it */

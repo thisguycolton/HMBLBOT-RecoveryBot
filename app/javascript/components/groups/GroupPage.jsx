@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutTemplate, NotebookPen, Pencil, Users } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutTemplate, NotebookPen, Pencil, Scale, Users } from "lucide-react";
 import { api } from "./lib";
 import { ErrorNote, Loading, Message, Pill } from "./ui";
 import GroupHero, { heroButton, heroQuietButton } from "./page/GroupHero";
@@ -12,6 +12,7 @@ import LiteratureTab from "./LiteratureTab";
 import ReadingsTab from "./ReadingsTab";
 import CourtTab from "./CourtTab";
 import EventsTab from "./EventsTab";
+import ConscienceTab from "./conscience/ConscienceTab";
 
 const TABS = [
   { key: "home", label: "Home", icon: House },
@@ -19,15 +20,18 @@ const TABS = [
   { key: "events", label: "Events", icon: CalendarRange },
   { key: "readings", label: "Readings", icon: NotebookPen, members: true },
   { key: "literature", label: "Literature", icon: BookOpen, members: true },
+  { key: "conscience", label: "Group conscience", icon: Scale, members: true },
   { key: "members", label: "Members", icon: Users, members: true },
   { key: "court", label: "Court verifications", icon: Gavel, managers: true },
 ];
 
 // /groups/:slug(/:tab): the group's own page (Home, made in the HMBLBOT Editor) and its
-// other sections. A new group (?new=1) opens on its meetings, to bring them in.
-export default function GroupPage() {
+// other sections. A new group (?new=1) opens on its meetings, to bring them in. Group
+// conscience (/:slug/conscience/*) is members' tab, but a Public document opens for anyone.
+export default function GroupPage({ tab: fixedTab }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { slug, tab = searchParams.get("new") === "1" ? "meetings" : "home" } = useParams();
+  const { slug, tab: routeTab = searchParams.get("new") === "1" ? "meetings" : "home" } = useParams();
+  const tab = fixedTab || routeTab;
   const navigate = useNavigate();
   // Opened from Find a meeting: back goes to those results
   const back = useLocation().state?.back;
@@ -64,7 +68,7 @@ export default function GroupPage() {
 
   const isMember = group.is_member || group.is_site_admin;
   const tabs = TABS.filter((t) => (!t.members || isMember) && (!t.managers || group.can_manage));
-  const current = tabs.find((t) => t.key === tab) || tabs[0];
+  const current = tabs.find((t) => t.key === tab) || (tab === "conscience" && { key: "conscience" }) || tabs[0];
 
   const act = async (path, confirmText) => {
     // Signed out: make an account first, then back here, where the request goes out (?ask=1)
@@ -157,6 +161,7 @@ export default function GroupPage() {
       {current.key === "events" && <EventsTab group={group} />}
       {current.key === "readings" && <ReadingsTab group={group} />}
       {current.key === "literature" && <LiteratureTab group={group} reload={load} />}
+      {current.key === "conscience" && <ConscienceTab group={group} />}
       {current.key === "members" && <MembersTab group={group} reload={load} setGroup={setGroup} />}
       {current.key === "court" && <CourtTab group={group} setGroup={setGroup} />}
     </div>

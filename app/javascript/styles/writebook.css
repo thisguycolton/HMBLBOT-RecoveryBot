@@ -1350,6 +1350,10 @@ body:has(.wb) {
 .wb-md pre { background: var(--wb-subtle); border-radius: 0.4em; color: inherit; margin: 0.4em 0 0; overflow-x: auto; padding: 0.5em 0.7em; }
 .wb-md pre code { background: none; padding: 0; }
 .wb-md a { color: var(--wb-link); text-decoration: underline; }
+.wb-md__table { overflow-x: auto; }
+.wb-md table { border-collapse: collapse; font-size: 0.95em; min-width: 100%; }
+.wb-md th, .wb-md td { border: 1px solid var(--wb-subtle); padding: 0.3em 0.6em; text-align: start; vertical-align: top; }
+.wb-md th { background: var(--wb-subtle); font-weight: 700; }
 
 /* /library/highlights */
 .wb-hl-page {
