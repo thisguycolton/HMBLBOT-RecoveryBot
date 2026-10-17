@@ -61,7 +61,7 @@ export const ACCOUNT_ITEMS = [
   { label: "My highlights", href: "/library/highlights", icon: Highlighter },
   { label: "Your profile", href: "/people/me", icon: UserRound, groups: true },
   { label: "My groups", href: "/groups", icon: Users, groups: true },
-  { label: "People", href: "/people", icon: Contact, groups: true },
+  { label: "Home feed", href: "/people", icon: Contact, groups: true },
   { label: "Profile & account", href: "/users/edit", icon: Settings },
 ];
 

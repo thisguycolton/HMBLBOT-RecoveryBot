@@ -39,7 +39,7 @@ An API-driven system for tracking game state, inventories, and player progress.
 ### 👤 Profiles & follows
 - `/people/:username` (`/people/me` is yours), React app `entrypoints/people.jsx`, JSON from `ProfilePage` (app/services) via `Api::PeopleController`. Same access as Groups (`User.profiles_open_to?`), signed-in only, never public on the web.
 - Every user has a `username` (made from their name, changeable in settings). Their page is laid out in the HMBLBOT Editor at `/people/me/edit` (`users.page_blocks`, nil = `ProfilePage::DEFAULT_BLOCKS`; `EventBlocks::PROFILE_TYPES`: feed, about, groups, people plus heading/notes/photo/gallery).
-- `Follow` (no approval; the followed person gets a notification). `/people` shows what people you follow share.
+- `Follow` (no approval; the followed person gets a notification). `/people` is the home page people land on after signing in (`after_sign_in_path_for`): Notes (yours and what people you follow share) in two thirds, and a third (folded on phones) with next meetings, sobriety birthdays and events from their groups (`PeopleHome`).
 - `Visibility` concern on notes and highlights: `private` (default) / `followers` / `public` (shown as "Members": anyone signed in who can see profiles). New ones take `users.default_highlight_visibility` / `default_note_visibility` from settings. Highlight share links work whatever this says.
 
 ### 🛠 Services

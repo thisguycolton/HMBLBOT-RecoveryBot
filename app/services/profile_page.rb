@@ -56,11 +56,13 @@ class ProfilePage
     }
   end
 
-  # What people the viewer follows have shared lately, newest first (the People page)
+  # The viewer's own notes and highlights and what people they follow shared with
+  # followers or members, newest first (the home page, /people)
   def following_feed(before: nil)
     ids = @viewer.follows_given.select(:followed_id)
-    notes = TimelineNote.where(user_id: ids, visibility: %w[followers public])
-    highlights = UserHighlight.where(user_id: ids, visibility: %w[followers public])
+    shared = %w[followers public]
+    notes = TimelineNote.where(user_id: ids, visibility: shared).or(TimelineNote.where(user_id: @viewer.id))
+    highlights = UserHighlight.where(user_id: ids, visibility: shared).or(UserHighlight.where(user_id: @viewer.id))
     merge(notes, highlights, before: before)
   end
 

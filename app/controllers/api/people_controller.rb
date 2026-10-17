@@ -6,8 +6,8 @@ class Api::PeopleController < ApplicationController
   before_action :require_profiles
   before_action :set_person, except: :index
 
-  # GET /api/people[?q=name] -> people matching q (or nobody), and what the people you
-  # follow have shared lately
+  # GET /api/people[?q=name][&before=ISO8601] -> the home page: people matching q, or your
+  # notes and highlights and those of the people you follow, and what's coming up in your groups
   def index
     q = params[:q].to_s.strip
     matches = if q.length >= 2
@@ -20,6 +20,10 @@ class Api::PeopleController < ApplicationController
       matches: matches,
       following_count: current_user.follows_given.count,
       feed: (ProfilePage.new(current_user).following_feed(before: before_param) unless q.present?),
+      coming_up: (PeopleHome.new(current_user).json if q.blank? && before_param.nil?),
+      note_max: TimelineNote::BODY_MAX, images_max: TimelineNote::IMAGES_MAX,
+      default_note_visibility: current_user.default_note_visibility,
+      groups: current_user.groups.order(:title).map { |g| { slug: g.slug, title: g.title } },
     }
   end
 

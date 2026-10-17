@@ -131,6 +131,32 @@ class Api::PeopleTest < ActionDispatch::IntegrationTest
     assert_not @mo.reload.custom_page?
   end
 
+  test "the home page shows your own notes and what's coming up in your groups" do
+    travel_to Time.zone.local(2026, 10, 17, 9, 0) do
+      @mo.update!(sobriety_date: Date.new(2024, 10, 20), show_sobriety_date: true)
+      @lee.update!(sobriety_date: Date.new(2020, 3, 1), show_sobriety_date: true)
+      @oz.update!(sobriety_date: Date.new(2023, 10, 18), show_sobriety_date: true) # not in their groups
+      @group.meetings.create!(name: "Sunrise", recurrence: "weekly", day_of_week: 1, start_minute: 420, end_minute: 480, time_zone: "America/Phoenix")
+      @group.events.create!(title: "Potluck", status: "published", time_zone: "America/Phoenix", starts_at: 5.days.from_now, created_by: @lee)
+      @group.events.create!(title: "Draft", status: "draft", time_zone: "America/Phoenix", starts_at: 5.days.from_now, created_by: @lee)
+      @lee.timeline_notes.create!(body: "Just mine")
+
+      sign_in @lee
+      get "/api/people", as: :json
+      body = response.parsed_body
+      assert_equal ["Just mine"], body["feed"].map { |i| i["body"] }, "your own notes are in your feed"
+      up = body["coming_up"]
+      assert_equal ["Sunrise"], up["meetings"].map { |m| m["name"] }
+      assert_equal [["mo", 2]], up["birthdays"].map { |b| [b["username"], b["years"]] }
+      assert_equal ["Potluck"], up["events"].map { |e| e["title"] }
+    end
+  end
+
+  test "people land on the home page after signing in" do
+    post "/users/sign_in", params: { user: { email: "mo@example.com", password: "password123" } }
+    assert_redirected_to "/people"
+  end
+
   test "the old timeline goes to your profile" do
     sign_in @mo
     get "/groups/timeline"
