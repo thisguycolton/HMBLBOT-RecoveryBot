@@ -5,7 +5,9 @@ class GroupDocument < ApplicationRecord
   KINDS = %w[format guidelines treasury service outreach other].freeze
   VISIBILITIES = %w[public members keepers].freeze
   STATUSES = %w[draft current archived].freeze
-  BODY_MAX = 100_000
+  # Written in the editor (sanitized HTML), or an older one still in Markdown
+  FORMATS = %w[html markdown].freeze
+  BODY_MAX = 300_000
   FILE_MAX = 20.megabytes
   # What an upload may be, and the type it is served as (only the last two kinds show inline)
   FILE_TYPES = {
@@ -25,6 +27,7 @@ class GroupDocument < ApplicationRecord
   has_one_attached :file
 
   before_validation { self.title = title.to_s.squish }
+  before_validation { self.body = DocumentHtml.sanitize(body) if body_format == "html" && body.present? }
   before_validation(on: :create) { self.position = (group.documents.where(kind: kind).maximum(:position) || 0) + 1 if position.zero? }
 
   validates :title, presence: true, length: { maximum: 160 }
@@ -32,6 +35,7 @@ class GroupDocument < ApplicationRecord
   validates :visibility, inclusion: { in: VISIBILITIES }
   validates :status, inclusion: { in: STATUSES }
   validates :body, length: { maximum: BODY_MAX }
+  validates :body_format, inclusion: { in: FORMATS }
   validate :file_allowed
   validate :approved_by_is_a_passed_decision
 
@@ -49,7 +53,10 @@ class GroupDocument < ApplicationRecord
 
   def self.search(scope, query)
     like = "%#{sanitize_sql_like(query.to_s.strip)}%"
-    scope.where("group_documents.title ILIKE :q OR group_documents.body ILIKE :q", q: like)
+    # the tags of an HTML document aren't what people search for: block ends become spaces,
+    # inline tags (bold, links) vanish so "the <b>word</b>" still reads as one
+    text = "replace(regexp_replace(regexp_replace(group_documents.body, '</(p|h[1-4]|li|tr|td|th|blockquote|pre)>|<br ?/?>', ' ', 'gi'), '<[^>]*>', '', 'g'), '&amp;', '&')"
+    scope.where("group_documents.title ILIKE :q OR #{text} ILIKE :q", q: like)
   end
 
   def self.file_type_for(filename) = FILE_TYPES[File.extname(filename.to_s).delete(".").downcase]
@@ -64,13 +71,13 @@ class GroupDocument < ApplicationRecord
     attrs = attrs.to_h.symbolize_keys
     upload = attrs.delete(:file)
     remove = ActiveModel::Type::Boolean.new.cast(attrs.delete(:remove_file)) && upload.blank? && file.attached?
-    before = { title: title_in_database, body: body_in_database, user_id: updated_by_id || created_by_id,
+    before = { title: title_in_database, body: body_in_database, body_format: body_format_in_database, user_id: updated_by_id || created_by_id,
                at: updated_at || Time.current, blob: (file.blob if file.attached?) }
 
     assign_attributes(attrs)
     self.updated_by = user
     self.file = upload if upload.present?
-    return save if new_record? || !(title_changed? || body_changed? || upload.present? || remove)
+    return save if new_record? || !(title_changed? || body_changed? || body_format_changed? || upload.present? || remove)
 
     saved = false
     transaction do
@@ -78,7 +85,7 @@ class GroupDocument < ApplicationRecord
       raise ActiveRecord::Rollback unless saved
 
       file.detach if remove
-      version = versions.create!(user_id: before[:user_id], title: before[:title], body: before[:body], created_at: before[:at])
+      version = versions.create!(user_id: before[:user_id], title: before[:title], body: before[:body], body_format: before[:body_format], created_at: before[:at])
       version.file.attach(before[:blob]) if before[:blob]
     end
     saved
@@ -86,7 +93,7 @@ class GroupDocument < ApplicationRecord
 
   # Puts an old copy back as a new save, so nothing is lost
   def restore(version, user)
-    attrs = { title: version.title, body: version.body }
+    attrs = { title: version.title, body: version.body, body_format: version.body_format }
     if version.file.attached?
       attrs[:file] = version.file.blob unless file.attached? && file.blob == version.file.blob
     elsif file.attached?
@@ -102,7 +109,7 @@ class GroupDocument < ApplicationRecord
       file: file.attached? ? { name: file.filename.to_s, type: served_type, size: file.byte_size, inline: inline? } : nil,
       excerpt: excerpt,
     }
-    json.merge!(body: body.to_s, created_at: created_at.iso8601, created_by: created_by&.display_name, approved_by: approved_by_json(viewer)) if full
+    json.merge!(body: body.to_s, body_format: body_format, created_at: created_at.iso8601, created_by: created_by&.display_name, approved_by: approved_by_json(viewer)) if full
     json
   end
 
@@ -124,6 +131,8 @@ class GroupDocument < ApplicationRecord
 
   # The start of the text as one plain line (table dividers and Markdown marks left out)
   def excerpt
+    return DocumentHtml.text(body).first(160) if body_format == "html"
+
     body.to_s.lines.reject { |l| l.match?(/\A\s*\|?[\s:|-]+\|?\s*\z/) }.join(" ").delete("#>*_`[]").tr("|", " ").squish.first(160)
   end
 

@@ -82,7 +82,7 @@ class Api::GroupDocumentsController < ApplicationController
   end
 
   def document_params
-    attrs = params.require(:document).permit(:title, :kind, :body, :visibility, :status, :pinned, :file, :remove_file, :approved_by_motion_id)
+    attrs = params.require(:document).permit(:title, :kind, :body, :body_format, :visibility, :status, :pinned, :file, :remove_file, :approved_by_motion_id)
     # A new upload with no title takes its file's name
     if attrs[:title].blank? && attrs[:file].respond_to?(:original_filename) && @document&.title.blank?
       attrs[:title] = File.basename(attrs[:file].original_filename, ".*").tr("_-", " ")

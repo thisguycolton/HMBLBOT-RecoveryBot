@@ -233,7 +233,7 @@ permission table above (`test/controllers`), and screenshots in
    Lets a group show its format and guidelines on its public page.
 4. **Tab name.** Default: "Group conscience". Alternative: "Business".
 5. **Who sees it?** Default: same gating as Groups (site admins unless `GROUPS_FOR_EVERYONE=1`).
-6. **Documents: Markdown or the book editor (Tiptap)?** Default: Markdown, matching notes
+6. **Documents: Markdown or the book editor (Tiptap)?** Decided: Tiptap (see "As built: documents as pages"). The original default was Markdown, matching notes
    and event blocks, with GFM tables for treasurer's reports. Tiptap is heavier but would
    give a Word-like toolbar; say if the people writing minutes would rather have that.
 7. **Uploads as-is?** Default: yes, files stay files (PDF/DOCX/XLSX shown or downloaded);
@@ -285,3 +285,34 @@ What differs from the plan above:
   for members, and a select on phones.
 - Search is `GET /api/groups/:slug/motions?q=`; the standing/failed/tabled and kind filters
   run in the browser over what the viewer may see.
+
+## As built: documents as pages (Tiptap)
+
+Open question 6 was answered with Tiptap, so documents are now written like a word processor's page.
+
+- **The page**: a document at `/conscience/documents/:id` is a white page on a grey desk
+  (`DocumentPage.jsx`). Record keepers type straight into it, with a ribbon above (undo, text
+  style, bold/italic/underline/strike, alignment, lists, quote, divider, link, tables, import).
+  Everyone else reads the same page without the ribbon. Ctrl/⌘+S or Save keeps it (one
+  version per save). `/documents/new` is a blank page; `/documents/:id/edit` is the same page.
+  Folder, who can see it, status, pin, adopted-by and the attached file are under Details.
+- **Top bar**: Share link (copies the address, says who can open it, and lets record keepers
+  change that on the spot; it isn't a new version) and Save as PDF (the browser's print, with a
+  print stylesheet that shows only the page at Letter size and 0.75in margins). A document that
+  is only a PDF shows Download PDF instead.
+- **Storage**: `body_format` is `html` (Tiptap's output, run through `DocumentHtml.sanitize`
+  on every save: only the editor's tags, `href` with http/https/mailto/relative, `colspan`,
+  `rowspan` and `text-align`) or `markdown` (documents from before). A Markdown document is
+  converted to HTML in the browser when it is opened, and saves as HTML; versions keep the
+  format they were written in. Search ignores tags (`GroupDocument.search`).
+- **Import**: in the browser. `.docx` goes through mammoth (headings, bold/italic/underline,
+  lists, tables, links; Word's paragraph alignment and pictures aren't kept). `.rtf` goes
+  through `lib/rtf.js` (headings from style names, inline styles, alignment, lists, tables,
+  Unicode and Windows-1252 accents). Old `.doc` asks for a `.docx`. In the documents list,
+  Import makes an editable document (dropping a .docx/.rtf does the same); Upload keeps a file
+  as it is.
+- **PDFs** are read in the page with pdf.js (`PdfViewer.jsx`): pages are drawn as they scroll
+  into view, with zoom, a page count and a text layer for selecting and copying. Pictures show
+  inline; Word and Excel uploads download.
+- Not done: pictures inside a document, comments, real server-side PDF files (Save as PDF is
+  the browser's print dialog), live multi-person editing.

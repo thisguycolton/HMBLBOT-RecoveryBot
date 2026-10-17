@@ -51,7 +51,7 @@ export const countLabel = (m) => {
 export const decisionsPath = (slug, open) => `/${slug}/conscience/decisions${open ? `?open=${open}` : ""}`;
 
 export const NAMES_REMINDER = "First names and last initials only.";
-export const FILE_ACCEPT = ".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp,.gif";
+export const FILE_ACCEPT = ".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp,.gif"; // what may be kept as a file
 
 export const documentsPath = (slug, rest = "") => `/${slug}/conscience${rest ? `/documents/${rest}` : ""}`;
 export const fileUrl = (slug, id, params = "") => `/api/groups/${slug}/documents/${id}/file${params}`;

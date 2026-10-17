@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_17_030000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_17_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -253,6 +253,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_030000) do
     t.text "body"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "body_format", default: "html", null: false
     t.index ["group_document_id"], name: "index_group_document_versions_on_group_document_id"
     t.index ["user_id"], name: "index_group_document_versions_on_user_id"
   end
@@ -271,6 +272,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_030000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "approved_by_motion_id"
+    t.string "body_format", default: "html", null: false
     t.index ["approved_by_motion_id"], name: "index_group_documents_on_approved_by_motion_id"
     t.index ["created_by_id"], name: "index_group_documents_on_created_by_id"
     t.index ["group_id", "kind", "position"], name: "index_group_documents_on_group_id_and_kind_and_position"

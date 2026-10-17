@@ -12,6 +12,7 @@ import "../styles/tailwind.css";
 import "../styles/reader.css";
 import "../styles/events.css";
 import "../styles/writebook.css";
+import "../styles/documents.css";
 
 import Navbar from "../components/Navbar";
 import GroupsIndex from "../components/groups/GroupsIndex";

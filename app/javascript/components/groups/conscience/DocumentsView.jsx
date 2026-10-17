@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { ChevronLeft, FileText, Globe, Lock, Pin, Plus, Search, Upload } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ChevronLeft, FileDown, FileText, Globe, Lock, Pin, Plus, Search, Upload } from "lucide-react";
 import { inputClass } from "../../ui/styles";
+import { IMPORT_ACCEPT, importDocument, isImportable } from "../../../lib/documentImport";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton } from "../ui";
 import { FILE_ACCEPT, KINDS, KIND_INFO, VISIBILITY_LABELS, dateLabel, documentsPath } from "./lib";
@@ -40,6 +41,7 @@ function DocRow({ slug, doc, showKind }) {
 // onto the page to upload it into the open folder.
 export default function DocumentsView({ group }) {
   const slug = group.slug;
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const folder = KIND_INFO[params.get("folder")] ? params.get("folder") : null;
   const [query, setQuery] = useState("");
@@ -48,6 +50,8 @@ export default function DocumentsView({ group }) {
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef(null);
+  const importRef = useRef(null);
+  const [notice, setNotice] = useState(null);
 
   const load = useCallback(() => {
     const q = query.trim();
@@ -59,19 +63,34 @@ export default function DocumentsView({ group }) {
   }, [load, query]);
 
   const canEdit = data?.can_edit;
+  // Word and RTF files become documents to edit; everything else (PDFs...) is kept as a file
   const upload = async (files) => {
     setBusy(true);
     setError(null);
+    setNotice(null);
+    const made = [];
+    const notes = [];
     try {
       for (const file of files) {
         const form = new FormData();
-        form.append("document[file]", file);
         form.append("document[kind]", folder || "other");
-        await api(`/groups/${slug}/documents`, { method: "POST", form });
+        if (isImportable(file)) {
+          const { title, html, notes: n } = await importDocument(file);
+          form.append("document[title]", title);
+          form.append("document[body]", html);
+          form.append("document[body_format]", "html");
+          notes.push(...n);
+        } else {
+          form.append("document[file]", file);
+        }
+        made.push(await api(`/groups/${slug}/documents`, { method: "POST", form }));
       }
+      if (made.length === 1 && isImportable(files[0])) { navigate(documentsPath(slug, made[0].id)); return; }
+      setNotice(`${made.length === 1 ? "Added 1 document" : `Added ${made.length} documents`}.${notes.length ? ` ${[...new Set(notes)].join(" ")}` : ""}`);
       await load();
     } catch (e) {
-      setError(e.message);
+      setError(made.length ? `${e.message} (${made.length} of ${files.length} were added.)` : e.message);
+      if (made.length) await load();
     } finally {
       setBusy(false);
     }
@@ -106,15 +125,20 @@ export default function DocumentsView({ group }) {
         </div>
         {canEdit && (
           <>
+            <input ref={importRef} type="file" multiple hidden accept={IMPORT_ACCEPT} onChange={(e) => { upload([...e.target.files]); e.target.value = ""; }} />
             <input ref={fileRef} type="file" multiple hidden accept={FILE_ACCEPT} onChange={(e) => { upload([...e.target.files]); e.target.value = ""; }} />
-            <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1.5 rounded-xl !bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:!bg-neutral-50 disabled:opacity-50 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
-              <Upload className="size-4" /> {busy ? "Uploading…" : "Upload a file"}
+            <button type="button" disabled={busy} onClick={() => importRef.current?.click()} title="Turn a Word (.docx) or RTF file into a document you can edit" className="inline-flex items-center gap-1.5 rounded-xl !bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:!bg-neutral-50 disabled:opacity-50 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
+              <FileDown className="size-4" /> {busy ? "Working…" : "Import Word / RTF"}
             </button>
-            <Link to={`${documentsPath(slug, "new")}${folder ? `?kind=${folder}` : ""}`} className={primaryButton}><Plus className="size-4" /> Write a document</Link>
+            <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} title="Keep a PDF, Excel file or picture as it is" className="inline-flex items-center gap-1.5 rounded-xl !bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:!bg-neutral-50 disabled:opacity-50 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
+              <Upload className="size-4" /> Upload a file
+            </button>
+            <Link to={`${documentsPath(slug, "new")}${folder ? `?kind=${folder}` : ""}`} className={primaryButton}><Plus className="size-4" /> New document</Link>
           </>
         )}
       </div>
       <ErrorNote error={error} />
+      {notice && <p role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{notice}</p>}
 
       {searching ? (
         <Tray label={`${docs.length} ${docs.length === 1 ? "document" : "documents"}`}>
@@ -144,7 +168,7 @@ export default function DocumentsView({ group }) {
           {docs.length === 0 && (
             <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">
               {canEdit
-                ? "No documents yet. Start with your meeting format or your group's guidelines: write one here, or drop a PDF or Word file on this page. Everything starts for Members only."
+                ? "No documents yet. Start with your meeting format or your group's guidelines: write one here, import a Word or RTF file, or upload a PDF. You can drop files on this page. Everything starts for Members only."
                 : "The group hasn't shared any documents yet."}
             </Card>
           )}

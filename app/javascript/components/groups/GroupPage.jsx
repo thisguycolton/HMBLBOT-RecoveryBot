@@ -93,7 +93,7 @@ export default function GroupPage({ tab: fixedTab }) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <Link to={back || (hasGroups ? "/" : "/meetings")} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">
+      <Link to={back || (hasGroups ? "/" : "/meetings")} className="group-chrome text-sm text-slate-500 hover:text-accent dark:text-neutral-400">
         {back || !hasGroups ? "← Find a meeting" : "← Groups"}
       </Link>
       <GroupHero
@@ -133,7 +133,7 @@ export default function GroupPage({ tab: fixedTab }) {
       <ErrorNote error={actionError} />
 
       {tabs.length > 1 && (
-        <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-neutral-200 px-4 dark:border-neutral-800" aria-label="Group sections">
+        <nav className="group-chrome -mx-4 flex gap-1 overflow-x-auto border-b border-neutral-200 px-4 dark:border-neutral-800" aria-label="Group sections">
           {tabs.map(({ key, label, icon: Icon }) => (
             <NavLink
               key={key}

@@ -201,4 +201,24 @@ class Api::GroupDocumentsTest < ActionDispatch::IntegrationTest
     get "/api/groups/#{@group.slug}/page", as: :json
     assert_equal true, response.parsed_body.dig("context", "viewer", "can_keep_records")
   end
+
+  test "the editor saves HTML, which is cleaned, and the document says what format it is in" do
+    sign_in @keeper
+    html = %(<h2>Format</h2><p>Hello <strong>all</strong><script>alert(1)</script></p>)
+    patch path(@members.id), params: { document: { body: html, body_format: "html" } }, as: :json
+    assert_response :success
+    assert_equal "html", response.parsed_body["body_format"]
+    assert_equal "<h2>Format</h2><p>Hello <strong>all</strong></p>", response.parsed_body["body"]
+    assert_equal ["Be kind", "html"], @members.versions.first.then { |v| [v.body, v.body_format] }
+
+    sign_in @member
+    get path(@members.id, "versions"), as: :json
+    assert_equal ["html"], response.parsed_body["versions"].map { |v| v["body_format"] }
+  end
+
+  test "a document written as HTML shows visitors cleaned HTML only" do
+    doc = @group.documents.create!(title: "Public format", kind: "format", visibility: "public", body: %(<p onclick="x()">Hi</p><script>1</script>))
+    get path(doc.id), as: :json
+    assert_equal "<p>Hi</p>", response.parsed_body["body"]
+  end
 end
