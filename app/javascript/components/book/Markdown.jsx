@@ -3,7 +3,7 @@ import React from "react";
 // A small Markdown renderer for highlight notes. It builds React elements
 // directly (no HTML strings), so a note can never inject markup or scripts.
 // Supports: paragraphs, line breaks, # headings, > quotes, - / 1. lists,
-// ``` code blocks, **bold**, *italic*, `code`, ~~strike~~ and [links](https://…).
+// | tables |, ``` code blocks, **bold**, *italic*, `code`, ~~strike~~ and [links](https://…).
 
 const SAFE_URL = /^(https?:\/\/|mailto:|\/(?!\/))/i;
 
@@ -34,6 +34,11 @@ function inline(text, keyBase = "i") {
 function withBreaks(lines, key) {
   return lines.flatMap((l, i) => (i ? [<br key={`${key}-br${i}`} />, ...inline(l, `${key}-${i}`)] : inline(l, `${key}-${i}`)));
 }
+
+// | a | b | rows with a |---|:---:| divider under the header
+const TABLE_DIVIDER = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+const cells = (line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+const isTableStart = (lines, i) => lines[i].includes("|") && i + 1 < lines.length && lines[i + 1].includes("-") && TABLE_DIVIDER.test(lines[i + 1]);
 
 function blocks(src, keyBase = "b") {
   const lines = src.replace(/\r\n?/g, "\n").split("\n");
@@ -70,6 +75,24 @@ function blocks(src, keyBase = "b") {
       continue;
     }
 
+    if (isTableStart(lines, i)) {
+      const head = cells(line);
+      const align = cells(lines[i + 1]).map((c) => (/^:-+:$/.test(c) ? "center" : /-:$/.test(c) ? "right" : undefined));
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].trim() && lines[i].includes("|")) rows.push(cells(lines[i++]));
+      const k = key();
+      out.push(
+        <div key={k} className="wb-md__table">
+          <table>
+            <thead><tr>{head.map((c, j) => <th key={j} style={{ textAlign: align[j] }}>{inline(c, `${k}-h${j}`)}</th>)}</tr></thead>
+            <tbody>{rows.map((r, ri) => <tr key={ri}>{head.map((_, j) => <td key={j} style={{ textAlign: align[j] }}>{inline(r[j] || "", `${k}-${ri}-${j}`)}</td>)}</tr>)}</tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
     const listRe = /^\s*([-*+]|\d+[.)])\s+(.*)$/;
     if (listRe.test(line)) {
       const ordered = /^\s*\d/.test(line);
@@ -85,7 +108,7 @@ function blocks(src, keyBase = "b") {
     }
 
     const para = [];
-    while (i < lines.length && lines[i].trim() && !/^(```|#{1,3}\s|>|\s*([-*+]|\d+[.)])\s)/.test(lines[i])) para.push(lines[i++]);
+    while (i < lines.length && lines[i].trim() && !/^(```|#{1,3}\s|>|\s*([-*+]|\d+[.)])\s)/.test(lines[i]) && !isTableStart(lines, i)) para.push(lines[i++]);
     if (!para.length) para.push(lines[i++]);
     const k = key();
     out.push(<p key={k}>{withBreaks(para, k)}</p>);

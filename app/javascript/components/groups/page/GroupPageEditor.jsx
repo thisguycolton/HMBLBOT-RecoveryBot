@@ -5,7 +5,9 @@ import { showToast } from "../../../lib/toast";
 import EditorFrame from "../../events/editor/EditorFrame";
 import BlockInspector, { Choice, Field } from "../../events/editor/Inspector";
 import { LayoutPanel, PanelTitle } from "../../events/editor/Panels";
-import { inputClass } from "../../ui/styles";
+import { inputClass, selectClass } from "../../ui/styles";
+import Toggle from "../../ui/Toggle";
+import { KINDS } from "../conscience/lib";
 import { api } from "../lib";
 import GroupHero from "./GroupHero";
 import { GROUP_BLOCK_GROUPS, GROUP_BLOCK_INFO, newGroupBlock } from "./lib";
@@ -18,7 +20,7 @@ const PANELS = [
 const formFrom = (p) => ({ layout: p.layout, blocks: p.blocks || [] });
 const LIMITS = { events: [[1, "1"], [3, "3"], [6, "6"], [12, "12"]], timeline: [[5, "5"], [10, "10"], [20, "20"]], readings: [[3, "3"], [5, "5"], [10, "10"]] };
 // The group's own blocks; the rest are the event page's, with their own fields
-const GROUP_OWN = ["meetings", "events", "timeline", "literature", "readings", "members", "join"];
+const GROUP_OWN = ["meetings", "events", "timeline", "literature", "readings", "documents", "members", "join"];
 const GROUP_HINT = "{{group}} is the group's name.";
 
 // The HMBLBOT Editor for a group's page (/groups/:slug/page/edit, its admins) or, with
@@ -169,6 +171,17 @@ export default function GroupPageEditor({ template = false }) {
       <>
         <Field label="Title" hint={GROUP_HINT}><input className={inputClass} value={block.title || ""} onChange={(e) => set("title")(e.target.value)} maxLength={120} /></Field>
         {LIMITS[block.type] && <Field label="How many"><Choice value={block.limit} onChange={set("limit")} options={LIMITS[block.type]} /></Field>}
+        {block.type === "documents" && (
+          <>
+            <Field label="Folder"><select className={selectClass} value={block.kind || "all"} onChange={(e) => set("kind")(e.target.value)}>
+              <option value="all">All folders</option>
+              {KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}
+            </select></Field>
+            <Field label="How many"><Choice value={block.limit} onChange={set("limit")} options={[[3, "3"], [5, "5"], [10, "10"], [20, "20"]]} /></Field>
+            <Toggle checked={!!block.pinned_only} onChange={set("pinned_only")} label="Pinned documents only" />
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Shows the documents each person may see: visitors only see ones marked Public, members also see Members ones. The block hides itself for anyone with nothing to see.</p>
+          </>
+        )}
         {block.type === "join" && (
           <Field label="Text" hint={`Markdown. ${GROUP_HINT} The button under it fits whoever's looking: ask to join, waiting, or already in.`}>
             <textarea className={`${inputClass} min-h-28 font-mono !text-xs`} value={block.markdown || ""} onChange={(e) => set("markdown")(e.target.value)} maxLength={2000} />

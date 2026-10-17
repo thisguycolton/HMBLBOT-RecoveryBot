@@ -53,6 +53,7 @@ const router = createBrowserRouter(
         { path: "find/:oiaaSlug", element: <IntergroupPage /> },
         { path: "default-page", element: <IntergroupPage template /> },
         { path: ":slug", element: <GroupPage /> },
+        { path: ":slug/conscience/*", element: <GroupPage tab="conscience" /> },
         { path: ":slug/:tab", element: <GroupPage /> },
         { path: ":slug/edit", element: <GroupForm /> },
       ],

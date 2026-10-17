@@ -9,6 +9,7 @@
 class GroupPage
   TIMELINE_MAX = 20
   MEMBERS_MAX = 48
+  DOCUMENTS_MAX = 60
 
   def initialize(viewer)
     @viewer = viewer
@@ -30,12 +31,13 @@ class GroupPage
         group: { slug: group.slug, title: group.title, description: group.description, website: group.website,
                  time_zone: group.time_zone, status: group.status, members_count: group.members.count },
         viewer: viewer_json.merge(is_member: !!membership&.active?, membership_status: membership&.status, role: membership&.role,
-                                  can_manage: group.manageable_by?(@viewer), default_note_visibility: @viewer&.default_note_visibility),
+                                  can_manage: group.manageable_by?(@viewer), can_keep_records: group.records_editable_by?(@viewer), default_note_visibility: @viewer&.default_note_visibility),
         meetings: group.meetings.ordered.map(&:as_api_json).reject { |m| m[:past] },
         events: group.events.published.with_attached_cover.where("starts_at IS NULL OR starts_at > ?", 12.hours.ago)
                      .upcoming_first.limit(20).map(&:card_json),
         literature: literature(group),
         readings: member ? readings(group) : nil,
+        documents: documents(group),
         members: member ? members(group) : nil,
         timeline: member ? group.shared_notes.limit(TIMELINE_MAX).map { |n| n.as_api_json(viewer: @viewer, group: group) } : nil,
       }
@@ -58,7 +60,7 @@ class GroupPage
         oiaa_slug: slug,
         viewer: viewer_json,
         meetings: listings.map { |r| listing_json(r) },
-        events: [], literature: [], readings: nil, members: nil, timeline: nil,
+        events: [], literature: [], readings: nil, documents: [], members: nil, timeline: nil,
       }
     )
   end
@@ -84,7 +86,7 @@ class GroupPage
           { id: "sample-1", name: "Sunrise Group", schedule_label: "Mondays, Wednesdays, Fridays, 7:00 AM MST", types: %w[O D], conference_url: "https://zoom.us/" },
           { id: "sample-2", name: "Sunrise Big Book Study", schedule_label: "Saturdays, 9:00 AM MST", types: %w[C B], conference_url: "https://zoom.us/" },
         ],
-        events: [], literature: [], readings: nil, members: nil, timeline: nil,
+        events: [], literature: [], readings: nil, documents: [], members: nil, timeline: nil,
       }
     )
   end
@@ -104,6 +106,12 @@ class GroupPage
     group.group_books.includes(book: { cover_image_attachment: :blob }).order(:created_at).map do |gb|
       { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color } }
     end
+  end
+
+  # Documents this viewer may see (Public ones for visitors); each block filters them again
+  def documents(group)
+    GroupDocument.visible_to(group, @viewer).with_attached_file.ordered.limit(DOCUMENTS_MAX)
+                 .map { |d| d.as_api_json.slice(:id, :title, :kind, :pinned, :excerpt, :updated_at, :file) }
   end
 
   def readings(group)
