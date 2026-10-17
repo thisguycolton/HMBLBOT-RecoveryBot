@@ -349,20 +349,50 @@ reminders, and the treasurer's monthly report as numbers. Differences from the p
 - **Printing**: meetings and reports print as a clean sheet through the browser's print
   (Save as PDF), like documents.
 
-### Not built: online voting
+### Online voting: decided, won't be built
 
-The plan's open question 1 answered "no" by default, and I kept to that. It is a decision for
-the group, not the code, so these need answers first:
+The group votes in the room, so the app is only a record of it. There will be no online voting,
+and nothing below needs answering. (These were the open questions: who may vote, secret or
+open ballots, how long a vote stays open and what carries it, and whether an online result
+replaces the vote in the room.)
 
-1. Who may vote on a motion online: every active member, or only members past some
-   sobriety or membership time (a group's own rules often say)?
-2. Secret or open ballots? An open record fits "as counted in the room"; a secret one needs
-   the app to keep who voted apart from how.
-3. How long does a vote stay open, what is the quorum, and what majority passes it
-   (a simple majority, two thirds, or "substantial unanimity")?
-4. Does an online result replace a vote in the room or only count towards it, and may a
-   member change their vote before it closes?
-5. Does it need the Concept V minority opinion to be heard before a re-vote (a hold on the
-   result for N days)?
+## As built: Robert's Rules
 
-Until then a secretary records the count as it stood, as now (`motions.votes_for` and the rest).
+The group uses all of Robert's Rules (the handout it follows is a short summary of them) and
+the app records what happens in the room. It never blocks a record; it says where one doesn't
+follow the rules.
+
+- **Every kind of motion**: main, amend, postpone indefinitely, commit/refer, postpone to a
+  certain time, limit/extend debate, previous question, lay on the table, fix the time to
+  adjourn, adjourn, recess, question of privilege, orders of the day, point of order, appeal,
+  suspend the rules, objection to consideration, divide the question, division of the
+  assembly, parliamentary inquiry, withdraw a motion, take from the table, rescind or amend
+  something adopted, reconsider, discharge a committee (`MotionKinds`). Each carries what the rules say:
+  second, debatable, amendable, the vote that carries it, its rank, and what it does to the
+  motion it applies to. "Robert's Rules at a glance" on the Meetings page shows the table.
+- **Recorded per motion**: who moved and seconded it, how it was voted (voice, standing,
+  show of hands, ballot, roll call, general consent), the count, the vote the rules (or your
+  bylaws, set on the motion) ask for, previous notice for a rescind, the committee it went
+  to, what it was postponed to, the motion as amended, and a note (a chair's ruling).
+- **Warnings** (record keepers only): no second recorded; a count that doesn't carry it
+  (a majority is more than half of the votes cast, a tie is lost, abstentions don't count;
+  two thirds; appeals: a tie sustains the chair); a two-thirds vote taken by voice; a motion
+  that ranks below the one pending (out of order); a motion that applies to nothing; business
+  done without a quorum. They show as you type and on the record, and the record still saves.
+- **Effects**: a passed "lay on the table", "refer", "postpone", "postpone indefinitely",
+  "take from the table", "reconsider" or "amend" changes the motion it applies to (and
+  carries its agenda item forward or crosses it off). Editing or deleting the later motion
+  doesn't undo that; change the motion itself.
+- **Decisions vs procedure**: only main motions and rescinds are decisions (the log, the
+  Overview, the page block, "standing"). Everything else is under "Procedure" and inside the
+  motion it applies to. A meeting lists its motions in the order they were made, with the ones
+  made on a motion under it.
+- **Unfinished business**: tabled, referred and postponed motions are offered on the next
+  meeting's agenda ("Put on the agenda"), then stay off the list.
+- **Quorum**: set from the bylaws as a number of people or a share of the members (group
+  admins, on the Meetings page). A meeting with fewer people is flagged, and so are motions made
+  without one (except to adjourn, recess, fix a time or a question of privilege).
+- **Meetings** also keep the time called to order and adjourned; the minutes skeleton and the
+  print sheet say who moved, seconded and how each motion came out.
+- Not modelled: debate (who spoke, in what order), the chair's recognition, and the precedence
+  stack as it happens; the chair runs those in the room.

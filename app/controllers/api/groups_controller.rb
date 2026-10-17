@@ -189,7 +189,8 @@ class Api::GroupsController < ApplicationController
   end
 
   def group_params
-    params.require(:group).permit(:title, :description, :website, :time_zone, :court_email_subject, :court_email_body, :court_email_reply_to)
+    params.require(:group).permit(:title, :description, :website, :time_zone, :court_email_subject, :court_email_body, :court_email_reply_to,
+                                  :quorum_count, :quorum_percent)
   end
 
   def group_card(group, membership)
@@ -230,6 +231,7 @@ class Api::GroupsController < ApplicationController
       json[:invite_url] = "#{request.base_url}/groups/join/#{@group.join_token}"
       json[:court_form_url] = "#{request.base_url}/court_verifications/new?group=#{@group.slug}"
       json[:court_email] = @group.court_email_json
+      json[:quorum] = { count: @group.quorum_count, percent: @group.quorum_percent, needed: @group.quorum_needed }
     end
     json
   end

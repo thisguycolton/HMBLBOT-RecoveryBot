@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Check, ChevronDown, ChevronLeft, ChevronUp, ExternalLink, GripVertical, Pencil, Plus, Printer, Save, Scale, Trash2, Vote, X } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronUp, ExternalLink, GripVertical, Pencil, Plus, Printer, Save, Scale, Trash2, Vote, X } from "lucide-react";
 import { inputClass, selectClass } from "../../ui/styles";
 import usePrintable, { printTitled } from "../../../lib/usePrintable";
 import { api } from "../lib";
@@ -9,23 +9,69 @@ import { AgendaList, ItemPill, SuggestForm } from "./AgendaParts";
 import DecisionForm from "./DecisionForm";
 import MeetingForm from "./MeetingForm";
 import MinutesEditor from "./MinutesEditor";
-import { AGENDA_KINDS, AGENDA_KIND_LABELS, MINUTES_STATUSES, MOTION_STATUS_LABELS, countLabel, dateLabel, decisionsPath, longDate, meetingsPath } from "./lib";
+import { AGENDA_KINDS, AGENDA_KIND_LABELS, MINUTES_STATUSES, MOTION_STATUS_LABELS, STATUS_TONES, VOTE_METHOD_SHORT, countLabel, dateLabel, decisionsPath, longDate, meetingsPath } from "./lib";
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-// The skeleton of the minutes, from what the meeting had on its agenda and decided
+// How a motion reads in the minutes: what was moved, by whom, and how it came out
+const clock12 = (hhmm) => { const [h, m] = hhmm.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+export function motionLine(m) {
+  const who = [m.moved_by && `moved by ${m.moved_by}`, m.seconded_by && `seconded by ${m.seconded_by}`].filter(Boolean).join(", ");
+  const how = [m.vote_method && VOTE_METHOD_SHORT[m.vote_method], countLabel(m)].filter(Boolean).join(", ");
+  const result = { passed: "Carried", failed: "Lost", tabled: "Tabled", referred: `Referred${m.committee ? ` to ${m.committee}` : ""}`, postponed: `Postponed${m.postponed_to ? ` to ${m.postponed_to}` : ""}`,
+    postponed_indefinitely: "Postponed indefinitely", withdrawn: "Withdrawn", no_second: "No second", out_of_order: "Ruled out of order", proposed: "Pending" }[m.status];
+  return `${m.kind === "main" ? "" : `${m.kind_label}: `}${m.title}${who ? ` (${who})` : ""}. ${result}${how ? ` (${how})` : ""}.`;
+}
+
+// The skeleton of the minutes, from the meeting's times, agenda and motions
 function minutesFromAgenda(meeting, group) {
   const who = [meeting.chair && `chaired by ${meeting.chair}`, meeting.secretary && `minutes by ${meeting.secretary}`, meeting.attendance_count != null && `${meeting.attendance_count} present`].filter(Boolean).join(", ");
+  const quorum = meeting.quorum_needed ? (meeting.quorum_met === false ? ` No quorum (${meeting.quorum_needed} needed).` : meeting.quorum_met ? ` A quorum was present (${meeting.quorum_needed} needed).` : "") : "";
   const items = meeting.agenda.filter((i) => i.status !== "suggested");
-  const parts = [`<h2>Call to order</h2><p>${esc(group.title)} business meeting, ${esc(longDate(meeting.held_on))}${who ? ` (${esc(who)})` : ""}.</p>`];
+  const asLine = (m) => `<p>${esc(motionLine(m))}</p>${meeting.motions.filter((c) => c.parent_id === m.id).map((c) => `<p>&nbsp;&nbsp;${esc(motionLine(c))}</p>`).join("")}`;
+  const top = (m) => !m.parent_id || !meeting.motions.some((p) => p.id === m.parent_id);
+  const parts = [`<h2>Call to order</h2><p>${esc(group.title)} business meeting, ${esc(longDate(meeting.held_on))}${meeting.called_to_order_time ? `, called to order at ${esc(clock12(meeting.called_to_order_time))}` : ""}${who ? ` (${esc(who)})` : ""}.${esc(quorum)}</p>`];
   items.forEach((item) => {
     parts.push(`<h3>${esc(item.title)}</h3>`);
-    const decided = meeting.motions.filter((m) => m.agenda_item_id === item.id);
-    if (decided.length === 0) parts.push("<p></p>");
-    decided.forEach((m) => parts.push(`<p><strong>${esc(MOTION_STATUS_LABELS[m.status])}:</strong> ${esc(m.title)}${countLabel(m) ? ` (${esc(countLabel(m))})` : ""}.</p>`));
+    const at = meeting.motions.filter((m) => m.agenda_item_id === item.id && top(m));
+    if (at.length === 0) parts.push("<p></p>");
+    at.forEach((m) => parts.push(asLine(m)));
   });
-  parts.push("<h2>Closing</h2><p>Next business meeting: </p>");
+  const loose = meeting.motions.filter((m) => !m.agenda_item_id && top(m));
+  if (loose.length) { parts.push("<h3>Other motions</h3>"); loose.forEach((m) => parts.push(asLine(m))); }
+  parts.push(`<h2>Adjournment</h2><p>${meeting.adjourned_time ? `Adjourned at ${esc(clock12(meeting.adjourned_time))}. ` : ""}Next business meeting: </p>`);
   return parts.join("");
+}
+
+// A meeting's motions in the order they were made, each with the motions made on it under it
+function MotionTree({ slug, motions, canEdit, onEdit, onAbout }) {
+  const here = new Set(motions.map((m) => m.id));
+  const kids = (id) => motions.filter((m) => m.parent_id === id);
+  const node = (m, depth = 0) => (
+    <li key={m.id} className={depth ? "ml-5 border-l-2 border-neutral-200 pl-3 dark:border-neutral-700" : ""}>
+      <div className="rounded-xl bg-white p-3 shadow-panel dark:bg-neutral-900">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Scale className="size-4 shrink-0 text-accent" aria-hidden="true" />
+          <Link to={decisionsPath(slug, m.id)} className="font-medium text-slate-900 hover:text-accent dark:text-white">{m.title}</Link>
+          {m.kind !== "main" && <Pill>{m.kind_label}</Pill>}
+          <Pill tone={STATUS_TONES[m.status]}>{MOTION_STATUS_LABELS[m.status]}</Pill>
+          {m.warnings?.length > 0 && <AlertTriangle className="size-4 text-amber-600" aria-label="Doesn't follow the rules" />}
+        </div>
+        <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">
+          {[m.moved_by && `Moved by ${m.moved_by}`, m.seconded_by && `seconded by ${m.seconded_by}`, m.vote_method && VOTE_METHOD_SHORT[m.vote_method], countLabel(m), m.committee && `to ${m.committee}`, m.postponed_to && `until ${m.postponed_to}`].filter(Boolean).join(" · ")}
+        </p>
+        {m.warnings?.length > 0 && <ul className="mt-1 space-y-0.5 text-xs text-amber-800 dark:text-amber-200">{m.warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
+        {canEdit && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} onClick={() => onAbout(m)}><Vote className="size-3.5" /> A motion on this</button>
+            <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} onClick={() => onEdit(m)}><Pencil className="size-3.5" /> Change</button>
+          </div>
+        )}
+      </div>
+      {kids(m.id).length > 0 && <ul className="mt-1.5 space-y-1.5">{kids(m.id).map((c) => node(c, depth + 1))}</ul>}
+    </li>
+  );
+  return <ul className="space-y-1.5">{motions.filter((m) => !m.parent_id || !here.has(m.parent_id)).map((m) => node(m))}</ul>;
 }
 
 function AgendaItemRow({ item, index, last, canEdit, slug, meeting, reload, setError, drag, onRecord }) {
@@ -102,8 +148,10 @@ export default function MeetingPage({ group, id }) {
   const [minutesStatus, setMinutesStatus] = useState("draft");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [recording, setRecording] = useState(null);
+  const [recording, setRecording] = useState(null); // { itemId?, preset }
+  const [editingMotion, setEditingMotion] = useState(null);
   const [allMotions, setAllMotions] = useState([]);
+  const [meta, setMeta] = useState({ kinds: [], groups: {} });
   const [regular, setRegular] = useState([]);
   const editorRef = useRef(null);
   const dragId = useRef(null);
@@ -119,7 +167,7 @@ export default function MeetingPage({ group, id }) {
   }, [load]);
   useEffect(() => {
     if (!meeting?.can_edit) return;
-    api(`/groups/${slug}/motions`).then((d) => setAllMotions(d.motions)).catch(() => {});
+    api(`/groups/${slug}/motions`).then((d) => { setAllMotions(d.motions); setMeta({ kinds: d.kinds, groups: d.groups }); }).catch(() => {});
     api(`/groups/${slug}/business_meetings`).then((d) => setRegular(d.regular_meetings)).catch(() => {});
   }, [slug, meeting?.can_edit]);
   useEffect(() => {
@@ -158,9 +206,18 @@ export default function MeetingPage({ group, id }) {
     try { await api(`/groups/${slug}/business_meetings/${id}`, { method: "DELETE" }); navigate(meetingsPath(slug)); } catch (e) { setError(e.message); }
   };
 
+  // Every motion the form can pick from: this meeting's (just loaded) and the group's others
+  const pickable = [...meeting.motions, ...allMotions.filter((m) => !meeting.motions.some((x) => x.id === m.id))];
   const agenda = meeting.agenda;
   const onAgenda = agenda.filter((i) => i.status !== "suggested");
   const suggested = agenda.filter((i) => i.status === "suggested");
+  const carry = async (u) => {
+    setError(null);
+    try {
+      await api(`/groups/${slug}/business_meetings/${id}/agenda_items`, { method: "POST", body: { agenda_item: { title: "", motion_id: u.id, status: "on_agenda" } } });
+      await load();
+    } catch (e) { setError(e.message); }
+  };
   const reorder = async (ids) => {
     try {
       const d = await api(`/groups/${slug}/business_meetings/${id}/agenda_items/reorder`, { method: "POST", body: { ids } });
@@ -210,6 +267,10 @@ export default function MeetingPage({ group, id }) {
                   {meeting.chair && <span>Chair: {meeting.chair}</span>}
                   {meeting.secretary && <span>Secretary: {meeting.secretary}</span>}
                   {meeting.attendance_count != null && <span>{meeting.attendance_count} came</span>}
+                  {meeting.quorum_met === true && <Pill tone="green">Quorum ({meeting.quorum_needed})</Pill>}
+                  {meeting.quorum_met === false && <Pill tone="amber">No quorum ({meeting.quorum_needed} needed)</Pill>}
+                  {meeting.called_to_order_time && <span>Called to order {clock12(meeting.called_to_order_time)}</span>}
+                  {meeting.adjourned_time && <span>Adjourned {clock12(meeting.adjourned_time)}</span>}
                 </p>
                 {eventPath && (
                   <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -236,10 +297,9 @@ export default function MeetingPage({ group, id }) {
                 {onAgenda.length === 0 && <li><Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">{canEdit ? "Nothing on the agenda yet. Add an item below, or approve a suggestion." : "Nothing on the agenda yet. You can suggest an item below."}</Card></li>}
                 {onAgenda.map((item, i) => (
                   <React.Fragment key={item.id}>
-                    <AgendaItemRow item={item} index={i} last={i === onAgenda.length - 1} canEdit={canEdit} slug={slug} meeting={meeting} reload={load} setError={setError} drag={drag} onRecord={setRecording} />
-                    {recording?.id === item.id && (
-                      <li><DecisionForm group={group} motions={allMotions} onCancel={() => setRecording(null)} onSaved={async () => { setRecording(null); await load(); }}
-                        preset={{ title: item.title, text: item.details, decided_on: meeting.held_on, business_meeting_id: meeting.id, agenda_item_id: item.id }} /></li>
+                    <AgendaItemRow item={item} index={i} last={i === onAgenda.length - 1} canEdit={canEdit} slug={slug} meeting={meeting} reload={load} setError={setError} drag={drag} onRecord={(it) => setRecording({ itemId: it.id, preset: { title: it.title, text: it.details, decided_on: meeting.held_on, business_meeting_id: meeting.id, agenda_item_id: it.id } })} />
+                    {recording?.itemId === item.id && (
+                      <li><DecisionForm group={group} motions={pickable} kinds={meta.kinds} groups={meta.groups} onCancel={() => setRecording(null)} onSaved={async () => { setRecording(null); await load(); }} preset={recording.preset} /></li>
                     )}
                   </React.Fragment>
                 ))}
@@ -250,7 +310,7 @@ export default function MeetingPage({ group, id }) {
               <Tray label={canEdit ? `Suggested by members (${suggested.length})` : "Suggestions"}>
                 <ol className="space-y-1.5">
                   {suggested.map((item) => (
-                    <AgendaItemRow key={item.id} item={item} index={0} last canEdit={canEdit} slug={slug} meeting={meeting} reload={load} setError={setError} drag={drag} onRecord={setRecording} />
+                    <AgendaItemRow key={item.id} item={item} index={0} last canEdit={canEdit} slug={slug} meeting={meeting} reload={load} setError={setError} drag={drag} onRecord={() => {}} />
                   ))}
                 </ol>
               </Tray>
@@ -263,21 +323,34 @@ export default function MeetingPage({ group, id }) {
               </Tray>
             )}
 
-            {meeting.motions.length > 0 && (
-              <Tray label="Decided at this meeting">
+            {meeting.unfinished?.length > 0 && (
+              <Tray label={`Unfinished business (${meeting.unfinished.length})`}>
                 <div className="space-y-1.5">
-                  {meeting.motions.map((m) => (
-                    <Link key={m.id} to={decisionsPath(slug, m.id)} className="flex items-start gap-3 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900">
-                      <Scale className="mt-0.5 size-4 shrink-0 text-accent" />
+                  {meeting.unfinished.map((u) => (
+                    <Card key={u.id} className="flex flex-wrap items-center gap-3 p-3">
                       <span className="min-w-0 flex-1">
-                        <span className="block font-medium text-slate-900 dark:text-white">{m.title}</span>
-                        <span className="block text-xs text-slate-500 dark:text-neutral-400">{MOTION_STATUS_LABELS[m.status]}{countLabel(m) ? ` · ${countLabel(m)}` : ""}</span>
+                        <span className="block font-medium text-slate-900 dark:text-white">{u.title}</span>
+                        <span className="block text-xs text-slate-500 dark:text-neutral-400">
+                          {MOTION_STATUS_LABELS[u.status]}{u.meeting_held_on ? ` on ${dateLabel(u.meeting_held_on)}` : u.decided_on ? ` on ${dateLabel(u.decided_on)}` : ""}{u.committee ? ` · committee: ${u.committee}` : ""}{u.postponed_to ? ` · until ${u.postponed_to}` : ""}
+                        </span>
                       </span>
-                    </Link>
+                      <button type="button" className={`${quietButton} !px-2.5 !py-1 !text-xs`} onClick={() => carry(u)}><Plus className="size-3.5" /> Put on the agenda</button>
+                    </Card>
                   ))}
                 </div>
+                <p className="px-2 pb-1 pt-2 text-xs text-slate-500 dark:text-neutral-400">Tabled, put off or sent to a committee at an earlier meeting. A tabled motion comes back with "take from the table".</p>
               </Tray>
             )}
+
+            <Tray label={`Motions (${meeting.motions.length})`} action={canEdit && !recording && !editingMotion && <button type="button" className={`${primaryButton} !px-2.5 !py-1 !text-xs`} onClick={() => setRecording({ preset: { decided_on: meeting.held_on, business_meeting_id: meeting.id } })}><Plus className="size-3.5" /> Record a motion</button>}>
+              <div className="space-y-1.5">
+                {meeting.motions.length === 0 && !recording && <Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">{canEdit ? "No motions recorded. Voting is in the room; record what was moved and how it came out." : "No motions have been recorded."}</Card>}
+                {recording && !recording.itemId && <DecisionForm group={group} motions={pickable} kinds={meta.kinds} groups={meta.groups} preset={recording.preset} onCancel={() => setRecording(null)} onSaved={async () => { setRecording(null); await load(); }} />}
+                {editingMotion && <DecisionForm group={group} motion={editingMotion} motions={allMotions} kinds={meta.kinds} groups={meta.groups} onCancel={() => setEditingMotion(null)} onSaved={async () => { setEditingMotion(null); await load(); }} />}
+                <MotionTree slug={slug} motions={meeting.motions.filter((m) => m.id !== editingMotion?.id)} canEdit={canEdit} onEdit={setEditingMotion}
+                  onAbout={(m) => { setRecording({ preset: { parent_id: m.id, kind: "amend", status: "passed", decided_on: meeting.held_on, business_meeting_id: meeting.id } }); }} />
+              </div>
+            </Tray>
           </div>
 
           <div className="min-w-0 space-y-3">
@@ -309,13 +382,13 @@ export default function MeetingPage({ group, id }) {
       <article className="hidden print:block meeting-print">
         <h1>{group.title} business meeting</h1>
         <p className="meeting-print__meta">{longDate(meeting.held_on)}{meeting.starts_at ? `, ${meeting.when_label.split(" · ")[1]}` : ""}
-          {[meeting.chair && `Chair: ${meeting.chair}`, meeting.secretary && `Secretary: ${meeting.secretary}`, meeting.attendance_count != null && `${meeting.attendance_count} present`].filter(Boolean).map((t) => ` · ${t}`).join("")}</p>
+          {[meeting.chair && `Chair: ${meeting.chair}`, meeting.secretary && `Secretary: ${meeting.secretary}`, meeting.attendance_count != null && `${meeting.attendance_count} present`, meeting.quorum_met === false && "No quorum", meeting.called_to_order_time && `Called to order ${clock12(meeting.called_to_order_time)}`, meeting.adjourned_time && `Adjourned ${clock12(meeting.adjourned_time)}`].filter(Boolean).map((t) => ` · ${t}`).join("")}</p>
         <h2>Agenda</h2>
         <AgendaList items={onAgenda} />
         {meeting.motions.length > 0 && (
           <>
-            <h2>Decisions</h2>
-            <ul>{meeting.motions.map((m) => <li key={m.id}><strong>{MOTION_STATUS_LABELS[m.status]}:</strong> {m.title}{countLabel(m) ? ` (${countLabel(m)})` : ""}{m.text && <div className="meeting-print__wording">{m.text}</div>}</li>)}</ul>
+            <h2>Motions</h2>
+            <ul>{meeting.motions.map((m) => <li key={m.id} style={m.parent_id ? { marginLeft: "1.2em" } : undefined}>{motionLine(m)}{(m.amended_text || m.text) && <div className="meeting-print__wording">{m.amended_text || m.text}</div>}</li>)}</ul>
           </>
         )}
         {minutesVisible && (minutes || meeting.minutes)?.trim() && (

@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CalendarPlus, FileCheck2 } from "lucide-react";
 import { api } from "../lib";
-import { Card, ErrorNote, Loading, Pill, Tray, primaryButton } from "../ui";
+import { Card, ErrorNote, Loading, Pill, Tray, primaryButton, quietButton } from "../ui";
 import MeetingForm from "./MeetingForm";
+import RulesTable from "./RulesTable";
+import { inputClass, selectClass } from "../../ui/styles";
 import { dateLabel, longDate, meetingsPath } from "./lib";
 
 function Row({ slug, m, keeper }) {
@@ -21,6 +23,44 @@ function Row({ slug, m, keeper }) {
       {m.visibility === "keepers" && <Pill tone="amber">Record keepers</Pill>}
       {minutes}
     </Link>
+  );
+}
+
+// The group's quorum, from its bylaws: a number of people or a share of the members. Group admins
+// set it; a meeting with fewer people than that is flagged, and so is business done without one.
+function QuorumCard({ group, quorum, canSet, onSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState(quorum.percent ? "percent" : "count");
+  const [value, setValue] = useState(quorum.percent || quorum.count || "");
+  const [error, setError] = useState(null);
+  const save = async (e) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      const n = value === "" ? null : Number(value);
+      await api(`/groups/${group.slug}`, { method: "PATCH", body: { group: { quorum_count: mode === "count" ? n : null, quorum_percent: mode === "percent" ? n : null } } });
+      setEditing(false);
+      onSaved();
+    } catch (err) { setError(err.message); }
+  };
+  return (
+    <Card className="flex flex-wrap items-center gap-3 p-3">
+      <p className="min-w-0 flex-1 text-sm text-slate-700 dark:text-neutral-200">
+        <span className="font-medium text-slate-900 dark:text-white">Quorum:</span>{" "}
+        {quorum.needed ? `${quorum.needed} ${quorum.needed === 1 ? "person" : "people"}${quorum.percent ? ` (${quorum.percent}% of the members)` : ""}` : "not set"}
+        <span className="text-xs text-slate-500 dark:text-neutral-400"> · what the bylaws ask for; business needs one</span>
+      </p>
+      {canSet && !editing && <button type="button" className={quietButton} onClick={() => setEditing(true)}>{quorum.needed ? "Change" : "Set it"}</button>}
+      {editing && (
+        <form onSubmit={save} className="flex w-full flex-wrap items-center gap-2">
+          <select aria-label="Quorum is" className={`${selectClass} !w-auto`} value={mode} onChange={(e) => setMode(e.target.value)}><option value="count">A number of people</option><option value="percent">A share of the members (%)</option></select>
+          <input aria-label="Quorum" type="number" min="1" max={mode === "percent" ? 100 : 9999} className={`${inputClass} !w-28`} value={value} onChange={(e) => setValue(e.target.value)} />
+          <button type="submit" className={primaryButton}>Save</button>
+          <button type="button" className={quietButton} onClick={() => setEditing(false)}>Cancel</button>
+          {error && <span role="alert" className="text-xs text-rose-700">{error}</span>}
+        </form>
+      )}
+    </Card>
   );
 }
 
@@ -48,6 +88,7 @@ export default function MeetingsView({ group }) {
       {scheduling && (
         <MeetingForm group={group} regular={data.regular_meetings} canMakeEvents={data.can_make_events} onCancel={() => setScheduling(false)} onSaved={(m) => navigate(meetingsPath(slug, m.id))} />
       )}
+      <QuorumCard group={group} quorum={data.quorum} canSet={data.can_make_events} onSaved={load} />
       {data.meetings.length === 0 && (
         <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">
           {data.can_edit ? "No business meetings yet. Schedule the next one, or add one that already happened to keep its minutes here." : "No business meetings have been scheduled yet."}
@@ -55,6 +96,7 @@ export default function MeetingsView({ group }) {
       )}
       {coming.length > 0 && <Tray label="Coming up"><div className="space-y-1.5">{coming.map((m) => <Row key={m.id} slug={slug} m={m} keeper={data.can_edit} />)}</div></Tray>}
       {past.length > 0 && <Tray label="Past meetings"><div className="space-y-1.5">{past.map((m) => <Row key={m.id} slug={slug} m={m} keeper={data.can_edit} />)}</div></Tray>}
+      <RulesTable kinds={data.kinds} groups={data.groups} />
     </div>
   );
 }

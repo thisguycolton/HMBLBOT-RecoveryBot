@@ -16,6 +16,7 @@ class Api::GroupAgendaItemsController < ApplicationController
     attrs = item_params
     attrs = attrs.slice(:kind, :title, :details).merge(status: "suggested") unless keeper?
     item = @meeting.agenda_items.new(attrs.merge(submitted_by: current_user))
+    carry_motion(item) if keeper?
     return render_errors(item) unless item.save
 
     tell_record_keepers(item) if item.suggested? && !keeper?
@@ -57,7 +58,19 @@ class Api::GroupAgendaItemsController < ApplicationController
   end
 
   def item_params
-    params.require(:agenda_item).permit(:kind, :title, :details, :status)
+    params.require(:agenda_item).permit(:kind, :title, :details, :status, :motion_id)
+  end
+
+  # Carrying an earlier motion onto the agenda as unfinished business: it names the motion, and
+  # says what happened to it
+  def carry_motion(item)
+    motion = @group.motions.find_by(id: item.motion_id)
+    item.motion = motion
+    return unless motion
+
+    item.title = "Unfinished: #{motion.title}" if item.title.blank?
+    item.kind = "old_business"
+    item.details = [motion.status.tr("_", " ").capitalize, motion.decided_on&.strftime("%b %-d, %Y"), motion.committee.presence && "to #{motion.committee}", motion.postponed_to.presence && "until #{motion.postponed_to}"].compact.join(" ") if item.details.blank?
   end
 
   def tell_record_keepers(item)

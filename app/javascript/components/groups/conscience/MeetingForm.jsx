@@ -13,6 +13,7 @@ export default function MeetingForm({ group, meeting = null, regular = [], canMa
     held_on: meeting?.held_on ?? "", starts_time: meeting?.starts_time ?? "", status: meeting?.status ?? "planned",
     visibility: meeting?.visibility ?? "members", chair_name: meeting?.chair ?? "", secretary_name: meeting?.secretary ?? "",
     attendance_count: meeting?.attendance_count ?? "", meeting_id: meeting?.meeting?.id ?? "",
+    called_to_order_time: meeting?.called_to_order_time ?? "", adjourned_time: meeting?.adjourned_time ?? "",
   });
   const [createEvent, setCreateEvent] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -65,6 +66,12 @@ export default function MeetingForm({ group, meeting = null, regular = [], canMa
             {field("bm-chair", "Chair", <input id="bm-chair" maxLength={80} className={inputClass} value={form.chair_name} onChange={set("chair_name")} placeholder="First name, last initial" />)}
             {field("bm-secretary", "Secretary", <input id="bm-secretary" maxLength={80} className={inputClass} value={form.secretary_name} onChange={set("secretary_name")} placeholder="First name, last initial" />)}
             {field("bm-attendance", "How many came", <input id="bm-attendance" type="number" min="0" max="9999" className={inputClass} value={form.attendance_count} onChange={set("attendance_count")} />)}
+          </div>
+        )}
+        {meeting && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {field("bm-open", "Called to order", <input id="bm-open" type="time" className={inputClass} value={form.called_to_order_time} onChange={set("called_to_order_time")} />)}
+            {field("bm-close", "Adjourned", <input id="bm-close" type="time" className={inputClass} value={form.adjourned_time} onChange={set("adjourned_time")} />)}
           </div>
         )}
         {meeting && <p className="-mt-2 text-xs text-slate-500 dark:text-neutral-400">{NAMES_REMINDER}</p>}

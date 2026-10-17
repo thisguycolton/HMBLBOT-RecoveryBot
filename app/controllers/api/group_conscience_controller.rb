@@ -37,7 +37,7 @@ class Api::GroupConscienceController < ApplicationController
     replacers = Motion.replacers_for(@group)
     ids = scope.pluck(:id)
     meetings = BusinessMeeting.visible_to(@group, current_user).pluck(:id)
-    scope.where(status: %w[passed failed]).newest_first.limit(5).map { |m| m.as_api_json(replacers: replacers, visible: ids, meetings: meetings) }
+    scope.decisions.where(status: %w[passed failed]).newest_first.limit(5).map { |m| m.as_api_json(replacers: replacers, visible: ids, meetings: meetings) }
   end
 
   # Things only a record keeper can move along
