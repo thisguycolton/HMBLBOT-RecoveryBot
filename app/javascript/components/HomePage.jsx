@@ -12,7 +12,7 @@ import {
   Share2,
   UserPlus,
 } from "lucide-react";
-import { NAV_CATEGORIES } from "./nav/siteMenu";
+import { NAV_CATEGORIES, showItem } from "./nav/siteMenu";
 import GroupNudge from "./GroupNudge";
 
 const MIN_SKELETON_MS = 350;
@@ -323,7 +323,8 @@ export default function HomePage() {
                   <span className="text-xs text-slate-500 dark:text-neutral-400">{category.blurb}</span>
                 </div>
                 <ul className="divide-y divide-neutral-100 dark:divide-neutral-800 !m-0 !p-0 list-none">
-                  {category.items.map((item) => {
+                  {/* members-only tools show to everyone here, marked; Groups ones only to who sees Groups */}
+                  {category.items.filter((item) => showItem(item, true)).map((item) => {
                     const Icon = item.icon;
                     return (
                       <li key={item.href}>

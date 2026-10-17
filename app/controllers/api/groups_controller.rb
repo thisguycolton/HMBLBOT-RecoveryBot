@@ -3,9 +3,13 @@
 class Api::GroupsController < ApplicationController
   include GroupScoped
 
-  before_action :set_group, only: %i[show update destroy join leave approve regenerate_invite court_verifications]
+  # Finding a group and looking at one needs no account; asking to join needs one, and
+  # anyone with one can ask (GroupsController#ask_to_join sends people to sign up first)
+  skip_before_action :authenticate_user!, only: %i[show find]
+  before_action :set_viewable_group, only: %i[show join]
+  before_action :set_group, only: %i[update destroy leave approve regenerate_invite court_verifications]
   before_action :require_manager, only: %i[update regenerate_invite court_verifications]
-  before_action :require_feature, only: %i[index create find start]
+  before_action :require_feature, only: %i[index create start]
 
   # GET /api/groups -> your groups and join requests
   def index
@@ -86,7 +90,7 @@ class Api::GroupsController < ApplicationController
     # a group here with the listing's name counts too, so nobody starts a second copy of it
     names = oiaa.flat_map { |r| [r.group_name, r.name] }.compact.map(&:downcase).uniq
     by_title = Group.where("LOWER(title) IN (?)", names.presence || [""]).index_by { |g| g.title.downcase }
-    mine = current_user.group_memberships.index_by(&:group_id)
+    mine = current_user ? current_user.group_memberships.index_by(&:group_id) : {}
 
     render json: {
       groups: groups.includes(:meetings).limit(15).map { |g| group_card(g, mine[g.id]) },
@@ -124,11 +128,7 @@ class Api::GroupsController < ApplicationController
 
   # POST /api/groups/:slug/join -> ask to join (a group admin approves)
   def join
-    membership = @group.memberships.find_or_initialize_by(user: current_user)
-    if membership.new_record?
-      membership.update!(role: "member", status: "requested")
-      @group.notify_admins(kind: "group.join_request", title: "#{current_user.display_name} asked to join #{@group.title}")
-    end
+    @group.request_to_join!(current_user)
     render json: group_json
   end
 
@@ -200,15 +200,17 @@ class Api::GroupsController < ApplicationController
 
   def group_json
     membership = @group.membership_for(current_user)
-    member = current_user.suite_admin? || membership&.active?
+    member = current_user&.suite_admin? || membership&.active?
     manager = @group.manageable_by?(current_user)
     json = {
       slug: @group.slug, title: @group.title, description: @group.description, website: @group.website,
       time_zone: @group.time_zone, status: @group.status,
       role: membership&.role, membership_status: membership&.status,
-      is_member: !!membership&.active?, can_manage: manager, is_site_admin: current_user.suite_admin?,
+      is_member: !!membership&.active?, can_manage: manager, is_site_admin: !!current_user&.suite_admin?, signed_in: current_user.present?,
       meetings: @group.meetings.ordered.map(&:as_api_json),
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
+      members_count: @group.members.count,
+      cover_url: @group.cover.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.cover, only_path: true) : nil,
     }
     if member
       json[:members] = @group.active_memberships.includes(user: { avatar_attachment: :blob }).sort_by { |m| [m.admin? ? 0 : 1, m.user.display_name.downcase] }

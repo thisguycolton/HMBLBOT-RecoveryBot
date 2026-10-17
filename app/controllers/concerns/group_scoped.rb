@@ -15,6 +15,12 @@ module GroupScoped
     render json: { error: "Not found." }, status: :not_found unless @group.visible_to?(current_user)
   end
 
+  # For what anyone may look at, signed in or not (Group#viewable_by?)
+  def set_viewable_group
+    @group = Group.find_by!(slug: params[:group_slug] || params[:slug])
+    render json: { error: "Not found." }, status: :not_found unless @group.viewable_by?(current_user)
+  end
+
   def require_manager
     return if @group.manageable_by?(current_user)
 

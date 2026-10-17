@@ -1,6 +1,8 @@
-# The HMBLBOT Editor's blocks, as an event stores them (events.blocks, a JSON array).
-# Every block has an id, a type, the region it sits in ("main" is the larger column, "side"
-# the smaller; the centered layout stacks side under main) and a span out of 12 columns.
+# The HMBLBOT Editor's blocks, as an event stores them (events.blocks, a JSON array) and a
+# group page does (groups.page_blocks, group_page_templates.blocks). Every block has an id,
+# a type, the region it sits in ("main" is the larger column, "side" the smaller; the
+# centered layout stacks side under main), a span out of 12 columns, and a color from the
+# site's palette (COLORS; "default" is the block's usual look).
 #
 #   heading    text, level (1-3), align
 #   notes      markdown; update: true sends each change to everyone following the event
@@ -10,10 +12,33 @@
 #   gallery    title, photos [{ id, url, caption }]
 #   poll       poll_token: one of the event's schedule polls, shown with a link to vote
 #
+# Group pages also have blocks filled in from the group itself (GROUP_TYPES):
+#
+#   meetings   title: the group's meetings, with their links
+#   events     title, limit: its upcoming published events
+#   timeline   title, limit: notes members shared to the group (members see them)
+#   literature title: the books it approved
+#   readings   title, limit: readings members tagged to it (members see them)
+#   members    title: who's in it (members see who; everyone else sees how many)
+#   join       title, markdown: asking to join, or starting the group from its listing
+#
+# On a group page, {{group}} in a heading or text is the group's name.
+#
+# Profile pages (users.page_blocks, PROFILE_TYPES) have their owner's blocks:
+#
+#   about      title: their picture, blurb and sobriety date (when they show it)
+#   feed       title, limit, show (all/notes/highlights): their notes and highlights, as
+#              far as the viewer may see them (Visibility); they post notes from it
+#   groups     title: their groups that the viewer is in too (they see all of theirs)
+#   people     title, which (following/followers)
+#
 # Each block has a smaller view for the side column and a larger one for the main column;
 # size "auto" follows the column it's in, "compact" or "full" picks one.
 module EventBlocks
   TYPES = %w[heading notes agenda guidelines photo gallery poll].freeze
+  GROUP_TYPES = %w[heading notes agenda guidelines photo gallery meetings events timeline literature readings members join].freeze
+  PROFILE_TYPES = %w[heading notes photo gallery about feed groups people].freeze
+  COLORS = %w[default accent brand sky indigo emerald amber rose slate].freeze
   SIZES = %w[auto compact full].freeze
   REGIONS = %w[main side].freeze
   SPANS = [3, 4, 6, 8, 9, 12].freeze
@@ -33,8 +58,8 @@ module EventBlocks
 
   module_function
 
-  def normalize(raw)
-    Array(raw).first(MAX_BLOCKS).filter_map { |b| block(b) }.uniq { |b| b["id"] }
+  def normalize(raw, types: TYPES)
+    Array(raw).first(MAX_BLOCKS).filter_map { |b| block(b, types) }.uniq { |b| b["id"] }
   end
 
   # Blocks whose changes go out as updates: [id, kind] => the markdown
@@ -47,10 +72,10 @@ module EventBlocks
     end
   end
 
-  def block(raw)
+  def block(raw, types = TYPES)
     b = hash(raw)
     type = b["type"].to_s
-    return unless TYPES.include?(type)
+    return unless types.include?(type)
 
     span = b["span"].to_i
     base = {
@@ -58,6 +83,7 @@ module EventBlocks
       "region" => REGIONS.include?(b["region"]) ? b["region"] : "main",
       "span" => SPANS.include?(span) ? span : 12,
       "size" => SIZES.include?(b["size"]) ? b["size"] : "auto",
+      "color" => COLORS.include?(b["color"]) ? b["color"] : "default",
     }
     base.merge(send(:"#{type}_fields", b))
   end
@@ -95,6 +121,38 @@ module EventBlocks
   def gallery_fields(b) = { "title" => text(b["title"], 120), "photos" => photos(b["photos"]) }
 
   def poll_fields(b) = { "poll_token" => b["poll_token"].to_s.match?(/\A[a-z0-9]{1,20}\z/) ? b["poll_token"].to_s : nil }
+
+  def meetings_fields(b) = { "title" => text(b.fetch("title", "Meetings"), 120) }
+  def events_fields(b) = { "title" => text(b.fetch("title", "Coming up"), 120), "limit" => limit(b["limit"], 3) }
+  def timeline_fields(b) = { "title" => text(b.fetch("title", "From our members"), 120), "limit" => limit(b["limit"], 10) }
+  def literature_fields(b) = { "title" => text(b.fetch("title", "Our literature"), 120) }
+  def readings_fields(b) = { "title" => text(b.fetch("title", "Shared readings"), 120), "limit" => limit(b["limit"], 5) }
+  def members_fields(b) = { "title" => text(b.fetch("title", "Members"), 120) }
+
+  def join_fields(b)
+    { "title" => text(b.fetch("title", "Join us"), 120),
+      "markdown" => b.key?("markdown") ? markdown(b["markdown"]).first(2000) : "Everyone with a desire to stop drinking is welcome." }
+  end
+
+  def about_fields(b) = { "title" => text(b.fetch("title", "About"), 120) }
+
+  def feed_fields(b)
+    { "title" => text(b.fetch("title", "Timeline"), 120), "limit" => limit(b["limit"], 10),
+      "show" => %w[all notes highlights].include?(b["show"]) ? b["show"] : "all" }
+  end
+
+  def groups_fields(b) = { "title" => text(b.fetch("title", "Groups"), 120) }
+
+  def people_fields(b)
+    which = b["which"] == "followers" ? "followers" : "following"
+    { "title" => text(b.fetch("title", which == "followers" ? "Followers" : "Following"), 120), "which" => which }
+  end
+
+  # How many items a group block lists, 1 to 20
+  def limit(value, default)
+    n = value.to_i
+    n.between?(1, 20) ? n : default
+  end
 
   def photos(list)
     Array(list).first(MAX_ITEMS).filter_map do |raw|

@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { BarChart3, CalendarClock, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
 import Markdown from "../book/Markdown";
+import GroupBlockView from "../groups/page/GroupBlocks";
+import PersonBlockView from "../people/PersonBlocks";
 import Lightbox from "./Lightbox";
+import { tone } from "./lib";
 
 // Whether a block shows its smaller view: size "auto" follows its column (the side column
 // is small, except in the centered layout where everything is in the middle).
@@ -11,41 +14,56 @@ export const isCompact = (block, layout) =>
 // How each HMBLBOT Editor block looks on the event page (and, live, in the editor). Every
 // block has a smaller view for the side column (`compact`) and a larger one for the main
 // column. `editing` turns off the shadow box so clicks select the block instead. `polls`
-// are the event's schedule polls, for Poll blocks.
-export default function BlockView({ block, compact = false, editing = false, polls = [] }) {
+// are the event's schedule polls, for Poll blocks. On a group page, `context` is the group
+// (app/services/group_page.rb): what its own blocks list, and its name for {{group}}; on a
+// profile it's the person (app/services/profile_page.rb).
+export default function BlockView({ block, compact = false, editing = false, polls = [], context = null }) {
   const props = { block, compact, editing };
+  const fill = (text) => fillGroup(text, context);
   switch (block.type) {
-    case "heading": return <HeadingView {...props} />;
-    case "notes": return <MarkdownCard compact={compact} markdown={block.markdown} placeholder={editing ? "Write some notes…" : null} badge={block.update ? "Update" : null} />;
-    case "guidelines": return <MarkdownCard compact={compact} markdown={block.markdown} tone="guidelines" placeholder={editing ? "Add the guidelines…" : null} />;
+    case "heading": return <HeadingView {...props} text={fill(block.text)} />;
+    case "notes": return <MarkdownCard block={block} compact={compact} markdown={fill(block.markdown)} placeholder={editing ? "Write some notes…" : null} badge={block.update ? "Update" : null} />;
+    case "guidelines": return <MarkdownCard block={block} compact={compact} markdown={fill(block.markdown)} placeholder={editing ? "Add the guidelines…" : null} />;
     case "agenda": return <AgendaView {...props} />;
     case "photo": return <PhotoView {...props} />;
     case "gallery": return <GalleryView {...props} />;
     case "poll": return <PollView {...props} poll={polls.find((p) => p.token === block.poll_token)} />;
-    default: return null;
+    default:
+      if (context?.kind === "person") return <PersonBlockView {...props} context={context} />;
+      return context ? <GroupBlockView {...props} context={context} fill={fill} /> : null;
   }
 }
+
+// {{group}} is the group's name on a group page (the default page uses it)
+export const fillGroup = (text, context) => (context?.group?.title && text ? text.replace(/\{\{\s*group\s*\}\}/g, context.group.title) : text);
+
+// A colored frame around photos, once the block has a color
+const Frame = ({ block, compact, children }) => {
+  const frame = tone(block).frame;
+  return frame ? <div className={`rounded-3xl ${frame} ${compact ? "p-2" : "p-3"}`}>{children}</div> : children;
+};
 
 const HEADING_SIZE = { 1: "text-4xl sm:text-5xl font-extrabold", 2: "text-2xl sm:text-3xl font-bold", 3: "text-xl font-semibold" };
 const COMPACT_HEADING_SIZE = { 1: "text-2xl font-extrabold", 2: "text-xl font-bold", 3: "text-base font-semibold" };
 const ALIGN = { left: "text-left", center: "text-center", right: "text-right" };
 
-export function HeadingView({ block, compact }) {
+export function HeadingView({ block, compact, text = block.text }) {
   const Tag = `h${Math.min(Math.max(block.level || 2, 1), 3) + 1}`;
   const sizes = compact ? COMPACT_HEADING_SIZE : HEADING_SIZE;
   return (
-    <Tag className={`ev-heading tracking-tight text-slate-900 dark:text-white ${sizes[block.level] || sizes[2]} ${ALIGN[block.align] || ""}`}>
-      {block.text || " "}
+    <Tag className={`ev-heading tracking-tight ${tone(block).text} ${sizes[block.level] || sizes[2]} ${ALIGN[block.align] || ""}`}>
+      {text || "\u00a0"}
     </Tag>
   );
 }
 
-export function MarkdownCard({ markdown, tone, placeholder, badge, compact }) {
+export function MarkdownCard({ block, markdown, placeholder, badge, compact }) {
   const empty = !markdown?.trim();
   if (empty && !placeholder) return null;
+  const t = tone(block);
   return (
-    <div className={`rounded-2xl ${compact ? "p-4 text-sm" : "p-5 sm:p-6 text-base"} ${tone === "guidelines" ? "bg-amber-50 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:ring-amber-900/60" : "bg-white shadow-panel dark:bg-neutral-800/70 dark:ring-1 dark:ring-white/5"}`}>
-      {badge && <span className="mb-2 inline-flex rounded-full bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent dark:bg-accent/25 dark:text-sky-200">{badge}</span>}
+    <div className={`rounded-2xl ${compact ? "p-4 text-sm" : "p-5 sm:p-6 text-base"} ${t.card}`}>
+      {badge && <span className={`mb-2 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${t.soft}`}>{badge}</span>}
       {empty ? <p className="text-sm italic text-slate-400">{placeholder}</p> : <Markdown source={markdown} className="ev-md" />}
     </div>
   );
@@ -57,8 +75,10 @@ function AgendaView({ block, editing, compact }) {
   const photos = activities.filter((a) => a.image_url).map((a) => ({ url: a.image_url, caption: a.title }));
   const show = (a) => !editing && a.image_url && setOpen(photos.findIndex((p) => p.url === a.image_url));
 
+  const t = tone(block);
+
   return (
-    <section className={`rounded-2xl bg-white shadow-panel dark:bg-neutral-800/70 dark:ring-1 dark:ring-white/5 ${compact ? "p-4" : "p-5 sm:p-6"}`}>
+    <section className={`rounded-2xl ${t.card} ${compact ? "p-4" : "p-5 sm:p-6"}`}>
       {block.title && <h3 className={`mb-3 font-semibold text-slate-900 dark:text-white ${compact ? "text-base" : "text-lg"}`}>{block.title}</h3>}
       {activities.length === 0 && <p className="text-sm italic text-slate-400">{editing ? "Add activities in the panel on the right." : "Nothing on the agenda yet."}</p>}
       {compact ? (
@@ -66,7 +86,7 @@ function AgendaView({ block, editing, compact }) {
         <ol className="relative space-y-3 before:absolute before:inset-y-1 before:left-3 before:w-px before:bg-neutral-200 dark:before:bg-neutral-700">
           {activities.map((a) => (
             <li key={a.id} className="relative flex items-start gap-3">
-              <span className="relative grid size-6 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-white">{a.queue_number}</span>
+              <span className={`relative grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${t.strong}`}>{a.queue_number}</span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold leading-6 text-slate-900 dark:text-white">{a.title}</p>
                 {a.description && <p className="line-clamp-2 text-xs text-slate-600 dark:text-neutral-400">{a.description}</p>}
@@ -88,7 +108,7 @@ function AgendaView({ block, editing, compact }) {
                   <img src={a.image_url} alt="" className="aspect-[4/3] w-full object-cover" />
                 </button>
               ) : (
-                <div className="grid aspect-[4/3] place-items-center bg-accent/10 text-3xl font-bold text-accent dark:bg-accent/20 dark:text-sky-200">{a.queue_number}</div>
+                <div className={`grid aspect-[4/3] place-items-center text-3xl font-bold ${t.soft}`}>{a.queue_number}</div>
               )}
               <div className="p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">#{a.queue_number}</p>
@@ -102,7 +122,7 @@ function AgendaView({ block, editing, compact }) {
         <ol className="space-y-2">
           {activities.map((a) => (
             <li key={a.id} className="flex items-start gap-3 rounded-xl p-2 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-sm font-semibold text-white">{a.queue_number}</span>
+              <span className={`grid size-9 shrink-0 place-items-center rounded-full text-sm font-semibold ${t.strong}`}>{a.queue_number}</span>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-slate-900 dark:text-white">{a.title}</p>
                 {a.description && <p className="text-sm text-slate-600 dark:text-neutral-300">{a.description}</p>}
@@ -143,6 +163,7 @@ function PhotoView({ block, editing, compact }) {
   const arrow = `absolute top-1/2 -translate-y-1/2 grid ${compact ? "size-7" : "size-10"} place-items-center rounded-full !bg-black/45 text-white hover:!bg-black/65`;
 
   return (
+    <Frame block={block} compact={compact}>
     <figure className="relative">
       <div className="relative overflow-hidden rounded-2xl bg-neutral-200 dark:bg-neutral-800">
         <button type="button" onClick={() => !editing && setOpen(i)} className="block w-full !bg-transparent !p-0" aria-label="Open the photo">
@@ -164,6 +185,7 @@ function PhotoView({ block, editing, compact }) {
       {photo.caption && <figcaption className={`mt-2 text-slate-600 dark:text-neutral-400 ${compact ? "text-xs" : "text-sm"}`}>{photo.caption}</figcaption>}
       {open != null && <Lightbox photos={photos} index={open} onClose={() => setOpen(null)} />}
     </figure>
+    </Frame>
   );
 }
 
@@ -175,6 +197,7 @@ function GalleryView({ block, editing, compact }) {
   const shown = photos.slice(0, limit);
   const more = photos.length - shown.length;
   return (
+    <Frame block={block} compact={compact}>
     <section>
       {block.title && <h3 className={`mb-3 font-semibold text-slate-900 dark:text-white ${compact ? "text-base" : "text-lg"}`}>{block.title}</h3>}
       {photos.length === 0 ? (
@@ -193,6 +216,7 @@ function GalleryView({ block, editing, compact }) {
       )}
       {open != null && <Lightbox photos={photos} index={open} onClose={() => setOpen(null)} />}
     </section>
+    </Frame>
   );
 }
 
@@ -209,11 +233,13 @@ function PollView({ block, poll, compact, editing }) {
     );
   }
   const closes = new Date(poll.closes_at).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  const button = `inline-flex items-center justify-center gap-1.5 rounded-xl !bg-accent font-semibold !text-white shadow-panel hover:opacity-90 ${compact ? "w-full px-3 py-2 text-sm" : "px-4 py-2.5"}`;
+  const t = tone(block);
+  const colored = block.color && block.color !== "default";
+  const button = `inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold shadow-panel hover:opacity-90 ${t.button} ${compact ? "w-full px-3 py-2 text-sm" : "px-4 py-2.5"}`;
   return (
-    <section className={`rounded-2xl bg-white shadow-panel ring-1 ring-accent/20 dark:bg-neutral-800/70 ${compact ? "p-4" : "p-5 sm:p-6"}`}>
+    <section className={`rounded-2xl ${colored ? t.card : "bg-white shadow-panel ring-1 ring-accent/20 dark:bg-neutral-800/70"} ${compact ? "p-4" : "p-5 sm:p-6"}`}>
       <div className={compact ? "space-y-3" : "flex flex-wrap items-center gap-5"}>
-        <span className={`grid shrink-0 place-items-center rounded-2xl bg-accent/10 text-accent dark:bg-accent/25 dark:text-sky-200 ${compact ? "size-10" : "size-14"}`}>
+        <span className={`grid shrink-0 place-items-center rounded-2xl ${t.soft} ${compact ? "size-10" : "size-14"}`}>
           <CalendarClock className={compact ? "size-5" : "size-7"} />
         </span>
         <div className="min-w-0 flex-1">

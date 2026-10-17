@@ -64,18 +64,24 @@ export function blockWrapClass(block) {
 
 // The page's own (read-only) blocks
 export default function EventBlocks({ event }) {
+  return <PageBlocks layout={event.layout} blocks={event.blocks} polls={event.polls} />;
+}
+
+// Blocks in a layout, read-only: an event's, or a group page's (with its `context`).
+// `hidden(block)` leaves out blocks with nothing to show this viewer.
+export function PageBlocks({ layout, blocks, polls, context, hidden = () => false }) {
   const renderRegion = (region) => {
-    const blocks = event.blocks.filter((b) => (b.region || "main") === region);
-    if (!blocks.length) return null;
+    const list = blocks.filter((b) => (b.region || "main") === region && !hidden(b));
+    if (!list.length) return null;
     return (
       <div className="grid grid-cols-12 gap-x-3 gap-y-5 sm:gap-x-5 sm:gap-y-6">
-        {blocks.map((block) => (
+        {list.map((block) => (
           <div key={block.id} className={blockWrapClass(block)}>
-            <BlockView block={block} compact={isCompact(block, event.layout)} polls={event.polls} />
+            <BlockView block={block} compact={isCompact(block, layout)} polls={polls} context={context} />
           </div>
         ))}
       </div>
     );
   };
-  return <LayoutColumns layout={event.layout} renderRegion={renderRegion} />;
+  return <LayoutColumns layout={layout} renderRegion={renderRegion} />;
 }

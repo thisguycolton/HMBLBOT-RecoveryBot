@@ -1763,3 +1763,169 @@ body:has(.wb) {
     display: none;
   }
 }
+
+/* ---------- Timeline notes and profile feeds (components/notes) ---------- */
+
+.wb-note-editor.wb-hl-note { margin-top: 0; }
+
+.wb-note-editor__images {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.wb-note-editor__images li {
+  aspect-ratio: 1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.wb-note-editor__images img { height: 100%; object-fit: cover; width: 100%; }
+
+.wb .wb-note-editor__images button {
+  align-items: center;
+  background: rgb(0 0 0 / 0.6);
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  display: grid;
+  height: 1.5rem;
+  padding: 0;
+  place-items: center;
+  position: absolute;
+  right: 0.25rem;
+  top: 0.25rem;
+  width: 1.5rem;
+}
+
+.wb-note-editor__groups {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.wb-note-editor__groups > span { color: var(--wb-ink-soft); margin-inline-end: 0.15rem; }
+
+.wb .wb-note-editor__chip { font-size: 0.8rem; font-weight: 600; padding: 0.2em 0.75em; }
+
+.wb .wb-note-editor .wb-hl-note__actions { flex-wrap: wrap; }
+.wb .wb-note-editor .wb-hl-note__actions .wb-btn { font-size: 0.875rem; padding: 0.35em 0.9em; }
+
+@media (max-width: 30rem) {
+  .wb-note-editor__label { display: none; }
+}
+
+.wb-feed { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.wb-feed-item {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle);
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.wb-feed-item--compact { padding: 0.7rem 0.8rem; }
+
+.wb-feed-item__head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  min-width: 0;
+}
+
+.wb .wb-feed-item__author {
+  align-items: center;
+  color: var(--wb-ink);
+  display: inline-flex;
+  font-weight: 700;
+  gap: 0.5rem;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.wb .wb-feed-item__author:hover span { text-decoration: underline; }
+
+.wb-feed-item__meta { color: var(--wb-ink-soft); font-size: 0.8rem; }
+
+.wb-feed-item__body { font-size: 1rem; }
+.wb-feed-item__body--compact { font-size: 0.925rem; }
+
+.wb-feed-item__quote { display: block; font-size: 1.05rem; }
+
+.wb .wb-feed-item__source {
+  align-items: center;
+  color: var(--wb-ink-soft);
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 600;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+  text-decoration: none;
+}
+
+.wb .wb-feed-item__source:hover { color: var(--wb-link); }
+
+.wb-feed-item__images {
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.6rem;
+  overflow: hidden;
+}
+
+.wb-feed-item__images--2,
+.wb-feed-item__images--4 { grid-template-columns: 1fr 1fr; }
+.wb-feed-item__images--3 { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; }
+.wb-feed-item__images--3 > :first-child { grid-row: span 2; }
+
+.wb .wb-feed-item__images button {
+  background: var(--wb-subtle-light);
+  border: 0;
+  border-radius: 0;
+  cursor: zoom-in;
+  display: block;
+  max-height: 26rem;
+  padding: 0;
+  position: relative;
+}
+
+.wb-feed-item__images--1 button { max-height: 30rem; }
+.wb-feed-item__images:not(.wb-feed-item__images--1) button { aspect-ratio: 4 / 3; }
+.wb-feed-item__images--3 > :first-child { aspect-ratio: auto !important; }
+
+.wb-feed-item__images img { display: block; height: 100%; max-height: inherit; object-fit: cover; width: 100%; }
+
+.wb-feed-item__images button span {
+  background: rgb(0 0 0 / 0.5);
+  color: #fff;
+  display: grid;
+  font-size: 1.4rem;
+  font-weight: 700;
+  inset: 0;
+  place-items: center;
+  position: absolute;
+}
+
+.wb-feed-item__foot {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+
+.wb-feed-item__shared { color: var(--wb-ink-soft); font-size: 0.8rem; }
+.wb .wb-feed-item__foot .wb-hl-note__edit { margin-inline-start: 0; background: transparent; border: 0; padding: 0; }
+.wb .wb-feed-item__foot .wb-hl-note__delete { color: oklch(55% 0.2 27); }
+/* The reader styles give every button a fill; a picked group chip stays dark */
+.wb .wb-note-editor__chip { background-color: transparent !important; }
+.wb .wb-note-editor__chip[aria-pressed="true"] { background-color: var(--wb-ink) !important; color: var(--wb-bg) !important; }

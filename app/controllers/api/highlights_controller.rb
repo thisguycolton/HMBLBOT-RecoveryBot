@@ -74,7 +74,9 @@ class Api::HighlightsController < ApplicationController
       chapter:  chapter,
       style:    highlight_params[:style],
       selector: highlight_params[:selector],
-      note:     highlight_params[:note]
+      note:     highlight_params[:note],
+      # Who sees it on their profile: what they picked, or their default (settings)
+      visibility: Visibility::LEVELS.include?(highlight_params[:visibility]) ? highlight_params[:visibility] : current_user.default_highlight_visibility
     )
     h.save!
     render json: highlight_json(h), status: :created
@@ -84,13 +86,14 @@ class Api::HighlightsController < ApplicationController
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
   end
 
-  # PATCH /api/highlights/:id  { highlight: { note: "markdown", style: { color } } }
-  # Only the reader who made the highlight can change its note or color.
+  # PATCH /api/highlights/:id  { highlight: { note: "markdown", style: { color }, visibility } }
+  # Only the reader who made the highlight can change its note, color or who sees it on their profile.
   # Everyone a highlight is shared with sees the note read-only.
   def update
     h = current_user.user_highlights.find(params[:id])
-    attrs = params.require(:highlight).permit(:note, style: {})
+    attrs = params.require(:highlight).permit(:note, :visibility, style: {})
     h.note  = attrs[:note].to_s.strip.presence if attrs.key?(:note)
+    h.visibility = attrs[:visibility] if attrs.key?(:visibility)
     h.style = attrs[:style] if attrs[:style].present?
     h.save!
     render json: highlight_json(h)
@@ -120,6 +123,8 @@ class Api::HighlightsController < ApplicationController
     if mine
       # Only the owner gets the per-highlight share id.
       json["share_id"] = h.signed_id(purpose: :share)
+      json["visibility"] = h.visibility
+      json["profiles"] = User.profiles_open_to?(current_user)
     else
       # First name only: enough to say whose highlight this is.
       json["by"] = h.user.name.to_s.split.first.presence
@@ -128,6 +133,6 @@ class Api::HighlightsController < ApplicationController
   end
 
   def highlight_params
-    params.require(:highlight).permit(:chapter_slug, :book_slug, :note, style: {}, selector: {})
+    params.require(:highlight).permit(:chapter_slug, :book_slug, :note, :visibility, style: {}, selector: {})
   end
 end

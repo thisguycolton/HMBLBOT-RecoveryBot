@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarClock, ChevronRight, Plus, Search, Users } from "lucide-react";
+import { CalendarClock, ChevronRight, LayoutTemplate, MessagesSquare, Plus, Search, Users } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { api } from "./lib";
 import { Loading, Message, Pill, primaryButton, quietButton } from "./ui";
@@ -27,10 +27,14 @@ export default function GroupsIndex() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Groups</h1>
           <p className="text-sm text-slate-600 dark:text-neutral-400">Your home groups: meetings, readings, literature and the people in them.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <a href="/people/me" className={quietButton}><MessagesSquare className="h-4 w-4" /> Your profile</a>
           <Link to="/find" className={quietButton}><Search className="h-4 w-4" /> Find a group</Link>
           {data.can_create && (
-            <Link to="/new" className={primaryButton}><Plus className="h-4 w-4" /> New group</Link>
+            <>
+              <Link to="/default-page" className={quietButton}><LayoutTemplate className="h-4 w-4" /> Default page</Link>
+              <Link to="/new" className={primaryButton}><Plus className="h-4 w-4" /> New group</Link>
+            </>
           )}
         </div>
       </div>

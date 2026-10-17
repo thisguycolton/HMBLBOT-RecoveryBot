@@ -39,6 +39,7 @@ Rails.application.routes.draw do
   get "oiaa/search", to: "oiaa#search"
   get "oiaa/matches", to: "oiaa#matches"
   get "groups/find", to: "groups#find"
+  get "meeting_search", to: "meeting_search#index"
   post "groups/start", to: "groups#start"
   post "groups/join_with_token", to: "groups#join_with_token"
   post "groups/dismiss_prompt", to: "groups#dismiss_prompt"
@@ -53,6 +54,10 @@ Rails.application.routes.draw do
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
+    resource :page, controller: "group_pages", only: %i[show update] do
+      post :images
+      delete "timeline/:note_id", action: :remove_note
+    end
     resources :meetings, controller: "group_meetings", only: %i[create update destroy] do
       post :unlink, on: :member
       collection do
@@ -60,6 +65,22 @@ Rails.application.routes.draw do
         post :refresh
       end
     end
+  end
+  resource :group_page_template, only: %i[show update] do
+    post :images
+  end
+  get "intergroup_pages/:oiaa_slug", to: "intergroup_pages#show", constraints: { oiaa_slug: %r{[^/]+} }, format: false
+  resources :timeline_notes, only: %i[index create update destroy]
+  get "people", to: "people#index"
+  resources :people, param: :username, only: :show, constraints: { username: %r{[^/]+} } do
+    member do
+      get :feed
+      post :follow
+      delete :follow, action: :unfollow
+    end
+  end
+  resource :profile_page, only: :update do
+    post :images
   end
   resources :events, only: %i[show update destroy], param: :token do
     member do
@@ -171,8 +192,15 @@ end
   get 'topics/by_category', to: 'topics#by_category'
   # Groups: a React app (app/javascript/entrypoints/groups.jsx); invite links join on the server
   get "/groups/join/:token", to: "groups#join", as: :join_group
+  get "/groups/:slug/ask_to_join", to: "groups#ask_to_join", as: :ask_to_join_group
   get "/groups", to: "groups#app", as: :groups
+  get "/meetings", to: redirect("/groups/meetings")
+  # Your timeline moved to your profile
+  get "/groups/timeline", to: redirect("/people/me")
   get "/groups/*path", to: "groups#app", format: false
+  # Profiles: a React app (app/javascript/entrypoints/people.jsx)
+  get "/people", to: "people#app", as: :people
+  get "/people/*path", to: "people#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb
   get "/books/:book_slug/chapters/:chapter_slug", to: "pages#reader"

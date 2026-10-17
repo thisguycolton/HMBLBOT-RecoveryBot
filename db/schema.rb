@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -225,6 +225,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
     t.index ["token"], name: "index_events_on_token", unique: true
   end
 
+  create_table "follows", force: :cascade do |t|
+    t.bigint "follower_id", null: false
+    t.bigint "followed_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["followed_id"], name: "index_follows_on_followed_id"
+    t.index ["follower_id", "followed_id"], name: "index_follows_on_follower_id_and_followed_id", unique: true
+    t.index ["follower_id"], name: "index_follows_on_follower_id"
+  end
+
   create_table "group_books", force: :cascade do |t|
     t.bigint "group_id", null: false
     t.bigint "book_id", null: false
@@ -248,6 +258,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
     t.index ["user_id"], name: "index_group_memberships_on_user_id"
   end
 
+  create_table "group_page_templates", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "layout", default: "main_side", null: false
+    t.jsonb "blocks", default: [], null: false
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_group_page_templates_on_key", unique: true
+    t.index ["updated_by_id"], name: "index_group_page_templates_on_updated_by_id"
+  end
+
   create_table "groups", force: :cascade do |t|
     t.string "title"
     t.string "description"
@@ -265,6 +286,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
     t.string "court_email_subject"
     t.text "court_email_body"
     t.string "court_email_reply_to"
+    t.string "page_layout", default: "main_side", null: false
+    t.jsonb "page_blocks"
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -370,7 +393,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
     t.datetime "last_seen_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "attendance_option"
+    t.string "location"
+    t.string "formatted_address"
+    t.string "region"
     t.index ["conference_id"], name: "index_oiaa_meetings_on_conference_id"
+    t.index ["last_seen_at"], name: "index_oiaa_meetings_on_last_seen_at"
     t.index ["slug"], name: "index_oiaa_meetings_on_slug", unique: true
   end
 
@@ -637,6 +665,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
     t.index ["user_id"], name: "index_text_reports_on_user_id"
   end
 
+  create_table "timeline_note_shares", force: :cascade do |t|
+    t.bigint "timeline_note_id", null: false
+    t.bigint "group_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id", "created_at"], name: "index_timeline_note_shares_on_group_id_and_created_at"
+    t.index ["group_id"], name: "index_timeline_note_shares_on_group_id"
+    t.index ["timeline_note_id", "group_id"], name: "index_timeline_note_shares_on_timeline_note_id_and_group_id", unique: true
+    t.index ["timeline_note_id"], name: "index_timeline_note_shares_on_timeline_note_id"
+  end
+
+  create_table "timeline_notes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "visibility", default: "private", null: false
+    t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_timeline_notes_on_user_id"
+  end
+
   create_table "topic_categories", force: :cascade do |t|
     t.string "title"
     t.string "icon"
@@ -711,8 +760,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
     t.text "note"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "visibility", default: "private", null: false
     t.index ["chapter_id"], name: "index_user_highlights_on_chapter_id"
     t.index ["user_id", "chapter_id"], name: "index_user_highlights_on_user_id_and_chapter_id"
+    t.index ["user_id", "created_at"], name: "index_user_highlights_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_user_highlights_on_user_id"
   end
 
@@ -736,9 +787,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
     t.datetime "group_prompt_dismissed_at"
     t.date "sobriety_date"
     t.boolean "show_sobriety_date", default: false, null: false
+    t.string "username"
+    t.string "page_layout", default: "main_side", null: false
+    t.jsonb "page_blocks"
+    t.string "default_highlight_visibility", default: "private", null: false
+    t.string "default_note_visibility", default: "private", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["share_token"], name: "index_users_on_share_token", unique: true
+    t.index ["username"], name: "index_users_on_username", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -755,10 +812,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
   add_foreign_key "event_updates", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "events", "groups"
   add_foreign_key "events", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "follows", "users", column: "followed_id"
+  add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "group_books", "books"
   add_foreign_key "group_books", "groups"
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"
+  add_foreign_key "group_page_templates", "users", column: "updated_by_id"
   add_foreign_key "groups", "users", column: "created_by_id"
   add_foreign_key "host_props", "hostificators"
   add_foreign_key "host_votes", "host_props"
@@ -789,6 +849,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_200000) do
   add_foreign_key "text_reports", "chapters"
   add_foreign_key "text_reports", "users"
   add_foreign_key "text_reports", "users", column: "resolved_by_id"
+  add_foreign_key "timeline_note_shares", "groups"
+  add_foreign_key "timeline_note_shares", "timeline_notes"
+  add_foreign_key "timeline_notes", "users"
   add_foreign_key "topic_sharing_prompts", "sharing_modes"
   add_foreign_key "topic_sharing_prompts", "topics"
   add_foreign_key "topic_tags", "tags"
