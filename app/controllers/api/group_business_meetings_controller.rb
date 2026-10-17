@@ -14,7 +14,8 @@ class Api::GroupBusinessMeetingsController < ApplicationController
   def index
     meetings = BusinessMeeting.visible_to(@group, current_user).includes(:event, :meeting, :agenda_items, :motions).newest_first
     render json: { meetings: meetings.map { |m| m.as_api_json(keeper: keeper?) }, can_edit: keeper?, can_delete: @group.manageable_by?(current_user),
-                   can_make_events: @group.manageable_by?(current_user), regular_meetings: regular_meetings }
+                   can_make_events: @group.manageable_by?(current_user), regular_meetings: regular_meetings,
+                   quorum: { count: @group.quorum_count, percent: @group.quorum_percent, needed: @group.quorum_needed } }.merge(MotionKinds.metadata)
   end
 
   # GET /api/groups/:group_slug/business_meetings/:id
@@ -65,10 +66,13 @@ class Api::GroupBusinessMeetingsController < ApplicationController
 
   def assign
     attrs = params.require(:business_meeting).permit(:held_on, :status, :visibility, :chair_name, :secretary_name, :attendance_count,
-                                                     :minutes, :minutes_status, :meeting_id, :starts_time)
+                                                     :minutes, :minutes_status, :meeting_id, :starts_time, :called_to_order_time, :adjourned_time)
     time = attrs.delete(:starts_time)
+    called = attrs.delete(:called_to_order_time)
+    adjourned = attrs.delete(:adjourned_time)
     @meeting.assign_attributes(attrs)
     @meeting.set_start(time) if params[:business_meeting].key?(:starts_time) || @meeting.new_record?
+    @meeting.set_times(called_to_order: called, adjourned: adjourned)
   end
 
   def regular_meetings
@@ -82,9 +86,18 @@ class Api::GroupBusinessMeetingsController < ApplicationController
     ids = visible.pluck(:id)
     @meeting.reload.as_api_json(keeper: keeper?).merge(
       agenda: @meeting.agenda_items.includes(:submitted_by).map { |i| i.as_api_json(viewer: current_user) },
-      motions: visible.where(business_meeting_id: @meeting.id).newest_first.map { |m| m.as_api_json(replacers: replacers, visible: ids, meetings: meetings) },
+      motions: visible.where(business_meeting_id: @meeting.id).includes(:parent, business_meeting: :group).order(:id)
+                      .map { |m| m.as_api_json(replacers: replacers, visible: ids, meetings: meetings, keeper: keeper?) },
       can_edit: keeper?, can_delete: @group.manageable_by?(current_user), can_suggest: @meeting.planned?
-    )
+    ).tap { |json| json[:unfinished] = unfinished_json if keeper? && @meeting.planned? }
+  end
+
+  # Motions put off at earlier meetings that this agenda could take up
+  def unfinished_json
+    @meeting.unfinished_business.map do |m|
+      { id: m.id, title: m.title, status: m.status, decided_on: m.decided_on&.iso8601, committee: m.committee, postponed_to: m.postponed_to,
+        meeting_held_on: m.business_meeting&.held_on&.iso8601 }
+    end
   end
 
   # A draft event with the live agenda in it; its date can be picked with a schedule poll

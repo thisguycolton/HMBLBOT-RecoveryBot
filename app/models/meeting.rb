@@ -14,6 +14,9 @@ class Meeting < ApplicationRecord
 
   belongs_to :group
   has_many :court_verifications, dependent: :nullify
+  # Who hosts and co-hosts it (weekly meetings), and who is covering on a given date
+  has_many :hosts, class_name: "MeetingHost", dependent: :destroy
+  has_many :host_covers, class_name: "MeetingHostCover", dependent: :destroy
 
   before_validation :tidy
 
@@ -30,6 +33,17 @@ class Meeting < ApplicationRecord
   scope :ordered, -> { order(Arel.sql("recurrence DESC, day_of_week, start_minute, starts_at")) }
   scope :weekly, -> { where(recurrence: "weekly") }
   scope :linked_to_oiaa, -> { where.not(oiaa_slug: nil) }
+
+  # The same meeting on its other days (it is stored once per weekday), this one included
+  def series
+    return group.meetings.where(id: id) unless weekly?
+
+    group.meetings.weekly.where(name: name, start_minute: start_minute, end_minute: end_minute)
+  end
+
+  # The assignment in place on `date` (the latest to have started), for "host" or "co_host"
+  def host_on(role, date) = hosts.select { |h| h.role == role && h.active_on?(date) }.max_by { |h| [h.starts_on, h.id] }
+  def cover_on(role, date) = host_covers.find { |c| c.role == role && c.on == date }
 
   def weekly? = recurrence == "weekly"
   def once? = recurrence == "once"

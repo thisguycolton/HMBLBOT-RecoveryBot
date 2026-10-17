@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutTemplate, NotebookPen, Pencil, Scale, Users } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutTemplate, NotebookPen, Pencil, Scale, UserCheck, Users } from "lucide-react";
 import { api } from "./lib";
 import { ErrorNote, Loading, Message, Pill } from "./ui";
 import GroupHero, { heroButton, heroQuietButton } from "./page/GroupHero";
@@ -13,10 +13,12 @@ import ReadingsTab from "./ReadingsTab";
 import CourtTab from "./CourtTab";
 import EventsTab from "./EventsTab";
 import ConscienceTab from "./conscience/ConscienceTab";
+import HostsTab from "./HostsTab";
 
 const TABS = [
   { key: "home", label: "Home", icon: House },
   { key: "meetings", label: "Meetings", icon: CalendarClock },
+  { key: "hosts", label: "Hosts", icon: UserCheck, members: true },
   { key: "events", label: "Events", icon: CalendarRange },
   { key: "readings", label: "Readings", icon: NotebookPen, members: true },
   { key: "literature", label: "Literature", icon: BookOpen, members: true },
@@ -158,6 +160,7 @@ export default function GroupPage({ tab: fixedTab }) {
 
       {current.key === "home" && <GroupHome slug={slug} onJoin={() => act("join")} />}
       {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={load} isNew={searchParams.get("new") === "1"} />}
+      {current.key === "hosts" && <HostsTab group={group} />}
       {current.key === "events" && <EventsTab group={group} />}
       {current.key === "readings" && <ReadingsTab group={group} />}
       {current.key === "literature" && <LiteratureTab group={group} reload={load} />}

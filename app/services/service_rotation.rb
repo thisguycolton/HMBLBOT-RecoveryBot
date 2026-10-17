@@ -23,7 +23,7 @@ module ServiceRotation
   def remind(group, term, today)
     position = term.service_position
     verb = term.ends_on < today ? "ended" : "ends"
-    url = "/groups/#{group.slug}/conscience/service"
+    url = "/groups/#{group.slug}/conscience/officials"
     keepers = group.record_keepers.where.not(id: term.user_id)
     Notification.deliver(keepers, kind: "service.rotation", title: "#{position.title}: #{term.name}'s term #{verb} #{term.ends_on.strftime("%b %-d")}",
                                   body: "It's time to find someone for #{position.title} at #{group.title}.", url: url)

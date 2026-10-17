@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_17_060000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_18_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -68,7 +68,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_060000) do
     t.string "status", default: "on_agenda", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "motion_id"
     t.index ["business_meeting_id"], name: "index_agenda_items_on_business_meeting_id"
+    t.index ["motion_id"], name: "index_agenda_items_on_motion_id"
     t.index ["submitted_by_id"], name: "index_agenda_items_on_submitted_by_id"
   end
 
@@ -157,6 +159,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_060000) do
     t.string "visibility", default: "members", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "called_to_order_at"
+    t.datetime "adjourned_at"
     t.index ["created_by_id"], name: "index_business_meetings_on_created_by_id"
     t.index ["event_id"], name: "index_business_meetings_on_event_id"
     t.index ["group_id", "held_on"], name: "index_business_meetings_on_group_id_and_held_on"
@@ -327,6 +331,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_060000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "can_keep_records", default: false, null: false
+    t.boolean "can_schedule_hosts", default: false, null: false
     t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
     t.index ["group_id"], name: "index_group_memberships_on_group_id"
     t.index ["user_id"], name: "index_group_memberships_on_user_id"
@@ -362,6 +367,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_060000) do
     t.string "court_email_reply_to"
     t.string "page_layout", default: "main_side", null: false
     t.jsonb "page_blocks"
+    t.integer "quorum_count"
+    t.integer "quorum_percent"
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -401,6 +408,33 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_060000) do
     t.string "category"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "meeting_host_covers", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.bigint "user_id"
+    t.string "role", null: false
+    t.string "name", null: false
+    t.date "on", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_id", "role", "on"], name: "index_meeting_host_covers_on_meeting_id_and_role_and_on", unique: true
+    t.index ["meeting_id"], name: "index_meeting_host_covers_on_meeting_id"
+    t.index ["user_id"], name: "index_meeting_host_covers_on_user_id"
+  end
+
+  create_table "meeting_hosts", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.bigint "user_id"
+    t.string "role", null: false
+    t.string "name", null: false
+    t.date "starts_on", null: false
+    t.date "ends_on"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_id", "role", "starts_on"], name: "index_meeting_hosts_on_meeting_id_and_role_and_starts_on"
+    t.index ["meeting_id"], name: "index_meeting_hosts_on_meeting_id"
+    t.index ["user_id"], name: "index_meeting_hosts_on_user_id"
   end
 
   create_table "meetings", force: :cascade do |t|
@@ -455,11 +489,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_060000) do
     t.datetime "updated_at", null: false
     t.bigint "business_meeting_id"
     t.bigint "agenda_item_id"
+    t.string "kind", default: "main", null: false
+    t.bigint "parent_id"
+    t.string "vote_method"
+    t.string "required_vote"
+    t.boolean "previous_notice", default: false, null: false
+    t.string "committee"
+    t.string "postponed_to"
+    t.text "amended_text"
+    t.text "note"
     t.index ["agenda_item_id"], name: "index_motions_on_agenda_item_id"
     t.index ["business_meeting_id"], name: "index_motions_on_business_meeting_id"
     t.index ["created_by_id"], name: "index_motions_on_created_by_id"
     t.index ["group_id", "decided_on"], name: "index_motions_on_group_id_and_decided_on"
     t.index ["group_id"], name: "index_motions_on_group_id"
+    t.index ["parent_id"], name: "index_motions_on_parent_id"
     t.index ["supersedes_id"], name: "index_motions_on_supersedes_id"
   end
 
@@ -947,6 +991,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_060000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agenda_items", "business_meetings", on_delete: :cascade
+  add_foreign_key "agenda_items", "motions", on_delete: :nullify
   add_foreign_key "agenda_items", "users", column: "submitted_by_id", on_delete: :nullify
   add_foreign_key "business_meetings", "events", on_delete: :nullify
   add_foreign_key "business_meetings", "groups", on_delete: :cascade
@@ -981,10 +1026,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_060000) do
   add_foreign_key "host_props", "hostificators"
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"
+  add_foreign_key "meeting_host_covers", "meetings", on_delete: :cascade
+  add_foreign_key "meeting_host_covers", "users", on_delete: :nullify
+  add_foreign_key "meeting_hosts", "meetings", on_delete: :cascade
+  add_foreign_key "meeting_hosts", "users", on_delete: :nullify
   add_foreign_key "meetings", "groups"
   add_foreign_key "motions", "agenda_items", on_delete: :nullify
   add_foreign_key "motions", "business_meetings", on_delete: :nullify
   add_foreign_key "motions", "groups", on_delete: :cascade
+  add_foreign_key "motions", "motions", column: "parent_id", on_delete: :nullify
   add_foreign_key "motions", "motions", column: "supersedes_id", on_delete: :nullify
   add_foreign_key "motions", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "notifications", "users"

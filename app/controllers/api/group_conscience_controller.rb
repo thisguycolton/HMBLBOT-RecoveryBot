@@ -20,6 +20,7 @@ class Api::GroupConscienceController < ApplicationController
                      .select { |p| p[:rotation] }.map { |p| p.slice(:id, :title, :rotation, :current) },
     }
     json[:waiting] = waiting if keeper?
+    json[:hosts_open] = HostSchedule.new(@group, current_user).summary if @group.hosts_editable_by?(current_user)
     render json: json
   end
 
@@ -37,7 +38,7 @@ class Api::GroupConscienceController < ApplicationController
     replacers = Motion.replacers_for(@group)
     ids = scope.pluck(:id)
     meetings = BusinessMeeting.visible_to(@group, current_user).pluck(:id)
-    scope.where(status: %w[passed failed]).newest_first.limit(5).map { |m| m.as_api_json(replacers: replacers, visible: ids, meetings: meetings) }
+    scope.decisions.where(status: %w[passed failed]).newest_first.limit(5).map { |m| m.as_api_json(replacers: replacers, visible: ids, meetings: meetings) }
   end
 
   # Things only a record keeper can move along

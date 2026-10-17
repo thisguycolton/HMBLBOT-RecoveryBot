@@ -16,7 +16,7 @@ const SECTIONS = [
   { key: "meetings", label: "Meetings", path: "/meetings" },
   { key: "decisions", label: "Decisions", path: "/decisions" },
   { key: "documents", label: "Documents", path: "/documents" },
-  { key: "service", label: "Service", path: "/service" },
+  { key: "officials", label: "Elected officials", path: "/officials" },
   { key: "treasury", label: "Treasury", path: "/treasury" },
 ];
 
@@ -27,10 +27,11 @@ const SECTIONS = [
 //   /conscience/meetings(/:id)        business meetings, agendas and minutes
 //   /conscience/decisions             what the group voted on
 //   /conscience/documents(/:id|/new)  document folders, and a document as a page
-//   /conscience/service               service positions and who holds them
+//   /conscience/officials             the group's elected officials and who holds each office
 //   /conscience/treasury(/:id|/new)   the treasurer's monthly reports
 export default function ConscienceTab({ group }) {
-  const [view, id] = (useParams()["*"] || "").split("/").filter(Boolean);
+  const [rawView, id] = (useParams()["*"] || "").split("/").filter(Boolean);
+  const view = rawView === "service" ? "officials" : rawView; // its old address
   const navigate = useNavigate();
   const isMember = group.is_member || group.is_site_admin;
   const current = SECTIONS.some((s) => s.key === view) ? view : isMember ? "overview" : "documents";
@@ -41,7 +42,7 @@ export default function ConscienceTab({ group }) {
   else if (current === "meetings") body = id ? <MeetingPage key={id} group={group} id={id} /> : <MeetingsView group={group} />;
   else if (current === "decisions") body = <DecisionsView group={group} />;
   else if (current === "documents") body = id === "new" ? <DocumentPage group={group} /> : id ? <DocumentPage group={group} id={id} /> : <DocumentsView group={group} />;
-  else if (current === "service") body = <ServiceView group={group} />;
+  else if (current === "officials") body = <ServiceView group={group} />;
   else if (current === "treasury") body = id === "new" ? <ReportPage group={group} /> : id ? <ReportPage key={id} group={group} id={id} /> : <TreasuryView group={group} />;
   else body = <OverviewView group={group} />;
 

@@ -6,6 +6,8 @@ class AgendaItem < ApplicationRecord
 
   belongs_to :business_meeting
   belongs_to :submitted_by, class_name: "User", optional: true
+  # An earlier motion carried onto this agenda as unfinished business
+  belongs_to :motion, optional: true
   has_many :motions, dependent: :nullify
 
   before_validation { self.title = title.to_s.squish }
@@ -20,6 +22,6 @@ class AgendaItem < ApplicationRecord
 
   def as_api_json(viewer: nil)
     { id: id, kind: kind, title: title, details: details.to_s, status: status, position: position,
-      submitted_by: submitted_by&.display_name, mine: !!viewer && submitted_by_id == viewer.id }
+      motion_id: motion_id, submitted_by: submitted_by&.display_name, mine: !!viewer && submitted_by_id == viewer.id }
   end
 end

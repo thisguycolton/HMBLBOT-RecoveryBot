@@ -228,7 +228,7 @@ class Api::GroupBusinessMeetingsTest < ActionDispatch::IntegrationTest
     assert_equal "tabled", tabled.reload.status
 
     get path(@next.id), as: :json
-    assert_equal ["Fix the roof", "Approve the report"], body["motions"].map { |m| m["title"] }
+    assert_equal ["Approve the report", "Fix the roof"], body["motions"].map { |m| m["title"] }, "in the order they were made"
 
     post "/api/groups/#{@group.slug}/motions", params: { motion: { title: "Bad", status: "proposed", business_meeting_id: @elsewhere.business_meetings.create!(held_on: @today).id } }, as: :json
     assert_response :unprocessable_entity

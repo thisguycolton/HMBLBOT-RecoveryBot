@@ -49,6 +49,8 @@ class Group < ApplicationRecord
   validates :time_zone, inclusion: { in: TIME_ZONES }
   validates :status, inclusion: { in: STATUSES }
   validates :description, length: { maximum: 1000 }
+  validates :quorum_count, numericality: { only_integer: true, in: 1..9999 }, allow_nil: true
+  validates :quorum_percent, numericality: { only_integer: true, in: 1..100 }, allow_nil: true
   validates :court_email_subject, length: { maximum: 200 }
   validates :court_email_body, length: { maximum: 5000 }
   validates :court_email_reply_to, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
@@ -83,6 +85,11 @@ class Group < ApplicationRecord
   def member?(user) = !!membership_for(user)&.active?
   def admin?(user) = !!membership_for(user)&.then { |m| m.active? && m.admin? }
   def manageable_by?(user) = !!user && (user.suite_admin? || admin?(user))
+  # Who schedules the hosts of its meetings: group admins, and members an admin marked in the
+  # Members tab (the person doing that needn't keep the records)
+  def hosts_editable_by?(user) = manageable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_schedule_hosts }
+  def host_schedulers = User.where(id: active_memberships.where("group_memberships.role = 'admin' OR group_memberships.can_schedule_hosts").select(:user_id))
+
   def member_or_site_admin?(user) = !!user && (user.suite_admin? || member?(user))
   # Record keepers write the group's documents (and, later, minutes and decisions): group
   # admins, site admins, and members an admin marked in the Members tab
@@ -90,6 +97,13 @@ class Group < ApplicationRecord
   # Who keeps the group's records: its admins and the members they marked (told when members
   # suggest agenda items, or a term is up)
   def record_keepers = User.where(id: active_memberships.where("group_memberships.role = 'admin' OR group_memberships.can_keep_records").select(:user_id))
+  # How many people make a quorum, from the bylaws: a number, or a share of the members
+  def quorum_needed
+    return (active_memberships.count * quorum_percent / 100.0).ceil if quorum_percent&.positive?
+
+    quorum_count if quorum_count&.positive?
+  end
+
   def visible_to?(user) = !!user && (user.suite_admin? || member?(user) || (active? && self.class.feature_open_to?(user)))
   def active? = status == "active"
   def page_visible_to?(user) = active? || visible_to?(user)

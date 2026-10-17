@@ -44,10 +44,32 @@ class BusinessMeeting < ApplicationRecord
   end
 
   def planned? = status == "planned"
+
+  # Motions set aside at earlier meetings (tabled, put off, sent to a committee) and not dealt with
+  # since, that aren't on this agenda yet
+  def unfinished_business
+    on_agenda = agenda_items.where.not(motion_id: nil).select(:motion_id)
+    group.motions.unfinished.where.not(id: on_agenda).where("motions.business_meeting_id IS NULL OR motions.business_meeting_id <> ?", id).includes(:business_meeting).newest_first
+  end
   def zone = group.zone
 
   # starts_at in the group's zone as "HH:MM", and back from it
   def starts_time = starts_at&.in_time_zone(zone)&.strftime("%H:%M")
+
+  def called_to_order_time = called_to_order_at&.in_time_zone(zone)&.strftime("%H:%M")
+  def adjourned_time = adjourned_at&.in_time_zone(zone)&.strftime("%H:%M")
+
+  # Whether enough people came, by the group's quorum; nil when the group has set none or no one
+  # counted
+  def quorum_met?
+    needed = group.quorum_needed
+    needed && attendance_count ? attendance_count >= needed : nil
+  end
+
+  def set_times(called_to_order: nil, adjourned: nil)
+    self.called_to_order_at = clock(called_to_order, called_to_order_at) unless called_to_order.nil?
+    self.adjourned_at = clock(adjourned, adjourned_at) unless adjourned.nil?
+  end
 
   def set_start(time)
     self.starts_at = time.present? && held_on ? zone.parse("#{held_on} #{time}") : nil
@@ -68,10 +90,15 @@ class BusinessMeeting < ApplicationRecord
       event: event && { token: event.token, title: event.title, status: event.status, path: event.path },
       meeting: meeting && { id: meeting.id, name: meeting.name },
       agenda_count: agenda_items.size, motions_count: motions.size,
+      called_to_order_time: called_to_order_time, adjourned_time: adjourned_time,
+      quorum_needed: group.quorum_needed, quorum_met: quorum_met?,
     }
   end
 
   private
+
+  # "19:05" on this meeting's day, in the group's zone; blank clears it
+  def clock(time, _was) = time.present? && held_on ? zone.parse("#{held_on} #{time}") : nil
 
   def belongs_with_group
     errors.add(:event, "must be one of this group's events") if event && event.group_id != group_id
