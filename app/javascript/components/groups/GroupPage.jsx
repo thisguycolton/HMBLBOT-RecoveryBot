@@ -45,7 +45,7 @@ export default function GroupPage() {
   if (error) {
     return (
       <Message title="That group isn't here" text={error}>
-        <Link to="/" className="mt-4 inline-block text-sm text-accent hover:underline">Back to groups</Link>
+        <Link to="/meetings" className="mt-4 inline-block text-sm text-accent hover:underline">Find a meeting</Link>
       </Message>
     );
   }
@@ -56,6 +56,9 @@ export default function GroupPage() {
   const current = tabs.find((t) => t.key === tab) || tabs[0];
 
   const act = async (path, confirmText) => {
+    // Signed out, asking to join means making an account (or logging in) first; the
+    // request goes out when they sign in
+    if (path === "join" && !group.signed_in) { window.location.href = `/groups/${slug}/ask_to_join`; return; }
     if (confirmText && !window.confirm(confirmText)) return;
     setBusy(true);
     setActionError(null);
@@ -73,7 +76,7 @@ export default function GroupPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <Link to={back || "/"} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">{back ? "← Find a meeting" : "← Groups"}</Link>
+      <Link to={back || (document.body.dataset.groups === "true" ? "/" : "/meetings")} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">{back || document.body.dataset.groups !== "true" ? "← Find a meeting" : "← Groups"}</Link>
       <GroupHero
         group={group}
         coverUrl={group.cover_url}

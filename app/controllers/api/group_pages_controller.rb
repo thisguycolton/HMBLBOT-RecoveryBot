@@ -5,7 +5,9 @@ class Api::GroupPagesController < ApplicationController
   include GroupScoped
   include TakesPageImages
 
-  before_action :set_group
+  skip_before_action :authenticate_user!, only: :show
+  before_action :set_viewable_group, only: :show
+  before_action :set_group, except: :show
   before_action :require_manager, only: %i[update images]
 
   # GET /api/groups/:group_slug/page

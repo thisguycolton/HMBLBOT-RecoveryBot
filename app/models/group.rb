@@ -73,6 +73,11 @@ class Group < ApplicationRecord
   def member?(user) = !!membership_for(user)&.active?
   def admin?(user) = !!membership_for(user)&.then { |m| m.active? && m.admin? }
   def manageable_by?(user) = !!user && (user.suite_admin? || admin?(user))
+  # Anyone, signed in or not, can look at an active group's page and meetings (finding a
+  # meeting needs no account); a group that's waiting for approval only shows to whoever
+  # can see it. Members' things stay with members (GroupPage, Api::GroupsController#group_json).
+  def self.viewable_by(user) = where(status: "active").or(where(id: visible_to(user).select(:id)))
+  def viewable_by?(user) = active? || visible_to?(user)
   def visible_to?(user) = !!user && (user.suite_admin? || member?(user) || (active? && self.class.feature_open_to?(user)))
   def active? = status == "active"
   def admins = members.merge(GroupMembership.admins)
@@ -95,6 +100,16 @@ class Group < ApplicationRecord
       default_body: CourtLetter.default_body(self),
       fields: CourtLetter::FIELDS,
     }
+  end
+
+  # Asks to join for `user` (a group admin approves); nothing changes if they're in already or waiting
+  def request_to_join!(user)
+    membership = memberships.find_or_initialize_by(user: user)
+    return membership unless membership.new_record?
+
+    membership.update!(role: "member", status: "requested")
+    notify_admins(kind: "group.join_request", title: "#{user.display_name} asked to join #{title}")
+    membership
   end
 
   def notify_admins(kind:, title:, body: nil, url: "/groups/#{slug}")

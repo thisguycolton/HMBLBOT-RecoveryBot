@@ -17,6 +17,16 @@ class ApplicationController < ActionController::Base
       group = JoinsGroupFromInvite.call(resource, token)
       return "/groups/#{group.slug}" if group
     end
+    # "Ask to join" pressed while signed out (GroupsController#ask_to_join): send the request now
+    slug = cookies.signed[:group_request]
+    if slug.present? && resource.is_a?(User)
+      cookies.delete(:group_request)
+      group = Group.find_by(slug: slug)
+      if group&.viewable_by?(resource)
+        group.request_to_join!(resource)
+        return "/groups/#{group.slug}"
+      end
+    end
     # Where they were headed, or the home page (notes and what's coming up) once profiles are open to them
     stored = resource.is_a?(User) && stored_location_for(resource)
     return stored if stored

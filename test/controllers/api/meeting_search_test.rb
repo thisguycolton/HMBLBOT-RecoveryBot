@@ -42,10 +42,13 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
     ].to_json)
   end
 
-  test "only people who see Groups can search" do
+  test "anyone can search, with or without an account" do
     sign_in @stranger
     get "/api/meeting_search", as: :json
-    assert_response :forbidden
+    assert_response :success
+    sign_out @stranger
+    get "/api/meeting_search", as: :json
+    assert_response :success
   end
 
   test "the coming week, soonest first, with what's on now" do

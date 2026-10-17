@@ -15,6 +15,9 @@ const viewerZone = () => {
 
 // /groups/find: "Which meeting do you go to?" Searches the groups here, and AA Intergroup's
 // directory to recognize the meeting; a meeting with no group here yet can start one.
+// Without Groups (signed out, or while it is admin-only) there is no Groups home to go back to
+const hasGroups = document.body.dataset.groups === "true";
+
 export default function FindGroup() {
   const navigate = useNavigate();
   const [mode, setMode] = useState("name");
@@ -85,7 +88,7 @@ export default function FindGroup() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
       <div>
-        <Link to="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Groups</Link>
+        {hasGroups ? <Link to="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Groups</Link> : <Link to="/meetings" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Find a meeting</Link>}
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Find your group</h1>
         <p className="text-sm text-slate-600 dark:text-neutral-400">
           Which meeting do you go to? Look it up by name or Zoom link, or by when it meets.

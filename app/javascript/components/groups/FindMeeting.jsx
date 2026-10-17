@@ -37,6 +37,9 @@ const loadView = () => {
   try { return localStorage.getItem("findMeeting.view") || "grid"; } catch { return "grid"; }
 };
 
+// Without Groups (signed out, or while it is admin-only) there is no Groups home to go back to
+const hasGroups = document.body.dataset.groups === "true";
+
 export default function FindMeeting() {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
@@ -128,7 +131,7 @@ export default function FindMeeting() {
     <div ref={top} className="mx-auto max-w-6xl scroll-mt-24 space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Link to="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Groups</Link>
+          {hasGroups && <Link to="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Groups</Link>}
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Find a meeting</h1>
           <p className="text-sm text-slate-600 dark:text-neutral-400">
             AA Intergroup's meetings and our groups' own. Times are in your time zone ({viewerZoneName()}).
