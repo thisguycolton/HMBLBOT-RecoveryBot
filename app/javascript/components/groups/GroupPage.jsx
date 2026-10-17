@@ -26,11 +26,13 @@ const TABS = [
 // /groups/:slug(/:tab): the group's own page (Home, made in the HMBLBOT Editor) and its
 // other sections. A new group (?new=1) opens on its meetings, to bring them in.
 export default function GroupPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { slug, tab = searchParams.get("new") === "1" ? "meetings" : "home" } = useParams();
   const navigate = useNavigate();
   // Opened from Find a meeting: back goes to those results
   const back = useLocation().state?.back;
+  // Groups itself is admin-only for now; everyone else came from Find a meeting
+  const hasGroups = document.body.dataset.groups === "true";
   const [group, setGroup] = useState(null);
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
@@ -41,6 +43,15 @@ export default function GroupPage() {
     setGroup(null);
     load();
   }, [load]);
+
+  // Back from making an account to ask to join (GroupsController#ask): send the request
+  useEffect(() => {
+    if (!group || searchParams.get("ask") !== "1") return;
+    setSearchParams({}, { replace: true });
+    if (group.signed_in && !group.membership_status && group.status === "active") {
+      api(`/groups/${slug}/join`, { method: "POST" }).then(setGroup).catch((e) => setActionError(e.message));
+    }
+  }, [group, searchParams, setSearchParams, slug]);
 
   if (error) {
     return (
@@ -56,6 +67,11 @@ export default function GroupPage() {
   const current = tabs.find((t) => t.key === tab) || tabs[0];
 
   const act = async (path, confirmText) => {
+    // Signed out: make an account first, then back here, where the request goes out (?ask=1)
+    if (path === "join" && !group.signed_in) {
+      window.location.href = `/groups/${slug}/ask`;
+      return;
+    }
     if (confirmText && !window.confirm(confirmText)) return;
     setBusy(true);
     setActionError(null);
@@ -73,7 +89,9 @@ export default function GroupPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <Link to={back || "/"} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">{back ? "← Find a meeting" : "← Groups"}</Link>
+      <Link to={back || (hasGroups ? "/" : "/meetings")} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">
+        {back || !hasGroups ? "← Find a meeting" : "← Groups"}
+      </Link>
       <GroupHero
         group={group}
         coverUrl={group.cover_url}
@@ -84,7 +102,7 @@ export default function GroupPage() {
             {group.status === "pending" && group.is_site_admin && (
               <button type="button" disabled={busy} onClick={() => act("approve")} className={heroButton}>Approve group</button>
             )}
-            {!group.membership_status && (
+            {!group.membership_status && group.status === "active" && (
               <button type="button" disabled={busy} onClick={() => act("join")} className={heroButton}>Ask to join</button>
             )}
             {group.membership_status === "requested" && (

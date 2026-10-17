@@ -3,7 +3,10 @@
 class Api::GroupsController < ApplicationController
   include GroupScoped
 
-  before_action :set_group, only: %i[show update destroy join leave approve regenerate_invite court_verifications]
+  # Anyone sees an active group's page, signed in or not; any account may ask to join it
+  skip_before_action :authenticate_user!, only: :show
+  before_action :set_viewable_group, only: %i[show join leave]
+  before_action :set_group, only: %i[update destroy approve regenerate_invite court_verifications]
   before_action :require_manager, only: %i[update regenerate_invite court_verifications]
   before_action :require_feature, only: %i[index create find start]
 
@@ -200,13 +203,13 @@ class Api::GroupsController < ApplicationController
 
   def group_json
     membership = @group.membership_for(current_user)
-    member = current_user.suite_admin? || membership&.active?
+    member = current_user&.suite_admin? || membership&.active?
     manager = @group.manageable_by?(current_user)
     json = {
       slug: @group.slug, title: @group.title, description: @group.description, website: @group.website,
       time_zone: @group.time_zone, status: @group.status,
       role: membership&.role, membership_status: membership&.status,
-      is_member: !!membership&.active?, can_manage: manager, is_site_admin: current_user.suite_admin?,
+      is_member: !!membership&.active?, can_manage: manager, is_site_admin: !!current_user&.suite_admin?, signed_in: current_user.present?,
       meetings: @group.meetings.ordered.map(&:as_api_json),
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
       members_count: @group.members.count,
