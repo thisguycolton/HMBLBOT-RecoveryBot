@@ -34,6 +34,36 @@ export function AgendaList({ items, empty = "Nothing on the agenda yet." }) {
   );
 }
 
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+const PRINT_HEADINGS = { report: "Reports", old_business: "Old business", new_business: "New business", other: "Other" };
+// Business that gets voted on has room beside it to write the motion's outcome
+const VOTED = new Set(["old_business", "new_business"]);
+
+// The paper agenda: one lettered section per kind (reports, old business, new business, other),
+// each item numbered from 1 within its section, with blanks to fill in the room for the ones voted on
+export function PrintAgenda({ items }) {
+  const sections = AGENDA_KINDS.map((k) => ({ ...k, items: items.filter((i) => i.kind === k.key) })).filter((s) => s.items.length);
+  if (!sections.length) return <p>Nothing on the agenda yet.</p>;
+  return sections.map((s, n) => (
+    <section key={s.key} className="agenda-print__section">
+      <h2>{ROMAN[n] || n + 1}. {PRINT_HEADINGS[s.key]}</h2>
+      <ol>
+        {s.items.map((item, i) => (
+          <li key={item.id}>
+            <div className="agenda-print__title"><span>{i + 1}.</span> {item.title}{item.status === "done" ? " (done)" : item.status === "tabled" ? " (tabled)" : ""}</div>
+            {item.details && <div className="meeting-print__wording">{item.details}</div>}
+            {VOTED.has(s.key) && (
+              <div className="agenda-print__blanks">
+                <span>Moved</span><span>Seconded</span><span className="agenda-print__short">Yes</span><span className="agenda-print__short">No</span><span className="agenda-print__short">Abst.</span><span>Carried / Lost / Tabled</span>
+              </div>
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
+  ));
+}
+
 // Anyone in the group can suggest an item for a meeting that's coming up; record keepers are told
 // and put it on the agenda. `onAdded` runs after it's sent.
 export function SuggestForm({ slug, meetingId, onAdded, compact = false }) {

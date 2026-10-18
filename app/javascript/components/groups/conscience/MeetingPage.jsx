@@ -5,7 +5,7 @@ import { inputClass, selectClass } from "../../ui/styles";
 import usePrintable, { printTitled } from "../../../lib/usePrintable";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Message, Pill, Tray, dangerButton, primaryButton, quietButton } from "../ui";
-import { AgendaList, ItemPill, SuggestForm } from "./AgendaParts";
+import { ItemPill, PrintAgenda, SuggestForm } from "./AgendaParts";
 import DecisionForm from "./DecisionForm";
 import MeetingForm from "./MeetingForm";
 import MinutesEditor from "./MinutesEditor";
@@ -75,6 +75,7 @@ function MotionTree({ slug, motions, canEdit, onEdit, onAbout }) {
 }
 
 function AgendaItemRow({ item, index, last, canEdit, slug, meeting, reload, setError, drag, onRecord }) {
+  const lifted = drag.id === item.id;
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: item.title, details: item.details, kind: item.kind, status: item.status });
   const base = `/groups/${slug}/business_meetings/${meeting.id}/agenda_items/${item.id}`;
@@ -104,8 +105,8 @@ function AgendaItemRow({ item, index, last, canEdit, slug, meeting, reload, setE
   }
 
   return (
-    <li draggable={canEdit && item.status !== "suggested"} onDragStart={() => drag.start(item.id)} onDragOver={(e) => canEdit && e.preventDefault()} onDrop={() => drag.drop(item.id)}
-      className="flex gap-2 rounded-xl bg-white p-3 shadow-panel dark:bg-neutral-900">
+    <li draggable={canEdit && item.status !== "suggested"} onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; drag.start(item.id); }} onDragOver={(e) => drag.over(e, item.id)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); drag.drop(); }} onDragEnd={drag.cancel}
+      className={`flex gap-2 rounded-xl p-3 transition-shadow ${lifted ? "border-2 border-dashed border-accent bg-accent/10 opacity-80 shadow-none" : "bg-white shadow-panel dark:bg-neutral-900"}`}>
       {canEdit && item.status !== "suggested" && <GripVertical className="mt-1 size-4 shrink-0 cursor-grab text-slate-400" aria-hidden="true" />}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -154,7 +155,9 @@ export default function MeetingPage({ group, id }) {
   const [meta, setMeta] = useState({ kinds: [], groups: {} });
   const [regular, setRegular] = useState([]);
   const editorRef = useRef(null);
-  const dragId = useRef(null);
+  const [dragId, setDragId] = useState(null);
+  // The agenda's order as it would be if let go now, shown live while an item is dragged
+  const [preview, setPreview] = useState(null);
 
   const load = useCallback(() => api(`/groups/${slug}/business_meetings/${id}`).then((m) => {
     setMeeting(m);
@@ -224,16 +227,32 @@ export default function MeetingPage({ group, id }) {
       setMeeting((m) => ({ ...m, agenda: [...d.agenda] }));
     } catch (e) { setError(e.message); }
   };
+  const baseIds = onAgenda.map((i) => i.id);
+  const shown = preview ? preview.map((pid) => onAgenda.find((i) => i.id === pid)).filter(Boolean) : onAgenda;
   const drag = {
-    start: (itemId) => { dragId.current = itemId; },
-    drop: (targetId) => {
-      const from = dragId.current;
-      dragId.current = null;
-      if (!from || from === targetId) return;
-      const ids = onAgenda.map((i) => i.id).filter((x) => x !== from);
-      ids.splice(ids.indexOf(targetId), 0, from);
-      reorder(ids);
+    id: dragId,
+    start: (itemId) => { setDragId(itemId); setPreview(baseIds); },
+    // The dragged row slides to above or below the one under the pointer, depending on which half
+    over: (e, targetId) => {
+      if (!dragId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (targetId === dragId) return;
+      const box = e.currentTarget.getBoundingClientRect();
+      const after = e.clientY > box.top + box.height / 2;
+      const ids = (preview || baseIds).filter((x) => x !== dragId);
+      ids.splice(ids.indexOf(targetId) + (after ? 1 : 0), 0, dragId);
+      setPreview((cur) => (cur && cur.join() === ids.join() ? cur : ids));
     },
+    // Let go: the order on screen is the order that's saved
+    drop: () => {
+      const ids = preview;
+      setDragId(null);
+      setPreview(null);
+      if (ids && ids.join() !== baseIds.join()) reorder(ids);
+    },
+    // Dropped outside the list or with Escape: back where it was
+    cancel: () => { setDragId(null); setPreview(null); },
     move: (itemId, step) => {
       const ids = onAgenda.map((i) => i.id);
       const at = ids.indexOf(itemId);
@@ -293,11 +312,11 @@ export default function MeetingPage({ group, id }) {
         <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
           <div className="min-w-0 space-y-5">
             <Tray label={`Agenda (${onAgenda.length})`}>
-              <ol className="space-y-1.5">
+              <ol className="space-y-1.5" onDragOver={(e) => dragId && e.preventDefault()} onDrop={(e) => { e.preventDefault(); drag.drop(); }}>
                 {onAgenda.length === 0 && <li><Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">{canEdit ? "Nothing on the agenda yet. Add an item below, or approve a suggestion." : "Nothing on the agenda yet. You can suggest an item below."}</Card></li>}
-                {onAgenda.map((item, i) => (
+                {shown.map((item, i) => (
                   <React.Fragment key={item.id}>
-                    <AgendaItemRow item={item} index={i} last={i === onAgenda.length - 1} canEdit={canEdit} slug={slug} meeting={meeting} reload={load} setError={setError} drag={drag} onRecord={(it) => setRecording({ itemId: it.id, preset: { title: it.title, text: it.details, decided_on: meeting.held_on, business_meeting_id: meeting.id, agenda_item_id: it.id } })} />
+                    <AgendaItemRow item={item} index={i} last={i === shown.length - 1} canEdit={canEdit} slug={slug} meeting={meeting} reload={load} setError={setError} drag={drag} onRecord={(it) => setRecording({ itemId: it.id, preset: { title: it.title, text: it.details, decided_on: meeting.held_on, business_meeting_id: meeting.id, agenda_item_id: it.id } })} />
                     {recording?.itemId === item.id && (
                       <li><DecisionForm group={group} motions={pickable} kinds={meta.kinds} groups={meta.groups} onCancel={() => setRecording(null)} onSaved={async () => { setRecording(null); await load(); }} preset={recording.preset} /></li>
                     )}
@@ -383,8 +402,7 @@ export default function MeetingPage({ group, id }) {
         <h1>{group.title} business meeting</h1>
         <p className="meeting-print__meta">{longDate(meeting.held_on)}{meeting.starts_at ? `, ${meeting.when_label.split(" · ")[1]}` : ""}
           {[meeting.chair && `Chair: ${meeting.chair}`, meeting.secretary && `Secretary: ${meeting.secretary}`, meeting.attendance_count != null && `${meeting.attendance_count} present`, meeting.quorum_met === false && "No quorum", meeting.called_to_order_time && `Called to order ${clock12(meeting.called_to_order_time)}`, meeting.adjourned_time && `Adjourned ${clock12(meeting.adjourned_time)}`].filter(Boolean).map((t) => ` · ${t}`).join("")}</p>
-        <h2>Agenda</h2>
-        <AgendaList items={onAgenda} />
+        <PrintAgenda items={onAgenda} />
         {meeting.motions.length > 0 && (
           <>
             <h2>Motions</h2>
