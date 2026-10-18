@@ -102,4 +102,11 @@
 .meeting-print ol { list-style: none; padding: 0; }
 .meeting-print table { border-collapse: collapse; margin-top: 1em; width: 100%; }
 .meeting-print th, .meeting-print td { border: 1px solid #999; padding: 4px 8px; text-align: left; }
+.agenda-print__section { break-inside: auto; }
+.agenda-print__section li { margin-bottom: 0.8em; }
+.agenda-print__title { font-weight: 600; }
+.agenda-print__title span { display: inline-block; min-width: 1.6em; }
+.agenda-print__blanks { color: #555; display: flex; font-size: 9pt; gap: 14px; margin: 0.5em 0 0 1.6em; }
+.agenda-print__blanks span { border-bottom: 1px solid #777; flex: 1 1 0; padding-top: 1.1em; }
+.agenda-print__blanks .agenda-print__short { flex: 0 0 3.2em; }
 .meeting-print dl > div { display: flex; justify-content: space-between; }
