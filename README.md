@@ -1,93 +1,100 @@
-# HMBLBOT RecoveryBot
+# RecoveryBot
 
-**HMBLBOT RecoveryBot** is an open-source web application built with [Ruby on Rails](https://rubyonrails.org/), designed to support people in recovery and 12-step programs. It provides interactive meeting formats, searchable recovery literature, and tools for organizing and sharing content online.
+A platform for running 12-step recovery groups: a literature library, group pages and meetings, and the record-keeping a group's business meeting needs.
 
-> Made with ❤️ by [Colton Hagan](https://github.com/thisguycolton) as a way to give back to a community that gave him so much.
+**Live:** https://recoverybot.hmblbot.com
 
----
+## Screenshots
 
-## ✨ Features
+| Group home page | Group conscience |
+| --- | --- |
+| ![A group's home page](docs/screenshots/group-home.png) | ![Group conscience overview](docs/screenshots/group-conscience.png) |
+| **Host scheduling** | **Public meeting finder** |
+| ![Host scheduling with open places](docs/screenshots/host-scheduling.png) | ![Find a meeting](docs/screenshots/meeting-finder.png) |
 
-- 🗣 **Topicificator 9000** – Randomized topic generator for group discussions
-- 📚 **Literature Library** – Searchable collection of recovery readings
-- 📝 **Rich Text Editor** – Post and format meeting readings online
-- 🔒 **User Authentication** – Admin approval required for new accounts
+The screenshots show the app running locally with made-up demo data.
 
----
+## Features
 
-## 🚀 Getting Started
+### Library
+- Recovery books with search across all of them, and a chapter reader
+- Shareable highlights with Markdown notes
+- Problem reports on text
+- Admin book and chapter editor
 
-### Requirements
+### Groups
+- Memberships, with admin and member roles
+- Meetings linked to the AA Intergroup directory
+- Group home pages and events built in a Tiptap-based page editor
+- Approved literature per group
+- Court-verification forms and emails
 
-- Ruby 3.2+
-- Rails 7
-- PostgreSQL
-- Node.js + Yarn (or Bun)
-- Redis (optional, for caching)
+### Group conscience
+- Bylaws and policies as live documents, with PDF export and Word/RTF import
+- A decision log
+- Business meetings with agendas, minutes, quorum and unfinished business
+- Robert's Rules checks on records (the app records what the room decided; it never blocks)
 
-### Installation
+### Service
+- Treasurer's reports with the prudent reserve and the split
+- Officer terms and rotation reminders
+- Host scheduling for 28 weekly meetings, with open-spot flags and one-day covers
 
-1. **Clone the repository**
+### Community
+- Profiles, follows and timeline posts
+- A public meeting finder
+- Schedule polls with a vote heat map
 
-   ```bash
-   git clone https://github.com/thisguycolton/HMBLBOT-RecoveryBot.git
-   cd HMBLBOT-RecoveryBot
-   ```
+### Admin
+- Overview, analytics, users, readings, tags and court verifications
 
-2. **Install dependencies**
+## Tech stack
 
-   ```
-   bundle install
-   yarn install # or bun install
-   ```
+- **Backend:** Ruby 3.2.3, Ruby on Rails 8, PostgreSQL, Devise for accounts, Active Storage, Ahoy for analytics, Sentry for error reporting
+- **Frontend:** React 19 with Stimulus and Turbo, bundled by Vite (`vite_rails`), styled with Tailwind CSS 4 and Bootstrap
+- **Editors:** Tiptap and Lexical
+- **Documents:** pdf.js and mammoth (browser-side PDF reading and Word import)
+- **Tests:** Rails' built-in Minitest, with Capybara system tests
+- **Deployment:** Docker on CapRover
 
-3. **Setup the database**
+## Local setup
 
-   ```
-   rails db:setup
-   ```
+You need Ruby 3.2.3, Node.js (the Dockerfile uses 20.x) and PostgreSQL.
 
-4. Start the server
+```sh
+bundle install
+npm ci
+bin/rails db:create db:schema:load
+```
 
-   ```
-   ./bin/dev
-   ```
+Then run the Rails server and the Vite dev server (two terminals):
 
-5. Visit http://localhost:3000 to see the app running locally.
+```sh
+bin/rails s
+bin/vite dev
+```
 
-### 🔧 Configuration
+The app is at http://localhost:3000. `bin/rails db:seed` does not work on an empty database (it expects an existing topic set), so create content through the app or the importers in `lib/tasks/`.
 
-    You can manage users via the Rails console:
+A few features are behind environment variables:
 
-    User.create(email: "admin@example.com", password: "password", admin: true, confirmed: true)
+| Variable | Effect |
+| --- | --- |
+| `ADMIN_EMAILS` | Comma-separated emails of site admins who can use the admin suite and Groups |
+| `GROUPS_FOR_EVERYONE=1` | Opens Groups to every account |
+| `AA_INTERGROUP_FEED_URL` | Overrides the AA Intergroup meeting feed |
 
-    Environment variables:
+## Tests
 
-        RAILS_ENV – Default: development
+```sh
+bin/rails test           # unit, controller and integration tests
+bin/rails test:system    # browser tests (needs Chrome)
+```
 
-        DATABASE_URL – If using an external DB
+The front end must be built once (`npx vite build`) before controller tests that render pages can pass.
 
-        REDIS_URL – Optional, for caching or background jobs
+## Deployment
 
-🧱 Built With
+The app deploys to CapRover from the `Dockerfile` and `captain-definition`. The image builds the Vite assets, and the container runs `rails db:migrate` and then Puma on start.
 
-    Ruby on Rails
-
-    Stimulus.js
-
-    Vite for JavaScript bundling
-
-    CapRover for deployment
-
-📦 Deployment
-
-This app is production-ready and has been deployed on CapRover. You can customize Dockerfile or use CapRover’s one-click deploy option.
-🤝 Contributing
-
-Pull requests and issues are welcome! If you find a bug or have a suggestion, open an issue or submit a PR.
-📜 License
-
-MIT
-🙌 Acknowledgements
-
-Thanks to the recovery community and all the open-source tools that made this project possible.
+See `AGENTS.md` for an architecture guide to the codebase.
