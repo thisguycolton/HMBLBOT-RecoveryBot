@@ -6,7 +6,7 @@ This guide provides essential architectural and operational knowledge for AI age
 RecoveryBot is a Ruby on Rails 7 application designed to support recovery and 12-step programs.
 
 ### Tech Stack
-- **Backend**: Ruby on Rails 7, PostgreSQL
+- **Backend**: Ruby on Rails 8, PostgreSQL
 - **Frontend**: React components (JSX) integrated with Stimulus.js and Vite for bundling.
 - **Deployment**: CapRover / Docker
 
@@ -56,7 +56,7 @@ Business logic for complex operations (e.g., importing literature) is encapsulat
 ## 🚀 Development Workflow
 
 ### Local Setup
-- **Server**: Run `./bin/dev` to start the Rails server and Vite.
+- **Server**: Run `bin/rails s` and `bin/vite dev` (there is no `bin/dev`; `Procfile.dev` lists both).
 - **Database**: Use `rails db:setup` for initial configuration.
 
 ### API Structure

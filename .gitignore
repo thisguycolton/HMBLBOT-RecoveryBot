@@ -5,10 +5,11 @@
 #   git config --global core.excludesfile '~/.gitignore_global'
 
 # Ignore bundler config.
-# /.bundle
+/.bundle
 
 # Ignore all logfiles and tempfiles.
 /log/*
+/logfile
 /tmp/*
 !/log/.keep
 !/tmp/.keep
@@ -34,7 +35,7 @@
 
 # Vite Ruby
 /public/vite*
-node_modules
+/node_modules
 # Vite uses dotenv and suggests to ignore local-only env files. See
 # https://vitejs.dev/guide/env-and-mode.html#env-files
 *.local
@@ -45,4 +46,5 @@ node_modules
 session-*.md
 .cortexkit/
 .claude/
-.DS_Store
+**/.DS_Store
+*:Zone.Identifier
