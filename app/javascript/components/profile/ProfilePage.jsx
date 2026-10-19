@@ -284,6 +284,61 @@ export default function ProfilePage() {
           </Card>
         </Tray>
       </form>
+
+      <DeleteAccount />
     </div>
+  );
+}
+
+// Deleting the account takes the current password; afterwards they land on the home page
+function DeleteAccount() {
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const remove = async (e) => {
+    e.preventDefault();
+    if (!window.confirm("Delete your account for good? This can't be undone.")) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/profile", { method: "DELETE", body: { current_password: password } });
+      window.location.href = "/";
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Tray label="Delete account">
+      <Card className="space-y-3 p-4">
+        <p className="text-sm text-slate-600 dark:text-neutral-400">
+          This removes your profile, notes, highlights, follows, RSVPs and group memberships. Records your groups keep, like minutes
+          or a document you edited, stay with the group. <a href="/privacy#deleting" className="text-accent hover:underline">What gets deleted</a>
+        </p>
+        {open ? (
+          <form onSubmit={remove} className="space-y-3">
+            <div>
+              <label htmlFor="p-delete-password" className={labelClass}>Your password</label>
+              <input id="p-delete-password" type="password" required autoComplete="current-password" className={inputClass}
+                value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+            <ErrorNote error={error} />
+            <div className="flex items-center justify-end gap-3">
+              <button type="button" className={quietButton} onClick={() => { setOpen(false); setError(null); }}>Cancel</button>
+              <button type="submit" disabled={busy || !password} className={dangerButton}>
+                <Trash2 className="h-4 w-4" /> {busy ? "Deleting…" : "Delete my account"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex justify-end">
+            <button type="button" className={dangerButton} onClick={() => setOpen(true)}><Trash2 className="h-4 w-4" /> Delete account…</button>
+          </div>
+        )}
+      </Card>
+    </Tray>
   );
 }

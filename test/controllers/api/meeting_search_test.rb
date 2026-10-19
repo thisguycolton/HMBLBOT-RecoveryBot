@@ -74,7 +74,7 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
       # Ask to join -> make an account -> back on the group's page, which sends the request
       get "/groups/#{group.slug}/ask"
       assert_redirected_to new_user_registration_path
-      post user_registration_path, params: { user: { name: "New Person", email: "new@example.com", password: "password123", password_confirmation: "password123" } }
+      post user_registration_path, params: { user: { name: "New Person", email: "new@example.com", password: "password123", password_confirmation: "password123" }, **human_check_params }
       User.find_by!(email: "new@example.com").update!(confirmed: true) # a site admin confirms new accounts
       post user_session_path, params: { user: { email: "new@example.com", password: "password123" } }
       assert_redirected_to "/groups/#{group.slug}?ask=1"

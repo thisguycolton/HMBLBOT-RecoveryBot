@@ -30,6 +30,7 @@ module AcidTest
       Devise::SessionsController.layout "reader"
       Devise::PasswordsController.layout "reader"
       Devise::RegistrationsController.layout ->(c) { %w[new create].include?(c.action_name) ? "reader" : "application" }
+      Users::RegistrationsController.layout ->(c) { %w[new create].include?(c.action_name) ? "reader" : "application" }
     end
   end
 end

@@ -3,6 +3,7 @@ import { BookOpen, CircleCheck, Highlighter, KeyRound, LogIn, Mail, Shuffle, Use
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
 import { RecoveryBotLogo } from "../brand/Logo";
+import HumanCheckFields from "../site/HumanCheckFields";
 
 // Devise's pages in the house panel style. Each posts a plain HTML form, so Devise
 // handles the session, redirects and flash (shown as toasts) exactly as before.
@@ -107,7 +108,7 @@ export function LoginPage({ email = "", remember = true, forgot_path, sign_up_pa
   );
 }
 
-export function SignUpPage({ name = "", email = "", min_password_length, login_path, ...form }) {
+export function SignUpPage({ name = "", email = "", min_password_length, login_path, human_check, ...form }) {
   return (
     <AuthFrame icon={UserPlus} title="Create your account" subtitle="An admin approves new accounts before you can log in"
       footer={login_path && <>Already have an account? <a href={login_path} className={linkClass}>Log in</a></>}>
@@ -117,6 +118,10 @@ export function SignUpPage({ name = "", email = "", min_password_length, login_p
         <Field id="user_password" label="Password" type="password" name="user[password]" autoComplete="new-password" required minLength={min_password_length}
           hint={passwordHint(min_password_length)} />
         <Field id="user_password_confirmation" label="Confirm password" type="password" name="user[password_confirmation]" autoComplete="new-password" required />
+        <HumanCheckFields check={human_check} />
+        <p className="text-xs text-slate-500 dark:text-neutral-400">
+          A first name and last initial is plenty. See the <a href="/privacy" className={linkClass}>privacy policy</a> for what we keep and who sees it.
+        </p>
       </AuthForm>
     </AuthFrame>
   );

@@ -1,0 +1,8 @@
+<%= @name %> <<%= @email %>> wrote through the RecoveryBot contact page.
+Topic: <%= @topic %>
+<% if @user %>Signed in as: <%= @user.name %> (<%= @user.email %>, @<%= @user.username %>)
+<% else %>Not signed in.
+<% end %>
+<%= @message %>
+
+Reply to this email to answer them.

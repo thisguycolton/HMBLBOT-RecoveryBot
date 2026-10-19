@@ -44,6 +44,16 @@ class User < ApplicationRecord
   has_many :event_collaborators, dependent: :destroy
   has_many :timeline_notes, dependent: :destroy
   has_many :event_rsvps, dependent: :destroy
+  has_many :intergroup_follows, dependent: :destroy
+  has_many :host_sub_requests_made, class_name: "HostSubRequest", foreign_key: :requested_by_id, dependent: :nullify, inverse_of: :requested_by
+  has_many :host_sub_requests_filled, class_name: "HostSubRequest", foreign_key: :filled_by_id, dependent: :nullify, inverse_of: :filled_by
+  has_many :page_templates_updated, class_name: "GroupPageTemplate", foreign_key: :updated_by_id, dependent: :nullify, inverse_of: :updated_by
+  # Readings are shared with everyone, so an account that added some isn't deleted on its own
+  # (Api::ProfilesController#destroy says to get in touch instead)
+  has_many :readings, dependent: :restrict_with_error
+  # Analytics stay as anonymous counts when an account is deleted
+  has_many :visits, class_name: "Ahoy::Visit", dependent: :nullify
+  has_many :ahoy_events, class_name: "Ahoy::Event", dependent: :nullify
 
   # Set default values for new users
   after_initialize :set_defaults, unless: :persisted?
