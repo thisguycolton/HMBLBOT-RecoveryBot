@@ -20,13 +20,14 @@ class Api::GroupMembershipsController < ApplicationController
     head :created
   end
 
-  # PATCH /api/groups/:slug/memberships/:id { role, can_keep_records, can_schedule_hosts, status: "active" approves a request }
+  # PATCH /api/groups/:slug/memberships/:id { role, can_keep_records, can_schedule_hosts, can_keep_treasury, status: "active" approves a request }
   def update
     was_request = !@membership.active?
     @membership.role = params[:role] if params[:role].present?
     @membership.status = "active" if params[:status] == "active"
     @membership.can_keep_records = ActiveModel::Type::Boolean.new.cast(params[:can_keep_records]) if params.key?(:can_keep_records)
     @membership.can_schedule_hosts = ActiveModel::Type::Boolean.new.cast(params[:can_schedule_hosts]) if params.key?(:can_schedule_hosts)
+    @membership.can_keep_treasury = ActiveModel::Type::Boolean.new.cast(params[:can_keep_treasury]) if params.key?(:can_keep_treasury)
     if @membership.role_changed? && @membership.role_was == "admin" && @group.admins.count == 1
       return render(json: { error: "A group needs at least one admin." }, status: :unprocessable_entity)
     end

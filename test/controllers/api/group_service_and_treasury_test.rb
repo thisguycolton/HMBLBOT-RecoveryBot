@@ -92,6 +92,31 @@ class Api::GroupServiceAndTreasuryTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a member an admin makes treasurer writes and posts reports, and sees drafts" do
+    treasurer = User.create!(email: "treasurer@example.com", name: "Tess", password: "password123", confirmed: true)
+    membership = @group.memberships.create!(user: treasurer, role: "member")
+    sign_in treasurer
+    post reports, params: { treasurer_report: { period_on: "2026-08-01" } }, as: :json
+    assert_response :forbidden
+
+    sign_in @member
+    patch "/api/groups/#{@group.slug}/memberships/#{membership.id}", params: { can_keep_treasury: true }, as: :json
+    assert_response :forbidden
+    sign_in @leader
+    patch "/api/groups/#{@group.slug}/memberships/#{membership.id}", params: { can_keep_treasury: true }, as: :json
+    assert_response :no_content
+
+    sign_in treasurer
+    post reports, params: { treasurer_report: { period_on: "2026-08-01" } }, as: :json
+    assert_response :created
+    get reports, as: :json
+    assert_equal [1, true, false], [body["reports"].size, body["can_edit"], body["can_delete"]]
+    patch reports(body["reports"].first["id"]), params: { treasurer_report: { status: "posted" } }, as: :json
+    assert_response :success
+    post positions, params: { service_position: { title: "GSR" } }, as: :json
+    assert_response :forbidden, "being treasurer isn't being a record keeper"
+  end
+
   test "members read posted reports; record keepers write them; group admins delete" do
     sign_in @keeper
     post reports, params: { treasurer_report: { period_on: "2026-09-20", opening_cents: 30_000, reserve_cents: 30_000,

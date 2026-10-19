@@ -1,18 +1,18 @@
 # The treasurer's monthly reports (app/models/treasurer_report.rb). Members read the posted
-# ones; record keepers write them as drafts and post them; group admins delete.
+# ones; the treasurer and record keepers write them as drafts and post them; group admins delete.
 class Api::GroupTreasurerReportsController < ApplicationController
   include GroupScoped
 
   before_action :set_group
   before_action :require_member
-  before_action :require_keeper, only: %i[create update]
+  before_action :require_treasurer, only: %i[create update]
   before_action :require_manager, only: :destroy
   before_action :set_report, only: %i[update destroy]
 
   # GET /api/groups/:group_slug/treasurer_reports
   def index
     render json: { reports: TreasurerReport.visible_to(@group, current_user).newest_first.map(&:as_api_json),
-                   can_edit: keeper?, can_delete: @group.manageable_by?(current_user) }
+                   can_edit: @group.treasury_editable_by?(current_user), can_delete: @group.manageable_by?(current_user) }
   end
 
   # POST /api/groups/:group_slug/treasurer_reports
@@ -33,6 +33,12 @@ class Api::GroupTreasurerReportsController < ApplicationController
   end
 
   private
+
+  def require_treasurer
+    return if @group.treasury_editable_by?(current_user)
+
+    render json: { error: "Only the group's treasurer and record keepers can do that." }, status: :forbidden
+  end
 
   def set_report
     @report = @group.treasurer_reports.find(params[:id])

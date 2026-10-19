@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_19_010000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_19_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -332,6 +332,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_010000) do
     t.datetime "updated_at", null: false
     t.boolean "can_keep_records", default: false, null: false
     t.boolean "can_schedule_hosts", default: false, null: false
+    t.boolean "can_keep_treasury", default: false, null: false
     t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
     t.index ["group_id"], name: "index_group_memberships_on_group_id"
     t.index ["user_id"], name: "index_group_memberships_on_user_id"

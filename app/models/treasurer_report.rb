@@ -26,7 +26,7 @@ class TreasurerReport < ApplicationRecord
   scope :newest_first, -> { order(period_on: :desc) }
 
   def self.visible_to(group, user)
-    return group.treasurer_reports if group.records_editable_by?(user)
+    return group.treasurer_reports if group.treasury_editable_by?(user)
 
     group.member_or_site_admin?(user) ? group.treasurer_reports.where(status: "posted", visibility: "members") : none
   end

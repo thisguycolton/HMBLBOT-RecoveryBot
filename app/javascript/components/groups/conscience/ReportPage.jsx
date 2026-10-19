@@ -76,7 +76,7 @@ export default function ReportPage({ group, id = null }) {
         setForm(formFrom(found));
         return;
       }
-      if (!d.can_edit) { setError("Only this group's record keepers can write reports."); return; }
+      if (!d.can_edit) { setError("Only this group's treasurer and record keepers can write reports."); return; }
       // a new month starts from the last: what it ended with, the reserve, the split, the usual lines
       const last = d.reports[0];
       const next = last ? new Date(Number(last.period_on.slice(0, 4)), Number(last.period_on.slice(5, 7)), 1) : new Date();

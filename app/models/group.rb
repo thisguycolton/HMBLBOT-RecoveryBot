@@ -96,6 +96,8 @@ class Group < ApplicationRecord
   def records_editable_by?(user) = manageable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_keep_records }
   # Who keeps the group's records: its admins and the members they marked (told when members
   # suggest agenda items, or a term is up)
+  # Who writes the treasurer's reports: record keepers, and members an admin marked as treasurer
+  def treasury_editable_by?(user) = records_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_keep_treasury }
   def record_keepers = User.where(id: active_memberships.where("group_memberships.role = 'admin' OR group_memberships.can_keep_records").select(:user_id))
   # How many people make a quorum, from the bylaws: a number, or a share of the members
   def quorum_needed
