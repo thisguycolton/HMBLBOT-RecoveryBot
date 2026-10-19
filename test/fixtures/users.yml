@@ -4,8 +4,10 @@ one:
   email: one@example.com
   name: User One
   confirmed: true
+  confirmed_at: <%= Time.current.to_fs(:db) %>
 
 two:
   email: two@example.com
   name: User Two
   confirmed: true
+  confirmed_at: <%= Time.current.to_fs(:db) %>

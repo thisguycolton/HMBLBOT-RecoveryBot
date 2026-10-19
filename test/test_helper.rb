@@ -14,4 +14,9 @@ end
 
 class ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
+
+  # What the sign-up and contact forms send to pass HumanCheck: a form drawn a little while ago
+  def human_check_params(drawn: 10.seconds.ago)
+    { HumanCheck::STAMP => HumanCheck.verifier.generate(drawn.to_f, expires_in: HumanCheck::MAX_AGE) }
+  end
 end

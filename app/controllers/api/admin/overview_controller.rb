@@ -21,6 +21,7 @@ class Api::Admin::OverviewController < Api::Admin::SuiteController
       },
       tags: Tag.count,
       text_reports: { open: TextReport.unresolved.count, resolved: TextReport.resolved.count },
+      contact_requests: { open: ContactRequest.unhandled.count, total: ContactRequest.count },
       notices: { live: SiteNotice.live.count, total: SiteNotice.count },
     }
   end

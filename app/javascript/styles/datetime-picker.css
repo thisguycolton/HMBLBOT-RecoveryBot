@@ -1123,8 +1123,10 @@ body.dark .datetime-picker-action-dot {
    DATE TIME PICKER POPUP
    ============================================================ */
 
+/* Above the HMBLBOT Editor's side panels and drawers (z-index 2050/2100) and full-screen
+   documents (2200), so a picker opened in one isn't hidden behind it */
 .datetime-picker-popup {
-  z-index: 1000;
+  z-index: 2400;
 }
 
 .datetime-picker-panel {
@@ -1172,8 +1174,6 @@ body.dark .datetime-picker-action-dot {
     max-width: 100vw !important;
 
     margin: 0 !important;
-
-    z-index: 1000;
   }
 
   .datetime-picker-panel {

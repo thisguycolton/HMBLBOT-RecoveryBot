@@ -1,4 +1,4 @@
-# Accounts for the admin suite: search, approve pending sign-ups, grant or remove admin.
+# Accounts for the admin suite: search, confirm someone whose email never arrived, grant or remove admin.
 class Api::Admin::UsersController < Api::Admin::SuiteController
   LIMIT = 200
 
@@ -34,10 +34,10 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
     render json: user_json(user)
   end
 
-  # PATCH: approve a pending sign-up and email them
+  # PATCH: confirm a sign-up by hand (their confirmation email never arrived) and email them
   def confirm
     user = User.find(params[:id])
-    if user.update(confirmed: true)
+    if user.confirm
       UserMailer.approval_notification(user).deliver_later
       Notification.deliver(user, kind: "user.approved", title: "Your account was approved. Welcome to HumbleBot!")
       render json: user_json(user)

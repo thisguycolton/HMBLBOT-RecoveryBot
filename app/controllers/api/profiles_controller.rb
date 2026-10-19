@@ -29,12 +29,36 @@ class Api::ProfilesController < ApplicationController
     render json: profile_json
   end
 
+  # DELETE /api/profile { current_password }
+  # Deletes the account and what's only theirs (profile, notes, highlights, follows, RSVPs,
+  # memberships); group records they helped keep stay with the group, without their name
+  # attached where the record allows it. Signs them out.
+  def destroy
+    user = current_user
+    unless user.valid_password?(params[:current_password].to_s)
+      return render(json: { error: "That password isn't right." }, status: :unprocessable_entity)
+    end
+
+    if user.readings.exists?
+      return render(json: { error: "You've added readings to the archive, and other people use them. Please use the Contact page and we'll delete your account and sort out the readings with you." },
+                    status: :unprocessable_entity)
+    end
+
+    unless user.destroy
+      return render(json: { error: user.errors.full_messages.to_sentence.presence || "Your account couldn't be deleted. Please use the Contact page and we'll do it for you." },
+                    status: :unprocessable_entity)
+    end
+
+    sign_out(user)
+    head :no_content
+  end
+
   private
 
   def profile_json
     u = current_user.reload
     {
-      name: u.name, email: u.email, bio: u.bio, avatar_url: u.avatar_url,
+      name: u.name, email: u.email, unconfirmed_email: u.unconfirmed_email, bio: u.bio, avatar_url: u.avatar_url,
       sobriety_date: u.sobriety_date&.iso8601, show_sobriety_date: u.show_sobriety_date,
       groups: u.group_memberships.includes(:group).map { |m| { slug: m.group.slug, title: m.group.title, role: m.role, status: m.status } },
       groups_open: Group.feature_open_to?(u),

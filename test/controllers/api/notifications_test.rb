@@ -27,9 +27,9 @@ class Api::NotificationsTest < ActionDispatch::IntegrationTest
     assert_equal ["text_report.resolved", "/books/daily-reflections/chapters/january-10"], [n.kind, n.url]
   end
 
-  test "sign-ups waiting for approval notify admins" do
+  test "sign-ups confirm their own email, so admins aren't asked to approve them" do
     User.create!(email: "new@example.com", password: "password123")
-    assert_equal ["user.pending"], @admin.notifications.pluck(:kind)
+    assert_empty @admin.notifications
   end
 
   test "readers list their notifications and mark them read" do

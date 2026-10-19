@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   Flag,
   Gauge,
+  Inbox,
   LayoutDashboard,
   Megaphone,
   Menu,
@@ -31,6 +32,7 @@ import ReadingsPage from "./ReadingsPage";
 import TagsPage from "./TagsPage";
 import CourtVerificationsPage from "./CourtVerificationsPage";
 import TextReportsPage from "./TextReportsPage";
+import ContactRequestsPage from "./ContactRequestsPage";
 import NoticesPage from "./NoticesPage";
 import { RecoveryBotLogo } from "../brand/Logo";
 
@@ -43,7 +45,8 @@ const SECTIONS = [
   {
     title: "Review",
     items: [
-      { to: "/users", label: "Members", icon: Users, count: "pending" },
+      { to: "/users", label: "Members", icon: Users },
+      { to: "/contact_requests", label: "Contact requests", icon: Inbox, count: "contact_requests" },
       { to: "/text_reports", label: "Text reports", icon: Flag, count: "text_reports" },
       { to: "/court_verifications", label: "Court verifications", icon: ClipboardCheck },
     ],
@@ -83,8 +86,8 @@ export default function AdminSuite() {
 }
 
 const inboxCounts = (overview) => ({
-  pending: overview?.users?.pending ?? 0,
   text_reports: overview?.text_reports?.open ?? 0,
+  contact_requests: overview?.contact_requests?.open ?? 0,
   notices: overview?.notices?.live ?? 0,
 });
 
@@ -236,6 +239,7 @@ function SuiteShell() {
               <Route path="/readings" element={<ReadingsPage notify={notify} />} />
               <Route path="/tags" element={<TagsPage notify={notify} />} />
               <Route path="/notices" element={<NoticesPage notify={notify} />} />
+              <Route path="/contact_requests" element={<ContactRequestsPage notify={notify} />} />
               <Route path="/text_reports" element={<TextReportsPage notify={notify} />} />
               <Route path="/court_verifications" element={<CourtVerificationsPage notify={notify} />} />
               <Route path="*" element={<p className="py-16 text-center text-slate-500 !font-sans">No admin page here.</p>} />

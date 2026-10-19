@@ -50,6 +50,13 @@ An API-driven system for tracking game state, inventories, and player progress.
 - `Follow` (no approval; the followed person gets a notification). `/people` is the home page people land on after signing in (`after_sign_in_path_for`): Notes (yours and what people you follow share) in two thirds, and a third (folded on phones) with next meetings, sobriety birthdays and events from their groups (`PeopleHome`).
 - `Visibility` concern on notes and highlights: `private` (default) / `followers` / `public` (shown as "Members": anyone signed in who can see profiles). New ones take `users.default_highlight_visibility` / `default_note_visibility` from settings. Highlight share links work whatever this says.
 
+### 🔒 Privacy, contact and sign-up
+- `/privacy` (`PrivacyController`, `components/site/PrivacyPage.jsx`) describes what the app really collects, every cookie and local-storage key, and each outside service. Change it (and its date) in the same change whenever you add a cookie, a tracker, an outside service or a new kind of personal data.
+- No cookie banner: every cookie is first-party and needed; Ahoy runs cookieless (`Ahoy.cookies = :none`) with masked IPs.
+- `/contact` (`ContactsController`) saves a `ContactRequest` (admin suite > Contact requests, `Api::Admin::ContactRequestsController`, `ContactRequestsPage.jsx`; open/handled) and `ContactMailer` emails it to support@hmblbot.com. Sign-up (`Users::RegistrationsController`) and contact go through `HumanCheck` (decoy field + signed form time, plus Cloudflare Turnstile only when `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` are set) and a `rate_limit`. Tests post `human_check_params`.
+- Sign-up uses Devise `:confirmable`: people confirm their email (link good for 3 days, resend at `/users/confirmation/new`) instead of waiting for admin approval. The old `users.confirmed` flag is kept in sync with `confirmed_at` (`User#sync_confirmed`), so queries on it still work and `confirmed: true` in code or fixtures means confirmed. Email changes wait for the new address to be confirmed (`unconfirmed_email`).
+- People delete their own account on the profile page (`DELETE /api/profile` with their password); an account with readings is refused and pointed to /contact.
+
 ### 🛠 Services
 Business logic for complex operations (e.g., importing literature) is encapsulated in `app/services`.
 

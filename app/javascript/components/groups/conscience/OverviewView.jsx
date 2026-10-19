@@ -58,7 +58,7 @@ export default function OverviewView({ group }) {
           {next ? (
             <>
               <div className="flex flex-wrap items-start gap-3">
-                <div className="min-w-0 flex-1">
+                <div className="min-w-[min(100%,15rem)] flex-1">
                   <p className="text-lg font-semibold text-slate-900 dark:text-white">{next.starts_at ? next.when_label : longDate(next.held_on)}</p>
                   {next.meeting && <p className="text-sm text-slate-500 dark:text-neutral-400">After {next.meeting.name}</p>}
                 </div>
