@@ -3,7 +3,7 @@
 # visibility (see .visible_to); every save keeps the copy it replaced (GroupDocumentVersion).
 class GroupDocument < ApplicationRecord
   KINDS = %w[format guidelines treasury service outreach other].freeze
-  VISIBILITIES = %w[public members keepers].freeze
+  VISIBILITIES = %w[public members hosts keepers].freeze
   STATUSES = %w[draft current archived].freeze
   # Written in the editor (sanitized HTML), or an older one still in Markdown
   FORMATS = %w[html markdown].freeze
@@ -41,13 +41,16 @@ class GroupDocument < ApplicationRecord
 
   scope :ordered, -> { order(pinned: :desc, position: :asc, title: :asc) }
 
-  # What this person may see. Keepers (see Group#records_editable_by?) see everything;
-  # members see current Members and Public documents; anyone else only current Public ones.
+  # What this person may see. Keepers (see Group#records_editable_by?) see everything; people
+  # who can host (Group#can_host?) see current Hosts, Members and Public documents; members
+  # current Members and Public ones; anyone else only current Public ones.
   def self.visible_to(group, user)
     docs = group.documents
     return docs if group.records_editable_by?(user)
 
     docs = docs.where(status: "current")
+    return docs.where(visibility: %w[public members hosts]) if group.can_host?(user)
+
     group.member_or_site_admin?(user) ? docs.where(visibility: %w[public members]) : docs.where(visibility: "public")
   end
 

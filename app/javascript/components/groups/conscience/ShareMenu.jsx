@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Check, Copy, Globe, Link2, Lock, Users } from "lucide-react";
+import { Check, Copy, Globe, Link2, Lock, UserCheck, Users } from "lucide-react";
 import { api } from "../lib";
 import { selectClass } from "../../ui/styles";
 import { quietButton } from "../ui";
@@ -8,6 +8,7 @@ import { VISIBILITIES } from "./lib";
 const WHO = {
   public: [Globe, "Anyone with the link can read this document."],
   members: [Users, "Only members of this group can open the link."],
+  hosts: [UserCheck, "Only members who can host or co-host, and record keepers, can open the link."],
   keepers: [Lock, "Only the group's record keepers can open the link."],
 };
 

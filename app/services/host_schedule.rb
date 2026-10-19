@@ -13,8 +13,12 @@ class HostSchedule
     meetings = @group.meetings.weekly.ordered.includes(:hosts, :host_covers).to_a
     series = meetings.group_by { |m| [m.name, m.start_minute, m.end_minute] }
     slots = meetings.map { |m| slot(m, series[[m.name, m.start_minute, m.end_minute]]) }
-    json = { slots: slots, summary: summary(slots), can_edit: @group.hosts_editable_by?(@viewer), sub_requests: sub_requests(meetings) }
-    json[:members] = @group.members.map { |u| { id: u.id, name: u.display_name } }.sort_by { |u| u[:name].downcase } if json[:can_edit]
+    json = { slots: slots, summary: summary(slots), can_edit: @group.hosts_editable_by?(@viewer), can_host: @group.can_host?(@viewer),
+             sub_requests: sub_requests(meetings), formats: formats }
+    if json[:can_edit]
+      json[:members] = @group.active_memberships.includes(:user).map { |m| { id: m.user_id, name: m.user.display_name, membership_id: m.id, can_host: m.can_host } }
+                             .sort_by { |u| [u[:can_host] ? 0 : 1, u[:name].downcase] }
+    end
     json
   end
 
@@ -27,11 +31,28 @@ class HostSchedule
 
   private
 
+  # The group's current format and scripts this person may read (a group can keep them for hosts)
+  def formats
+    GroupDocument.visible_to(@group, @viewer).where(kind: "format", status: "current").ordered
+                 .map { |d| { id: d.id, title: d.title, visibility: d.visibility } }
+  end
+
+  # The places this person holds now or later, or covers on a coming date, so they can say they
+  # won't be there
+  def mine(meeting)
+    return [] unless @viewer
+
+    MeetingHost::ROLES.select do |role|
+      meeting.hosts.any? { |h| h.role == role && h.user_id == @viewer.id && (h.ends_on.nil? || h.ends_on >= @today) } ||
+        meeting.host_covers.any? { |c| c.role == role && c.user_id == @viewer.id && c.on >= @today }
+    end
+  end
+
   # Open "Need a sub" requests from today on, soonest first
   def sub_requests(meetings)
     HostSubRequest.open.where(meeting_id: meetings.map(&:id)).where("host_sub_requests.on >= ?", @today)
                   .includes(:meeting, :requested_by).order(:on).map do |r|
-      r.as_api_json.merge(meeting_name: r.meeting.name, start_minute: r.meeting.start_minute, day_of_week: r.meeting.day_of_week)
+      r.as_api_json.merge(asked_by_me: !!@viewer && r.requested_by_id == @viewer.id, meeting_name: r.meeting.name, start_minute: r.meeting.start_minute, day_of_week: r.meeting.day_of_week)
     end
   end
 
@@ -50,6 +71,7 @@ class HostSchedule
       held = next_on && meeting.host_on(role, next_on)
       json[:"next_#{role}"] = cover ? { name: cover.name, cover: true } : held ? { name: held.name, cover: false } : nil
     end
+    json[:mine] = mine(meeting)
     json[:covers] = meeting.host_covers.select { |c| c.on >= @today && c.on <= @today + COVER_DAYS }.sort_by { |c| [c.on, c.role] }.map(&:as_api_json)
     json
   end
