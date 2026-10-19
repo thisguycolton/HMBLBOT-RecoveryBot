@@ -59,12 +59,12 @@ export const NAV_CATEGORIES = [
 
 // The Account dropdown: the member's own things, then the admin tools.
 export const ACCOUNT_ITEMS = [
-  { label: "New Reading", href: "/readings/new", icon: Plus },
-  { label: "My Readings", href: "/readings/mine", icon: NotebookPen },
-  { label: "My highlights", href: "/library/highlights", icon: Highlighter },
+  { label: "Home feed", href: "/people", icon: Contact, groups: true },
   { label: "Your profile", href: "/people/me", icon: UserRound, groups: true },
   { label: "My groups", href: "/groups", icon: Users, groups: true },
-  { label: "Home feed", href: "/people", icon: Contact, groups: true },
+  { label: "My Readings", href: "/readings/mine", icon: NotebookPen },
+  { label: "New Reading", href: "/readings/new", icon: Plus },
+  { label: "My highlights", href: "/library/highlights", icon: Highlighter },
   { label: "Profile & account", href: "/users/edit", icon: Settings },
 ];
 

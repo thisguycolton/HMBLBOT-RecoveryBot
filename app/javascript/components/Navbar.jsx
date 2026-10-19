@@ -201,7 +201,7 @@ export default function Navbar({
           )}
           {isAuthenticated && hasGroups() && (
             <div className="grid grid-cols-2 gap-2">
-              {ACCOUNT_ITEMS.filter((item) => item.href === "/people" || item.href === "/groups").reverse().map((item) => (
+              {ACCOUNT_ITEMS.filter((item) => item.href === "/people" || item.href === "/groups").map((item) => (
                 <QuickLink key={item.href} item={item} current={item.href === here} onClick={item.href === "/groups" ? openMyGroups : null} />
               ))}
             </div>

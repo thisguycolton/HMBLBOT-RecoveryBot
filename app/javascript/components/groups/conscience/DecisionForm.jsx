@@ -156,8 +156,8 @@ export default function DecisionForm({ group, motion = null, motions, kinds, gro
           </fieldset>
         )}
 
-        <Toggle checked={!!form.ignore_rules} onChange={(v) => setForm((f) => ({ ...f, ignore_rules: v }))} label="Don't hold this one to Robert's Rules"
-          description="For a decision the group made its own way: no warnings about seconds, counts or the vote needed." />
+        {group.follows_roberts_rules !== false && <Toggle checked={!!form.ignore_rules} onChange={(v) => setForm((f) => ({ ...f, ignore_rules: v }))} label="Don't hold this one to Robert's Rules"
+          description="For a decision the group made its own way: no warnings about seconds, counts or the vote needed." />}
 
         {warnings.length > 0 && (
           <ul role="status" className="space-y-1 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">

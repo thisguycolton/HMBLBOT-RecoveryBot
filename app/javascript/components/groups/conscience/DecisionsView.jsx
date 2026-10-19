@@ -196,8 +196,10 @@ export default function DecisionsView({ group }) {
     setBusy(false);
   };
   const bulkActions = [
-    { key: "ignore_rules", label: "Ignore Robert's Rules warnings" },
-    { key: "follow_rules", label: "Follow Robert's Rules again" },
+    ...(group.follows_roberts_rules !== false ? [
+      { key: "ignore_rules", label: "Ignore Robert's Rules warnings" },
+      { key: "follow_rules", label: "Follow Robert's Rules again" },
+    ] : []),
     { key: "mark_checked", label: "Mark as checked (members can see them)" },
     { key: "category", label: "Change the kind to…", values: CATEGORIES.map((c) => [c.key, c.label]) },
     { key: "visibility", label: "Who can see them…", values: [["members", "Members"], ["public", "Anyone (public)"]] },

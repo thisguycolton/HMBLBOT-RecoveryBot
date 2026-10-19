@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ImagePlus, Trash2 } from "lucide-react";
+import Toggle from "../ui/Toggle";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { api, ZONES } from "./lib";
 import { Card, ErrorNote, dangerButton, primaryButton, quietButton } from "./ui";
@@ -11,7 +12,7 @@ export { GroupLogo };
 // Group settings in the group dashboard (group admins): its name, about, website, time zone and logo
 export default function GroupSettings({ group, setGroup }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ title: group.title || "", description: group.description || "", website: group.website || "", time_zone: group.time_zone });
+  const [form, setForm] = useState({ title: group.title || "", description: group.description || "", website: group.website || "", time_zone: group.time_zone, follows_roberts_rules: group.follows_roberts_rules !== false });
   const [logo, setLogo] = useState(null); // a File waiting to be saved
   const [removeLogo, setRemoveLogo] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -86,6 +87,12 @@ export default function GroupSettings({ group, setGroup }) {
             </select>
           </div>
         </div>
+      </Card>
+
+      <Card className="space-y-3 p-4 sm:p-5">
+        <h2 className="font-semibold text-slate-900 dark:text-white">Business meetings</h2>
+        <Toggle checked={form.follows_roberts_rules} onChange={(v) => set({ follows_roberts_rules: v })} label="Run business by Robert's Rules"
+          description="When this is on, recording a motion notes where it doesn't follow the rules (a missing second, a count that doesn't carry it). Turn it off if your group decides things its own way; the warnings go away for every decision." />
       </Card>
 
       <ErrorNote error={error} />

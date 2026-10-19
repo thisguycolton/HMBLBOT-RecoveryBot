@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_19_050000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_19_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -370,6 +370,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_050000) do
     t.jsonb "page_blocks"
     t.integer "quorum_count"
     t.integer "quorum_percent"
+    t.boolean "follows_roberts_rules", default: true, null: false
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true

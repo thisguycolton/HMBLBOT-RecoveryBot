@@ -60,6 +60,16 @@ class Api::GroupBulkAndSettingsTest < ActionDispatch::IntegrationTest
     assert_equal 0, @group.documents.count
   end
 
+  test "a group that turns Robert's Rules off gets no rules warnings" do
+    assert_includes @b.warnings, "No second is recorded."
+    sign_in @admin
+    patch "/api/groups/#{@group.slug}", params: { group: { follows_roberts_rules: false } }, as: :json
+    assert_response :success
+    assert_equal false, response.parsed_body["follows_roberts_rules"]
+    assert_empty @b.reload.warnings
+    assert_equal ["Brought in from old minutes: check it against them, then save it so members can see it."], @a.reload.warnings
+  end
+
   test "group admins set a logo and take it off" do
     sign_in @admin
     patch "/api/groups/#{@group.slug}", params: { group: { logo: fixture_file_upload(Rails.root.join("test/fixtures/files/avatar.png"), "image/png") } }

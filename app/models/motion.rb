@@ -111,7 +111,7 @@ class Motion < ApplicationRecord
     recorded = DECIDED.include?(status)
     list = []
     list << "Brought in from old minutes: check it against them, then save it so members can see it." if needs_review
-    return list if ignore_rules
+    return list if ignore_rules || group&.follows_roberts_rules == false
     list << "No second is recorded." if info[:second] && seconded_by_name.blank? && recorded
     list << "Say which motion this applies to." if info[:pending] && parent_id.nil?
     required = required_vote_key
