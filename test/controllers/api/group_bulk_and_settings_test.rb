@@ -21,6 +21,17 @@ class Api::GroupBulkAndSettingsTest < ActionDispatch::IntegrationTest
   def motions_bulk(**body) = post("/api/groups/#{@group.slug}/motions/bulk", params: body, as: :json)
   def docs_bulk(**body) = post("/api/groups/#{@group.slug}/documents/bulk", params: body, as: :json)
 
+  test "a one-time decision stays in the log but isn't standing" do
+    sign_in @keeper
+    assert_includes @group.motions.standing, @b
+    motions_bulk(ids: [@b.id], do: "one_time")
+    assert @b.reload.one_time
+    assert_not_includes @group.motions.standing, @b
+    assert_not @b.as_api_json[:standing]
+    motions_bulk(ids: [@b.id], do: "standing")
+    assert_includes @group.motions.standing, @b.reload
+  end
+
   test "record keepers act on many decisions at once; only admins delete them" do
     sign_in @member
     motions_bulk(ids: [@a.id], do: "ignore_rules")

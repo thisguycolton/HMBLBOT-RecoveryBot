@@ -34,7 +34,7 @@ function Aside({ m }) {
 }
 
 function Decision({ slug, motion: m, parent, children, open, canEdit, canDelete, onEdit, onDelete, selected, onSelect }) {
-  const replaced = m.status === "passed" && isDecision(m) && !m.standing;
+  const replaced = m.status === "passed" && isDecision(m) && !m.standing && !m.one_time;
   const counts = countLabel(m);
   return (
     <Card className={`flex gap-2.5 p-3 ${selected ? "ring-2 ring-accent/60" : ""}`}>
@@ -49,6 +49,7 @@ function Decision({ slug, motion: m, parent, children, open, canEdit, canDelete,
             {m.amended_text && <Pill>As amended</Pill>}
             {m.visibility === "public" && <Pill tone="green"><Globe className="size-3" /> Public</Pill>}
             {m.needs_review && <Pill tone="amber">To check</Pill>}
+            {m.one_time && m.status === "passed" && <Pill>One-time</Pill>}
             {m.ignore_rules && <Pill>No Robert's Rules</Pill>}
             {m.warnings?.length > 0 && <AlertTriangle className="size-4 text-amber-600" aria-label="Doesn't follow the rules" />}
           </span>
@@ -200,6 +201,8 @@ export default function DecisionsView({ group }) {
       { key: "ignore_rules", label: "Ignore Robert's Rules warnings" },
       { key: "follow_rules", label: "Follow Robert's Rules again" },
     ] : []),
+    { key: "one_time", label: "Mark as one-time (not standing)" },
+    { key: "standing", label: "Make standing again (not one-time)" },
     { key: "status", label: "Set how it came out…", values: Object.entries(MOTION_STATUS_LABELS) },
     { key: "mark_checked", label: "Mark as checked (members can see them)" },
     { key: "category", label: "Change the kind to…", values: CATEGORIES.map((c) => [c.key, c.label]) },

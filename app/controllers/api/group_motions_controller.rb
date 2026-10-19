@@ -55,10 +55,10 @@ class Api::GroupMotionsController < ApplicationController
     head :no_content
   end
 
-  BULK_ACTIONS = %w[ignore_rules follow_rules mark_checked category visibility status delete].freeze
+  BULK_ACTIONS = %w[ignore_rules follow_rules one_time standing mark_checked category visibility status delete].freeze
 
   # POST /api/groups/:group_slug/motions/bulk { ids: [], do: "ignore_rules" | "follow_rules" |
-  # "mark_checked" | "category" | "visibility" | "status" | "delete", value } -> { updated: n }
+  # "one_time" | "standing" | "mark_checked" | "category" | "visibility" | "status" | "delete", value } -> { updated: n }
   # (deleting is for group admins, as one at a time is)
   def bulk
     action = params[:do].to_s
@@ -71,6 +71,8 @@ class Api::GroupMotionsController < ApplicationController
       case action
       when "ignore_rules" then motions.update_all(ignore_rules: true, updated_at: Time.current)
       when "follow_rules" then motions.update_all(ignore_rules: false, updated_at: Time.current)
+      when "one_time" then motions.update_all(one_time: true, updated_at: Time.current)
+      when "standing" then motions.update_all(one_time: false, updated_at: Time.current)
       when "mark_checked" then motions.update_all(needs_review: false, updated_at: Time.current)
       when "category"
         return render(json: { error: "That isn't a category." }, status: :unprocessable_entity) unless Motion::CATEGORIES.include?(value)
@@ -119,6 +121,6 @@ class Api::GroupMotionsController < ApplicationController
     params.require(:motion).permit(:title, :text, :moved_by_name, :seconded_by_name, :status, :votes_for, :votes_against,
                                    :abstentions, :minority_opinion, :decided_on, :category, :supersedes_id, :visibility,
                                    :business_meeting_id, :agenda_item_id, :kind, :parent_id, :vote_method, :required_vote,
-                                   :previous_notice, :committee, :postponed_to, :amended_text, :note, :ignore_rules)
+                                   :previous_notice, :committee, :postponed_to, :amended_text, :note, :ignore_rules, :one_time)
   end
 end

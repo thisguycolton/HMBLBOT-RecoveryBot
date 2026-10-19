@@ -107,7 +107,7 @@ export default function OverviewView({ group }) {
             {data.recent_decisions.map((m) => (
               <Row key={m.id} to={decisionsPath(slug, m.id)} icon={Scale} title={m.title}
                 note={[m.decided_on && dateLabel(m.decided_on), countLabel(m)].filter(Boolean).join(" · ")}
-                right={m.status === "failed" ? <Pill tone="amber">{MOTION_STATUS_LABELS[m.status]}</Pill> : !m.standing ? <Pill>Replaced</Pill> : null} />
+                right={m.status === "failed" ? <Pill tone="amber">{MOTION_STATUS_LABELS[m.status]}</Pill> : m.one_time ? <Pill>One-time</Pill> : !m.standing ? <Pill>Replaced</Pill> : null} />
             ))}
           </div>
         </Tray>
