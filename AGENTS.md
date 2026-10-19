@@ -53,7 +53,7 @@ An API-driven system for tracking game state, inventories, and player progress.
 ### 🔒 Privacy, contact and sign-up
 - `/privacy` (`PrivacyController`, `components/site/PrivacyPage.jsx`) describes what the app really collects, every cookie and local-storage key, and each outside service. Change it (and its date) in the same change whenever you add a cookie, a tracker, an outside service or a new kind of personal data.
 - No cookie banner: every cookie is first-party and needed; Ahoy runs cookieless (`Ahoy.cookies = :none`) with masked IPs.
-- `/contact` (`ContactsController`, `ContactMailer`) emails `CONTACT_EMAIL`, else `ADMIN_EMAILS`; nothing is stored. Sign-up (`Users::RegistrationsController`) and contact go through `HumanCheck` (decoy field + signed form time, plus Cloudflare Turnstile only when `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` are set) and a `rate_limit`. Tests post `human_check_params`.
+- `/contact` (`ContactsController`) saves a `ContactRequest` (admin suite > Contact requests, `Api::Admin::ContactRequestsController`, `ContactRequestsPage.jsx`; open/handled) and `ContactMailer` emails it to support@hmblbot.com. Sign-up (`Users::RegistrationsController`) and contact go through `HumanCheck` (decoy field + signed form time, plus Cloudflare Turnstile only when `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` are set) and a `rate_limit`. Tests post `human_check_params`.
 - People delete their own account on the profile page (`DELETE /api/profile` with their password); an account with readings is refused and pointed to /contact.
 
 ### 🛠 Services

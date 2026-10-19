@@ -296,6 +296,7 @@ end
       resources :text_reports, only: %i[index update destroy] do
         post :comment, on: :member
       end
+      resources :contact_requests, only: %i[index update destroy]
     end
   end
   resources :readings do

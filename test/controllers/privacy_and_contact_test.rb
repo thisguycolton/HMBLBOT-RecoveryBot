@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 class PrivacyAndContactTest < ActionDispatch::IntegrationTest
   setup do
@@ -26,27 +27,24 @@ class PrivacyAndContactTest < ActionDispatch::IntegrationTest
     get "/contact"
     assert_response :success
     props = JSON.parse(Nokogiri::HTML(response.body).at("#site-page")["data-props"])
-    assert props["configured"]
     assert_equal "website", props.dig("human_check", "decoy")
     assert_nil props.dig("human_check", "turnstile_site_key")
   end
 
-  test "a message is emailed to the admins with a reply-to, and nothing is saved" do
-    post "/contact", params: contact.merge(human_check_params)
+  test "a message is saved and emailed to support with a reply-to" do
+    assert_difference -> { ContactRequest.count }, 1 do
+      post "/contact", params: contact.merge(human_check_params)
+    end
     assert_redirected_to "/contact?sent=1"
+    saved = ContactRequest.last
+    assert_equal ["Sam", "sam@example.com", "privacy", "open", nil], [saved.name, saved.email, saved.topic, saved.status, saved.user_id]
 
     mail = ActionMailer::Base.deliveries.last
-    assert_equal %w[admin@example.com other@example.com], mail.to
+    assert_equal ["support@hmblbot.com"], mail.to
     assert_equal ["sam@example.com"], mail.reply_to
     assert_includes mail.subject, "Privacy or deleting my data"
     assert_includes mail.text_part.body.to_s, "Please delete my RSVP."
     assert_includes mail.text_part.body.to_s, "Not signed in."
-  end
-
-  test "CONTACT_EMAIL wins over the admin list" do
-    ENV["CONTACT_EMAIL"] = "hello@example.com"
-    post "/contact", params: contact.merge(human_check_params)
-    assert_equal ["hello@example.com"], ActionMailer::Base.deliveries.last.to
   end
 
   test "bots are turned away: decoy filled, too fast, no stamp or a forged one" do
@@ -60,6 +58,7 @@ class PrivacyAndContactTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
     end
     assert_empty ActionMailer::Base.deliveries
+    assert_equal 0, ContactRequest.count
   end
 
   test "it needs an email to reply to and a message" do
@@ -70,15 +69,42 @@ class PrivacyAndContactTest < ActionDispatch::IntegrationTest
     assert_empty ActionMailer::Base.deliveries
   end
 
-  test "with no admin address it says so instead of pretending to send" do
-    ENV.delete("ADMIN_EMAILS")
-    get "/contact"
-    refute JSON.parse(Nokogiri::HTML(response.body).at("#site-page")["data-props"])["configured"]
+  test "a failed email still keeps the message" do
+    ContactMailer.stub(:with, ->(*) { raise "SMTP is down" }) do
+      post "/contact", params: contact.merge(human_check_params)
+    end
+    assert_redirected_to "/contact?sent=1"
+    assert_equal 1, ContactRequest.count
+  end
 
-    post "/contact", params: contact.merge(human_check_params)
-    assert_response :unprocessable_entity
-    assert_includes response.body, "set up on this site yet"
-    assert_empty ActionMailer::Base.deliveries
+  test "admins see, handle and delete contact requests" do
+    admin = User.create!(email: "admin@example.com", name: "Admin", password: "password123", confirmed: true, admin: true)
+    member = User.create!(email: "m@example.com", name: "Member", password: "password123", confirmed: true)
+    sign_in member
+    post "/contact", params: contact(email: "m@example.com").merge(human_check_params)
+    req = ContactRequest.last
+    assert_equal member, req.user
+
+    get "/api/admin/contact_requests", as: :json
+    assert_response :forbidden
+
+    sign_in admin
+    get "/api/admin/overview", as: :json
+    assert_equal 1, response.parsed_body.dig("contact_requests", "open")
+    get "/api/admin/contact_requests", as: :json
+    assert_equal ["Please delete my RSVP."], response.parsed_body["contact_requests"].map { _1["message"] }
+    assert_equal "Member", response.parsed_body["contact_requests"].first.dig("account", "name")
+
+    patch "/api/admin/contact_requests/#{req.id}", params: { status: "handled" }, as: :json
+    assert_equal ["handled", admin.id], [req.reload.status, req.handled_by_id]
+    get "/api/admin/contact_requests", as: :json
+    assert_empty response.parsed_body["contact_requests"]
+    get "/api/admin/contact_requests?status=handled", as: :json
+    assert_equal 1, response.parsed_body["contact_requests"].size
+
+    delete "/api/admin/contact_requests/#{req.id}", as: :json
+    assert_response :no_content
+    refute ContactRequest.exists?(req.id)
   end
 
   test "sign-up needs the human check" do

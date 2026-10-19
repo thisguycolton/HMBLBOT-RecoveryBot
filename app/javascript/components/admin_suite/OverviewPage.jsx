@@ -16,6 +16,7 @@ export default function OverviewPage({ notify }) {
 
   const waiting = [
     { label: "Members waiting for approval", count: data.users.pending, to: "/users?filter=pending", tone: "bg-amber-500" },
+    { label: "Contact requests to answer", count: data.contact_requests.open, to: "/contact_requests", tone: "bg-sky-600" },
     { label: "Open text reports", count: data.text_reports.open, to: "/text_reports", tone: "bg-red-500" },
     { label: "Site notices showing", count: data.notices.live, to: "/notices", tone: "bg-emerald-600" },
   ];

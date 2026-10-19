@@ -61,13 +61,13 @@ function Table({ head, rows }) {
   );
 }
 
-export default function PrivacyPage({ turnstile = false, contact_configured = true }) {
+export default function PrivacyPage({ turnstile = false }) {
   // The page draws after load, so a link to a section (/privacy#deleting) scrolls once it's there
   useEffect(() => {
     if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
   }, []);
 
-  const contact = contact_configured ? <a href="/contact">the Contact page</a> : <a href="https://discord.gg/mBkUUwH7hd">our Discord</a>;
+  const contact = <a href="/contact">the Contact page</a>;
 
   return (
     <div className="bg-slate-50 dark:bg-neutral-950 min-h-[calc(100vh-56px)] px-4 py-10 sm:py-14 !font-sans [&_*]:!font-sans">
@@ -135,7 +135,7 @@ export default function PrivacyPage({ turnstile = false, contact_configured = tr
             <li><strong>Court attendance verifications:</strong> when a group signs one, the name and email of the person who attended, the meeting, its date and topic, and who signed it. A copy is emailed to that person and to the group.</li>
             <li><strong>Readings and reports:</strong> readings you add to the shared archive, and any problems you report in the library's text.</li>
             <li><strong>The Acid Quest:</strong> a screen name and your progress in the game.</li>
-            <li><strong>Messages to us:</strong> what you send through the Contact page is emailed to us. It isn't saved on the site.</li>
+            <li><strong>Messages to us:</strong> what you send through the Contact page (your name if you give one, your email and your message) is emailed to us and kept so the people who run the site can answer it. Ask us if you'd like it deleted afterwards.</li>
           </ul>
           <h3>Things we record when you visit</h3>
           <ul>

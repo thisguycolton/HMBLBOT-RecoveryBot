@@ -8,7 +8,7 @@ const linkClass = "font-medium text-accent hover:underline";
 const MAX_MESSAGE = 5000;
 
 // The Contact page (/contact, ContactsController): a plain HTML form the server emails on
-export default function ContactPage({ action, authenticity_token, sent, errors = [], configured, topics = [], values = {}, human_check }) {
+export default function ContactPage({ action, authenticity_token, sent, errors = [], topics = [], values = {}, human_check }) {
   const [submitting, setSubmitting] = useState(false);
   const [length, setLength] = useState((values.message || "").length);
 
@@ -27,16 +27,11 @@ export default function ContactPage({ action, authenticity_token, sent, errors =
                 </p>
                 <p className="text-sm"><a href="/" className={linkClass}>Back to RecoveryBot</a></p>
               </div>
-            ) : !configured ? (
-              <p className="py-4 text-sm text-slate-600 dark:text-neutral-400">
-                The contact form isn't set up on this site yet. In the meantime you can reach us on{" "}
-                <a href="https://discord.gg/mBkUUwH7hd" target="_blank" rel="noreferrer" className={linkClass}>Discord</a>.
-              </p>
             ) : (
               <form action={action} method="post" acceptCharset="UTF-8" className="space-y-4" onSubmit={() => setSubmitting(true)}>
                 <input type="hidden" name="authenticity_token" value={authenticity_token} />
                 <p className="text-sm text-slate-600 dark:text-neutral-400">
-                  This goes by email to the people who run RecoveryBot. We don't save it on the site. Please don't include anything about
+                  This goes to the people who run RecoveryBot, who keep it until it's dealt with. Please don't include anything about
                   other members you wouldn't say in the meeting room.
                 </p>
                 {errors.length > 0 && (

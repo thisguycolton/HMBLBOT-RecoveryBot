@@ -3,6 +3,6 @@ class PrivacyController < ApplicationController
   layout "reader"
 
   def show
-    @props = { turnstile: HumanCheck.turnstile_site_key.present?, contact_configured: ContactMailer.recipients.any? }
+    @props = { turnstile: HumanCheck.turnstile_site_key.present? }
   end
 end

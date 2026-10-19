@@ -2,4 +2,4 @@
 <p>Topic: <%= @topic %><br>
 <% if @user %>Signed in as: <%= @user.name %> (<%= @user.email %>, @<%= @user.username %>)<% else %>Not signed in.<% end %></p>
 <div style="white-space: pre-wrap; border-left: 3px solid #ccc; padding-left: 12px;"><%= @message %></div>
-<p style="color: #666;">Reply to this email to answer them.</p>
+<p style="color: #666;">Reply to this email to answer them. <a href="<%= @admin_url %>">All contact requests</a></p>

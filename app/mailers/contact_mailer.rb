@@ -1,6 +1,8 @@
-# Messages from the Contact page (/contact). They're only emailed, never stored in the app.
+# Messages from the Contact page (/contact): each is saved as a ContactRequest (admin suite >
+# Contact requests) and emailed to RECIPIENT.
 class ContactMailer < ApplicationMailer
-  default from: "support@hmblbot.com"
+  RECIPIENT = "support@hmblbot.com"
+  default from: RECIPIENT
 
   TOPICS = {
     "general" => "A question or idea",
@@ -9,19 +11,15 @@ class ContactMailer < ApplicationMailer
     "group" => "A group or meeting listing",
   }.freeze
 
-  # Who gets them: CONTACT_EMAIL, else the site admins (ADMIN_EMAILS); comma-separated
-  def self.recipients
-    (ENV["CONTACT_EMAIL"].presence || ENV["ADMIN_EMAILS"].presence || ENV["COURT_VERIFICATION_ADMIN_EMAILS"]).to_s
-      .split(",").map(&:strip).reject(&:blank?)
-  end
-
-  # params: name, email, topic, message, user (signed in, or nil)
+  # params: contact_request
   def message_sent
-    @name = params[:name].presence || "Someone"
-    @email = params[:email]
-    @topic = TOPICS.fetch(params[:topic], TOPICS["general"])
-    @message = params[:message]
-    @user = params[:user]
-    mail(to: self.class.recipients, reply_to: @email, subject: "[RecoveryBot] #{@topic}: from #{@name}")
+    contact = params[:contact_request]
+    @name = contact.name.presence || "Someone"
+    @email = contact.email
+    @topic = contact.topic_label
+    @message = contact.message
+    @user = contact.user
+    @admin_url = "#{root_url.chomp('/')}/admin_panel/contact_requests"
+    mail(to: RECIPIENT, reply_to: @email, subject: "[RecoveryBot] #{@topic}: from #{@name}")
   end
 end

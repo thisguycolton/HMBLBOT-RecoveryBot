@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_19_070000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_19_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -186,6 +186,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_070000) do
     t.index ["book_id", "index"], name: "index_chapters_on_book_id_and_index", unique: true
     t.index ["book_id", "slug"], name: "index_chapters_on_book_id_and_slug", unique: true
     t.index ["book_id"], name: "index_chapters_on_book_id"
+  end
+
+  create_table "contact_requests", force: :cascade do |t|
+    t.string "name"
+    t.string "email", null: false
+    t.string "topic", default: "general", null: false
+    t.text "message", null: false
+    t.bigint "user_id"
+    t.string "status", default: "open", null: false
+    t.datetime "handled_at"
+    t.bigint "handled_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["handled_by_id"], name: "index_contact_requests_on_handled_by_id"
+    t.index ["status", "created_at"], name: "index_contact_requests_on_status_and_created_at"
+    t.index ["user_id"], name: "index_contact_requests_on_user_id"
   end
 
   create_table "court_verifications", force: :cascade do |t|
@@ -1045,6 +1061,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_070000) do
   add_foreign_key "business_meetings", "meetings", on_delete: :nullify
   add_foreign_key "business_meetings", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chapters", "books"
+  add_foreign_key "contact_requests", "users", column: "handled_by_id", on_delete: :nullify
+  add_foreign_key "contact_requests", "users", on_delete: :nullify
   add_foreign_key "court_verifications", "groups"
   add_foreign_key "court_verifications", "meetings", on_delete: :nullify
   add_foreign_key "event_collaborators", "events"
