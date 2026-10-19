@@ -268,7 +268,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
     { label: "File", items: [
       canEdit && { label: "Save", shortcut: "⌘S", onClick: save, disabled: saving || (!dirty && !!doc) },
       canEdit && { label: "New document", onClick: () => navigate(`${documentsPath(slug, "new")}?kind=${form.kind}`) },
-      canEdit && { label: "Import Word or RTF…", onClick: () => importRef.current?.click() },
+      canEdit && { label: "Import Word, RTF or Markdown…", onClick: () => importRef.current?.click() },
       canEdit && "divider",
       { label: "Download as Word (.docx)", onClick: () => exportAs("docx"), disabled: !hasText },
       { label: "Download as RTF", onClick: () => exportAs("rtf"), disabled: !hasText },

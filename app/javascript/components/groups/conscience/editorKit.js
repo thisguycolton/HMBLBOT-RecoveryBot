@@ -7,6 +7,8 @@ import TextAlign from "@tiptap/extension-text-align";
 import TextStyle from "@tiptap/extension-text-style";
 import Highlight from "@tiptap/extension-highlight";
 import { Extension } from "@tiptap/core";
+import { Plugin } from "@tiptap/pm/state";
+import { looksLikeMarkdown, markdownToEditorHtml } from "../../../lib/markdownHtml";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
@@ -64,12 +66,34 @@ export const BORDER_COLORS = [["Default", null], ["Light gray", "#e2e8f0"], ["Gr
 export const BORDER_WIDTHS = [["Default", null], ["None", "0px"], ["Thin", "1px"], ["Medium", "2px"], ["Thick", "3px"]];
 export const CELL_WIDTHS = [["Auto", null], ["Narrow", "15%"], ["Medium", "30%"], ["Wide", "50%"]];
 
+// Pasting Markdown (from a .md file, ChatGPT, a notes app) turns it into real headings, lists,
+// quotes and tables. Formatted pastes (from Word, a web page) are left to the editor as before.
+const MarkdownPaste = Extension.create({
+  name: "markdownPaste",
+  addProseMirrorPlugins() {
+    const editor = this.editor;
+    return [new Plugin({
+      props: {
+        handlePaste(view, event) {
+          const data = event.clipboardData;
+          if (!data || data.types.includes("text/html") && !/^\s*<(meta|pre|code)/i.test(data.getData("text/html"))) return false;
+          const text = data.getData("text/plain");
+          if (!looksLikeMarkdown(text)) return false;
+          editor.commands.insertContent(markdownToEditorHtml(text), { parseOptions: { preserveWhitespace: false } });
+          return true;
+        },
+      },
+    })];
+  },
+});
+
 export const documentExtensions = (placeholder = "Start typing…") => [
   StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false, code: false }),
   Underline,
   TextStyle,
   TextColor,
   Highlight.configure({ multicolor: true }),
+  MarkdownPaste,
   Link.configure({ openOnClick: false, autolink: true, protocols: ["mailto"], HTMLAttributes: { rel: "noopener noreferrer nofollow", target: "_blank" } }),
   TextAlign.configure({ types: ["heading", "paragraph"] }),
   Table.configure({ resizable: false }),
