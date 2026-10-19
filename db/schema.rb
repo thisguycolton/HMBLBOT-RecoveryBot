@@ -1045,6 +1045,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_170000) do
     t.jsonb "page_blocks"
     t.string "default_highlight_visibility", default: "private", null: false
     t.string "default_note_visibility", default: "private", null: false
+    t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["share_token"], name: "index_users_on_share_token", unique: true
