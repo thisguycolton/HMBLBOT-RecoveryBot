@@ -17,6 +17,8 @@ class Api::GroupMeetingHostCoversController < ApplicationController
     cover.assign_attributes(name: attrs[:name], user_id: user_id)
     return render_errors(cover) unless cover.save
 
+    meeting.host_sub_requests.open.where(role: cover.role, on: cover.on).update_all(status: "filled", filled_by_id: cover.user_id, updated_at: Time.current)
+
     if cover.user && cover.user_id != current_user.id
       Notification.deliver(cover.user, kind: "meeting_host.covering", title: "You're covering as #{MeetingHost::ROLE_LABELS[cover.role].downcase} for #{meeting.name} on #{cover.on.strftime("%b %-d")}",
                                        body: meeting.schedule_label, url: "/groups/#{@group.slug}/hosts")
@@ -35,6 +37,6 @@ class Api::GroupMeetingHostCoversController < ApplicationController
   def require_scheduler
     return if @group.hosts_editable_by?(current_user)
 
-    render json: { error: "Only the people who schedule hosts can do that." }, status: :forbidden
+    render json: { error: "Only host coordinators can do that." }, status: :forbidden
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_18_010000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_19_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -381,6 +381,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_18_010000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["hostificator_id"], name: "index_host_props_on_hostificator_id"
+  end
+
+  create_table "host_sub_requests", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.bigint "requested_by_id"
+    t.bigint "filled_by_id"
+    t.string "role", null: false
+    t.date "on", null: false
+    t.string "note"
+    t.string "status", default: "open", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["filled_by_id"], name: "index_host_sub_requests_on_filled_by_id"
+    t.index ["meeting_id", "role", "on", "status"], name: "idx_on_meeting_id_role_on_status_9ed0303692"
+    t.index ["meeting_id"], name: "index_host_sub_requests_on_meeting_id"
+    t.index ["requested_by_id"], name: "index_host_sub_requests_on_requested_by_id"
   end
 
   create_table "host_votes", force: :cascade do |t|
@@ -1024,6 +1040,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_18_010000) do
   add_foreign_key "group_page_templates", "users", column: "updated_by_id"
   add_foreign_key "groups", "users", column: "created_by_id"
   add_foreign_key "host_props", "hostificators"
+  add_foreign_key "host_sub_requests", "meetings"
+  add_foreign_key "host_sub_requests", "users", column: "filled_by_id"
+  add_foreign_key "host_sub_requests", "users", column: "requested_by_id"
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"
   add_foreign_key "meeting_host_covers", "meetings", on_delete: :cascade

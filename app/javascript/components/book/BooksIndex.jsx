@@ -32,9 +32,9 @@ export default function BooksIndex({ isAdmin: isAdminProp }) {
 
   return (
     <div className="wb">
-      <header className="flex items-center justify-between gap-4 pt-2">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-2">
         <h1 className="text-3xl md:text-4xl font-extrabold m-0">Library</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {books?.length > 0 && <SearchButton onClick={() => setOpenSearch(true)} label="Search all books" />}
           {document.body.dataset.currentUser === "true" && (
             <a href="/library/highlights" className="wb-btn">My highlights</a>

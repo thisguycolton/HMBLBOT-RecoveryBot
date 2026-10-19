@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { CalendarClock, Plus, Printer, Trash2, UserMinus, UserPlus, X } from "lucide-react";
+import { BellRing, CalendarClock, Plus, Printer, Trash2, UserMinus, UserPlus, X } from "lucide-react";
 import Toggle from "../ui/Toggle";
 import usePrintable, { printTitled } from "../../lib/usePrintable";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
@@ -77,6 +77,57 @@ function CoverForm({ slug, slot, members, onDone, onCancel, setData }) {
   );
 }
 
+// "Need a sub": a host coordinator asks every member to fill one place on one date
+function SubForm({ slug, slot, onDone, onCancel, setData }) {
+  const [form, setForm] = useState({ role: "host", on: slot.next_on || today(), note: "" });
+  const [error, setError] = useState(null);
+  const save = async (e) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      setData(await api(`/groups/${slug}/host_sub_requests`, { method: "POST", body: { sub_request: { ...form, meeting_id: slot.id } } }));
+      onDone();
+    } catch (err) { setError(err.message); }
+  };
+  return (
+    <form onSubmit={save} className="mt-2 space-y-3 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
+      <p className="text-sm font-medium text-slate-800 dark:text-neutral-100">Ask for a sub at {slot.name} ({DAYS[slot.day_of_week]}s, {clock(slot.start_minute)})</p>
+      <ErrorNote error={error} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><label htmlFor={`s-role-${slot.id}`} className={labelClass}>Place to fill</label><select id={`s-role-${slot.id}`} className={selectClass} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>{ROLES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+        <div><label htmlFor={`s-on-${slot.id}`} className={labelClass}>On</label><input id={`s-on-${slot.id}`} type="date" required min={today()} className={inputClass} value={form.on} onChange={(e) => setForm({ ...form, on: e.target.value })} /></div>
+        <div className="sm:col-span-2"><label htmlFor={`s-note-${slot.id}`} className={labelClass}>Note (optional)</label><input id={`s-note-${slot.id}`} maxLength={300} className={inputClass} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="e.g. Kim is out of town" /></div>
+      </div>
+      <p className="-mt-1 text-xs text-slate-500 dark:text-neutral-400">Every member gets a notification. The first to take it is put on for that date.</p>
+      <div className="flex justify-end gap-2"><button type="button" className={quietButton} onClick={onCancel}>Cancel</button><button type="submit" className={primaryButton}><BellRing className="size-4" /> Send it out</button></div>
+    </form>
+  );
+}
+
+// The open "Need a sub" requests, at the top of the tab, for every member to take
+function SubRequests({ requests, edit, call }) {
+  if (!requests?.length) return null;
+  return (
+    <Card className="space-y-2 p-3 ring-1 ring-amber-300/60 dark:ring-amber-500/40">
+      <p className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white"><BellRing className="size-4 text-amber-500" /> {requests.length === 1 ? "A sub is needed" : `${requests.length} subs are needed`}</p>
+      <ul className="space-y-2">
+        {requests.map((r) => (
+          <li key={r.id} className="flex flex-col gap-2 rounded-lg bg-neutral-50 p-2.5 sm:flex-row sm:items-center dark:bg-neutral-950">
+            <div className="min-w-0 flex-1 text-sm">
+              <p className="text-slate-900 dark:text-white"><span className="font-medium">{SHORT[r.role]}</span> for {r.meeting_name}, {longDate(r.on)} at {clock(r.start_minute)}</p>
+              {(r.note || r.requested_by) && <p className="text-xs text-slate-500 dark:text-neutral-400">{[r.note, r.requested_by && `asked by ${r.requested_by}`].filter(Boolean).join(" · ")}</p>}
+            </div>
+            <div className="flex gap-2">
+              <button type="button" className={`${primaryButton} flex-1 !py-1.5 !text-sm sm:flex-none`} onClick={() => window.confirm(`Cover the ${SHORT[r.role].toLowerCase()} place at ${r.meeting_name} on ${longDate(r.on)}?`) && call(`host_sub_requests/${r.id}/take`, "POST")}>I'll cover it</button>
+              {edit && <button type="button" className={`${quietButton} !py-1.5 !text-sm`} onClick={() => window.confirm("Call off this request?") && call(`host_sub_requests/${r.id}`, "DELETE")}>Call off</button>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 // The host and co-host of every weekly meeting (/groups/:slug/hosts), by day. The schedule is for
 // members; group admins and the people they marked as scheduling hosts change it.
 export default function HostsTab({ group }) {
@@ -131,7 +182,12 @@ export default function HostsTab({ group }) {
           {slot.next_on && (slot.next_host || slot.next_co_host) && (
             <p className="text-xs text-slate-500 dark:text-neutral-400">Next, {dateLabel(slot.next_on)}: {[slot.next_host && `${slot.next_host.name}${slot.next_host.cover ? " (covering)" : ""}`, slot.next_co_host && `${slot.next_co_host.name}${slot.next_co_host.cover ? " (covering)" : ""}`].filter(Boolean).join(" and ")}</p>
           )}
-          {edit && <button type="button" className={`${quietButton} mt-1 !px-2 !py-0.5 !text-xs`} onClick={() => setOpen({ slotId: slot.id, role: "cover" })}><CalendarClock className="size-3.5" /> Cover a date</button>}
+          {edit && (
+            <span className="mt-1 flex flex-wrap gap-1">
+              <button type="button" className={`${quietButton} !px-2 !py-0.5 !text-xs`} onClick={() => setOpen({ slotId: slot.id, role: "sub" })}><BellRing className="size-3.5" /> Need a sub</button>
+              <button type="button" className={`${quietButton} !px-2 !py-0.5 !text-xs`} onClick={() => setOpen({ slotId: slot.id, role: "cover" })}><CalendarClock className="size-3.5" /> Cover a date</button>
+            </span>
+          )}
         </div>
         {cell(slot, "host")}
         {cell(slot, "co_host")}
@@ -145,7 +201,8 @@ export default function HostsTab({ group }) {
           ))}
         </ul>
       )}
-      {open?.slotId === slot.id && open.role !== "cover" && <AssignForm slug={slug} slot={slot} role={open.role} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
+      {open?.slotId === slot.id && open.role === "sub" && <SubForm slug={slug} slot={slot} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
+      {open?.slotId === slot.id && !["cover", "sub"].includes(open.role) && <AssignForm slug={slug} slot={slot} role={open.role} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
       {open?.slotId === slot.id && open.role === "cover" && <CoverForm slug={slug} slot={slot} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
     </Card>
   );
@@ -156,7 +213,7 @@ export default function HostsTab({ group }) {
     <div className="space-y-5">
       <div className="print:hidden space-y-5">
         <div className="flex flex-wrap items-center gap-3">
-          <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300">
+          <p className="min-w-0 basis-full text-sm text-slate-600 sm:basis-auto sm:flex-1 dark:text-neutral-300">
             {data.slots.length === 0 ? "The group has no weekly meetings yet. Add them on the Meetings tab, then put a host and co-host on each."
               : openTotal === 0 ? `Every one of the ${s.places} places has someone in it.`
               : <><strong className="text-slate-900 dark:text-white">{openTotal}</strong> of {s.places} places are open: {s.open_hosts} {s.open_hosts === 1 ? "host" : "hosts"} and {s.open_co_hosts} {s.open_co_hosts === 1 ? "co-host" : "co-hosts"}.</>}
@@ -165,6 +222,7 @@ export default function HostsTab({ group }) {
           {data.slots.length > 0 && <button type="button" className={quietButton} onClick={() => printTitled(`${group.title} hosts`)}><Printer className="size-4" /> Print</button>}
         </div>
         <ErrorNote error={error} />
+        <SubRequests requests={data.sub_requests} edit={edit} call={call} />
         {days.map((day) => <Tray key={day.d} label={day.name}><div className="space-y-1.5">{day.slots.map(row)}</div></Tray>)}
         {slots.length === 0 && data.slots.length > 0 && <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">Every place is filled.</Card>}
       </div>

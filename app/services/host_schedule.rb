@@ -13,7 +13,7 @@ class HostSchedule
     meetings = @group.meetings.weekly.ordered.includes(:hosts, :host_covers).to_a
     series = meetings.group_by { |m| [m.name, m.start_minute, m.end_minute] }
     slots = meetings.map { |m| slot(m, series[[m.name, m.start_minute, m.end_minute]]) }
-    json = { slots: slots, summary: summary(slots), can_edit: @group.hosts_editable_by?(@viewer) }
+    json = { slots: slots, summary: summary(slots), can_edit: @group.hosts_editable_by?(@viewer), sub_requests: sub_requests(meetings) }
     json[:members] = @group.members.map { |u| { id: u.id, name: u.display_name } }.sort_by { |u| u[:name].downcase } if json[:can_edit]
     json
   end
@@ -26,6 +26,14 @@ class HostSchedule
   end
 
   private
+
+  # Open "Need a sub" requests from today on, soonest first
+  def sub_requests(meetings)
+    HostSubRequest.open.where(meeting_id: meetings.map(&:id)).where("host_sub_requests.on >= ?", @today)
+                  .includes(:meeting, :requested_by).order(:on).map do |r|
+      r.as_api_json.merge(meeting_name: r.meeting.name, start_minute: r.meeting.start_minute, day_of_week: r.meeting.day_of_week)
+    end
+  end
 
   def slot(meeting, siblings)
     next_on = meeting.next_start&.to_date

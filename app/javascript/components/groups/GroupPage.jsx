@@ -135,7 +135,7 @@ export default function GroupPage({ tab: fixedTab }) {
       <ErrorNote error={actionError} />
 
       {tabs.length > 1 && (
-        <nav className="group-chrome -mx-4 flex gap-1 overflow-x-auto border-b border-neutral-200 px-4 dark:border-neutral-800" aria-label="Group sections">
+        <nav className="group-chrome no-scrollbar -mx-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-neutral-200 px-4 dark:border-neutral-800" aria-label="Group sections">
           {tabs.map(({ key, label, icon: Icon }) => (
             <NavLink
               key={key}

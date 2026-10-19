@@ -57,6 +57,9 @@ Rails.application.routes.draw do
     resource :conscience, controller: "group_conscience", only: :show
     resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy]
     resources :meeting_host_covers, controller: "group_meeting_host_covers", only: %i[create destroy]
+    resources :host_sub_requests, controller: "group_host_sub_requests", only: %i[create destroy] do
+      post :take, on: :member
+    end
     resources :business_meetings, controller: "group_business_meetings", only: %i[index show create update destroy] do
       resources :agenda_items, controller: "group_agenda_items", only: %i[create update destroy] do
         post :reorder, on: :collection

@@ -178,13 +178,14 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Phones: every category's links in one scrolling panel */}
+      {/* Phones: Home feed and My groups up top, then each category folded shut (the one
+          holding this page starts open) */}
       <div
         className={`md:hidden border-t border-slate-200 dark:border-slate-800 transition-all duration-150 overflow-y-auto bg-white dark:bg-neutral-900 border-b border-slate-300 dark:border-slate-600 ${
           mobileOpen ? "max-h-[calc(100dvh-3.5rem)] opacity-100" : "max-h-0 opacity-0 pointer-events-none"
         }`}
       >
-        <div className="mx-auto max-w-6xl px-3 py-3 space-y-3">
+        <div className="mx-auto max-w-6xl px-3 py-3 space-y-2">
           {!isAuthenticated && (
             <div className="grid grid-cols-2 gap-2">
               <a href={loginPath} className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-100">
@@ -195,19 +196,24 @@ export default function Navbar({
               </a>
             </div>
           )}
+          {isAuthenticated && hasGroups() && (
+            <div className="grid grid-cols-2 gap-2">
+              {ACCOUNT_ITEMS.filter((item) => item.href === "/people" || item.href === "/groups").reverse().map((item) => (
+                <QuickLink key={item.href} item={item} current={item.href === here} />
+              ))}
+            </div>
+          )}
           {NAV_CATEGORIES.map((category) => (
-            <section key={category.key}>
-              <SectionLabel>{category.label}</SectionLabel>
+            <Fold key={category.key} label={category.label} startOpen={category.items.some((i) => i.href === here)}>
               {visible(category.items).map((item) => (
                 <MenuItem key={item.href} item={item} current={item.href === here} compact />
               ))}
-            </section>
+            </Fold>
           ))}
           {isAuthenticated && (
-            <section>
-              <SectionLabel>Account</SectionLabel>
-              <AccountLinks isSuiteAdmin={isSuiteAdmin} here={here} compact />
-            </section>
+            <Fold label="Account" startOpen={ACCOUNT_ITEMS.some((i) => i.href === here)}>
+              <AccountLinks isSuiteAdmin={isSuiteAdmin} here={here} compact skip={hasGroups() ? ["/people", "/groups"] : []} />
+            </Fold>
           )}
           <div className="flex gap-2 pt-1">
             <button
@@ -299,7 +305,7 @@ function MenuItem({ item, current = false, compact = false, onClick }) {
 const hasGroups = () => document.body.dataset.groups === "true";
 const needsGroup = () => document.body.dataset.needsGroup === "true";
 
-function AccountLinks({ isSuiteAdmin, here, compact = false }) {
+function AccountLinks({ isSuiteAdmin, here, compact = false, skip = [] }) {
   return (
     <>
       {needsGroup() && (
@@ -311,7 +317,7 @@ function AccountLinks({ isSuiteAdmin, here, compact = false }) {
           <span>You're not in a group yet · <span className="font-semibold text-accent">Find your group</span></span>
         </a>
       )}
-      {ACCOUNT_ITEMS.filter((item) => !item.groups || hasGroups()).map((item) => (
+      {ACCOUNT_ITEMS.filter((item) => (!item.groups || hasGroups()) && !skip.includes(item.href)).map((item) => (
         <MenuItem key={item.href} item={item} current={item.href === here} compact />
       ))}
       {isSuiteAdmin && (
@@ -323,6 +329,41 @@ function AccountLinks({ isSuiteAdmin, here, compact = false }) {
         </>
       )}
     </>
+  );
+}
+
+// A big tap target for the phone menu's top row
+function QuickLink({ item, current }) {
+  const Icon = item.icon;
+  return (
+    <a
+      href={item.href}
+      aria-current={current ? "page" : undefined}
+      className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold ${
+        current ? "bg-accent !text-white" : "bg-accent/10 text-accent dark:bg-accent/20 dark:text-sky-200"
+      }`}
+    >
+      <Icon size={18} strokeWidth={2.25} className="shrink-0" /> {item.label}
+    </a>
+  );
+}
+
+// One of the phone menu's categories: a header that opens and shuts its links
+function Fold({ label, startOpen = false, children }) {
+  const [open, setOpen] = useState(startOpen);
+  return (
+    <section className="rounded-lg border border-slate-200 dark:border-slate-800">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between rounded-lg !bg-transparent px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300"
+      >
+        {label}
+        <ChevronDown size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <div className="px-1 pb-1">{children}</div>}
+    </section>
   );
 }
 

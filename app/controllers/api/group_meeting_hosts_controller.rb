@@ -54,7 +54,7 @@ class Api::GroupMeetingHostsController < ApplicationController
   def require_scheduler
     return if @group.hosts_editable_by?(current_user)
 
-    render json: { error: "Only the people who schedule hosts can do that." }, status: :forbidden
+    render json: { error: "Only host coordinators can do that." }, status: :forbidden
   end
 
   def set_host

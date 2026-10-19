@@ -17,6 +17,7 @@ class Meeting < ApplicationRecord
   # Who hosts and co-hosts it (weekly meetings), and who is covering on a given date
   has_many :hosts, class_name: "MeetingHost", dependent: :destroy
   has_many :host_covers, class_name: "MeetingHostCover", dependent: :destroy
+  has_many :host_sub_requests, dependent: :destroy
 
   before_validation :tidy
 

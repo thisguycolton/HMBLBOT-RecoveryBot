@@ -253,3 +253,7 @@ button:focus-visible {
     background-size: 16px 16px;
   }
 }
+
+/* Sideways-scrolling rows (tab bars) scroll by touch without drawing a scroll bar over their labels. */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
