@@ -15,6 +15,7 @@ export const KIND_INFO = Object.fromEntries(KINDS.map((k) => [k.key, k]));
 export const VISIBILITIES = [
   { key: "members", label: "Members", note: "Anyone in the group" },
   { key: "public", label: "Public", note: "Anyone who opens the group's page" },
+  { key: "hosts", label: "Hosts", note: "Members who can host or co-host, and the people who keep the group's records" },
   { key: "keepers", label: "Record keepers", note: "Only people who keep the group's records" },
 ];
 export const VISIBILITY_LABELS = Object.fromEntries(VISIBILITIES.map((v) => [v.key, v.label]));

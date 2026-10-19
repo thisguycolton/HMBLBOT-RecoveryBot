@@ -45,6 +45,8 @@ class Meeting < ApplicationRecord
   # The assignment in place on `date` (the latest to have started), for "host" or "co_host"
   def host_on(role, date) = hosts.select { |h| h.role == role && h.active_on?(date) }.max_by { |h| [h.starts_on, h.id] }
   def cover_on(role, date) = host_covers.find { |c| c.role == role && c.on == date }
+  # Who is in that place on that date: someone covering it, or whoever holds it then
+  def holder_on(role, date) = cover_on(role, date) || host_on(role, date)
 
   def weekly? = recurrence == "weekly"
   def once? = recurrence == "once"

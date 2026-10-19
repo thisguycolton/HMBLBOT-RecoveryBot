@@ -95,6 +95,10 @@ class Group < ApplicationRecord
   # Members tab (the person doing that needn't keep the records)
   def hosts_editable_by?(user) = manageable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_schedule_hosts }
   def host_schedulers = User.where(id: active_memberships.where("group_memberships.role = 'admin' OR group_memberships.can_schedule_hosts").select(:user_id))
+  # Members marked as able to host or co-host (by an admin or a host coordinator): they read the
+  # documents kept for hosts (the format) and are the ones asked when a host won't be there
+  def can_host?(user) = hosts_editable_by?(user) || records_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_host }
+  def host_pool = User.where(id: active_memberships.where(can_host: true).select(:user_id))
 
   def member_or_site_admin?(user) = !!user && (user.suite_admin? || member?(user))
   # Record keepers write the group's documents (and, later, minutes and decisions): group

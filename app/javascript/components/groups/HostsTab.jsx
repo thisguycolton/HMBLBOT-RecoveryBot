@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { BellRing, CalendarClock, Plus, Printer, Trash2, UserMinus, UserPlus, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { BellRing, CalendarClock, CalendarX, Plus, Printer, ScrollText, Trash2, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
 import Toggle from "../ui/Toggle";
 import usePrintable, { printTitled } from "../../lib/usePrintable";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { DAYS, api, clock } from "./lib";
-import { dateLabel, longDate } from "./conscience/lib";
+import { dateLabel, documentsPath, longDate } from "./conscience/lib";
 import { Card, ErrorNote, Loading, Pill, Tray, dangerButton, primaryButton, quietButton } from "./ui";
 
 const ROLES = [["host", "Host"], ["co_host", "Co-host"]];
@@ -34,7 +35,7 @@ function AssignForm({ slug, slot, role, members, onDone, onCancel, setData }) {
       <p className="text-sm font-medium text-slate-800 dark:text-neutral-100">{SHORT[role]} for {slot.name}, {DAYS[slot.day_of_week]} at {clock(slot.start_minute)}</p>
       <ErrorNote error={error} />
       <div className="grid gap-3 sm:grid-cols-2">
-        {field(`h-user-${slot.id}-${role}`, "A member", <select id={`h-user-${slot.id}-${role}`} className={selectClass} value={form.user_id} onChange={pick}><option value="">Someone else</option>{members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>)}
+        {field(`h-user-${slot.id}-${role}`, "A member", <select id={`h-user-${slot.id}-${role}`} className={selectClass} value={form.user_id} onChange={pick}><option value="">Someone else</option>{members.map((m) => <option key={m.id} value={m.id}>{m.name}{m.can_host ? " (can host)" : ""}</option>)}</select>)}
         {field(`h-name-${slot.id}-${role}`, "Name on the schedule", <input id={`h-name-${slot.id}-${role}`} required maxLength={80} className={inputClass} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="First name, last initial" />)}
         {field(`h-from-${slot.id}-${role}`, "From", <input id={`h-from-${slot.id}-${role}`} type="date" required className={inputClass} value={form.starts_on} onChange={(e) => setForm({ ...form, starts_on: e.target.value })} />)}
         {field(`h-to-${slot.id}-${role}`, "Until (optional)", <input id={`h-to-${slot.id}-${role}`} type="date" className={inputClass} value={form.ends_on} onChange={(e) => setForm({ ...form, ends_on: e.target.value })} />)}
@@ -77,9 +78,10 @@ function CoverForm({ slug, slot, members, onDone, onCancel, setData }) {
   );
 }
 
-// "Need a sub": a host coordinator asks every member to fill one place on one date
-function SubForm({ slug, slot, onDone, onCancel, setData }) {
-  const [form, setForm] = useState({ role: "host", on: slot.next_on || today(), note: "" });
+// "Need a sub": a host coordinator, or the host or co-host who won't be there (`roles` is then
+// just their own places), asks the members who can host to fill one place on one date
+function SubForm({ slug, slot, roles = ROLES, mine = false, onDone, onCancel, setData }) {
+  const [form, setForm] = useState({ role: roles[0][0], on: slot.next_on || today(), note: "" });
   const [error, setError] = useState(null);
   const save = async (e) => {
     e.preventDefault();
@@ -91,14 +93,14 @@ function SubForm({ slug, slot, onDone, onCancel, setData }) {
   };
   return (
     <form onSubmit={save} className="mt-2 space-y-3 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
-      <p className="text-sm font-medium text-slate-800 dark:text-neutral-100">Ask for a sub at {slot.name} ({DAYS[slot.day_of_week]}s, {clock(slot.start_minute)})</p>
+      <p className="text-sm font-medium text-slate-800 dark:text-neutral-100">{mine ? "Can't make it to" : "Ask for a sub at"} {slot.name} ({DAYS[slot.day_of_week]}s, {clock(slot.start_minute)})</p>
       <ErrorNote error={error} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <div><label htmlFor={`s-role-${slot.id}`} className={labelClass}>Place to fill</label><select id={`s-role-${slot.id}`} className={selectClass} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>{ROLES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+        <div><label htmlFor={`s-role-${slot.id}`} className={labelClass}>Place to fill</label><select id={`s-role-${slot.id}`} className={selectClass} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>{roles.map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
         <div><label htmlFor={`s-on-${slot.id}`} className={labelClass}>On</label><input id={`s-on-${slot.id}`} type="date" required min={today()} className={inputClass} value={form.on} onChange={(e) => setForm({ ...form, on: e.target.value })} /></div>
-        <div className="sm:col-span-2"><label htmlFor={`s-note-${slot.id}`} className={labelClass}>Note (optional)</label><input id={`s-note-${slot.id}`} maxLength={300} className={inputClass} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="e.g. Kim is out of town" /></div>
+        <div className="sm:col-span-2"><label htmlFor={`s-note-${slot.id}`} className={labelClass}>Note (optional)</label><input id={`s-note-${slot.id}`} maxLength={300} className={inputClass} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={mine ? "e.g. I'm out of town" : "e.g. Kim is out of town"} /></div>
       </div>
-      <p className="-mt-1 text-xs text-slate-500 dark:text-neutral-400">Every member gets a notification. The first to take it is put on for that date.</p>
+      <p className="-mt-1 text-xs text-slate-500 dark:text-neutral-400">The members who can host get a notification (every member, if nobody is marked as able to host). The first to take it is put on for that date.</p>
       <div className="flex justify-end gap-2"><button type="button" className={quietButton} onClick={onCancel}>Cancel</button><button type="submit" className={primaryButton}><BellRing className="size-4" /> Send it out</button></div>
     </form>
   );
@@ -119,12 +121,57 @@ function SubRequests({ requests, edit, call }) {
             </div>
             <div className="flex gap-2">
               <button type="button" className={`${primaryButton} flex-1 !py-1.5 !text-sm sm:flex-none`} onClick={() => window.confirm(`Cover the ${SHORT[r.role].toLowerCase()} place at ${r.meeting_name} on ${longDate(r.on)}?`) && call(`host_sub_requests/${r.id}/take`, "POST")}>I'll cover it</button>
-              {edit && <button type="button" className={`${quietButton} !py-1.5 !text-sm`} onClick={() => window.confirm("Call off this request?") && call(`host_sub_requests/${r.id}`, "DELETE")}>Call off</button>}
+              {(edit || r.asked_by_me) && <button type="button" className={`${quietButton} !py-1.5 !text-sm`} onClick={() => window.confirm("Call off this request?") && call(`host_sub_requests/${r.id}`, "DELETE")}>Call off</button>}
             </div>
           </li>
         ))}
       </ul>
     </Card>
+  );
+}
+
+// The group's format and scripts, for whoever is about to run a meeting
+function Formats({ slug, formats }) {
+  if (!formats?.length) return null;
+  return (
+    <Card className="flex flex-wrap items-center gap-2 p-3">
+      <span className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white"><ScrollText className="size-4 text-accent" /> Our format</span>
+      {formats.map((d) => (
+        <Link key={d.id} to={documentsPath(slug, d.id)} className={`${quietButton} !px-2.5 !py-1 !text-sm`}>
+          {d.title}{d.visibility === "hosts" && <UserCheck className="size-3.5 text-slate-400" aria-label="Kept for hosts" />}
+        </Link>
+      ))}
+    </Card>
+  );
+}
+
+// Host coordinators mark which members can host or co-host: they read the format kept for hosts
+// and are the ones asked when a host won't be there
+function WhoCanHost({ slug, members, reload }) {
+  const [error, setError] = useState(null);
+  const toggle = async (m) => {
+    setError(null);
+    try {
+      await api(`/groups/${slug}/memberships/${m.membership_id}`, { method: "PATCH", body: { can_host: !m.can_host } });
+      await reload();
+    } catch (e) { setError(e.message); }
+  };
+  const count = members.filter((m) => m.can_host).length;
+  return (
+    <Tray label={`Who can host (${count})`}>
+      <Card className="space-y-2 p-3">
+        <p className="text-sm text-slate-600 dark:text-neutral-300">Members marked here can read the format kept for hosts, and hear about it when a host or co-host won't be there.</p>
+        <ErrorNote error={error} />
+        <div className="flex flex-wrap gap-1.5">
+          {members.map((m) => (
+            <button key={m.id} type="button" aria-pressed={m.can_host} onClick={() => toggle(m)}
+              className={`${quietButton} !px-2.5 !py-1 !text-sm ${m.can_host ? "!bg-emerald-100 !text-emerald-800 dark:!bg-emerald-900/40 dark:!text-emerald-200" : ""}`}>
+              {m.can_host && <UserCheck className="size-3.5" />} {m.name}
+            </button>
+          ))}
+        </div>
+      </Card>
+    </Tray>
   );
 }
 
@@ -136,7 +183,7 @@ export default function HostsTab({ group }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [onlyOpen, setOnlyOpen] = useState(false);
-  const [open, setOpen] = useState(null); // { slotId, role | "cover" }
+  const [open, setOpen] = useState(null); // { slotId, role | "cover" | "sub" | "mine" }
   const load = useCallback(() => api(`/groups/${slug}/meeting_hosts`).then(setData).catch((e) => setError(e.message)), [slug]);
   useEffect(() => { load(); }, [load]);
   if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
@@ -188,6 +235,11 @@ export default function HostsTab({ group }) {
               <button type="button" className={`${quietButton} !px-2 !py-0.5 !text-xs`} onClick={() => setOpen({ slotId: slot.id, role: "cover" })}><CalendarClock className="size-3.5" /> Cover a date</button>
             </span>
           )}
+          {!edit && slot.mine?.length > 0 && (
+            <span className="mt-1 flex flex-wrap gap-1">
+              <button type="button" className={`${quietButton} !px-2 !py-0.5 !text-xs`} onClick={() => setOpen({ slotId: slot.id, role: "mine" })}><CalendarX className="size-3.5" /> I can't make it</button>
+            </span>
+          )}
         </div>
         {cell(slot, "host")}
         {cell(slot, "co_host")}
@@ -202,7 +254,8 @@ export default function HostsTab({ group }) {
         </ul>
       )}
       {open?.slotId === slot.id && open.role === "sub" && <SubForm slug={slug} slot={slot} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
-      {open?.slotId === slot.id && !["cover", "sub"].includes(open.role) && <AssignForm slug={slug} slot={slot} role={open.role} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
+      {open?.slotId === slot.id && open.role === "mine" && <SubForm slug={slug} slot={slot} mine roles={ROLES.filter(([k]) => slot.mine.includes(k))} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
+      {open?.slotId === slot.id && !["cover", "sub", "mine"].includes(open.role) && <AssignForm slug={slug} slot={slot} role={open.role} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
       {open?.slotId === slot.id && open.role === "cover" && <CoverForm slug={slug} slot={slot} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
     </Card>
   );
@@ -223,8 +276,10 @@ export default function HostsTab({ group }) {
         </div>
         <ErrorNote error={error} />
         <SubRequests requests={data.sub_requests} edit={edit} call={call} />
+        <Formats slug={slug} formats={data.formats} />
         {days.map((day) => <Tray key={day.d} label={day.name}><div className="space-y-1.5">{day.slots.map(row)}</div></Tray>)}
         {slots.length === 0 && data.slots.length > 0 && <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">Every place is filled.</Card>}
+        {edit && data.members?.length > 0 && <WhoCanHost slug={slug} members={data.members} reload={load} />}
       </div>
 
       <article className="meeting-print hidden print:block">

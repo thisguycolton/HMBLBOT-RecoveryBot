@@ -1,10 +1,10 @@
 # A group's members, run by its admins: add people by email, approve or turn down join
-# requests, change roles, remove people.
+# requests, change roles, remove people. Host coordinators may also mark who can host.
 class Api::GroupMembershipsController < ApplicationController
   include GroupScoped
 
   before_action :set_group
-  before_action :require_manager
+  before_action :require_manager, unless: :marking_hosts?
   before_action :set_membership, only: %i[update destroy]
 
   # POST /api/groups/:slug/memberships { email, role }
@@ -20,7 +20,7 @@ class Api::GroupMembershipsController < ApplicationController
     head :created
   end
 
-  # PATCH /api/groups/:slug/memberships/:id { role, can_keep_records, can_schedule_hosts, can_keep_treasury, status: "active" approves a request }
+  # PATCH /api/groups/:slug/memberships/:id { role, can_keep_records, can_schedule_hosts, can_keep_treasury, can_host, status: "active" approves a request }
   def update
     was_request = !@membership.active?
     @membership.role = params[:role] if params[:role].present?
@@ -28,6 +28,7 @@ class Api::GroupMembershipsController < ApplicationController
     @membership.can_keep_records = ActiveModel::Type::Boolean.new.cast(params[:can_keep_records]) if params.key?(:can_keep_records)
     @membership.can_schedule_hosts = ActiveModel::Type::Boolean.new.cast(params[:can_schedule_hosts]) if params.key?(:can_schedule_hosts)
     @membership.can_keep_treasury = ActiveModel::Type::Boolean.new.cast(params[:can_keep_treasury]) if params.key?(:can_keep_treasury)
+    @membership.can_host = ActiveModel::Type::Boolean.new.cast(params[:can_host]) if params.key?(:can_host)
     if @membership.role_changed? && @membership.role_was == "admin" && @group.admins.count == 1
       return render(json: { error: "A group needs at least one admin." }, status: :unprocessable_entity)
     end
@@ -50,6 +51,13 @@ class Api::GroupMembershipsController < ApplicationController
   end
 
   private
+
+  # A host coordinator (not an admin) changing only whether an active member can host
+  def marking_hosts?
+    action_name == "update" && @group.hosts_editable_by?(current_user) &&
+      params.key?(:can_host) && (params.keys & %w[role status can_keep_records can_schedule_hosts can_keep_treasury]).empty? &&
+      @group.memberships.active.exists?(id: params[:id])
+  end
 
   def set_membership
     @membership = @group.memberships.find(params[:id])
