@@ -19,15 +19,20 @@ class PrivacyAndContactTest < ActionDispatch::IntegrationTest
     { contact: { name: "Sam", email: "sam@example.com", topic: "privacy", message: "Please delete my RSVP." }.merge(fields) }
   end
 
-  test "the privacy policy and contact page are public" do
+  test "the privacy policy, terms and contact page are public" do
     get "/privacy"
     assert_response :success
     assert_includes response.body, %(data-page="privacy")
+
+    get "/terms"
+    assert_response :success
+    assert_includes response.body, %(data-page="terms")
 
     get "/contact"
     assert_response :success
     props = JSON.parse(Nokogiri::HTML(response.body).at("#site-page")["data-props"])
     assert_equal "website", props.dig("human_check", "decoy")
+    assert_equal "SHA-256", props.dig("human_check", "altcha", "algorithm")
     assert_nil props.dig("human_check", "turnstile_site_key")
   end
 
@@ -54,6 +59,8 @@ class PrivacyAndContactTest < ActionDispatch::IntegrationTest
       -> { contact.merge(human_check_params(drawn: 1.second.ago)) },
       -> { contact },
       -> { contact.merge(form_started: "forged") },
+      -> { contact.merge(human_check_params).merge(altcha: nil) },
+      -> { contact.merge(human_check_params).merge(altcha: solved_altcha(number: 8).sub(/.{4}\z/, "AAA=")) },
     ].each do |params|
       post "/contact", params: params.call
       assert_response :unprocessable_entity

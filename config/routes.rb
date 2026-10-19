@@ -17,6 +17,7 @@ Rails.application.routes.draw do
 
   get "/topicificator", to: "pages#topicificator"
   get "/privacy", to: "privacy#show", as: :privacy
+  get "/terms", to: "terms#show", as: :terms
   get "/contact", to: "contacts#new", as: :contact
   post "/contact", to: "contacts#create"
   get "/library(/*path)", to: "pages#library"

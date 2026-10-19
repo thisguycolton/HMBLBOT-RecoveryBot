@@ -123,7 +123,8 @@ export function SignUpPage({ name = "", email = "", min_password_length, login_p
         <Field id="user_password_confirmation" label="Confirm password" type="password" name="user[password_confirmation]" autoComplete="new-password" required />
         <HumanCheckFields check={human_check} />
         <p className="text-xs text-slate-500 dark:text-neutral-400">
-          A first name and last initial is plenty. See the <a href="/privacy" className={linkClass}>privacy policy</a> for what we keep and who sees it.
+          A first name and last initial is plenty. By signing up you agree to the <a href="/terms" className={linkClass}>terms of use</a> and{" "}
+          <a href="/privacy" className={linkClass}>privacy policy</a>, which says what we keep and who sees it.
         </p>
       </AuthForm>
     </AuthFrame>
