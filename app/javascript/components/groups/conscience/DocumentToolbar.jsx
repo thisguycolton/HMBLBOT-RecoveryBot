@@ -1,9 +1,9 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, FileUp, Italic, Link2, List, ListOrdered, Minus, Quote,
+  AlignCenter, AlignJustify, AlignLeft, AlignRight, Baseline, Bold, FileUp, Highlighter, Italic, Link2, List, ListOrdered, Maximize2, Minimize2, Minus, Quote,
   Redo2, Strikethrough, Table2, Underline, Undo2, Unlink,
 } from "lucide-react";
-import { normalizeHref } from "./editorKit";
+import { HIGHLIGHT_COLORS, TEXT_COLORS, normalizeHref } from "./editorKit";
 
 const button = "grid size-8 shrink-0 place-items-center rounded-lg !bg-transparent text-slate-700 hover:!bg-neutral-200/70 disabled:opacity-35 dark:text-neutral-200 dark:hover:!bg-neutral-700/60";
 const on = "!bg-accent/15 text-accent dark:!bg-accent/30 dark:text-white";
@@ -15,10 +15,41 @@ function Tool({ label, icon: Icon, active, disabled, onClick }) {
     </button>
   );
 }
+// A toolbar button that opens a row of color swatches, with a "None" to take the color off
+function ColorMenu({ label, icon: Icon, colors, current, onPick, onClear }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  return (
+    <span ref={ref} className="relative shrink-0">
+      <button type="button" title={label} aria-label={label} aria-expanded={open} onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen((v) => !v)} className={`${button} relative`}>
+        <Icon className="size-4" />
+        <span aria-hidden="true" className="absolute inset-x-1.5 bottom-1 h-1 rounded-full" style={{ background: current || "transparent", boxShadow: current ? "none" : "inset 0 0 0 1px rgb(148 163 184)" }} />
+      </button>
+      {open && (
+        <span role="menu" className="fixed z-[2300] mt-1 grid w-44 grid-cols-5 gap-1.5 rounded-xl border border-neutral-200 bg-white p-2 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
+          style={{ top: ref.current?.getBoundingClientRect().bottom, left: Math.min(ref.current?.getBoundingClientRect().left || 0, window.innerWidth - 184) }}>
+          {colors.map(([name, value]) => (
+            <button key={value} type="button" role="menuitem" title={name} aria-label={name} onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(value); setOpen(false); }}
+              className={`size-7 rounded-lg !p-0 ring-1 ring-black/10 ${current === value ? "outline outline-2 outline-offset-1 outline-accent" : ""}`} style={{ background: value }} />
+          ))}
+          <button type="button" role="menuitem" onMouseDown={(e) => e.preventDefault()} onClick={() => { onClear(); setOpen(false); }}
+            className="col-span-5 mt-1 rounded-lg !bg-neutral-100 py-1 text-xs font-medium text-slate-700 dark:!bg-neutral-800 dark:text-neutral-200">None</button>
+        </span>
+      )}
+    </span>
+  );
+}
+
 const Divider = () => <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-neutral-300 dark:bg-neutral-600" />;
 
 // The word processor's ribbon above the page: styles, alignment, lists, links, tables, undo, import
-export default function DocumentToolbar({ editor, onImport }) {
+export default function DocumentToolbar({ editor, onImport, fullScreen, onFullScreen }) {
   const fileRef = useRef(null);
   const [linking, setLinking] = useState(false);
   const [href, setHref] = useState("");
@@ -59,6 +90,10 @@ export default function DocumentToolbar({ editor, onImport }) {
       <Tool label="Italic (Ctrl+I)" icon={Italic} active={editor.isActive("italic")} onClick={run((c) => c.toggleItalic())} />
       <Tool label="Underline (Ctrl+U)" icon={Underline} active={editor.isActive("underline")} onClick={run((c) => c.toggleUnderline())} />
       <Tool label="Strikethrough" icon={Strikethrough} active={editor.isActive("strike")} onClick={run((c) => c.toggleStrike())} />
+      <ColorMenu label="Text color" icon={Baseline} colors={TEXT_COLORS} current={editor.getAttributes("textStyle").color}
+        onPick={(color) => editor.chain().focus().setTextColor(color).run()} onClear={() => editor.chain().focus().unsetTextColor().run()} />
+      <ColorMenu label="Highlight color" icon={Highlighter} colors={HIGHLIGHT_COLORS} current={editor.isActive("highlight") ? editor.getAttributes("highlight").color : null}
+        onPick={(color) => editor.chain().focus().setHighlight({ color }).run()} onClear={() => editor.chain().focus().unsetHighlight().run()} />
       <Divider />
       <Tool label="Align left" icon={AlignLeft} active={editor.isActive({ textAlign: "left" })} onClick={run((c) => c.setTextAlign("left"))} />
       <Tool label="Center" icon={AlignCenter} active={editor.isActive({ textAlign: "center" })} onClick={run((c) => c.setTextAlign("center"))} />
@@ -91,6 +126,12 @@ export default function DocumentToolbar({ editor, onImport }) {
           <button type="button" className="rounded px-1.5 py-1 !bg-transparent hover:underline" onClick={run((c) => c.deleteColumn())}>− Column</button>
           <button type="button" className="rounded px-1.5 py-1 !bg-transparent text-rose-700 hover:underline dark:text-rose-300" onClick={run((c) => c.deleteTable())}>Delete table</button>
         </span>
+      )}
+      {onFullScreen && (
+        <>
+          <Divider />
+          <Tool label={fullScreen ? "Leave full screen (Esc)" : "Full screen"} icon={fullScreen ? Minimize2 : Maximize2} active={fullScreen} onClick={onFullScreen} />
+        </>
       )}
       {onImport && (
         <>

@@ -1,9 +1,10 @@
 # The HTML of a group document, as the editor (Tiptap) writes it. Documents are read by
 # every member and, when Public, by anyone, so what is stored is cleaned here first: only
-# what the editor can make (text, headings, lists, quotes, tables, links, alignment) stays.
+# what the editor can make (text, headings, lists, quotes, tables, links, alignment, text and
+# highlight colors) stays.
 module DocumentHtml
-  TAGS = %w[p br h1 h2 h3 h4 strong b em i u s strike code pre blockquote ul ol li hr a table thead tbody tfoot tr th td].freeze
-  ATTRIBUTES = %w[href colspan rowspan style].freeze
+  TAGS = %w[p br h1 h2 h3 h4 strong b em i u s strike code pre blockquote ul ol li hr a table thead tbody tfoot tr th td span mark].freeze
+  ATTRIBUTES = %w[href colspan rowspan style data-color].freeze
   # Gone with everything inside them, not just unwrapped
   DISCARD = "script, style, svg, math, iframe, object, embed, noscript, template, form, head, title".freeze
   LINK = /\A(https?:|mailto:|\/(?!\/)|#)/i

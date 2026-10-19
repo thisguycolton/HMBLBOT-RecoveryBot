@@ -61,6 +61,21 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [details, setDetails] = useState(false);
+  const [fullScreen, setFullScreen] = useState(false);
+  // Leaving full screen: Esc, or the browser leaving its own full screen; the page behind stays put
+  useEffect(() => {
+    if (!fullScreen) return undefined;
+    const onKey = (e) => { if (e.key === "Escape" && !document.fullscreenElement) setFullScreen(false); };
+    const onChange = () => { if (!document.fullscreenElement) setFullScreen(false); };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("fullscreenchange", onChange);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("fullscreenchange", onChange);
+      document.body.style.overflow = "";
+    };
+  }, [fullScreen]);
   const [history, setHistory] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [adopters, setAdopters] = useState([]);
@@ -182,6 +197,16 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
     window.print();
   };
 
+  // Full screen: the page fills the window (and the screen, where the browser allows), Esc leaves
+  const toggleFullScreen = () => {
+    const next = !fullScreen;
+    setFullScreen(next);
+    try {
+      if (next && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+      if (!next && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    } catch {}
+  };
+
   const folderLink = `${documentsPath(slug)}${isMember ? `?folder=${form.kind}` : ""}`;
   const showPaper = canEdit ? withText : !!initialHtml.trim();
   const isPdf = file?.type === "application/pdf";
@@ -189,8 +214,10 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
   const status = saving ? "Saving…" : dirty ? "Unsaved changes" : saved ? "All changes saved" : "";
 
   return (
-    <div className="doc-desk -mx-4 -mt-1 rounded-2xl px-2 pb-10 sm:mx-0 sm:px-4">
-      <div className="doc-chrome z-20 -mx-2 mb-4 space-y-px border-b border-neutral-200 bg-white sm:sticky sm:top-[var(--nav-h,56px)] sm:-mx-4 sm:rounded-t-2xl dark:border-neutral-800 dark:bg-neutral-900 print:hidden">
+    <div className={fullScreen
+      ? "doc-desk doc-fullscreen fixed inset-0 z-[2200] overflow-y-auto px-2 pb-16 sm:px-4"
+      : "doc-desk -mx-4 -mt-1 rounded-2xl px-2 pb-10 sm:mx-0 sm:px-4"}>
+      <div className={`doc-chrome z-20 -mx-2 mb-4 space-y-px border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 print:hidden ${fullScreen ? "sticky top-0 sm:-mx-4" : "sm:sticky sm:top-[var(--nav-h,56px)] sm:-mx-4 sm:rounded-t-2xl"}`}>
         <div className="flex flex-wrap items-center gap-2 px-3 py-2">
           <Link to={folderLink} className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"><ChevronLeft className="size-4" /> {isMember ? KIND_INFO[form.kind].label : "Documents"}</Link>
           <span aria-live="polite" className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-neutral-400">{status}</span>
@@ -202,7 +229,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
           {canEdit && <button type="button" onClick={() => setDetails((v) => !v)} aria-pressed={details} className={quietButton}><SlidersHorizontal className="size-4" /> <span className="max-sm:sr-only">Details</span></button>}
           {canEdit && <button type="button" onClick={save} disabled={saving || (!dirty && !!doc)} className={primaryButton}><Save className="size-4" /> {saving ? "Saving…" : "Save"}</button>}
         </div>
-        {canEdit && showPaper && <DocumentToolbar editor={editor} onImport={importFile} />}
+        {canEdit && showPaper && <DocumentToolbar editor={editor} onImport={importFile} fullScreen={fullScreen} onFullScreen={toggleFullScreen} />}
       </div>
 
       <div className="mx-auto max-w-[816px] space-y-3 print:max-w-none">
