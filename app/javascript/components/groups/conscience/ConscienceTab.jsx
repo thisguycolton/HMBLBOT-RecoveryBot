@@ -29,6 +29,20 @@ const SECTIONS = [
 //   /conscience/documents(/:id|/new)  document folders, and a document as a page
 //   /conscience/officials             the group's elected officials and who holds each office
 //   /conscience/treasury(/:id|/new)   the treasurer's monthly reports
+// What one section shows, for the tab and for the group dashboard (GroupDashboard.jsx)
+export function ConscienceBody({ group, view, id }) {
+  const isMember = group.is_member || group.is_site_admin;
+  if (!isMember && view !== "documents" && view !== "decisions") return <DocumentsView group={group} />;
+  if (view === "meetings") return id ? <MeetingPage key={id} group={group} id={id} /> : <MeetingsView group={group} />;
+  if (view === "decisions") return <DecisionsView group={group} />;
+  if (view === "documents") return id === "new" ? <DocumentPage group={group} /> : id ? <DocumentPage group={group} id={id} /> : <DocumentsView group={group} />;
+  if (view === "officials") return <ServiceView group={group} />;
+  if (view === "treasury") return id === "new" ? <ReportPage group={group} /> : id ? <ReportPage key={id} group={group} id={id} /> : <TreasuryView group={group} />;
+  return <OverviewView group={group} />;
+}
+
+export const SECTION_KEYS = SECTIONS.map((s) => s.key);
+
 export default function ConscienceTab({ group }) {
   const [rawView, id] = (useParams()["*"] || "").split("/").filter(Boolean);
   const view = rawView === "service" ? "officials" : rawView; // its old address
@@ -36,15 +50,6 @@ export default function ConscienceTab({ group }) {
   const isMember = group.is_member || group.is_site_admin;
   const current = SECTIONS.some((s) => s.key === view) ? view : isMember ? "overview" : "documents";
   const base = `/${group.slug}/conscience`;
-
-  let body;
-  if (!isMember && current !== "documents" && current !== "decisions") body = <DocumentsView group={group} />;
-  else if (current === "meetings") body = id ? <MeetingPage key={id} group={group} id={id} /> : <MeetingsView group={group} />;
-  else if (current === "decisions") body = <DecisionsView group={group} />;
-  else if (current === "documents") body = id === "new" ? <DocumentPage group={group} /> : id ? <DocumentPage group={group} id={id} /> : <DocumentsView group={group} />;
-  else if (current === "officials") body = <ServiceView group={group} />;
-  else if (current === "treasury") body = id === "new" ? <ReportPage group={group} /> : id ? <ReportPage key={id} group={group} id={id} /> : <TreasuryView group={group} />;
-  else body = <OverviewView group={group} />;
 
   return (
     <div className="space-y-5">
@@ -63,7 +68,7 @@ export default function ConscienceTab({ group }) {
           </select>
         </>
       )}
-      {body}
+      <ConscienceBody group={group} view={current} id={id} />
     </div>
   );
 }

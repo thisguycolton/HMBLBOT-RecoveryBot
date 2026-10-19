@@ -1,10 +1,20 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarClock, CalendarPlus, ExternalLink, FileText, HandHelping, Scale, UserCheck } from "lucide-react";
+import { CalendarClock, CalendarDays, CalendarPlus, ExternalLink, FileText, Gavel, HandHelping, Landmark, Scale, UserCheck, Users } from "lucide-react";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton } from "../ui";
 import { AgendaList, SuggestForm } from "./AgendaParts";
 import { KIND_INFO, MOTION_STATUS_LABELS, countLabel, dateLabel, decisionsPath, documentsPath, longDate, meetingsPath, officialsPath, treasuryPath } from "./lib";
+
+// A number across the top of the group dashboard, like the site admin's StatTile
+const Stat = ({ to, icon: Icon, label, value, detail }) => (
+  <Link to={to} className="block min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 hover:border-accent/50 dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
+    <span className="mb-4 hidden size-11 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-neutral-800 dark:text-neutral-200 sm:grid"><Icon className="size-5" /></span>
+    <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400 sm:text-sm"><Icon className="size-3.5 shrink-0 sm:hidden" />{label}</span>
+    <span className="mt-1 block text-2xl font-bold tabular-nums text-slate-900 dark:text-white sm:text-3xl">{value}</span>
+    {detail && <span className="mt-1 block text-xs text-slate-500 dark:text-neutral-400 sm:text-sm">{detail}</span>}
+  </Link>
+);
 
 const Row = ({ to, icon: Icon, title, note, right }) => (
   <Link to={to} className="flex items-start gap-3 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900">
@@ -32,8 +42,17 @@ export default function OverviewView({ group }) {
   const waiting = data.waiting;
   const waitingCount = waiting ? waiting.draft_minutes.length + waiting.suggested_items.length + waiting.draft_documents.length + waiting.draft_reports.length : 0;
 
+  const st = data.stats;
   return (
     <div className="space-y-5">
+      {st && (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <Stat to={group.can_manage ? `/${slug}/conscience/members` : `/${slug}/members`} icon={Users} label="Members" value={st.members} detail={st.requests ? `${st.requests} asking to join` : "No one waiting to join"} />
+          <Stat to={decisionsPath(slug)} icon={Gavel} label="Standing decisions" value={st.standing_decisions} detail={st.decisions_to_check ? `${st.decisions_to_check} imported, waiting to be checked` : "Everything checked"} />
+          <Stat to={meetingsPath(slug)} icon={CalendarDays} label="Business meetings held" value={st.business_meetings} detail={next ? `Next: ${longDate(next.held_on)}` : "None scheduled"} />
+          <Stat to={treasuryPath(slug)} icon={Landmark} label="Last treasurer's report" value={st.last_report_on ? new Date(`${st.last_report_on}T00:00:00`).toLocaleDateString([], { month: "short", year: "numeric" }) : "None"} detail={waiting?.draft_reports?.length ? `${waiting.draft_reports.length} in draft` : "Posted reports"} />
+        </div>
+      )}
       <Tray label="Next business meeting">
         <Card className="space-y-4 p-4 sm:p-5">
           {next ? (

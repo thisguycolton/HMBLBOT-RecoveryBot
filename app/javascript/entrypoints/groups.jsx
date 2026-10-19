@@ -18,6 +18,7 @@ import Navbar from "../components/Navbar";
 import GroupsIndex from "../components/groups/GroupsIndex";
 import GroupForm from "../components/groups/GroupForm";
 import GroupPage from "../components/groups/GroupPage";
+import { ConscienceRoute } from "../components/groups/GroupDashboard";
 import FindGroup from "../components/groups/FindGroup";
 import FindMeeting from "../components/groups/FindMeeting";
 import IntergroupPage from "../components/groups/page/IntergroupPage";
@@ -25,13 +26,13 @@ import GroupPageEditor from "../components/groups/page/GroupPageEditor";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
-function Shell() {
+function Shell({ children }) {
   return (
     <>
       <Navbar isAuthenticated={isAuthenticated} />
       <main className="w-full pt-[var(--nav-h,56px)]">
         <div className="mx-auto max-w-7xl px-4 py-6">
-          <Outlet />
+          {children || <Outlet />}
         </div>
       </main>
     </>
@@ -43,6 +44,8 @@ const router = createBrowserRouter(
     // The HMBLBOT Editor takes the whole window
     { path: "/default-page/edit", element: <div className="ev-root w-full"><GroupPageEditor template /></div> },
     { path: "/:slug/page/edit", element: <div className="ev-root w-full"><GroupPageEditor /></div> },
+    // Group admins and members with a role get the group's dashboard; members the plain tab
+    { path: "/:slug/conscience/*", element: <ConscienceRoute fallback={<Shell><GroupPage tab="conscience" /></Shell>} /> },
     {
       path: "/",
       element: <Shell />,
@@ -54,7 +57,6 @@ const router = createBrowserRouter(
         { path: "find/:oiaaSlug", element: <IntergroupPage /> },
         { path: "default-page", element: <IntergroupPage template /> },
         { path: ":slug", element: <GroupPage /> },
-        { path: ":slug/conscience/*", element: <GroupPage tab="conscience" /> },
         { path: ":slug/:tab", element: <GroupPage /> },
         { path: ":slug/edit", element: <GroupForm /> },
       ],

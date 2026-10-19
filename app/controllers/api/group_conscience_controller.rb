@@ -21,6 +21,7 @@ class Api::GroupConscienceController < ApplicationController
     }
     json[:waiting] = waiting if keeper?
     json[:hosts_open] = HostSchedule.new(@group, current_user).summary if @group.hosts_editable_by?(current_user)
+    json[:stats] = stats if keeper? || @group.hosts_editable_by?(current_user) || @group.treasury_editable_by?(current_user)
     render json: json
   end
 
@@ -39,6 +40,19 @@ class Api::GroupConscienceController < ApplicationController
     ids = scope.pluck(:id)
     meetings = BusinessMeeting.visible_to(@group, current_user).pluck(:id)
     scope.decisions.where(status: %w[passed failed]).newest_first.limit(5).map { |m| m.as_api_json(replacers: replacers, visible: ids, meetings: meetings) }
+  end
+
+  # The numbers across the top of the group dashboard (GroupDashboard.jsx)
+  def stats
+    last_report = @group.treasurer_reports.where(status: "posted").order(period_on: :desc).first
+    {
+      members: @group.active_memberships.count,
+      requests: @group.memberships.requested.count,
+      standing_decisions: @group.motions.standing.where(needs_review: false).count,
+      decisions_to_check: keeper? ? @group.motions.where(needs_review: true).count : 0,
+      business_meetings: @group.business_meetings.where(status: "held").count,
+      last_report_on: last_report&.period_on&.iso8601,
+    }
   end
 
   # Things only a record keeper can move along

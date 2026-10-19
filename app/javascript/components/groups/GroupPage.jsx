@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutTemplate, NotebookPen, Pencil, Scale, UserCheck, Users } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutDashboard, LayoutTemplate, NotebookPen, Pencil, Scale, UserCheck, Users } from "lucide-react";
+import { hasGroupRole } from "./GroupDashboard";
 import { api } from "./lib";
 import { ErrorNote, Loading, Message, Pill } from "./ui";
 import GroupHero, { heroButton, heroQuietButton } from "./page/GroupHero";
@@ -69,7 +70,9 @@ export default function GroupPage({ tab: fixedTab }) {
   if (!group) return <Loading />;
 
   const isMember = group.is_member || group.is_site_admin;
-  const tabs = TABS.filter((t) => (!t.members || isMember) && (!t.managers || group.can_manage));
+  // People with a role run the group's business from its dashboard (GroupDashboard.jsx), not a tab
+  const dashboard = hasGroupRole(group);
+  const tabs = TABS.filter((t) => (!t.members || isMember) && (!t.managers || group.can_manage) && !(dashboard && t.key === "conscience"));
   const current = tabs.find((t) => t.key === tab) || (tab === "conscience" && { key: "conscience" }) || tabs[0];
 
   const act = async (path, confirmText) => {
@@ -120,6 +123,7 @@ export default function GroupPage({ tab: fixedTab }) {
             {group.membership_status === "active" && (
               <span className={heroQuietButton}>You're {group.role === "admin" ? "a group admin" : "a member"}</span>
             )}
+            {dashboard && <Link to={`/${slug}/conscience`} className={heroButton}><LayoutDashboard className="h-4 w-4" /> Dashboard</Link>}
             {group.can_manage && (
               <>
                 <Link to={`/${slug}/page/edit`} className={heroButton}><LayoutTemplate className="h-4 w-4" /> Edit page</Link>
