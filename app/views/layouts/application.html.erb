@@ -124,7 +124,10 @@
     <div class="container-fluid m-0 bg-dark text-light">
       <div class="container">
         <footer class="d-flex flex-wrap justify-content-between align-items-end py-5 ">
-        <p class="col-12 col-md-4 mb-0 text-body-secondary montserrat justify-content-sm-center justify-content-md-start text-center text-md-left">© 2026 <span class="fw-bold">HMBLBOT</span></p>
+        <div class="col-12 col-md-4 text-center text-md-start">
+          <p class="mb-1 text-body-secondary montserrat">© 2026 <span class="fw-bold">HMBLBOT</span></p>
+          <p class="mb-0 small"><%= link_to "Privacy", privacy_path, class: "link-light link-underline-opacity-25 me-3" %><%= link_to "Terms", terms_path, class: "link-light link-underline-opacity-25 me-3" %><%= link_to "Contact", contact_path, class: "link-light link-underline-opacity-25" %></p>
+        </div>
 
         <a href="/" class=" col-12 col-md-4 d-flex align-items-center justify-content-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none mt-4 mt-md-0 mb-2 mb-md-0">
           <div class="text-center text-light pb-2">

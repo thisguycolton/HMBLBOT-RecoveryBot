@@ -138,14 +138,14 @@ export default function DateTimePicker({
       requestAnimationFrame(updatePosition);
     };
     
-    // Add scroll listener
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Follow the field when the page or a scrolling panel it sits in (a sidebar) scrolls
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
     window.addEventListener('resize', handleScroll);
     
     return () => {
       cancelAnimationFrame(frameId);
       cancelAnimationFrame(secondFrame);
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll, { capture: true });
       window.removeEventListener('resize', handleScroll);
     };
   }, [isOpen]);
@@ -435,12 +435,12 @@ export default function DateTimePicker({
         </button>
       )}
 
-      {/* Picker Panel - Rendered via portal for proper positioning */}
+      {/* Picker Panel - Rendered via portal for proper positioning (stacking: datetime-picker.css) */}
       {isOpen && popupPosition && (
         createPortal(
           <div
             ref={popupRef}
-            className="datetime-picker-popup z-[60] shadow-lg rounded-4xl overflow-hidden"
+            className="datetime-picker-popup shadow-lg rounded-4xl overflow-hidden"
             style={{
               position: 'absolute',
               top: popupPosition.top,

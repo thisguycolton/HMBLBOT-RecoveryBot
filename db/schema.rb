@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_19_080000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -188,6 +188,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_080000) do
     t.index ["book_id"], name: "index_chapters_on_book_id"
   end
 
+  create_table "contact_requests", force: :cascade do |t|
+    t.string "name"
+    t.string "email", null: false
+    t.string "topic", default: "general", null: false
+    t.text "message", null: false
+    t.bigint "user_id"
+    t.string "status", default: "open", null: false
+    t.datetime "handled_at"
+    t.bigint "handled_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["handled_by_id"], name: "index_contact_requests_on_handled_by_id"
+    t.index ["status", "created_at"], name: "index_contact_requests_on_status_and_created_at"
+    t.index ["user_id"], name: "index_contact_requests_on_user_id"
+  end
+
   create_table "court_verifications", force: :cascade do |t|
     t.string "respondent_name", null: false
     t.string "respondent_email", null: false
@@ -347,6 +363,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_080000) do
     t.boolean "can_keep_records", default: false, null: false
     t.boolean "can_schedule_hosts", default: false, null: false
     t.boolean "can_keep_treasury", default: false, null: false
+    t.boolean "can_host", default: false, null: false
     t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
     t.index ["group_id"], name: "index_group_memberships_on_group_id"
     t.index ["user_id"], name: "index_group_memberships_on_user_id"
@@ -1030,6 +1047,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_080000) do
     t.jsonb "page_blocks"
     t.string "default_highlight_visibility", default: "private", null: false
     t.string "default_note_visibility", default: "private", null: false
+    t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["share_token"], name: "index_users_on_share_token", unique: true
@@ -1046,6 +1064,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_080000) do
   add_foreign_key "business_meetings", "meetings", on_delete: :nullify
   add_foreign_key "business_meetings", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chapters", "books"
+  add_foreign_key "contact_requests", "users", column: "handled_by_id", on_delete: :nullify
+  add_foreign_key "contact_requests", "users", on_delete: :nullify
   add_foreign_key "court_verifications", "groups"
   add_foreign_key "court_verifications", "meetings", on_delete: :nullify
   add_foreign_key "event_collaborators", "events"

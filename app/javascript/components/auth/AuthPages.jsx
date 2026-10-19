@@ -3,6 +3,7 @@ import { BookOpen, CircleCheck, Highlighter, KeyRound, LogIn, Mail, Shuffle, Use
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
 import { RecoveryBotLogo } from "../brand/Logo";
+import HumanCheckFields from "../site/HumanCheckFields";
 
 // Devise's pages in the house panel style. Each posts a plain HTML form, so Devise
 // handles the session, redirects and flash (shown as toasts) exactly as before.
@@ -87,10 +88,13 @@ function Field({ id, label, aside, hint, ...input }) {
 
 const passwordHint = (min) => (min ? `At least ${min} characters` : null);
 
-export function LoginPage({ email = "", remember = true, forgot_path, sign_up_path, ...form }) {
+export function LoginPage({ email = "", remember = true, forgot_path, sign_up_path, confirm_path, ...form }) {
   return (
     <AuthFrame icon={LogIn} title="Welcome back" subtitle="Log in to your RecoveryBot account"
-      footer={sign_up_path && <>Don't have an account yet? <a href={sign_up_path} className={linkClass}>Sign up</a></>}>
+      footer={<>
+        {sign_up_path && <>Don't have an account yet? <a href={sign_up_path} className={linkClass}>Sign up</a></>}
+        {confirm_path && <><br /><a href={confirm_path} className={linkClass}>Didn't get the confirmation email?</a></>}
+      </>}>
       <AuthForm {...form} submitLabel="Log in" busyLabel="Logging in…">
         <Field id="user_email" label="Email" type="email" name="user[email]" defaultValue={email} autoComplete="email" autoFocus required placeholder="you@example.com" />
         <Field id="user_password" label="Password" type="password" name="user[password]" autoComplete="current-password" required placeholder="••••••••"
@@ -107,9 +111,9 @@ export function LoginPage({ email = "", remember = true, forgot_path, sign_up_pa
   );
 }
 
-export function SignUpPage({ name = "", email = "", min_password_length, login_path, ...form }) {
+export function SignUpPage({ name = "", email = "", min_password_length, login_path, human_check, ...form }) {
   return (
-    <AuthFrame icon={UserPlus} title="Create your account" subtitle="An admin approves new accounts before you can log in"
+    <AuthFrame icon={UserPlus} title="Create your account" subtitle="We'll email you a link to confirm your address"
       footer={login_path && <>Already have an account? <a href={login_path} className={linkClass}>Log in</a></>}>
       <AuthForm {...form} submitLabel="Sign up" busyLabel="Signing up…">
         <Field id="user_name" label="Name" name="user[name]" defaultValue={name} autoComplete="name" autoFocus required placeholder="First name and last initial" />
@@ -117,6 +121,23 @@ export function SignUpPage({ name = "", email = "", min_password_length, login_p
         <Field id="user_password" label="Password" type="password" name="user[password]" autoComplete="new-password" required minLength={min_password_length}
           hint={passwordHint(min_password_length)} />
         <Field id="user_password_confirmation" label="Confirm password" type="password" name="user[password_confirmation]" autoComplete="new-password" required />
+        <HumanCheckFields check={human_check} />
+        <p className="text-xs text-slate-500 dark:text-neutral-400">
+          A first name and last initial is plenty. By signing up you agree to the <a href="/terms" className={linkClass}>terms of use</a> and{" "}
+          <a href="/privacy" className={linkClass}>privacy policy</a>, which says what we keep and who sees it.
+        </p>
+      </AuthForm>
+    </AuthFrame>
+  );
+}
+
+export function ResendConfirmationPage({ email = "", login_path, ...form }) {
+  return (
+    <AuthFrame icon={Mail} title="Confirm your email" subtitle="We'll send a new confirmation link"
+      footer={login_path && <>Already confirmed? <a href={login_path} className={linkClass}>Log in</a></>}>
+      <AuthForm {...form} submitLabel="Send the link again" busyLabel="Sending…">
+        <Field id="user_email" label="Email" type="email" name="user[email]" defaultValue={email} autoComplete="email" autoFocus required placeholder="you@example.com" />
+        <p className="text-xs text-slate-500 dark:text-neutral-400">The link works for 3 days. Check your spam folder if it doesn't turn up.</p>
       </AuthForm>
     </AuthFrame>
   );

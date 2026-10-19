@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, FileDown, FileText, Globe, Lock, Pin, Plus, Search, Upload } from "lucide-react";
+import { ChevronLeft, FileDown, FileText, Globe, Lock, Pin, Plus, Search, Upload, UserCheck } from "lucide-react";
 import { inputClass } from "../../ui/styles";
 import { IMPORT_ACCEPT, importDocument, isImportable } from "../../../lib/documentImport";
 import { api } from "../lib";
@@ -12,6 +12,7 @@ export function StatusPills({ doc }) {
   return (
     <>
       {doc.visibility === "public" && <Pill tone="green"><Globe className="size-3" /> Public</Pill>}
+      {doc.visibility === "hosts" && <Pill tone="accent"><UserCheck className="size-3" /> {VISIBILITY_LABELS.hosts}</Pill>}
       {doc.visibility === "keepers" && <Pill tone="amber"><Lock className="size-3" /> {VISIBILITY_LABELS.keepers}</Pill>}
       {doc.status !== "current" && <Pill tone="slate">{doc.status === "draft" ? "Draft" : "Archived"}</Pill>}
     </>

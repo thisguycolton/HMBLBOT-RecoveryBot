@@ -16,6 +16,10 @@ Rails.application.routes.draw do
   end
 
   get "/topicificator", to: "pages#topicificator"
+  get "/privacy", to: "privacy#show", as: :privacy
+  get "/terms", to: "terms#show", as: :terms
+  get "/contact", to: "contacts#new", as: :contact
+  post "/contact", to: "contacts#create"
   get "/library(/*path)", to: "pages#library"
 
   # Schedule polls: a React app (app/javascript/entrypoints/schedule_polls.jsx)
@@ -35,7 +39,7 @@ Rails.application.routes.draw do
 
   resources :text_reports, only: :create
   resources :site_notices, only: :index
-  resource :profile, only: %i[show update]
+  resource :profile, only: %i[show update destroy]
   get "oiaa/search", to: "oiaa#search"
   get "oiaa/matches", to: "oiaa#matches"
   get "groups/find", to: "groups#find"
@@ -253,7 +257,7 @@ end
   resources :topics
   # Your profile (React, app/javascript/entrypoints/profile.jsx) replaces Devise's edit page
   get "/users/edit", to: "profiles#show", as: :edit_profile
-  devise_for :users
+  devise_for :users, controllers: { registrations: "users/registrations" }
 
   namespace :admin_panel do
     # React app; every path below it routes on the client
@@ -293,6 +297,7 @@ end
       resources :text_reports, only: %i[index update destroy] do
         post :comment, on: :member
       end
+      resources :contact_requests, only: %i[index update destroy]
     end
   end
   resources :readings do

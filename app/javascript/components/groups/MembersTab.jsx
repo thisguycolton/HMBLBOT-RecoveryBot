@@ -102,6 +102,7 @@ export default function MembersTab({ group, reload, setGroup }) {
                   {person.can_keep_records && <Pill tone="green">Record keeper</Pill>}
                   {person.can_schedule_hosts && <Pill tone="green">Host coordinator</Pill>}
                   {person.can_keep_treasury && <Pill tone="green">Treasurer</Pill>}
+                  {person.can_host && <Pill tone="green">Can host</Pill>}
                 </p>
                 {person.email && <p className="truncate text-xs text-slate-500 dark:text-neutral-400">{person.email}</p>}
                 {person.sobriety_date && (
@@ -129,6 +130,10 @@ export default function MembersTab({ group, reload, setGroup }) {
                     <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Writes and posts the treasurer's reports"
                       onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_keep_treasury: !person.can_keep_treasury } })}>
                       {person.can_keep_treasury ? "Not treasurer" : "Make treasurer"}
+                    </button>
+                    <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Can host or co-host: reads the format kept for hosts and hears when a host won't be there"
+                      onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_host: !person.can_host } })}>
+                      {person.can_host ? "Can't host" : "Can host"}
                     </button>
                     <button type="button" className={`${dangerButton} !px-2 !py-1 !text-xs`}
                       onClick={() => window.confirm(`Remove ${person.name} from ${group.title}?`) && call(`/memberships/${person.membership_id}`, { method: "DELETE" })}>
