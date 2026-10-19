@@ -37,6 +37,7 @@
     "@tiptap/pm": "^2.4.0",
     "@tiptap/react": "^2.4.0",
     "@tiptap/starter-kit": "^2.4.0",
+    "altcha": "3.2.4",
     "axios": "^1.10.0",
     "cheerio": "^1.0.0-rc.12",
     "framer-motion": "^12.23.3",

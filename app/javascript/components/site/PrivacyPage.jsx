@@ -145,6 +145,12 @@ export default function PrivacyPage({ turnstile = false }) {
               saving it, and we don't use a cookie to recognize you. If you're signed in, the visit is linked to your account so we can see
               when you were last active. Only site admins see these statistics, and only as totals.
             </li>
+            <li>
+              <strong>Bot check:</strong> the sign-up and contact forms have an “I'm not a robot” box.{" "}
+              {turnstile
+                ? "It's run by Cloudflare Turnstile (see Outside services)."
+                : "Ticking it has your browser solve a small math puzzle we made, which takes a second or two. It runs on your device; nothing about you is sent anywhere, and we only check the answer."}
+            </li>
             <li><strong>Server logs and errors:</strong> our server keeps short technical logs (including IP addresses) to keep the site running. When something breaks, an error report goes to our own error tracker; it doesn't include your IP address.</li>
           </ul>
           <h3>Things that come from elsewhere</h3>

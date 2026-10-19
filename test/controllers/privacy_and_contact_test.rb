@@ -32,6 +32,7 @@ class PrivacyAndContactTest < ActionDispatch::IntegrationTest
     assert_response :success
     props = JSON.parse(Nokogiri::HTML(response.body).at("#site-page")["data-props"])
     assert_equal "website", props.dig("human_check", "decoy")
+    assert_equal "SHA-256", props.dig("human_check", "altcha", "algorithm")
     assert_nil props.dig("human_check", "turnstile_site_key")
   end
 
@@ -58,6 +59,8 @@ class PrivacyAndContactTest < ActionDispatch::IntegrationTest
       -> { contact.merge(human_check_params(drawn: 1.second.ago)) },
       -> { contact },
       -> { contact.merge(form_started: "forged") },
+      -> { contact.merge(human_check_params).merge(altcha: nil) },
+      -> { contact.merge(human_check_params).merge(altcha: solved_altcha(number: 8).sub(/.{4}\z/, "AAA=")) },
     ].each do |params|
       post "/contact", params: params.call
       assert_response :unprocessable_entity
