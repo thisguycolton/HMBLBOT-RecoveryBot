@@ -2,7 +2,8 @@
 # amend, lay on the table...), who moved and seconded it, how it was voted and the count as it stood
 # in the room, and what became of it. Voting happens in the room; this only records it, and
 # #warnings says where a record doesn't add up. The decisions log is the main motions and the
-# ones that rescind a decision: a passed one that no later passed one replaces is "standing".
+# ones that rescind a decision: a passed one that no later passed one replaces is "standing", unless
+# it's marked one-time (done once, kept for the record, not a rule the group goes by).
 # Names are plain text (first name and last initial), never links to accounts, so a record read
 # or printed by everyone exposes nobody.
 class Motion < ApplicationRecord
@@ -60,8 +61,8 @@ class Motion < ApplicationRecord
   scope :passed, -> { where(status: "passed") }
   scope :newest_first, -> { order(Arel.sql("motions.decided_on DESC NULLS LAST"), id: :desc) }
   scope :decisions, -> { where(kind: MotionKinds::DECISION_KINDS) }
-  # A decision that passed and that no later passed decision replaces
-  scope :standing, -> { decisions.passed.where.not(id: Motion.passed.where.not(supersedes_id: nil).select(:supersedes_id)) }
+  # A decision that passed, isn't one-time, and that no later passed decision replaces
+  scope :standing, -> { decisions.passed.where(one_time: false).where.not(id: Motion.passed.where.not(supersedes_id: nil).select(:supersedes_id)) }
   # Set aside, put off or sent away at a meeting and not dealt with since: unfinished business
   scope :unfinished, -> { decisions.where(status: %w[tabled postponed referred]) }
 
@@ -173,14 +174,14 @@ class Motion < ApplicationRecord
       moved_by: moved_by_name, seconded_by: seconded_by_name,
       votes_for: votes_for, votes_against: votes_against, abstentions: abstentions,
       minority_opinion: minority_opinion.to_s, decided_on: decided_on&.iso8601, created_at: created_at.iso8601,
-      standing: passed? && replacer.nil?,
+      standing: passed? && !one_time && replacer.nil?,
       # A replacement the viewer can't see still counts, but its title stays out of it
       replaced_by: replacer && { id: (replacer.id if shown.call(replacer)), title: (replacer.title if shown.call(replacer)), decided_on: replacer.decided_on&.iso8601 },
       replaces: supersedes && shown.call(supersedes) ? { id: supersedes.id, title: supersedes.title, decided_on: supersedes.decided_on&.iso8601 } : nil,
       supersedes_id: supersedes_id, agenda_item_id: agenda_item_id,
       kind: kind, kind_label: kind_info[:label], kind_group: kind_info[:group], parent_id: parent_id, vote_method: vote_method, required_vote: required_vote, previous_notice: previous_notice,
       required: required_vote_key, committee: committee, postponed_to: postponed_to, amended_text: amended_text.to_s, note: note.to_s,
-      warnings: keeper ? warnings : [], needs_review: needs_review, imported: imported, ignore_rules: ignore_rules,
+      warnings: keeper ? warnings : [], needs_review: needs_review, imported: imported, ignore_rules: ignore_rules, one_time: one_time,
       business_meeting_id: business_meeting_id,
       meeting: business_meeting && (meetings.nil? || meetings.include?(business_meeting_id)) ? { id: business_meeting_id, held_on: business_meeting.held_on.iso8601 } : nil,
     }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_19_070000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_19_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -545,6 +545,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_070000) do
     t.boolean "needs_review", default: false, null: false
     t.boolean "ignore_rules", default: false, null: false
     t.boolean "imported", default: false, null: false
+    t.boolean "one_time", default: false, null: false
     t.index ["agenda_item_id"], name: "index_motions_on_agenda_item_id"
     t.index ["business_meeting_id"], name: "index_motions_on_business_meeting_id"
     t.index ["created_by_id"], name: "index_motions_on_created_by_id"

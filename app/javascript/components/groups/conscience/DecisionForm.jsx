@@ -12,7 +12,7 @@ const blank = () => ({
   kind: "main", parent_id: "", title: "", text: "", category: "other", status: "passed", decided_on: today(),
   moved_by_name: "", seconded_by_name: "", vote_method: "", required_vote: "", previous_notice: false,
   votes_for: "", votes_against: "", abstentions: "", committee: "", postponed_to: "", amended_text: "", note: "",
-  minority_opinion: "", supersedes_id: "", visibility: "members", business_meeting_id: "", agenda_item_id: "", ignore_rules: false,
+  minority_opinion: "", supersedes_id: "", visibility: "members", business_meeting_id: "", agenda_item_id: "", ignore_rules: false, one_time: false,
 });
 const GROUP_ORDER = ["main", "subsidiary", "privileged", "incidental", "bring_back"];
 
@@ -155,6 +155,9 @@ export default function DecisionForm({ group, motion = null, motions, kinds, gro
             </details>
           </fieldset>
         )}
+
+        {(form.kind === "main" || form.kind === "rescind") && <Toggle checked={!!form.one_time} onChange={(v) => setForm((f) => ({ ...f, one_time: v }))} label="One-time decision"
+          description="Something done once, like a change to the script or a purchase. It stays in the log but isn't listed with the group's standing decisions." />}
 
         {group.follows_roberts_rules !== false && <Toggle checked={!!form.ignore_rules} onChange={(v) => setForm((f) => ({ ...f, ignore_rules: v }))} label="Don't hold this one to Robert's Rules"
           description="For a decision the group made its own way: no warnings about seconds, counts or the vote needed." />}
