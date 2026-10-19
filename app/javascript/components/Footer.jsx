@@ -53,6 +53,7 @@ export default function Footer() {
           <div>© {new Date().getFullYear()} RecoveryBot by HMBLBOT</div>
           <div className="flex flex-wrap gap-4">
             <a href="/privacy" className="!text-neutral-500 !no-underline hover:!text-white">Privacy</a>
+            <a href="/terms" className="!text-neutral-500 !no-underline hover:!text-white">Terms</a>
             <a href="/contact" className="!text-neutral-500 !no-underline hover:!text-white">Contact</a>
             <a href={`${REPO}/issues/new`} target="_blank" rel="noreferrer" className="!text-neutral-500 !no-underline hover:!text-white">
               Report a problem

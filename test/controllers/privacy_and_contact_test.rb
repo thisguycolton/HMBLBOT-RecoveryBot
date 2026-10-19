@@ -19,10 +19,14 @@ class PrivacyAndContactTest < ActionDispatch::IntegrationTest
     { contact: { name: "Sam", email: "sam@example.com", topic: "privacy", message: "Please delete my RSVP." }.merge(fields) }
   end
 
-  test "the privacy policy and contact page are public" do
+  test "the privacy policy, terms and contact page are public" do
     get "/privacy"
     assert_response :success
     assert_includes response.body, %(data-page="privacy")
+
+    get "/terms"
+    assert_response :success
+    assert_includes response.body, %(data-page="terms")
 
     get "/contact"
     assert_response :success
