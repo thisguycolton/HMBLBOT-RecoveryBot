@@ -52,25 +52,31 @@
 
 <body>
   <div class="container">
-    <h1>Confirm Your Email</h1>
-    <p>Hello <%= @resource.email %>,</p>
+    <h1>Confirm your email</h1>
+    <p>Hi<%= " #{@resource.name}" if @resource.name.present? %>,</p>
 
     <p>
-      Welcome! Please confirm your email address by clicking the button below.
+      <% if @resource.pending_reconfirmation? %>
+        Please confirm <%= @resource.unconfirmed_email %> as your new RecoveryBot email address by clicking the button below.
+      <% else %>
+        Welcome to RecoveryBot! Click the button below to confirm your email address, and then you can log in.
+      <% end %>
     </p>
 
     <p>
       <a href="<%= confirmation_url(@resource, confirmation_token: @token) %>" class="button">
-        Confirm Email
+        Confirm my email
       </a>
     </p>
 
+    <p>The link works for 3 days. If it has run out, you can ask for a new one from the log-in page.</p>
+
     <p>
-      If you didn’t create an account with us, you can safely ignore this email.
+      If you didn’t ask for this, you can ignore this email.
     </p>
 
     <div class="footer">
-      Sent with ♥ by HumbleBot<br />
+      Sent with ♥ by RecoveryBot<br />
       <%= link_to root_url, root_url %>
     </div>
   </div>

@@ -35,7 +35,7 @@ class Api::ProfilesTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     patch "/api/profile", params: { profile: { email: "new@example.com", current_password: "password123" } }, as: :json
     assert_response :success
-    assert_equal "new@example.com", @user.reload.email
+    assert_equal "new@example.com", @user.reload.unconfirmed_email # it changes once they confirm it
   end
 
   test "sobriety date is private unless they show it to their groups" do

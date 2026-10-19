@@ -256,6 +256,11 @@ export default function ProfilePage() {
               <label htmlFor="p-email" className={labelClass}>Email</label>
               <input id="p-email" type="email" required autoComplete="email" className={inputClass} value={account.email}
                 onChange={(e) => setAccount({ ...account, email: e.target.value })} />
+              {profile.unconfirmed_email && (
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                  We sent a link to {profile.unconfirmed_email}. Your email changes once you click it.
+                </p>
+              )}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>

@@ -48,13 +48,14 @@ class PrivacyAndContactTest < ActionDispatch::IntegrationTest
   end
 
   test "bots are turned away: decoy filled, too fast, no stamp or a forged one" do
+    # Built as each post goes out, so a slow earlier request can't age the "too fast" stamp
     [
-      contact.merge(human_check_params).merge(website: "http://spam.example"),
-      contact.merge(human_check_params(drawn: 1.second.ago)),
-      contact,
-      contact.merge(form_started: "forged"),
+      -> { contact.merge(human_check_params).merge(website: "http://spam.example") },
+      -> { contact.merge(human_check_params(drawn: 1.second.ago)) },
+      -> { contact },
+      -> { contact.merge(form_started: "forged") },
     ].each do |params|
-      post "/contact", params: params
+      post "/contact", params: params.call
       assert_response :unprocessable_entity
     end
     assert_empty ActionMailer::Base.deliveries

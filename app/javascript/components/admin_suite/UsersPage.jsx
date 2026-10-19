@@ -9,7 +9,7 @@ import { formatCount } from "./App";
 
 const FILTERS = [
   { value: "", label: "Everyone" },
-  { value: "pending", label: "Waiting for approval" },
+  { value: "pending", label: "Email not confirmed" },
   { value: "admins", label: "Admins" },
 ];
 
@@ -38,7 +38,9 @@ export default function UsersPage({ notify }) {
     }
   }
 
-  const approve = (user) => change(user, "/confirm", null, `Approved ${user.email}. They've been emailed.`);
+  // People confirm their own email; this is for someone whose email never arrives
+  const approve = (user) => window.confirm(`Confirm ${user.email} without the email link? Only do this if you know the address is theirs.`) &&
+    change(user, "/confirm", null, `Confirmed ${user.email}. They've been emailed that they can log in.`);
   function toggleAdmin(user) {
     const verb = user.admin ? "Remove admin access from" : "Make";
     if (!window.confirm(`${verb} ${user.email}${user.admin ? "?" : " an admin?"}`)) return;
@@ -74,14 +76,14 @@ export default function UsersPage({ notify }) {
                   <td className={`${td} whitespace-nowrap`}>{u.last_seen_at ? shortDate(u.last_seen_at) : "—"}</td>
                   <td className={`${td} tabular-nums`}>{formatCount(u.readings_count)}</td>
                   <td className={td}>
-                    {!u.confirmed && <Badge tone="warn">Waiting</Badge>}
+                    {!u.confirmed && <Badge tone="warn">Unconfirmed</Badge>}
                     {u.admin && <Badge>Admin</Badge>}
                     {u.is_you && <Badge>You</Badge>}
                   </td>
                   <td className={`${td} text-right whitespace-nowrap`}>
                     {!u.confirmed && (
-                      <button type="button" className={buttonClass.primary} onClick={() => approve(u)}>
-                        <Check className="w-4 h-4" strokeWidth={2.5} /> Approve
+                      <button type="button" className={buttonClass.secondary} onClick={() => approve(u)}>
+                        <Check className="w-4 h-4" strokeWidth={2.5} /> Confirm for them
                       </button>
                     )}
                     {!u.is_you && (

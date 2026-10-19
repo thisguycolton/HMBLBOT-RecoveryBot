@@ -58,7 +58,7 @@ class Api::ProfilesController < ApplicationController
   def profile_json
     u = current_user.reload
     {
-      name: u.name, email: u.email, bio: u.bio, avatar_url: u.avatar_url,
+      name: u.name, email: u.email, unconfirmed_email: u.unconfirmed_email, bio: u.bio, avatar_url: u.avatar_url,
       sobriety_date: u.sobriety_date&.iso8601, show_sobriety_date: u.show_sobriety_date,
       groups: u.group_memberships.includes(:group).map { |m| { slug: m.group.slug, title: m.group.title, role: m.role, status: m.status } },
       groups_open: Group.feature_open_to?(u),

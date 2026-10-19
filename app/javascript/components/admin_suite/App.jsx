@@ -45,7 +45,7 @@ const SECTIONS = [
   {
     title: "Review",
     items: [
-      { to: "/users", label: "Members", icon: Users, count: "pending" },
+      { to: "/users", label: "Members", icon: Users },
       { to: "/contact_requests", label: "Contact requests", icon: Inbox, count: "contact_requests" },
       { to: "/text_reports", label: "Text reports", icon: Flag, count: "text_reports" },
       { to: "/court_verifications", label: "Court verifications", icon: ClipboardCheck },
@@ -86,7 +86,6 @@ export default function AdminSuite() {
 }
 
 const inboxCounts = (overview) => ({
-  pending: overview?.users?.pending ?? 0,
   text_reports: overview?.text_reports?.open ?? 0,
   contact_requests: overview?.contact_requests?.open ?? 0,
   notices: overview?.notices?.live ?? 0,

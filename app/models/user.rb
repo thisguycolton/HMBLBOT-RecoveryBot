@@ -1,8 +1,9 @@
 class User < ApplicationRecord
   # Include default devise modules. Others available are:
-  # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
+  # :lockable, :timeoutable, :trackable and :omniauthable
+  # :confirmable: new accounts confirm their email address before they can sign in
   devise :database_authenticatable, :registerable,
-         :recoverable, :rememberable, :validatable
+         :recoverable, :rememberable, :validatable, :confirmable
 
   has_one :user_active_group, -> { order(updated_at: :desc) }, dependent: :destroy
   has_many :group_memberships, dependent: :destroy
@@ -57,22 +58,11 @@ class User < ApplicationRecord
 
   # Set default values for new users
   after_initialize :set_defaults, unless: :persisted?
-  after_create_commit :notify_admins_of_signup, unless: :confirmed?
+  before_save :sync_confirmed
 
   def set_defaults
     self.admin ||= false
     self.confirmed ||= false
-  end
-
-  # New sign-ups wait for an admin to approve them in the admin suite's Users page
-  def notify_admins_of_signup
-    Notification.deliver(User.suite_admins, kind: "user.pending", title: "#{name.presence || email} is waiting for approval",
-                                            url: "/admin_panel/users")
-  end
-
-  # Only allow confirmed users to sign in
-  def active_for_authentication?
-    super && confirmed?
   end
 
   # The admin suite (/admin_panel) shows members' attendance records, visits and accounts, so
@@ -120,12 +110,15 @@ class User < ApplicationRecord
       (group_prompt_dismissed_at.nil? || group_prompt_dismissed_at < 30.days.ago)
   end
 
-  # Provide a message if user is not confirmed
-  def inactive_message
-    confirmed? ? super : :unconfirmed
-  end
-
   private
+
+  # `confirmed` (the old admin-approval flag, still what queries use) and Devise's
+  # `confirmed_at` say the same thing: confirming the email sets the flag, and an account
+  # made or approved with confirmed: true (an admin, a test) counts as confirmed.
+  def sync_confirmed
+    self.confirmed = true if confirmed_at.present?
+    self.confirmed_at ||= Time.current if self[:confirmed]
+  end
 
   def sobriety_date_is_past
     errors.add(:sobriety_date, "can't be in the future") if sobriety_date && sobriety_date > Date.current + 1

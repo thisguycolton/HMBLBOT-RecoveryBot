@@ -124,7 +124,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <H2 id="what-we-collect">What we collect</H2>
           <h3>Things you give us</h3>
           <ul>
-            <li><strong>Your account:</strong> name, email address and password. The password is stored only as a one-way hash; nobody can read it. New accounts are approved by a site admin before they can sign in.</li>
+            <li><strong>Your account:</strong> name, email address and password. The password is stored only as a one-way hash; nobody can read it. We email you a link to confirm the address before you can sign in.</li>
             <li><strong>Your profile:</strong> username, picture, a short bio, an optional sobriety date, and how you lay out your profile page.</li>
             <li><strong>Notes and highlights:</strong> passages you highlight in the library, notes you write on them, and notes on your timeline (with up to six pictures). Each one has its own visibility (see below).</li>
             <li><strong>Follows:</strong> who you follow and who follows you.</li>
@@ -160,7 +160,7 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>The public web:</strong> the home page, the tools, Find a meeting, published events, and the parts of a group's home page that its admins choose to show visitors. Profiles are never public.</li>
             <li><strong>Signed-in members:</strong> profiles, and notes or highlights set to <em>Members</em>. Notes set to <em>Followers</em> are only seen by people who follow you; <em>Private</em> ones (the default) only by you. Highlights you share by link can be opened by anyone with that link.</li>
             <li><strong>Your groups:</strong> members of a group see its member list, its members-only pages and records, and notes you share to it. Record keepers and admins of the group see drafts and everything else the group keeps.</li>
-            <li><strong>Site admins:</strong> the few people who run RecoveryBot can see what's stored, to approve accounts, fix problems and answer requests. We don't browse your things without a reason.</li>
+            <li><strong>Site admins:</strong> the few people who run RecoveryBot can see what's stored, to fix problems and answer requests. We don't browse your things without a reason.</li>
           </ul>
           <p>Search engines can't reach anything behind sign-in and are asked to stay out of the library and readings. AI crawlers are turned away from the whole site.</p>
 
@@ -193,7 +193,7 @@ export default function PrivacyPage({ turnstile = false }) {
 
           <H2 id="email">Email</H2>
           <p>
-            We email you only when you need it or asked for it: a password reset, when your account is approved, when someone adds
+            We email you only when you need it or asked for it: a link to confirm your email address, a password reset, when someone adds
             you to a schedule poll, when an event you RSVP'd to posts an update (each has a link to stop them), and a copy of a court
             attendance verification made for you. Group news, like a scheduled business meeting or a host assignment, shows up in
             the notification bell on the site instead. We don't send newsletters or marketing.
