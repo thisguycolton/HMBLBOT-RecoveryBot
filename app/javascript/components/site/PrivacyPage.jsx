@@ -242,7 +242,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <H2 id="changes">Changes and contact</H2>
           <p>
             If we change what we collect or who sees it, we'll update this page and the date at the top, and for big changes we'll put a
-            notice on the site. Questions or requests go to {contact}.
+            notice on the site. The rules for using the site are in the <a href="/terms">terms of use</a>. Questions or requests go to {contact}.
           </p>
         </article>
       </div>

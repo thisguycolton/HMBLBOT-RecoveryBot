@@ -1,5 +1,5 @@
-// The site's own pages: the privacy policy (/privacy) and the contact form (/contact).
-// Each view renders <div id="site-page" data-page="privacy|contact" data-props="{...}">.
+// The site's own pages: the privacy policy (/privacy), the terms of use (/terms) and the contact
+// form (/contact). Each view renders <div id="site-page" data-page="privacy|terms|contact" data-props="{...}">.
 import React from "react";
 import { createRoot } from "react-dom/client";
 
@@ -8,9 +8,10 @@ import "../styles/reader.css";
 
 import Layout from "../components/Layout";
 import PrivacyPage from "../components/site/PrivacyPage";
+import TermsPage from "../components/site/TermsPage";
 import ContactPage from "../components/site/ContactPage";
 
-const PAGES = { privacy: PrivacyPage, contact: ContactPage };
+const PAGES = { privacy: PrivacyPage, terms: TermsPage, contact: ContactPage };
 
 const root = document.getElementById("site-page");
 const Page = root && PAGES[root.dataset.page];
