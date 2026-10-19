@@ -109,7 +109,9 @@ class Api::GroupDocumentsController < ApplicationController
   end
 
   def document_json
-    @document.as_api_json(viewer: current_user, full: true).merge(can_edit: keeper?, can_delete: @group.manageable_by?(current_user))
+    template = GroupDocumentTemplate.for(@group, @document.kind)
+    @document.as_api_json(viewer: current_user, full: true).merge(can_edit: keeper?, can_delete: @group.manageable_by?(current_user),
+                                                                  letterhead: template.blank? ? nil : template.as_api_json)
   end
 
   def document_params

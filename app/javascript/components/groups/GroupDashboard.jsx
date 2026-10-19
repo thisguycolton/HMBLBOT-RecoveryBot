@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpRight, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, FileText, Gavel, LayoutDashboard, LayoutTemplate,
-  Landmark, Menu, Moon, Settings, Sun, UserCheck, UserCircle, Users, X,
+  Landmark, Menu, Moon, Settings, Stamp, Sun, UserCheck, UserCircle, Users, X,
 } from "lucide-react";
 import NotificationBell from "../NotificationBell";
 import { RecoveryBotLogo } from "../brand/Logo";
@@ -16,6 +16,7 @@ import EventsTab from "./EventsTab";
 import LiteratureTab from "./LiteratureTab";
 import CourtTab from "./CourtTab";
 import GroupSettings, { GroupLogo } from "./GroupSettings";
+import DocumentTemplates from "./conscience/DocumentTemplates";
 
 // Who gets the dashboard: anyone in the group with a role beyond plain member
 export const hasGroupRole = (group) =>
@@ -30,6 +31,7 @@ const SECTIONS = [
       { key: "meetings", path: "/meetings", label: "Business meetings", icon: CalendarDays },
       { key: "decisions", path: "/decisions", label: "Decisions", icon: Gavel },
       { key: "documents", path: "/documents", label: "Documents", icon: FileText },
+      { key: "templates", path: "/templates", label: "Document templates", icon: Stamp, show: (g) => g.can_keep_records },
     ],
   },
   {
@@ -141,7 +143,8 @@ export default function GroupDashboard({ group: initial }) {
   else if (current.key === "literature") body = <LiteratureTab group={group} reload={reload} />;
   else if (current.key === "court") body = <CourtTab group={group} setGroup={setGroup} />;
   else if (current.key === "settings") body = <GroupSettings group={group} setGroup={setGroup} />;
-  else body = <ConscienceBody group={group} view={current.key} id={id} />;
+  else if (current.key === "templates") body = <DocumentTemplates group={group} />;
+  else body = <ConscienceBody group={group} view={current.key} id={id} embedded />;
 
   return (
     <div className="min-h-screen w-full bg-slate-100 text-slate-900 !font-sans dark:bg-neutral-950 dark:text-neutral-100 [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
@@ -171,18 +174,16 @@ export default function GroupDashboard({ group: initial }) {
           </a>
         </header>
 
-        <main className="min-w-0 max-w-screen-xl p-4 sm:p-6">
-          <div className="group-chrome mb-6 flex flex-wrap items-center gap-3">
-            <h1 className="flex-1 !text-2xl font-bold text-slate-900 dark:text-white">{current.label}</h1>
-            <div className="text-sm text-slate-500 dark:text-neutral-400">
-              <Link to={`/${slug}`} className="!text-slate-500 hover:underline dark:!text-neutral-400">{group.title}</Link>
-              {" / "}
-              {current.key === "overview" ? "Dashboard" : <><Link to={base} className="!text-slate-500 hover:underline dark:!text-neutral-400">Dashboard</Link> / {current.label}</>}
-            </div>
-          </div>
-          <ErrorNote error={error} />
-          {body}
-        </main>
+        {/* One open document fills the whole area, its menus and toolbar along the top */}
+        {current.key === "documents" && id ? (
+          <main className="min-w-0">{body}</main>
+        ) : (
+          <main className="min-w-0 max-w-screen-xl p-4 sm:p-6">
+            <h1 className="group-chrome mb-6 !text-2xl font-bold text-slate-900 dark:text-white">{current.label}</h1>
+            <ErrorNote error={error} />
+            {body}
+          </main>
+        )}
       </div>
     </div>
   );

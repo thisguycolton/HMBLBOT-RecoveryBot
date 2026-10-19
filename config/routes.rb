@@ -70,6 +70,7 @@ Rails.application.routes.draw do
     end
     resources :treasurer_reports, controller: "group_treasurer_reports", only: %i[index create update destroy]
     resources :minutes_imports, controller: "group_minutes_imports", only: :create
+    resources :document_templates, controller: "group_document_templates", only: %i[index update]
     resources :motions, controller: "group_motions", only: %i[index create update destroy] do
       post :check, on: :collection
       post :bulk, on: :collection

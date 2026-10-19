@@ -3,7 +3,7 @@ import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Baseline, Bold, FileUp, Highlighter, Italic, Link2, List, ListOrdered, Maximize2, Minimize2, Minus, Quote,
   Redo2, Strikethrough, Table2, Underline, Undo2, Unlink,
 } from "lucide-react";
-import { HIGHLIGHT_COLORS, TEXT_COLORS, normalizeHref } from "./editorKit";
+import { BORDER_COLORS, BORDER_WIDTHS, CELL_FILLS, CELL_WIDTHS, HIGHLIGHT_COLORS, TEXT_COLORS, normalizeHref } from "./editorKit";
 
 const button = "grid size-8 shrink-0 place-items-center rounded-lg !bg-transparent text-slate-700 hover:!bg-neutral-200/70 disabled:opacity-35 dark:text-neutral-200 dark:hover:!bg-neutral-700/60";
 const on = "!bg-accent/15 text-accent dark:!bg-accent/30 dark:text-white";
@@ -41,6 +41,69 @@ function ColorMenu({ label, icon: Icon, colors, current, onPick, onClear }) {
           <button type="button" role="menuitem" onMouseDown={(e) => e.preventDefault()} onClick={() => { onClear(); setOpen(false); }}
             className="col-span-5 mt-1 rounded-lg !bg-neutral-100 py-1 text-xs font-medium text-slate-700 dark:!bg-neutral-800 dark:text-neutral-200">None</button>
         </span>
+      )}
+    </span>
+  );
+}
+
+// Everything about the table the cursor is in: rows and columns, the header row, merging, and
+// the selected cells' fill, borders, width and alignment (drag across cells to style several)
+function TableMenu({ editor }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  const run = (fn) => () => fn(editor.chain().focus()).run();
+  const setCell = (attr, value) => editor.chain().focus().setCellAttribute(attr, value).run();
+  const cell = editor.getAttributes(editor.isActive("tableHeader") ? "tableHeader" : "tableCell");
+  const act = "rounded-lg !bg-neutral-100 px-2 py-1 text-xs font-medium text-slate-700 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:text-neutral-200 dark:hover:!bg-neutral-700";
+  const Row = ({ label, children }) => (
+    <div className="space-y-1">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">{label}</p>
+      <div className="flex flex-wrap gap-1">{children}</div>
+    </div>
+  );
+  const choice = (attr, [name, value]) => (
+    <button key={name} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setCell(attr, value)}
+      className={`${act} ${(cell[attr] || null) === value ? "!bg-accent/20 !text-accent" : ""}`}>{name}</button>
+  );
+  const swatch = (attr, [name, value]) => (
+    <button key={name} type="button" title={name} aria-label={name} onMouseDown={(e) => e.preventDefault()} onClick={() => setCell(attr, value)}
+      className={`size-6 rounded-md !p-0 ring-1 ring-black/15 ${(cell[attr] || null) === value ? "outline outline-2 outline-offset-1 outline-accent" : ""}`}
+      style={{ background: value || "repeating-linear-gradient(45deg,#fff,#fff 3px,#e2e8f0 3px,#e2e8f0 6px)" }} />
+  );
+  return (
+    <span ref={ref} className="relative shrink-0">
+      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen((v) => !v)} aria-expanded={open}
+        className={`inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold ${open ? on : "!bg-accent/10 text-accent"} `}>
+        <Table2 className="size-4" /> Table ▾
+      </button>
+      {open && (
+        <div className="fixed z-[2300] mt-1 w-72 space-y-3 rounded-xl border border-neutral-200 bg-white p-3 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
+          style={{ top: ref.current?.getBoundingClientRect().bottom, left: Math.min(ref.current?.getBoundingClientRect().left || 0, window.innerWidth - 300) }}>
+          <Row label="Rows and columns">
+            <button type="button" className={act} onClick={run((c) => c.addRowBefore())}>+ Row above</button>
+            <button type="button" className={act} onClick={run((c) => c.addRowAfter())}>+ Row below</button>
+            <button type="button" className={act} onClick={run((c) => c.addColumnBefore())}>+ Column left</button>
+            <button type="button" className={act} onClick={run((c) => c.addColumnAfter())}>+ Column right</button>
+            <button type="button" className={act} onClick={run((c) => c.deleteRow())}>− Row</button>
+            <button type="button" className={act} onClick={run((c) => c.deleteColumn())}>− Column</button>
+            <button type="button" className={act} onClick={run((c) => c.toggleHeaderRow())}>Header row</button>
+            <button type="button" className={act} disabled={!editor.can().mergeCells()} onClick={run((c) => c.mergeCells())}>Merge</button>
+            <button type="button" className={act} disabled={!editor.can().splitCell()} onClick={run((c) => c.splitCell())}>Split</button>
+          </Row>
+          <Row label="Cell fill">{CELL_FILLS.map((c) => swatch("backgroundColor", c))}</Row>
+          <Row label="Border color">{BORDER_COLORS.map((c) => swatch("borderColor", c))}</Row>
+          <Row label="Border width">{BORDER_WIDTHS.map((c) => choice("borderWidth", c))}</Row>
+          <Row label="Column width">{CELL_WIDTHS.map((c) => choice("cellWidth", c))}</Row>
+          <Row label="Line up text">{[["Top", null], ["Middle", "middle"], ["Bottom", "bottom"]].map((c) => choice("verticalAlign", c))}</Row>
+          <p className="text-[11px] text-slate-500 dark:text-neutral-400">Styles go on the cell the cursor is in. Drag across cells to style several at once.</p>
+          <button type="button" className={`${act} w-full !text-rose-700 dark:!text-rose-300`} onClick={() => { setOpen(false); editor.chain().focus().deleteTable().run(); }}>Delete table</button>
+        </div>
       )}
     </span>
   );
@@ -118,15 +181,7 @@ export default function DocumentToolbar({ editor, onImport, fullScreen, onFullSc
         </>
       )}
       <Tool label="Insert a table" icon={Table2} active={inTable} onClick={run((c) => c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }))} />
-      {inTable && (
-        <span className="flex shrink-0 items-center gap-1 rounded-lg bg-neutral-200/60 px-1 text-[11px] font-semibold text-slate-600 dark:bg-neutral-700/60 dark:text-neutral-200">
-          <button type="button" className="rounded px-1.5 py-1 !bg-transparent hover:underline" onClick={run((c) => c.addRowAfter())}>+ Row</button>
-          <button type="button" className="rounded px-1.5 py-1 !bg-transparent hover:underline" onClick={run((c) => c.addColumnAfter())}>+ Column</button>
-          <button type="button" className="rounded px-1.5 py-1 !bg-transparent hover:underline" onClick={run((c) => c.deleteRow())}>− Row</button>
-          <button type="button" className="rounded px-1.5 py-1 !bg-transparent hover:underline" onClick={run((c) => c.deleteColumn())}>− Column</button>
-          <button type="button" className="rounded px-1.5 py-1 !bg-transparent text-rose-700 hover:underline dark:text-rose-300" onClick={run((c) => c.deleteTable())}>Delete table</button>
-        </span>
-      )}
+      {inTable && <TableMenu editor={editor} />}
       {onFullScreen && (
         <>
           <Divider />

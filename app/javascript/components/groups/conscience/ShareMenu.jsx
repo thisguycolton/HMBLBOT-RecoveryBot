@@ -13,8 +13,11 @@ const WHO = {
 
 // "Share link" at the top of a document: copies its address and says who can open it. Record
 // keepers can change that right here (it takes effect at once, and isn't a new copy of the text).
-export default function ShareMenu({ group, doc, canEdit, onChanged }) {
-  const [open, setOpen] = useState(false);
+// With `open`/`onOpenChange` the File menu opens it, and its own button is left out (`bare`).
+export default function ShareMenu({ group, doc, canEdit, onChanged, open: openProp, onOpenChange, bare = false }) {
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (v) => { const next = typeof v === "function" ? v(open) : v; onOpenChange ? onOpenChange(next) : setOpenState(next); };
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
   const box = useRef(null);
@@ -52,7 +55,7 @@ export default function ShareMenu({ group, doc, canEdit, onChanged }) {
 
   return (
     <div ref={box} className="relative">
-      <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} title="Share link" aria-label="Share link" className={quietButton}><Link2 className="size-4" /> <span className="max-sm:sr-only">Share link</span></button>
+      {!bare && <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} title="Share link" aria-label="Share link" className={quietButton}><Link2 className="size-4" /> <span className="max-sm:sr-only">Share link</span></button>}
       {open && (
         <div role="dialog" aria-label="Share link" className="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] space-y-3 rounded-2xl bg-white p-4 text-sm shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
           <div className="flex gap-2">

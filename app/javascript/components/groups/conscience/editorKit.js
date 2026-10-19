@@ -45,6 +45,25 @@ export const HIGHLIGHT_COLORS = [
   ["Yellow", "#fef08a"], ["Green", "#bbf7d0"], ["Blue", "#bfdbfe"], ["Pink", "#fbcfe8"], ["Orange", "#fed7aa"], ["Purple", "#ddd6fe"], ["Gray", "#e2e8f0"],
 ];
 
+// Table cells keep their own fill, border and width as inline style (the server keeps those)
+const cellStyle = {
+  backgroundColor: { default: null, parseHTML: (el) => el.style.backgroundColor || null, renderHTML: (a) => (a.backgroundColor ? { style: `background-color: ${a.backgroundColor}` } : {}) },
+  borderColor: { default: null, parseHTML: (el) => el.style.borderColor || null, renderHTML: (a) => (a.borderColor ? { style: `border-color: ${a.borderColor}` } : {}) },
+  borderWidth: { default: null, parseHTML: (el) => el.style.borderWidth || null, renderHTML: (a) => (a.borderWidth ? { style: `border-width: ${a.borderWidth}; border-style: ${a.borderWidth === "0px" ? "none" : "solid"}` } : {}) },
+  cellWidth: { default: null, parseHTML: (el) => el.style.width || null, renderHTML: (a) => (a.cellWidth ? { style: `width: ${a.cellWidth}` } : {}) },
+  verticalAlign: { default: null, parseHTML: (el) => el.style.verticalAlign || null, renderHTML: (a) => (a.verticalAlign ? { style: `vertical-align: ${a.verticalAlign}` } : {}) },
+};
+const StyledCell = TableCell.extend({ addAttributes() { return { ...this.parent?.(), ...cellStyle }; } });
+const StyledHeader = TableHeader.extend({ addAttributes() { return { ...this.parent?.(), ...cellStyle }; } });
+
+export const CELL_FILLS = [
+  ["None", null], ["Gray", "#f1f5f9"], ["Yellow", "#fef9c3"], ["Green", "#dcfce7"], ["Blue", "#dbeafe"], ["Pink", "#fce7f3"],
+  ["Orange", "#ffedd5"], ["Purple", "#ede9fe"],
+];
+export const BORDER_COLORS = [["Default", null], ["Light gray", "#e2e8f0"], ["Gray", "#94a3b8"], ["Black", "#0f172a"], ["Blue", "#2563eb"], ["Red", "#dc2626"], ["Green", "#16a34a"]];
+export const BORDER_WIDTHS = [["Default", null], ["None", "0px"], ["Thin", "1px"], ["Medium", "2px"], ["Thick", "3px"]];
+export const CELL_WIDTHS = [["Auto", null], ["Narrow", "15%"], ["Medium", "30%"], ["Wide", "50%"]];
+
 export const documentExtensions = (placeholder = "Start typing…") => [
   StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false, code: false }),
   Underline,
@@ -55,8 +74,8 @@ export const documentExtensions = (placeholder = "Start typing…") => [
   TextAlign.configure({ types: ["heading", "paragraph"] }),
   Table.configure({ resizable: false }),
   TableRow,
-  TableHeader,
-  TableCell,
+  StyledHeader,
+  StyledCell,
   Placeholder.configure({ placeholder }),
 ];
 

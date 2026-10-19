@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { ChevronLeft, Download, FileUp, History, Moon, Paperclip, Pin, Printer, RotateCcw, Save, SlidersHorizontal, Sun, Trash2 } from "lucide-react";
+import { ChevronLeft, Download, FileUp, Paperclip, Pin, RotateCcw, Save, Trash2 } from "lucide-react";
+import { download, safeName, toDocx, toMarkdown, toRtf } from "../../../lib/documentExport";
+import { IMPORT_ACCEPT } from "../../../lib/documentImport";
+import MenuBar from "./MenuBar";
 import Markdown, { markdownToHtml } from "../../book/Markdown";
 import { importDocument } from "../../../lib/documentImport";
 import { labelClass, selectClass } from "../../ui/styles";
@@ -14,6 +17,21 @@ import ShareMenu from "./ShareMenu";
 import { documentExtensions } from "./editorKit";
 import { FILE_ACCEPT, KIND_INFO, KINDS, VISIBILITIES, VISIBILITY_LABELS, STATUSES, dateLabel, decisionsPath, documentsPath, fileUrl, sizeLabel } from "./lib";
 
+// The folder's letterhead at the top of the page: its logo or seal, a heading and a line under it
+function Letterhead({ template: t, groupTitle }) {
+  return (
+    <header className={`doc-letterhead doc-letterhead--${t.align}`}>
+      {t.mark_url && <img src={t.mark_url} alt="" className="doc-letterhead-mark" />}
+      {(t.header_text || t.subheader_text) && (
+        <div className="doc-letterhead-text">
+          {t.header_text && <p className="doc-letterhead-heading">{t.header_text.replace("{{group}}", groupTitle)}</p>}
+          {t.subheader_text && <p className="doc-letterhead-sub">{t.subheader_text.replace("{{group}}", groupTitle)}</p>}
+        </div>
+      )}
+    </header>
+  );
+}
+
 // What the editor starts from: the text as HTML (an older Markdown document is converted)
 async function startingHtml(doc) {
   if (!doc?.body?.trim()) return "";
@@ -23,7 +41,7 @@ async function startingHtml(doc) {
 // /conscience/documents/:id (and /new): a group document as a page, like a word processor's. Record
 // keepers type straight into it; everyone else reads it. Loads the document, then hands over to
 // DocumentSheet, which holds the editor.
-export default function DocumentPage({ group, id = null }) {
+export default function DocumentPage({ group, id = null, embedded = false }) {
   const slug = group.slug;
   const [loaded, setLoaded] = useState(null); // { doc, html }
   const [error, setError] = useState(null);
@@ -41,10 +59,10 @@ export default function DocumentPage({ group, id = null }) {
   if (!loaded) return <Loading />;
   const canEdit = loaded.doc ? loaded.doc.can_edit : !!(group.can_keep_records || group.is_site_admin);
   if (!loaded.doc && !canEdit) return <Message title="You can't write documents here" text="Only this group's record keepers can write or upload documents." />;
-  return <DocumentSheet key={id || "new"} group={group} initialDoc={loaded.doc} initialHtml={loaded.html} canEdit={canEdit} />;
+  return <DocumentSheet key={id || "new"} group={group} initialDoc={loaded.doc} initialHtml={loaded.html} canEdit={canEdit} embedded={embedded} />;
 }
 
-function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
+function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
   const slug = group.slug;
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -90,6 +108,20 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
   const [withText, setWithText] = useState(() => !!initialHtml || !initialDoc?.file);
   const titleRef = useRef(null);
   const fileRef = useRef(null);
+  const importRef = useRef(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  // The folder's letterhead (Document templates): from the document, or for record keepers the
+  // current one for whichever folder is picked, so changing the folder shows it at once
+  const [templates, setTemplates] = useState(null);
+  useEffect(() => {
+    if (!isMember) return;
+    api(`/groups/${slug}/document_templates`).then((d) => setTemplates(d.templates)).catch(() => {});
+  }, [slug, isMember]);
+  const letterhead = (() => {
+    const t = templates?.find((x) => x.kind === form.kind);
+    if (t) return t.blank ? null : t;
+    return doc?.letterhead || null;
+  })();
 
   const editor = useEditor({
     extensions: documentExtensions("Start typing, or import a Word or RTF file from the toolbar…"),
@@ -221,28 +253,72 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
   const pdfOnly = isPdf && !showPaper;
   const status = saving ? "Saving…" : dirty ? "Unsaved changes" : saved ? "All changes saved" : "";
 
+  const exportAs = async (kind) => {
+    const html = editor?.isEmpty ? "" : editor?.getHTML() || "";
+    const title = form.title || doc?.title || "Document";
+    try {
+      if (kind === "docx") download(await toDocx(html, title), `${safeName(title)}.docx`);
+      if (kind === "rtf") download(new Blob([toRtf(html, title)], { type: "application/rtf" }), `${safeName(title)}.rtf`);
+      if (kind === "md") download(new Blob([toMarkdown(html, title)], { type: "text/markdown" }), `${safeName(title)}.md`);
+    } catch (e) { setError(`Couldn't make that file: ${e.message}`); }
+  };
+  const chain = () => editor.chain().focus();
+  const hasText = showPaper && editor && !editor.isEmpty;
+  const menus = [
+    { label: "File", items: [
+      canEdit && { label: "Save", shortcut: "⌘S", onClick: save, disabled: saving || (!dirty && !!doc) },
+      canEdit && { label: "New document", onClick: () => navigate(`${documentsPath(slug, "new")}?kind=${form.kind}`) },
+      canEdit && { label: "Import Word or RTF…", onClick: () => importRef.current?.click() },
+      canEdit && "divider",
+      { label: "Download as Word (.docx)", onClick: () => exportAs("docx"), disabled: !hasText },
+      { label: "Download as RTF", onClick: () => exportAs("rtf"), disabled: !hasText },
+      { label: "Download as Markdown", onClick: () => exportAs("md"), disabled: !hasText },
+      { label: pdfOnly ? "Download the PDF" : "Save as PDF / Print", shortcut: "⌘P", onClick: () => (pdfOnly ? window.open(fileUrl(slug, doc.id, "?download=1")) : printPdf()), disabled: !doc && !hasText },
+      file && doc && !pdfOnly && { label: `Download ${file.name}`, onClick: () => window.open(fileUrl(slug, doc.id, "?download=1")) },
+      "divider",
+      doc && { label: "Share…", onClick: () => setShareOpen(true) },
+      canEdit && { label: "Document details…", onClick: () => setDetails((v) => !v), checked: details },
+      isMember && doc && { label: "Version history", onClick: toggleHistory, checked: showHistory },
+      doc?.can_delete && "divider",
+      doc?.can_delete && { label: "Delete document…", onClick: remove },
+    ] },
+    canEdit && showPaper && { label: "Edit", items: [
+      { label: "Undo", shortcut: "⌘Z", onClick: () => chain().undo().run(), disabled: !editor?.can().undo() },
+      { label: "Redo", shortcut: "⇧⌘Z", onClick: () => chain().redo().run(), disabled: !editor?.can().redo() },
+      "divider",
+      { label: "Select all", shortcut: "⌘A", onClick: () => chain().selectAll().run() },
+      { label: "Clear formatting", onClick: () => chain().unsetAllMarks().clearNodes().run() },
+    ] },
+    { label: "View", items: [
+      { label: "Dark page", onClick: flipPaper, checked: darkPaper },
+      { label: "Full screen", shortcut: "Esc to leave", onClick: toggleFullScreen, checked: fullScreen },
+    ] },
+    canEdit && showPaper && { label: "Insert", items: [
+      { label: "Table", onClick: () => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+      { label: "Divider line", onClick: () => chain().setHorizontalRule().run() },
+    ] },
+  ].filter(Boolean).map((m) => ({ ...m, items: m.items.filter(Boolean) }));
+
   return (
     <div className={`${darkPaper ? "doc-dark " : ""}${fullScreen
       ? "doc-desk doc-fullscreen fixed inset-0 z-[2200] overflow-y-auto px-2 pb-16 sm:px-4"
+      : embedded ? "doc-desk min-h-[calc(100dvh-61px)] px-2 pb-16 sm:px-4"
       : "doc-desk -mx-4 -mt-1 rounded-2xl px-2 pb-10 sm:mx-0 sm:px-4"}`}>
-      <div className={`doc-chrome z-20 -mx-2 mb-4 space-y-px border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 print:hidden ${fullScreen ? "sticky top-0 sm:-mx-4" : "sm:sticky sm:top-[var(--nav-h,56px)] sm:-mx-4 sm:rounded-t-2xl"}`}>
-        <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-          <Link to={folderLink} className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"><ChevronLeft className="size-4" /> {isMember ? KIND_INFO[form.kind].label : "Documents"}</Link>
+      <div className={`doc-chrome z-20 -mx-2 mb-6 space-y-px border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 print:hidden ${fullScreen ? "sticky top-0 sm:-mx-4" : embedded ? "sticky top-[61px] sm:-mx-4" : "sm:sticky sm:top-[var(--nav-h,56px)] sm:-mx-4 sm:rounded-t-2xl"}`}>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 py-1.5">
+          <Link to={folderLink} title={`Back to ${isMember ? KIND_INFO[form.kind].label : "Documents"}`} aria-label="Back to the folder" className="grid size-8 place-items-center rounded-lg text-accent hover:bg-neutral-200/70 dark:hover:bg-neutral-700/60"><ChevronLeft className="size-5" /></Link>
+          <MenuBar menus={menus} />
           <span aria-live="polite" className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-neutral-400">{status}</span>
-          {(showPaper || !doc) && (
-            <button type="button" onClick={flipPaper} title={darkPaper ? "White page" : "Dark page"} aria-label={darkPaper ? "White page" : "Dark page"} aria-pressed={darkPaper} className={quietButton}>
-              {darkPaper ? <Sun className="size-4" /> : <Moon className="size-4" />} <span className="max-sm:sr-only">{darkPaper ? "White page" : "Dark page"}</span>
-            </button>
+          {doc && (
+            <span className="relative">
+              <ShareMenu group={group} doc={doc} canEdit={canEdit} bare open={shareOpen} onOpenChange={setShareOpen}
+                onChanged={(d) => { setDoc(d); setForm((f) => ({ ...f, visibility: d.visibility })); }} />
+            </span>
           )}
-          {doc && <ShareMenu group={group} doc={doc} canEdit={canEdit} onChanged={(d) => { setDoc(d); setForm((f) => ({ ...f, visibility: d.visibility })); }} />}
-          {pdfOnly
-            ? <a href={fileUrl(slug, doc.id, "?download=1")} className={quietButton}><Download className="size-4" /> <span className="max-sm:sr-only">Download PDF</span></a>
-            : doc && <button type="button" onClick={printPdf} title="Save as PDF" className={quietButton}><Printer className="size-4" /> <span className="max-sm:sr-only">Save as PDF</span></button>}
-          {isMember && doc && <button type="button" onClick={toggleHistory} aria-pressed={showHistory} className={quietButton}><History className="size-4" /> <span className="max-sm:sr-only">History</span></button>}
-          {canEdit && <button type="button" onClick={() => setDetails((v) => !v)} aria-pressed={details} className={quietButton}><SlidersHorizontal className="size-4" /> <span className="max-sm:sr-only">Details</span></button>}
           {canEdit && <button type="button" onClick={save} disabled={saving || (!dirty && !!doc)} className={primaryButton}><Save className="size-4" /> {saving ? "Saving…" : "Save"}</button>}
+          <input ref={importRef} type="file" hidden accept={IMPORT_ACCEPT} onChange={(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importFile(f); }} />
         </div>
-        {canEdit && showPaper && <DocumentToolbar editor={editor} onImport={importFile} fullScreen={fullScreen} onFullScreen={toggleFullScreen} />}
+        {canEdit && showPaper && <DocumentToolbar editor={editor} />}
       </div>
 
       <div className="mx-auto max-w-[816px] space-y-3 print:max-w-none">
@@ -299,6 +375,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
 
         {showPaper && (
           <article className="doc-paper" aria-label={form.title || "Untitled document"}>
+            {letterhead && <Letterhead template={letterhead} groupTitle={group.title} />}
             {canEdit ? (
               <input ref={titleRef} className="doc-title" value={form.title} maxLength={160} onChange={(e) => change("title")(e.target.value)} placeholder="Untitled document" aria-label="Title" />
             ) : <h1 className="doc-title">{form.title}</h1>}
@@ -310,6 +387,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
               {doc?.approved_by && <Link to={decisionsPath(slug, doc.approved_by.id)} className="text-accent hover:underline">Adopted{doc.approved_by.decided_on ? ` ${dateLabel(doc.approved_by.decided_on)}` : ""} by group conscience</Link>}
             </p>
             <EditorContent editor={editor} />
+            {letterhead?.footer_text && <footer className="doc-letterhead-footer">{letterhead.footer_text}</footer>}
           </article>
         )}
 

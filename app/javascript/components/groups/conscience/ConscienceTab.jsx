@@ -30,12 +30,12 @@ const SECTIONS = [
 //   /conscience/officials             the group's elected officials and who holds each office
 //   /conscience/treasury(/:id|/new)   the treasurer's monthly reports
 // What one section shows, for the tab and for the group dashboard (GroupDashboard.jsx)
-export function ConscienceBody({ group, view, id }) {
+export function ConscienceBody({ group, view, id, embedded = false }) {
   const isMember = group.is_member || group.is_site_admin;
   if (!isMember && view !== "documents" && view !== "decisions") return <DocumentsView group={group} />;
   if (view === "meetings") return id ? <MeetingPage key={id} group={group} id={id} /> : <MeetingsView group={group} />;
   if (view === "decisions") return <DecisionsView group={group} />;
-  if (view === "documents") return id === "new" ? <DocumentPage group={group} /> : id ? <DocumentPage group={group} id={id} /> : <DocumentsView group={group} />;
+  if (view === "documents") return id === "new" ? <DocumentPage group={group} embedded={embedded} /> : id ? <DocumentPage group={group} id={id} embedded={embedded} /> : <DocumentsView group={group} />;
   if (view === "officials") return <ServiceView group={group} />;
   if (view === "treasury") return id === "new" ? <ReportPage group={group} /> : id ? <ReportPage key={id} group={group} id={id} /> : <TreasuryView group={group} />;
   return <OverviewView group={group} />;

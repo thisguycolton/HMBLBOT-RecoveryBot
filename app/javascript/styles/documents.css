@@ -137,3 +137,20 @@
 /* An old copy in the History panel sits on the panel's own color */
 .dark .doc-prose--small { color: #e5e7eb; }
 .dark .doc-prose--small h1, .dark .doc-prose--small h2, .dark .doc-prose--small h3 { color: #f8fafc; }
+
+/* A folder's letterhead (Document templates) at the top of the page, and its footer */
+.doc-letterhead { align-items: center; border-bottom: 1px solid #e2e8f0; display: flex; gap: 14px; margin: -24px 0 28px; padding-bottom: 18px; }
+.doc-letterhead--center { flex-direction: column; text-align: center; gap: 8px; }
+.doc-letterhead-mark { border-radius: 22%; height: 64px; object-fit: contain; width: auto; max-width: 160px; }
+.doc-letterhead-heading { color: #0f172a; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.02em; margin: 0; }
+.doc-letterhead-sub { color: #64748b; font-size: 0.8rem; margin: 2px 0 0; }
+.doc-letterhead-footer { border-top: 1px solid #e2e8f0; color: #64748b; font-size: 0.75rem; margin-top: 40px; padding-top: 10px; text-align: center; white-space: pre-line; }
+@media screen {
+  .doc-dark .doc-letterhead, .doc-dark .doc-letterhead-footer { border-color: #3f3f46; }
+  .doc-dark .doc-letterhead-heading { color: #f8fafc; }
+  .doc-dark .doc-letterhead-sub, .doc-dark .doc-letterhead-footer { color: #9ca3af; }
+}
+@media (max-width: 720px) { .doc-letterhead { margin-top: 0; } .doc-letterhead-mark { height: 48px; } }
+@media print { body.doc-printing .doc-letterhead { margin-top: 0; } }
+/* A filled table cell keeps dark text on its light fill on the dark page too */
+@media screen { .doc-dark .doc-prose td[style*="background-color"], .doc-dark .doc-prose th[style*="background-color"] { color: #0f172a; } }
