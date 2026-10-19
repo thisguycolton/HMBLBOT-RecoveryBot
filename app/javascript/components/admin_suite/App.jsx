@@ -17,7 +17,6 @@ import {
   NotebookPen,
   Sun,
   Tags,
-  UserCircle,
   Users,
   X,
 } from "lucide-react";
@@ -25,6 +24,7 @@ import { showToast } from "../../lib/toast";
 import { ShellStyle } from "../ui/Shell";
 import { api } from "../topicificator_admin/api";
 import NotificationBell from "../NotificationBell";
+import Avatar from "../groups/Avatar";
 import OverviewPage from "./OverviewPage";
 import AnalyticsPage from "./AnalyticsPage";
 import UsersPage from "./UsersPage";
@@ -219,7 +219,7 @@ function SuiteShell() {
           </button>
           <NotificationBell />
           <a href="/users/edit" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-sm font-medium !text-slate-800 hover:bg-slate-100 dark:!text-neutral-200 dark:hover:bg-neutral-800">
-            <UserCircle className="size-7 text-slate-400" strokeWidth={1.5} />
+            <Avatar person={{ name, avatar_url: document.body.dataset.avatarUrl }} size={28} />
             <span className="hidden sm:inline">{name}</span>
           </a>
         </header>

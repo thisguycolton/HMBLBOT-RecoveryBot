@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpRight, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, FileText, Gavel, LayoutDashboard, LayoutTemplate,
-  Landmark, Menu, Moon, Settings, Stamp, Sun, UserCheck, UserCircle, Users, X,
+  Landmark, Menu, Moon, Settings, Stamp, Sun, UserCheck, Users, X,
 } from "lucide-react";
 import NotificationBell from "../NotificationBell";
+import Avatar from "./Avatar";
 import { RecoveryBotLogo } from "../brand/Logo";
 import { api } from "./lib";
 import { ErrorNote, Loading } from "./ui";
@@ -169,7 +170,7 @@ export default function GroupDashboard({ group: initial }) {
           <button type="button" className={iconButton} onClick={() => setDark((d) => !d)} aria-label={dark ? "Light mode" : "Dark mode"}>{dark ? <Sun className="size-4" /> : <Moon className="size-4" />}</button>
           <NotificationBell />
           <a href="/people/me" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm font-medium !text-slate-800 hover:bg-slate-100 dark:!text-neutral-200 dark:hover:bg-neutral-800 sm:pr-3">
-            <UserCircle className="size-7 text-slate-400" strokeWidth={1.5} />
+            <Avatar person={{ name: document.body.dataset.userName, avatar_url: document.body.dataset.avatarUrl }} size={28} />
             <span className="hidden sm:inline">{document.body.dataset.userName || "You"}</span>
           </a>
         </header>
