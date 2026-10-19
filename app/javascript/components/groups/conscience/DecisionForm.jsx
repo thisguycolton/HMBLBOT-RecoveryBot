@@ -12,7 +12,7 @@ const blank = () => ({
   kind: "main", parent_id: "", title: "", text: "", category: "other", status: "passed", decided_on: today(),
   moved_by_name: "", seconded_by_name: "", vote_method: "", required_vote: "", previous_notice: false,
   votes_for: "", votes_against: "", abstentions: "", committee: "", postponed_to: "", amended_text: "", note: "",
-  minority_opinion: "", supersedes_id: "", visibility: "members", business_meeting_id: "", agenda_item_id: "",
+  minority_opinion: "", supersedes_id: "", visibility: "members", business_meeting_id: "", agenda_item_id: "", ignore_rules: false,
 });
 const GROUP_ORDER = ["main", "subsidiary", "privileged", "incidental", "bring_back"];
 
@@ -155,6 +155,9 @@ export default function DecisionForm({ group, motion = null, motions, kinds, gro
             </details>
           </fieldset>
         )}
+
+        <Toggle checked={!!form.ignore_rules} onChange={(v) => setForm((f) => ({ ...f, ignore_rules: v }))} label="Don't hold this one to Robert's Rules"
+          description="For a decision the group made its own way: no warnings about seconds, counts or the vote needed." />
 
         {warnings.length > 0 && (
           <ul role="status" className="space-y-1 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">

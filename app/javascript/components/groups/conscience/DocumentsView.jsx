@@ -6,6 +6,7 @@ import { IMPORT_ACCEPT, importDocument, isImportable } from "../../../lib/docume
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton } from "../ui";
 import { FILE_ACCEPT, KINDS, KIND_INFO, VISIBILITY_LABELS, dateLabel, documentsPath } from "./lib";
+import BulkBar, { RowCheck } from "./BulkBar";
 
 export function StatusPills({ doc }) {
   return (
@@ -17,10 +18,10 @@ export function StatusPills({ doc }) {
   );
 }
 
-function DocRow({ slug, doc, showKind }) {
+function DocRow({ slug, doc, showKind, selected, onSelect }) {
   const Icon = KIND_INFO[doc.kind]?.icon || FileText;
-  return (
-    <Link to={documentsPath(slug, doc.id)} className="flex items-start gap-3 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900">
+  const link = (
+    <Link to={documentsPath(slug, doc.id)} className={`flex min-w-0 flex-1 items-start gap-3 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900 ${selected ? "ring-2 ring-accent/60" : ""}`}>
       <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-accent/10 text-accent"><Icon className="size-4" /></span>
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -34,6 +35,13 @@ function DocRow({ slug, doc, showKind }) {
         </span>
       </span>
     </Link>
+  );
+  if (!onSelect) return link;
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className="pt-3"><RowCheck checked={selected} onChange={onSelect} label={`Select “${doc.title}”`} /></span>
+      {link}
+    </div>
   );
 }
 
@@ -52,6 +60,7 @@ export default function DocumentsView({ group }) {
   const fileRef = useRef(null);
   const importRef = useRef(null);
   const [notice, setNotice] = useState(null);
+  const [selected, setSelected] = useState(() => new Set());
 
   const load = useCallback(() => {
     const q = query.trim();
@@ -110,6 +119,31 @@ export default function DocumentsView({ group }) {
   const counts = Object.fromEntries(KINDS.map((k) => [k.key, docs.filter((d) => d.kind === k.key).length]));
   const folders = KINDS.filter((k) => canEdit || counts[k.key] > 0);
   const pinned = docs.filter((d) => d.pinned);
+  // What the ticked boxes can reach: the folder or search results on screen
+  const listed = searching ? docs : folder ? inFolder : pinned;
+  const picked = listed.filter((d) => selected.has(d.id));
+  const toggle = (id, on) => setSelected((s) => { const n = new Set(s); on ? n.add(id) : n.delete(id); return n; });
+  const row = (d, showKind) => <DocRow key={d.id} slug={slug} doc={d} showKind={showKind} selected={selected.has(d.id)} onSelect={canEdit ? (on) => toggle(d.id, on) : null} />;
+  const runBulk = async (action, value) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await api(`/groups/${slug}/documents/bulk`, { method: "POST", body: { ids: picked.map((d) => d.id), do: action, value } });
+      setNotice(`Done: ${res.updated} ${res.updated === 1 ? "document" : "documents"}.`);
+      setSelected(new Set());
+      await load();
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+  const bulkActions = [
+    { key: "move", label: "Move to a folder…", values: KINDS.map((k) => [k.key, k.label]) },
+    { key: "visibility", label: "Who can see them…", values: Object.entries(VISIBILITY_LABELS) },
+    { key: "pin", label: "Pin" },
+    { key: "unpin", label: "Unpin" },
+    { key: "archive", label: "Archive" },
+    { key: "unarchive", label: "Bring back from the archive" },
+    ...(group.can_manage ? [{ key: "delete", label: "Delete", danger: true, confirm: (n) => `Delete ${n} ${n === 1 ? "document" : "documents"} and their history? This can't be undone.` }] : []),
+  ];
 
   return (
     <div
@@ -138,18 +172,19 @@ export default function DocumentsView({ group }) {
         )}
       </div>
       <ErrorNote error={error} />
+      {canEdit && <BulkBar count={picked.length} total={listed.length} onSelectAll={() => setSelected(new Set(listed.map((d) => d.id)))} onClear={() => setSelected(new Set())} actions={bulkActions} onRun={runBulk} busy={busy} />}
       {notice && <p role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{notice}</p>}
 
       {searching ? (
         <Tray label={`${docs.length} ${docs.length === 1 ? "document" : "documents"}`}>
           <div className="space-y-1.5">
             {docs.length === 0 && <Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">Nothing matches “{query.trim()}”.</Card>}
-            {docs.map((d) => <DocRow key={d.id} slug={slug} doc={d} showKind />)}
+            {docs.map((d) => row(d, true))}
           </div>
         </Tray>
       ) : folder ? (
         <>
-          <button type="button" onClick={() => setParams({})} className="inline-flex items-center gap-1 !bg-transparent p-0 text-sm font-medium text-accent hover:underline">
+          <button type="button" onClick={() => { setSelected(new Set()); setParams({}); }} className="inline-flex items-center gap-1 !bg-transparent p-0 text-sm font-medium text-accent hover:underline">
             <ChevronLeft className="size-4" /> All folders
           </button>
           <Tray label={KIND_INFO[folder].label}>
@@ -159,7 +194,7 @@ export default function DocumentsView({ group }) {
                   {canEdit ? "Nothing here yet. Write a document, or drop a file on this page." : "Nothing here yet."}
                 </Card>
               )}
-              {inFolder.map((d) => <DocRow key={d.id} slug={slug} doc={d} />)}
+              {inFolder.map((d) => row(d, false))}
             </div>
           </Tray>
         </>
@@ -174,13 +209,13 @@ export default function DocumentsView({ group }) {
           )}
           {pinned.length > 0 && (
             <Tray label="Pinned">
-              <div className="space-y-1.5">{pinned.map((d) => <DocRow key={d.id} slug={slug} doc={d} showKind />)}</div>
+              <div className="space-y-1.5">{pinned.map((d) => row(d, true))}</div>
             </Tray>
           )}
           <Tray label="Folders">
             <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
               {folders.map(({ key, label, note, icon: Icon }) => (
-                <button key={key} type="button" onClick={() => setParams({ folder: key })} className="flex items-start gap-3 rounded-xl !bg-white p-3 text-left shadow-panel hover:ring-1 hover:ring-accent/40 dark:!bg-neutral-900">
+                <button key={key} type="button" onClick={() => { setSelected(new Set()); setParams({ folder: key }); }} className="flex items-start gap-3 rounded-xl !bg-white p-3 text-left shadow-panel hover:ring-1 hover:ring-accent/40 dark:!bg-neutral-900">
                   <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent"><Icon className="size-5" /></span>
                   <span className="min-w-0">
                     <span className="block font-medium text-slate-900 dark:text-white">{label}</span>

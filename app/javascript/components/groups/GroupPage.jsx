@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutDashboard, LayoutTemplate, NotebookPen, Pencil, Scale, UserCheck, Users } from "lucide-react";
 import { hasGroupRole } from "./GroupDashboard";
 import { api } from "./lib";
@@ -72,7 +72,9 @@ export default function GroupPage({ tab: fixedTab }) {
   const isMember = group.is_member || group.is_site_admin;
   // People with a role run the group's business from its dashboard (GroupDashboard.jsx), not a tab
   const dashboard = hasGroupRole(group);
-  const tabs = TABS.filter((t) => (!t.members || isMember) && (!t.managers || group.can_manage) && !(dashboard && t.key === "conscience"));
+  // The tabs that moved into the dashboard: their old addresses open it there
+  if (dashboard && tab === "court") return <Navigate to={`/${slug}/conscience/court`} replace />;
+  const tabs = TABS.filter((t) => (!t.members || isMember) && (!t.managers || group.can_manage) && !(dashboard && ["conscience", "court"].includes(t.key)));
   const current = tabs.find((t) => t.key === tab) || (tab === "conscience" && { key: "conscience" }) || tabs[0];
 
   const act = async (path, confirmText) => {
@@ -127,7 +129,7 @@ export default function GroupPage({ tab: fixedTab }) {
             {group.can_manage && (
               <>
                 <Link to={`/${slug}/page/edit`} className={heroButton}><LayoutTemplate className="h-4 w-4" /> Edit page</Link>
-                <Link to={`/${slug}/edit`} className={heroQuietButton}><Pencil className="h-4 w-4" /> Details</Link>
+                <Link to={`/${slug}/conscience/settings`} className={heroQuietButton}><Pencil className="h-4 w-4" /> Settings</Link>
               </>
             )}
             {group.membership_status === "active" && (

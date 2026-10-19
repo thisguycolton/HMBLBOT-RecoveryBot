@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useParams } from "react-router-dom";
 import {
-  ArrowLeft, BookOpenCheck, CalendarDays, FileText, Gavel, LayoutDashboard, Landmark, Menu, Moon, Sun, UserCheck, UserCircle, Users, X,
+  ArrowLeft, ArrowUpRight, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, FileText, Gavel, LayoutDashboard, LayoutTemplate,
+  Landmark, Menu, Moon, Settings, Sun, UserCheck, UserCircle, Users, X,
 } from "lucide-react";
 import NotificationBell from "../NotificationBell";
 import { RecoveryBotLogo } from "../brand/Logo";
@@ -10,6 +11,11 @@ import { ErrorNote, Loading } from "./ui";
 import { ConscienceBody } from "./conscience/ConscienceTab";
 import HostsTab from "./HostsTab";
 import MembersTab from "./MembersTab";
+import MeetingsTab from "./MeetingsTab";
+import EventsTab from "./EventsTab";
+import LiteratureTab from "./LiteratureTab";
+import CourtTab from "./CourtTab";
+import GroupSettings, { GroupLogo } from "./GroupSettings";
 
 // Who gets the dashboard: anyone in the group with a role beyond plain member
 export const hasGroupRole = (group) =>
@@ -32,7 +38,17 @@ const SECTIONS = [
       { key: "officials", path: "/officials", label: "Elected officials", icon: BookOpenCheck },
       { key: "treasury", path: "/treasury", label: "Treasury", icon: Landmark },
       { key: "hosts", path: "/hosts", label: "Hosts", icon: UserCheck, show: (g) => g.can_schedule_hosts },
+    ],
+  },
+  {
+    title: "Group",
+    items: [
       { key: "members", path: "/members", label: "Members", icon: Users, show: (g) => g.can_manage, count: (g) => g.requests?.length || 0 },
+      { key: "schedule", path: "/schedule", label: "Meeting schedule", icon: CalendarClock, show: (g) => g.can_manage },
+      { key: "events", path: "/events", label: "Events", icon: CalendarRange, show: (g) => g.can_manage },
+      { key: "literature", path: "/literature", label: "Approved literature", icon: BookOpen, show: (g) => g.can_manage },
+      { key: "court", path: "/court", label: "Court verifications", icon: ClipboardCheck, show: (g) => g.can_manage },
+      { key: "settings", path: "/settings", label: "Group settings", icon: Settings, show: (g) => g.can_manage },
     ],
   },
 ];
@@ -64,10 +80,13 @@ export default function GroupDashboard({ group: initial }) {
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <Link to={base} className="flex items-center gap-2 px-6 pb-2 pt-6">
-        <span className="!text-slate-900 dark:!text-white"><RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-lg" /></span>
+      <Link to={base} className="flex items-center gap-3 px-6 pb-5 pt-6">
+        <GroupLogo group={group} className="size-10 text-sm" />
+        <span className="min-w-0">
+          <span className="block truncate font-semibold !text-slate-900 dark:!text-white">{group.title}</span>
+          <span className="block text-xs !text-slate-500 dark:!text-neutral-400">Group dashboard</span>
+        </span>
       </Link>
-      <p className="truncate px-6 pb-5 text-sm font-semibold text-slate-500 dark:text-neutral-400">{group.title}</p>
       <nav className="flex-1 overflow-y-auto px-4 pb-6" aria-label="Group dashboard">
         {SECTIONS.map((section) => {
           const shown = section.items.filter((i) => items.includes(i));
@@ -95,6 +114,14 @@ export default function GroupDashboard({ group: initial }) {
             </div>
           );
         })}
+        {group.can_manage && (
+          <div className="mb-6">
+            <div className="mb-3 px-3 text-xs uppercase tracking-wider text-slate-400 dark:text-neutral-500">More</div>
+            <Link to={`/${slug}/page/edit`} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium !text-slate-700 hover:bg-slate-100 dark:!text-neutral-300 dark:hover:bg-neutral-800">
+              <LayoutTemplate className="size-5 opacity-70" /> <span className="flex-1">Edit the group page</span> <ArrowUpRight className="size-4 opacity-40" />
+            </Link>
+          </div>
+        )}
       </nav>
       <div className="border-t border-slate-200 p-4 dark:border-neutral-800">
         <Link to={`/${slug}`} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium !text-slate-700 hover:bg-slate-100 dark:!text-neutral-300 dark:hover:bg-neutral-800">
@@ -109,6 +136,11 @@ export default function GroupDashboard({ group: initial }) {
   let body;
   if (current.key === "hosts") body = <HostsTab group={group} />;
   else if (current.key === "members") body = <MembersTab group={group} reload={reload} setGroup={setGroup} />;
+  else if (current.key === "schedule") body = <MeetingsTab group={group} setGroup={setGroup} reload={reload} />;
+  else if (current.key === "events") body = <EventsTab group={group} />;
+  else if (current.key === "literature") body = <LiteratureTab group={group} reload={reload} />;
+  else if (current.key === "court") body = <CourtTab group={group} setGroup={setGroup} />;
+  else if (current.key === "settings") body = <GroupSettings group={group} setGroup={setGroup} />;
   else body = <ConscienceBody group={group} view={current.key} id={id} />;
 
   return (
@@ -129,7 +161,7 @@ export default function GroupDashboard({ group: initial }) {
       <div className="min-w-0 lg:pl-72 print:!pl-0">
         <header className="group-chrome sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90 sm:px-6 print:!hidden">
           <button type="button" className={`lg:hidden ${iconButton} !rounded-lg`} aria-label="Open menu" onClick={() => setDrawer(true)}><Menu className="size-4" /></button>
-          <span className="min-w-0 truncate font-semibold text-slate-900 dark:text-white lg:hidden">{group.title}</span>
+          <span className="flex min-w-0 items-center gap-2 lg:hidden"><GroupLogo group={group} className="size-7 text-[0.6rem]" /><span className="truncate font-semibold text-slate-900 dark:text-white">{group.title}</span></span>
           <div className="flex-1" />
           <button type="button" className={iconButton} onClick={() => setDark((d) => !d)} aria-label={dark ? "Light mode" : "Dark mode"}>{dark ? <Sun className="size-4" /> : <Moon className="size-4" />}</button>
           <NotificationBell />

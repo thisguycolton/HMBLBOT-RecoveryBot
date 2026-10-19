@@ -9,7 +9,7 @@ class Api::GroupMotionsController < ApplicationController
   skip_before_action :authenticate_user!, only: :index
   before_action :set_viewable_group, only: :index
   before_action :set_group, except: :index
-  before_action :require_keeper, only: %i[create update check]
+  before_action :require_keeper, only: %i[create update check bulk]
   before_action :require_manager, only: :destroy
   before_action :set_motion, only: %i[update destroy]
 
@@ -55,6 +55,37 @@ class Api::GroupMotionsController < ApplicationController
     head :no_content
   end
 
+  BULK_ACTIONS = %w[ignore_rules follow_rules mark_checked category visibility delete].freeze
+
+  # POST /api/groups/:group_slug/motions/bulk { ids: [], do: "ignore_rules" | "follow_rules" |
+  # "mark_checked" | "category" | "visibility" | "delete", value } -> { updated: n }
+  # (deleting is for group admins, as one at a time is)
+  def bulk
+    action = params[:do].to_s
+    return render(json: { error: "Pick something to do." }, status: :unprocessable_entity) unless BULK_ACTIONS.include?(action)
+    return render(json: { error: "Only this group's admins can delete decisions." }, status: :forbidden) if action == "delete" && !@group.manageable_by?(current_user)
+
+    motions = @group.motions.where(id: Array(params[:ids]))
+    value = params[:value].to_s
+    n = Motion.transaction do
+      case action
+      when "ignore_rules" then motions.update_all(ignore_rules: true, updated_at: Time.current)
+      when "follow_rules" then motions.update_all(ignore_rules: false, updated_at: Time.current)
+      when "mark_checked" then motions.update_all(needs_review: false, updated_at: Time.current)
+      when "category"
+        return render(json: { error: "That isn't a category." }, status: :unprocessable_entity) unless Motion::CATEGORIES.include?(value)
+
+        motions.update_all(category: value, updated_at: Time.current)
+      when "visibility"
+        return render(json: { error: "That isn't a visibility." }, status: :unprocessable_entity) unless Motion::VISIBILITIES.include?(value)
+
+        motions.update_all(visibility: value, updated_at: Time.current)
+      when "delete" then motions.destroy_all.size
+      end
+    end
+    render json: { updated: n }
+  end
+
   private
 
   def set_motion
@@ -78,6 +109,6 @@ class Api::GroupMotionsController < ApplicationController
     params.require(:motion).permit(:title, :text, :moved_by_name, :seconded_by_name, :status, :votes_for, :votes_against,
                                    :abstentions, :minority_opinion, :decided_on, :category, :supersedes_id, :visibility,
                                    :business_meeting_id, :agenda_item_id, :kind, :parent_id, :vote_method, :required_vote,
-                                   :previous_notice, :committee, :postponed_to, :amended_text, :note)
+                                   :previous_notice, :committee, :postponed_to, :amended_text, :note, :ignore_rules)
   end
 end

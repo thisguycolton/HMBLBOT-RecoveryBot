@@ -6,6 +6,7 @@ import { inputClass, selectClass } from "../../ui/styles";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, dangerButton, primaryButton, quietButton } from "../ui";
 import DecisionForm from "./DecisionForm";
+import BulkBar, { RowCheck } from "./BulkBar";
 import { CATEGORIES, MOTION_STATUS_LABELS, STATUS_TONES, VOTE_METHOD_SHORT, countLabel, dateLabel, longDate, meetingsPath } from "./lib";
 
 const FILTERS = [
@@ -15,6 +16,8 @@ const FILTERS = [
   ["unfinished", "Unfinished"],
   ["procedure", "Procedure"],
 ];
+// Only record keepers see these
+const KEEPER_FILTERS = [["to_check", "To check"]];
 const isDecision = (m) => m.kind === "main" || m.kind === "rescind";
 
 // One line for a motion made about another: "Amend: Make it larger, passed (6 for, 2 against)"
@@ -30,12 +33,13 @@ function Aside({ m }) {
   );
 }
 
-function Decision({ slug, motion: m, parent, children, open, canEdit, canDelete, onEdit, onDelete }) {
+function Decision({ slug, motion: m, parent, children, open, canEdit, canDelete, onEdit, onDelete, selected, onSelect }) {
   const replaced = m.status === "passed" && isDecision(m) && !m.standing;
   const counts = countLabel(m);
   return (
-    <Card className="p-3">
-      <details open={open} id={`decision-${m.id}`}>
+    <Card className={`flex gap-2.5 p-3 ${selected ? "ring-2 ring-accent/60" : ""}`}>
+      {onSelect && <RowCheck checked={selected} onChange={onSelect} label={`Select “${m.title}”`} />}
+      <details open={open} id={`decision-${m.id}`} className="min-w-0 flex-1">
         <summary className="cursor-pointer">
           <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 align-top">
             <span className={`font-medium text-slate-900 dark:text-white ${replaced ? "line-through decoration-slate-400" : ""}`}>{m.title}</span>
@@ -44,6 +48,8 @@ function Decision({ slug, motion: m, parent, children, open, canEdit, canDelete,
             {m.status !== "passed" && <Pill tone={STATUS_TONES[m.status]}>{MOTION_STATUS_LABELS[m.status]}</Pill>}
             {m.amended_text && <Pill>As amended</Pill>}
             {m.visibility === "public" && <Pill tone="green"><Globe className="size-3" /> Public</Pill>}
+            {m.needs_review && <Pill tone="amber">To check</Pill>}
+            {m.ignore_rules && <Pill>No Robert's Rules</Pill>}
             {m.warnings?.length > 0 && <AlertTriangle className="size-4 text-amber-600" aria-label="Doesn't follow the rules" />}
           </span>
           <span className="mt-0.5 block text-xs text-slate-500 dark:text-neutral-400">
@@ -112,6 +118,8 @@ export default function DecisionsView({ group }) {
   const [filter, setFilter] = useState("standing");
   const [category, setCategory] = useState("");
   const [editing, setEditing] = useState(null); // "new" | a motion
+  const [selected, setSelected] = useState(() => new Set());
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
     const q = query.trim();
@@ -141,6 +149,7 @@ export default function DecisionsView({ group }) {
   const shown = useMemo(() => {
     if (!data) return [];
     return data.motions.filter((m) => {
+      if (filter === "to_check") return m.needs_review;
       if (filter === "procedure") return !isDecision(m);
       if (!isDecision(m)) return false;
       if (category && m.category !== category) return false;
@@ -164,11 +173,32 @@ export default function DecisionsView({ group }) {
 
   if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
   const canEdit = data.can_edit;
+  const toggle = (id, on) => setSelected((s) => { const n = new Set(s); on ? n.add(id) : n.delete(id); return n; });
+  const picked = shown.filter((m) => selected.has(m.id));
+  const runBulk = async (action, value) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/groups/${slug}/motions/bulk`, { method: "POST", body: { ids: picked.map((m) => m.id), do: action, value } });
+      setSelected(new Set());
+      await load();
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+  const bulkActions = [
+    { key: "ignore_rules", label: "Ignore Robert's Rules warnings" },
+    { key: "follow_rules", label: "Follow Robert's Rules again" },
+    { key: "mark_checked", label: "Mark as checked (members can see them)" },
+    { key: "category", label: "Change the kind to…", values: CATEGORIES.map((c) => [c.key, c.label]) },
+    { key: "visibility", label: "Who can see them…", values: [["members", "Members"], ["public", "Anyone (public)"]] },
+    ...(data.can_delete ? [{ key: "delete", label: "Delete", danger: true, confirm: (n) => `Delete ${n} ${n === 1 ? "decision" : "decisions"} from the log? This can't be undone.` }] : []),
+  ];
   const saved = async () => { setEditing(null); await load(); };
   const form = (m) => <DecisionForm key={m?.id || "new"} group={group} motion={m} motions={data.motions} kinds={data.kinds} groups={data.groups} onSaved={saved} onCancel={() => setEditing(null)} />;
   const row = (m) => (
     editing && editing !== "new" && editing.id === m.id ? form(m) : (
-      <Decision key={m.id} slug={slug} motion={m} parent={index.byId.get(m.parent_id)} children={index.kids.get(m.id) || []} open={m.id === openId} canEdit={canEdit} canDelete={data.can_delete} onEdit={setEditing} onDelete={remove} />
+      <Decision key={m.id} slug={slug} motion={m} parent={index.byId.get(m.parent_id)} children={index.kids.get(m.id) || []} open={m.id === openId} canEdit={canEdit} canDelete={data.can_delete} onEdit={setEditing} onDelete={remove}
+        selected={selected.has(m.id)} onSelect={canEdit ? (on) => toggle(m.id, on) : null} />
     )
   );
 
@@ -185,7 +215,7 @@ export default function DecisionsView({ group }) {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="Show" className="flex flex-wrap rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800">
-          {FILTERS.map(([key, label]) => (
+          {[...FILTERS, ...(canEdit && data.motions.some((m) => m.needs_review) ? KEEPER_FILTERS : [])].map(([key, label]) => (
             <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${filter === key ? "!bg-white text-slate-900 shadow-sm dark:!bg-neutral-950 dark:text-white" : "!bg-transparent text-slate-500 hover:text-slate-800 dark:text-neutral-400"}`}>{label}</button>
           ))}
@@ -198,6 +228,7 @@ export default function DecisionsView({ group }) {
         )}
       </div>
       <ErrorNote error={error} />
+      {canEdit && <BulkBar count={picked.length} total={shown.length} onSelectAll={() => setSelected(new Set(shown.map((m) => m.id)))} onClear={() => setSelected(new Set())} actions={bulkActions} onRun={runBulk} busy={busy} />}
 
       {editing === "new" && form(null)}
 

@@ -4,6 +4,7 @@ import { CalendarClock, ChevronRight, LayoutTemplate, MessagesSquare, Plus, Sear
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { api } from "./lib";
 import { Loading, Message, Pill, primaryButton, quietButton } from "./ui";
+import { GroupLogo } from "./GroupSettings";
 
 // /groups: the groups you're in (and waiting on), then every other group for site admins
 export default function GroupsIndex() {
@@ -67,6 +68,7 @@ export default function GroupsIndex() {
 function GroupRow({ group }) {
   return (
     <Link to={`/${group.slug}`} className="flex items-center gap-3 p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
+      <GroupLogo group={group} className="size-11 text-sm" />
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900 dark:text-white">
           <span className="truncate">{group.title}</span>

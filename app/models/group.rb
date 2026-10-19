@@ -31,6 +31,11 @@ class Group < ApplicationRecord
   # The group's page (Api::GroupPagesController): page_blocks stays nil until the group
   # saves its own, and until then it shows the default page (GroupPageTemplate)
   has_one_attached :cover
+  # The group's logo, shown in a rounded square (Group settings)
+  has_one_attached :logo
+  LOGO_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
+  validate { errors.add(:logo, "has to be a PNG, JPEG, WebP or GIF image") if logo.attached? && !LOGO_TYPES.include?(logo.blob.content_type) }
+  validate { errors.add(:logo, "has to be under 5 MB") if logo.attached? && logo.blob.byte_size > 5.megabytes }
   # Pictures placed in the page's blocks
   has_many_attached :page_images
 

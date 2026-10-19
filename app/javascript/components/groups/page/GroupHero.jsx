@@ -14,6 +14,7 @@ export default function GroupHero({ group, coverUrl, actions, badge, note, next 
       {coverUrl && <img src={coverUrl} alt="" className="absolute inset-0 size-full object-cover" />}
       <div className={`relative flex min-h-[13rem] flex-col justify-end gap-4 p-6 sm:min-h-[16rem] sm:p-10 ${coverUrl ? "bg-gradient-to-t from-black/80 via-black/35 to-transparent" : ""}`}>
         <div className="min-w-0">
+          {group.logo_url && <img src={group.logo_url} alt="" className="mb-4 size-16 rounded-[28%] object-cover shadow-lg ring-2 ring-white/70 sm:size-20" />}
           <h1 className="ev-heading flex flex-wrap items-center gap-3 text-3xl font-extrabold tracking-tight text-white sm:text-5xl">
             {group.title}
             {badge}

@@ -111,6 +111,7 @@ class Motion < ApplicationRecord
     recorded = DECIDED.include?(status)
     list = []
     list << "Brought in from old minutes: check it against them, then save it so members can see it." if needs_review
+    return list if ignore_rules
     list << "No second is recorded." if info[:second] && seconded_by_name.blank? && recorded
     list << "Say which motion this applies to." if info[:pending] && parent_id.nil?
     required = required_vote_key
@@ -179,7 +180,7 @@ class Motion < ApplicationRecord
       supersedes_id: supersedes_id, agenda_item_id: agenda_item_id,
       kind: kind, kind_label: kind_info[:label], kind_group: kind_info[:group], parent_id: parent_id, vote_method: vote_method, required_vote: required_vote, previous_notice: previous_notice,
       required: required_vote_key, committee: committee, postponed_to: postponed_to, amended_text: amended_text.to_s, note: note.to_s,
-      warnings: keeper ? warnings : [], needs_review: needs_review,
+      warnings: keeper ? warnings : [], needs_review: needs_review, ignore_rules: ignore_rules,
       business_meeting_id: business_meeting_id,
       meeting: business_meeting && (meetings.nil? || meetings.include?(business_meeting_id)) ? { id: business_meeting_id, held_on: business_meeting.held_on.iso8601 } : nil,
     }

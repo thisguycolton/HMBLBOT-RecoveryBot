@@ -72,6 +72,7 @@ Rails.application.routes.draw do
     resources :minutes_imports, controller: "group_minutes_imports", only: :create
     resources :motions, controller: "group_motions", only: %i[index create update destroy] do
       post :check, on: :collection
+      post :bulk, on: :collection
     end
     resources :documents, controller: "group_documents", only: %i[index show create update destroy] do
       member do
@@ -79,6 +80,7 @@ Rails.application.routes.draw do
         get :versions
         post "versions/:version_id/restore", action: :restore
       end
+      post :bulk, on: :collection
     end
     resource :page, controller: "group_pages", only: %i[show update] do
       post :images

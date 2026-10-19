@@ -42,6 +42,7 @@ class Api::GroupsController < ApplicationController
 
   # PATCH /api/groups/:slug
   def update
+    @group.logo.purge_later if ActiveModel::Type::Boolean.new.cast(params.dig(:group, :remove_logo)) && params.dig(:group, :logo).blank?
     @group.update(group_params) ? render(json: group_json) : render_errors(@group)
   end
 
@@ -190,13 +191,14 @@ class Api::GroupsController < ApplicationController
 
   def group_params
     params.require(:group).permit(:title, :description, :website, :time_zone, :court_email_subject, :court_email_body, :court_email_reply_to,
-                                  :quorum_count, :quorum_percent)
+                                  :quorum_count, :quorum_percent, :logo)
   end
 
   def group_card(group, membership)
     upcoming = group.meetings.sort_by { |m| m.next_start || Time.current }.reject { |m| m.once? && m.next_start < Time.current }
     {
       slug: group.slug, title: group.title, description: group.description, status: group.status,
+      logo_url: group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(group.logo, only_path: true) : nil,
       role: membership&.role, membership_status: membership&.status,
       meetings_count: group.meetings.size, next_meeting: upcoming.first&.then { |m| { name: m.name, schedule_label: m.schedule_label, next_start: m.next_start.iso8601 } },
     }
@@ -214,6 +216,7 @@ class Api::GroupsController < ApplicationController
       meetings: @group.meetings.ordered.map(&:as_api_json),
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
       members_count: @group.members.count,
+      logo_url: @group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.logo, only_path: true) : nil,
       cover_url: @group.cover.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.cover, only_path: true) : nil,
     }
     if member

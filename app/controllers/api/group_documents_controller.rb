@@ -9,7 +9,7 @@ class Api::GroupDocumentsController < ApplicationController
   before_action :set_viewable_group, only: %i[index show file]
   before_action :set_group, except: %i[index show file]
   before_action :set_document, only: %i[show file update destroy versions restore]
-  before_action :require_keeper, only: %i[create update restore]
+  before_action :require_keeper, only: %i[create update restore bulk]
   before_action :require_manager, only: :destroy
   before_action :require_member, only: :versions
 
@@ -54,6 +54,37 @@ class Api::GroupDocumentsController < ApplicationController
   def destroy
     @document.destroy!
     head :no_content
+  end
+
+  BULK_ACTIONS = %w[move visibility pin unpin archive unarchive delete].freeze
+
+  # POST /api/groups/:group_slug/documents/bulk { ids: [], do: "move" (value: a folder) |
+  # "visibility" (value) | "pin" | "unpin" | "archive" | "unarchive" | "delete" } -> { updated: n }
+  # (deleting is for group admins, as one at a time is)
+  def bulk
+    action = params[:do].to_s
+    return render(json: { error: "Pick something to do." }, status: :unprocessable_entity) unless BULK_ACTIONS.include?(action)
+    return render(json: { error: "Only this group's admins can delete documents." }, status: :forbidden) if action == "delete" && !@group.manageable_by?(current_user)
+
+    docs = @group.documents.where(id: Array(params[:ids]))
+    value = params[:value].to_s
+    now = Time.current
+    n = case action
+        when "move"
+          return render(json: { error: "That isn't a folder." }, status: :unprocessable_entity) unless GroupDocument::KINDS.include?(value)
+
+          docs.update_all(kind: value, updated_at: now)
+        when "visibility"
+          return render(json: { error: "That isn't a visibility." }, status: :unprocessable_entity) unless GroupDocument::VISIBILITIES.include?(value)
+
+          docs.update_all(visibility: value, updated_at: now)
+        when "pin" then docs.update_all(pinned: true, updated_at: now)
+        when "unpin" then docs.update_all(pinned: false, updated_at: now)
+        when "archive" then docs.update_all(status: "archived", updated_at: now)
+        when "unarchive" then docs.where(status: "archived").update_all(status: "current", updated_at: now)
+        when "delete" then docs.destroy_all.size
+        end
+    render json: { updated: n }
   end
 
   # GET /api/groups/:group_slug/documents/:id/versions -> the copies it had before each save
