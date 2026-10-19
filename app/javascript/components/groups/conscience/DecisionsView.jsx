@@ -117,6 +117,7 @@ export default function DecisionsView({ group }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("standing");
   const [category, setCategory] = useState("");
+  const [when, setWhen] = useState(""); // "" | "imported" | "older" | "imported_or_older" | "this_month"
   const [editing, setEditing] = useState(null); // "new" | a motion
   const [selected, setSelected] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
@@ -148,7 +149,13 @@ export default function DecisionsView({ group }) {
 
   const shown = useMemo(() => {
     if (!data) return [];
+    const monthStart = new Date().toLocaleDateString("en-CA").slice(0, 8) + "01";
+    const older = (m) => !!m.decided_on && m.decided_on < monthStart;
     return data.motions.filter((m) => {
+      if (when === "imported" && !m.imported) return false;
+      if (when === "older" && !older(m)) return false;
+      if (when === "imported_or_older" && !(m.imported || older(m))) return false;
+      if (when === "this_month" && !(m.decided_on && m.decided_on >= monthStart)) return false;
       if (filter === "to_check") return m.needs_review;
       if (filter === "procedure") return !isDecision(m);
       if (!isDecision(m)) return false;
@@ -158,7 +165,7 @@ export default function DecisionsView({ group }) {
       if (filter === "unfinished") return ["tabled", "referred", "postponed"].includes(m.status);
       return true;
     });
-  }, [data, filter, category]);
+  }, [data, filter, category, when]);
 
   const remove = async (m) => {
     const note = m.replaces ? ` “${m.replaces.title}” will be standing again.` : "";
@@ -202,7 +209,7 @@ export default function DecisionsView({ group }) {
     )
   );
 
-  const grouped = filter === "standing" && !query.trim();
+  const grouped = filter === "standing" && !query.trim() && !when;
   const decisionsCount = data.motions.filter(isDecision).length;
   return (
     <div className="space-y-5">
@@ -226,6 +233,13 @@ export default function DecisionsView({ group }) {
             {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
         )}
+        <select aria-label="When" className={`${selectClass} !w-auto`} value={when} onChange={(e) => setWhen(e.target.value)}>
+          <option value="">Any time</option>
+          <option value="this_month">This month</option>
+          <option value="older">Before this month</option>
+          {data.motions.some((m) => m.imported) && <option value="imported">Imported from old minutes</option>}
+          {data.motions.some((m) => m.imported) && <option value="imported_or_older">Imported or before this month</option>}
+        </select>
       </div>
       <ErrorNote error={error} />
       {canEdit && <BulkBar count={picked.length} total={shown.length} onSelectAll={() => setSelected(new Set(shown.map((m) => m.id)))} onClear={() => setSelected(new Set())} actions={bulkActions} onRun={runBulk} busy={busy} />}

@@ -70,7 +70,7 @@ class MinutesImport
           bm.assign_attributes(status: "held", minutes: html(e.paragraphs), minutes_status: "approved", visibility: "keepers", created_by: bm.created_by || @user)
           bm.save!
           motions.each do |m|
-            @group.motions.create!(m.merge(business_meeting: bm, decided_on: e.held_on, kind: "main", needs_review: true, visibility: "members", created_by: @user))
+            @group.motions.create!(m.merge(business_meeting: bm, decided_on: e.held_on, kind: "main", needs_review: true, imported: true, visibility: "members", created_by: @user))
           end
         end
       end

@@ -55,6 +55,7 @@ class MinutesImportTest < ActiveSupport::TestCase
     assert_equal ["Add the Grapevine to approved group literature", "Move the workshop to Mondays at 6pm"], motions.map(&:title)
     assert_equal "Shelly B", motions.last.moved_by_name
     assert motions.all?(&:needs_review)
+    assert motions.all?(&:imported)
 
     early = @group.motions.find_by!(decided_on: Date.new(2020, 3, 22))
     assert_equal %w[Justin Ruth passed], [early.moved_by_name, early.seconded_by_name, early.status]

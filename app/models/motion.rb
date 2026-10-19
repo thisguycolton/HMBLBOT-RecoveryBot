@@ -180,7 +180,7 @@ class Motion < ApplicationRecord
       supersedes_id: supersedes_id, agenda_item_id: agenda_item_id,
       kind: kind, kind_label: kind_info[:label], kind_group: kind_info[:group], parent_id: parent_id, vote_method: vote_method, required_vote: required_vote, previous_notice: previous_notice,
       required: required_vote_key, committee: committee, postponed_to: postponed_to, amended_text: amended_text.to_s, note: note.to_s,
-      warnings: keeper ? warnings : [], needs_review: needs_review, ignore_rules: ignore_rules,
+      warnings: keeper ? warnings : [], needs_review: needs_review, imported: imported, ignore_rules: ignore_rules,
       business_meeting_id: business_meeting_id,
       meeting: business_meeting && (meetings.nil? || meetings.include?(business_meeting_id)) ? { id: business_meeting_id, held_on: business_meeting.held_on.iso8601 } : nil,
     }
