@@ -42,7 +42,7 @@ class Api::GroupMotionsController < ApplicationController
 
   # PATCH /api/groups/:group_slug/motions/:id
   def update
-    return render_errors(@motion) unless @motion.update(motion_params)
+    return render_errors(@motion) unless @motion.update(motion_params.merge(needs_review: false))
 
     settle
     render json: motion_json

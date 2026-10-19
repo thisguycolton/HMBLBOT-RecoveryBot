@@ -69,9 +69,9 @@ class Motion < ApplicationRecord
   # anyone else only Public decisions that passed (so a group can say "this meeting is closed").
   def self.visible_to(group, user)
     return group.motions if group.records_editable_by?(user)
-    return group.motions.where(visibility: %w[public members]) if group.member_or_site_admin?(user)
+    return group.motions.where(visibility: %w[public members], needs_review: false) if group.member_or_site_admin?(user)
 
-    group.motions.where(visibility: "public", status: "passed")
+    group.motions.where(visibility: "public", status: "passed", needs_review: false)
   end
 
   def self.search(scope, query)
@@ -110,6 +110,7 @@ class Motion < ApplicationRecord
     info = kind_info
     recorded = DECIDED.include?(status)
     list = []
+    list << "Brought in from old minutes: check it against them, then save it so members can see it." if needs_review
     list << "No second is recorded." if info[:second] && seconded_by_name.blank? && recorded
     list << "Say which motion this applies to." if info[:pending] && parent_id.nil?
     required = required_vote_key
@@ -178,7 +179,7 @@ class Motion < ApplicationRecord
       supersedes_id: supersedes_id, agenda_item_id: agenda_item_id,
       kind: kind, kind_label: kind_info[:label], kind_group: kind_info[:group], parent_id: parent_id, vote_method: vote_method, required_vote: required_vote, previous_notice: previous_notice,
       required: required_vote_key, committee: committee, postponed_to: postponed_to, amended_text: amended_text.to_s, note: note.to_s,
-      warnings: keeper ? warnings : [],
+      warnings: keeper ? warnings : [], needs_review: needs_review,
       business_meeting_id: business_meeting_id,
       meeting: business_meeting && (meetings.nil? || meetings.include?(business_meeting_id)) ? { id: business_meeting_id, held_on: business_meeting.held_on.iso8601 } : nil,
     }
