@@ -117,7 +117,9 @@ export default function DecisionsView({ group }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("standing");
   const [category, setCategory] = useState("");
-  const [when, setWhen] = useState(""); // "" | "imported" | "older" | "imported_or_older" | "this_month"
+  const [when, setWhen] = useState(""); // "" | "imported" | "older" | "imported_or_older" | "this_month" | "range"
+  const [from, setFrom] = useState("");
+  const [until, setUntil] = useState("");
   const [editing, setEditing] = useState(null); // "new" | a motion
   const [selected, setSelected] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
@@ -156,6 +158,7 @@ export default function DecisionsView({ group }) {
       if (when === "older" && !older(m)) return false;
       if (when === "imported_or_older" && !(m.imported || older(m))) return false;
       if (when === "this_month" && !(m.decided_on && m.decided_on >= monthStart)) return false;
+      if (when === "range" && (from || until) && !(m.decided_on && (!from || m.decided_on >= from) && (!until || m.decided_on <= until))) return false;
       if (filter === "to_check") return m.needs_review;
       if (filter === "procedure") return !isDecision(m);
       if (!isDecision(m)) return false;
@@ -165,7 +168,7 @@ export default function DecisionsView({ group }) {
       if (filter === "unfinished") return ["tabled", "referred", "postponed"].includes(m.status);
       return true;
     });
-  }, [data, filter, category, when]);
+  }, [data, filter, category, when, from, until]);
 
   const remove = async (m) => {
     const note = m.replaces ? ` “${m.replaces.title}” will be standing again.` : "";
@@ -239,7 +242,16 @@ export default function DecisionsView({ group }) {
           <option value="older">Before this month</option>
           {data.motions.some((m) => m.imported) && <option value="imported">Imported from old minutes</option>}
           {data.motions.some((m) => m.imported) && <option value="imported_or_older">Imported or before this month</option>}
+          <option value="range">Between dates…</option>
         </select>
+        {when === "range" && (
+          <span className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600 dark:text-neutral-300">
+            <input type="date" aria-label="From" className={`${inputClass} !w-auto`} value={from} max={until || undefined} onChange={(e) => setFrom(e.target.value)} />
+            <span>to</span>
+            <input type="date" aria-label="Until" className={`${inputClass} !w-auto`} value={until} min={from || undefined} onChange={(e) => setUntil(e.target.value)} />
+            {(from || until) && <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} onClick={() => { setFrom(""); setUntil(""); }}>Clear</button>}
+          </span>
+        )}
       </div>
       <ErrorNote error={error} />
       {canEdit && <BulkBar count={picked.length} total={shown.length} onSelectAll={() => setSelected(new Set(shown.map((m) => m.id)))} onClear={() => setSelected(new Set())} actions={bulkActions} onRun={runBulk} busy={busy} />}
