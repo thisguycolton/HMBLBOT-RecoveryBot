@@ -3,7 +3,7 @@
 # and a line under it, and a footer. Documents in that folder show it on the page and in print.
 class GroupDocumentTemplate < ApplicationRecord
   MARKS = %w[none group_logo seal].freeze
-  ALIGNS = %w[left center].freeze
+  ALIGNS = %w[left center right].freeze
   IMAGE_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
 
   belongs_to :group

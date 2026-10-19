@@ -46,7 +46,7 @@ function TemplateCard({ group, template, hasGroupLogo, canEdit, onSaved }) {
 
       {/* How the top of the page will look */}
       <div className="rounded-xl bg-white p-4 text-slate-900 ring-1 ring-neutral-200">
-        <div className={`flex gap-3 border-b border-slate-200 pb-3 ${form.align === "center" ? "flex-col items-center text-center" : "items-center"}`}>
+        <div className={`flex gap-3 border-b border-slate-200 pb-3 ${form.align === "center" ? "flex-col items-center text-center" : form.align === "right" ? "flex-row-reverse items-center text-right" : "items-center"}`}>
           {markUrl && <img src={markUrl} alt="" className="h-12 w-auto max-w-[120px] rounded-[22%] object-contain" />}
           <div>
             <p className="text-sm font-bold">{(form.header_text || (form.mark === "none" ? "No letterhead" : "")).replace("{{group}}", group.title)}</p>
@@ -77,6 +77,7 @@ function TemplateCard({ group, template, hasGroupLogo, canEdit, onSaved }) {
               <select id={`t-align-${template.kind}`} className={selectClass} value={form.align} onChange={(e) => set({ align: e.target.value })}>
                 <option value="center">Centered, logo above</option>
                 <option value="left">Left, logo beside</option>
+                <option value="right">Right, logo beside</option>
               </select>
             </div>
             <div>

@@ -200,6 +200,7 @@ export default function DecisionsView({ group }) {
       { key: "ignore_rules", label: "Ignore Robert's Rules warnings" },
       { key: "follow_rules", label: "Follow Robert's Rules again" },
     ] : []),
+    { key: "status", label: "Set how it came out…", values: Object.entries(MOTION_STATUS_LABELS) },
     { key: "mark_checked", label: "Mark as checked (members can see them)" },
     { key: "category", label: "Change the kind to…", values: CATEGORIES.map((c) => [c.key, c.label]) },
     { key: "visibility", label: "Who can see them…", values: [["members", "Members"], ["public", "Anyone (public)"]] },

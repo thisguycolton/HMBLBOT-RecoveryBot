@@ -55,10 +55,10 @@ class Api::GroupMotionsController < ApplicationController
     head :no_content
   end
 
-  BULK_ACTIONS = %w[ignore_rules follow_rules mark_checked category visibility delete].freeze
+  BULK_ACTIONS = %w[ignore_rules follow_rules mark_checked category visibility status delete].freeze
 
   # POST /api/groups/:group_slug/motions/bulk { ids: [], do: "ignore_rules" | "follow_rules" |
-  # "mark_checked" | "category" | "visibility" | "delete", value } -> { updated: n }
+  # "mark_checked" | "category" | "visibility" | "status" | "delete", value } -> { updated: n }
   # (deleting is for group admins, as one at a time is)
   def bulk
     action = params[:do].to_s
@@ -76,6 +76,16 @@ class Api::GroupMotionsController < ApplicationController
         return render(json: { error: "That isn't a category." }, status: :unprocessable_entity) unless Motion::CATEGORIES.include?(value)
 
         motions.update_all(category: value, updated_at: Time.current)
+      when "status"
+        return render(json: { error: "That isn't a way a motion comes out." }, status: :unprocessable_entity) unless Motion::STATUSES.include?(value)
+
+        # A decided one needs its date: keep the one it has, else its meeting's, else today
+        if Motion::DECIDED.include?(value)
+          motions.where(decided_on: nil).where.not(business_meeting_id: nil)
+                 .update_all("decided_on = (SELECT held_on FROM business_meetings WHERE business_meetings.id = motions.business_meeting_id)")
+          motions.where(decided_on: nil).update_all(decided_on: @group.zone.today)
+        end
+        motions.update_all(status: value, updated_at: Time.current)
       when "visibility"
         return render(json: { error: "That isn't a visibility." }, status: :unprocessable_entity) unless Motion::VISIBILITIES.include?(value)
 

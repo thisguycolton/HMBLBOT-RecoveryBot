@@ -35,13 +35,17 @@ class Api::GroupBulkAndSettingsTest < ActionDispatch::IntegrationTest
     assert_not @a.reload.needs_review
     motions_bulk(ids: [@a.id], do: "category", value: "format")
     assert_equal "format", @a.reload.category
+    meeting = @group.business_meetings.create!(held_on: Date.new(2025, 4, 20), status: "held")
+    proposed = @group.motions.create!(title: "Start a newsletter", status: "proposed", business_meeting: meeting)
+    motions_bulk(ids: [proposed.id, @b.id], do: "status", value: "tabled")
+    assert_equal [["tabled", Date.new(2025, 4, 20)], ["tabled", Date.current]], [proposed, @b].map { |m| m.reload.then { [m.status, m.decided_on] } }
     motions_bulk(ids: [@a.id], do: "category", value: "nonsense")
     assert_response :unprocessable_entity
     motions_bulk(ids: [@a.id], do: "delete")
     assert_response :forbidden
 
     sign_in @admin
-    motions_bulk(ids: [@a.id, @b.id], do: "delete")
+    motions_bulk(ids: [@a.id, @b.id, proposed.id], do: "delete")
     assert_equal 0, @group.motions.count
   end
 

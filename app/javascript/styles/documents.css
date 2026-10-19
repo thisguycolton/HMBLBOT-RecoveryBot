@@ -154,3 +154,4 @@
 @media print { body.doc-printing .doc-letterhead { margin-top: 0; } }
 /* A filled table cell keeps dark text on its light fill on the dark page too */
 @media screen { .doc-dark .doc-prose td[style*="background-color"], .doc-dark .doc-prose th[style*="background-color"] { color: #0f172a; } }
+.doc-letterhead--right { flex-direction: row-reverse; text-align: right; }
