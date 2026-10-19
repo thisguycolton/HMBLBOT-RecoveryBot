@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_19_040000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_19_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -425,6 +425,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_040000) do
     t.string "category"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "intergroup_follows", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "group_name", null: false
+    t.string "oiaa_slug", null: false
+    t.datetime "notified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_name"], name: "index_intergroup_follows_on_group_name"
+    t.index ["user_id", "group_name"], name: "index_intergroup_follows_on_user_id_and_group_name", unique: true
+    t.index ["user_id"], name: "index_intergroup_follows_on_user_id"
   end
 
   create_table "meeting_host_covers", force: :cascade do |t|
@@ -1049,6 +1061,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_040000) do
   add_foreign_key "host_sub_requests", "users", column: "requested_by_id"
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"
+  add_foreign_key "intergroup_follows", "users"
   add_foreign_key "meeting_host_covers", "meetings", on_delete: :cascade
   add_foreign_key "meeting_host_covers", "users", on_delete: :nullify
   add_foreign_key "meeting_hosts", "meetings", on_delete: :cascade

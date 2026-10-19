@@ -4,14 +4,9 @@ import { ImagePlus, Trash2 } from "lucide-react";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { api, ZONES } from "./lib";
 import { Card, ErrorNote, dangerButton, primaryButton, quietButton } from "./ui";
+import GroupLogo from "./GroupLogo";
 
-// The group's logo in its very rounded square, or its initials when it has none
-export function GroupLogo({ group, url = group?.logo_url, className = "size-12 text-base" }) {
-  const initials = (group?.title || "?").split(/\s+/).filter((w) => /^[A-Za-z0-9]/.test(w) && !/^(the|of|and)$/i.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
-  return url
-    ? <img src={url} alt="" className={`shrink-0 rounded-[28%] object-cover ${className}`} />
-    : <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-[28%] bg-gradient-to-br from-accent to-indigo-600 font-bold text-white ${className}`}>{initials}</span>;
-}
+export { GroupLogo };
 
 // Group settings in the group dashboard (group admins): its name, about, website, time zone and logo
 export default function GroupSettings({ group, setGroup }) {

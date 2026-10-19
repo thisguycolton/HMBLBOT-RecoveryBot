@@ -30,7 +30,7 @@ export default function ProfileHero({ person, viewer, coverUrl, actions, onFollo
         <div className="flex flex-wrap items-end gap-4 sm:gap-5">
           <Avatar person={person} size={96} className="ring-4 ring-white/80 shadow-lg" />
           <div className="min-w-0 flex-1">
-            <h1 className="ev-heading text-3xl font-extrabold tracking-tight text-white sm:text-4xl [overflow-wrap:anywhere]">{person.name}</h1>
+            <h1 className="ev-heading !text-2xl !leading-tight font-extrabold tracking-tight text-white sm:!text-4xl [overflow-wrap:break-word] [word-break:normal]">{person.name}</h1>
             <p className="text-sm font-medium text-white/80">@{person.username}{viewer.follows_you ? " · follows you" : ""}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <span className={chip}><strong>{person.followers_count}</strong> {person.followers_count === 1 ? "follower" : "followers"}</span>

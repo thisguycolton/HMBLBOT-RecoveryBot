@@ -49,7 +49,7 @@ export default function MembersTab({ group, reload, setGroup }) {
               <Card key={person.membership_id} className="flex flex-wrap items-center gap-3 p-3">
                 <Avatar person={person} />
                 <div className="min-w-[12rem] flex-1">
-                  <p className="font-medium text-slate-900 dark:text-white">{person.name}</p>
+                  <p className="font-medium text-slate-900 dark:text-white">{person.username ? <a href={`/people/${person.username}`} className="!text-slate-900 hover:underline dark:!text-white">{person.name}</a> : person.name}</p>
                   <p className="text-xs text-slate-500 dark:text-neutral-400">{person.email}</p>
                   {person.bio && <p className="mt-0.5 text-sm text-slate-600 dark:text-neutral-300">{person.bio}</p>}
                 </div>
@@ -94,10 +94,10 @@ export default function MembersTab({ group, reload, setGroup }) {
         <div className="grid gap-1.5 sm:grid-cols-2">
           {group.members.map((person) => (
             <Card key={person.membership_id} className="flex gap-3 p-3">
-              <Avatar person={person} size={48} />
+              <a href={person.username ? `/people/${person.username}` : undefined} className="shrink-0" aria-label={`${person.name}'s profile`}><Avatar person={person} size={48} /></a>
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900 dark:text-white">
-                  {person.name}
+                  {person.username ? <a href={`/people/${person.username}`} className="!text-slate-900 hover:underline dark:!text-white">{person.name}</a> : person.name}
                   {person.role === "admin" && <Pill tone="accent">{ROLE_LABELS.admin}</Pill>}
                   {person.can_keep_records && <Pill tone="green">Record keeper</Pill>}
                   {person.can_schedule_hosts && <Pill tone="green">Host coordinator</Pill>}

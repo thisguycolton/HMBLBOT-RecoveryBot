@@ -8,7 +8,8 @@ class Api::GroupsController < ApplicationController
   before_action :set_viewable_group, only: %i[show join leave]
   before_action :set_group, only: %i[update destroy approve regenerate_invite court_verifications]
   before_action :require_manager, only: %i[update regenerate_invite court_verifications]
-  before_action :require_feature, only: %i[index create find start]
+  # Listing your own groups is open to anyone in one (the My groups window in the nav)
+  before_action :require_feature, only: %i[create find start]
 
   # GET /api/groups -> your groups and join requests
   def index
@@ -162,6 +163,7 @@ class Api::GroupsController < ApplicationController
 
     @group.update!(status: "active")
     Notification.deliver(@group.admins, kind: "group.approved", title: "#{@group.title} is approved", url: "/groups/#{@group.slug}")
+    IntergroupFollow.announce!(@group)
     render json: group_json
   end
 

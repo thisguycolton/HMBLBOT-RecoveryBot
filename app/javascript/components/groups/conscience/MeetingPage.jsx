@@ -372,7 +372,8 @@ export default function MeetingPage({ group, id }) {
             </Tray>
           </div>
 
-          <div className="min-w-0 space-y-3">
+          {/* The minutes stay in view while the agenda scrolls past, and scroll on their own */}
+          <div className="no-scrollbar min-w-0 space-y-3 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:pb-2">
             <Tray label="Minutes" action={meeting.minutes_status !== "draft" && <Pill tone="green">{meeting.minutes_status === "approved" ? "Approved" : "Posted"}{meeting.minutes_approved_at ? ` ${dateLabel(meeting.minutes_approved_at)}` : meeting.minutes_posted_at ? ` ${dateLabel(meeting.minutes_posted_at)}` : ""}</Pill>}>
               {canEdit ? (
                 <div className="space-y-3 p-1">

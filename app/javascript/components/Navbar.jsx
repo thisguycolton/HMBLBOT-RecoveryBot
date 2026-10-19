@@ -5,6 +5,7 @@ import DonationModal from "./DonationModal";
 import NotificationBell from "./NotificationBell";
 import { ACCOUNT_ITEMS, ADMIN_ITEMS, NAV_CATEGORIES, currentHref, showItem } from "./nav/siteMenu";
 import { RecoveryBotLogo } from "./brand/Logo";
+import MyGroupsModal from "./nav/MyGroupsModal";
 
 // !bg: the reader styles give every <button> a gray fill
 const linkTone =
@@ -23,6 +24,8 @@ export default function Navbar({
   const [openMenu, setOpenMenu] = useState(null); // a category key, "account", or null
   const [mobileOpen, setMobileOpen] = useState(false);
   const [donationModalOpen, setDonationModalOpen] = useState(false);
+  const [myGroupsOpen, setMyGroupsOpen] = useState(false);
+  const openMyGroups = () => { setOpenMenu(null); setMobileOpen(false); setMyGroupsOpen(true); };
   const navRef = useRef(null);
   // set by the reader layout for User#suite_admin?; the admin pages check again server-side
   const isSuiteAdmin = document.body.dataset.suiteAdmin === "true";
@@ -142,7 +145,7 @@ export default function Navbar({
             <div className="hidden md:flex items-center gap-2">
               {isAuthenticated ? (
                 <Dropdown label="Account" align="right" open={openMenu === "account"} onToggle={() => toggle("account")}>
-                  <AccountLinks isSuiteAdmin={isSuiteAdmin} here={here} />
+                  <AccountLinks isSuiteAdmin={isSuiteAdmin} here={here} onMyGroups={openMyGroups} />
                   <a
                     href={logoutPath}
                     className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm bg-slate-900 !text-white hover:bg-slate-800 dark:bg-slate-100 dark:!text-slate-900 dark:hover:bg-white"
@@ -199,7 +202,7 @@ export default function Navbar({
           {isAuthenticated && hasGroups() && (
             <div className="grid grid-cols-2 gap-2">
               {ACCOUNT_ITEMS.filter((item) => item.href === "/people" || item.href === "/groups").reverse().map((item) => (
-                <QuickLink key={item.href} item={item} current={item.href === here} />
+                <QuickLink key={item.href} item={item} current={item.href === here} onClick={item.href === "/groups" ? openMyGroups : null} />
               ))}
             </div>
           )}
@@ -235,6 +238,7 @@ export default function Navbar({
         </div>
       </div>
       <DonationModal isOpen={donationModalOpen} onClose={() => setDonationModalOpen(false)} />
+      <MyGroupsModal open={myGroupsOpen} onClose={() => setMyGroupsOpen(false)} isSuiteAdmin={isSuiteAdmin} />
     </nav>
   );
 }
@@ -305,7 +309,7 @@ function MenuItem({ item, current = false, compact = false, onClick }) {
 const hasGroups = () => document.body.dataset.groups === "true";
 const needsGroup = () => document.body.dataset.needsGroup === "true";
 
-function AccountLinks({ isSuiteAdmin, here, compact = false, skip = [] }) {
+function AccountLinks({ isSuiteAdmin, here, compact = false, skip = [], onMyGroups }) {
   return (
     <>
       {needsGroup() && (
@@ -318,7 +322,7 @@ function AccountLinks({ isSuiteAdmin, here, compact = false, skip = [] }) {
         </a>
       )}
       {ACCOUNT_ITEMS.filter((item) => (!item.groups || hasGroups()) && !skip.includes(item.href)).map((item) => (
-        <MenuItem key={item.href} item={item} current={item.href === here} compact />
+        <MenuItem key={item.href} item={item} current={item.href === here} compact onClick={item.href === "/groups" && onMyGroups ? onMyGroups : undefined} />
       ))}
       {isSuiteAdmin && (
         <>
@@ -333,8 +337,15 @@ function AccountLinks({ isSuiteAdmin, here, compact = false, skip = [] }) {
 }
 
 // A big tap target for the phone menu's top row
-function QuickLink({ item, current }) {
+function QuickLink({ item, current, onClick }) {
   const Icon = item.icon;
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className="flex items-center gap-2 rounded-lg !bg-accent/10 px-3 py-2.5 text-left text-sm font-semibold text-accent dark:!bg-accent/20 dark:text-sky-200">
+        <Icon size={18} strokeWidth={2.25} className="shrink-0" /> {item.label}
+      </button>
+    );
+  }
   return (
     <a
       href={item.href}
