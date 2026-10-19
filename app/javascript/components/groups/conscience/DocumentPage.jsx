@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { ChevronLeft, Download, FileUp, History, Paperclip, Pin, Printer, RotateCcw, Save, SlidersHorizontal, Trash2 } from "lucide-react";
+import { ChevronLeft, Download, FileUp, History, Moon, Paperclip, Pin, Printer, RotateCcw, Save, SlidersHorizontal, Sun, Trash2 } from "lucide-react";
 import Markdown, { markdownToHtml } from "../../book/Markdown";
 import { importDocument } from "../../../lib/documentImport";
 import { labelClass, selectClass } from "../../ui/styles";
@@ -62,6 +62,14 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
   const [notice, setNotice] = useState(null);
   const [details, setDetails] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
+  // The dark page: each person's own pick, kept in this browser; until they pick, it follows the site
+  const [paper, setPaper] = useState(() => { try { return localStorage.getItem("doc-paper") || ""; } catch { return ""; } });
+  const darkPaper = paper ? paper === "dark" : document.documentElement.classList.contains("dark");
+  const flipPaper = () => {
+    const next = darkPaper ? "light" : "dark";
+    setPaper(next);
+    try { localStorage.setItem("doc-paper", next); } catch {}
+  };
   // Leaving full screen: Esc, or the browser leaving its own full screen; the page behind stays put
   useEffect(() => {
     if (!fullScreen) return undefined;
@@ -214,13 +222,18 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit }) {
   const status = saving ? "Saving…" : dirty ? "Unsaved changes" : saved ? "All changes saved" : "";
 
   return (
-    <div className={fullScreen
+    <div className={`${darkPaper ? "doc-dark " : ""}${fullScreen
       ? "doc-desk doc-fullscreen fixed inset-0 z-[2200] overflow-y-auto px-2 pb-16 sm:px-4"
-      : "doc-desk -mx-4 -mt-1 rounded-2xl px-2 pb-10 sm:mx-0 sm:px-4"}>
+      : "doc-desk -mx-4 -mt-1 rounded-2xl px-2 pb-10 sm:mx-0 sm:px-4"}`}>
       <div className={`doc-chrome z-20 -mx-2 mb-4 space-y-px border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 print:hidden ${fullScreen ? "sticky top-0 sm:-mx-4" : "sm:sticky sm:top-[var(--nav-h,56px)] sm:-mx-4 sm:rounded-t-2xl"}`}>
         <div className="flex flex-wrap items-center gap-2 px-3 py-2">
           <Link to={folderLink} className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"><ChevronLeft className="size-4" /> {isMember ? KIND_INFO[form.kind].label : "Documents"}</Link>
           <span aria-live="polite" className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-neutral-400">{status}</span>
+          {(showPaper || !doc) && (
+            <button type="button" onClick={flipPaper} title={darkPaper ? "White page" : "Dark page"} aria-label={darkPaper ? "White page" : "Dark page"} aria-pressed={darkPaper} className={quietButton}>
+              {darkPaper ? <Sun className="size-4" /> : <Moon className="size-4" />} <span className="max-sm:sr-only">{darkPaper ? "White page" : "Dark page"}</span>
+            </button>
+          )}
           {doc && <ShareMenu group={group} doc={doc} canEdit={canEdit} onChanged={(d) => { setDoc(d); setForm((f) => ({ ...f, visibility: d.visibility })); }} />}
           {pdfOnly
             ? <a href={fileUrl(slug, doc.id, "?download=1")} className={quietButton}><Download className="size-4" /> <span className="max-sm:sr-only">Download PDF</span></a>

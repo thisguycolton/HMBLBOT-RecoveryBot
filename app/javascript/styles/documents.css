@@ -114,3 +114,26 @@
 /* Highlights (the toolbar's highlight colors) and full-screen editing */
 .doc-paper mark, .doc-prose mark { background-color: #fef08a; border-radius: 2px; color: inherit; padding: 0 1px; }
 .doc-fullscreen { padding-top: 0; }
+
+/* The dark page (DocumentPage's moon button, or the site in dark mode until someone picks):
+   light text on a dark sheet. Only on screen; Save as PDF and print stay white. */
+@media screen {
+  .doc-dark .doc-paper { background: #1c1c1e; box-shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 8px 24px rgb(0 0 0 / 0.35); color: #e5e7eb; }
+  .doc-dark .doc-title { color: #f8fafc; }
+  .doc-dark .doc-title::placeholder, .doc-dark .doc-prose p.is-editor-empty:first-child::before { color: #6b7280; }
+  .doc-dark .doc-meta { color: #9ca3af; }
+  .doc-dark .doc-prose { color: #e5e7eb; }
+  .doc-dark .doc-prose h1, .doc-dark .doc-prose h2, .doc-dark .doc-prose h3 { color: #f8fafc; }
+  .doc-dark .doc-prose li::marker { color: #9ca3af; }
+  .doc-dark .doc-prose blockquote { border-color: #4b5563; color: #cbd5e1; }
+  .doc-dark .doc-prose hr { border-color: #4b5563; }
+  .doc-dark .doc-prose a { color: #7dd3fc; }
+  .doc-dark .doc-prose th, .doc-dark .doc-prose td { border-color: #4b5563; }
+  .doc-dark .doc-prose th { background: #27272a; }
+  /* The toolbar's black text would vanish: show it light; highlights keep dark text on their pastel */
+  .doc-dark .doc-prose [style*="rgb(15, 23, 42)"], .doc-dark .doc-prose [style*="#0f172a"] { color: #f1f5f9 !important; }
+  .doc-dark .doc-prose mark, .doc-dark .doc-prose mark * { color: #0f172a !important; }
+}
+/* An old copy in the History panel sits on the panel's own color */
+.dark .doc-prose--small { color: #e5e7eb; }
+.dark .doc-prose--small h1, .dark .doc-prose--small h2, .dark .doc-prose--small h3 { color: #f8fafc; }
