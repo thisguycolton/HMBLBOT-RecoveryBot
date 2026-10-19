@@ -7,7 +7,11 @@ require "zip"
 # visible to keepers only and the motions are marked needs_review until a keeper saves them.
 # Phone numbers and email addresses are taken out of the minutes on the way in.
 #
-#   MinutesImport.new(group, "/path/to/Minutes", user: someone).run(dry_run: true)
+#   MinutesImport.from_folder(group, "/path/to/Minutes", user: someone).run(dry_run: true)
+#   MinutesImport.new(group, [["2025/GC April MINUTES.docx", "/tmp/upload"]], user: someone)
+#
+# Each file is a [name, path] pair: the name is where it sat in the folder ("2025/GC April
+# MINUTES.docx"), which gives the year when the file name doesn't.
 class MinutesImport
   MONTHS = Date::MONTHNAMES.compact.each_with_index.flat_map { |m, i| [[m.downcase, i + 1], [m[0, 3].downcase, i + 1]] }.to_h.merge("sept" => 9)
   PHONE = /\(?\b\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b/
@@ -16,17 +20,22 @@ class MinutesImport
   ROUTINE = /\b(?:motion(?:ed)?|moved)\b[^.;]{0,40}?\b(?:to\s+)?(?:accept|approve|close|adjourn)\b(?!\s+(?:the\s+)?(?:new|changes?|wording|exemption))|\bMOTION:\s*accept\b/i
   NAME = /([A-Z][a-z]+(?:\s[A-Z]\.?)?)/
 
-  Entry = Struct.new(:path, :held_on, :paragraphs, :skipped, keyword_init: true)
+  Entry = Struct.new(:name, :path, :held_on, :paragraphs, :skipped, keyword_init: true)
 
-  def initialize(group, folder, user: nil)
+  def self.from_folder(group, folder, user: nil)
+    files = Dir.glob(File.join(folder, "**", "*")).select { |f| File.file?(f) && !File.basename(f).start_with?(".") }.sort
+    new(group, files.map { |f| [f.delete_prefix("#{folder}/"), f] }, user: user)
+  end
+
+  def initialize(group, files, user: nil)
     @group = group
-    @folder = folder
+    @files = files
     @user = user
   end
 
   # Which files make which meetings, and what was left out and why, without saving anything
   def plan
-    entries = files.map { |path| entry(path) }
+    entries = @files.map { |name, path| entry(name, path) }
     kept = {}
     entries.each do |e|
       next if e.skipped
@@ -34,27 +43,29 @@ class MinutesImport
       if (other = kept[e.held_on])
         # The same meeting twice ("Copy of", "(1)", an amended version): keep the longer one
         loser, winner = [other, e].sort_by { |x| x.paragraphs.sum { |p| p[:text].size } }
-        loser.skipped = "same meeting as #{File.basename(winner.path)}"
+        loser.skipped = "same meeting as #{File.basename(winner.name)}"
         kept[e.held_on] = winner
       else
         kept[e.held_on] = e
       end
     end
-    entries.sort_by { |e| [e.held_on || Date.new(1900), e.path] }
+    entries.sort_by { |e| [e.held_on || Date.new(1900), e.name] }
   end
 
   # Saves (unless dry_run) and returns one row per file: what it became
   def run(dry_run: false)
     seen = Set.new
     plan.map do |e|
-      next { file: rel(e.path), skipped: e.skipped } if e.skipped
+      next { file: e.name, skipped: e.skipped } if e.skipped
 
       # Minutes often carry last month's motions forward word for word; the first one counts
       motions = motions_in(e.paragraphs).select { |m| seen.add?([m[:title].downcase, m[:status]]) }
+      existing = @group.business_meetings.find_by(held_on: e.held_on)
+      next { file: e.name, held_on: e.held_on, skipped: "already has a business meeting on #{e.held_on.strftime("%b %-d, %Y")}" } if existing&.minutes.present? || existing&.motions&.exists?
+
       unless dry_run
         BusinessMeeting.transaction do
-          bm = @group.business_meetings.find_or_initialize_by(held_on: e.held_on)
-          next if bm.persisted? && bm.motions.exists? # already brought in
+          bm = existing || @group.business_meetings.new(held_on: e.held_on)
 
           bm.assign_attributes(status: "held", minutes: html(e.paragraphs), minutes_status: "approved", visibility: "keepers", created_by: bm.created_by || @user)
           bm.save!
@@ -63,7 +74,7 @@ class MinutesImport
           end
         end
       end
-      { file: rel(e.path), held_on: e.held_on, motions: motions }
+      { file: e.name, held_on: e.held_on, motions: motions }
     end
   end
 
@@ -100,21 +111,19 @@ class MinutesImport
 
   private
 
-  def files = Dir.glob(File.join(@folder, "**", "*.{docx,DOCX}")).sort
+  def entry(name, path)
+    base = File.basename(name, ".*").squish
+    skip = ->(why) { Entry.new(name: name, path: path, skipped: why) }
+    return skip.call("not a Word file (.docx)") unless File.extname(name).casecmp?(".docx")
+    return skip.call("an agenda") if base =~ /agenda/i
 
-  def rel(path) = path.delete_prefix("#{@folder}/")
+    folder_year = File.dirname(name).split("/").reverse.find { |d| d =~ /\A(19|20)\d\d\z/ }&.to_i
+    held_on = date_from(base, folder_year)
+    return skip.call("no date in its name (or year folder)") unless held_on
 
-  def entry(path)
-    name = File.basename(path, ".*").squish
-    return Entry.new(path: path, skipped: "agenda") if name =~ /agenda/i
-    return Entry.new(path: path, skipped: "not in a year folder") unless File.basename(File.dirname(path)) =~ /\A(19|20)\d\d\z/
-
-    held_on = date_from(name, File.basename(File.dirname(path)).to_i)
-    return Entry.new(path: path, skipped: "no date in the file name") unless held_on
-
-    Entry.new(path: path, held_on: held_on, paragraphs: paragraphs(path))
-  rescue Zip::Error => e
-    Entry.new(path: path, skipped: "couldn't read it (#{e.message})")
+    Entry.new(name: name, path: path, held_on: held_on, paragraphs: paragraphs(path))
+  rescue Zip::Error, SystemCallError => e
+    skip.call("couldn't read it (#{e.message})")
   end
 
   # "Acid Test Minutes 03-22-2020", "bus meeting mins 2023-4-16", "GC April MINUTES-2025",
@@ -132,6 +141,8 @@ class MinutesImport
     return unless month
 
     year = name[/\b(20\d\d)\b/, 1]&.to_i || folder_year
+    return unless year
+
     first = Date.new(year, month, 1)
     first + ((7 - first.wday) % 7) + 14
   rescue Date::Error

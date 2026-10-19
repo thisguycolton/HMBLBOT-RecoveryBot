@@ -8,7 +8,7 @@ namespace :minutes do
   task :import, %i[slug folder] => :environment do |_, args|
     group = Group.find_by!(slug: args[:slug])
     dry = ENV["DRY_RUN"].present?
-    rows = MinutesImport.new(group, args[:folder], user: group.admins.first).run(dry_run: dry)
+    rows = MinutesImport.from_folder(group, args[:folder], user: group.admins.first).run(dry_run: dry)
 
     rows.each do |r|
       puts r[:skipped] ? "skip  #{r[:file]} (#{r[:skipped]})" : "#{r[:held_on]}  #{r[:file]}: #{r[:motions].size} motions"

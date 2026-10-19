@@ -69,6 +69,7 @@ Rails.application.routes.draw do
       resources :terms, controller: "group_service_terms", only: %i[create update destroy]
     end
     resources :treasurer_reports, controller: "group_treasurer_reports", only: %i[index create update destroy]
+    resources :minutes_imports, controller: "group_minutes_imports", only: :create
     resources :motions, controller: "group_motions", only: %i[index create update destroy] do
       post :check, on: :collection
     end

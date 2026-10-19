@@ -42,7 +42,7 @@ class MinutesImportTest < ActiveSupport::TestCase
     docx("2025/Copy of GC April MINUTES-2025.docx", "I. Chair")
     docx("2020/Acid Test Minutes 03-22-2020.docx", "Set a sobriety requirement of 60 days (motion – Justin, seconded Ruth; motion passed)")
 
-    rows = MinutesImport.new(@group, @dir, user: @keeper).run
+    rows = MinutesImport.from_folder(@group, @dir, user: @keeper).run
     assert_equal 2, rows.count { |r| !r[:skipped] }
 
     april = @group.business_meetings.find_by!(held_on: Date.new(2025, 4, 20)) # third Sunday
@@ -63,7 +63,7 @@ class MinutesImportTest < ActiveSupport::TestCase
     assert_equal 3, Motion.visible_to(@group, @keeper).count
 
     assert_no_difference -> { Motion.count } do
-      MinutesImport.new(@group, @dir, user: @keeper).run
+      MinutesImport.from_folder(@group, @dir, user: @keeper).run
     end
   end
 end

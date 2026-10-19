@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CalendarPlus, FileCheck2 } from "lucide-react";
+import { CalendarPlus, FileCheck2, FileUp } from "lucide-react";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton, quietButton } from "../ui";
 import MeetingForm from "./MeetingForm";
+import MinutesImport from "./MinutesImport";
 import RulesTable from "./RulesTable";
 import { inputClass, selectClass } from "../../ui/styles";
 import { dateLabel, longDate, meetingsPath } from "./lib";
@@ -71,6 +72,7 @@ export default function MeetingsView({ group }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [scheduling, setScheduling] = useState(false);
+  const [importing, setImporting] = useState(false);
   const load = useCallback(() => api(`/groups/${slug}/business_meetings`).then(setData).catch((e) => setError(e.message)), [slug]);
   useEffect(() => { load(); }, [load]);
 
@@ -83,8 +85,10 @@ export default function MeetingsView({ group }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300">Each business meeting has an agenda anyone in the group can add to, and minutes once they're posted.</p>
+        {data.can_edit && !importing && <button type="button" onClick={() => setImporting(true)} className={quietButton}><FileUp className="size-4" /> Import old minutes</button>}
         {data.can_edit && !scheduling && <button type="button" onClick={() => setScheduling(true)} className={primaryButton}><CalendarPlus className="size-4" /> Schedule a meeting</button>}
       </div>
+      {importing && <MinutesImport group={group} onClose={() => setImporting(false)} onDone={load} />}
       {scheduling && (
         <MeetingForm group={group} regular={data.regular_meetings} canMakeEvents={data.can_make_events} onCancel={() => setScheduling(false)} onSaved={(m) => navigate(meetingsPath(slug, m.id))} />
       )}
