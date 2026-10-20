@@ -1930,6 +1930,91 @@ body:has(.wb) {
 .wb-feed-item__shared { color: var(--wb-ink-soft); font-size: 0.8rem; }
 .wb .wb-feed-item__foot .wb-hl-note__edit { margin-inline-start: 0; background: transparent; border: 0; padding: 0; }
 .wb .wb-feed-item__foot .wb-hl-note__delete { color: oklch(55% 0.2 27); }
+
+/* A repost: who reposted it, then the note inset as its author wrote it */
+.wb-feed-item__reposted { align-items: center; display: inline-flex; gap: 0.35rem; }
+.wb .wb-feed-item__reposted a { color: var(--wb-ink); font-weight: 600; text-decoration: none; }
+.wb .wb-feed-item__reposted a:hover { text-decoration: underline; }
+.wb-feed-item__repost {
+  border: 1px solid var(--wb-subtle);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.8rem;
+}
+
+/* Like, Love, Hugs and Repost under a note */
+.wb-note-actions {
+  align-items: center;
+  border-top: 1px solid var(--wb-subtle-light);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+  padding-top: 0.55rem;
+}
+.wb .wb-note-actions__btn {
+  align-items: center;
+  background: transparent !important;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--wb-ink-soft);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 600;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+}
+.wb .wb-note-actions__btn:hover { background: var(--wb-subtle-light) !important; color: var(--wb-ink); }
+.wb .wb-note-actions__btn[aria-pressed="true"] { border-color: currentColor; }
+.wb .wb-note-actions__btn--like[aria-pressed="true"], .wb-note-actions__icon--like { color: oklch(55% 0.17 255); }
+.wb .wb-note-actions__btn--love[aria-pressed="true"], .wb-note-actions__icon--love { color: oklch(58% 0.21 15); }
+.wb .wb-note-actions__btn--hugs[aria-pressed="true"], .wb-note-actions__icon--hugs { color: oklch(62% 0.16 55); }
+.wb .wb-note-actions__btn--repost[aria-pressed="true"] { color: oklch(55% 0.14 150); }
+.wb-note-actions__count { font-variant-numeric: tabular-nums; }
+.wb-note-actions__static { align-items: center; color: var(--wb-ink-soft); display: inline-flex; font-size: 0.8rem; gap: 0.3rem; }
+.wb .wb-note-actions__who {
+  background: transparent !important;
+  border: 0;
+  color: var(--wb-ink-soft);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.3rem;
+}
+.wb .wb-note-actions__who:hover { color: var(--wb-ink); text-decoration: underline; }
+.wb-note-actions__menu {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.3);
+  list-style: none;
+  margin: 0.25rem 0 0;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+  position: absolute;
+  width: 15rem;
+  z-index: 30;
+}
+.wb-note-actions__menu-head { color: var(--wb-ink-soft); font-size: 0.75rem; padding: 0.35rem 0.6rem 0.2rem; }
+.wb .wb-note-actions__person {
+  align-items: center;
+  background: transparent !important;
+  border: 0;
+  border-radius: 0.5rem;
+  color: var(--wb-ink);
+  display: flex;
+  font-size: 0.85rem;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  text-decoration: none;
+  width: 100%;
+}
+.wb .wb-note-actions__person:hover { background: var(--wb-subtle-light) !important; }
+@media (max-width: 30rem) {
+  .wb-note-actions__btn--like span:not(.wb-note-actions__count),
+  .wb-note-actions__btn--love span:not(.wb-note-actions__count),
+  .wb-note-actions__btn--hugs span:not(.wb-note-actions__count) { display: none; }
+}
 /* The reader styles give every button a fill; a picked group chip stays dark */
 .wb .wb-note-editor__chip { background-color: transparent !important; }
 .wb .wb-note-editor__chip[aria-pressed="true"] { background-color: var(--wb-ink) !important; color: var(--wb-bg) !important; }

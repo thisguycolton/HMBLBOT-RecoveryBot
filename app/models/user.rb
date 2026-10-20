@@ -44,6 +44,7 @@ class User < ApplicationRecord
   has_many :schedule_poll_ballots, dependent: :nullify
   has_many :event_collaborators, dependent: :destroy
   has_many :timeline_notes, dependent: :destroy
+  has_many :note_reactions, dependent: :delete_all
   has_many :event_rsvps, dependent: :destroy
   has_many :intergroup_follows, dependent: :destroy
   has_many :host_sub_requests_made, class_name: "HostSubRequest", foreign_key: :requested_by_id, dependent: :nullify, inverse_of: :requested_by

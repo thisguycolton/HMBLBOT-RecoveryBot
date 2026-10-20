@@ -53,7 +53,7 @@ function FeedBlock({ block, compact, editing, context, title }) {
   useEffect(() => { setLimit(block.limit || 10); }, [block.limit]);
 
   const kind = SHOW[block.show];
-  const shown = items.filter((i) => !kind || i.kind === kind);
+  const shown = items.filter((i) => !kind || i.kind === kind || (kind === "note" && i.kind === "repost"));
   const me = context.viewer?.is_me;
   const replace = (item) => setItems((list) => list.map((i) => (i.kind === item.kind && i.id === item.id ? { ...i, ...item } : i)));
   const remove = (kindOf) => (id) => setItems((list) => list.filter((i) => !(i.kind === kindOf && i.id === id)));

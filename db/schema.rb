@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_20_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -572,6 +572,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
     t.index ["supersedes_id"], name: "index_motions_on_supersedes_id"
   end
 
+  create_table "note_reactions", force: :cascade do |t|
+    t.bigint "timeline_note_id", null: false
+    t.bigint "user_id", null: false
+    t.string "kind", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["timeline_note_id", "user_id"], name: "index_note_reactions_on_timeline_note_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_note_reactions_on_user_id"
+  end
+
   create_table "notifications", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "kind", null: false
@@ -919,6 +929,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "visibility", default: "private", null: false
+    t.bigint "repost_of_id"
+    t.index ["repost_of_id", "user_id"], name: "index_timeline_notes_on_repost_of_id_and_user_id", unique: true, where: "(repost_of_id IS NOT NULL)"
     t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_timeline_notes_on_user_id"
   end
@@ -1110,6 +1122,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
   add_foreign_key "motions", "motions", column: "parent_id", on_delete: :nullify
   add_foreign_key "motions", "motions", column: "supersedes_id", on_delete: :nullify
   add_foreign_key "motions", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "note_reactions", "timeline_notes", on_delete: :cascade
+  add_foreign_key "note_reactions", "users", on_delete: :cascade
   add_foreign_key "notifications", "users"
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
@@ -1140,6 +1154,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
   add_foreign_key "text_reports", "users", column: "resolved_by_id"
   add_foreign_key "timeline_note_shares", "groups"
   add_foreign_key "timeline_note_shares", "timeline_notes"
+  add_foreign_key "timeline_notes", "timeline_notes", column: "repost_of_id", on_delete: :cascade
   add_foreign_key "timeline_notes", "users"
   add_foreign_key "topic_sharing_prompts", "sharing_modes"
   add_foreign_key "topic_sharing_prompts", "topics"

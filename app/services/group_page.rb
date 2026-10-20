@@ -42,7 +42,7 @@ class GroupPage
         decisions: decisions(group),
         business_meeting: business_meeting(group),
         members: member ? members(group) : nil,
-        timeline: member ? group.shared_notes.limit(TIMELINE_MAX).map { |n| n.as_api_json(viewer: @viewer, group: group) } : nil,
+        timeline: member ? group.shared_notes.for_feed.limit(TIMELINE_MAX).map { |n| n.as_api_json(viewer: @viewer, group: group) } : nil,
       }
     )
   end

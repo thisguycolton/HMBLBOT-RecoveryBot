@@ -2,15 +2,19 @@
 # like a highlight's note, with up to TimelineNote::IMAGES_MAX pictures. `visibility` says
 # who sees it on your profile (new notes take your default from settings); sharing it to
 # groups you're in also shows it to their members in the group page's Timeline block.
+#
+# Anyone who can see a note (TimelineNote#visible_to?) reacts to it, and reposts it to their
+# own timeline when its author shares it with Members. A repost only changes who sees it.
 class Api::TimelineNotesController < ApplicationController
   include GroupScoped
 
   before_action :require_profiles
   before_action :set_note, only: %i[update destroy]
+  before_action :set_visible_note, only: %i[react unreact repost unrepost]
 
   # GET /api/timeline_notes -> your notes, newest first, and the groups you can share to
   def index
-    notes = current_user.timeline_notes.includes(:groups, images_attachments: :blob, user: { avatar_attachment: :blob }).newest_first.limit(200)
+    notes = current_user.timeline_notes.for_feed.newest_first.limit(200)
     render json: {
       notes: notes.map { |n| n.as_api_json(viewer: current_user) },
       groups: current_user.groups.order(:title).map { |g| { slug: g.slug, title: g.title } },
@@ -39,6 +43,8 @@ class Api::TimelineNotesController < ApplicationController
   # PATCH /api/timeline_notes/:id (multipart when pictures come along)
   # note: body, visibility, group_slugs[], images[] (added), remove_image_ids[] -> any of them
   def update
+    return update_repost if @note.repost?
+
     removing = @note.images.attachments.where(id: Array(note_params[:remove_image_ids]).map(&:to_i)).to_a
     body = note_params.key?(:body) ? note_params[:body].to_s.strip : @note.body
     kept = @note.images.attachments.size - removing.size + uploads.size
@@ -66,7 +72,77 @@ class Api::TimelineNotesController < ApplicationController
     head :no_content
   end
 
+  # PUT /api/timeline_notes/:id/reaction  kind: like|love|hugs -> the note. Reacting again changes it.
+  def react
+    kind = params[:kind].to_s
+    return render(json: { error: "Pick Like, Love or Hugs." }, status: :unprocessable_entity) unless NoteReaction::KINDS.include?(kind)
+
+    reaction = @note.reactions.find_or_initialize_by(user: current_user)
+    first = reaction.new_record?
+    reaction.update!(kind: kind)
+    if first && @note.user_id != current_user.id
+      Notification.deliver(@note.user, kind: "note.reaction", title: "#{current_user.display_name} #{NoteReaction.phrase(kind)} your note",
+                                       body: @note.body.to_s.truncate(120), url: @note.user.profile_path)
+    end
+    render json: note_json
+  rescue ActiveRecord::RecordNotUnique
+    retry
+  end
+
+  # DELETE /api/timeline_notes/:id/reaction -> the note
+  def unreact
+    @note.reactions.where(user: current_user).delete_all
+    render json: note_json
+  end
+
+  # POST /api/timeline_notes/:id/repost  visibility -> the repost, now on your timeline
+  def repost
+    repost = current_user.timeline_notes.find_by(repost_of: @note) ||
+             current_user.timeline_notes.create!(repost_of: @note, body: "", visibility: repost_visibility)
+    if repost.previously_new_record?
+      Notification.deliver(@note.user, kind: "note.repost", title: "#{current_user.display_name} reposted your note",
+                                       body: @note.body.to_s.truncate(120), url: current_user.profile_path)
+    end
+    render json: TimelineNote.for_feed.find(repost.id).as_api_json(viewer: current_user), status: :created
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordNotUnique
+    retry
+  end
+
+  # DELETE /api/timeline_notes/:id/repost -> the note, off your timeline
+  def unrepost
+    current_user.timeline_notes.where(repost_of: @note).destroy_all
+    render json: note_json
+  end
+
   private
+
+  # Reposts keep the original's words; only who sees them changes
+  def update_repost
+    @note.update!(visibility: visibility_param) if visibility_param
+    render json: @note.as_api_json(viewer: current_user)
+  rescue ActiveRecord::RecordInvalid
+    render_errors(@note)
+  end
+
+  # The note to react to or repost (a repost's original), if the viewer can see it
+  def set_visible_note
+    note = TimelineNote.find_by(id: params[:id])
+    note = note.repost_of if note&.repost?
+    return @note = note if note&.visible_to?(current_user)
+
+    render json: { error: "That note isn't here anymore." }, status: :not_found
+  end
+
+  def note_json = TimelineNote.for_feed.find(@note.id).as_api_json(viewer: current_user)
+
+  # Who sees a new repost: as asked, or your followers unless you share notes with Members by default
+  def repost_visibility
+    return params[:visibility] if Visibility::LEVELS.include?(params[:visibility])
+
+    current_user.default_note_visibility == "public" ? "public" : "followers"
+  end
 
   def require_profiles
     return if User.profiles_open_to?(current_user)

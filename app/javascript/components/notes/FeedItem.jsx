@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, Pencil, Trash2 } from "lucide-react";
+import { BookOpen, Pencil, Repeat2, Trash2 } from "lucide-react";
 import Markdown from "../book/Markdown";
 import HighlightNote from "../book/HighlightNote";
 import { highlightCss } from "../book/HighlightCard";
@@ -8,23 +8,77 @@ import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
 import { timeAgo } from "../groups/page/lib";
 import { showToast } from "../../lib/toast";
+import NoteActions from "./NoteActions";
 import NoteEditor from "./NoteEditor";
 import VisibilityPicker from "./VisibilityPicker";
 import { saveNote } from "./lib";
 
-// One thing on a timeline: a note (Markdown and pictures) or a highlight (its quote, its
-// note and where it's from). Its owner edits it right there and picks who sees it.
+// One thing on a timeline: a note (Markdown and pictures), a repost of someone's note, or a
+// highlight (its quote, its note and where it's from). Its owner edits it right there and
+// picks who sees it; others react to notes and repost them (NoteActions).
 // `showAuthor` puts their name on it (a feed of several people); `readOnly` (the editor's
 // canvas) leaves off the owner's buttons. Needs a `.wb` around it.
 export default function FeedItem({ item: given, readOnly = false, showAuthor = false, compact = false, groups = null, max, imagesMax, onChange, onRemove, extraAction }) {
   const item = readOnly ? { ...given, mine: false, by: null } : given;
   const [editing, setEditing] = useState(false);
+  if (item.kind === "repost") return <Repost item={item} readOnly={readOnly} compact={compact} onChange={onChange} onRemove={onRemove} />;
   return (
     <article className={`wb-feed-item ${compact ? "wb-feed-item--compact" : ""}`}>
       <ItemHead item={item} showAuthor={showAuthor} compact={compact} extraAction={extraAction} onChange={onChange} editing={editing} />
       {item.kind === "highlight"
         ? <HighlightBody item={item} onChange={onChange} />
         : <NoteBody item={item} editing={editing} setEditing={setEditing} groups={groups} max={max} imagesMax={imagesMax} compact={compact} onChange={onChange} onRemove={onRemove} />}
+      {item.kind === "note" && !readOnly && !editing && <NoteActions note={item} onChange={onChange} />}
+    </article>
+  );
+}
+
+// Someone's note on the reposter's timeline: who reposted it and when, then the note as its
+// author wrote it. The reposter picks who sees the repost, or takes it off.
+function Repost({ item, readOnly, compact, onChange, onRemove }) {
+  const mine = item.mine && !readOnly;
+  const note = { ...item.note, mine: false };
+
+  const changeVisibility = async (visibility) => {
+    const previous = item;
+    onChange?.({ ...item, visibility });
+    try {
+      onChange?.(await saveNote(item.id, { visibility }));
+    } catch {
+      onChange?.(previous);
+      showToast("Couldn't change who sees it.", { tone: "error" });
+    }
+  };
+  const undo = async () => {
+    try {
+      await api(`/timeline_notes/${item.id}`, { method: "DELETE" });
+      onRemove?.(item.id);
+    } catch (e) {
+      showToast(e.message, { tone: "error" });
+    }
+  };
+
+  return (
+    <article className={`wb-feed-item ${compact ? "wb-feed-item--compact" : ""}`}>
+      <header className="wb-feed-item__head">
+        <span className="wb-feed-item__meta wb-feed-item__reposted">
+          <Repeat2 size={13} aria-hidden="true" />
+          <a href={`/people/${item.author.username}`}>{item.mine ? "You" : item.author.name}</a> reposted · {timeAgo(item.created_at)}
+        </span>
+        <span className="flex-1" />
+        {mine && <VisibilityPicker value={item.visibility} onChange={changeVisibility} align="right" />}
+      </header>
+      <div className="wb-feed-item__repost">
+        <ItemHead item={note} showAuthor compact />
+        <NoteBody item={note} compact={compact} />
+      </div>
+      {!readOnly && <NoteActions note={item.note} onChange={(n) => onChange?.({ ...item, note: n })} />}
+      {mine && (
+        <div className="wb-feed-item__foot">
+          <span className="flex-1" />
+          <button type="button" className="wb-hl-note__edit wb-hl-note__delete" onClick={undo}><Trash2 size={13} aria-hidden="true" /> Take off my timeline</button>
+        </div>
+      )}
     </article>
   );
 }

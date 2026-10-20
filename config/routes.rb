@@ -105,7 +105,14 @@ Rails.application.routes.draw do
   get "intergroup_pages/:oiaa_slug", to: "intergroup_pages#show", constraints: { oiaa_slug: %r{[^/]+} }, format: false
   post "intergroup_pages/:oiaa_slug/follow", to: "intergroup_pages#follow", constraints: { oiaa_slug: %r{[^/]+} }, format: false
   delete "intergroup_pages/:oiaa_slug/follow", to: "intergroup_pages#unfollow", constraints: { oiaa_slug: %r{[^/]+} }, format: false
-  resources :timeline_notes, only: %i[index create update destroy]
+  resources :timeline_notes, only: %i[index create update destroy] do
+    member do
+      put :reaction, action: :react
+      delete :reaction, action: :unreact
+      post :repost
+      delete :repost, action: :unrepost
+    end
+  end
   get "people", to: "people#index"
   resources :people, param: :username, only: :show, constraints: { username: %r{[^/]+} } do
     member do
