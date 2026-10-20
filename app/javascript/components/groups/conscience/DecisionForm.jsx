@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Save } from "lucide-react";
 import Markdown from "../../book/Markdown";
+import Combobox from "../../ui/Combobox";
 import Toggle from "../../ui/Toggle";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import { api } from "../lib";
@@ -56,10 +57,12 @@ export default function DecisionForm({ group, motion = null, motions, kinds, gro
   }, [form, group.slug, motion?.id]);
 
   const pickKind = (e) => setForm((f) => ({ ...f, kind: e.target.value, parent_id: "", status: f.status === "proposed" ? f.status : "passed" }));
-  const pickParent = (e) => {
-    const parent = motions.find((m) => String(m.id) === e.target.value);
-    setForm((f) => ({ ...f, parent_id: e.target.value, title: f.title || (parent ? parent.title : f.title), amended_text: f.amended_text || (kind.key === "amend" && parent ? parent.amended_text || parent.text : f.amended_text) }));
+  const pickParent = (value) => {
+    const parent = motions.find((m) => String(m.id) === value);
+    setForm((f) => ({ ...f, parent_id: value, title: f.title || (parent ? parent.title : f.title), amended_text: f.amended_text || (kind.key === "amend" && parent ? parent.amended_text || parent.text : f.amended_text) }));
   };
+
+  const choice = (m) => ({ value: String(m.id), label: m.title, hint: m.decided_on ? dateLabel(m.decided_on) : null });
 
   const save = async (e) => {
     e.preventDefault();
@@ -100,10 +103,7 @@ export default function DecisionForm({ group, motion = null, motions, kinds, gro
         ), `${kind.help ? `${kind.help}. ` : ""}${kindFacts(kind)}.`)}
 
         {(kind.pending) && field("m-parent", "It applies to", (
-          <select id="m-parent" className={selectClass} value={form.parent_id ?? ""} onChange={pickParent}>
-            <option value="">Choose the motion</option>
-            {parentChoices.map((m) => <option key={m.id} value={m.id}>{m.title}{m.decided_on ? ` (${dateLabel(m.decided_on)})` : ""}</option>)}
-          </select>
+          <Combobox id="m-parent" value={String(form.parent_id ?? "")} onChange={pickParent} options={parentChoices.map(choice)} placeholder="Choose the motion" noMatches="No motion matches" />
         ), parentChoices.length === 0 ? "Nothing is pending here. Record the main motion first." : null)}
 
         {field("m-title", decision ? "What was moved" : "In short", <input id="m-title" required autoFocus maxLength={160} className={inputClass} value={form.title} onChange={set("title")} placeholder={decision ? "e.g. Send 7th Tradition 60/30/10" : "e.g. Table the urn until next month"} />)}
@@ -172,10 +172,7 @@ export default function DecisionForm({ group, motion = null, motions, kinds, gro
         {field("m-note", "Notes", <textarea id="m-note" rows={2} maxLength={2000} className={inputClass} value={form.note} onChange={set("note")} placeholder={noVote ? "What the chair ruled, and why" : "Anything the record should say"} />)}
 
         {decision && field("m-replaces", "It replaces", (
-          <select id="m-replaces" className={selectClass} value={form.supersedes_id ?? ""} onChange={set("supersedes_id")}>
-            <option value="">Nothing (a new decision)</option>
-            {replaceable.map((m) => <option key={m.id} value={m.id}>{m.title}{m.decided_on ? ` (${dateLabel(m.decided_on)})` : ""}</option>)}
-          </select>
+          <Combobox id="m-replaces" value={String(form.supersedes_id ?? "")} onChange={(v) => setForm((f) => ({ ...f, supersedes_id: v }))} options={replaceable.map(choice)} emptyLabel="Nothing (a new decision)" placeholder="Type to find a decision" noMatches="No decision matches" />
         ), "Once this passes, the decision it replaces shows as replaced.")}
         {decision && field("m-minority", "Minority opinion (optional)", <textarea id="m-minority" rows={3} maxLength={5000} className={inputClass} value={form.minority_opinion} onChange={set("minority_opinion")} />, "Anyone in the minority may have theirs heard and recorded here before a re-vote (Concept V).")}
         {field("m-visibility", "Who can see it", (
