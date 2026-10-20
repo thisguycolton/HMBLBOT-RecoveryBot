@@ -25,7 +25,7 @@ const addDaysIso = (iso, n) => {
 const CourtVerificationForm = ({ isAuthenticated, group = null }) => {
   const [respondentName, setRespondentName] = useState("");
   const [respondentEmail, setRespondentEmail] = useState("");
-  // a host's account menu opens it on their meeting (&meeting=<id>), on the day it last ran
+  // a host's account menu and the Hosting Command Center open it on their meeting (&meeting=<id>), on the day it last ran
   const preselect = group?.preselect;
   const [meetingTimeSlot, setMeetingTimeSlot] = useState(preselect?.meeting_id ? String(preselect.meeting_id) : ""); // "09:00", "12:00", "18:00", "21:00"
   const [hostName, setHostName] = useState(preselect?.host_name || "");

@@ -6,7 +6,8 @@ class CourtVerificationsController < ApplicationController
 
   # ?group=<slug> makes it that group's form: its name, its meetings, its time zone.
   # Group links are shared by the group's admins, like the plain one. &meeting=<id> (from a
-  # host's account menu) picks that meeting, on whichever of today and yesterday it ran.
+  # host's account menu or the Hosting Command Center) picks that meeting, on whichever of today and
+  # yesterday it ran, and &host=<name> fills in the host.
   def new
     @group = Group.active.find_by(slug: params[:group].to_s) if params[:group].present?
     @group_json = @group && group_form_json(@group)
@@ -16,7 +17,7 @@ class CourtVerificationsController < ApplicationController
   private
 
   # { meeting_id:, day: "today" | "yesterday", host_name: } for the meeting (any of its days) on
-  # the latest of today and yesterday it ran, and the host's name when they're signed in
+  # the latest of today and yesterday it ran, and the host's name (&host=, or theirs when they're signed in)
   def preselect(group, json)
     meeting = group.meetings.find_by(id: params[:meeting])
     return unless meeting
@@ -28,7 +29,7 @@ class CourtVerificationsController < ApplicationController
       m = json[:meetings].find { |x| ids.include?(x[:id]) && x[:dates].include?(date) }
       [label, m] if m
     end.first
-    { meeting_id: hit&.dig(:id), day: day, name: meeting.name, host_name: current_user&.display_name }.compact
+    { meeting_id: hit&.dig(:id), day: day, name: meeting.name, host_name: params[:host].to_s.squish.first(80).presence || current_user&.display_name }.compact
   end
 
   # Each meeting with the dates it falls on today and yesterday (in the group's zone),

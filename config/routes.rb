@@ -38,6 +38,7 @@ Rails.application.routes.draw do
             resources :court_verifications, only: :create
 
   resources :text_reports, only: :create
+  get "hosting_links/:code", to: "hosting_links#show"
   resources :site_notices, only: :index
   resource :profile, only: %i[show update destroy]
   resource :hosting, controller: "hosting", only: :show
@@ -64,6 +65,15 @@ Rails.application.routes.draw do
       post :link, on: :collection
     end
     resources :meeting_host_covers, controller: "group_meeting_host_covers", only: %i[create destroy]
+    # The Hosting Command Center (/groups/:slug/host/:meeting_id)
+    resources :hosting, controller: "group_hosting", only: %i[index show], param: :meeting_id do
+      member do
+        post :ping
+        post :act
+        put :kit
+        delete :kit, action: :reset_kit
+      end
+    end
     resources :host_sub_requests, controller: "group_host_sub_requests", only: %i[create destroy] do
       post :take, on: :member
     end
@@ -229,6 +239,8 @@ end
   get 'game/world', to: 'game#world' # generated-world overview for tuning (?seed=N)
   get 'topics/by_category', to: 'topics#by_category'
   # Groups: a React app (app/javascript/entrypoints/groups.jsx); invite links join on the server
+  # A meeting date's short link for its hosts (and the chat postings, for anyone)
+  get "/h/:code", to: "hosting_links#show", as: :hosting_link
   get "/groups/join/:token", to: "groups#join", as: :join_group
   get "/groups/:slug/ask", to: "groups#ask", as: :ask_to_join_group
   get "/groups", to: "groups#app", as: :groups
