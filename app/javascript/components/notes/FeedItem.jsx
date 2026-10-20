@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { BookOpen, Pencil, Repeat2, Trash2 } from "lucide-react";
 import Markdown from "../book/Markdown";
 import HighlightNote from "../book/HighlightNote";
@@ -8,7 +8,9 @@ import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
 import { timeAgo } from "../groups/page/lib";
 import { showToast } from "../../lib/toast";
+import LinkCard from "./LinkCard";
 import NoteActions from "./NoteActions";
+import NoteComments from "./NoteComments";
 import NoteEditor from "./NoteEditor";
 import VisibilityPicker from "./VisibilityPicker";
 import { saveNote } from "./lib";
@@ -28,8 +30,19 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
       {item.kind === "highlight"
         ? <HighlightBody item={item} onChange={onChange} />
         : <NoteBody item={item} editing={editing} setEditing={setEditing} groups={groups} max={max} imagesMax={imagesMax} compact={compact} onChange={onChange} onRemove={onRemove} />}
-      {item.kind === "note" && !readOnly && !editing && <NoteActions note={item} onChange={onChange} />}
+      {item.kind === "note" && !readOnly && !editing && <Social note={item} onChange={onChange} />}
     </article>
+  );
+}
+
+// Reactions, Comment and Repost under a note, then its comments
+function Social({ note, onChange }) {
+  const comments = useRef(null);
+  return (
+    <>
+      <NoteActions note={note} onChange={onChange} onComment={note.can_comment ? () => comments.current?.focus() : undefined} />
+      <NoteComments ref={comments} note={note} onChange={onChange} />
+    </>
   );
 }
 
@@ -72,7 +85,7 @@ function Repost({ item, readOnly, compact, onChange, onRemove }) {
         <ItemHead item={note} showAuthor compact />
         <NoteBody item={note} compact={compact} />
       </div>
-      {!readOnly && <NoteActions note={item.note} onChange={(n) => onChange?.({ ...item, note: n })} />}
+      {!readOnly && <Social note={item.note} onChange={(n) => onChange?.({ ...item, note: n })} />}
       {mine && (
         <div className="wb-feed-item__foot">
           <span className="flex-1" />
@@ -160,6 +173,7 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
           ))}
         </div>
       )}
+      {item.link && <LinkCard link={item.link} />}
       {open != null && <Lightbox photos={images.map((p) => ({ url: p.url }))} index={open} onClose={() => setOpen(null)} />}
       {item.mine && (
         <div className="wb-feed-item__foot">

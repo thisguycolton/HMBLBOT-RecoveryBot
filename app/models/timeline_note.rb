@@ -4,13 +4,15 @@
 # that group's members in the group page's Timeline block. A group's admins can take a
 # note off their group's timeline.
 #
-# People who can see a note react to it (NoteReaction) and can repost it to their own
+# People who can see a note react to it (NoteReaction), comment on it (NoteComment) and
+# can repost it to their own
 # timeline. A repost is a note of theirs that shows the original (`repost_of`) with its
 # author's name. Only notes their author shares with Members can be reposted, so a repost
 # never shows a note to anyone its author didn't; when the author narrows who sees it (or
 # deletes it), its reposts go.
 class TimelineNote < ApplicationRecord
   include Visibility
+  include Reactable
 
   BODY_MAX = 10_000
   IMAGES_MAX = 6
@@ -19,7 +21,8 @@ class TimelineNote < ApplicationRecord
   has_many :shares, class_name: "TimelineNoteShare", dependent: :destroy
   has_many :groups, through: :shares
   has_many_attached :images
-  has_many :reactions, class_name: "NoteReaction", dependent: :delete_all
+  has_many :comments, -> { order(:created_at, :id) }, class_name: "NoteComment", dependent: :destroy
+  has_one_attached :link_image
   belongs_to :repost_of, class_name: "TimelineNote", optional: true, inverse_of: :reposts
   has_many :reposts, class_name: "TimelineNote", foreign_key: :repost_of_id, inverse_of: :repost_of, dependent: :destroy
 
@@ -34,7 +37,9 @@ class TimelineNote < ApplicationRecord
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
   # What a feed needs to show notes (and the originals of reposts) without a query each
   scope :for_feed, lambda {
-    shown = [:groups, :reposts, { images_attachments: :blob, user: { avatar_attachment: :blob }, reactions: { user: { avatar_attachment: :blob } } }]
+    people = { user: { avatar_attachment: :blob } }
+    shown = [:groups, :reposts, { images_attachments: :blob, link_image_attachment: :blob, **people, reactions: people,
+                                  comments: [people, { reactions: people, timeline_note: :groups }] }]
     includes(*shown, repost_of: shown)
   }
 
@@ -93,16 +98,37 @@ class TimelineNote < ApplicationRecord
     json
   end
 
+  # The note's first link as a card: its page's title, description, site and picture
+  def link_json
+    return unless link_preview.present?
+
+    image = (Rails.application.routes.url_helpers.rails_storage_proxy_path(link_image, only_path: true) if link_image.attached?)
+    link_preview.slice("url", "title", "description", "site_name").merge("image_url" => image)
+  end
+
+  # Takes the preview for `url` (LinkPreview, cached from when the note was written, with
+  # its picture copied here so readers never load it from the other site), or none when
+  # `url` is blank. The same link keeps the one it has.
+  def link_url=(url)
+    url = url.to_s.strip
+    return if url.present? && url == link_preview&.dig("url")
+
+    link_image.purge_later if link_image.attached?
+    preview = (LinkPreview.fetch(url) if url.present?)
+    self.link_preview = preview&.slice(:url, :title, :description, :site_name)&.stringify_keys
+    image = preview && preview[:image_url] && LinkPreview.image(preview[:image_url])
+    link_image.attach(image) if image
+  end
+
   private
 
-  REACTORS_MAX = 50
+  COMMENTS_MAX = 100
 
-  # Reactions (how many of each, the viewer's, and who, newest first) and reposts
+  # Reactions, comments and reposts
   def social_json(viewer)
-    counts = NoteReaction::KINDS.index_with { |k| reactions.count { |r| r.kind == k } }
-    reactors = reactions.sort_by(&:created_at).reverse.first(REACTORS_MAX)
-                        .map { |r| r.user.as_person_json.merge(reaction: r.kind) }
-    { reactions: counts, my_reaction: reactions.find { |r| r.user_id == viewer&.id }&.kind, reactors: reactors,
+    { **reactions_json(viewer), link: link_json,
+      comments: comments.last(COMMENTS_MAX).map { |c| c.as_api_json(viewer: viewer) }, comment_count: comments.size,
+      can_comment: !viewer.nil?,
       repost_count: reposts.size, reposted: reposts.any? { |r| r.user_id == viewer&.id }, can_repost: repostable_by?(viewer) }
   end
 

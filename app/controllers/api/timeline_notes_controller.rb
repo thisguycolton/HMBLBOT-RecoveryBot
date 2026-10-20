@@ -3,10 +3,13 @@
 # who sees it on your profile (new notes take your default from settings); sharing it to
 # groups you're in also shows it to their members in the group page's Timeline block.
 #
-# Anyone who can see a note (TimelineNote#visible_to?) reacts to it, and reposts it to their
-# own timeline when its author shares it with Members. A repost only changes who sees it.
+# Anyone who can see a note (TimelineNote#visible_to?) reacts to it, comments on it
+# (Api::NoteCommentsController), and reposts it to their own timeline when its author
+# shares it with Members. A repost only changes who sees it. `link_url` is the link whose
+# preview (LinkPreview) the note shows, or blank for none.
 class Api::TimelineNotesController < ApplicationController
   include GroupScoped
+  include Reacting
 
   before_action :require_profiles
   before_action :set_note, only: %i[update destroy]
@@ -23,7 +26,7 @@ class Api::TimelineNotesController < ApplicationController
   end
 
   # POST /api/timeline_notes (multipart when pictures come along)
-  # note: body, visibility, group_slugs[], images[]
+  # note: body, visibility, group_slugs[], images[], link_url
   def create
     problem = TimelineNote.upload_problem(uploads)
     return render(json: { error: problem }, status: :unprocessable_entity) if problem
@@ -31,6 +34,7 @@ class Api::TimelineNotesController < ApplicationController
     note = current_user.timeline_notes.new(body: note_params[:body].to_s.strip,
                                            visibility: visibility_param || current_user.default_note_visibility)
     note.images.attach(uploads) if uploads.any?
+    note.link_url = note_params[:link_url] if note_params.key?(:link_url)
     TimelineNote.transaction do
       note.save!
       note.share_to!(share_groups) if note_params.key?(:group_slugs)
@@ -41,7 +45,7 @@ class Api::TimelineNotesController < ApplicationController
   end
 
   # PATCH /api/timeline_notes/:id (multipart when pictures come along)
-  # note: body, visibility, group_slugs[], images[] (added), remove_image_ids[] -> any of them
+  # note: body, visibility, group_slugs[], images[] (added), remove_image_ids[], link_url -> any of them
   def update
     return update_repost if @note.repost?
 
@@ -55,13 +59,14 @@ class Api::TimelineNotesController < ApplicationController
     TimelineNote.transaction do
       @note.body = body
       @note.visibility = visibility_param if visibility_param
+      @note.link_url = note_params[:link_url] if note_params.key?(:link_url)
       @note.save!
       @note.share_to!(share_groups) if note_params.key?(:group_slugs)
     end
     # On a saved note, attach saves right away (and the pictures were checked above)
     @note.images.attach(uploads) if uploads.any?
     removing.each(&:purge_later)
-    render json: @note.reload.as_api_json(viewer: current_user)
+    render json: TimelineNote.for_feed.find(@note.id).as_api_json(viewer: current_user)
   rescue ActiveRecord::RecordInvalid
     render_errors(@note)
   end
@@ -74,25 +79,14 @@ class Api::TimelineNotesController < ApplicationController
 
   # PUT /api/timeline_notes/:id/reaction  kind: like|love|hugs -> the note. Reacting again changes it.
   def react
-    kind = params[:kind].to_s
-    return render(json: { error: "Pick Like, Love or Hugs." }, status: :unprocessable_entity) unless NoteReaction::KINDS.include?(kind)
-
-    reaction = @note.reactions.find_or_initialize_by(user: current_user)
-    first = reaction.new_record?
-    reaction.update!(kind: kind)
-    if first && @note.user_id != current_user.id
-      Notification.deliver(@note.user, kind: "note.reaction", title: "#{current_user.display_name} #{NoteReaction.phrase(kind)} your note",
-                                       body: @note.body.to_s.truncate(120), url: @note.user.profile_path)
-    end
-    render json: note_json
-  rescue ActiveRecord::RecordNotUnique
-    retry
+    @reactable = @note
+    save_reaction(what: "note", url: @note.user.profile_path) { render json: note_json }
   end
 
   # DELETE /api/timeline_notes/:id/reaction -> the note
   def unreact
-    @note.reactions.where(user: current_user).delete_all
-    render json: note_json
+    @reactable = @note
+    remove_reaction { render json: note_json }
   end
 
   # POST /api/timeline_notes/:id/repost  visibility -> the repost, now on your timeline
@@ -155,7 +149,7 @@ class Api::TimelineNotesController < ApplicationController
   end
 
   def note_params
-    params.require(:note).permit(:body, :visibility, group_slugs: [], images: [], remove_image_ids: [])
+    params.require(:note).permit(:body, :visibility, :link_url, group_slugs: [], images: [], remove_image_ids: [])
   end
 
   def visibility_param

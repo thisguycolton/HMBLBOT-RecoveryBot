@@ -128,7 +128,8 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Your profile:</strong> username, picture, a short bio, an optional sobriety date, and how you lay out your profile page.</li>
             <li><strong>Notes and highlights:</strong> passages you highlight in the library, notes you write on them, and notes on your timeline (with up to six pictures). Each one has its own visibility (see below).</li>
             <li><strong>Follows:</strong> who you follow and who follows you.</li>
-            <li><strong>Reactions and reposts:</strong> the Like, Love or Hugs you give a note, and notes you repost to your timeline.</li>
+            <li><strong>Reactions, comments and reposts:</strong> the Like, Love or Hugs you give a note or comment, comments you write on notes, and notes you repost to your timeline.</li>
+            <li><strong>Link previews:</strong> when a note has a link, our server visits that page to read its title, description and picture, and keeps them (with a copy of the picture) with your note. The other site sees a visit from RecoveryBot, not from you or the people reading your note.</li>
             <li><strong>Groups:</strong> the groups you join or ask to join, your role (member, admin, record keeper, host scheduler, treasurer), and the meetings you host or cover.</li>
             <li><strong>Group records:</strong> documents, decisions, business meeting agendas and minutes, elected officials, host schedules and treasurer reports that members write for their group.</li>
             <li><strong>Events:</strong> events you create, and RSVPs. If you RSVP without an account we ask for a name and email address so we can send you the event's updates.</li>
@@ -165,7 +166,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <H2 id="who-sees-what">Who sees what</H2>
           <ul>
             <li><strong>The public web:</strong> the home page, the tools, Find a meeting, published events, and the parts of a group's home page that its admins choose to show visitors. Profiles are never public.</li>
-            <li><strong>Signed-in members:</strong> profiles, and notes or highlights set to <em>Members</em>. Notes set to <em>Followers</em> are only seen by people who follow you; <em>Private</em> ones (the default) only by you. Highlights you share by link can be opened by anyone with that link. Anyone who can see a note sees who reacted to it and how. Only notes set to <em>Members</em> can be reposted, and when you narrow or delete one, its reposts go too.</li>
+            <li><strong>Signed-in members:</strong> profiles, and notes or highlights set to <em>Members</em>. Notes set to <em>Followers</em> are only seen by people who follow you; <em>Private</em> ones (the default) only by you. Highlights you share by link can be opened by anyone with that link. Anyone who can see a note sees its comments, and who reacted to it and how. Only notes set to <em>Members</em> can be reposted, and when you narrow or delete one, its reposts go too.</li>
             <li><strong>Your groups:</strong> members of a group see its member list, its members-only pages and records, and notes you share to it. Record keepers and admins of the group see drafts and everything else the group keeps.</li>
             <li><strong>Site admins:</strong> the few people who run RecoveryBot can see what's stored, to fix problems and answer requests. We don't browse your things without a reason.</li>
           </ul>
@@ -222,7 +223,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <ul>
             <li>your account, profile, picture and settings;</li>
             <li>your highlights, notes, timeline notes and their pictures;</li>
-            <li>your follows, reactions, reposts, notifications, RSVPs, group memberships and schedule polls you made.</li>
+            <li>your follows, reactions, comments, reposts, notifications, RSVPs, group memberships and schedule polls you made.</li>
           </ul>
           <p>
             Some things belong to a group or to everyone, so they stay without your account attached: group documents and minutes you

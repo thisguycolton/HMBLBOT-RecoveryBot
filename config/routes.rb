@@ -112,7 +112,16 @@ Rails.application.routes.draw do
       post :repost
       delete :repost, action: :unrepost
     end
+    resources :comments, controller: :note_comments, only: :create
   end
+  resources :note_comments, only: %i[update destroy] do
+    member do
+      put :reaction, action: :react
+      delete :reaction, action: :unreact
+    end
+  end
+  get "link_preview", to: "link_previews#show"
+  get "link_preview/image", to: "link_previews#image", as: :link_preview_image
   get "people", to: "people#index"
   resources :people, param: :username, only: :show, constraints: { username: %r{[^/]+} } do
     member do

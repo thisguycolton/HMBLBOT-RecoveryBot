@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { HandHeart, Heart, Repeat2, ThumbsUp } from "lucide-react";
+import { HandHeart, Heart, MessageCircle, Repeat2, ThumbsUp } from "lucide-react";
 import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
 import { showToast } from "../../lib/toast";
@@ -13,9 +13,11 @@ export const REACTIONS = [
 const reactionOf = (value) => REACTIONS.find((r) => r.value === value);
 
 // Under a note: Like, Love and Hugs (one each, tap yours again to take it back), who
-// reacted, and Repost to your own timeline (only for notes their author shares with
-// Members; the server says so in `can_repost`). `onChange` gets the note back.
-export default function NoteActions({ note, onChange }) {
+// reacted, Comment (with `onComment`), and Repost to your own timeline (only for notes
+// their author shares with Members; the server says so in `can_repost`). `onChange` gets
+// the note back. A comment has the same reactions (`path` is where it lives, `small` a
+// tighter row).
+export default function NoteActions({ note, onChange, onComment, path = `/timeline_notes/${note.id}`, small = false }) {
   const [busy, setBusy] = useState(false);
 
   const run = async (optimistic, request, failure) => {
@@ -39,7 +41,7 @@ export default function NoteActions({ note, onChange }) {
     if (note.my_reaction) reactions[note.my_reaction] = Math.max(0, (reactions[note.my_reaction] || 0) - 1);
     if (!taking) reactions[kind] = (reactions[kind] || 0) + 1;
     run({ reactions, my_reaction: taking ? null : kind },
-      () => api(`/timeline_notes/${note.id}/reaction`, taking ? { method: "DELETE" } : { method: "PUT", body: { kind } }),
+      () => api(`${path}/reaction`, taking ? { method: "DELETE" } : { method: "PUT", body: { kind } }),
       "Couldn't save that.");
   };
 
@@ -55,7 +57,7 @@ export default function NoteActions({ note, onChange }) {
 
   const reactions = note.reactions || {};
   return (
-    <div className="wb-note-actions">
+    <div className={`wb-note-actions ${small ? "wb-note-actions--small" : ""}`}>
       {REACTIONS.map((r) => {
         const Icon = r.icon;
         const mine = note.my_reaction === r.value;
@@ -71,6 +73,12 @@ export default function NoteActions({ note, onChange }) {
       })}
       <WhoReacted reactors={note.reactors || []} />
       <span className="flex-1" />
+      {onComment && (
+        <button type="button" className="wb-note-actions__btn wb-note-actions__btn--comment" onClick={onComment} aria-label={note.comment_count ? `Comment, ${note.comment_count}` : "Comment"}>
+          <MessageCircle size={14} aria-hidden="true" /> <span>Comment</span>
+          {note.comment_count > 0 && <span className="wb-note-actions__count">{note.comment_count}</span>}
+        </button>
+      )}
       {note.reposted ? (
         <button type="button" className="wb-note-actions__btn wb-note-actions__btn--repost" aria-pressed="true" onClick={unrepost} title="Take it off your timeline">
           <Repeat2 size={14} aria-hidden="true" /> <span>Reposted</span>

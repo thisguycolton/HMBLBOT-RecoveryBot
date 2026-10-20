@@ -572,13 +572,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_200000) do
     t.index ["supersedes_id"], name: "index_motions_on_supersedes_id"
   end
 
-  create_table "note_reactions", force: :cascade do |t|
+  create_table "note_comments", force: :cascade do |t|
     t.bigint "timeline_note_id", null: false
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["timeline_note_id", "created_at"], name: "index_note_comments_on_timeline_note_id_and_created_at"
+    t.index ["user_id"], name: "index_note_comments_on_user_id"
+  end
+
+  create_table "note_reactions", force: :cascade do |t|
+    t.string "reactable_type", null: false
+    t.bigint "reactable_id", null: false
     t.bigint "user_id", null: false
     t.string "kind", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["timeline_note_id", "user_id"], name: "index_note_reactions_on_timeline_note_id_and_user_id", unique: true
+    t.index ["reactable_type", "reactable_id", "user_id"], name: "index_note_reactions_on_reactable_and_user", unique: true
     t.index ["user_id"], name: "index_note_reactions_on_user_id"
   end
 
@@ -930,6 +941,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_200000) do
     t.datetime "updated_at", null: false
     t.string "visibility", default: "private", null: false
     t.bigint "repost_of_id"
+    t.jsonb "link_preview"
     t.index ["repost_of_id", "user_id"], name: "index_timeline_notes_on_repost_of_id_and_user_id", unique: true, where: "(repost_of_id IS NOT NULL)"
     t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_timeline_notes_on_user_id"
@@ -1122,7 +1134,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_200000) do
   add_foreign_key "motions", "motions", column: "parent_id", on_delete: :nullify
   add_foreign_key "motions", "motions", column: "supersedes_id", on_delete: :nullify
   add_foreign_key "motions", "users", column: "created_by_id", on_delete: :nullify
-  add_foreign_key "note_reactions", "timeline_notes", on_delete: :cascade
+  add_foreign_key "note_comments", "timeline_notes", on_delete: :cascade
+  add_foreign_key "note_comments", "users", on_delete: :cascade
   add_foreign_key "note_reactions", "users", on_delete: :cascade
   add_foreign_key "notifications", "users"
   add_foreign_key "options", "polls"
