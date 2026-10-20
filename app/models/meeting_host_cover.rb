@@ -11,6 +11,6 @@ class MeetingHostCover < ApplicationRecord
   validate { errors.add(:on, "isn't a day this meeting meets (#{Date::DAYNAMES[meeting.day_of_week]}s)") if on && meeting&.weekly? && on.wday != meeting.day_of_week }
 
   def as_api_json
-    { id: id, role: role, name: name, on: self.on.iso8601, linked: user_id.present? }
+    { id: id, role: role, name: name, on: self.on.iso8601, linked: user_id.present?, user_id: user_id }
   end
 end

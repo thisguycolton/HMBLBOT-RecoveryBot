@@ -43,6 +43,26 @@ class Api::GroupMeetingHostsController < ApplicationController
     @host.update(host_params) ? render(json: schedule) : render_errors(@host)
   end
 
+  # POST /api/groups/:group_slug/meeting_hosts/link { name, user_id }
+  # Connects everywhere a name is on the schedule (every place and cover written as that name)
+  # to a member's account, so they hear about it, get reminders and see their meetings; a blank
+  # user_id disconnects them again. The name stays as the group wrote it.
+  def link
+    name = params.require(:name).to_s.squish
+    user = params[:user_id].presence && @group.members.find_by(id: params[:user_id])
+    return render(json: { error: "That person isn't a member of the group." }, status: :unprocessable_entity) if params[:user_id].present? && !user
+
+    changed = [MeetingHost, MeetingHostCover].sum do |model|
+      model.where(meeting_id: @group.meetings.select(:id)).where("LOWER(name) = ?", name.downcase)
+           .where("user_id IS DISTINCT FROM ?", user&.id).update_all(user_id: user&.id, updated_at: Time.current)
+    end
+    if user && changed.positive? && user != current_user
+      Notification.deliver(user, kind: "meeting_host.linked", title: "You're on #{@group.title}'s host schedule",
+                                 body: "Your account is connected to \"#{name}\" on the schedule. Turn on reminders in your account settings.", url: "/groups/#{@group.slug}/hosts")
+    end
+    render json: schedule
+  end
+
   # DELETE /api/groups/:group_slug/meeting_hosts/:id
   def destroy
     @host.destroy!

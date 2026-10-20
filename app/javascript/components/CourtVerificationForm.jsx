@@ -25,11 +25,13 @@ const addDaysIso = (iso, n) => {
 const CourtVerificationForm = ({ isAuthenticated, group = null }) => {
   const [respondentName, setRespondentName] = useState("");
   const [respondentEmail, setRespondentEmail] = useState("");
-  const [meetingTimeSlot, setMeetingTimeSlot] = useState(""); // "09:00", "12:00", "18:00", "21:00"
-  const [hostName, setHostName] = useState("");
+  // a host's account menu opens it on their meeting (&meeting=<id>), on the day it last ran
+  const preselect = group?.preselect;
+  const [meetingTimeSlot, setMeetingTimeSlot] = useState(preselect?.meeting_id ? String(preselect.meeting_id) : ""); // "09:00", "12:00", "18:00", "21:00"
+  const [hostName, setHostName] = useState(preselect?.host_name || "");
   const [signerName, setSignerName] = useState("");
   const [topic, setTopic] = useState("");
-  const [meetingDay, setMeetingDay] = useState("today"); // "today" | "yesterday"
+  const [meetingDay, setMeetingDay] = useState(preselect?.day || "today"); // "today" | "yesterday"
   const pickDay = (day) => {
     setMeetingDay(day);
     if (group) setMeetingTimeSlot("");
@@ -192,6 +194,9 @@ const meetingDisplayDate = () =>
               </div>
               <div>
                 <span className={labelClass}>Meeting time</span>
+                {preselect && !preselect.meeting_id && (
+                  <p className="mb-2 text-sm text-amber-700 dark:text-amber-300">{preselect.name} didn't meet today or yesterday, so pick the meeting it's for.</p>
+                )}
                 {slots.length === 0 ? (
                   <p className="text-sm text-slate-600 dark:text-neutral-400">{group.title} has no meeting on that day.</p>
                 ) : (

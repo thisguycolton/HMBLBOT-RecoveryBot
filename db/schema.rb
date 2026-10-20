@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_20_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -402,6 +402,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
     t.integer "quorum_count"
     t.integer "quorum_percent"
     t.boolean "follows_roberts_rules", default: true, null: false
+    t.boolean "show_hosts_publicly", default: true, null: false
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -482,6 +483,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
     t.index ["meeting_id", "role", "on"], name: "index_meeting_host_covers_on_meeting_id_and_role_and_on", unique: true
     t.index ["meeting_id"], name: "index_meeting_host_covers_on_meeting_id"
     t.index ["user_id"], name: "index_meeting_host_covers_on_user_id"
+  end
+
+  create_table "meeting_host_reminders", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "meeting_id", null: false
+    t.string "role", null: false
+    t.date "on", null: false
+    t.datetime "created_at", null: false
+    t.index ["meeting_id"], name: "index_meeting_host_reminders_on_meeting_id"
+    t.index ["user_id", "meeting_id", "role", "on"], name: "index_meeting_host_reminders_once", unique: true
+    t.index ["user_id"], name: "index_meeting_host_reminders_on_user_id"
   end
 
   create_table "meeting_hosts", force: :cascade do |t|
@@ -1047,6 +1059,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
     t.jsonb "page_blocks"
     t.string "default_highlight_visibility", default: "private", null: false
     t.string "default_note_visibility", default: "private", null: false
+    t.boolean "host_reminders", default: false, null: false
+    t.integer "host_reminder_hours", default: 24, null: false
+    t.boolean "host_reminder_email", default: true, null: false
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
@@ -1101,6 +1116,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
   add_foreign_key "intergroup_follows", "users"
   add_foreign_key "meeting_host_covers", "meetings", on_delete: :cascade
   add_foreign_key "meeting_host_covers", "users", on_delete: :nullify
+  add_foreign_key "meeting_host_reminders", "meetings", on_delete: :cascade
+  add_foreign_key "meeting_host_reminders", "users", on_delete: :cascade
   add_foreign_key "meeting_hosts", "meetings", on_delete: :cascade
   add_foreign_key "meeting_hosts", "users", on_delete: :nullify
   add_foreign_key "meetings", "groups"

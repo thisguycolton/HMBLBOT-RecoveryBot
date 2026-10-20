@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "October 19, 2026";
+const UPDATED = "October 20, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -120,6 +120,10 @@ export default function PrivacyPage({ turnstile = false }) {
             name members, so we ask the people who keep them to follow their group's anonymity practices: first names only, and nothing
             said in a meeting that wasn't meant to leave the room.
           </p>
+          <p>
+            A group's page, which anyone can see, lists its meetings with the name of who hosts and co-hosts the next one, as the group
+            wrote it on its host schedule. Each group can turn that off in its settings.
+          </p>
 
           <H2 id="what-we-collect">What we collect</H2>
           <h3>Things you give us</h3>
@@ -201,7 +205,8 @@ export default function PrivacyPage({ turnstile = false }) {
           <p>
             We email you only when you need it or asked for it: a link to confirm your email address, a password reset, when someone adds
             you to a schedule poll, when an event you RSVP'd to posts an update (each has a link to stop them), and a copy of a court
-            attendance verification made for you. Group news, like a scheduled business meeting or a host assignment, shows up in
+            attendance verification made for you. If you host or co-host and turn on reminders in your account settings, we also email you
+            before each meeting you're on, unless you choose notifications only. Other group news, like a scheduled business meeting or a host assignment, shows up in
             the notification bell on the site instead. We don't send newsletters or marketing.
           </p>
 

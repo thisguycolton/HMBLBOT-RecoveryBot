@@ -9,14 +9,17 @@ class Api::ProfilesController < ApplicationController
 
   # PATCH /api/profile (multipart when a picture is uploaded)
   # name, bio, avatar, remove_avatar=1, sobriety_date, show_sobriety_date, username,
-  # default_highlight_visibility, default_note_visibility; email or password also need current_password
+  # default_highlight_visibility, default_note_visibility; email or password also need current_password.
+  # Hosts (User#host?) also: host_reminders, host_reminder_hours, host_reminder_email
   def update
     user = current_user
-    attrs = params.require(:profile).permit(:name, :bio, :avatar, :sobriety_date, :show_sobriety_date, :username, :default_highlight_visibility, :default_note_visibility, :email, :password, :password_confirmation, :current_password)
+    attrs = params.require(:profile).permit(:name, :bio, :avatar, :sobriety_date, :show_sobriety_date, :username, :default_highlight_visibility, :default_note_visibility, :email, :password, :password_confirmation, :current_password,
+                                            :host_reminders, :host_reminder_hours, :host_reminder_email)
     user.avatar.purge_later if ActiveModel::Type::Boolean.new.cast(params.dig(:profile, :remove_avatar)) && attrs[:avatar].blank?
 
     attrs[:username] = attrs[:username].to_s.strip.downcase if attrs.key?(:username)
     profile = %i[name bio avatar sobriety_date show_sobriety_date username default_highlight_visibility default_note_visibility]
+    profile += %i[host_reminders host_reminder_hours host_reminder_email] if user.host?
     account_change = attrs[:email].present? && attrs[:email].strip.casecmp?(user.email) == false || attrs[:password].present?
     saved = if account_change
               user.update_with_password(attrs.slice(*profile, :email, :password, :password_confirmation, :current_password))
@@ -64,6 +67,22 @@ class Api::ProfilesController < ApplicationController
       groups_open: Group.feature_open_to?(u),
       username: u.username, profile_path: u.profile_path, profiles_open: User.profiles_open_to?(u),
       default_highlight_visibility: u.default_highlight_visibility, default_note_visibility: u.default_note_visibility,
+      hosting: hosting_json(u),
+    }
+  end
+
+  # Only for hosts and co-hosts: their reminder settings and the next few dates they're on
+  def hosting_json(user)
+    commitments = HostCommitments.new(user)
+    return unless commitments.host?
+
+    {
+      reminders: user.host_reminders, hours: user.host_reminder_hours, email: user.host_reminder_email, hour_options: User::HOST_REMINDER_HOURS,
+      groups: commitments.groups.map { |g| { slug: g.slug, title: g.title } },
+      upcoming: commitments.upcoming(to: Time.current + 3.weeks).first(6).map do |c|
+        { meeting: c.meeting.name, group: c.meeting.group.title, slug: c.meeting.group.slug, role: c.role, on: c.on.iso8601,
+          time: c.starts_at.strftime("%-I:%M %p %Z"), cover: c.cover }
+      end,
     }
   end
 end

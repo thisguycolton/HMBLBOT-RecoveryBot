@@ -49,3 +49,10 @@ on_booted do
 rescue StandardError => e
   warn "[oiaa] couldn't start the refresh: #{e.message}"
 end
+
+# Remind hosts who asked for it before their meetings (see HostReminders; there is no job runner)
+on_booted do
+  HostReminders.start_loop if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[host reminders] couldn't start: #{e.message}"
+end

@@ -33,7 +33,7 @@ class GroupPage
                  time_zone: group.time_zone, status: group.status, members_count: group.members.count },
         viewer: viewer_json.merge(is_member: !!membership&.active?, membership_status: membership&.status, role: membership&.role,
                                   can_manage: group.manageable_by?(@viewer), can_keep_records: group.records_editable_by?(@viewer), default_note_visibility: @viewer&.default_note_visibility),
-        meetings: group.meetings.ordered.map(&:as_api_json).reject { |m| m[:past] },
+        meetings: meetings(group),
         events: group.events.published.with_attached_cover.where("starts_at IS NULL OR starts_at > ?", 12.hours.ago)
                      .upcoming_first.limit(20).map(&:card_json),
         literature: literature(group),
@@ -86,7 +86,8 @@ class GroupPage
         sample: true,
         viewer: viewer_json,
         meetings: [
-          { id: "sample-1", name: "Sunrise Group", schedule_label: "Mondays, Wednesdays, Fridays, 7:00 AM MST", types: %w[O D], conference_url: "https://zoom.us/" },
+          { id: "sample-1", name: "Sunrise Group", schedule_label: "Mondays, Wednesdays, Fridays, 7:00 AM MST", types: %w[O D], conference_url: "https://zoom.us/",
+            hosts: [{ role: "host", name: "Sam R." }, { role: "co_host", name: "Alex P." }] },
           { id: "sample-2", name: "Sunrise Big Book Study", schedule_label: "Saturdays, 9:00 AM MST", types: %w[C B], conference_url: "https://zoom.us/" },
         ],
         events: [], literature: [], readings: nil, documents: [], members: nil, timeline: nil,
@@ -103,6 +104,29 @@ class GroupPage
 
   def viewer_json
     { signed_in: @viewer.present?, can_start: Group.feature_open_to?(@viewer), is_member: false }
+  end
+
+  # Its meetings still to come, each with who hosts and co-hosts it next (or now, while it's on)
+  # unless the group turned that off in its settings; a name connected to an account links to
+  # their profile for people who can see profiles
+  def meetings(group)
+    list = group.meetings.ordered
+    list = list.includes(hosts: :user, host_covers: :user) if group.show_hosts_publicly
+    profiles = User.profiles_open_to?(@viewer)
+    list.filter_map do |m|
+      json = m.as_api_json
+      next if json[:past]
+
+      date = (m.upcoming&.first || m.next_start)&.to_date if group.show_hosts_publicly && m.weekly?
+      if date
+        json[:hosts] = MeetingHost::ROLES.filter_map do |role|
+          held = m.holder_on(role, date) or next
+          { role: role, name: held.name, username: (held.user.username if profiles && held.user) }.compact
+        end
+        json[:hosts_on] = date.iso8601
+      end
+      json
+    end
   end
 
   def literature(group)
