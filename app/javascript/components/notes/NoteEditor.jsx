@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ImagePlus, Trash2, X } from "lucide-react";
+import LinkCard, { firstLink } from "./LinkCard";
+import MarkdownTextarea from "./MarkdownTextarea";
 import VisibilityPicker from "./VisibilityPicker";
+import { api } from "../groups/lib";
 import { saveNote } from "./lib";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
@@ -9,7 +12,9 @@ const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 // (book/HighlightNote.jsx): Markdown, ⌘/Ctrl+Enter saves, Esc cancels. Notes also hold
 // pictures (pick, drop or paste them) and say who sees them on your profile. `groups` are
 // the groups you can share it to; `shareTo` is the one group it goes to (a group page's
-// Timeline block). Needs a `.wb` around it for the highlight-note look.
+// Timeline block). Selecting text offers Bold, Italic, Underline, Strikethrough and Link
+// (MarkdownTextarea). The first link gets a preview card, which the X takes off. Needs a
+// `.wb` around it for the highlight-note look.
 export default function NoteEditor({
   note = null, groups = null, shareTo = null, defaultVisibility = "private", max = 10000, imagesMax = 6,
   onSaved, onCancel, onDelete, autoFocus = false, placeholder = "Write a note… Markdown works: **bold**, *italic*, - lists, > quotes, [links](https://…)",
@@ -21,10 +26,34 @@ export default function NoteEditor({
   const [removed, setRemoved] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [link, setLink] = useState(note?.link || null);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [dropped, setDropped] = useState(() => new Set()); // links whose preview was taken off (or has none)
   const textRef = useRef(null);
   const fileRef = useRef(null);
 
   useEffect(() => { if (autoFocus) textRef.current?.focus(); }, [autoFocus]);
+
+  // The first link's preview, a moment after it's typed or pasted
+  const url = firstLink(body);
+  useEffect(() => {
+    if (!url) { setLink(null); setLinkLoading(false); return undefined; }
+    if (url === link?.url || dropped.has(url)) return undefined;
+    let current = true;
+    const timer = setTimeout(async () => {
+      setLinkLoading(true);
+      try {
+        const preview = await api(`/link_preview?url=${encodeURIComponent(url)}`);
+        if (current) setLink(preview);
+      } catch {
+        if (current) { setLink(null); setDropped((d) => new Set(d).add(url)); }
+      } finally {
+        if (current) setLinkLoading(false);
+      }
+    }, 600);
+    return () => { current = false; clearTimeout(timer); };
+  }, [url, link?.url, dropped]);
+  const dropLink = () => { if (link) setDropped((d) => new Set(d).add(link.url)); setLink(null); };
 
   const previews = useMemo(() => files.map((file) => ({ file, url: URL.createObjectURL(file) })), [files]);
   useEffect(() => () => previews.forEach((p) => URL.revokeObjectURL(p.url)), [previews]);
@@ -40,14 +69,14 @@ export default function NoteEditor({
     if (room > 0 && pictures.length) setFiles((f) => [...f, ...pictures.slice(0, room)]);
   };
 
-  const reset = () => { setBody(""); setFiles([]); setRemoved([]); setError(null); setPicked(shareTo ? [shareTo] : []); setVisibility(defaultVisibility); };
+  const reset = () => { setBody(""); setLink(null); setDropped(new Set()); setFiles([]); setRemoved([]); setError(null); setPicked(shareTo ? [shareTo] : []); setVisibility(defaultVisibility); };
 
   async function save() {
     if (empty || saving) return;
     setSaving(true);
     setError(null);
     try {
-      const fields = { body, visibility, images: files };
+      const fields = { body, visibility, images: files, link_url: (url && link?.url === url ? url : "") };
       if (removed.length) fields.remove_image_ids = removed;
       if (groups || shareTo) fields.group_slugs = picked;
       const saved = await saveNote(note?.id, fields);
@@ -61,7 +90,7 @@ export default function NoteEditor({
   }
 
   const toggle = (slug) => setPicked((list) => (list.includes(slug) ? list.filter((s) => s !== slug) : [...list, slug]));
-  const cancel = () => { if (note) { setBody(note.body || ""); setRemoved([]); setFiles([]); } else reset(); onCancel?.(); };
+  const cancel = () => { if (note) { setBody(note.body || ""); setLink(note.link || null); setRemoved([]); setFiles([]); } else reset(); onCancel?.(); };
 
   return (
     <form
@@ -70,20 +99,21 @@ export default function NoteEditor({
       onDragOver={(e) => { if (e.dataTransfer?.types?.includes("Files")) e.preventDefault(); }}
       onDrop={(e) => { if (e.dataTransfer?.files?.length) { e.preventDefault(); addFiles(e.dataTransfer.files); } }}
     >
-      <textarea
+      <MarkdownTextarea
         ref={textRef}
-        className="wb-hl-note__input"
         value={body}
-        rows={note ? 5 : 3}
+        minRows={note ? 5 : 3}
         maxLength={max}
         placeholder={placeholder}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={setBody}
         onPaste={(e) => { if (e.clipboardData?.files?.length) { e.preventDefault(); addFiles(e.clipboardData.files); } }}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); save(); }
           if (e.key === "Escape" && (note || onCancel)) { e.stopPropagation(); cancel(); }
         }}
       />
+
+      {(link || linkLoading) && url && <LinkCard link={link?.url === url ? link : null} loading={linkLoading && link?.url !== url} onRemove={dropLink} />}
 
       {count > 0 && (
         <ul className="wb-note-editor__images">

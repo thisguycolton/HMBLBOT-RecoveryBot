@@ -3,13 +3,13 @@ import React from "react";
 // A small Markdown renderer for highlight notes. It builds React elements
 // directly (no HTML strings), so a note can never inject markup or scripts.
 // Supports: paragraphs, line breaks, # headings, > quotes, - / 1. lists,
-// | tables |, ``` code blocks, **bold**, *italic*, `code`, ~~strike~~ and [links](https://…).
+// | tables |, ``` code blocks, **bold**, *italic*, ++underline++, `code`, ~~strike~~ and [links](https://…).
 
 const SAFE_URL = /^(https?:\/\/|mailto:|\/(?!\/))/i;
 
 function inline(text, keyBase = "i") {
   const out = [];
-  const re = /(`[^`\n]+`)|(\*\*[^*\n]+\*\*|__[^_\n]+__)|(\*[^*\n]+\*|_[^_\n]+_)|(~~[^~\n]+~~)|(\[[^\]\n]+\]\([^)\s]+\))|(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])/g;
+  const re = /(`[^`\n]+`)|(\*\*[^*\n]+\*\*|__[^_\n]+__)|(\*[^*\n]+\*|_[^_\n]+_)|(~~[^~\n]+~~)|(\[[^\]\n]+\]\([^)\s]+\))|(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])|(\+\+[^+\n]+\+\+)/g;
   let last = 0, m, n = 0;
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index));
@@ -25,6 +25,7 @@ function inline(text, keyBase = "i") {
         ? <a key={k} href={href} target="_blank" rel="noopener noreferrer nofollow">{inline(label, k)}</a>
         : label);
     } else if (m[6]) out.push(<a key={k} href={t} target="_blank" rel="noopener noreferrer nofollow">{t}</a>);
+    else if (m[7]) out.push(<u key={k}>{inline(t.slice(2, -2), k)}</u>);
     last = m.index + t.length;
   }
   if (last < text.length) out.push(text.slice(last));

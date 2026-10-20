@@ -77,7 +77,7 @@ class ProfilePage
       notes = notes.where(created_at: ...before)
       highlights = highlights.where(created_at: ...before)
     end
-    notes = notes.includes(:groups, images_attachments: :blob, user: { avatar_attachment: :blob }).newest_first.limit(FEED_MAX)
+    notes = notes.for_feed.newest_first.limit(FEED_MAX)
     highlights = highlights.includes(chapter: :book, user: { avatar_attachment: :blob }).order(created_at: :desc, id: :desc).limit(FEED_MAX)
     (notes.map { |n| n.as_api_json(viewer: @viewer) } + highlights.map { |h| h.as_feed_json(viewer: @viewer) })
       .sort_by { |item| item[:created_at] }.reverse.first(FEED_MAX)
