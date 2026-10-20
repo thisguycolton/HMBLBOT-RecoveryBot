@@ -215,4 +215,58 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
                  response.parsed_body.dig("kit", "service_roles").map { |r| [r["key"], r["label"]] }
     assert response.parsed_body.dig("kit", "custom_service_roles")
   end
+  test "each date gets a short link: hosts land on that day's Command Center, anyone else on its chat postings" do
+    sign_in @coordinator
+    save_kit(scope: "default")
+    sign_in @host
+    get path(@other_day.id), params: { on: (@today + 1).iso8601 }, as: :json
+    assert_response :success
+    assert_equal (@today + 1).iso8601, response.parsed_body["on"]
+    assert_equal @other_day.id, response.parsed_body.dig("meeting", "id")
+    code = response.parsed_body.dig("link", "code")
+    assert_match(/\A[A-Z2-9]{6}\z/, code)
+    assert_equal "/h/#{code}", response.parsed_body.dig("link", "path")
+    post path(@other_day.id, "act"), params: { on: (@today + 1).iso8601, act: "posted", posting_id: HostChatPosting.first.id }, as: :json
+    assert_response :success
+    hosting = HostingSession.find_by!(code: code)
+    assert_equal [@other_day.id, @today + 1], [hosting.meeting_id, hosting.on]
+    assert hosting.posted.key?(HostChatPosting.first.id.to_s)
+
+    get "/h/#{code.downcase}"
+    assert_redirected_to "/groups/#{@group.slug}/host/#{@other_day.id}?on=#{(@today + 1).iso8601}"
+
+    sign_out @host
+    get "/h/#{code}"
+    assert_redirected_to "/groups/#{@group.slug}/chat/#{code}"
+    get "/h/#{code}", params: { sign_in: 1 }
+    assert_redirected_to "/users/sign_in"
+    get "/h/NOPE00"
+    assert_redirected_to "/groups/meetings"
+
+    get "/api/hosting_links/#{code}", as: :json
+    assert_response :success
+    body = response.parsed_body
+    assert body["shown"]
+    assert_not body["can_host"]
+    assert_equal ["Welcome", "7th Tradition"], body.dig("kit", "postings").map { |p| p["title"] }
+    assert body.dig("live", "posted").key?(HostChatPosting.first.id.to_s)
+    assert_not body["live"].key?("log")
+    assert_not body["live"].key?("milestones")
+
+    @group.hosting_kits.first.update!(public_postings: false)
+    get "/api/hosting_links/#{code}", as: :json
+    assert_not response.parsed_body["shown"]
+    assert_empty response.parsed_body.dig("kit", "postings")
+    assert_nil response.parsed_body["live"]
+
+    get "/api/hosting_links/NOPE00", as: :json
+    assert_response :not_found
+  end
+
+  test "host coordinators keep the chat postings to hosts" do
+    sign_in @coordinator
+    put path(@meeting.id, "kit"), params: { kit: { scope: "meeting", public_postings: false, postings: [] } }, as: :json
+    assert_response :success
+    assert_equal false, response.parsed_body.dig("link", "public_postings")
+  end
 end

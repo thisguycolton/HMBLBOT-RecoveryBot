@@ -24,6 +24,7 @@ import FindMeeting from "../components/groups/FindMeeting";
 import IntergroupPage from "../components/groups/page/IntergroupPage";
 import GroupPageEditor from "../components/groups/page/GroupPageEditor";
 import CommandCenter from "../components/groups/hosting/CommandCenter";
+import GuestPostings from "../components/groups/hosting/GuestPostings";
 import HostingIndex from "../components/groups/hosting/HostingIndex";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
@@ -48,6 +49,8 @@ const router = createBrowserRouter(
     { path: "/:slug/page/edit", element: <div className="ev-root w-full"><GroupPageEditor /></div> },
     // The Hosting Command Center takes the whole window too
     { path: "/:slug/host/:meetingId", element: <CommandCenter /> },
+    // What a hosting short link (/h/CODE) shows anyone else: the chat postings
+    { path: "/:slug/chat/:code", element: <GuestPostings /> },
     // Group admins and members with a role get the group's dashboard; members the plain tab
     { path: "/:slug/conscience/*", element: <ConscienceRoute fallback={<Shell><GroupPage tab="conscience" /></Shell>} /> },
     {

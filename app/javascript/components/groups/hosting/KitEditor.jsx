@@ -25,6 +25,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
   const [scope, setScope] = useState(kit.own || !editor.has_default ? "meeting" : "default");
   const [scriptId, setScriptId] = useState(editor.script_document_id ? String(editor.script_document_id) : "");
   const [anchor, setAnchor] = useState(kit.activity_anchor || "");
+  const [publicPostings, setPublicPostings] = useState(center.link?.public_postings !== false);
   const [postings, setPostings] = useState(() => kit.postings.map((p) => ({ ...p, key: `p${p.id}` })));
   const [readings, setReadings] = useState(kit.readings);
   // Only sent when changed, so a kit keeps following the usual roles until someone edits them
@@ -53,9 +54,9 @@ export default function KitEditor({ center, onClose, onSaved }) {
     setSaving(true);
     setError(null);
     try {
-      const saved = await api(`/groups/${group.slug}/hosting/${meeting.id}/kit`, {
+      const saved = await api(`/groups/${group.slug}/hosting/${meeting.id}/kit?on=${center.on}`, {
         method: "PUT",
-        body: { kit: { scope, script_document_id: scriptId || null, activity_anchor: anchor || null, readings, postings: postings.map(({ id, title, icon, minute, body }) => ({ id, title, icon, minute, body })),
+        body: { kit: { scope, script_document_id: scriptId || null, activity_anchor: anchor || null, public_postings: publicPostings, readings, postings: postings.map(({ id, title, icon, minute, body }) => ({ id, title, icon, minute, body })),
           ...(rolesEdited ? { service_roles: roles.map(({ key, label }) => ({ key, label })) } : {}) } },
       });
       onSaved(saved);
@@ -69,7 +70,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
   const reset = async () => {
     if (!window.confirm(`Take ${meeting.name}'s own script, postings and readings away? It goes back to the group's default.`)) return;
     try {
-      onSaved(await api(`/groups/${group.slug}/hosting/${meeting.id}/kit`, { method: "DELETE" }));
+      onSaved(await api(`/groups/${group.slug}/hosting/${meeting.id}/kit?on=${center.on}`, { method: "DELETE" }));
       onClose();
     } catch (e) { setError(e.message); }
   };
@@ -114,6 +115,10 @@ export default function KitEditor({ center, onClose, onSaved }) {
             <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">
               Pasted into the Zoom chat as written. These fill themselves in: {PLACEHOLDERS.map(([k, what], i) => <span key={k}>{i > 0 && ", "}<code className="rounded bg-neutral-200 px-1 dark:bg-neutral-800">{`{{${k}}}`}</code> ({what})</span>)}, and the service roles below, like <code className="rounded bg-neutral-200 px-1 dark:bg-neutral-800">{roleToken("hiw")}</code>.
             </p>
+            <label className="mb-2 flex items-start gap-2 rounded-xl bg-white p-3 text-sm shadow-panel dark:bg-neutral-900">
+              <input type="checkbox" className="mt-0.5" checked={publicPostings} onChange={(e) => setPublicPostings(e.target.checked)} />
+              <span>Anyone with the hosts' share link can see and copy these, without an account<span className="block text-xs text-slate-500 dark:text-neutral-400">For a co-host who doesn't sign in. The script, readings and milestones stay with the hosts.</span></span>
+            </label>
             {postings.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-slate-500 shadow-panel dark:bg-neutral-900 dark:text-neutral-400">No postings yet.</p>}
             <ul className="space-y-2">
               {postings.map((p, i) => (

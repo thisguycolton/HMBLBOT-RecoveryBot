@@ -38,6 +38,7 @@ Rails.application.routes.draw do
             resources :court_verifications, only: :create
 
   resources :text_reports, only: :create
+  get "hosting_links/:code", to: "hosting_links#show"
   resources :site_notices, only: :index
   resource :profile, only: %i[show update destroy]
   get "oiaa/search", to: "oiaa#search"
@@ -235,6 +236,8 @@ end
   get 'game/world', to: 'game#world' # generated-world overview for tuning (?seed=N)
   get 'topics/by_category', to: 'topics#by_category'
   # Groups: a React app (app/javascript/entrypoints/groups.jsx); invite links join on the server
+  # A meeting date's short link for its hosts (and the chat postings, for anyone)
+  get "/h/:code", to: "hosting_links#show", as: :hosting_link
   get "/groups/join/:token", to: "groups#join", as: :join_group
   get "/groups/:slug/ask", to: "groups#ask", as: :ask_to_join_group
   get "/groups", to: "groups#app", as: :groups

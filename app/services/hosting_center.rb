@@ -8,11 +8,12 @@ class HostingCenter
 
   attr_reader :meeting, :on
 
-  def initialize(group, meeting, viewer, now: Time.current)
+  # `on`: a date the meeting runs (from a short link), instead of picking one
+  def initialize(group, meeting, viewer, now: Time.current, on: nil)
     @group = group
     @viewer = viewer
     @now = now
-    @meeting, @on, @starts_at, @ends_at = occurrence(meeting)
+    @meeting, @on, @starts_at, @ends_at = (on && occurrence_on(meeting, on)) || occurrence(meeting)
   end
 
   def kit = @kit ||= HostingKit.for(@meeting)
@@ -38,6 +39,7 @@ class HostingCenter
       my_role: [["host", host], ["co_host", co_host]].find { |_, h| h&.user_id && h.user_id == @viewer&.id }&.first,
       court_url: "/court_verifications/new?#{{ group: @group.slug, meeting: @meeting.id, host: (host || co_host)&.name }.compact.to_query}",
       kit: kit_json, can_edit: can_edit?, live: session.live_json(@viewer, @now), activity_options: activity_options,
+      link: { code: session.code, path: session.link_path, public_postings: kit.nil? || kit.public_postings },
     }
     json[:editor] = editor_json if can_edit?
     json
@@ -61,7 +63,33 @@ class HostingCenter
          .sort_by { |m| m[:next_start] || "9999" }
   end
 
+  # The short link's page for people without an account: the meeting, and its chat postings filled
+  # in for the day (HostingSession#public_json), or just the meeting when the kit keeps them to hosts
+  def public_json
+    host = @meeting.holder_on("host", @on)
+    co_host = @meeting.holder_on("co_host", @on)
+    shown = kit.nil? || kit.public_postings
+    {
+      group: { slug: @group.slug, title: @group.title, logo_url: @group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.logo, only_path: true) : nil },
+      meeting: @meeting.as_api_json.slice(:id, :name, :schedule_label, :time_zone, :conference_url),
+      on: @on.iso8601, starts_at: @starts_at&.iso8601, hosts: { host: host&.name, co_host: co_host&.name },
+      shown: shown, can_host: @group.can_host?(@viewer), code: session.code,
+      kit: { postings: shown && kit ? kit.postings.map(&:as_api_json) : [], service_roles: kit ? kit.roles : HostingKit::DEFAULT_SERVICE_ROLES },
+      live: shown ? session.public_json(@now) : nil,
+    }
+  end
+
   private
+
+  # The meeting on a given date: whichever day of the series runs then (nil if none does)
+  def occurrence_on(meeting, on)
+    rows = meeting.weekly? ? meeting.series.to_a : [meeting]
+    rows.each do |m|
+      start = m.start_on(on)
+      return [m, on, start, start + m.duration_minutes.minutes] if start
+    end
+    nil
+  end
 
   # The day of the series to show: the one on now (or ended within STICKY), or the soonest coming
   def occurrence(meeting)

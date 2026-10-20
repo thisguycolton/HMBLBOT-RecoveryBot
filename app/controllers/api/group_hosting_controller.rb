@@ -45,7 +45,7 @@ class Api::GroupHostingController < ApplicationController
   end
 
   # PUT /api/groups/:group_slug/hosting/:meeting_id/kit
-  # { kit: { scope: "meeting" | "default", script_document_id, activity_anchor, service_roles: [{ key, label }], readings: [...], postings: [{ id, title, icon, minute, body }] } }
+  # { kit: { scope: "meeting" | "default", script_document_id, activity_anchor, public_postings, service_roles: [{ key, label }], readings: [...], postings: [{ id, title, icon, minute, body }] } }
   def kit
     attrs = params.require(:kit)
     kit = if attrs[:scope] == "default"
@@ -56,12 +56,13 @@ class Api::GroupHostingController < ApplicationController
     HostingKit.transaction do
       kit.script_document_id = attrs[:script_document_id].presence
       kit.activity_anchor = attrs[:activity_anchor] if attrs.key?(:activity_anchor)
+      kit.public_postings = ActiveModel::Type::Boolean.new.cast(attrs[:public_postings]) if attrs.key?(:public_postings)
       kit.service_roles = attrs.permit(service_roles: %i[key label]).fetch(:service_roles, []).map(&:to_h) if attrs.key?(:service_roles)
       kit.readings = attrs.permit(readings: %i[book_slug chapter_slug title book_title url]).fetch(:readings, []).map(&:to_h)
       kit.save!
       sync_postings(kit, attrs.permit(postings: %i[id title icon minute body]).fetch(:postings, []))
     end
-    render json: HostingCenter.new(@group, @meeting, current_user).as_json
+    render json: center.as_json
   rescue ActiveRecord::RecordInvalid => e
     render_errors(e.record)
   end
@@ -69,7 +70,7 @@ class Api::GroupHostingController < ApplicationController
   # DELETE /api/groups/:group_slug/hosting/:meeting_id/kit: this meeting goes back to the group's default
   def reset_kit
     @group.hosting_kits.where(meeting_id: @meeting.series.select(:id)).destroy_all
-    render json: HostingCenter.new(@group, @meeting, current_user).as_json
+    render json: center.as_json
   end
 
   private
@@ -90,7 +91,14 @@ class Api::GroupHostingController < ApplicationController
     @meeting = @group.meetings.find(params[:meeting_id] || params[:id])
   end
 
-  def center = @center ||= HostingCenter.new(@group, @meeting, current_user)
+  def center = @center ||= HostingCenter.new(@group, @meeting, current_user, on: requested_on)
+
+  # ?on=2026-10-20: the date a short link opened (/h/CODE), so both hosts stay on it
+  def requested_on
+    Date.iso8601(params[:on].to_s) if params[:on].present?
+  rescue Date::Error
+    nil
+  end
   def hosting_session = center.session
 
   # A topic from the activity's Topicificator set: by its number, or at random among the ones not

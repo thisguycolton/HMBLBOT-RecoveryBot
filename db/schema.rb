@@ -470,6 +470,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_200000) do
     t.jsonb "readings", default: [], null: false
     t.text "activity_anchor"
     t.jsonb "service_roles"
+    t.boolean "public_postings", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["group_id"], name: "index_hosting_kits_on_group_id"
@@ -504,8 +505,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_200000) do
     t.datetime "timer_started_at"
     t.integer "timer_banked", default: 0, null: false
     t.integer "version", default: 0, null: false
+    t.string "code", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_hosting_sessions_on_code", unique: true
     t.index ["meeting_id", "on"], name: "index_hosting_sessions_on_meeting_id_and_on", unique: true
     t.index ["meeting_id"], name: "index_hosting_sessions_on_meeting_id"
   end

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, BookOpen, Check, ChevronRight, Clipboard, ClipboardCheck, ExternalLink, Gavel, Link2, Maximize2,
   MessageSquare, Minus, Moon, Pause, Play, Plus, RotateCcw, ScrollText, Settings, Sun, Undo2, UserCheck, Users, Video, X,
@@ -26,7 +26,7 @@ const store = {
 };
 
 // The site's own light/dark switch (Navbar.jsx keeps it in localStorage "theme")
-function useDarkMode() {
+export function useDarkMode() {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const toggle = () => {
     const next = !dark;
@@ -37,7 +37,7 @@ function useDarkMode() {
   return [dark, toggle];
 }
 
-function useNow(ms) {
+export function useNow(ms) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), ms);
@@ -47,7 +47,7 @@ function useNow(ms) {
 }
 
 // A time on the viewer's clock, or in the meeting's zone when one is given
-const timeOf = (iso, timeZone) => (iso ? new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", ...(timeZone ? { timeZone, timeZoneName: "short" } : {}) }) : "");
+export const timeOf = (iso, timeZone) => (iso ? new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", ...(timeZone ? { timeZone, timeZoneName: "short" } : {}) }) : "");
 const label = "!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
 const iconButton = "inline-grid size-9 shrink-0 place-items-center rounded-xl !bg-transparent text-slate-600 hover:!bg-neutral-100 disabled:opacity-40 dark:text-neutral-300 dark:hover:!bg-neutral-800";
 
@@ -57,6 +57,11 @@ const iconButton = "inline-grid size-9 shrink-0 place-items-center rounded-xl !b
 // are, the timer and what's been posted are shared: the page checks in every few seconds.
 export default function CommandCenter() {
   const { slug, meetingId } = useParams();
+  // ?on=: the date a short link (/h/CODE) opened, so both hosts stay on that day
+  const [params] = useSearchParams();
+  const on = /^\d{4}-\d{2}-\d{2}$/.test(params.get("on") || "") ? params.get("on") : null;
+  const base = `/groups/${slug}/hosting/${meetingId}`;
+  const q = on ? `?on=${on}` : "";
   const [center, setCenter] = useState(null);
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
@@ -79,7 +84,7 @@ export default function CommandCenter() {
     });
   }, []);
 
-  const load = useCallback(() => api(`/groups/${slug}/hosting/${meetingId}`).then((c) => { setCenter(c); applyLive(c.live); }).catch((e) => setError(e)), [slug, meetingId, applyLive]);
+  const load = useCallback(() => api(`${base}${q}`).then((c) => { setCenter(c); applyLive(c.live); }).catch((e) => setError(e)), [base, q, applyLive]);
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
@@ -100,8 +105,8 @@ export default function CommandCenter() {
     : section ? `On ${section.title}` : "Here";
 
   const ping = useCallback(() => {
-    api(`/groups/${slug}/hosting/${meetingId}/ping`, { method: "POST", body: { activity, section_index: index } }).then(applyLive).catch(() => {});
-  }, [slug, meetingId, activity, index, applyLive]);
+    api(`${base}/ping${q}`, { method: "POST", body: { activity, section_index: index } }).then(applyLive).catch(() => {});
+  }, [base, q, activity, index, applyLive]);
   useEffect(() => {
     if (!center) return undefined;
     ping();
@@ -112,7 +117,7 @@ export default function CommandCenter() {
   const act = async (what, extra = {}) => {
     setActionError(null);
     try {
-      applyLive(await api(`/groups/${slug}/hosting/${meetingId}/act`, { method: "POST", body: { act: what, ...extra } }));
+      applyLive(await api(`${base}/act${q}`, { method: "POST", body: { act: what, ...extra } }));
     } catch (e) { setActionError(e.message); }
   };
   const goto = (i) => {
@@ -173,7 +178,7 @@ export default function CommandCenter() {
   );
   const actions = <QuickActions center={center} />;
   const chat = <ChatPostings center={center} live={live} elapsed={elapsed} act={act} />;
-  const people = <People live={live} now={now} act={act} />;
+  const people = <People center={center} live={live} now={now} act={act} />;
 
   return (
     <div className={`hc-root flex h-dvh flex-col bg-neutral-50 !font-sans text-slate-900 dark:bg-neutral-950 dark:text-white ${dark ? "doc-dark" : ""}`}>
@@ -446,7 +451,7 @@ function QuickActions({ center }) {
 
 // The postings to paste into the Zoom chat, in the order they go out. The next one due (by the
 // meeting timer) stands out; a copied one says who copied it, for both hosts.
-function ChatPostings({ center, live, elapsed, act }) {
+export function ChatPostings({ center, live, elapsed, act }) {
   const [justCopied, setJustCopied] = useState(null);
   const [openId, setOpenId] = useState(null);
   const postings = center.kit.postings;
@@ -455,7 +460,7 @@ function ChatPostings({ center, live, elapsed, act }) {
     await copyText(fillPosting(p.body, center, live));
     setJustCopied(p.id);
     setTimeout(() => setJustCopied((id) => (id === p.id ? null : id)), 1800);
-    act("posted", { posting_id: p.id });
+    act?.("posted", { posting_id: p.id });
   };
   return (
     <section>
@@ -488,7 +493,7 @@ function ChatPostings({ center, live, elapsed, act }) {
                 {open && (
                   <div className="border-t border-neutral-100 px-3 pb-3 pt-2 dark:border-neutral-800">
                     <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-700 dark:text-neutral-200">{fillPosting(p.body, center, live)}</pre>
-                    {posted && <button type="button" className="mt-2 !bg-transparent p-0 text-xs font-medium text-slate-500 hover:underline dark:text-neutral-400" onClick={() => act("unposted", { posting_id: p.id })}>Mark as not posted</button>}
+                    {posted && act && <button type="button" className="mt-2 !bg-transparent p-0 text-xs font-medium text-slate-500 hover:underline dark:text-neutral-400" onClick={() => act("unposted", { posting_id: p.id })}>Mark as not posted</button>}
                   </div>
                 )}
               </li>
@@ -500,10 +505,32 @@ function ChatPostings({ center, live, elapsed, act }) {
   );
 }
 
+// This date's short link, for the co-host: it opens the same day's Command Center for anyone who
+// can host, and the chat postings (no account needed) for anyone else, unless the kit keeps them
+// to hosts
+function ShareLink({ link }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}${link.path}`;
+  const copy = () => copyText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  return (
+    <div className="rounded-xl bg-white p-3 shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
+      <h2 className={`${label} mb-1.5 flex items-center gap-1.5`}><Link2 className="size-3.5" /> Share with your co-host</h2>
+      <div className="flex items-center gap-2">
+        <code className="min-w-0 flex-1 truncate font-mono text-sm font-semibold tracking-wide" title={url}>{url.replace(/^https?:\/\//, "")}</code>
+        <button type="button" className={`${quietButton} !px-3`} onClick={copy}>{copied ? <><ClipboardCheck className="size-4" /> Copied</> : <><Clipboard className="size-4" /> Copy</>}</button>
+      </div>
+      <p className="mt-1.5 text-xs text-slate-500 dark:text-neutral-400">
+        Just for this meeting's date. {link.public_postings ? "Hosts get this Command Center. Anyone without an account can still see and copy the chat postings." : "It opens this Command Center for hosts. The chat postings are kept to hosts."}
+      </p>
+    </div>
+  );
+}
+
 // Who has the Command Center open and what they're on, who's celebrating, and what the hosts have done
-function People({ live, now, act }) {
+function People({ center, live, now, act }) {
   return (
     <section className="space-y-5">
+      <ShareLink link={center.link} />
       <div>
         <h2 className={`${label} mb-2`}>Hosts here</h2>
         <ul className="space-y-2">

@@ -13,11 +13,27 @@ class HostingSession < ApplicationRecord
   }.freeze
   MAX_TOPICS = 20
   MAX_MILESTONES = 40
+  # The short link's code: no 0/O, 1/I/L to mix up when it's read out
+  CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789".chars.freeze
+  CODE_LENGTH = 6
 
   belongs_to :meeting
   has_many :presences, class_name: "HostingPresence", dependent: :delete_all
 
   validates :on, presence: true
+  before_validation(on: :create) { self.code ||= self.class.new_code }
+
+  def self.new_code
+    loop do
+      code = Array.new(CODE_LENGTH) { CODE_CHARS.sample(random: SecureRandom) }.join
+      return code unless exists?(code: code)
+    end
+  end
+
+  # From the short link, however it was typed
+  def self.find_by_code(code) = find_by(code: code.to_s.upcase.gsub(/[^A-Z0-9]/, "").presence)
+
+  def link_path = "/h/#{code}"
 
   # Seconds on the meeting timer
   def elapsed(now = Time.current) = timer_banked + (timer_started_at ? (now - timer_started_at).to_i : 0)
@@ -141,5 +157,11 @@ class HostingSession < ApplicationRecord
       timer: { running: timer_running?, elapsed: elapsed(now) }, server_now: now.iso8601(3),
       presences: presences.includes(:user).select { |p| p.last_seen_at > HostingPresence::AWAY.ago }.sort_by { |p| p.created_at }.map { |p| p.as_api_json(viewer) },
     }
+  end
+
+  # What the short link shows people without an account, next to the chat postings: which went
+  # out, the names that fill them in and the timer, but not the hosts' log or who's celebrating
+  def public_json(now = Time.current)
+    { version: version, posted: posted, activity: activity, service: service, timer: { running: timer_running?, elapsed: elapsed(now) }, server_now: now.iso8601(3) }
   end
 end

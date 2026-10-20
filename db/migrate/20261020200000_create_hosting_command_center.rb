@@ -15,6 +15,8 @@ class CreateHostingCommandCenter < ActiveRecord::Migration[8.0]
       # The service the hosts line people up for ([{ key, label }]; nil: the usual ones), named in
       # the script as {{ service_KEY }}
       t.jsonb :service_roles
+      # Whether the short link shows the chat postings to people without an account
+      t.boolean :public_postings, null: false, default: true
       t.timestamps
     end
     add_index :hosting_kits, :group_id, unique: true, where: "meeting_id IS NULL", name: "index_hosting_kits_one_default"
@@ -49,9 +51,12 @@ class CreateHostingCommandCenter < ActiveRecord::Migration[8.0]
       t.datetime :timer_started_at
       t.integer :timer_banked, null: false, default: 0
       t.integer :version, null: false, default: 0
+      # The short link the hosts share for this date (/h/CODE)
+      t.string :code, null: false
       t.timestamps
     end
     add_index :hosting_sessions, %i[meeting_id on], unique: true
+    add_index :hosting_sessions, :code, unique: true
 
     # Who has the Command Center open, and what they last did
     create_table :hosting_presences do |t|
