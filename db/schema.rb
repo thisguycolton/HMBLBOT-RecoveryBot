@@ -468,6 +468,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_200000) do
     t.bigint "meeting_id"
     t.bigint "script_document_id"
     t.jsonb "readings", default: [], null: false
+    t.text "activity_anchor"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["group_id"], name: "index_hosting_kits_on_group_id"
@@ -496,6 +497,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_200000) do
     t.jsonb "completed", default: [], null: false
     t.jsonb "posted", default: {}, null: false
     t.jsonb "log", default: [], null: false
+    t.jsonb "activity"
     t.datetime "timer_started_at"
     t.integer "timer_banked", default: 0, null: false
     t.integer "version", default: 0, null: false

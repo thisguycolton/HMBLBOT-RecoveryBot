@@ -11,6 +11,7 @@ class HostingKit < ApplicationRecord
   has_many :postings, -> { order(:minute, :position, :id) }, class_name: "HostChatPosting", dependent: :destroy, inverse_of: :hosting_kit
 
   before_validation :tidy_readings
+  before_validation { self.activity_anchor = activity_anchor.to_s.squish.first(500).presence }
 
   validates :meeting_id, uniqueness: true, allow_nil: true
   validate { errors.add(:meeting, "isn't one of this group's") if meeting && meeting.group_id != group_id }

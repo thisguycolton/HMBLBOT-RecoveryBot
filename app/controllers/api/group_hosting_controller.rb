@@ -27,7 +27,7 @@ class Api::GroupHostingController < ApplicationController
     render json: hosting_session.live_json(current_user)
   end
 
-  # POST /api/groups/:group_slug/hosting/:meeting_id/act { act, index, label, posting_id }
+  # POST /api/groups/:group_slug/hosting/:meeting_id/act { act, index, label, posting_id, activity, number }
   def act
     act = params[:act].to_s
     return render(json: { error: "That isn't something the Command Center does." }, status: :unprocessable_entity) unless HostingSession::ACTS.include?(act)
@@ -37,12 +37,14 @@ class Api::GroupHostingController < ApplicationController
       return render(json: { error: "Not found." }, status: :not_found) unless posting
     end
 
-    hosting_session.act!(act, user: current_user, index: params[:index], label: params[:label], posting: posting)
+    pick = params[:activity].respond_to?(:permit) ? params[:activity].permit(:kind, :title, :note, :book_slug, :chapter_slug, :book_title, :topic_set_id, :topic_set_name).to_h : nil
+    hosting_session.act!(act, user: current_user, index: params[:index], label: params[:label], posting: posting, pick: pick,
+                              topic: (draw_topic(params[:number]) if act == "draw_topic"))
     render json: hosting_session.live_json(current_user)
   end
 
   # PUT /api/groups/:group_slug/hosting/:meeting_id/kit
-  # { kit: { scope: "meeting" | "default", script_document_id, readings: [...], postings: [{ id, title, icon, minute, body }] } }
+  # { kit: { scope: "meeting" | "default", script_document_id, activity_anchor, readings: [...], postings: [{ id, title, icon, minute, body }] } }
   def kit
     attrs = params.require(:kit)
     kit = if attrs[:scope] == "default"
@@ -52,6 +54,7 @@ class Api::GroupHostingController < ApplicationController
           end
     HostingKit.transaction do
       kit.script_document_id = attrs[:script_document_id].presence
+      kit.activity_anchor = attrs[:activity_anchor] if attrs.key?(:activity_anchor)
       kit.readings = attrs.permit(readings: %i[book_slug chapter_slug title book_title url]).fetch(:readings, []).map(&:to_h)
       kit.save!
       sync_postings(kit, attrs.permit(postings: %i[id title icon minute body]).fetch(:postings, []))
@@ -87,6 +90,17 @@ class Api::GroupHostingController < ApplicationController
 
   def center = @center ||= HostingCenter.new(@group, @meeting, current_user)
   def hosting_session = center.session
+
+  # A topic from the activity's Topicificator set: by its number, or at random among the ones not
+  # drawn yet today
+  def draw_topic(number)
+    activity = hosting_session.activity || {}
+    topics = Topic.where(topic_set_id: activity["topic_set_id"])
+    return topics.find_by(searchable_number: number.to_s.strip) if number.present?
+
+    drawn = Array(activity["topics"]).map { |t| t["id"] }
+    topics.where.not(id: drawn).order(Arel.sql("RANDOM()")).first || topics.order(Arel.sql("RANDOM()")).first
+  end
 
   # The postings in the order given: kept by id, new ones added, the ones left out removed
   def sync_postings(kit, list)

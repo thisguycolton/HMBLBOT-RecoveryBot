@@ -2,32 +2,85 @@
 // chat postings filled in and copied, and library chapters as HTML for sharing on screen.
 import { markdownToHtml } from "../../book/Markdown";
 
-// The script document as sections, cut at its top level of headings (h1, else h2, else h3).
-// Text before the first heading is its own section. No headings: one section, the whole script.
-export async function scriptSections(script) {
+const squish = (text) => (text || "").replace(/\s+/g, " ").trim();
+const isHeading = (node) => /^H[1-6]$/.test(node.tagName || "");
+
+// A paragraph that is only bold text, short, like "(Top of the hour)": a script's time cues
+const isCue = (node) => {
+  const text = squish(node.textContent);
+  return node.tagName === "P" && text.length > 0 && text.length <= 80 &&
+    [...node.childNodes].every((n) => (n.nodeType === 3 && !n.textContent.trim()) || /^(STRONG|B)$/.test(n.tagName || ""));
+};
+const cueTitle = (node) => {
+  const text = squish(node.textContent).replace(/^\((.*)\)$/, "$1").replace(/^\*+|\*+$/g, "").trim();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+// Where the day's reading or activity goes when nobody said: the line most formats have there
+export const AUTO_ANCHOR = /you choose the format|reading\s*\/\s*activity|speaker,\s*topic/i;
+export const ACTIVITY_TITLE = "Reading / activity";
+
+// The script's top-level blocks (paragraphs, headings, lists...) as DOM nodes
+async function scriptNodes(script) {
   if (!script?.body?.trim()) return [];
   const html = script.body_format === "markdown" ? await markdownToHtml(script.body) : script.body;
   const body = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html").body.firstChild;
-  const nodes = [...body.childNodes];
-  const level = [1, 2, 3].find((n) => nodes.some((el) => el.tagName === `H${n}`));
-  if (!level) return [{ title: script.title, html }];
+  return [...body.childNodes].filter((n) => n.nodeType === 1 || n.textContent.trim());
+}
+
+// The script's paragraphs, for picking which one the reading / activity follows
+export async function scriptParagraphs(script) {
+  return (await scriptNodes(script)).map((n) => squish(n.textContent)).filter((t) => t.length > 0);
+}
+
+const matchesAnchor = (node, anchor) => {
+  const text = squish(node.textContent);
+  if (!text) return false;
+  return anchor ? text.startsWith(anchor.slice(0, 160)) : AUTO_ANCHOR.test(text);
+};
+
+// The script document as sections. It is cut at its headings (the top level with two or more:
+// h1, else h2, else h3), or failing that at its bold time cues ("(Top of the hour)"); with
+// neither it is one section. The day's reading / activity gets a section of its own, right after
+// the paragraph `anchor` begins (by itself: the "You choose the format!" line; "none": no spot).
+export async function scriptSections(script, anchor = null) {
+  const nodes = await scriptNodes(script);
+  if (!nodes.length) return [];
+  const level = [1, 2, 3].find((n) => nodes.filter((el) => el.tagName === `H${n}`).length >= 2);
+  const breaks = level ? (node) => node.tagName === `H${level}` : nodes.filter(isCue).length >= 2 ? isCue : () => false;
+  const titleOf = (node) => (level ? squish(node.textContent) || "Untitled" : cueTitle(node));
+  const spot = anchor === "none" ? null : nodes.find((n) => !breaks(n) && matchesAnchor(n, anchor));
 
   const sections = [];
   let current = null;
+  let lastTitle = script.title;
   for (const node of nodes) {
-    if (node.tagName === `H${level}`) {
-      current = { title: node.textContent.trim() || "Untitled", parts: [] };
+    if (breaks(node)) {
+      lastTitle = titleOf(node);
+      current = { title: lastTitle, parts: [] };
       sections.push(current);
       continue;
     }
-    if (!current) {
-      if (!node.textContent.trim() && node.nodeType !== 1) continue;
-      current = { title: "Before we begin", parts: [] };
+    if (!current || current.activity) {
+      current = { title: current?.activity ? `${lastTitle} (continued)` : sections.length ? lastTitle : "Before we begin", parts: [] };
       sections.push(current);
     }
-    current.parts.push(node.nodeType === 1 ? node.outerHTML : node.textContent);
+    current.parts.push(node.outerHTML || node.textContent);
+    if (node === spot) {
+      current = { title: ACTIVITY_TITLE, parts: [], activity: true };
+      sections.push(current);
+    }
   }
-  return sections.map(({ title, parts }) => ({ title, html: parts.join("") }));
+  // a section that is only a heading (the document's title above the first cue) joins the next one
+  const merged = [];
+  let carry = [];
+  for (const sec of sections) {
+    const onlyHeadings = !sec.activity && sec.parts.length > 0 && sec.parts.every((p) => /^<h[1-6][\s>]/i.test(p));
+    if (onlyHeadings && sec !== sections[sections.length - 1]) { carry = carry.concat(sec.parts); continue; }
+    merged.push({ ...sec, parts: carry.concat(sec.parts) });
+    carry = [];
+  }
+  return merged.map(({ title, parts, activity }) => ({ title, html: parts.join(""), ...(activity ? { activity: true } : {}) }));
 }
 
 // "{{meeting}}" and friends in a chat posting, filled in for this meeting and date
@@ -38,9 +91,22 @@ export const PLACEHOLDERS = [
   ["host", "the host's name"],
   ["co_host", "the co-host's name"],
   ["zoom_link", "the meeting's Zoom link"],
+  ["activity", "the day's reading or activity"],
 ];
 
-export function fillPosting(body, center) {
+// "Daily Reflections: October 20", "Topic: Gratitude", "Speaker: Kim R."
+export function activityLabel(activity) {
+  if (!activity) return "";
+  if (activity.kind === "topics") {
+    const last = activity.topics?.[activity.topics.length - 1];
+    return last ? `Topic: ${last.title}` : activity.topic_set_name || "Topicificator";
+  }
+  const kind = { reading: "", daily: "", speaker: "Speaker", meditation: "Meditation", other: "" }[activity.kind] ?? "";
+  const title = [activity.book_title, activity.title].filter(Boolean).join(": ");
+  return kind ? (activity.title ? `${kind}: ${activity.title}` : kind) : title || "Reading / activity";
+}
+
+export function fillPosting(body, center, activity = null) {
   const date = center?.on ? new Date(`${center.on}T12:00:00`).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "";
   const values = {
     meeting: center?.meeting?.name || "",
@@ -49,6 +115,7 @@ export function fillPosting(body, center) {
     host: center?.hosts?.host || "",
     co_host: center?.hosts?.co_host || "",
     zoom_link: center?.meeting?.conference_url || "",
+    activity: activityLabel(activity),
   };
   return (body || "").replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (all, key) => (key in values ? values[key] : all));
 }

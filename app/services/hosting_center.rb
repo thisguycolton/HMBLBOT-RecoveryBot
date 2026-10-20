@@ -37,7 +37,7 @@ class HostingCenter
       hosts: { host: host&.name, co_host: co_host&.name },
       my_role: [["host", host], ["co_host", co_host]].find { |_, h| h&.user_id && h.user_id == @viewer&.id }&.first,
       court_url: "/court_verifications/new?#{{ group: @group.slug, meeting: @meeting.id, host: (host || co_host)&.name }.compact.to_query}",
-      kit: kit_json, can_edit: can_edit?, live: session.live_json(@viewer, @now),
+      kit: kit_json, can_edit: can_edit?, live: session.live_json(@viewer, @now), activity_options: activity_options,
     }
     json[:editor] = editor_json if can_edit?
     json
@@ -82,7 +82,20 @@ class HostingCenter
       script_hidden: !!script && !visible,
       postings: kit ? kit.postings.map(&:as_api_json) : [],
       readings: kit ? kit.readings : [],
+      activity_anchor: kit&.activity_anchor,
     }
+  end
+
+  # What the hosts pick the day's reading or activity from: the page for this date in each daily
+  # book ("october-20" in Daily Reflections, The Language of Letting Go...), the group's literature
+  # (or the whole library when it has none), and the Topicificator's topic sets
+  def activity_options
+    slug = "#{Date::MONTHNAMES[@on.month].downcase}-#{@on.day}"
+    daily = Chapter.joins(:book).merge(Book.visible_to(@viewer)).where(slug: slug).includes(:book).order("books.title")
+                   .map { |c| { book_slug: c.book.slug, book_title: c.book.title, chapter_slug: c.slug, title: c.title } }
+    books = @group.books.merge(Book.visible_to(@viewer)).order(:title).to_a
+    books = Book.visible_to(@viewer).order(:title).to_a if books.empty?
+    { daily: daily, books: books.map { |b| { slug: b.slug, title: b.title } }, topic_sets: TopicSet.order(:name).map { |t| { id: t.id, name: t.name } } }
   end
 
   # What a host coordinator picks from: documents hosts can read, and the group's literature

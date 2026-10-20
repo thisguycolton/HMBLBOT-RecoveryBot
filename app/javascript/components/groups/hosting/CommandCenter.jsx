@@ -10,7 +10,8 @@ import GroupLogo from "../GroupLogo";
 import LucideIcon from "../../ui/LucideIcon";
 import { ErrorNote, Loading, Message, primaryButton, quietButton } from "../ui";
 import KitEditor from "./KitEditor";
-import { chapterHtml, copyText, fillPosting, mmss, readerHref, scriptSections } from "./lib";
+import ActivityPanel, { ChapterText, activityIcon, shareReading } from "./Activity";
+import { ACTIVITY_TITLE, activityLabel, copyText, fillPosting, mmss, scriptSections } from "./lib";
 import "./hosting.css";
 
 const PING_MS = 3000;
@@ -61,7 +62,7 @@ export default function CommandCenter() {
   const [live, setLive] = useState(null);
   const receivedAt = useRef(Date.now());
   const [sections, setSections] = useState([]);
-  const [reading, setReading] = useState(null); // a kit reading open in the middle
+  const [reading, setReading] = useState(null); // a kit reading open in the middle, or "activity"
   const [panel, setPanel] = useState("script"); // on a phone: script | chat | readings | people
   const [setup, setSetup] = useState(false);
   const [dark, toggleDark] = useDarkMode();
@@ -82,9 +83,9 @@ export default function CommandCenter() {
 
   useEffect(() => {
     let gone = false;
-    scriptSections(center?.kit?.script).then((s) => !gone && setSections(s));
+    scriptSections(center?.kit?.script, center?.kit?.activity_anchor).then((s) => !gone && setSections(s));
     return () => { gone = true; };
-  }, [center?.kit?.script]);
+  }, [center?.kit?.script, center?.kit?.activity_anchor]);
 
   useEffect(() => {
     document.title = center ? `Hosting ${center.meeting.name}` : "Hosting Command Center";
@@ -94,7 +95,7 @@ export default function CommandCenter() {
   const section = sections[index];
 
   // What the other host sees beside my name
-  const activity = setup ? "Setting up the kit" : reading ? `Sharing ${reading.title}` : panel === "chat" ? "Looking at chat postings"
+  const activity = setup ? "Setting up the kit" : reading === "activity" ? `On ${ACTIVITY_TITLE}` : reading ? `Sharing ${reading.title}` : panel === "chat" ? "Looking at chat postings"
     : section ? `On ${section.title}` : "Here";
 
   const ping = useCallback(() => {
@@ -156,8 +157,19 @@ export default function CommandCenter() {
   const hosts = [center.hosts.host && `Host: ${center.hosts.host}`, center.hosts.co_host && `Co-host: ${center.hosts.co_host}`].filter(Boolean).join(" · ");
   const kit = center.kit;
 
-  const flow = <Flow sections={sections} index={index} completed={live.completed} presences={live.presences} goto={goto} />;
-  const readings = <Readings kit={kit} open={reading} onOpen={(r) => { setReading(r); setPanel("script"); }} />;
+  const flow = <Flow sections={sections} index={index} completed={live.completed} presences={live.presences} goto={goto} picked={!!live.activity} />;
+  // Today's reading / activity: its place in the script, or on its own when the script has none
+  const openActivity = () => {
+    const spot = sections.findIndex((x) => x.activity);
+    if (spot >= 0) goto(spot);
+    else { setReading("activity"); setPanel("script"); }
+  };
+  const readings = (
+    <>
+      <ActivityCard activity={live.activity} open={reading === "activity" || !!section?.activity} onOpen={openActivity} />
+      <Readings kit={kit} open={reading} onOpen={(r) => { setReading(r); setPanel("script"); }} />
+    </>
+  );
   const actions = <QuickActions center={center} />;
   const chat = <ChatPostings center={center} live={live} elapsed={elapsed} act={act} />;
   const people = <People live={live} now={now} />;
@@ -209,7 +221,12 @@ export default function CommandCenter() {
         </aside>
 
         <main className={`min-h-0 overflow-y-auto lg:block ${panel === "script" ? "block" : "hidden"}`}>
-          {reading ? (
+          {reading === "activity" ? (
+            <div className="mx-auto max-w-3xl px-4 py-5 sm:px-8 sm:py-8">
+              <div className="mb-3 flex items-center gap-2"><h1 className="flex-1 text-2xl font-bold sm:text-3xl">{ACTIVITY_TITLE}</h1><button type="button" className={quietButton} onClick={() => setReading(null)}><X className="size-4" /> Back to the script</button></div>
+              <ActivityPanel center={center} live={live} act={act} size={size} />
+            </div>
+          ) : reading ? (
             <ReadingView reading={reading} size={size} onClose={() => setReading(null)} />
           ) : (
             <ScriptView center={center} sections={sections} index={index} section={section} live={live} size={size}
@@ -253,7 +270,7 @@ export default function CommandCenter() {
 
 // The meeting's flow: the script's sections, where the meeting is, which are done, and where the
 // other host is looking
-function Flow({ sections, index, completed, presences, goto }) {
+function Flow({ sections, index, completed, presences, goto, picked }) {
   if (!sections.length) return null;
   return (
     <section>
@@ -270,6 +287,7 @@ function Flow({ sections, index, completed, presences, goto }) {
                   {done && i !== index ? <Check className="size-4" /> : i + 1}
                 </span>
                 <span className={`min-w-0 flex-1 truncate ${done && i !== index ? "text-slate-500 dark:text-neutral-500" : ""}`}>{s.title}</span>
+                {s.activity && !picked && <span className="size-2 shrink-0 rounded-full bg-amber-500" title="Not picked yet" />}
                 {here.map((p) => <Avatar key={p.user_id} person={p} size={20} className="ring-2 ring-white dark:ring-neutral-950" />)}
               </button>
             </li>
@@ -306,7 +324,8 @@ function ScriptView({ center, sections, index, section, live, size, goto, next, 
         <p className="text-sm tabular-nums text-slate-500 dark:text-neutral-400">{index + 1} / {sections.length}</p>
       </div>
       <h1 className="text-2xl font-bold sm:text-3xl">{section.title}</h1>
-      <div className="doc-prose hc-script mt-4" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: section.html }} />
+      {section.activity ? <div className="mt-4"><ActivityPanel center={center} live={live} act={act} size={size} /></div>
+        : <div className="doc-prose hc-script mt-4" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: section.html }} />}
 
       <div className="mt-8 border-t border-neutral-200 pt-5 dark:border-neutral-800">
         {upNext && (
@@ -365,28 +384,35 @@ function Readings({ kit, open, onOpen }) {
 
 // A library chapter in the middle, big enough to share on screen, or opened in its own window
 function ReadingView({ reading, size, onClose }) {
-  const [html, setHtml] = useState(null);
-  const [error, setError] = useState(null);
-  useEffect(() => {
-    setHtml(null);
-    setError(null);
-    fetch(`/api/books/${encodeURIComponent(reading.book_slug)}/chapters/${encodeURIComponent(reading.chapter_slug)}`, { headers: { Accept: "application/json" }, credentials: "same-origin" })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("That chapter isn't in the library anymore."))))
-      .then((c) => setHtml(chapterHtml(c.tiptap_json)))
-      .catch((e) => setError(e.message));
-  }, [reading]);
-  const share = () => window.open(readerHref(reading), "hosting-reading", "popup,width=1100,height=850");
   return (
     <div className="mx-auto max-w-3xl px-4 py-5 sm:px-8 sm:py-8">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <p className={`${label} flex-1`}>Reading{reading.book_title ? ` · ${reading.book_title}` : ""}</p>
-        <button type="button" className={quietButton} onClick={share} title="Opens the reader in its own window, to share that window in Zoom"><Maximize2 className="size-4" /> Open to share</button>
+        <button type="button" className={quietButton} onClick={() => shareReading(reading)} title="Opens the reader in its own window, to share that window in Zoom"><Maximize2 className="size-4" /> Open to share</button>
         <button type="button" className={quietButton} onClick={onClose}><X className="size-4" /> Back to the script</button>
       </div>
       <h1 className="text-2xl font-bold sm:text-3xl">{reading.title}</h1>
-      <ErrorNote error={error} />
-      {html == null && !error ? <Loading /> : <div className="doc-prose hc-script mt-4" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: html || "" }} />}
+      <ChapterText bookSlug={reading.book_slug} chapterSlug={reading.chapter_slug} size={size} />
     </div>
+  );
+}
+
+// The day's reading / activity at the top of the left column: what's picked, or that it isn't yet
+function ActivityCard({ activity, open, onOpen }) {
+  const Icon = activityIcon(activity);
+  return (
+    <section className="mb-6">
+      <h2 className={`${label} mb-2`}>Today's reading / activity</h2>
+      <button type="button" onClick={onOpen} aria-pressed={open}
+        className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left text-sm ring-1 ${activity ? "!bg-white ring-neutral-200 dark:!bg-neutral-900 dark:ring-neutral-800" : "!bg-amber-50 ring-amber-200 dark:!bg-amber-950/30 dark:ring-amber-800/60"} ${open ? "!ring-2 !ring-accent" : ""}`}>
+        <Icon className={`size-5 shrink-0 ${activity ? "text-accent" : "text-amber-600"}`} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-medium">{activity ? activityLabel(activity) : "Not picked yet"}</span>
+          <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{activity ? `Picked by ${activity.by}` : "A reading, the Topicificator, a speaker…"}</span>
+        </span>
+        <ChevronRight className="size-4 text-slate-400" />
+      </button>
+    </section>
   );
 }
 
@@ -419,7 +445,7 @@ function ChatPostings({ center, live, elapsed, act }) {
   const postings = center.kit.postings;
   const due = useMemo(() => postings.find((p) => !live.posted[p.id] && p.minute * 60 <= elapsed), [postings, live.posted, elapsed]);
   const copy = async (p) => {
-    await copyText(fillPosting(p.body, center));
+    await copyText(fillPosting(p.body, center, live.activity));
     setJustCopied(p.id);
     setTimeout(() => setJustCopied((id) => (id === p.id ? null : id)), 1800);
     act("posted", { posting_id: p.id });
@@ -454,7 +480,7 @@ function ChatPostings({ center, live, elapsed, act }) {
                 </div>
                 {open && (
                   <div className="border-t border-neutral-100 px-3 pb-3 pt-2 dark:border-neutral-800">
-                    <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-700 dark:text-neutral-200">{fillPosting(p.body, center)}</pre>
+                    <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-700 dark:text-neutral-200">{fillPosting(p.body, center, live.activity)}</pre>
                     {posted && <button type="button" className="mt-2 !bg-transparent p-0 text-xs font-medium text-slate-500 hover:underline dark:text-neutral-400" onClick={() => act("unposted", { posting_id: p.id })}>Mark as not posted</button>}
                   </div>
                 )}

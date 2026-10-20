@@ -6,7 +6,7 @@ import LucideIcon from "../../ui/LucideIcon";
 import SegmentedControl from "../../ui/SegmentedControl";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import { ErrorNote, dangerButton, primaryButton, quietButton } from "../ui";
-import { PLACEHOLDERS, fillPosting, scriptSections } from "./lib";
+import { AUTO_ANCHOR, PLACEHOLDERS, fillPosting, scriptParagraphs, scriptSections } from "./lib";
 
 const move = (list, i, by) => {
   const j = i + by;
@@ -24,6 +24,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
   const { kit, editor, meeting, group } = center;
   const [scope, setScope] = useState(kit.own || !editor.has_default ? "meeting" : "default");
   const [scriptId, setScriptId] = useState(editor.script_document_id ? String(editor.script_document_id) : "");
+  const [anchor, setAnchor] = useState(kit.activity_anchor || "");
   const [postings, setPostings] = useState(() => kit.postings.map((p) => ({ ...p, key: `p${p.id}` })));
   const [readings, setReadings] = useState(kit.readings);
   const [openKey, setOpenKey] = useState(null);
@@ -50,7 +51,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
     try {
       const saved = await api(`/groups/${group.slug}/hosting/${meeting.id}/kit`, {
         method: "PUT",
-        body: { kit: { scope, script_document_id: scriptId || null, readings, postings: postings.map(({ id, title, icon, minute, body }) => ({ id, title, icon, minute, body })) } },
+        body: { kit: { scope, script_document_id: scriptId || null, activity_anchor: anchor || null, readings, postings: postings.map(({ id, title, icon, minute, body }) => ({ id, title, icon, minute, body })) } },
       });
       onSaved(saved);
       onClose();
@@ -98,7 +99,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
             </p>
           </div>
 
-          <ScriptPicker documents={editor.documents} value={scriptId} onChange={setScriptId} current={kit.script} />
+          <ScriptPicker documents={editor.documents} value={scriptId} onChange={setScriptId} current={kit.script} anchor={anchor} setAnchor={setAnchor} />
 
           <section>
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -133,15 +134,20 @@ export default function KitEditor({ center, onClose, onSaved }) {
   );
 }
 
-// Which document is the script, and the sections its headings make
-function ScriptPicker({ documents, value, onChange, current }) {
+// Which document is the script, the sections it makes, and where the day's reading / activity goes
+function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor }) {
   const [sections, setSections] = useState([]);
+  const [paragraphs, setParagraphs] = useState([]);
+  const shown = current && String(current.id) === value;
   useEffect(() => {
     let gone = false;
-    if (current && String(current.id) === value) scriptSections(current).then((s) => !gone && setSections(s));
-    else setSections([]);
+    if (shown) {
+      scriptSections(current, anchor || null).then((s) => !gone && setSections(s));
+      scriptParagraphs(current).then((p) => !gone && setParagraphs(p));
+    } else { setSections([]); setParagraphs([]); }
     return () => { gone = true; };
-  }, [current, value]);
+  }, [current, shown, anchor]);
+  const auto = paragraphs.find((t) => AUTO_ANCHOR.test(t));
   return (
     <section>
       <label htmlFor="kit-script" className={labelClass}>Script</label>
@@ -150,11 +156,22 @@ function ScriptPicker({ documents, value, onChange, current }) {
         {documents.map((d) => <option key={d.id} value={d.id}>{d.title}{d.kind === "format" ? "" : ` (${d.kind})`}</option>)}
       </select>
       <p className="mt-1.5 text-xs text-slate-500 dark:text-neutral-400">
-        One of the group's current documents that hosts can read (Hosts, Members or Public, in Group conscience &gt; Documents). Its headings make the meeting's sections: change them by editing the document.
+        One of the group's current documents that hosts can read (Hosts, Members or Public, in Group conscience &gt; Documents). Its headings make the meeting's sections, or its bold time cues like "(Top of the hour)" when it has no headings: change them by editing the document.
       </p>
+      {shown && paragraphs.length > 0 && (
+        <div className="mt-3">
+          <label htmlFor="kit-anchor" className={labelClass}>Reading / activity goes after</label>
+          <select id="kit-anchor" className={selectClass} value={anchor} onChange={(e) => setAnchor(e.target.value)}>
+            <option value="">{auto ? `Found by itself: “${auto.slice(0, 70)}…”` : "Found by itself (nothing found: no spot)"}</option>
+            <option value="none">No reading / activity spot</option>
+            {paragraphs.map((t, i) => <option key={i} value={t.slice(0, 160)}>{t.length > 90 ? `${t.slice(0, 90)}…` : t}</option>)}
+          </select>
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-neutral-400">The hosts pick what fills it each day: a reading, today's daily reading, the Topicificator, a speaker…</p>
+        </div>
+      )}
       {sections.length > 0 && (
         <ol className="mt-2 flex flex-wrap gap-1.5 text-xs">
-          {sections.map((s, i) => <li key={i} className="rounded-full bg-neutral-200 px-2 py-0.5 text-slate-700 dark:bg-neutral-800 dark:text-neutral-300">{i + 1}. {s.title}</li>)}
+          {sections.map((s, i) => <li key={i} className={`rounded-full px-2 py-0.5 ${s.activity ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" : "bg-neutral-200 text-slate-700 dark:bg-neutral-800 dark:text-neutral-300"}`}>{i + 1}. {s.title}</li>)}
         </ol>
       )}
     </section>

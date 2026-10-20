@@ -9,6 +9,9 @@ class CreateHostingCommandCenter < ActiveRecord::Migration[8.0]
       t.references :meeting, index: false, foreign_key: { on_delete: :cascade }
       t.references :script_document, foreign_key: { to_table: :group_documents, on_delete: :nullify }
       t.jsonb :readings, null: false, default: []
+      # Where the day's reading or activity goes in the script: the text of the paragraph it
+      # follows (nil: found by itself, "none": the script has no such spot)
+      t.text :activity_anchor
       t.timestamps
     end
     add_index :hosting_kits, :group_id, unique: true, where: "meeting_id IS NULL", name: "index_hosting_kits_one_default"
@@ -33,6 +36,9 @@ class CreateHostingCommandCenter < ActiveRecord::Migration[8.0]
       t.jsonb :posted, null: false, default: {}
       # What the hosts did, newest last ({ by, text, at }), so each sees what the other has done
       t.jsonb :log, null: false, default: []
+      # The reading or activity the hosts picked for the day (a chapter, today's daily reading,
+      # Topicificator topics, a speaker...)
+      t.jsonb :activity
       t.datetime :timer_started_at
       t.integer :timer_banked, null: false, default: 0
       t.integer :version, null: false, default: 0

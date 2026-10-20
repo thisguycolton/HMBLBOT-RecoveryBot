@@ -140,4 +140,47 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
     group = JSON.parse(CGI.unescapeHTML(response.body[/data-group="([^"]*)"/, 1]))
     assert_nil group["picked_meeting_id"], "it doesn't meet today"
   end
+
+  test "the hosts pick the day's reading or activity: today's page of a daily book, or Topicificator topics" do
+    book = Book.create!(slug: "daily-reflections", title: "Daily Reflections")
+    on = nil
+    sign_in @host
+    get path(@meeting.id), as: :json
+    on = Date.parse(response.parsed_body["on"])
+    slug = "#{Date::MONTHNAMES[on.month].downcase}-#{on.day}"
+    book.chapters.create!(slug: slug, title: "#{Date::MONTHNAMES[on.month]} #{on.day}: Today", index: 1)
+    book.chapters.create!(slug: "foreword", title: "Foreword", index: 0)
+
+    get path(@meeting.id), as: :json
+    assert_equal [slug], response.parsed_body.dig("activity_options", "daily").map { |d| d["chapter_slug"] }
+
+    post path(@meeting.id, "act"), params: { act: "activity", activity: { kind: "daily", book_slug: book.slug, chapter_slug: slug, title: "Today", book_title: "Daily Reflections" } }, as: :json
+    assert_equal "daily", response.parsed_body.dig("activity", "kind")
+    assert_equal "Hal", response.parsed_body.dig("activity", "by")
+    assert_equal "Picked Daily reading: Today", response.parsed_body["log"].first["text"]
+
+    set = TopicSet.create!(name: "Acid Test topics")
+    gratitude = Topic.create!(topic_set_id: set.id, title: "Gratitude", searchable_number: "7")
+    Topic.create!(topic_set_id: set.id, title: "Fear", searchable_number: "8")
+    post path(@meeting.id, "act"), params: { act: "draw_topic" }, as: :json
+    assert_nil response.parsed_body.dig("activity", "topics"), "no topics drawn into a reading"
+
+    sign_in @co_host
+    post path(@meeting.id, "act"), params: { act: "activity", activity: { kind: "topics", topic_set_id: set.id, topic_set_name: set.name } }, as: :json
+    post path(@meeting.id, "act"), params: { act: "draw_topic", number: "7" }, as: :json
+    post path(@meeting.id, "act"), params: { act: "draw_topic" }, as: :json
+    assert_equal ["Gratitude", "Fear"], response.parsed_body.dig("activity", "topics").map { |t| t["title"] }, "a random draw skips the ones drawn"
+    post path(@meeting.id, "act"), params: { act: "drop_topic", index: gratitude.id }, as: :json
+    assert_equal ["Fear"], response.parsed_body.dig("activity", "topics").map { |t| t["title"] }
+
+    sign_in @host
+    post path(@meeting.id, "ping"), as: :json
+    assert_equal "Cory", response.parsed_body.dig("activity", "by"), "the other host sees it"
+  end
+
+  test "host coordinators say where the reading / activity goes in the script" do
+    sign_in @coordinator
+    put path(@meeting.id, "kit"), params: { kit: { scope: "meeting", script_document_id: @script.id, activity_anchor: "  You choose the format!  " } }, as: :json
+    assert_equal "You choose the format!", response.parsed_body.dig("kit", "activity_anchor")
+  end
 end
