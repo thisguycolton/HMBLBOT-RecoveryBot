@@ -144,7 +144,7 @@ class Api::GroupHostingController < ApplicationController
 
   # The topics' HTML as the reading's page copies it: one line each, "- " before list items
   def topics_text(html)
-    text = html.gsub(%r{</(li|p|div|h[1-6])>|<br\s*/?>}i, "\n").gsub(/<li[^>]*>/i, "- ")
+    text = html.gsub(/\s*\n\s*/, " ").gsub(%r{</(li|p|div|h[1-6])>|<br\s*/?>}i, "\n").gsub(/<li[^>]*>/i, "- ")
     CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(text)).tr("\u00a0", " ").lines.map(&:strip).join("\n").gsub(/\n{3,}/, "\n\n").strip
   end
 
