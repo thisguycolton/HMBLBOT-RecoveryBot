@@ -25,8 +25,9 @@ const addDaysIso = (iso, n) => {
 const CourtVerificationForm = ({ isAuthenticated, group = null }) => {
   const [respondentName, setRespondentName] = useState("");
   const [respondentEmail, setRespondentEmail] = useState("");
-  const [meetingTimeSlot, setMeetingTimeSlot] = useState(""); // "09:00", "12:00", "18:00", "21:00"
-  const [hostName, setHostName] = useState("");
+  // A group's form names its meetings by id; the Hosting Command Center's link picks its own
+  const [meetingTimeSlot, setMeetingTimeSlot] = useState(group?.picked_meeting_id ? String(group.picked_meeting_id) : ""); // "09:00", "12:00", "18:00", "21:00"
+  const [hostName, setHostName] = useState(group?.host_name || "");
   const [signerName, setSignerName] = useState("");
   const [topic, setTopic] = useState("");
   const [meetingDay, setMeetingDay] = useState("today"); // "today" | "yesterday"

@@ -1,0 +1,15 @@
+/* The Hosting Command Center (CommandCenter.jsx): the script reads big, and follows the size
+   buttons (the inline font-size) instead of documents.css's fixed one */
+.hc-script { line-height: 1.6; max-width: 70ch; }
+.hc-script p, .hc-script li { font-size: inherit !important; }
+.dark .hc-script { color: #e5e7eb; }
+.dark .hc-script h1, .dark .hc-script h2, .dark .hc-script h3, .dark .hc-script h4 { color: #f8fafc; }
+.dark .hc-script blockquote { border-color: #4b5563; color: #cbd5e1; }
+.dark .hc-script li::marker { color: #9ca3af; }
+.dark .hc-script th { background: #262626; }
+.dark .hc-script th, .dark .hc-script td, .dark .hc-script hr { border-color: #404040; }
+.dark .hc-script a { color: #7dd3fc; }
+.dark .hc-script mark { background-color: #854d0e; color: #fef9c3; }
+
+/* reader.css sets every p and h1 in serif, justified */
+.hc-root p, .hc-root h1, .hc-root h2, .hc-root h3 { font-family: inherit; hyphens: none; text-align: inherit; }

@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "October 19, 2026";
+const UPDATED = "October 20, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -33,6 +33,7 @@ const STORAGE = [
   ["theme", "Light, dark or system appearance"],
   ["findMeeting.view", "List or map view in Find a meeting"],
   ["doc-paper", "Page color in the document editor"],
+  ["hosting-text-size", "Script text size in the Hosting Command Center"],
   ["questScreenName, questChime", "Your screen name and sound setting in The Acid Quest"],
 ];
 
@@ -128,7 +129,7 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Your profile:</strong> username, picture, a short bio, an optional sobriety date, and how you lay out your profile page.</li>
             <li><strong>Notes and highlights:</strong> passages you highlight in the library, notes you write on them, and notes on your timeline (with up to six pictures). Each one has its own visibility (see below).</li>
             <li><strong>Follows:</strong> who you follow and who follows you.</li>
-            <li><strong>Groups:</strong> the groups you join or ask to join, your role (member, admin, record keeper, host scheduler, treasurer), and the meetings you host or cover.</li>
+            <li><strong>Groups:</strong> the groups you join or ask to join, your role (member, admin, record keeper, host scheduler, treasurer), and the meetings you host or cover. While you have a meeting's Hosting Command Center open, the group's other hosts see that you're there and what you're on, and what you did in it (like copying a chat posting) is kept with that meeting's date.</li>
             <li><strong>Group records:</strong> documents, decisions, business meeting agendas and minutes, elected officials, host schedules and treasurer reports that members write for their group.</li>
             <li><strong>Events:</strong> events you create, and RSVPs. If you RSVP without an account we ask for a name and email address so we can send you the event's updates.</li>
             <li><strong>Schedule polls:</strong> your answers, and a name if you vote without an account. To stop the same person voting twice without an account, we keep a scrambled (hashed) form of your IP address with the vote, not the address itself.</li>

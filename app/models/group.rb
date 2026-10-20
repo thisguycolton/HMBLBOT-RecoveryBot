@@ -34,6 +34,8 @@ class Group < ApplicationRecord
   # The group's logo, shown in a rounded square (Group settings)
   has_one_attached :logo
   has_many :document_templates, class_name: "GroupDocumentTemplate", dependent: :destroy
+  # The Hosting Command Center: the default kit (meeting_id nil) and each meeting's own
+  has_many :hosting_kits, dependent: :destroy
   LOGO_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
   validate { errors.add(:logo, "has to be a PNG, JPEG, WebP or GIF image") if logo.attached? && !LOGO_TYPES.include?(logo.blob.content_type) }
   validate { errors.add(:logo, "has to be under 5 MB") if logo.attached? && logo.blob.byte_size > 5.megabytes }

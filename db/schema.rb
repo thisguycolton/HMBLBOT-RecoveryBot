@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_20_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -407,6 +407,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
     t.index ["slug"], name: "index_groups_on_slug", unique: true
   end
 
+  create_table "host_chat_postings", force: :cascade do |t|
+    t.bigint "hosting_kit_id", null: false
+    t.string "title", null: false
+    t.string "icon"
+    t.integer "minute", default: 0, null: false
+    t.text "body", default: "", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hosting_kit_id"], name: "index_host_chat_postings_on_hosting_kit_id"
+  end
+
   create_table "host_props", force: :cascade do |t|
     t.string "name"
     t.string "proposed_meeting"
@@ -449,6 +461,48 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
     t.time "poll_closes_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "hosting_kits", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "meeting_id"
+    t.bigint "script_document_id"
+    t.jsonb "readings", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id"], name: "index_hosting_kits_on_group_id"
+    t.index ["group_id"], name: "index_hosting_kits_one_default", unique: true, where: "(meeting_id IS NULL)"
+    t.index ["meeting_id"], name: "index_hosting_kits_one_per_meeting", unique: true, where: "(meeting_id IS NOT NULL)"
+    t.index ["script_document_id"], name: "index_hosting_kits_on_script_document_id"
+  end
+
+  create_table "hosting_presences", force: :cascade do |t|
+    t.bigint "hosting_session_id", null: false
+    t.bigint "user_id", null: false
+    t.string "activity"
+    t.integer "section_index"
+    t.datetime "last_seen_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hosting_session_id", "user_id"], name: "index_hosting_presences_on_hosting_session_id_and_user_id", unique: true
+    t.index ["hosting_session_id"], name: "index_hosting_presences_on_hosting_session_id"
+    t.index ["user_id"], name: "index_hosting_presences_on_user_id"
+  end
+
+  create_table "hosting_sessions", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.date "on", null: false
+    t.integer "section_index", default: 0, null: false
+    t.jsonb "completed", default: [], null: false
+    t.jsonb "posted", default: {}, null: false
+    t.jsonb "log", default: [], null: false
+    t.datetime "timer_started_at"
+    t.integer "timer_banked", default: 0, null: false
+    t.integer "version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_id", "on"], name: "index_hosting_sessions_on_meeting_id_and_on", unique: true
+    t.index ["meeting_id"], name: "index_hosting_sessions_on_meeting_id"
   end
 
   create_table "icons", force: :cascade do |t|
@@ -1092,12 +1146,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_190000) do
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_page_templates", "users", column: "updated_by_id"
   add_foreign_key "groups", "users", column: "created_by_id"
+  add_foreign_key "host_chat_postings", "hosting_kits", on_delete: :cascade
   add_foreign_key "host_props", "hostificators"
   add_foreign_key "host_sub_requests", "meetings"
   add_foreign_key "host_sub_requests", "users", column: "filled_by_id"
   add_foreign_key "host_sub_requests", "users", column: "requested_by_id"
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"
+  add_foreign_key "hosting_kits", "group_documents", column: "script_document_id", on_delete: :nullify
+  add_foreign_key "hosting_kits", "groups"
+  add_foreign_key "hosting_kits", "meetings", on_delete: :cascade
+  add_foreign_key "hosting_presences", "hosting_sessions", on_delete: :cascade
+  add_foreign_key "hosting_presences", "users", on_delete: :cascade
+  add_foreign_key "hosting_sessions", "meetings", on_delete: :cascade
   add_foreign_key "intergroup_follows", "users"
   add_foreign_key "meeting_host_covers", "meetings", on_delete: :cascade
   add_foreign_key "meeting_host_covers", "users", on_delete: :nullify

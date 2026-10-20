@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { BellRing, CalendarClock, CalendarX, Plus, Printer, ScrollText, Trash2, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
+import { BellRing, CalendarClock, CalendarX, MonitorPlay, Plus, Printer, ScrollText, Trash2, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
 import Toggle from "../ui/Toggle";
 import usePrintable, { printTitled } from "../../lib/usePrintable";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
@@ -225,7 +225,9 @@ export default function HostsTab({ group }) {
     <Card key={slot.id} className="p-3">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-start">
         <div className="min-w-0">
-          <p className="font-medium text-slate-900 dark:text-white">{clock(slot.start_minute)} · {slot.name}</p>
+          <p className="font-medium text-slate-900 dark:text-white">{clock(slot.start_minute)} · {slot.name}
+            {data.can_host && <Link to={`/${slug}/host/${slot.id}`} className="ml-1.5 inline-flex align-middle text-slate-400 hover:text-accent" aria-label={`Hosting Command Center for ${slot.name}`} title="Hosting Command Center"><MonitorPlay className="size-4" /></Link>}
+          </p>
           {slot.next_on && (slot.next_host || slot.next_co_host) && (
             <p className="text-xs text-slate-500 dark:text-neutral-400">Next, {dateLabel(slot.next_on)}: {[slot.next_host && `${slot.next_host.name}${slot.next_host.cover ? " (covering)" : ""}`, slot.next_co_host && `${slot.next_co_host.name}${slot.next_co_host.cover ? " (covering)" : ""}`].filter(Boolean).join(" and ")}</p>
           )}
@@ -273,6 +275,7 @@ export default function HostsTab({ group }) {
           </p>
           {data.slots.length > 0 && <Toggle checked={onlyOpen} onChange={setOnlyOpen} label="Only meetings with an open place" />}
           {data.slots.length > 0 && <button type="button" className={quietButton} onClick={() => printTitled(`${group.title} hosts`)}><Printer className="size-4" /> Print</button>}
+          {data.can_host && <Link to={`/${slug}/host`} className={primaryButton}><MonitorPlay className="size-4" /> Command Center</Link>}
         </div>
         <ErrorNote error={error} />
         <SubRequests requests={data.sub_requests} edit={edit} call={call} />

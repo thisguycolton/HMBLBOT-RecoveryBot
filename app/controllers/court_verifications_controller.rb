@@ -9,6 +9,12 @@ class CourtVerificationsController < ApplicationController
   def new
     @group = Group.active.find_by(slug: params[:group].to_s) if params[:group].present?
     @group_json = @group && group_form_json(@group)
+    # From the Hosting Command Center: its meeting picked (when it meets today) and its host's name
+    if @group_json
+      picked = @group_json[:meetings].find { |m| m[:id].to_s == params[:meeting].to_s && m[:dates].include?(@group_json[:today]) }
+      @group_json[:picked_meeting_id] = picked[:id] if picked
+      @group_json[:host_name] = params[:host].to_s.squish.first(80).presence
+    end
   end
 
   private

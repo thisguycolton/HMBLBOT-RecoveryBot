@@ -61,6 +61,15 @@ Rails.application.routes.draw do
     resource :conscience, controller: "group_conscience", only: :show
     resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy]
     resources :meeting_host_covers, controller: "group_meeting_host_covers", only: %i[create destroy]
+    # The Hosting Command Center (/groups/:slug/host/:meeting_id)
+    resources :hosting, controller: "group_hosting", only: %i[index show], param: :meeting_id do
+      member do
+        post :ping
+        post :act
+        put :kit
+        delete :kit, action: :reset_kit
+      end
+    end
     resources :host_sub_requests, controller: "group_host_sub_requests", only: %i[create destroy] do
       post :take, on: :member
     end
