@@ -12,6 +12,9 @@ class CreateHostingCommandCenter < ActiveRecord::Migration[8.0]
       # Where the day's reading or activity goes in the script: the text of the paragraph it
       # follows (nil: found by itself, "none": the script has no such spot)
       t.text :activity_anchor
+      # The service the hosts line people up for ([{ key, label }]; nil: the usual ones), named in
+      # the script as {{ service_KEY }}
+      t.jsonb :service_roles
       t.timestamps
     end
     add_index :hosting_kits, :group_id, unique: true, where: "meeting_id IS NULL", name: "index_hosting_kits_one_default"
@@ -39,6 +42,10 @@ class CreateHostingCommandCenter < ActiveRecord::Migration[8.0]
       # The reading or activity the hosts picked for the day (a chapter, today's daily reading,
       # Topicificator topics, a speaker...)
       t.jsonb :activity
+      # Who is doing which service today ({ key => name }), and who is celebrating a milestone
+      # ([{ id, name, length, done }])
+      t.jsonb :service, null: false, default: {}
+      t.jsonb :milestones, null: false, default: []
       t.datetime :timer_started_at
       t.integer :timer_banked, null: false, default: 0
       t.integer :version, null: false, default: 0

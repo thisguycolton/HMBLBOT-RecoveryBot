@@ -4,6 +4,14 @@
 # without its own; a meeting's kit covers all the days it runs (Meeting#series).
 class HostingKit < ApplicationRecord
   MAX_READINGS = 30
+  # The service a host lines people up for, as Host Helper had it; the script names them as
+  # {{ service_hiw }}, the host and co-host come from the schedule
+  DEFAULT_SERVICE_ROLES = [
+    { "key" => "host", "label" => "Host" }, { "key" => "co_host", "label" => "Co-host" },
+    { "key" => "hiw", "label" => "How It Works" }, { "key" => "traditions", "label" => "The 12 Traditions" },
+    { "key" => "timer", "label" => "Timer" }, { "key" => "closing", "label" => "Closing reading" },
+  ].freeze
+  MAX_ROLES = 20
 
   belongs_to :group
   belongs_to :meeting, optional: true
@@ -11,6 +19,7 @@ class HostingKit < ApplicationRecord
   has_many :postings, -> { order(:minute, :position, :id) }, class_name: "HostChatPosting", dependent: :destroy, inverse_of: :hosting_kit
 
   before_validation :tidy_readings
+  before_validation :tidy_service_roles
   before_validation { self.activity_anchor = activity_anchor.to_s.squish.first(500).presence }
 
   validates :meeting_id, uniqueness: true, allow_nil: true
@@ -24,8 +33,25 @@ class HostingKit < ApplicationRecord
   end
 
   def default? = meeting_id.nil?
+  def roles = service_roles.presence || DEFAULT_SERVICE_ROLES
 
   private
+
+  # [{ key, label }], each key made from its label when it has none ("Closing reading" is
+  # closing_reading), unique, at most MAX_ROLES; an empty list means the usual ones
+  def tidy_service_roles
+    return self.service_roles = nil if service_roles.nil?
+
+    seen = Set.new
+    self.service_roles = Array(service_roles).filter_map do |r|
+      r = r.to_h.stringify_keys
+      label = r["label"].to_s.squish.first(60)
+      key = (r["key"].presence || label).to_s.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_+|_+\z/, "").first(40)
+      next if label.blank? || key.blank? || !seen.add?(key)
+
+      { "key" => key, "label" => label }
+    end.first(MAX_ROLES).presence
+  end
 
   # A reading is a chapter of a library book, or a link: { book_slug, chapter_slug, title } or { url, title }
   def tidy_readings

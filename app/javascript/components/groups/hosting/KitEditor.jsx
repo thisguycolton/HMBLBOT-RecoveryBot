@@ -6,7 +6,7 @@ import LucideIcon from "../../ui/LucideIcon";
 import SegmentedControl from "../../ui/SegmentedControl";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import { ErrorNote, dangerButton, primaryButton, quietButton } from "../ui";
-import { AUTO_ANCHOR, PLACEHOLDERS, fillPosting, scriptParagraphs, scriptSections } from "./lib";
+import { AUTO_ANCHOR, PLACEHOLDERS, fillPosting, roleKey, roleToken, scriptParagraphs, scriptSections } from "./lib";
 
 const move = (list, i, by) => {
   const j = i + by;
@@ -27,6 +27,10 @@ export default function KitEditor({ center, onClose, onSaved }) {
   const [anchor, setAnchor] = useState(kit.activity_anchor || "");
   const [postings, setPostings] = useState(() => kit.postings.map((p) => ({ ...p, key: `p${p.id}` })));
   const [readings, setReadings] = useState(kit.readings);
+  // Only sent when changed, so a kit keeps following the usual roles until someone edits them
+  const [roles, setRoles] = useState(() => kit.service_roles.map((r) => ({ ...r, id: r.key })));
+  const [rolesEdited, setRolesEdited] = useState(false);
+  const changeRoles = (list) => { setRoles(list); setRolesEdited(true); };
   const [openKey, setOpenKey] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -51,7 +55,8 @@ export default function KitEditor({ center, onClose, onSaved }) {
     try {
       const saved = await api(`/groups/${group.slug}/hosting/${meeting.id}/kit`, {
         method: "PUT",
-        body: { kit: { scope, script_document_id: scriptId || null, activity_anchor: anchor || null, readings, postings: postings.map(({ id, title, icon, minute, body }) => ({ id, title, icon, minute, body })) } },
+        body: { kit: { scope, script_document_id: scriptId || null, activity_anchor: anchor || null, readings, postings: postings.map(({ id, title, icon, minute, body }) => ({ id, title, icon, minute, body })),
+          ...(rolesEdited ? { service_roles: roles.map(({ key, label }) => ({ key, label })) } : {}) } },
       });
       onSaved(saved);
       onClose();
@@ -107,7 +112,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
               <button type="button" className={smallButton} onClick={addPosting}><Plus className="size-3.5" /> Add a posting</button>
             </div>
             <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">
-              Pasted into the Zoom chat as written. These fill themselves in: {PLACEHOLDERS.map(([k, what], i) => <span key={k}>{i > 0 && ", "}<code className="rounded bg-neutral-200 px-1 dark:bg-neutral-800">{`{{${k}}}`}</code> ({what})</span>)}.
+              Pasted into the Zoom chat as written. These fill themselves in: {PLACEHOLDERS.map(([k, what], i) => <span key={k}>{i > 0 && ", "}<code className="rounded bg-neutral-200 px-1 dark:bg-neutral-800">{`{{${k}}}`}</code> ({what})</span>)}, and the service roles below, like <code className="rounded bg-neutral-200 px-1 dark:bg-neutral-800">{roleToken("hiw")}</code>.
             </p>
             {postings.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-slate-500 shadow-panel dark:bg-neutral-900 dark:text-neutral-400">No postings yet.</p>}
             <ul className="space-y-2">
@@ -119,6 +124,8 @@ export default function KitEditor({ center, onClose, onSaved }) {
               ))}
             </ul>
           </section>
+
+          <RolesEditor roles={roles} setRoles={changeRoles} custom={kit.custom_service_roles || rolesEdited} />
 
           <ReadingsEditor books={editor.books} readings={readings} setReadings={setReadings} />
         </div>
@@ -204,7 +211,7 @@ function PostingRow({ posting: p, open, toggle, change, up, down, remove, center
             <label htmlFor={`${id}-body`} className={labelClass}>What gets pasted</label>
             <textarea id={`${id}-body`} rows={6} maxLength={4000} className={`${inputClass} font-mono`} value={p.body} onChange={(e) => change({ body: e.target.value })}
               placeholder={"Welcome to {{meeting}}! 👋\nPlease keep your microphone muted unless you're sharing."} />
-            {p.body.includes("{{") && <p className="mt-1 whitespace-pre-wrap rounded-lg bg-neutral-100 p-2 text-xs text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">{fillPosting(p.body, center)}</p>}
+            {p.body.includes("{{") && <p className="mt-1 whitespace-pre-wrap rounded-lg bg-neutral-100 p-2 text-xs text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">{fillPosting(p.body, center, center.live)}</p>}
           </div>
           <div>
             <button type="button" className={smallButton} onClick={() => setPickIcon(!pickIcon)} aria-expanded={pickIcon}><LucideIcon name={p.icon} fallback={MessageSquare} size={14} /> {pickIcon ? "Done picking" : "Change icon"}</button>
@@ -281,6 +288,47 @@ function ReadingsEditor({ books, readings, setReadings }) {
         <div><label htmlFor="kit-link-title" className={labelClass}>Link title</label><input id="kit-link-title" className={inputClass} maxLength={120} value={link.title} onChange={(e) => setLink({ ...link, title: e.target.value })} placeholder="Daily Reflections" /></div>
         <div><label htmlFor="kit-link-url" className={labelClass}>Link</label><input id="kit-link-url" type="url" className={inputClass} value={link.url} onChange={(e) => setLink({ ...link, url: e.target.value })} placeholder="https://" /></div>
         <button type="submit" className={quietButton} disabled={!/^https?:\/\//i.test(link.url.trim())}><Plus className="size-4" /> Add</button>
+      </form>
+    </section>
+  );
+}
+
+// The service the hosts line people up for at the start ("Before we begin"). The script and the
+// chat postings name each one as {{ service_KEY }}, and the name the hosts type goes there.
+function RolesEditor({ roles, setRoles, custom }) {
+  const [label, setLabel] = useState("");
+  const add = (e) => {
+    e.preventDefault();
+    const key = roleKey(label);
+    if (!key || roles.some((r) => r.key === key)) return;
+    setRoles([...roles, { key, label: label.trim(), id: `n${Date.now()}` }]);
+    setLabel("");
+  };
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className={labelClass}>Service roles</h3>
+        {custom && <button type="button" className={smallButton} onClick={() => setRoles([])}>Use the usual ones</button>}
+      </div>
+      <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">
+        The hosts fill these in under "Before we begin". Put the code in the script (or a posting) where the name goes, like "{roleToken("hiw")} has volunteered to read How It Works". Host and co-host start with the schedule's.
+      </p>
+      {roles.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-slate-500 shadow-panel dark:bg-neutral-900 dark:text-neutral-400">The usual ones (host, co-host, How It Works, Traditions, timer, closing reading), once you save.</p>}
+      <ul className="space-y-1.5">
+        {roles.map((r, i) => (
+          <li key={r.id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-panel dark:bg-neutral-900">
+            <input aria-label="Role" className={`${inputClass} !py-1.5`} maxLength={60} value={r.label}
+              onChange={(e) => setRoles(roles.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
+            <code className="hidden w-44 shrink-0 truncate rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-slate-600 sm:block dark:bg-neutral-800 dark:text-neutral-300">{roleToken(r.key)}</code>
+            <button type="button" className={smallButton} onClick={() => setRoles(move(roles, i, -1))} disabled={i === 0} aria-label={`Move ${r.label} up`}><ArrowUp className="size-3.5" /></button>
+            <button type="button" className={smallButton} onClick={() => setRoles(move(roles, i, 1))} disabled={i === roles.length - 1} aria-label={`Move ${r.label} down`}><ArrowDown className="size-3.5" /></button>
+            <button type="button" className={smallButton} onClick={() => setRoles(roles.filter((_, j) => j !== i))} aria-label={`Take ${r.label} off`}><Trash2 className="size-3.5" /></button>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={add} className="mt-2 flex gap-2">
+        <input aria-label="New role" className={`${inputClass} !py-1.5`} maxLength={60} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Add a role, like Secretary" />
+        <button type="submit" className={smallButton} disabled={!roleKey(label)}><Plus className="size-3.5" /> Add</button>
       </form>
     </section>
   );

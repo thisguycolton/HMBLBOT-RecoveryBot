@@ -2,7 +2,8 @@
 # they are in the script, which sections are done, the meeting timer, and which chat postings
 # have gone out (and who posted them). Both see the same one; every change bumps `version`.
 class HostingSession < ApplicationRecord
-  ACTS = %w[goto complete uncomplete timer_start timer_pause timer_reset posted unposted activity clear_activity draw_topic drop_topic].freeze
+  ACTS = %w[goto complete uncomplete timer_start timer_pause timer_reset posted unposted activity clear_activity draw_topic drop_topic
+            service milestone_add milestone_update milestone_remove milestone_move].freeze
   LOG_SIZE = 30
   # What fills the script's reading / activity spot: a chapter from the literature, today's page
   # of a daily book, topics drawn from a Topicificator set, a speaker, a meditation, or anything
@@ -11,6 +12,7 @@ class HostingSession < ApplicationRecord
     "speaker" => "Speaker", "meditation" => "Meditation", "other" => "Activity",
   }.freeze
   MAX_TOPICS = 20
+  MAX_MILESTONES = 40
 
   belongs_to :meeting
   has_many :presences, class_name: "HostingPresence", dependent: :delete_all
@@ -23,8 +25,10 @@ class HostingSession < ApplicationRecord
 
   # A change from the Command Center, by `user`, kept in the log when it's worth telling the other
   # host. `label` names the section it was about (the sections come from the script, in the page).
-  # `pick` is the reading or activity a host picked; `topic` one drawn for them.
-  def act!(act, user:, index: nil, posting: nil, label: nil, pick: nil, topic: nil, now: Time.current)
+  # `pick` is the reading or activity a host picked; `topic` one drawn for them; `data` a service
+  # name ({ value }) or a milestone ({ id, name, length, done, by }).
+  def act!(act, user:, index: nil, posting: nil, label: nil, pick: nil, topic: nil, data: {}, now: Time.current)
+    data = data.to_h.stringify_keys
     label = label.to_s.squish.first(80).presence
     with_lock do
       # topics are drawn only into a Topicificator activity
@@ -66,6 +70,35 @@ class HostingSession < ApplicationRecord
               drawn = { "id" => topic.id, "title" => topic.title.to_s, "subtitle" => topic.subtitle.presence, "number" => topic.searchable_number.presence }.compact
               self.activity = activity.merge("topics" => (Array(activity["topics"]) + [drawn]).last(MAX_TOPICS))
               "Drew the topic #{topic.title.to_s.squish.first(60)}"
+            when "service"
+              key = index.to_s.downcase.gsub(/[^a-z0-9_]/, "").first(40)
+              name = data["value"].to_s.squish.first(80).presence
+              self.service = name ? service.merge(key => name) : service.except(key) if key.present?
+              name && label && "Put #{name} on #{label}"
+            when "milestone_add"
+              name = data["name"].to_s.squish.first(80).presence
+              if name && milestones.size < MAX_MILESTONES
+                length = data["length"].to_s.squish.first(60).presence
+                self.milestones = milestones + [{ "id" => SecureRandom.hex(6), "name" => name, "length" => length }.compact]
+                "Added #{name}#{" (#{length})" if length} to the milestones"
+              end
+            when "milestone_update"
+              self.milestones = milestones.map do |m|
+                next m unless m["id"] == data["id"].to_s
+
+                m.merge("name" => data.key?("name") ? data["name"].to_s.squish.first(80).presence || m["name"] : m["name"],
+                        "length" => data.key?("length") ? data["length"].to_s.squish.first(60).presence : m["length"],
+                        "done" => data.key?("done") ? ActiveModel::Type::Boolean.new.cast(data["done"]) : m["done"]).compact
+              end
+              nil
+            when "milestone_remove"
+              self.milestones = milestones.reject { |m| m["id"] == data["id"].to_s }
+              nil
+            when "milestone_move"
+              i = milestones.index { |m| m["id"] == data["id"].to_s }
+              j = i && i + (data["by"].to_i.negative? ? -1 : 1)
+              self.milestones = milestones.dup.tap { |l| l[i], l[j] = l[j], l[i] } if i && j.between?(0, milestones.size - 1)
+              nil
             when "drop_topic"
               self.activity = activity.merge("topics" => Array(activity&.dig("topics")).reject { |t| t["id"].to_s == index.to_s }) if activity
               nil
@@ -104,6 +137,7 @@ class HostingSession < ApplicationRecord
   def live_json(viewer, now = Time.current)
     {
       version: version, section_index: section_index, completed: completed, posted: posted, log: log.last(12).reverse, activity: activity,
+      service: service, milestones: milestones,
       timer: { running: timer_running?, elapsed: elapsed(now) }, server_now: now.iso8601(3),
       presences: presences.includes(:user).select { |p| p.last_seen_at > HostingPresence::AWAY.ago }.sort_by { |p| p.created_at }.map { |p| p.as_api_json(viewer) },
     }

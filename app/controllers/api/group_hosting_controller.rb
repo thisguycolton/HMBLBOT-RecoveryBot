@@ -27,7 +27,7 @@ class Api::GroupHostingController < ApplicationController
     render json: hosting_session.live_json(current_user)
   end
 
-  # POST /api/groups/:group_slug/hosting/:meeting_id/act { act, index, label, posting_id, activity, number }
+  # POST /api/groups/:group_slug/hosting/:meeting_id/act { act, index, label, posting_id, activity, number, data }
   def act
     act = params[:act].to_s
     return render(json: { error: "That isn't something the Command Center does." }, status: :unprocessable_entity) unless HostingSession::ACTS.include?(act)
@@ -38,13 +38,14 @@ class Api::GroupHostingController < ApplicationController
     end
 
     pick = params[:activity].respond_to?(:permit) ? params[:activity].permit(:kind, :title, :note, :book_slug, :chapter_slug, :book_title, :topic_set_id, :topic_set_name).to_h : nil
-    hosting_session.act!(act, user: current_user, index: params[:index], label: params[:label], posting: posting, pick: pick,
+    data = params[:data].respond_to?(:permit) ? params[:data].permit(:value, :id, :name, :length, :done, :by).to_h : {}
+    hosting_session.act!(act, user: current_user, index: params[:index], label: params[:label], posting: posting, pick: pick, data: data,
                               topic: (draw_topic(params[:number]) if act == "draw_topic"))
     render json: hosting_session.live_json(current_user)
   end
 
   # PUT /api/groups/:group_slug/hosting/:meeting_id/kit
-  # { kit: { scope: "meeting" | "default", script_document_id, activity_anchor, readings: [...], postings: [{ id, title, icon, minute, body }] } }
+  # { kit: { scope: "meeting" | "default", script_document_id, activity_anchor, service_roles: [{ key, label }], readings: [...], postings: [{ id, title, icon, minute, body }] } }
   def kit
     attrs = params.require(:kit)
     kit = if attrs[:scope] == "default"
@@ -55,6 +56,7 @@ class Api::GroupHostingController < ApplicationController
     HostingKit.transaction do
       kit.script_document_id = attrs[:script_document_id].presence
       kit.activity_anchor = attrs[:activity_anchor] if attrs.key?(:activity_anchor)
+      kit.service_roles = attrs.permit(service_roles: %i[key label]).fetch(:service_roles, []).map(&:to_h) if attrs.key?(:service_roles)
       kit.readings = attrs.permit(readings: %i[book_slug chapter_slug title book_title url]).fetch(:readings, []).map(&:to_h)
       kit.save!
       sync_postings(kit, attrs.permit(postings: %i[id title icon minute body]).fetch(:postings, []))

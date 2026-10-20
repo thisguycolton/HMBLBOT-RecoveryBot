@@ -11,7 +11,8 @@ import LucideIcon from "../../ui/LucideIcon";
 import { ErrorNote, Loading, Message, primaryButton, quietButton } from "../ui";
 import KitEditor from "./KitEditor";
 import ActivityPanel, { ChapterText, activityIcon, shareReading } from "./Activity";
-import { ACTIVITY_TITLE, activityLabel, copyText, fillPosting, mmss, scriptSections } from "./lib";
+import { ServicePanel, Milestones } from "./Service";
+import { ACTIVITY_TITLE, activityLabel, copyText, fillPosting, fillRoles, mmss, scriptSections, serviceNames } from "./lib";
 import "./hosting.css";
 
 const PING_MS = 3000;
@@ -172,7 +173,7 @@ export default function CommandCenter() {
   );
   const actions = <QuickActions center={center} />;
   const chat = <ChatPostings center={center} live={live} elapsed={elapsed} act={act} />;
-  const people = <People live={live} now={now} />;
+  const people = <People live={live} now={now} act={act} />;
 
   return (
     <div className={`hc-root flex h-dvh flex-col bg-neutral-50 !font-sans text-slate-900 dark:bg-neutral-950 dark:text-white ${dark ? "doc-dark" : ""}`}>
@@ -325,7 +326,13 @@ function ScriptView({ center, sections, index, section, live, size, goto, next, 
       </div>
       <h1 className="text-2xl font-bold sm:text-3xl">{section.title}</h1>
       {section.activity ? <div className="mt-4"><ActivityPanel center={center} live={live} act={act} size={size} /></div>
-        : <div className="doc-prose hc-script mt-4" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: section.html }} />}
+        : (
+          <>
+            {index === 0 && <div className="mt-4"><ServicePanel center={center} live={live} act={act} /></div>}
+            <div className="doc-prose hc-script mt-4" style={{ fontSize: size }}
+              dangerouslySetInnerHTML={{ __html: fillRoles(section.html, kit.service_roles, serviceNames(center, live)) }} />
+          </>
+        )}
 
       <div className="mt-8 border-t border-neutral-200 pt-5 dark:border-neutral-800">
         {upNext && (
@@ -445,7 +452,7 @@ function ChatPostings({ center, live, elapsed, act }) {
   const postings = center.kit.postings;
   const due = useMemo(() => postings.find((p) => !live.posted[p.id] && p.minute * 60 <= elapsed), [postings, live.posted, elapsed]);
   const copy = async (p) => {
-    await copyText(fillPosting(p.body, center, live.activity));
+    await copyText(fillPosting(p.body, center, live));
     setJustCopied(p.id);
     setTimeout(() => setJustCopied((id) => (id === p.id ? null : id)), 1800);
     act("posted", { posting_id: p.id });
@@ -480,7 +487,7 @@ function ChatPostings({ center, live, elapsed, act }) {
                 </div>
                 {open && (
                   <div className="border-t border-neutral-100 px-3 pb-3 pt-2 dark:border-neutral-800">
-                    <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-700 dark:text-neutral-200">{fillPosting(p.body, center, live.activity)}</pre>
+                    <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-700 dark:text-neutral-200">{fillPosting(p.body, center, live)}</pre>
                     {posted && <button type="button" className="mt-2 !bg-transparent p-0 text-xs font-medium text-slate-500 hover:underline dark:text-neutral-400" onClick={() => act("unposted", { posting_id: p.id })}>Mark as not posted</button>}
                   </div>
                 )}
@@ -493,8 +500,8 @@ function ChatPostings({ center, live, elapsed, act }) {
   );
 }
 
-// Who has the Command Center open and what they're on, and what the hosts have done
-function People({ live, now }) {
+// Who has the Command Center open and what they're on, who's celebrating, and what the hosts have done
+function People({ live, now, act }) {
   return (
     <section className="space-y-5">
       <div>
@@ -516,6 +523,7 @@ function People({ live, now }) {
         </ul>
         {live.presences.length < 2 && <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">When the other host opens this meeting's Command Center, you'll see what they're on here.</p>}
       </div>
+      <Milestones live={live} act={act} />
       {live.log.length > 0 && (
         <div>
           <h2 className={`${label} mb-2`}>Done so far</h2>

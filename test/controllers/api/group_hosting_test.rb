@@ -183,4 +183,36 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
     put path(@meeting.id, "kit"), params: { kit: { scope: "meeting", script_document_id: @script.id, activity_anchor: "  You choose the format!  " } }, as: :json
     assert_equal "You choose the format!", response.parsed_body.dig("kit", "activity_anchor")
   end
+
+  test "the hosts line up today's service and the milestones, and both see them" do
+    sign_in @host
+    get path(@meeting.id), as: :json
+    assert_equal %w[host co_host hiw traditions timer closing], response.parsed_body.dig("kit", "service_roles").map { |r| r["key"] }
+
+    post path(@meeting.id, "act"), params: { act: "service", index: "hiw", label: "How It Works", data: { value: "  Kim R. " } }, as: :json
+    assert_equal({ "hiw" => "Kim R." }, response.parsed_body["service"])
+    assert_equal "Put Kim R. on How It Works", response.parsed_body["log"].first["text"]
+
+    post path(@meeting.id, "act"), params: { act: "milestone_add", data: { name: "Jo", length: "30 days" } }, as: :json
+    post path(@meeting.id, "act"), params: { act: "milestone_add", data: { name: "Lee", length: "1 year" } }, as: :json
+    lee = response.parsed_body["milestones"].last["id"]
+    post path(@meeting.id, "act"), params: { act: "milestone_move", data: { id: lee, by: -1 } }, as: :json
+    post path(@meeting.id, "act"), params: { act: "milestone_update", data: { id: lee, done: true } }, as: :json
+
+    sign_in @co_host
+    post path(@meeting.id, "ping"), as: :json
+    assert_equal [["Lee", "1 year", true], ["Jo", "30 days", nil]], response.parsed_body["milestones"].map { |m| [m["name"], m["length"], m["done"]] }
+    post path(@meeting.id, "act"), params: { act: "service", index: "hiw", data: { value: "" } }, as: :json
+    assert_equal({}, response.parsed_body["service"])
+    post path(@meeting.id, "act"), params: { act: "milestone_remove", data: { id: lee } }, as: :json
+    assert_equal ["Jo"], response.parsed_body["milestones"].map { |m| m["name"] }
+  end
+
+  test "host coordinators name the group's own service roles" do
+    sign_in @coordinator
+    put path(@meeting.id, "kit"), params: { kit: { scope: "meeting", service_roles: [{ label: "How It Works", key: "hiw" }, { label: "Closing reading" }, { label: "Closing reading" }, { label: "" }] } }, as: :json
+    assert_equal [["hiw", "How It Works"], ["closing_reading", "Closing reading"]],
+                 response.parsed_body.dig("kit", "service_roles").map { |r| [r["key"], r["label"]] }
+    assert response.parsed_body.dig("kit", "custom_service_roles")
+  end
 end

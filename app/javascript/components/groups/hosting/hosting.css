@@ -13,3 +13,10 @@
 
 /* reader.css sets every p and h1 in serif, justified */
 .hc-root p, .hc-root h1, .hc-root h2, .hc-root h3 { font-family: inherit; hyphens: none; text-align: inherit; }
+
+/* A {{ service_KEY }} in the script: the name the hosts typed under "Before we begin", or the
+   role, dashed, while nobody has it yet */
+.hc-role { font-weight: 600; background: rgb(8 145 178 / 0.12); color: #155e75; border-radius: 4px; padding: 0 3px; }
+.hc-role--empty { background: transparent; border: 1px dashed #94a3b8; color: #64748b; font-weight: 500; }
+.dark .hc-role { background: rgb(34 211 238 / 0.15); color: #a5f3fc; }
+.dark .hc-role--empty { background: transparent; border-color: #525252; color: #a3a3a3; }

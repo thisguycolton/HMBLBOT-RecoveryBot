@@ -2,6 +2,26 @@
 // chat postings filled in and copied, and library chapters as HTML for sharing on screen.
 import { markdownToHtml } from "../../book/Markdown";
 
+// "{{ service_hiw }}" in a script or a chat posting: whoever is doing that service today
+const ROLE_TOKEN = /\{\{\s*service_([a-z0-9_]+)\s*\}\}/gi;
+export const roleToken = (key) => `{{ service_${key} }}`;
+// The key a new role gets from its label, as HostingKit makes it ("Closing reading" is closing_reading)
+export const roleKey = (label) => label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
+
+// Who is doing each service today: what the hosts typed, else the schedule's host and co-host
+export const serviceNames = (center, live) => ({ host: center?.hosts?.host || "", co_host: center?.hosts?.co_host || "", ...(live?.service || {}) });
+
+// A section's HTML with today's names in it; a service nobody has yet shows its name, dimmed
+export function fillRoles(html, roles, names) {
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  return html.replace(/⟦role:([a-z0-9_]+)⟧/g, (_, key) => {
+    const name = names[key];
+    if (name) return `<span class="hc-role">${esc(name)}</span>`;
+    const role = roles.find((r) => r.key === key);
+    return `<span class="hc-role hc-role--empty" title="Nobody yet: fill it in under Before we begin">${esc(role?.label || key.replace(/_/g, " "))}</span>`;
+  });
+}
+
 const squish = (text) => (text || "").replace(/\s+/g, " ").trim();
 const isHeading = (node) => /^H[1-6]$/.test(node.tagName || "");
 
@@ -23,7 +43,10 @@ export const ACTIVITY_TITLE = "Reading / activity";
 // The script's top-level blocks (paragraphs, headings, lists...) as DOM nodes
 async function scriptNodes(script) {
   if (!script?.body?.trim()) return [];
-  const html = script.body_format === "markdown" ? await markdownToHtml(script.body) : script.body;
+  // {{ service_hiw }} becomes a mark Markdown leaves alone (its underscore could start italics),
+  // filled in with the name when the section shows (fillRoles)
+  const source = script.body.replace(ROLE_TOKEN, (_, key) => `⟦role:${key.toLowerCase()}⟧`);
+  const html = script.body_format === "markdown" ? await markdownToHtml(source) : source;
   const body = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html").body.firstChild;
   return [...body.childNodes].filter((n) => n.nodeType === 1 || n.textContent.trim());
 }
@@ -106,7 +129,8 @@ export function activityLabel(activity) {
   return kind ? (activity.title ? `${kind}: ${activity.title}` : kind) : title || "Reading / activity";
 }
 
-export function fillPosting(body, center, activity = null) {
+export function fillPosting(body, center, live = null) {
+  const names = serviceNames(center, live);
   const date = center?.on ? new Date(`${center.on}T12:00:00`).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "";
   const values = {
     meeting: center?.meeting?.name || "",
@@ -115,9 +139,11 @@ export function fillPosting(body, center, activity = null) {
     host: center?.hosts?.host || "",
     co_host: center?.hosts?.co_host || "",
     zoom_link: center?.meeting?.conference_url || "",
-    activity: activityLabel(activity),
+    activity: activityLabel(live?.activity),
   };
-  return (body || "").replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (all, key) => (key in values ? values[key] : all));
+  return (body || "")
+    .replace(ROLE_TOKEN, (_, key) => names[key.toLowerCase()] || "")
+    .replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (all, key) => (key in values ? values[key] : all));
 }
 
 export async function copyText(text) {
