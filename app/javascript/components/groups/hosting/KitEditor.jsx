@@ -5,7 +5,9 @@ import IconPicker from "../../ui/IconPicker";
 import LucideIcon from "../../ui/LucideIcon";
 import SegmentedControl from "../../ui/SegmentedControl";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
+import MarkdownTextarea from "../../notes/MarkdownTextarea";
 import { ErrorNote, dangerButton, primaryButton, quietButton } from "../ui";
+import PostingPreview from "./PostingPreview";
 import { AUTO_ANCHOR, PLACEHOLDERS, fillPosting, roleKey, roleToken, scriptParagraphs, scriptSections } from "./lib";
 
 const move = (list, i, by) => {
@@ -113,7 +115,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
               <button type="button" className={smallButton} onClick={addPosting}><Plus className="size-3.5" /> Add a posting</button>
             </div>
             <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">
-              Pasted into the Zoom chat as written. These fill themselves in: {PLACEHOLDERS.map(([k, what], i) => <span key={k}>{i > 0 && ", "}<code className="rounded bg-neutral-200 px-1 dark:bg-neutral-800">{`{{${k}}}`}</code> ({what})</span>)}, and the service roles below, like <code className="rounded bg-neutral-200 px-1 dark:bg-neutral-800">{roleToken("hiw")}</code>.
+              Pasted into the Zoom chat, with the formatting you give it. These fill themselves in: {PLACEHOLDERS.map(([k, what], i) => <span key={k}>{i > 0 && ", "}<code className="rounded bg-neutral-200 px-1 dark:bg-neutral-800">{`{{${k}}}`}</code> ({what})</span>)}, and the service roles below, like <code className="rounded bg-neutral-200 px-1 dark:bg-neutral-800">{roleToken("hiw")}</code>.
             </p>
             <label className="mb-2 flex items-start gap-2 rounded-xl bg-white p-3 text-sm shadow-panel dark:bg-neutral-900">
               <input type="checkbox" className="mt-0.5" checked={publicPostings} onChange={(e) => setPublicPostings(e.target.checked)} />
@@ -214,9 +216,15 @@ function PostingRow({ posting: p, open, toggle, change, up, down, remove, center
           </div>
           <div>
             <label htmlFor={`${id}-body`} className={labelClass}>What gets pasted</label>
-            <textarea id={`${id}-body`} rows={6} maxLength={4000} className={`${inputClass} font-mono`} value={p.body} onChange={(e) => change({ body: e.target.value })}
-              placeholder={"Welcome to {{meeting}}! 👋\nPlease keep your microphone muted unless you're sharing."} />
-            {p.body.includes("{{") && <p className="mt-1 whitespace-pre-wrap rounded-lg bg-neutral-100 p-2 text-xs text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">{fillPosting(p.body, center, center.live)}</p>}
+            <MarkdownTextarea id={`${id}-body`} minRows={6} maxLength={4000} colors className={`${inputClass} font-mono`} value={p.body} onChange={(body) => change({ body })}
+              placeholder={"Welcome to {{meeting}}! 👋\nPlease keep your microphone **muted** unless you're sharing."} />
+            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Select text for bold, italic, underline, strikethrough, a link, or a text or highlight color. It copies with that formatting.</p>
+            {p.body.trim() && (
+              <div className="mt-2 rounded-lg bg-neutral-100 p-2.5 text-sm text-slate-800 dark:bg-neutral-800 dark:text-neutral-100">
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">As it pastes</p>
+                <PostingPreview markdown={fillPosting(p.body, center, center.live)} />
+              </div>
+            )}
           </div>
           <div>
             <button type="button" className={smallButton} onClick={() => setPickIcon(!pickIcon)} aria-expanded={pickIcon}><LucideIcon name={p.icon} fallback={MessageSquare} size={14} /> {pickIcon ? "Done picking" : "Change icon"}</button>

@@ -70,6 +70,8 @@ Rails.application.routes.draw do
       member do
         post :ping
         post :act
+        get :my_readings
+        get :reading
         put :kit
         delete :kit, action: :reset_kit
       end

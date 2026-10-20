@@ -270,4 +270,54 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal false, response.parsed_body.dig("link", "public_postings")
   end
+
+  test "a host picks one of their own readings: it comes with the page's copy as a chat posting, and both hosts can read it" do
+    mine = Reading.create!(user: @host, title: "How It Works", source: "Alcoholics Anonymous", meetingName: "Sunrise", published_at: 1.day.ago,
+                           content: "<p>Rarely have we seen a person fail.</p>", topic: "<ul><li>Honesty</li><li>Open-mindedness</li></ul>")
+    draft = Reading.create!(user: @host, title: "Draft reading", content: "<p>Not yet</p>")
+    theirs = Reading.create!(user: @co_host, title: "Cory's reading", published_at: 1.day.ago, content: "<p>Cory</p>")
+
+    sign_in @host
+    get path(@meeting.id, "my_readings"), as: :json
+    assert_response :success
+    assert_equal [["Draft reading", "draft"], ["How It Works", "published"]], response.parsed_body["readings"].map { |r| [r["title"], r["status"]] }.sort
+
+    post path(@meeting.id, "act"), params: { act: "activity", activity: { kind: "my_reading", reading_id: theirs.id } }, as: :json
+    assert_response :unprocessable_entity, "someone else's reading can't be picked"
+
+    post path(@meeting.id, "act"), params: { act: "activity", activity: { kind: "my_reading", reading_id: mine.id, title: "Spoofed", reading_path: "/elsewhere" } }, as: :json
+    assert_response :success
+    activity = response.parsed_body["activity"]
+    assert_equal "my_reading", activity["kind"]
+    assert_equal "How It Works", activity["title"], "the title comes from the reading"
+    assert_equal "/readings/#{mine.id}", activity["reading_path"]
+    assert_equal "- Honesty\n- Open-mindedness", activity["reading_topics"]
+    assert activity["reading_published"]
+    assert_equal "Picked Reading: How It Works", response.parsed_body["log"].first["text"]
+
+    post path(@meeting.id, "act"), params: { act: "posted", posting_id: "reading" }, as: :json
+    assert_response :success
+    assert_equal "Hal", response.parsed_body.dig("posted", "reading", "by")
+
+    sign_in @co_host
+    get path(@meeting.id, "reading"), as: :json
+    assert_response :success
+    assert_equal "How It Works", response.parsed_body["title"]
+    assert_includes response.parsed_body["html"], "Rarely have we seen"
+    assert_includes response.parsed_body["topics_html"], "Honesty"
+
+    post path(@meeting.id, "act"), params: { act: "activity", activity: { kind: "my_reading", reading_id: draft.id } }, as: :json
+    assert_response :unprocessable_entity, "the co-host picks from their own readings"
+    sign_in @host
+    post path(@meeting.id, "act"), params: { act: "activity", activity: { kind: "my_reading", reading_id: draft.id } }, as: :json
+    assert_not response.parsed_body.dig("activity", "reading_published")
+    assert_nil response.parsed_body["posted"]["reading"], "a new pick clears the old posting's copied mark"
+
+    post path(@meeting.id, "act"), params: { act: "clear_activity" }, as: :json
+    get path(@meeting.id, "reading"), as: :json
+    assert_response :not_found
+
+    post path(@meeting.id, "act"), params: { act: "posted", posting_id: "reading" }, as: :json
+    assert_response :not_found, "there is no reading posting without a reading"
+  end
 end

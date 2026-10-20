@@ -146,6 +146,18 @@ export function fillPosting(body, center, live = null) {
     .replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (all, key) => (key in values ? values[key] : all));
 }
 
+// The posting that goes with a reading picked from the hosts' own (activity kind "my_reading"):
+// what the reading's page copies (its title, its link and the example topics), so it is ready to
+// paste when the reading comes up. It isn't one of the kit's postings; the Command Center puts it
+// first in the list while that reading is today's.
+export function readingPosting(activity) {
+  if (activity?.kind !== "my_reading" || !activity.reading_id) return null;
+  const rule = "====================";
+  const lines = [rule, "**Reading:**", activity.title, `${window.location.origin}${activity.reading_path}`, rule];
+  if (activity.reading_topics) lines.push("**Example Topics For Sharing:**", "Feel free to check in!", "---------------------", activity.reading_topics);
+  return { id: "reading", title: `Reading: ${activity.title}`, icon: "book-open", minute: 0, body: lines.join("\n"), virtual: true };
+}
+
 export async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);

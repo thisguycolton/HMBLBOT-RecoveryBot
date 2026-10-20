@@ -5,12 +5,15 @@ class HostingSession < ApplicationRecord
   ACTS = %w[goto complete uncomplete timer_start timer_pause timer_reset posted unposted activity clear_activity draw_topic drop_topic
             service milestone_add milestone_update milestone_remove milestone_move].freeze
   LOG_SIZE = 30
-  # What fills the script's reading / activity spot: a chapter from the literature, today's page
-  # of a daily book, topics drawn from a Topicificator set, a speaker, a meditation, or anything
+  # What fills the script's reading / activity spot: a chapter from the literature, one of the
+  # host's own readings (a Reading: the page's copy comes along as a chat posting, POSTED_READING),
+  # today's page of a daily book, topics drawn from a Topicificator set, a speaker, a meditation, or anything
   ACTIVITY_KINDS = {
-    "reading" => "Reading", "daily" => "Daily reading", "topics" => "Topicificator",
+    "reading" => "Reading", "my_reading" => "Reading", "daily" => "Daily reading", "topics" => "Topicificator",
     "speaker" => "Speaker", "meditation" => "Meditation", "other" => "Activity",
   }.freeze
+  # The key a my_reading activity's chat posting is kept under in `posted` (it isn't a HostChatPosting)
+  POSTED_READING = "reading"
   MAX_TOPICS = 20
   MAX_MILESTONES = 40
   # The short link's code: no 0/O, 1/I/L to mix up when it's read out
@@ -78,9 +81,11 @@ class HostingSession < ApplicationRecord
               nil
             when "activity"
               self.activity = self.class.tidy_activity(pick).merge("by" => user.display_name, "at" => now.iso8601)
+              self.posted = posted.except(POSTED_READING)
               "Picked #{activity_label}"
             when "clear_activity"
               self.activity = nil
+              self.posted = posted.except(POSTED_READING)
               "Took the reading / activity off"
             when "draw_topic"
               drawn = { "id" => topic.id, "title" => topic.title.to_s, "subtitle" => topic.subtitle.presence, "number" => topic.searchable_number.presence }.compact
@@ -144,6 +149,11 @@ class HostingSession < ApplicationRecord
     when "reading", "daily"
       out.merge!("book_slug" => text.call("book_slug", 200), "chapter_slug" => text.call("chapter_slug", 200), "book_title" => text.call("book_title", 160))
       out["kind"] = "other" unless out["book_slug"] && out["chapter_slug"]
+    when "my_reading"
+      # the controller has checked it's the host's own and filled these in from it
+      out.merge!("reading_id" => a["reading_id"].to_i.nonzero?, "reading_path" => text.call("reading_path", 200), "reading_topics" => a["reading_topics"].to_s.strip.first(1500).presence,
+                 "reading_published" => ActiveModel::Type::Boolean.new.cast(a["reading_published"]) || false)
+      out["kind"] = "other" unless out["reading_id"] && out["reading_path"]
     when "topics"
       out.merge!("topic_set_id" => a["topic_set_id"].to_i.nonzero?, "topic_set_name" => text.call("topic_set_name", 120), "topics" => [])
     end

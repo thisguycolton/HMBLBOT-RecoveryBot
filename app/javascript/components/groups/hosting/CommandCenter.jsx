@@ -12,7 +12,9 @@ import { ErrorNote, Loading, Message, primaryButton, quietButton } from "../ui";
 import KitEditor from "./KitEditor";
 import ActivityPanel, { ChapterText, activityIcon, shareReading } from "./Activity";
 import { ServicePanel, Milestones } from "./Service";
-import { ACTIVITY_TITLE, activityLabel, copyText, fillPosting, fillRoles, mmss, scriptSections, serviceNames } from "./lib";
+import PostingPreview from "./PostingPreview";
+import { copyPosting } from "./chatFormat";
+import { ACTIVITY_TITLE, activityLabel, copyText, fillPosting, fillRoles, mmss, readingPosting, scriptSections, serviceNames } from "./lib";
 import "./hosting.css";
 
 const PING_MS = 3000;
@@ -454,10 +456,15 @@ function QuickActions({ center }) {
 export function ChatPostings({ center, live, elapsed, act }) {
   const [justCopied, setJustCopied] = useState(null);
   const [openId, setOpenId] = useState(null);
-  const postings = center.kit.postings;
-  const due = useMemo(() => postings.find((p) => !live.posted[p.id] && p.minute * 60 <= elapsed), [postings, live.posted, elapsed]);
+  const kitPostings = center.kit.postings;
+  // A reading picked from the hosts' own comes with its posting (what its page copies), first in the list
+  const reading = useMemo(() => readingPosting(live.activity), [live.activity]);
+  const postings = useMemo(() => (reading ? [reading, ...kitPostings] : kitPostings), [reading, kitPostings]);
+  const due = useMemo(() => kitPostings.find((p) => !live.posted[p.id] && p.minute * 60 <= elapsed), [kitPostings, live.posted, elapsed]);
+  // The reading's text is already filled in; the kit's postings get the meeting's names
+  const filled = (p) => (p.virtual ? p.body : fillPosting(p.body, center, live));
   const copy = async (p) => {
-    await copyText(fillPosting(p.body, center, live));
+    await copyPosting(filled(p));
     setJustCopied(p.id);
     setTimeout(() => setJustCopied((id) => (id === p.id ? null : id)), 1800);
     act?.("posted", { posting_id: p.id });
@@ -481,7 +488,7 @@ export function ChatPostings({ center, live, elapsed, act }) {
                       <LucideIcon name={p.icon} fallback={MessageSquare} size={18} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block font-mono text-xs tabular-nums text-slate-500 dark:text-neutral-400">{mmss(p.minute * 60)}{isDue && <span className="ml-1.5 font-sans font-semibold text-accent dark:text-sky-300">Now</span>}</span>
+                      <span className="block font-mono text-xs tabular-nums text-slate-500 dark:text-neutral-400">{p.virtual ? <span className="font-sans font-semibold text-accent dark:text-sky-300">With today's reading</span> : mmss(p.minute * 60)}{isDue && <span className="ml-1.5 font-sans font-semibold text-accent dark:text-sky-300">Now</span>}</span>
                       <span className="block truncate font-semibold">{p.title}</span>
                       {posted && <span className="block truncate text-xs text-emerald-700 dark:text-emerald-300">Copied by {posted.by} · {timeOf(posted.at)}</span>}
                     </span>
@@ -492,7 +499,7 @@ export function ChatPostings({ center, live, elapsed, act }) {
                 </div>
                 {open && (
                   <div className="border-t border-neutral-100 px-3 pb-3 pt-2 dark:border-neutral-800">
-                    <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-700 dark:text-neutral-200">{fillPosting(p.body, center, live)}</pre>
+                    <PostingPreview markdown={filled(p)} className="text-sm text-slate-700 dark:text-neutral-200" />
                     {posted && act && <button type="button" className="mt-2 !bg-transparent p-0 text-xs font-medium text-slate-500 hover:underline dark:text-neutral-400" onClick={() => act("unposted", { posting_id: p.id })}>Mark as not posted</button>}
                   </div>
                 )}

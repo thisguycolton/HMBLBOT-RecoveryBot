@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { BookOpen, CalendarDays, Dices, Hash, Maximize2, Mic, Repeat, Shuffle, Sparkles, Wind, X } from "lucide-react";
+import { BookMarked, BookOpen, CalendarDays, Dices, ExternalLink, Hash, Maximize2, Mic, Plus, Repeat, RefreshCw, Shuffle, Sparkles, TriangleAlert, Wind, X } from "lucide-react";
+import { api } from "../lib";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import { ErrorNote, Loading, primaryButton, quietButton } from "../ui";
 import { ACTIVITY_TITLE, activityLabel, chapterHtml, readerHref } from "./lib";
 
 const label = "!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
-const KIND_ICONS = { reading: BookOpen, daily: CalendarDays, topics: Dices, speaker: Mic, meditation: Wind, other: Sparkles };
+const KIND_ICONS = { reading: BookOpen, my_reading: BookMarked, daily: CalendarDays, topics: Dices, speaker: Mic, meditation: Wind, other: Sparkles };
 export const activityIcon = (activity) => KIND_ICONS[activity?.kind] || Sparkles;
 
 const getJson = (url) => fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" }).then((r) => (r.ok ? r.json() : Promise.reject(new Error("That chapter isn't in the library anymore."))));
@@ -43,6 +44,7 @@ export default function ActivityPanel({ center, live, act, size }) {
         <Icon className="size-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate font-medium">{activityLabel(activity)}</span>
         {activity.by && <span className="text-xs opacity-80">picked by {activity.by}</span>}
+        {activity.kind === "my_reading" && activity.reading_published && <button type="button" className={`${quietButton} !px-2.5 !py-1 !text-xs`} onClick={() => shareReading({ url: activity.reading_path })} title="Opens the reading in its own window, to share that window in Zoom"><Maximize2 className="size-3.5" /> Open to share</button>}
         {isReading && <button type="button" className={`${quietButton} !px-2.5 !py-1 !text-xs`} onClick={() => shareReading(activity)} title="Opens the reader in its own window, to share that window in Zoom"><Maximize2 className="size-3.5" /> Open to share</button>}
         <button type="button" className={`${quietButton} !px-2.5 !py-1 !text-xs`} onClick={change}><Repeat className="size-3.5" /> Change</button>
       </div>
@@ -54,6 +56,7 @@ export default function ActivityPanel({ center, live, act, size }) {
           <ChapterText bookSlug={activity.book_slug} chapterSlug={activity.chapter_slug} size={size} />
         </>
       )}
+      {activity.kind === "my_reading" && <MyReading center={center} activity={activity} size={size} />}
       {activity.kind === "topics" && <Topics activity={activity} act={act} size={size} />}
       {["speaker", "meditation", "other"].includes(activity.kind) && (
         <>
@@ -138,16 +141,96 @@ function ActivityPicker({ center, act }) {
           <Tile key={d.book_slug} icon={CalendarDays} title={`Today's ${d.book_title.replace(/^The /, "")}`} text={d.title}
             onClick={() => pick({ kind: "daily", book_slug: d.book_slug, chapter_slug: d.chapter_slug, title: d.title, book_title: d.book_title })} />
         ))}
+        <Tile icon={BookMarked} title="One of my readings" text="A reading saved on your account" onClick={() => setMode("my_reading")} pressed={mode === "my_reading"} />
         <Tile icon={BookOpen} title="A reading from the literature" text="A chapter of an approved book" onClick={() => setMode("reading")} pressed={mode === "reading"} />
         {options.topic_sets.length > 0 && <Tile icon={Dices} title="Topicificator" text="Draw topics for discussion" onClick={() => setMode("topics")} pressed={mode === "topics"} />}
         <Tile icon={Mic} title="Speaker" text="Someone shares their story" onClick={() => setMode("speaker")} pressed={mode === "speaker"} />
         <Tile icon={Wind} title="Meditation" onClick={() => setMode("meditation")} pressed={mode === "meditation"} />
         <Tile icon={Sparkles} title="Something else" onClick={() => setMode("other")} pressed={mode === "other"} />
       </div>
+      {mode === "my_reading" && <MyReadingPick center={center} onPick={pick} />}
       {mode === "reading" && <ChapterPick books={options.books} onPick={pick} />}
       {mode === "topics" && <TopicSetPick sets={options.topic_sets} onPick={pick} />}
       {["speaker", "meditation", "other"].includes(mode) && <NotePick key={mode} kind={mode} onPick={pick} />}
     </div>
+  );
+}
+
+const readingsUrl = (center, rest) => `/groups/${center.group.slug}/hosting/${center.meeting.id}/${rest}?on=${center.on}`;
+
+// The signed-in host's own readings (the ones on /readings/mine), to pick one for today. The reading
+// comes with the posting its page copies, in the chat postings. A new one is made on its own page, and
+// the list reloads when the host comes back to this one.
+function MyReadingPick({ center, onPick }) {
+  const [readings, setReadings] = useState(null);
+  const [error, setError] = useState(null);
+  const [id, setId] = useState("");
+  const load = () => api(readingsUrl(center, "my_readings")).then((r) => { setReadings(r.readings); setError(null); }).catch((e) => setError(e.message));
+  useEffect(() => {
+    load();
+    const onShow = () => document.visibilityState === "visible" && load();
+    document.addEventListener("visibilitychange", onShow);
+    return () => document.removeEventListener("visibilitychange", onShow);
+  }, [center.group.slug, center.meeting.id, center.on]);
+  const reading = readings?.find((r) => String(r.id) === id);
+  return (
+    <div className="mt-3 space-y-2">
+      <ErrorNote error={error} />
+      {readings && readings.length === 0 && <p className="text-sm text-slate-600 dark:text-neutral-300">You haven't saved a reading yet. Make one, then come back here.</p>}
+      {readings && readings.length > 0 && (
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <label htmlFor="act-my-reading" className={labelClass}>Your readings</label>
+            <select id="act-my-reading" className={selectClass} value={id} onChange={(e) => setId(e.target.value)}>
+              <option value="">Pick a reading</option>
+              {readings.map((r) => <option key={r.id} value={r.id}>{r.title || "Untitled"}{r.status !== "published" ? ` (${r.status})` : ""}{r.meeting_name ? ` · ${r.meeting_name}` : ""}</option>)}
+            </select>
+          </div>
+          <button type="button" className={primaryButton} disabled={!reading} onClick={() => onPick({ kind: "my_reading", reading_id: reading.id })}>Use it</button>
+        </div>
+      )}
+      {readings === null && !error && <Loading />}
+      {reading && reading.status !== "published" && <p className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-200"><TriangleAlert className="mt-0.5 size-3.5 shrink-0" /> This reading is a {reading.status}. The link in the chat only opens for you until you publish it.</p>}
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <a href="/readings/new" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline"><Plus className="size-3.5" /> Create a new reading <ExternalLink className="size-3" /></a>
+        <button type="button" className="inline-flex items-center gap-1 !bg-transparent p-0 text-slate-600 hover:underline dark:text-neutral-300" onClick={load}><RefreshCw className="size-3.5" /> Refresh the list</button>
+      </div>
+    </div>
+  );
+}
+
+// One of the hosts' own readings, in the middle: its text and, under it, the example topics. It is
+// fetched from the Command Center (it only gives the one picked for today, so another host's draft
+// is readable here without its page being open to them).
+function MyReading({ center, activity, size }) {
+  const [reading, setReading] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    setReading(null);
+    setError(null);
+    api(readingsUrl(center, "reading")).then(setReading).catch((e) => setError(e.message));
+  }, [center.group.slug, center.meeting.id, center.on, activity.reading_id]);
+  return (
+    <>
+      <h2 className="mt-5 text-xl font-bold sm:text-2xl">{activity.title}</h2>
+      {!activity.reading_published && (
+        <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-amber-50 p-2.5 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"><TriangleAlert className="mt-0.5 size-4 shrink-0" /> This reading isn't published, so the link in the chat only opens for its owner. Publish it to share the link.</p>
+      )}
+      {error && <div className="mt-3"><ErrorNote error={error} /></div>}
+      {!reading && !error && <Loading />}
+      {reading && (
+        <>
+          <div className="doc-prose hc-script mt-4" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: reading.html ?? chapterHtml(reading.tiptap) }} />
+          {reading.source && <p className="mt-3 italic text-slate-600 dark:text-neutral-300" style={{ fontSize: size }}>{reading.source}</p>}
+          {reading.topics_html && (
+            <div className="mt-6 rounded-2xl bg-white p-4 shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
+              <p className={`${label} mb-2`}>Example topics for sharing</p>
+              <div className="doc-prose hc-script" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: reading.topics_html }} />
+            </div>
+          )}
+        </>
+      )}
+    </>
   );
 }
 

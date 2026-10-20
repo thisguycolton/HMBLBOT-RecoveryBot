@@ -1,5 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
-import { Bold, Italic, Link2, Strikethrough, Underline } from "lucide-react";
+import { Bold, Highlighter, Italic, Link2, Strikethrough, Type, Underline, X } from "lucide-react";
+import { BACKGROUND_COLORS, TEXT_COLORS, formatAttrs, parseAttrs } from "../groups/hosting/chatFormat";
 
 // Markdown each button wraps the selection in (`++` is underline in book/Markdown.jsx)
 const MARKS = [
@@ -30,11 +31,14 @@ function caretCoords(textarea, position) {
 
 // A note's text box: it grows with what's written (never resized by hand), and selecting
 // text brings up Bold, Italic, Underline, Strikethrough and Link above it, which put the
-// Markdown in for you (⌘/Ctrl+B, I, U, Shift+X and K do the same). Other props go to the textarea.
-const MarkdownTextarea = forwardRef(function MarkdownTextarea({ value, onChange, onKeyDown, minRows = 3, className = "", ...rest }, ref) {
+// Markdown in for you (⌘/Ctrl+B, I, U, Shift+X and K do the same). With `colors`, the pill also
+// has text and highlight colors, written as [text]{color=#dc2626 bg=#fef08a} (chat postings: see
+// groups/hosting/chatFormat.js). Other props go to the textarea.
+const MarkdownTextarea = forwardRef(function MarkdownTextarea({ value, onChange, onKeyDown, minRows = 3, className = "", colors = false, ...rest }, ref) {
   const textRef = useRef(null);
   const [bar, setBar] = useState(null); // { top, left } while text is selected
   const [linking, setLinking] = useState(null); // { start, end, url } while asking for a link
+  const [picking, setPicking] = useState(null); // "color" | "bg" while choosing a color
   useImperativeHandle(ref, () => textRef.current);
 
   useLayoutEffect(() => {
@@ -46,7 +50,7 @@ const MarkdownTextarea = forwardRef(function MarkdownTextarea({ value, onChange,
 
   const place = useCallback(() => {
     const el = textRef.current;
-    if (!el || el.selectionStart === el.selectionEnd || document.activeElement !== el) { setBar(null); return; }
+    if (!el || el.selectionStart === el.selectionEnd || document.activeElement !== el) { setBar(null); setPicking(null); return; }
     const { top, left } = caretCoords(el, el.selectionStart);
     setBar({ top: Math.max(top, 0), left: Math.min(Math.max(left - 8, 0), Math.max(el.clientWidth - 190, 0)) });
   }, []);
@@ -89,6 +93,32 @@ const MarkdownTextarea = forwardRef(function MarkdownTextarea({ value, onChange,
     replace(start, end, next, [lead.length + w.length, lead.length + w.length + core.length]);
   };
 
+  // Sets (or, with no hex, takes off) the selection's text color or highlight. A selection inside
+  // a [text]{...} span, or the whole span, changes that span's colors; anything else gets a new one.
+  const paint = (key, hex) => {
+    const el = textRef.current;
+    const [start, end] = [el.selectionStart, el.selectionEnd];
+    const picked = value.slice(start, end);
+    setPicking(null);
+    const change = (attrs) => formatAttrs({ ...attrs, [key]: hex || undefined });
+    const after = value.slice(end).match(/^\]\{([^}\n]*)\}/);
+    if (value[start - 1] === "[" && after) {
+      const attrs = change(parseAttrs(after[1]));
+      return replace(start - 1, end + after[0].length, attrs ? `[${picked}]{${attrs}}` : picked, [1, 1 + picked.length]);
+    }
+    const whole = picked.match(/^\[([^\]\n]+)\]\{([^}\n]*)\}$/);
+    if (whole) {
+      const attrs = change(parseAttrs(whole[2]));
+      const text = attrs ? `[${whole[1]}]{${attrs}}` : whole[1];
+      return replace(start, end, text, [attrs ? 1 : 0, (attrs ? 1 : 0) + whole[1].length]);
+    }
+    if (!hex) return;
+    const lead = picked.match(/^\s*/)[0];
+    const trail = picked.slice(lead.length).match(/\s*$/)[0];
+    const core = picked.slice(lead.length, picked.length - trail.length) || "text";
+    replace(start, end, `${lead}[${core}]{${key}=${hex}}${trail}`, [lead.length + 1, lead.length + 1 + core.length]);
+  };
+
   const askLink = () => {
     const el = textRef.current;
     setLinking({ start: el.selectionStart, end: el.selectionEnd, url: "" });
@@ -121,7 +151,14 @@ const MarkdownTextarea = forwardRef(function MarkdownTextarea({ value, onChange,
       {(bar || linking) && (
         <div className="wb-md-input__bar" style={{ top: bar?.top ?? 0, left: bar?.left ?? 0 }} role="toolbar" aria-label="Format the selected text"
           onMouseDown={(e) => { if (e.target.tagName !== "INPUT") e.preventDefault(); }}>
-          {linking ? (
+          {picking ? (
+            <div className="flex items-center gap-1" role="group" aria-label={picking === "color" ? "Text color" : "Highlight color"}>
+              {(picking === "color" ? TEXT_COLORS : BACKGROUND_COLORS).map(([name, hex]) => (
+                <button key={hex} type="button" className="wb-md-input__swatch" style={{ background: hex }} onClick={() => paint(picking, hex)} aria-label={name} title={name} />
+              ))}
+              <button type="button" className="wb-md-input__btn" onClick={() => paint(picking, null)} aria-label="No color" title="No color"><X size={15} aria-hidden="true" /></button>
+            </div>
+          ) : linking ? (
             <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); applyLink(); }}>
               <input autoFocus type="url" inputMode="url" placeholder="Paste a link" value={linking.url} aria-label="Link"
                 onChange={(e) => setLinking((l) => ({ ...l, url: e.target.value }))}
@@ -141,6 +178,12 @@ const MarkdownTextarea = forwardRef(function MarkdownTextarea({ value, onChange,
               <button type="button" className="wb-md-input__btn" onClick={askLink} aria-label="Link" title="Link">
                 <Link2 size={15} aria-hidden="true" />
               </button>
+              {colors && (
+                <>
+                  <button type="button" className="wb-md-input__btn" onClick={() => setPicking("color")} aria-label="Text color" title="Text color"><Type size={15} aria-hidden="true" /></button>
+                  <button type="button" className="wb-md-input__btn" onClick={() => setPicking("bg")} aria-label="Highlight color" title="Highlight color"><Highlighter size={15} aria-hidden="true" /></button>
+                </>
+              )}
             </>
           )}
         </div>
