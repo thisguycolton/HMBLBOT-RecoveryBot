@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Camera, Check, ExternalLink, Trash2 } from "lucide-react";
+import { Camera, Check, ExternalLink, Mic, Trash2 } from "lucide-react";
 import { VISIBILITY } from "../notes/lib";
-import { inputClass, labelClass } from "../ui/styles";
+import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { DateField, todayValue } from "../ui/DateFields";
 import Toggle from "../ui/Toggle";
 import { api } from "../groups/lib";
@@ -54,6 +54,9 @@ export default function ProfilePage() {
     setRemovePicture(false);
   };
   useEffect(() => { api("/profile").then(load).catch((e) => setError(e.message)); }, []);
+  // /users/edit#hosting (from a reminder email) once the page is there
+  const loaded = Boolean(profile);
+  useEffect(() => { if (loaded && location.hash === "#hosting") document.getElementById("hosting")?.scrollIntoView(); }, [loaded]);
 
   if (!profile) return error ? <ErrorNote error={error} /> : <p className="py-16 text-center !font-sans text-sm text-slate-500">Loading…</p>;
 
@@ -232,6 +235,8 @@ export default function ProfilePage() {
         </Tray>
       )}
 
+      {profile.hosting && <HostingSettings hosting={profile.hosting} save={saveDefault} saved={saved} />}
+
       {profile.groups_open || profile.groups.length > 0 ? (
         <Tray label="Your groups" action={<a href="/groups/find" className="text-sm font-medium text-accent hover:underline">Find a group</a>}>
           <Card className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -292,6 +297,60 @@ export default function ProfilePage() {
 
       <DeleteAccount />
     </div>
+  );
+}
+
+const ROLE_LABEL = { host: "Host", co_host: "Co-host" };
+const hoursLabel = (h) => (h === 24 ? "The day before (24 hours)" : h === 48 ? "Two days before" : `${h} hours before`);
+
+// Only for hosts and co-hosts (on a group's host schedule, or marked as able to host): whether
+// they're reminded before each meeting they're on, how early, and by email too. Saved as it's
+// changed, like the privacy defaults.
+function HostingSettings({ hosting, save, saved }) {
+  const dateLabel = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  return (
+    <section id="hosting" className="scroll-mt-20">
+      <Tray label="Hosting">
+        <Card className="space-y-4 p-4">
+          <p className="text-sm text-slate-600 dark:text-neutral-400">
+            You host or co-host for {hosting.groups.map((g) => g.title).join(", ")}. These settings only show to hosts.
+          </p>
+          <Toggle checked={hosting.reminders} onChange={(v) => save("host_reminders", v)}
+            label={<span className="inline-flex items-center gap-2">Remind me before meetings I'm on {saved === "host_reminders" && <Check className="h-3.5 w-3.5 text-emerald-600" />}</span>}
+            description="A notification here (and an email, if you like) before each meeting you host, co-host or cover. Nothing is sent until you turn this on." />
+          {hosting.reminders && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="p-host-hours" className={labelClass}>When</label>
+                <select id="p-host-hours" className={selectClass} value={hosting.hours} onChange={(e) => save("host_reminder_hours", Number(e.target.value))}>
+                  {hosting.hour_options.map((h) => <option key={h} value={h}>{hoursLabel(h)}</option>)}
+                </select>
+              </div>
+              <Toggle className="sm:pt-6" checked={hosting.email} onChange={(v) => save("host_reminder_email", v)} label="Email me too" description="Sent to your account's email address." />
+            </div>
+          )}
+          <div className="border-t border-neutral-100 pt-3 dark:border-neutral-800">
+            <p className={labelClass}>Coming up</p>
+            {hosting.upcoming.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-neutral-400">You're not on the schedule in the next three weeks.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {hosting.upcoming.map((c) => (
+                  <li key={`${c.slug}-${c.meeting}-${c.on}-${c.role}`}>
+                    <a href={`/groups/${c.slug}/hosts`} className="flex items-center gap-2 text-sm hover:text-accent">
+                      <Mic className="h-4 w-4 shrink-0 text-slate-400" />
+                      <span className="w-28 shrink-0 text-slate-500 dark:text-neutral-400">{dateLabel(c.on)}</span>
+                      <span className="min-w-0 flex-1 truncate text-slate-900 dark:text-white">{c.time} · {c.meeting}</span>
+                      <Pill tone={c.role === "host" ? "accent" : undefined}>{ROLE_LABEL[c.role]}{c.cover ? ", covering" : ""}</Pill>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Card>
+      </Tray>
+    </section>
   );
 }
 

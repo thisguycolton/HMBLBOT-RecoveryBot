@@ -28,6 +28,9 @@ class User < ApplicationRecord
                        format: { with: USERNAME, message: "can use lowercase letters, numbers and dashes (2 to 30)" }
   validates :page_layout, inclusion: { in: Event::LAYOUTS }
   validates :default_highlight_visibility, :default_note_visibility, inclusion: { in: Visibility::LEVELS }
+  # How long before a meeting they host a reminder goes out (HostReminders), when they turn it on
+  HOST_REMINDER_HOURS = [2, 6, 12, 24, 48].freeze
+  validates :host_reminder_hours, inclusion: { in: HOST_REMINDER_HOURS }
 
   AVATAR_TYPES = %w[image/jpeg image/png image/webp].freeze
   validates :bio, length: { maximum: 280 }
@@ -48,6 +51,7 @@ class User < ApplicationRecord
   has_many :intergroup_follows, dependent: :destroy
   has_many :host_sub_requests_made, class_name: "HostSubRequest", foreign_key: :requested_by_id, dependent: :nullify, inverse_of: :requested_by
   has_many :host_sub_requests_filled, class_name: "HostSubRequest", foreign_key: :filled_by_id, dependent: :nullify, inverse_of: :filled_by
+  has_many :meeting_host_reminders, dependent: :delete_all
   has_many :page_templates_updated, class_name: "GroupPageTemplate", foreign_key: :updated_by_id, dependent: :nullify, inverse_of: :updated_by
   # Readings are shared with everyone, so an account that added some isn't deleted on its own
   # (Api::ProfilesController#destroy says to get in touch instead)
@@ -93,6 +97,10 @@ class User < ApplicationRecord
   def profile_path = "/people/#{username}"
   def following?(other) = !!other && follows_given.exists?(followed_id: other.id)
   def custom_page? = !page_blocks.nil?
+
+  # Their hosting: the groups they can host for, their meetings and coming dates
+  def host_commitments = @host_commitments ||= HostCommitments.new(self)
+  def host? = host_commitments.host?
 
   # Enough to show and link to them anywhere
   def as_person_json = { id: id, name: display_name, username: username, avatar_url: avatar_url }

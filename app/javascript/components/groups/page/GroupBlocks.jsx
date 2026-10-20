@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Gavel, Lock, MessagesSquare, Pin, Scale, Trash2, UserPlus, Users, Video } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Gavel, Lock, MessagesSquare, Mic, Pin, Scale, Trash2, UserPlus, Users, Video } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { tone } from "../../events/lib";
 import Avatar from "../Avatar";
@@ -50,14 +50,43 @@ export function Card({ block, compact, title, icon: Icon, action, children }) {
 
 export const Empty = ({ children }) => <p className="text-sm italic text-slate-400 dark:text-neutral-500">{children}</p>;
 
-// Weekly meetings are a row per day; the same meeting on several days is one line
+// Weekly meetings are a row per day; the same meeting on several days is one line, showing who
+// hosts the soonest of its days
 function meetingRows(meetings) {
   const weekly = meetings.filter((m) => m.recurrence === "weekly");
   const rest = meetings.filter((m) => m.recurrence !== "weekly");
+  const soonest = (series) => [...series].sort((a, b) => (a.upcoming_start || a.next_start || "").localeCompare(b.upcoming_start || b.next_start || ""))[0];
   return [
-    ...toSeries(weekly).map((series) => ({ ...series[0], id: series.map((m) => m.id).join("-"), label: scheduleLabel(series) })),
+    ...toSeries(weekly).map((series) => {
+      const next = soonest(series);
+      return { ...series[0], id: series.map((m) => m.id).join("-"), label: scheduleLabel(series), hosts: next.hosts, hosts_on: series.length > 1 ? next.hosts_on : null };
+    }),
     ...rest.map((m) => ({ ...m, label: m.schedule_label })),
   ];
+}
+
+const HOST_ROLE = { host: "Host", co_host: "Co-host" };
+
+// "Host Sam R. · Co-host Alex P.", for the next meeting (and which day, when it meets on several)
+function MeetingHosts({ hosts, on, editing }) {
+  if (!hosts?.length) return null;
+  const local = (d) => d.toLocaleDateString("en-CA");
+  const now = new Date();
+  const day = on && (on === local(now) ? "Today" : on === local(new Date(now.getTime() + 864e5)) ? "Tomorrow" : new Date(`${on}T12:00:00`).toLocaleDateString(undefined, { weekday: "short" }));
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-slate-600 dark:text-neutral-300 [&>span+span]:ml-1.5">
+      <Mic className="size-3.5 shrink-0 text-slate-400" aria-hidden />
+      {day && <span className="text-slate-500 dark:text-neutral-400">{day}:</span>}
+      {hosts.map((h) => (
+        <span key={h.role} className="whitespace-nowrap">
+          <span className="text-slate-500 dark:text-neutral-400">{HOST_ROLE[h.role]} </span>
+          {h.username && !editing
+            ? <a href={`/people/${h.username}`} className="font-medium text-slate-800 hover:text-accent hover:underline dark:text-neutral-100">{h.name}</a>
+            : <span className="font-medium text-slate-800 dark:text-neutral-100">{h.name}</span>}
+        </span>
+      ))}
+    </p>
+  );
 }
 
 function MeetingsBlock({ block, compact, editing, context, title }) {
@@ -72,6 +101,7 @@ function MeetingsBlock({ block, compact, editing, context, title }) {
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-slate-900 dark:text-white">{m.name}</p>
               <p className="text-sm text-slate-600 dark:text-neutral-300">{m.label}</p>
+              <MeetingHosts hosts={m.hosts} on={m.hosts_on} editing={editing} />
               {m.types?.length > 0 && (
                 <p className="mt-1 flex flex-wrap gap-1">
                   {m.types.slice(0, compact ? 3 : 6).map((code) => (

@@ -5,13 +5,31 @@ class CourtVerificationsController < ApplicationController
   after_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }
 
   # ?group=<slug> makes it that group's form: its name, its meetings, its time zone.
-  # Group links are shared by the group's admins, like the plain one.
+  # Group links are shared by the group's admins, like the plain one. &meeting=<id> (from a
+  # host's account menu) picks that meeting, on whichever of today and yesterday it ran.
   def new
     @group = Group.active.find_by(slug: params[:group].to_s) if params[:group].present?
     @group_json = @group && group_form_json(@group)
+    @group_json&.merge!(preselect: preselect(@group, @group_json)) if params[:meeting].present?
   end
 
   private
+
+  # { meeting_id:, day: "today" | "yesterday", host_name: } for the meeting (any of its days) on
+  # the latest of today and yesterday it ran, and the host's name when they're signed in
+  def preselect(group, json)
+    meeting = group.meetings.find_by(id: params[:meeting])
+    return unless meeting
+
+    ids = meeting.series.pluck(:id)
+    today = json[:today]
+    yesterday = (Date.iso8601(today) - 1).iso8601
+    day, hit = [["today", today], ["yesterday", yesterday]].lazy.filter_map do |label, date|
+      m = json[:meetings].find { |x| ids.include?(x[:id]) && x[:dates].include?(date) }
+      [label, m] if m
+    end.first
+    { meeting_id: hit&.dig(:id), day: day, name: meeting.name, host_name: current_user&.display_name }.compact
+  end
 
   # Each meeting with the dates it falls on today and yesterday (in the group's zone),
   # so the form can offer the right ones for the day picked

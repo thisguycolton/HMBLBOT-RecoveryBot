@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { BellRing, CalendarClock, CalendarX, Plus, Printer, ScrollText, Trash2, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
+import { BellRing, CalendarClock, CalendarX, Link2, Plus, Printer, ScrollText, Trash2, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
 import Toggle from "../ui/Toggle";
 import usePrintable, { printTitled } from "../../lib/usePrintable";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
@@ -43,6 +43,35 @@ function AssignForm({ slug, slot, role, members, onDone, onCancel, setData }) {
       <p className="-mt-1 text-xs text-slate-500 dark:text-neutral-400">Whoever is in this place now ends the day before. A member is told they've been put on.</p>
       {slot.series_ids.length > 1 && <Toggle checked={form.all_days} onChange={(v) => setForm({ ...form, all_days: v })} label={`Every day this meeting runs (${slot.series_ids.length} days)`} description={`${slot.name} at ${clock(slot.start_minute)}, all week`} />}
       <div className="flex justify-end gap-2"><button type="button" className={quietButton} onClick={onCancel}>Cancel</button><button type="submit" className={primaryButton}><UserPlus className="size-4" /> Put them on</button></div>
+    </form>
+  );
+}
+
+// Connecting a name on the schedule to a member's account, everywhere that name is written, so
+// they're told about changes, can turn on reminders and get the host tools. A member whose name
+// matches is picked to start with.
+function LinkForm({ slug, person, members, onDone, onCancel, setData }) {
+  const match = members.find((m) => m.name.trim().toLowerCase() === person.name.trim().toLowerCase());
+  const [userId, setUserId] = useState(String(person.user_id || match?.id || ""));
+  const [error, setError] = useState(null);
+  const save = async (e) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      setData(await api(`/groups/${slug}/meeting_hosts/link`, { method: "POST", body: { name: person.name, user_id: userId || null } }));
+      onDone();
+    } catch (err) { setError(err.message); }
+  };
+  return (
+    <form onSubmit={save} className="mt-2 space-y-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
+      <label htmlFor={`link-${person.id}`} className={labelClass}>Whose account is “{person.name}”?</label>
+      <select id={`link-${person.id}`} className={selectClass} value={userId} onChange={(e) => setUserId(e.target.value)}>
+        <option value="">Not connected to an account</option>
+        {members.map((m) => <option key={m.id} value={m.id}>{m.name}{match?.id === m.id ? " (same name)" : ""}</option>)}
+      </select>
+      <p className="text-xs text-slate-500 dark:text-neutral-400">Every place and cover written as “{person.name}” is connected. They're told, and can turn on reminders in their account settings.</p>
+      <ErrorNote error={error} />
+      <div className="flex justify-end gap-2"><button type="button" className={quietButton} onClick={onCancel}>Cancel</button><button type="submit" className={primaryButton}><Link2 className="size-4" /> Save</button></div>
     </form>
   );
 }
@@ -206,13 +235,18 @@ export default function HostsTab({ group }) {
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">{SHORT[role]}</p>
         {person ? (
-          <p className="text-sm text-slate-900 dark:text-white"><span className="font-medium">{person.name}</span>{person.ends_on && <span className="text-xs text-slate-500 dark:text-neutral-400"> until {dateLabel(person.ends_on)}</span>}</p>
+          <p className="text-sm text-slate-900 dark:text-white">
+            <span className="font-medium">{person.name}</span>
+            {person.linked && <UserCheck className="ml-1 inline size-3.5 align-[-2px] text-emerald-600 dark:text-emerald-400" aria-label="Connected to their account" title="Connected to their account" />}
+            {person.ends_on && <span className="text-xs text-slate-500 dark:text-neutral-400"> until {dateLabel(person.ends_on)}</span>}
+          </p>
         ) : later ? <p className="text-sm italic text-slate-500 dark:text-neutral-400">Starts {dateLabel(later.starts_on)}</p>
           : <Pill tone="amber">Open</Pill>}
         {person && later && <p className="text-xs text-slate-500 dark:text-neutral-400">Then {later.name} from {dateLabel(later.starts_on)}</p>}
         {edit && !showing && (
           <span className="mt-1 flex flex-wrap gap-1">
             <button type="button" className={`${quietButton} !px-2 !py-0.5 !text-xs`} onClick={() => setOpen({ slotId: slot.id, role })}><UserPlus className="size-3.5" /> {person || later ? "Change" : "Put someone on"}</button>
+            {person && data.members?.length > 0 && <button type="button" className={`${quietButton} !px-2 !py-0.5 !text-xs`} onClick={() => setOpen({ slotId: slot.id, role: `link-${role}` })}><Link2 className="size-3.5" /> {person.linked ? "Account" : "Connect account"}</button>}
             {person && <button type="button" className={`${quietButton} !px-2 !py-0.5 !text-xs`} title="Ends today" onClick={() => window.confirm(`${person.name} steps down as ${SHORT[role].toLowerCase()}?`) && call(`meeting_hosts/${person.id}`, "PATCH", { meeting_host: { ends_on: today() } })}><UserMinus className="size-3.5" /> Step down</button>}
             {person && <button type="button" aria-label={`Remove ${person.name}`} className={`${dangerButton} !px-1.5 !py-0.5`} onClick={() => window.confirm(`Remove ${person.name} from the schedule, as if they never were ${SHORT[role].toLowerCase()}?`) && call(`meeting_hosts/${person.id}`, "DELETE")}><Trash2 className="size-3.5" /></button>}
           </span>
@@ -255,7 +289,8 @@ export default function HostsTab({ group }) {
       )}
       {open?.slotId === slot.id && open.role === "sub" && <SubForm slug={slug} slot={slot} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
       {open?.slotId === slot.id && open.role === "mine" && <SubForm slug={slug} slot={slot} mine roles={ROLES.filter(([k]) => slot.mine.includes(k))} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
-      {open?.slotId === slot.id && !["cover", "sub", "mine"].includes(open.role) && <AssignForm slug={slug} slot={slot} role={open.role} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
+      {open?.slotId === slot.id && open.role.startsWith("link-") && <LinkForm slug={slug} person={slot[open.role.slice(5)]} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
+      {open?.slotId === slot.id && !["cover", "sub", "mine"].includes(open.role) && !open.role.startsWith("link-") && <AssignForm slug={slug} slot={slot} role={open.role} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
       {open?.slotId === slot.id && open.role === "cover" && <CoverForm slug={slug} slot={slot} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
     </Card>
   );

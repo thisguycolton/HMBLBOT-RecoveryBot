@@ -40,6 +40,7 @@ Rails.application.routes.draw do
   resources :text_reports, only: :create
   resources :site_notices, only: :index
   resource :profile, only: %i[show update destroy]
+  resource :hosting, controller: "hosting", only: :show
   get "oiaa/search", to: "oiaa#search"
   get "oiaa/matches", to: "oiaa#matches"
   get "groups/find", to: "groups#find"
@@ -59,7 +60,9 @@ Rails.application.routes.draw do
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
     resource :conscience, controller: "group_conscience", only: :show
-    resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy]
+    resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy] do
+      post :link, on: :collection
+    end
     resources :meeting_host_covers, controller: "group_meeting_host_covers", only: %i[create destroy]
     resources :host_sub_requests, controller: "group_host_sub_requests", only: %i[create destroy] do
       post :take, on: :member

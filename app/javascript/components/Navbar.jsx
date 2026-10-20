@@ -1,11 +1,12 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronDown, Heart, LogIn, LogOut, Menu, Moon, Sun, UserPlus, Users, X } from "lucide-react";
+import { ChevronDown, FileCheck2, Heart, LogIn, LogOut, Menu, Moon, Sun, UserPlus, Users, X } from "lucide-react";
 
 import DonationModal from "./DonationModal";
 import NotificationBell from "./NotificationBell";
 import { ACCOUNT_ITEMS, ADMIN_ITEMS, NAV_CATEGORIES, currentHref, showItem } from "./nav/siteMenu";
 import { RecoveryBotLogo } from "./brand/Logo";
 import MyGroupsModal from "./nav/MyGroupsModal";
+import HostCourtModal from "./nav/HostCourtModal";
 
 // !bg: the reader styles give every <button> a gray fill
 const linkTone =
@@ -26,6 +27,8 @@ export default function Navbar({
   const [donationModalOpen, setDonationModalOpen] = useState(false);
   const [myGroupsOpen, setMyGroupsOpen] = useState(false);
   const openMyGroups = () => { setOpenMenu(null); setMobileOpen(false); setMyGroupsOpen(true); };
+  const [courtOpen, setCourtOpen] = useState(false);
+  const openCourt = () => { setOpenMenu(null); setMobileOpen(false); setCourtOpen(true); };
   const navRef = useRef(null);
   // set by the reader layout for User#suite_admin?; the admin pages check again server-side
   const isSuiteAdmin = document.body.dataset.suiteAdmin === "true";
@@ -145,7 +148,7 @@ export default function Navbar({
             <div className="hidden md:flex items-center gap-2">
               {isAuthenticated ? (
                 <Dropdown label="Account" align="right" open={openMenu === "account"} onToggle={() => toggle("account")}>
-                  <AccountLinks isSuiteAdmin={isSuiteAdmin} here={here} onMyGroups={openMyGroups} />
+                  <AccountLinks isSuiteAdmin={isSuiteAdmin} here={here} onMyGroups={openMyGroups} onCourt={openCourt} />
                   <a
                     href={logoutPath}
                     className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm bg-slate-900 !text-white hover:bg-slate-800 dark:bg-slate-100 dark:!text-slate-900 dark:hover:bg-white"
@@ -215,7 +218,7 @@ export default function Navbar({
           ))}
           {isAuthenticated && (
             <Fold label="Account" startOpen={ACCOUNT_ITEMS.some((i) => i.href === here)}>
-              <AccountLinks isSuiteAdmin={isSuiteAdmin} here={here} compact skip={hasGroups() ? ["/people", "/groups"] : []} />
+              <AccountLinks isSuiteAdmin={isSuiteAdmin} here={here} compact skip={hasGroups() ? ["/people", "/groups"] : []} onCourt={openCourt} />
             </Fold>
           )}
           <div className="flex gap-2 pt-1">
@@ -239,6 +242,7 @@ export default function Navbar({
       </div>
       <DonationModal isOpen={donationModalOpen} onClose={() => setDonationModalOpen(false)} />
       <MyGroupsModal open={myGroupsOpen} onClose={() => setMyGroupsOpen(false)} isSuiteAdmin={isSuiteAdmin} />
+      <HostCourtModal open={courtOpen} onClose={() => setCourtOpen(false)} />
     </nav>
   );
 }
@@ -308,8 +312,11 @@ function MenuItem({ item, current = false, compact = false, onClick }) {
 // nudge them toward a group (User#needs_group?)
 const hasGroups = () => document.body.dataset.groups === "true";
 const needsGroup = () => document.body.dataset.needsGroup === "true";
+// Set by the reader layout for User#host? (on a host schedule, or marked as able to host)
+const isHost = () => document.body.dataset.host === "true";
+const COURT_ITEM = { label: "Court verification", href: "#court-verification", icon: FileCheck2, note: "For a meeting you host" };
 
-function AccountLinks({ isSuiteAdmin, here, compact = false, skip = [], onMyGroups }) {
+function AccountLinks({ isSuiteAdmin, here, compact = false, skip = [], onMyGroups, onCourt }) {
   return (
     <>
       {needsGroup() && (
@@ -324,6 +331,7 @@ function AccountLinks({ isSuiteAdmin, here, compact = false, skip = [], onMyGrou
       {ACCOUNT_ITEMS.filter((item) => (!item.groups || hasGroups()) && !skip.includes(item.href)).map((item) => (
         <MenuItem key={item.href} item={item} current={item.href === here} compact onClick={item.href === "/groups" && onMyGroups ? onMyGroups : undefined} />
       ))}
+      {isHost() && onCourt && <MenuItem item={COURT_ITEM} compact onClick={onCourt} />}
       {isSuiteAdmin && (
         <>
           <SectionLabel className={compact ? "" : "border-t border-slate-200 dark:border-slate-700 mt-2 pt-3"}>Admin</SectionLabel>

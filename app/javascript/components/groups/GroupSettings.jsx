@@ -12,7 +12,7 @@ export { GroupLogo };
 // Group settings in the group dashboard (group admins): its name, about, website, time zone and logo
 export default function GroupSettings({ group, setGroup }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ title: group.title || "", description: group.description || "", website: group.website || "", time_zone: group.time_zone, follows_roberts_rules: group.follows_roberts_rules !== false });
+  const [form, setForm] = useState({ title: group.title || "", description: group.description || "", website: group.website || "", time_zone: group.time_zone, follows_roberts_rules: group.follows_roberts_rules !== false, show_hosts_publicly: group.show_hosts_publicly !== false });
   const [logo, setLogo] = useState(null); // a File waiting to be saved
   const [removeLogo, setRemoveLogo] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -93,6 +93,12 @@ export default function GroupSettings({ group, setGroup }) {
         <h2 className="font-semibold text-slate-900 dark:text-white">Business meetings</h2>
         <Toggle checked={form.follows_roberts_rules} onChange={(v) => set({ follows_roberts_rules: v })} label="Run business by Robert's Rules"
           description="When this is on, recording a motion notes where it doesn't follow the rules (a missing second, a count that doesn't carry it). Turn it off if your group decides things its own way; the warnings go away for every decision." />
+      </Card>
+
+      <Card className="space-y-3 p-4 sm:p-5">
+        <h2 className="font-semibold text-slate-900 dark:text-white">Meeting schedule</h2>
+        <Toggle checked={form.show_hosts_publicly} onChange={(v) => set({ show_hosts_publicly: v })} label="Show who hosts each meeting"
+          description="The meetings on the group's page say who hosts and co-hosts the next one, from the Hosts tab. Anyone can see the group's page, so turn this off if your hosts would rather not be named there. Meetings with nobody on the schedule look the same either way." />
       </Card>
 
       <ErrorNote error={error} />

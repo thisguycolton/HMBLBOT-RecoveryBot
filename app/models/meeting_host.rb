@@ -18,6 +18,6 @@ class MeetingHost < ApplicationRecord
   def active_on?(date) = starts_on <= date && (ends_on.nil? || ends_on >= date)
 
   def as_api_json
-    { id: id, role: role, name: name, starts_on: starts_on.iso8601, ends_on: ends_on&.iso8601, linked: user_id.present? }
+    { id: id, role: role, name: name, starts_on: starts_on.iso8601, ends_on: ends_on&.iso8601, linked: user_id.present?, user_id: user_id }
   end
 end
