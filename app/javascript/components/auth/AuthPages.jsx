@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, CircleCheck, Highlighter, KeyRound, LogIn, Mail, Shuffle, UserPlus } from "lucide-react";
+import { BookOpen, CircleCheck, Highlighter, Inbox, KeyRound, LogIn, Mail, Shuffle, UserPlus } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
 import { RecoveryBotLogo } from "../brand/Logo";
@@ -138,6 +138,30 @@ export function ResendConfirmationPage({ email = "", login_path, ...form }) {
       <AuthForm {...form} submitLabel="Send the link again" busyLabel="Sending…">
         <Field id="user_email" label="Email" type="email" name="user[email]" defaultValue={email} autoComplete="email" autoFocus required placeholder="you@example.com" />
         <p className="text-xs text-slate-500 dark:text-neutral-400">The link works for 3 days. Check your spam folder if it doesn't turn up.</p>
+      </AuthForm>
+    </AuthFrame>
+  );
+}
+
+// Right after sign-up: the account can't log in until the emailed link is clicked.
+export function CheckEmailPage({ email = "", login_path, sign_up_path, ...form }) {
+  return (
+    <AuthFrame icon={Inbox} title="Check your email" subtitle="One more step before you can log in"
+      footer={<>
+        {login_path && <>Clicked the link? <a href={login_path} className={linkClass}>Log in</a></>}
+        {sign_up_path && <><br />Wrong address? <a href={sign_up_path} className={linkClass}>Sign up again</a></>}
+      </>}>
+      <div className="mb-5 space-y-3 text-left text-sm text-slate-700 dark:text-neutral-300 [&_p]:!text-left">
+        <p>
+          We sent a confirmation link to <strong className="font-semibold text-slate-900 dark:text-white break-all">{email}</strong>.
+          Click it to confirm your address, then log in.
+        </p>
+        <p className="text-xs text-slate-500 dark:text-neutral-400">
+          It can take a minute or two. If it doesn't turn up, check your spam or promotions folder. The link works for 3 days.
+        </p>
+      </div>
+      <AuthForm {...form} submitLabel="Send the link again" busyLabel="Sending…">
+        <input type="hidden" name="user[email]" value={email} />
       </AuthForm>
     </AuthFrame>
   );

@@ -4,6 +4,23 @@ class Users::RegistrationsController < Devise::RegistrationsController
   rate_limit to: 5, within: 1.hour, only: :create, with: -> { turn_away("Too many sign-ups from here just now. Please try again later.") }
   prepend_before_action :check_human, only: :create
 
+  # "Check your email": where a new account lands until its address is confirmed, so the
+  # next step isn't left to a toast that fades.
+  def check_email
+    email = session[:signed_up_email].to_s
+    return redirect_to new_user_registration_path if email.blank?
+
+    flash.delete(:notice) # the page says it, no need for a toast too
+    self.resource = resource_class.new(email: email)
+  end
+
+  protected
+
+  def after_inactive_sign_up_path_for(resource)
+    session[:signed_up_email] = resource.email
+    users_check_email_path
+  end
+
   private
 
   def check_human

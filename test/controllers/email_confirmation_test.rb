@@ -42,6 +42,25 @@ class EmailConfirmationTest < ActionDispatch::IntegrationTest
     refute_equal "/users/sign_in", URI(response.location).path
   end
 
+  test "sign-up lands on a check-your-email page that can resend the link" do
+    sign_up
+    assert_redirected_to "/users/check_email"
+    follow_redirect!
+    assert_response :success
+    assert_includes response.body, "check_email"
+    assert_includes response.body, "new@example.com"
+    assert_nil flash[:notice], "the page says it, so no toast too"
+
+    ActionMailer::Base.deliveries.clear
+    post "/users/confirmation", params: { user: { email: "new@example.com" } }
+    assert_equal ["new@example.com"], ActionMailer::Base.deliveries.last.to
+  end
+
+  test "the check-your-email page sends strangers to sign-up" do
+    get "/users/check_email"
+    assert_redirected_to "/users/sign_up"
+  end
+
   test "the resend page sends a new link" do
     sign_up
     ActionMailer::Base.deliveries.clear
