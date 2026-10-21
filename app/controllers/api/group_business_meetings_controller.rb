@@ -10,10 +10,15 @@ class Api::GroupBusinessMeetingsController < ApplicationController
   before_action :require_manager, only: :destroy
   before_action :set_meeting, only: %i[show update destroy]
 
-  # GET /api/groups/:group_slug/business_meetings
+  # GET /api/groups/:group_slug/business_meetings(?q=): with q, only the meetings whose minutes,
+  # agenda or decisions have every word, each with `hits` showing where
   def index
     meetings = BusinessMeeting.visible_to(@group, current_user).includes(:event, :meeting, :agenda_items, :motions).newest_first
-    render json: { meetings: meetings.map { |m| m.as_api_json(keeper: keeper?) }, can_edit: keeper?, can_delete: @group.manageable_by?(current_user),
+    if params[:q].present?
+      hits = BusinessMeeting.search(meetings, params[:q], motions: Motion.visible_to(@group, current_user), keeper: keeper?)
+      meetings = meetings.select { |m| hits.key?(m.id) }
+    end
+    render json: { meetings: meetings.map { |m| m.as_api_json(keeper: keeper?).tap { |j| j[:hits] = hits[m.id] if hits } }, can_edit: keeper?, can_delete: @group.manageable_by?(current_user),
                    can_make_events: @group.manageable_by?(current_user), regular_meetings: regular_meetings,
                    quorum: { count: @group.quorum_count, percent: @group.quorum_percent, needed: @group.quorum_needed } }.merge(MotionKinds.metadata)
   end

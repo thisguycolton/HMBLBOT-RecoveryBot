@@ -75,6 +75,11 @@ class Api::GroupDocumentsTest < ActionDispatch::IntegrationTest
     sign_in @member
     get path, params: { q: "kind" }, as: :json
     assert_equal ["Guidelines"], titles
+    # every word, anywhere: in the title or the text, not as one phrase
+    get path, params: { q: "kind guidelines" }, as: :json
+    assert_equal ["Guidelines"], titles
+    get path, params: { q: "kind format" }, as: :json
+    assert_empty titles
   end
 
   test "only record keepers write documents" do
