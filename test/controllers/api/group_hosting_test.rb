@@ -102,7 +102,7 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
     assert_equal "host", response.parsed_body["my_role"]
   end
 
-  test "the host and co-host share where they are, the timer and what was posted, and see each other" do
+  test "the host and co-host share where they are and what was posted, and see each other" do
     sign_in @admin
     save_kit
     posting = @group.hosting_kits.first.postings.first
@@ -110,7 +110,6 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
     sign_in @host
     post path(@meeting.id, "ping"), params: { activity: "Reading the script", section_index: 0 }, as: :json
     post path(@meeting.id, "act"), params: { act: "goto", index: 2, label: "Readings" }, as: :json
-    post path(@meeting.id, "act"), params: { act: "timer_start" }, as: :json
     post path(@meeting.id, "act"), params: { act: "posted", posting_id: posting.id }, as: :json
     assert_response :success
 
@@ -118,12 +117,15 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
     post path(@meeting.id, "ping"), params: { activity: "Looking at chat postings" }, as: :json
     live = response.parsed_body
     assert_equal 2, live["section_index"]
-    assert live.dig("timer", "running")
+    assert live["server_now"], "the page's meeting clock runs from the start time, on the server's clock"
     assert_equal "Hal", live.dig("posted", posting.id.to_s, "by")
     assert_equal ["Hal", "Cory"], live["presences"].map { |p| p["name"] }
     assert_equal "Reading the script", live["presences"].first["activity"]
-    assert_equal ["Copied Welcome", "Started the timer", "Moved to Readings"], live["log"].map { |l| l["text"] }
+    assert_equal ["Copied Welcome", "Moved to Readings"], live["log"].map { |l| l["text"] }
 
+    # the timer runs from the meeting's start time: there's no starting or pausing it
+    post path(@meeting.id, "act"), params: { act: "timer_start" }, as: :json
+    assert_response :unprocessable_entity
     post path(@meeting.id, "act"), params: { act: "explode" }, as: :json
     assert_response :unprocessable_entity
     post path(@meeting.id, "act"), params: { act: "posted", posting_id: 0 }, as: :json
@@ -319,5 +321,117 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
 
     post path(@meeting.id, "act"), params: { act: "posted", posting_id: "reading" }, as: :json
     assert_response :not_found, "there is no reading posting without a reading"
+  end
+
+  test "the picker lists the week's meetings by date, with who hosts each" do
+    sign_in @host
+    get path, as: :json
+    assert_response :success
+    occurrences = response.parsed_body["occurrences"]
+    assert occurrences.size >= 2
+    assert(occurrences.all? { |o| o["name"] == "Sunrise" && o["starts_at"] && o["on"] })
+    assert(occurrences.any? { |o| o["mine"] && o["host"] == "Hal" })
+    assert_equal occurrences.map { |o| o["starts_at"] }.sort, occurrences.map { |o| o["starts_at"] }
+  end
+
+  test "a script's sections: counted for the picker, and kept when the document is saved" do
+    body = '<p>Welcome</p><div data-hc-section="" data-title="Top of the hour" data-cue="start+0" onclick="x()"></div><p>Hi</p>' \
+           '<div data-hc-section="" data-title="Speaker" data-when="speaker" data-days="6"></div><p>Please welcome {{ speaker_name }}</p>'
+    @script.update!(body: body)
+    assert_includes @script.body, 'data-title="Top of the hour"'
+    assert_includes @script.body, 'data-when="speaker"'
+    assert_not_includes @script.body, "onclick"
+    assert_equal 3, HostingKit.section_count(@script), "two sections and what comes before them"
+    assert_equal 2, HostingKit.section_count(GroupDocument.new(body: "<h2>A</h2><p>x</p><h2>B</h2>", body_format: "html"))
+    assert_nil HostingKit.section_count(GroupDocument.new(body: "<p>Just text</p>", body_format: "html"))
+
+    sign_in @admin
+    get path(@meeting.id), as: :json
+    assert_equal 3, response.parsed_body.dig("editor", "documents").find { |d| d["id"] == @script.id }["sections"]
+  end
+
+  test "host coordinators pick the dynamic values the document editor offers" do
+    sign_in @admin
+    put path(@meeting.id, "kit"), params: { kit: { scope: "default", script_document_id: @script.id, allowed_values: ["milestones", "host", "bad key!"], postings: [] } }, as: :json
+    assert_response :success
+    assert_equal %w[milestones host], response.parsed_body.dig("kit", "allowed_values")
+
+    sign_in @host
+    get path("values"), params: { document_id: @script.id }, as: :json
+    assert_equal %w[milestones host], response.parsed_body["allowed"]
+    assert_includes response.parsed_body["roles"].map { |r| r["key"] }, "hiw"
+
+    sign_in @admin
+    put path(@meeting.id, "kit"), params: { kit: { scope: "default", script_document_id: @script.id, allowed_values: nil, postings: [] } }, as: :json
+    assert_nil response.parsed_body.dig("kit", "allowed_values")
+    get path("values"), params: { document_id: @secret.id }, as: :json
+    assert_nil response.parsed_body["allowed"], "a document no kit uses follows the default kit"
+
+    sign_in @member
+    get path("values"), as: :json
+    assert_response :forbidden
+  end
+
+  test "service readings: every version, and one version's text to share" do
+    ServiceReading.delete_all # the scaffold fixtures, when the whole suite runs
+    hiw = ServiceReading.create!(title: "How It Works", source: "Big Book", icon: "book-open", body: "<p>Rarely have we seen</p>")
+    ServiceReading.create!(title: "How It Works", source: "Short form")
+    sign_in @host
+    get path("service_readings"), as: :json
+    assert_response :success
+    assert_equal ["Big Book", "Short form"], response.parsed_body["readings"].map { |r| r["source"] }
+
+    get path("service_readings", hiw.id), as: :json
+    assert_response :success
+    assert_equal "How It Works", response.parsed_body["title"]
+    assert_includes response.parsed_body["html"], "Rarely have we seen"
+
+    sign_in @member
+    get path("service_readings"), as: :json
+    assert_response :forbidden
+  end
+
+  test "the Time Capsule keeps what each meeting picked, and the next pick sees the last ones" do
+    sign_in @host
+    get path(@meeting.id), as: :json
+    on = Date.parse(response.parsed_body["on"])
+    past = HostingSession.create!(meeting: @meeting, on: on - 7, activity: { "kind" => "speaker", "title" => "Kim R.", "by" => "Hal" },
+                                  milestones: [{ "id" => "a", "name" => "Sam", "length" => "30 days" }], service: { "hiw" => "Jo" })
+    HostingSession.create!(meeting: @meeting, on: on - 14) # opened, nothing done: left out
+
+    get path("capsule"), as: :json
+    assert_response :success
+    sessions = response.parsed_body["sessions"]
+    assert_equal [past.id], sessions.map { |x| x["id"] }
+    assert_equal "Speaker: Kim R.", sessions.first["activity_label"]
+    assert_equal [{ "label" => "How It Works", "name" => "Jo" }], sessions.first["service"]
+    assert_equal "Sam", sessions.first["milestones"].first["name"]
+
+    get path("capsule"), params: { meeting_id: @other_day.id }, as: :json
+    assert_equal [past.id], response.parsed_body["sessions"].map { |x| x["id"] }, "a meeting's other days are the same meeting"
+
+    get path(@meeting.id), params: { on: on.iso8601 }, as: :json
+    assert_equal ["Speaker: Kim R."], response.parsed_body["previous"].map { |p| p["label"] }
+
+    sign_in @member
+    get path("capsule"), as: :json
+    assert_response :forbidden
+  end
+
+  test "who's celebrating goes to the short link's page only when a posting names them" do
+    sign_in @admin
+    save_kit
+    sign_in @host
+    post path(@meeting.id, "act"), params: { act: "milestone_add", data: { name: "Sam", length: "30 days" } }, as: :json
+    post path(@meeting.id, "act"), params: { act: "milestone_add", data: { name: "Kim" } }, as: :json
+    code = HostingSession.last.code
+    sign_out @host
+
+    get "/api/hosting_links/#{code}", as: :json
+    assert_nil response.parsed_body.dig("live", "milestones_text")
+
+    @group.hosting_kits.first.postings.first.update!(body: "Congratulations {{ milestones }}!")
+    get "/api/hosting_links/#{code}", as: :json
+    assert_equal "Sam (30 days) and Kim", response.parsed_body.dig("live", "milestones_text")
   end
 end

@@ -65,6 +65,23 @@
 .doc-prose .selectedCell::after { background: rgb(37 99 235 / 0.15); content: ""; inset: 0; pointer-events: none; position: absolute; }
 .doc-prose p.is-editor-empty:first-child::before { color: #94a3b8; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
 .doc-paper .ProseMirror { min-height: 40vh; }
+
+/* A Hosting Command Center section (Insert > Add Section, hostSection.jsx): a subtle dashed line
+   with a small tag naming it. In the editor it's hostSection.jsx's own; shown as HTML, the empty
+   <div data-hc-section> draws its tag from data-title. */
+.doc-prose div[data-hc-section] { border-top: 1px dashed #94a3b8; height: 0; margin: 2.2em 0 1.2em; position: relative; }
+.doc-prose div[data-hc-section]::before { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 999px; color: #475569; content: "§ " attr(data-title); font-size: 11px; font-weight: 600; left: 0; line-height: 1.6; padding: 0 8px; position: absolute; top: -0.85em; }
+.hc-sec { margin: 1.6em 0 0.9em; user-select: none; }
+.hc-sec__line { border-top: 1px dashed #94a3b8; position: relative; }
+.hc-sec__tag { align-items: center; background: #f1f5f9 !important; border: 1px solid #cbd5e1; border-radius: 999px; color: #475569; cursor: pointer; display: inline-flex; flex-wrap: wrap; font-size: 11px; font-weight: 600; gap: 6px; left: 0; line-height: 1.6; max-width: 100%; padding: 0 8px; position: absolute; top: -0.85em; }
+.hc-sec__tag:hover, .hc-sec__tag--open, .ProseMirror-selectednode .hc-sec__tag { border-color: var(--color-accent); color: var(--color-accent); }
+.hc-sec__num { opacity: 0.7; }
+.hc-sec__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 22em; }
+.hc-sec__cond { align-items: center; border-left: 1px solid #cbd5e1; display: inline-flex; font-weight: 500; gap: 3px; padding-left: 6px; }
+.hc-sec__pop { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 12px 32px rgb(15 23 42 / 0.18); left: 0; padding: 14px; position: absolute; top: 1.2em; width: min(22rem, 100%); z-index: 30; }
+.ProseMirror-selectednode.hc-sec { outline: none; }
+/* {{ milestones }}-style dynamic values */
+.doc-token { background: #e0f2fe; border-radius: 6px; color: #075985; font-weight: 600; padding: 0 3px; }
 .doc-paper .ProseMirror:focus { outline: none; }
 
 /* pdf.js text layer: pages are drawn on a canvas with invisible text on top, so it can be selected */
@@ -130,6 +147,11 @@
   .doc-dark .doc-prose a { color: #7dd3fc; }
   .doc-dark .doc-prose th, .doc-dark .doc-prose td { border-color: #4b5563; }
   .doc-dark .doc-prose th { background: #27272a; }
+  .doc-dark .doc-prose div[data-hc-section], .doc-dark .hc-sec__line { border-color: #52525b; }
+  .doc-dark .doc-prose div[data-hc-section]::before, .doc-dark .hc-sec__tag { background: #27272a !important; border-color: #52525b; color: #d4d4d8; }
+  .doc-dark .hc-sec__cond { border-color: #52525b; }
+  .doc-dark .hc-sec__pop { background: #18181b; border-color: #3f3f46; }
+  .doc-dark .doc-token { background: #0c4a6e; color: #e0f2fe; }
   /* The toolbar's black text would vanish: show it light; highlights keep dark text on their pastel */
   .doc-dark .doc-prose [style*="rgb(15, 23, 42)"], .doc-dark .doc-prose [style*="#0f172a"] { color: #f1f5f9 !important; }
   .doc-dark .doc-prose mark, .doc-dark .doc-prose mark * { color: #0f172a !important; }

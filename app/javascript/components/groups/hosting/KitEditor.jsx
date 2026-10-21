@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, BookOpen, ChevronDown, Link2, MessageSquare, Plus, Save, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, ChevronDown, ExternalLink, Link2, MessageSquare, Plus, Save, Trash2, X } from "lucide-react";
 import { api } from "../lib";
 import IconPicker from "../../ui/IconPicker";
 import LucideIcon from "../../ui/LucideIcon";
@@ -7,8 +7,9 @@ import SegmentedControl from "../../ui/SegmentedControl";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import MarkdownTextarea from "../../notes/MarkdownTextarea";
 import { ErrorNote, dangerButton, primaryButton, quietButton } from "../ui";
+import { documentsPath } from "../conscience/lib";
 import PostingPreview from "./PostingPreview";
-import { AUTO_ANCHOR, PLACEHOLDERS, fillPosting, roleKey, roleToken, scriptParagraphs, scriptSections } from "./lib";
+import { AUTO_ANCHOR, DYNAMIC_VALUES, PLACEHOLDERS, SERVICE_VALUES, cueLabel, fillPosting, roleKey, roleToken, scriptParagraphs, scriptSections, valueToken } from "./lib";
 
 const move = (list, i, by) => {
   const j = i + by;
@@ -33,6 +34,8 @@ export default function KitEditor({ center, onClose, onSaved }) {
   // Only sent when changed, so a kit keeps following the usual roles until someone edits them
   const [roles, setRoles] = useState(() => kit.service_roles.map((r) => ({ ...r, id: r.key })));
   const [rolesEdited, setRolesEdited] = useState(false);
+  // Which dynamic values the document editor offers (Insert > Dynamic Values); null: all of them
+  const [allowed, setAllowed] = useState(kit.allowed_values ?? null);
   const changeRoles = (list) => { setRoles(list); setRolesEdited(true); };
   const [openKey, setOpenKey] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -58,7 +61,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
     try {
       const saved = await api(`/groups/${group.slug}/hosting/${meeting.id}/kit?on=${center.on}`, {
         method: "PUT",
-        body: { kit: { scope, script_document_id: scriptId || null, activity_anchor: anchor || null, public_postings: publicPostings, readings, postings: postings.map(({ id, title, icon, minute, body }) => ({ id, title, icon, minute, body })),
+        body: { kit: { scope, script_document_id: scriptId || null, activity_anchor: anchor || null, public_postings: publicPostings, readings, allowed_values: allowed, postings: postings.map(({ id, title, icon, minute, body }) => ({ id, title, icon, minute, body })),
           ...(rolesEdited ? { service_roles: roles.map(({ key, label }) => ({ key, label })) } : {}) } },
       });
       onSaved(saved);
@@ -107,7 +110,9 @@ export default function KitEditor({ center, onClose, onSaved }) {
             </p>
           </div>
 
-          <ScriptPicker documents={editor.documents} value={scriptId} onChange={setScriptId} current={kit.script} anchor={anchor} setAnchor={setAnchor} />
+          <ScriptPicker documents={editor.documents} value={scriptId} onChange={setScriptId} current={kit.script} anchor={anchor} setAnchor={setAnchor} slug={group.slug} />
+
+          <ValuesPicker allowed={allowed} setAllowed={setAllowed} />
 
           <section>
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -149,7 +154,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
 }
 
 // Which document is the script, the sections it makes, and where the day's reading / activity goes
-function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor }) {
+function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor, slug }) {
   const [sections, setSections] = useState([]);
   const [paragraphs, setParagraphs] = useState([]);
   const shown = current && String(current.id) === value;
@@ -162,17 +167,21 @@ function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor }
     return () => { gone = true; };
   }, [current, shown, anchor]);
   const auto = paragraphs.find((t) => AUTO_ANCHOR.test(t));
+  // a section marked as the reading / activity spot in the document takes the place of picking one here
+  const marked = shown && /data-kind="activity"/.test(current.body || "");
+  const count = (n) => (n == null ? "" : ` · ${n} ${n === 1 ? "section" : "sections"}`);
   return (
     <section>
       <label htmlFor="kit-script" className={labelClass}>Script</label>
       <select id="kit-script" className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">No script</option>
-        {documents.map((d) => <option key={d.id} value={d.id}>{d.title}{d.kind === "format" ? "" : ` (${d.kind})`}</option>)}
+        {documents.map((d) => <option key={d.id} value={d.id}>{d.title}{d.kind === "format" ? "" : ` (${d.kind})`}{count(d.sections)}</option>)}
       </select>
       <p className="mt-1.5 text-xs text-slate-500 dark:text-neutral-400">
-        One of the group's current documents that hosts can read (Hosts, Members or Public, in Group conscience &gt; Documents). Its headings make the meeting's sections, or its bold time cues like "(Top of the hour)" when it has no headings: change them by editing the document.
+        One of the group's current documents that hosts can read (Hosts, Members or Public, in Group conscience &gt; Documents). Its sections (Insert &gt; Add Section in the document) make the meeting's steps, each with a title, and can be kept to certain activities or days, or remind the hosts at a time. Without sections, its headings or bold time cues like "(Top of the hour)" are used.
+        {value && <> <a href={`/groups${documentsPath(slug, value)}`} target="_blank" rel="noopener" className="inline-flex items-center gap-0.5 font-medium text-accent hover:underline">Edit the document <ExternalLink className="size-3" /></a></>}
       </p>
-      {shown && paragraphs.length > 0 && (
+      {shown && paragraphs.length > 0 && !marked && (
         <div className="mt-3">
           <label htmlFor="kit-anchor" className={labelClass}>Reading / activity goes after</label>
           <select id="kit-anchor" className={selectClass} value={anchor} onChange={(e) => setAnchor(e.target.value)}>
@@ -185,9 +194,45 @@ function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor }
       )}
       {sections.length > 0 && (
         <ol className="mt-2 flex flex-wrap gap-1.5 text-xs">
-          {sections.map((s, i) => <li key={i} className={`rounded-full px-2 py-0.5 ${s.activity ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" : "bg-neutral-200 text-slate-700 dark:bg-neutral-800 dark:text-neutral-300"}`}>{i + 1}. {s.title}</li>)}
+          {sections.map((s, i) => (
+            <li key={i} title={[s.when && "Only for some activities", s.days && "Only some days", s.cue && `Reminder ${cueLabel(s.cue)}`].filter(Boolean).join(" · ") || undefined}
+              className={`rounded-full px-2 py-0.5 ${s.activity ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" : s.when || s.days ? "border border-dashed border-slate-400 text-slate-600 dark:text-neutral-300" : "bg-neutral-200 text-slate-700 dark:bg-neutral-800 dark:text-neutral-300"}`}>
+              {i + 1}. {s.title}{s.cue ? " ⏰" : ""}
+            </li>
+          ))}
         </ol>
       )}
+    </section>
+  );
+}
+
+// Which dynamic values a host coordinator lets the format's writers put in (the document editor's
+// Insert > Dynamic Values): all of them until some are turned off
+function ValuesPicker({ allowed, setAllowed }) {
+  const keys = [...DYNAMIC_VALUES.map((v) => v.key), SERVICE_VALUES];
+  const isOn = (key) => !allowed || allowed.includes(key);
+  const toggle = (key) => {
+    const current = allowed || keys;
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+    setAllowed(keys.every((k) => next.includes(k)) ? null : next);
+  };
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className={labelClass}>Dynamic values</h3>
+        {allowed && <button type="button" className={smallButton} onClick={() => setAllowed(null)}>Allow all</button>}
+      </div>
+      <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">
+        What the script's writers can put in from the document editor's Insert &gt; Dynamic Values. Each fills itself in during the meeting, like {valueToken("milestones")} with who's celebrating.
+      </p>
+      <div className="grid gap-1.5 rounded-xl bg-white p-3 shadow-panel sm:grid-cols-2 dark:bg-neutral-900">
+        {[...DYNAMIC_VALUES, { key: SERVICE_VALUES, label: "Service roles", what: "who's doing each service, like How It Works" }].map((v) => (
+          <label key={v.key} className="flex items-start gap-2 text-sm" title={v.key === SERVICE_VALUES ? roleToken("hiw") : valueToken(v.key)}>
+            <input type="checkbox" className="mt-0.5" checked={isOn(v.key)} onChange={() => toggle(v.key)} />
+            <span>{v.label}<span className="block text-xs text-slate-500 dark:text-neutral-400">{v.what}</span></span>
+          </label>
+        ))}
+      </div>
     </section>
   );
 }
