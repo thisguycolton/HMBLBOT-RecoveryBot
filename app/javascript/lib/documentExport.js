@@ -8,7 +8,17 @@ const BLOCKY = ["UL", "OL", "TABLE", "BLOCKQUOTE"];
 const ownText = (li) => [...li.children].filter((c) => !BLOCKY.includes(c.tagName));
 const inner = (li) => [...li.children].filter((c) => BLOCKY.includes(c.tagName));
 
-const parse = (html) => new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
+// Collapsible text (<details>) is written out open: its line in bold, then what it hides
+function parse(html) {
+  const body = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
+  body.querySelectorAll("summary").forEach((s) => {
+    const p = document.createElement("p");
+    const b = p.appendChild(document.createElement("strong"));
+    b.append(...s.childNodes);
+    s.replaceWith(p);
+  });
+  return body;
+}
 
 export function download(blob, filename) {
   const url = URL.createObjectURL(blob);

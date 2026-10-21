@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { ChevronLeft, Download, FileUp, Paperclip, Pin, RotateCcw, Save, Trash2 } from "lucide-react";
 import { download, safeName, toDocx, toMarkdown, toRtf } from "../../../lib/documentExport";
+import { toDocumentJson } from "../../../lib/documentJson";
 import { IMPORT_ACCEPT } from "../../../lib/documentImport";
 import MenuBar from "./MenuBar";
 import Markdown, { markdownToHtml } from "../../book/Markdown";
@@ -194,7 +195,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
       if (!form.title.trim()) setForm((f) => ({ ...f, title }));
       setWithText(true);
       setDirty(true);
-      setNotice(notes.join(" ") || `Imported “${picked.name}”. Save when it looks right.`);
+      setNotice([`Imported “${picked.name}”.`, ...notes, "Save when it looks right."].join(" "));
     } catch (e) {
       setError(e.message);
     }
@@ -262,6 +263,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
       if (kind === "docx") download(await toDocx(html, title), `${safeName(title)}.docx`);
       if (kind === "rtf") download(new Blob([toRtf(html, title)], { type: "application/rtf" }), `${safeName(title)}.rtf`);
       if (kind === "md") download(new Blob([toMarkdown(html, title)], { type: "text/markdown" }), `${safeName(title)}.md`);
+      if (kind === "json") download(new Blob([toDocumentJson(editor, { title, kind: form.kind, status: form.status })], { type: "application/json" }), `${safeName(title)}.recoverybot.json`);
     } catch (e) { setError(`Couldn't make that file: ${e.message}`); }
   };
   const chain = () => editor.chain().focus();
@@ -270,11 +272,13 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
     { label: "File", items: [
       canEdit && { label: "Save", shortcut: "⌘S", onClick: save, disabled: saving || (!dirty && !!doc) },
       canEdit && { label: "New document", onClick: () => navigate(`${documentsPath(slug, "new")}?kind=${form.kind}`) },
-      canEdit && { label: "Import Word, RTF or Markdown…", onClick: () => importRef.current?.click() },
+      canEdit && { label: "Import Word, RTF, Markdown or JSON…", onClick: () => importRef.current?.click() },
       canEdit && "divider",
       { label: "Download as Word (.docx)", onClick: () => exportAs("docx"), disabled: !hasText },
       { label: "Download as RTF", onClick: () => exportAs("rtf"), disabled: !hasText },
       { label: "Download as Markdown", onClick: () => exportAs("md"), disabled: !hasText },
+      // Keeps the sections, forms, dynamic values and collapsibles, to import into another group or back
+      { label: "Download as RecoveryBot JSON", onClick: () => exportAs("json"), disabled: !hasText },
       { label: pdfOnly ? "Download the PDF" : "Save as PDF / Print", shortcut: "⌘P", onClick: () => (pdfOnly ? window.open(fileUrl(slug, doc.id, "?download=1")) : printPdf()), disabled: !doc && !hasText },
       file && doc && !pdfOnly && { label: `Download ${file.name}`, onClick: () => window.open(fileUrl(slug, doc.id, "?download=1")) },
       "divider",
@@ -298,6 +302,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
     canEdit && showPaper && { label: "Insert", items: [
       { label: "Table", onClick: () => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
       { label: "Divider line", onClick: () => chain().setHorizontalRule().run() },
+      { label: "Collapsible text", onClick: () => chain().setCollapsible().run() },
       "divider",
       { label: "Add Section", onClick: () => chain().addHostSection().run() },
       { label: "Milestone Form", onClick: () => chain().addHostForm("milestones").run() },

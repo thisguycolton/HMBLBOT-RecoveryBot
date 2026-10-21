@@ -431,6 +431,13 @@ function ScriptView({ center, sections, shown, index, section, live, size, upNex
 // A form in the format (Insert > Milestone Form): an empty <div data-hc-form="milestones">
 const FORM = /<div[^>]*\bdata-hc-form="([a-z_]+)"[^>]*>\s*<\/div>/gi;
 
+// A stretch of the script's text. Kept as it is until the text itself changes: the Command
+// Center re-renders every few seconds, and setting the same HTML again would close any
+// collapsible text the host had opened.
+const ScriptHtml = React.memo(function ScriptHtml({ html, size }) {
+  return <div className="doc-prose hc-script" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: html }} />;
+});
+
 // A section's text, with the forms in it ready to fill in where they sit
 function ScriptText({ html, size, live, act }) {
   const parts = html.split(FORM); // text, form, text, form, ... text
@@ -438,7 +445,7 @@ function ScriptText({ html, size, live, act }) {
     <div className="mt-4">
       {parts.map((part, i) => (i % 2
         ? <Milestones key={i} live={live} act={act} inScript />
-        : part.trim() ? <div key={i} className="doc-prose hc-script" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: part }} /> : null))}
+        : part.trim() ? <ScriptHtml key={i} html={part} size={size} /> : null))}
     </div>
   );
 }

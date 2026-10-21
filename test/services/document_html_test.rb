@@ -16,4 +16,10 @@ class DocumentHtmlTest < ActiveSupport::TestCase
     assert_includes html, %(<div data-hc-form="milestones"></div>)
     assert_no_match(/onclick/, html)
   end
+
+  test "collapsible text stays, and its line counts as words" do
+    html = DocumentHtml.sanitize(%(<details open onclick="x()"><summary>The Twelve Traditions</summary><p>One: our common welfare</p></details>))
+    assert_includes html, %(<details><summary>The Twelve Traditions</summary><p>One: our common welfare</p></details>)
+    assert_equal "The Twelve Traditions One: our common welfare", DocumentHtml.text(html)
+  end
 end

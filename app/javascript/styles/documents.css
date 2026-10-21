@@ -94,6 +94,32 @@
 .hc-sec__cond { align-items: center; border-left: 1px solid #cbd5e1; display: inline-flex; font-weight: 500; gap: 3px; padding-left: 6px; }
 .hc-sec__pop { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 12px 32px rgb(15 23 42 / 0.18); left: 0; padding: 14px; position: absolute; top: 1.2em; width: min(22rem, 100%); z-index: 30; }
 .ProseMirror-selectednode.hc-sec { outline: none; }
+/* Collapsible text (Insert > Collapsible text, collapsible.js): a line with an arrow that shows
+   or hides the text under it. Shown as HTML it's a plain <details>; in the editor it's the node
+   view's div, open or closed on screen only (print shows everything). Borders and tints are see-through
+   so it sits on the white page, the dark page and the Command Center's dark script alike. */
+.doc-prose details, .doc-collapse { border: 1px solid rgb(148 163 184 / 0.55); border-radius: 10px; margin: 0.8em 0; padding: 0.35em 0.9em; }
+.doc-prose details > summary, .doc-collapse summary { cursor: pointer; margin-top: 0 !important; display: block; font-weight: 600; list-style: none; padding: 0.15em 0 0.15em 1.5em; position: relative; }
+.doc-prose details > summary::-webkit-details-marker { display: none; }
+.doc-prose details > summary::before { border-color: currentColor; border-style: solid; border-width: 0 2px 2px 0; content: ""; height: 0.45em; left: 0.3em; opacity: 0.6; position: absolute; top: 0.62em; transform: rotate(-45deg); transition: transform 0.15s; width: 0.45em; }
+.doc-prose details[open] > summary::before { transform: rotate(45deg); top: 0.5em; }
+.doc-prose details[open] > summary { margin-bottom: 0.4em; }
+.doc-prose details > :last-child { margin-bottom: 0.4em; }
+.doc-prose details > * + *, .doc-collapse__body > * + * { margin-top: 0.75em; }
+.doc-prose details > :not(summary), .doc-collapse__body > :not(summary) { margin-left: 1.5em; }
+.doc-collapse { position: relative; }
+.doc-collapse.ProseMirror-selectednode { border-color: var(--color-accent); }
+.doc-collapse__tools { display: flex; left: 0.45em; pointer-events: none; position: absolute; right: 0.45em; top: 0.4em; z-index: 1; }
+.doc-collapse__tools button { align-items: center; background: transparent !important; border-radius: 6px; color: inherit; display: inline-flex; height: 1.5em; justify-content: center; opacity: 0.6; pointer-events: auto; width: 1.5em; }
+.doc-collapse__tools button:hover { background: rgb(148 163 184 / 0.2) !important; opacity: 1; }
+.doc-collapse__toggle svg { transition: transform 0.15s; }
+.doc-collapse--open .doc-collapse__toggle svg { transform: rotate(90deg); }
+.doc-collapse__unwrap { margin-left: auto; }
+.doc-collapse summary { cursor: text; padding-right: 1.8em; }
+.doc-collapse--open summary { margin-bottom: 0.4em; }
+.doc-collapse__body > :last-child { margin-bottom: 0.4em; }
+@media screen { .doc-collapse--closed .doc-collapse__body > :not(summary) { display: none; } }
+.ProseMirror:not([contenteditable="true"]) .doc-collapse summary { cursor: pointer; }
 /* {{ milestones }}-style dynamic values */
 .doc-token { background: #e0f2fe; border-radius: 6px; color: #075985; font-weight: 600; padding: 0 3px; }
 .doc-paper .ProseMirror:focus { outline: none; }
