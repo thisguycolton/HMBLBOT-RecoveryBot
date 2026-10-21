@@ -77,6 +77,25 @@ const MarkdownTextarea = forwardRef(function MarkdownTextarea({ value, onChange,
     const [start, end] = [el.selectionStart, el.selectionEnd];
     const picked = value.slice(start, end);
     const w = mark.wrap;
+    // Bold and italic share `*`, so count the run of them around the selection: ***both***
+    // is bold (2) and italic (1), and each button takes off or adds only its own
+    if (w[0] === "*") {
+      const left = value.slice(0, start).match(/\*{0,3}$/)[0].length;
+      const right = value.slice(end).match(/^\*{0,3}/)[0].length;
+      const has = (n) => (w.length === 2 ? n >= 2 : n % 2 === 1);
+      if (has(left) && has(right)) return replace(start - w.length, end + w.length, picked, [0, picked.length]);
+      if (left || right) return replace(start, end, `${w}${picked}${w}`, [w.length, w.length + picked.length]);
+      const inLeft = picked.match(/^\*{0,3}/)[0].length;
+      const inRight = picked.match(/\*{0,3}$/)[0].length;
+      if (picked.length > inLeft + inRight && inLeft && inRight) {
+        if (has(inLeft) && has(inRight)) {
+          const inner = picked.slice(0, inLeft - w.length) + picked.slice(inLeft, -inRight) + picked.slice(picked.length - inRight + w.length);
+          return replace(start, end, inner, [0, inner.length]);
+        }
+        const next = `${picked.slice(0, inLeft)}${w}${picked.slice(inLeft, -inRight)}${w}${picked.slice(-inRight)}`;
+        return replace(start, end, next, [0, next.length]);
+      }
+    }
     // Already wrapped (inside or just outside the selection): take it off
     if (picked.length > 2 * w.length && picked.startsWith(w) && picked.endsWith(w)) {
       const inner = picked.slice(w.length, -w.length);

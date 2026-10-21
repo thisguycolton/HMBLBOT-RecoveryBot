@@ -4,12 +4,13 @@ import React from "react";
 // directly (no HTML strings), so a note can never inject markup or scripts.
 // Supports: paragraphs, line breaks, # headings, > quotes, - / 1. lists,
 // | tables |, ``` code blocks, **bold**, *italic*, ++underline++, `code`, ~~strike~~ and [links](https://…).
+// Bold can hold italic, so ***both*** and **bold *and italic* words** work.
 
 const SAFE_URL = /^(https?:\/\/|mailto:|\/(?!\/))/i;
 
 function inline(text, keyBase = "i") {
   const out = [];
-  const re = /(`[^`\n]+`)|(\*\*[^*\n]+\*\*|__[^_\n]+__)|(\*[^*\n]+\*|_[^_\n]+_)|(~~[^~\n]+~~)|(\[[^\]\n]+\]\([^)\s]+\))|(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])|(\+\+[^+\n]+\+\+)/g;
+  const re = /(`[^`\n]+`)|(\*\*(?:[^*\n]|\*[^*\n]+\*)+?\*\*|__[^_\n]+__)|(\*[^*\n]+\*|_[^_\n]+_)|(~~[^~\n]+~~)|(\[[^\]\n]+\]\([^)\s]+\))|(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])|(\+\+[^+\n]+\+\+)/g;
   let last = 0, m, n = 0;
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index));

@@ -2,9 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { Pencil, Trash2 } from "lucide-react";
 import Markdown from "./Markdown";
+import MarkdownEditor from "../notes/MarkdownEditor";
 
-// A highlight's Markdown note. The reader who made the highlight can add,
-// edit and delete it; everyone the highlight is shared with sees it read-only.
+// A highlight's Markdown note, written formatted (notes/MarkdownEditor). The reader who
+// made the highlight can add, edit and delete it; everyone the highlight is shared with
+// sees it read-only.
 export default function HighlightNote({ highlight, onChange, startEditing = false, compact = false }) {
   const mine = !!highlight?.mine;
   const [editing, setEditing] = useState(mine && startEditing);
@@ -56,14 +58,13 @@ export default function HighlightNote({ highlight, onChange, startEditing = fals
         className="wb-hl-note wb-hl-note--editing"
         onSubmit={(e) => { e.preventDefault(); save(draft); }}
       >
-        <textarea
+        <MarkdownEditor
           ref={textRef}
-          className="wb-hl-note__input"
           value={draft}
-          rows={5}
+          minRows={5}
           maxLength={10000}
-          placeholder="Write a note… Markdown works: **bold**, *italic*, - lists, > quotes, [links](https://…)"
-          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Write a note… Select words to make them bold, italic or a link"
+          onChange={setDraft}
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); save(draft); }
             if (e.key === "Escape") { e.stopPropagation(); setEditing(false); setDraft(highlight?.note || ""); }

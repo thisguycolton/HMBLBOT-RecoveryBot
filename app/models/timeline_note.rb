@@ -58,6 +58,14 @@ class TimelineNote < ApplicationRecord
   # Others may repost it when it's shared with Members, unless it's a repost itself
   def repostable_by?(viewer) = !!viewer && viewer.id != user_id && !repost? && visibility == "public"
 
+  # Why someone else can't repost it (their Repost button says so), or nil when they can
+  def repost_blocked_reason(viewer)
+    return if !viewer || viewer.id == user_id || repost? || repostable_by?(viewer)
+
+    shared = visibility == "followers" ? "with their followers" : "with their group"
+    "#{user.display_name.split.first} shared this only #{shared}, so it can't be reposted. Only notes shared with Members can be."
+  end
+
   # Shares it to these groups, only the ones its author is in, and stops sharing it to the rest
   def share_to!(groups)
     allowed = groups.select { |g| g.member?(user) }
@@ -129,7 +137,8 @@ class TimelineNote < ApplicationRecord
     { **reactions_json(viewer), link: link_json,
       comments: comments.last(COMMENTS_MAX).map { |c| c.as_api_json(viewer: viewer) }, comment_count: comments.size,
       can_comment: !viewer.nil?,
-      repost_count: reposts.size, reposted: reposts.any? { |r| r.user_id == viewer&.id }, can_repost: repostable_by?(viewer) }
+      repost_count: reposts.size, reposted: reposts.any? { |r| r.user_id == viewer&.id }, can_repost: repostable_by?(viewer),
+      repost_blocked: repost_blocked_reason(viewer) }
   end
 
   def repost_json(viewer)

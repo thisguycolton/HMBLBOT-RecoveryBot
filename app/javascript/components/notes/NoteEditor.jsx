@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ImagePlus, Trash2, X } from "lucide-react";
 import LinkCard, { firstLink } from "./LinkCard";
-import MarkdownTextarea from "./MarkdownTextarea";
+import MarkdownEditor from "./MarkdownEditor";
 import VisibilityPicker from "./VisibilityPicker";
 import { api } from "../groups/lib";
 import { saveNote } from "./lib";
@@ -12,12 +12,12 @@ const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 // (book/HighlightNote.jsx): Markdown, ⌘/Ctrl+Enter saves, Esc cancels. Notes also hold
 // pictures (pick, drop or paste them) and say who sees them on your profile. `groups` are
 // the groups you can share it to; `shareTo` is the one group it goes to (a group page's
-// Timeline block). Selecting text offers Bold, Italic, Underline, Strikethrough and Link
-// (MarkdownTextarea). The first link gets a preview card, which the X takes off. Needs a
+// Timeline block). It's written formatted, not as Markdown symbols, and selecting text
+// offers Bold, Italic, Underline, Strikethrough and Link (MarkdownEditor). The first link gets a preview card, which the X takes off. Needs a
 // `.wb` around it for the highlight-note look.
 export default function NoteEditor({
   note = null, groups = null, shareTo = null, defaultVisibility = "private", max = 10000, imagesMax = 6,
-  onSaved, onCancel, onDelete, autoFocus = false, placeholder = "Write a note… Markdown works: **bold**, *italic*, - lists, > quotes, [links](https://…)",
+  onSaved, onCancel, onDelete, autoFocus = false, placeholder = "Write a note… Select words to make them bold, italic or a link",
 }) {
   const [body, setBody] = useState(note?.body || "");
   const [visibility, setVisibility] = useState(note?.visibility || defaultVisibility);
@@ -99,7 +99,7 @@ export default function NoteEditor({
       onDragOver={(e) => { if (e.dataTransfer?.types?.includes("Files")) e.preventDefault(); }}
       onDrop={(e) => { if (e.dataTransfer?.files?.length) { e.preventDefault(); addFiles(e.dataTransfer.files); } }}
     >
-      <MarkdownTextarea
+      <MarkdownEditor
         ref={textRef}
         value={body}
         minRows={note ? 5 : 3}
