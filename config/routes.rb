@@ -67,6 +67,12 @@ Rails.application.routes.draw do
     resources :meeting_host_covers, controller: "group_meeting_host_covers", only: %i[create destroy]
     # The Hosting Command Center (/groups/:slug/host/:meeting_id)
     resources :hosting, controller: "group_hosting", only: %i[index show], param: :meeting_id do
+      collection do
+        get :capsule
+        get :values
+        get :service_readings
+        get "service_readings/:reading_id", action: :service_reading, as: :service_reading
+      end
       member do
         post :ping
         post :act
@@ -291,6 +297,9 @@ end
   # Your profile (React, app/javascript/entrypoints/profile.jsx) replaces Devise's edit page
   get "/users/edit", to: "profiles#show", as: :edit_profile
   devise_for :users, controllers: { registrations: "users/registrations" }
+  devise_scope :user do
+    get "users/check_email", to: "users/registrations#check_email", as: :users_check_email
+  end
 
   namespace :admin_panel do
     # React app; every path below it routes on the client

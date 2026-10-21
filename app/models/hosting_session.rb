@@ -1,8 +1,10 @@
 # One meeting on one date as its host and co-host run it from the Hosting Command Center: where
-# they are in the script, which sections are done, the meeting timer, and which chat postings
-# have gone out (and who posted them). Both see the same one; every change bumps `version`.
+# they are in the script, which sections are done, which chat postings have gone out (and who
+# posted them), the day's reading or activity, service and milestones. Both see the same one;
+# every change bumps `version`. Kept after the meeting, it's the Time Capsule's record of that day.
+# The meeting timer runs from the meeting's start time, in the page (timer_* columns are unused).
 class HostingSession < ApplicationRecord
-  ACTS = %w[goto complete uncomplete timer_start timer_pause timer_reset posted unposted activity clear_activity draw_topic drop_topic
+  ACTS = %w[goto complete uncomplete posted unposted activity clear_activity draw_topic drop_topic
             service milestone_add milestone_update milestone_remove milestone_move].freeze
   LOG_SIZE = 30
   # What fills the script's reading / activity spot: a chapter from the literature, one of the
@@ -38,10 +40,6 @@ class HostingSession < ApplicationRecord
 
   def link_path = "/h/#{code}"
 
-  # Seconds on the meeting timer
-  def elapsed(now = Time.current) = timer_banked + (timer_started_at ? (now - timer_started_at).to_i : 0)
-  def timer_running? = timer_started_at.present?
-
   # A change from the Command Center, by `user`, kept in the log when it's worth telling the other
   # host. `label` names the section it was about (the sections come from the script, in the page).
   # `pick` is the reading or activity a host picked; `topic` one drawn for them; `data` a service
@@ -62,17 +60,6 @@ class HostingSession < ApplicationRecord
             when "uncomplete"
               self.completed = completed - [index.to_i]
               nil
-            when "timer_start"
-              self.timer_started_at ||= now
-              "Started the timer"
-            when "timer_pause"
-              self.timer_banked = elapsed(now)
-              self.timer_started_at = nil
-              "Paused the timer"
-            when "timer_reset"
-              self.timer_banked = 0
-              self.timer_started_at = nil
-              "Reset the timer"
             when "posted"
               self.posted = posted.merge(posting.id.to_s => { "by" => user.display_name, "at" => now.iso8601 })
               "Copied #{posting.title}"
@@ -131,6 +118,12 @@ class HostingSession < ApplicationRecord
     end
   end
 
+  # {{ milestones }} in a chat posting: "Kim (30 days) and Sam (1 year)" (the page fills it the same way, lib.js)
+  def milestones_text
+    parts = milestones.map { |m| m["length"].present? ? "#{m["name"]} (#{m["length"]})" : m["name"] }
+    parts.size > 1 ? "#{parts[0..-2].join(", ")} and #{parts.last}" : parts.first.to_s
+  end
+
   # "Daily Reflections: October 20" or "Speaker: Kim R."
   def activity_label
     return unless activity
@@ -164,14 +157,14 @@ class HostingSession < ApplicationRecord
     {
       version: version, section_index: section_index, completed: completed, posted: posted, log: log.last(12).reverse, activity: activity,
       service: service, milestones: milestones,
-      timer: { running: timer_running?, elapsed: elapsed(now) }, server_now: now.iso8601(3),
+      server_now: now.iso8601(3),
       presences: presences.includes(:user).select { |p| p.last_seen_at > HostingPresence::AWAY.ago }.sort_by { |p| p.created_at }.map { |p| p.as_api_json(viewer) },
     }
   end
 
   # What the short link shows people without an account, next to the chat postings: which went
-  # out, the names that fill them in and the timer, but not the hosts' log or who's celebrating
+  # out and the names that fill them in, but not the hosts' log or who's celebrating
   def public_json(now = Time.current)
-    { version: version, posted: posted, activity: activity, service: service, timer: { running: timer_running?, elapsed: elapsed(now) }, server_now: now.iso8601(3) }
+    { version: version, posted: posted, activity: activity, service: service, server_now: now.iso8601(3) }
   end
 end

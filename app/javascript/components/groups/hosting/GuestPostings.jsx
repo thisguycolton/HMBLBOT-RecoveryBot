@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { LogIn, Moon, Sun } from "lucide-react";
 import { api } from "../lib";
 import GroupLogo from "../GroupLogo";
 import { Loading, Message, quietButton } from "../ui";
-import { ChatPostings, timeOf, useDarkMode, useNow } from "./CommandCenter";
-import { mmss } from "./lib";
+import { ChatPostings, MeetingClock, timeOf, useDarkMode, useMeetingClock } from "./CommandCenter";
 import "./hosting.css";
 
 const POLL_MS = 5000;
@@ -13,16 +12,14 @@ const iconButton = "inline-grid size-9 shrink-0 place-items-center rounded-xl !b
 
 // /groups/:slug/chat/:code, where a hosting short link (/h/CODE) sends someone who can't host or
 // isn't signed in: that date's chat postings, filled in, to copy into the Zoom chat. It follows
-// what the hosts have posted and the meeting timer, but changes nothing.
+// what the hosts have posted and the meeting's time, but changes nothing.
 export default function GuestPostings() {
   const { code } = useParams();
   const [page, setPage] = useState(null);
   const [error, setError] = useState(null);
-  const receivedAt = useRef(Date.now());
   const [dark, toggleDark] = useDarkMode();
-  const now = useNow(1000);
 
-  const load = useCallback(() => api(`/hosting_links/${encodeURIComponent(code)}`).then((p) => { receivedAt.current = Date.now(); setPage(p); setError(null); })
+  const load = useCallback(() => api(`/hosting_links/${encodeURIComponent(code)}`).then((p) => { setPage(p); setError(null); })
     .catch((e) => setError(e)), [code]);
   useEffect(() => {
     load();
@@ -30,12 +27,12 @@ export default function GuestPostings() {
     return () => clearInterval(t);
   }, [load]);
   useEffect(() => { document.title = page ? `${page.meeting.name} chat postings` : "Chat postings"; }, [page]);
+  const { elapsed } = useMeetingClock(page?.starts_at, page?.live?.server_now);
 
   if (error && !page) return <Message title="That link doesn't work" text={error.message} />;
   if (!page) return <Loading />;
 
   const live = page.live;
-  const elapsed = live ? live.timer.elapsed + (live.timer.running ? (now - receivedAt.current) / 1000 : 0) : 0;
   const signIn = `/h/${page.code}?sign_in=1`;
   return (
     <div className={`hc-root min-h-dvh w-full bg-neutral-50 !font-sans text-slate-900 dark:bg-neutral-950 dark:text-white ${dark ? "doc-dark" : ""}`}>
@@ -48,7 +45,7 @@ export default function GuestPostings() {
             {page.starts_at && ` at ${timeOf(page.starts_at, page.meeting.time_zone)}`}
           </p>
         </div>
-        {live && (live.timer.running || elapsed > 0) && <span className="font-mono text-lg font-semibold tabular-nums" title="Meeting elapsed">{mmss(elapsed)}</span>}
+        {page.starts_at && <MeetingClock center={page} elapsed={elapsed} compact />}
         <button type="button" className={iconButton} onClick={toggleDark} aria-label={dark ? "Light mode" : "Dark mode"}>{dark ? <Sun className="size-5" /> : <Moon className="size-5" />}</button>
       </header>
       <main className="mx-auto max-w-xl space-y-4 px-4 py-5">

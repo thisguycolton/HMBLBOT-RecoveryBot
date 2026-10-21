@@ -15,6 +15,7 @@ import DocumentToolbar from "./DocumentToolbar";
 import PdfViewer from "./PdfViewer";
 import ShareMenu from "./ShareMenu";
 import { documentExtensions } from "./editorKit";
+import { DynamicValuesBar } from "./hostSection";
 import { FILE_ACCEPT, KIND_INFO, KINDS, VISIBILITIES, VISIBILITY_LABELS, STATUSES, dateLabel, decisionsPath, documentsPath, fileUrl, sizeLabel } from "./lib";
 
 // The folder's letterhead at the top of the page: its logo or seal, a heading and a line under it
@@ -110,6 +111,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
   const fileRef = useRef(null);
   const importRef = useRef(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [valuesOpen, setValuesOpen] = useState(false);
   // The folder's letterhead (Document templates): from the document, or for record keepers the
   // current one for whichever folder is picked, so changing the folder shows it at once
   const [templates, setTemplates] = useState(null);
@@ -296,6 +298,9 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
     canEdit && showPaper && { label: "Insert", items: [
       { label: "Table", onClick: () => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
       { label: "Divider line", onClick: () => chain().setHorizontalRule().run() },
+      "divider",
+      { label: "Add Section", onClick: () => chain().addHostSection().run() },
+      { label: "Dynamic Values", onClick: () => setValuesOpen((v) => !v), checked: valuesOpen },
     ] },
   ].filter(Boolean).map((m) => ({ ...m, items: m.items.filter(Boolean) }));
 
@@ -319,6 +324,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
           <input ref={importRef} type="file" hidden accept={IMPORT_ACCEPT} onChange={(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importFile(f); }} />
         </div>
         {canEdit && showPaper && <DocumentToolbar editor={editor} />}
+        {canEdit && showPaper && valuesOpen && <DynamicValuesBar editor={editor} slug={slug} documentId={doc?.id} onClose={() => setValuesOpen(false)} />}
       </div>
 
       <div className="mx-auto max-w-[816px] space-y-3 print:max-w-none">

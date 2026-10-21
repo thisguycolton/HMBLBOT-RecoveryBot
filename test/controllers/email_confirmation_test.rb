@@ -68,4 +68,17 @@ class EmailConfirmationTest < ActionDispatch::IntegrationTest
     assert_equal ["old@example.com", "fresh@example.com"], response.parsed_body.values_at("email", "unconfirmed_email")
     assert_equal ["fresh@example.com"], ActionMailer::Base.deliveries.last.to
   end
+
+  test "after signing up, a page says to check their email, and can send the link again" do
+    sign_up
+    assert_redirected_to "/users/check_email"
+    follow_redirect!
+    assert_response :success
+    assert_includes response.body, "check_email"
+    assert_includes response.body, "new@example.com"
+
+    ActionMailer::Base.deliveries.clear
+    post "/users/confirmation", params: { user: { email: "new@example.com" } }
+    assert_equal ["new@example.com"], ActionMailer::Base.deliveries.last&.to
+  end
 end

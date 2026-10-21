@@ -143,6 +143,24 @@ export function ResendConfirmationPage({ email = "", login_path, ...form }) {
   );
 }
 
+// Where a new account lands after signing up: confirm the address first (the email has the link),
+// with a way to have it sent again
+export function CheckEmailPage({ email = "", login_path, ...form }) {
+  return (
+    <AuthFrame icon={Mail} title="Check your email" subtitle="One more step before you can log in"
+      footer={login_path && <>Already confirmed? <a href={login_path} className={linkClass}>Log in</a></>}>
+      <div role="status" className="mb-5 space-y-2 text-sm text-slate-700 dark:text-neutral-300">
+        <p>We sent a confirmation link to {email ? <strong className="break-all text-slate-900 dark:text-white">{email}</strong> : "your email address"}. Click it to confirm your address, then log in.</p>
+        <p className="text-xs text-slate-500 dark:text-neutral-400">It can take a minute or two, and the link works for 3 days. Check your spam folder if it doesn't turn up.</p>
+      </div>
+      <AuthForm {...form} submitLabel="Send the link again" busyLabel="Sending…">
+        {email ? <input type="hidden" name="user[email]" value={email} />
+          : <Field id="user_email" label="Email" type="email" name="user[email]" autoComplete="email" required placeholder="you@example.com" />}
+      </AuthForm>
+    </AuthFrame>
+  );
+}
+
 export function ForgotPasswordPage({ email = "", login_path, ...form }) {
   return (
     <AuthFrame icon={Mail} title="Forgot your password?" subtitle="We'll email you a link to choose a new one"
