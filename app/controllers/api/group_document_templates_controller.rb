@@ -4,6 +4,7 @@ class Api::GroupDocumentTemplatesController < ApplicationController
   include GroupScoped
 
   before_action :set_group
+  before_action :require_premium, only: :update
   before_action :require_member
   before_action :require_keeper, only: :update
 

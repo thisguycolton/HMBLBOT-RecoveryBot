@@ -35,6 +35,14 @@ class HostingSession < ApplicationRecord
     end
   end
 
+  # A group's contribution link (/g/CODE) uses the same letters
+  def self.new_contribution_code
+    loop do
+      code = Array.new(CODE_LENGTH) { CODE_CHARS.sample(random: SecureRandom) }.join
+      return code unless Group.exists?(contribution_code: code)
+    end
+  end
+
   # From the short link, however it was typed
   def self.find_by_code(code) = find_by(code: code.to_s.upcase.gsub(/[^A-Z0-9]/, "").presence)
 

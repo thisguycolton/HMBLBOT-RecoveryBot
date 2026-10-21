@@ -38,6 +38,8 @@ class HostingCenter
       hosts: { host: host&.name, co_host: co_host&.name },
       my_role: [["host", host], ["co_host", co_host]].find { |_, h| h&.user_id && h.user_id == @viewer&.id }&.first,
       court_url: "/court_verifications/new?#{{ group: @group.slug, meeting: @meeting.id, host: (host || co_host)&.name }.compact.to_query}",
+      # The group's 7th Tradition link, to put in the chat (Group#contribution_path)
+      contribution_path: (@group.contribution_path if @group.takes_contributions?),
       kit: kit_json, can_edit: can_edit?, live: session.live_json(@viewer, @now), activity_options: activity_options, previous: previous_json,
       link: { code: session.code, path: session.link_path, public_postings: kit.nil? || kit.public_postings },
     }

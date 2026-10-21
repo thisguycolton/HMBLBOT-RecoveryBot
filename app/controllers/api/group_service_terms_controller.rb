@@ -4,6 +4,7 @@ class Api::GroupServiceTermsController < ApplicationController
   include GroupScoped
 
   before_action :set_group
+  before_action :require_premium, only: %i[create update destroy]
   before_action :require_member
   before_action :require_keeper
   before_action :set_position

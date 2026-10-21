@@ -4,6 +4,7 @@ class Api::GroupAgendaItemsController < ApplicationController
   include GroupScoped
 
   before_action :set_group
+  before_action :require_premium, only: %i[create update destroy reorder]
   before_action :require_member
   before_action :set_meeting
   before_action :set_item, only: %i[update destroy]

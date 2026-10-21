@@ -7,6 +7,7 @@ class Api::GroupHostingController < ApplicationController
 
   before_action :set_group
   before_action :require_host
+  before_action :require_premium
   before_action :set_meeting, except: %i[index capsule service_readings service_reading values]
   before_action :require_coordinator, only: %i[kit reset_kit]
 

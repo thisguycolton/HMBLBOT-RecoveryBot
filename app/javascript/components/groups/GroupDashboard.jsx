@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpRight, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, FileText, Gavel, LayoutDashboard, LayoutTemplate,
-  Landmark, Menu, Moon, Settings, Stamp, Sun, UserCheck, Users, X,
+  HandHeart, Landmark, Lock, Menu, Moon, Settings, Stamp, Sun, UserCheck, Users, X,
 } from "lucide-react";
 import NotificationBell from "../NotificationBell";
 import Avatar from "./Avatar";
@@ -18,28 +18,30 @@ import LiteratureTab from "./LiteratureTab";
 import CourtTab from "./CourtTab";
 import GroupSettings, { GroupLogo } from "./GroupSettings";
 import DocumentTemplates from "./conscience/DocumentTemplates";
+import PlanView from "./PlanView";
 
 // Who gets the dashboard: anyone in the group with a role beyond plain member
 export const hasGroupRole = (group) =>
   !!(group && (group.can_manage || group.can_keep_records || group.can_schedule_hosts || group.can_keep_treasury));
 
-// The sidebar, like the site admin's (components/admin_suite/App.jsx). `show` says who sees an item.
+// The sidebar, like the site admin's (components/admin_suite/App.jsx). `show` says who sees an item;
+// `premium` marks the premium tools (app/services/premium.rb), locked to reading without it.
 const SECTIONS = [
   { title: "Menu", items: [{ key: "overview", path: "", label: "Dashboard", icon: LayoutDashboard }] },
   {
     title: "Business",
     items: [
-      { key: "meetings", path: "/meetings", label: "Business meetings", icon: CalendarDays },
-      { key: "decisions", path: "/decisions", label: "Decisions", icon: Gavel },
-      { key: "documents", path: "/documents", label: "Documents", icon: FileText },
-      { key: "templates", path: "/templates", label: "Document templates", icon: Stamp, show: (g) => g.can_keep_records },
+      { key: "meetings", path: "/meetings", premium: true, label: "Business meetings", icon: CalendarDays },
+      { key: "decisions", path: "/decisions", premium: true, label: "Decisions", icon: Gavel },
+      { key: "documents", path: "/documents", premium: true, label: "Documents", icon: FileText },
+      { key: "templates", path: "/templates", premium: true, label: "Document templates", icon: Stamp, show: (g) => g.can_keep_records },
     ],
   },
   {
     title: "Service",
     items: [
-      { key: "officials", path: "/officials", label: "Elected officials", icon: BookOpenCheck },
-      { key: "treasury", path: "/treasury", label: "Treasury", icon: Landmark },
+      { key: "officials", path: "/officials", premium: true, label: "Elected officials", icon: BookOpenCheck },
+      { key: "treasury", path: "/treasury", premium: true, label: "Treasury", icon: Landmark },
       { key: "hosts", path: "/hosts", label: "Hosts", icon: UserCheck, show: (g) => g.can_schedule_hosts },
     ],
   },
@@ -51,6 +53,7 @@ const SECTIONS = [
       { key: "events", path: "/events", label: "Events", icon: CalendarRange, show: (g) => g.can_manage },
       { key: "literature", path: "/literature", label: "Approved literature", icon: BookOpen, show: (g) => g.can_manage },
       { key: "court", path: "/court", label: "Court verifications", icon: ClipboardCheck, show: (g) => g.can_manage },
+      { key: "plan", path: "/plan", label: "Plan & contributions", icon: HandHeart, show: (g) => g.can_manage || g.can_keep_treasury },
       { key: "settings", path: "/settings", label: "Group settings", icon: Settings, show: (g) => g.can_manage },
     ],
   },
@@ -108,6 +111,7 @@ export default function GroupDashboard({ group: initial }) {
                         className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${active ? "bg-accent/15 !text-accent-ink dark:!text-sky-300" : "!text-slate-700 hover:bg-slate-100 dark:!text-neutral-300 dark:hover:bg-neutral-800"}`}>
                         <Icon className={`size-5 ${active ? "text-accent dark:text-sky-300" : "opacity-70"}`} />
                         <span className="flex-1">{item.label}</span>
+                        {item.premium && group.premium === false && <Lock className="size-3.5 opacity-50" aria-label="Premium" />}
                         {n > 0 && <span className="min-w-5 rounded-full bg-amber-500 px-1.5 text-center text-xs font-semibold !text-white">{n}</span>}
                       </NavLink>
                     </li>
@@ -145,6 +149,7 @@ export default function GroupDashboard({ group: initial }) {
   else if (current.key === "court") body = <CourtTab group={group} setGroup={setGroup} />;
   else if (current.key === "settings") body = <GroupSettings group={group} setGroup={setGroup} />;
   else if (current.key === "templates") body = <DocumentTemplates group={group} />;
+  else if (current.key === "plan") body = <PlanView group={group} reload={reload} />;
   else body = <ConscienceBody group={group} view={current.key} id={id} embedded />;
 
   return (
@@ -182,11 +187,22 @@ export default function GroupDashboard({ group: initial }) {
           <main className="min-w-0 max-w-screen-xl p-4 sm:p-6">
             <h1 className="group-chrome mb-6 !text-2xl font-bold text-slate-900 dark:text-white">{current.label}</h1>
             <ErrorNote error={error} />
+            {current.premium && group.premium === false && <PremiumNote group={group} base={base} />}
             {body}
           </main>
         )}
       </div>
     </div>
+  );
+}
+
+// Over a premium tool when the group hasn't got premium: it reads, but can't add or change
+function PremiumNote({ group, base }) {
+  return (
+    <p className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+      <Lock className="size-4" /> This is a premium tool. Everything {group.title} wrote is still here to read.
+      {(group.can_manage || group.can_keep_treasury) && <Link to={`${base}/plan`} className="font-semibold underline">See the plan</Link>}
+    </p>
   );
 }
 

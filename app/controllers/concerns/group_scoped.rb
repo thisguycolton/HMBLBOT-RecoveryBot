@@ -41,6 +41,14 @@ module GroupScoped
     render json: { error: "Only members of this group can see that." }, status: :forbidden
   end
 
+  # Premium tools (see Premium): a group without it still reads what it wrote, but can't add or
+  # change it. The page shows the upgrade note on premium_required.
+  def require_premium
+    return if @group.premium?
+
+    render json: { error: "This is a premium tool. #{@group.title} can keep reading what's here; a group admin can turn premium on in Plan & contributions.", premium_required: true }, status: :payment_required
+  end
+
   def render_errors(record)
     render json: { error: record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   end

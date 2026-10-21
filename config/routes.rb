@@ -75,6 +75,13 @@ Rails.application.routes.draw do
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
     resource :conscience, controller: "group_conscience", only: :show
+    # Plan & contributions: premium and the group's own Stripe account (Api::GroupBillingController)
+    resource :billing, controller: "group_billing", only: %i[show update] do
+      post :checkout
+      post :portal
+      post :connect
+      post :refresh
+    end
     resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy] do
       post :link, on: :collection
     end
@@ -279,6 +286,10 @@ end
   # Groups: a React app (app/javascript/entrypoints/groups.jsx); invite links join on the server
   # A meeting date's short link for its hosts (and the chat postings, for anyone)
   get "/h/:code", to: "hosting_links#show", as: :hosting_link
+  # A group's 7th Tradition page, shared in the meeting (ContributionsController)
+  get "/g/:code", to: "contributions#show", as: :contribution
+  post "/g/:code", to: "contributions#create"
+  post "/stripe/webhooks", to: "stripe_webhooks#create"
   get "/groups/join/:token", to: "groups#join", as: :join_group
   get "/groups/:slug/ask", to: "groups#ask", as: :ask_to_join_group
   get "/groups", to: "groups#app", as: :groups

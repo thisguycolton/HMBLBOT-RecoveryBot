@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "October 21, 2026";
+const UPDATED = "October 22, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -203,6 +203,12 @@ export default function PrivacyPage({ turnstile = false }) {
               <strong>Browser push services:</strong> if you turn on notifications, each one goes through the push service of the company that
               makes your browser (Apple for Safari, iPhone and iPad; Google for Chrome and Android; Mozilla for Firefox; Microsoft for Edge on
               Windows). It's encrypted so only your device can read it: the service sees that RecoveryBot sent your device something and when, not what it says.
+            </li>
+            <li>
+              <strong>Stripe:</strong> takes payments. When a group admin pays for premium, Stripe handles the card and billing
+              details; we keep the group's Stripe customer and subscription numbers, and when it's paid until. When a member makes an
+              online 7th Tradition contribution, it goes to the group's own Stripe account: Stripe (and the group's treasurer, in
+              Stripe's dashboard) sees the card details and email, and we keep only the amount and date, not who gave.
             </li>
             <li><strong>ipinfo.io:</strong> looks up the shortened IP address of a visit to get the rough location for visit statistics.</li>
             {turnstile && <li><strong>Cloudflare Turnstile:</strong> checks that the sign-up and contact forms are filled in by a person. Cloudflare sees your IP address and browser details when the check runs.</li>}

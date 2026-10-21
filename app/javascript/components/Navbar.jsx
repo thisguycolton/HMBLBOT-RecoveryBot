@@ -20,6 +20,7 @@ export default function Navbar({
   rootPath = "/",
   loginPath = "/users/sign_in",
   signupPath = "/users/sign_up",
+  hideDonate = false,
   logoutPath = "/users/sign_out",
   brandSubtitle = "Beta",
 }) {
@@ -133,14 +134,14 @@ export default function Navbar({
           </div>
 
           <div className="flex items-center gap-1">
-            {/* always in view, phones included */}
-            <button
+            {/* always in view, phones included (not on a group's 7th Tradition page, where it'd muddle whose basket it is) */}
+            {!hideDonate && <button
               type="button"
               onClick={openDonation}
               className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-semibold !bg-rose-50 !text-rose-700 ring-1 ring-rose-200 hover:!bg-rose-100 dark:!bg-rose-950/40 dark:!text-rose-300 dark:ring-rose-900 mr-1"
             >
               <Heart size={16} className="fill-current" /> Donate
-            </button>
+            </button>}
             <button
               type="button"
               onClick={toggleTheme}

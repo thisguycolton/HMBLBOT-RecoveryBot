@@ -9,6 +9,7 @@ class Api::GroupMotionsController < ApplicationController
   skip_before_action :authenticate_user!, only: :index
   before_action :set_viewable_group, only: :index
   before_action :set_group, except: :index
+  before_action :require_premium, only: %i[create update destroy bulk]
   before_action :require_keeper, only: %i[create update check bulk]
   before_action :require_manager, only: :destroy
   before_action :set_motion, only: %i[update destroy]
