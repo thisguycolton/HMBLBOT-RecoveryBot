@@ -4,6 +4,7 @@ import DateTimePicker from "./ui/DateTimePicker";
 import { createDateFromString } from "./ui/DateTimePicker/dateUtils";
 import { Shell, ShellPanel, ShellBand } from "./ui/Shell";
 import SegmentedControl from "./ui/SegmentedControl";
+import TagAutocomplete from "./ui/TagAutocomplete";
 import { inputClass, labelClass, iconInputClass } from "./ui/styles";
 import axios from "axios";
 import {
@@ -14,7 +15,6 @@ import {
   Calendar as CalendarIcon,
   Link as LinkIcon,
   Save,
-  Plus,
   Tag,
   User,
   Globe,
@@ -506,7 +506,6 @@ useEffect(() => {
   }, [focusField]);
 
   const [availableTags, setAvailableTags] = useState(tags || []);
-  const [newTagName, setNewTagName] = useState("");
   const [creatingTag, setCreatingTag] = useState(false);
 
   // Picking a group also fills in its name and video link when those still hold the
@@ -533,17 +532,6 @@ useEffect(() => {
     if (value !== "scheduled") setScheduleAt(null);
   }
 
-function toggleTag(tagId) {
-  setFormData((prev) => {
-    const exists = prev.tagIds.includes(tagId);
-    return {
-      ...prev,
-      tagIds: exists
-        ? prev.tagIds.filter((id) => id !== tagId)
-        : [...prev.tagIds, tagId],
-    };
-  });
-}
 useEffect(() => {
   setAvailableTags(tags || []);
 }, [tags]);
@@ -575,8 +563,8 @@ useEffect(() => {
     return null;
   }
 
-async function handleCreateTag() {
-  const title = newTagName.trim();
+async function handleCreateTag(name) {
+  const title = name.trim();
   if (!title) return;
 
   try {
@@ -607,7 +595,6 @@ async function handleCreateTag() {
         ? prev.tagIds
         : [...prev.tagIds, Number(createdTag.id)],
     }));
-    setNewTagName("");
   } catch (error) {
     console.error("Failed to create tag", error);
   } finally {
@@ -1056,50 +1043,13 @@ async function handleSubmit(e) {
                 <ShellBand icon={Tag} title="Tags" />
 
                 <ShellPanel position="bottom" className="p-4 max-lg:p-5">
-                  <div className="flex flex-wrap gap-1.5 max-lg:gap-2">
-                    {availableTags.map((tag) => {
-                      const selected = formData.tagIds.includes(Number(tag.id));
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => toggleTag(Number(tag.id))}
-                          aria-pressed={selected}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 max-lg:px-3.5 max-lg:py-2 max-lg:text-sm rounded-full text-xs transition-colors ${
-                            selected
-                              ? "bg-accent-tint text-accent-ink font-semibold dark:bg-accent/35 dark:text-white"
-                              : "bg-white dark:bg-neutral-900 font-medium text-slate-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:bg-accent/5 dark:hover:bg-white/5"
-                          }`}
-                        >
-                          {selected && <span className="w-1.5 h-1.5 rounded-full bg-accent dark:bg-white" aria-hidden="true" />}
-                          {tag.title}
-                          {!selected && <Plus className="w-3 h-3 text-slate-400" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {isAdminUser && (
-                    <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
-                      <div className="flex items-stretch rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-700 focus-within:ring-2 focus-within:ring-accent">
-                        <input
-                          type="text"
-                          value={newTagName}
-                          onChange={(e) => setNewTagName(e.target.value)}
-                          placeholder="Add new tag (admin only)"
-                          className="flex-1 min-w-0 px-3 py-2 max-lg:py-3 text-sm max-lg:text-base bg-white dark:bg-neutral-900 text-slate-800 dark:text-white placeholder-slate-400 border-0 focus:outline-none focus:ring-0"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleCreateTag}
-                          disabled={creatingTag || !newTagName.trim()}
-                          className="shrink-0 px-4 text-sm font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap transition-opacity"
-                        >
-                          {creatingTag ? "Adding..." : "Add"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <TagAutocomplete
+                    tags={availableTags}
+                    value={formData.tagIds}
+                    onChange={(tagIds) => updateField("tagIds", tagIds)}
+                    onCreate={isAdminUser ? handleCreateTag : undefined}
+                    creating={creatingTag}
+                  />
                 </ShellPanel>
               </Shell>
 
