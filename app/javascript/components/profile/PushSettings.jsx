@@ -17,7 +17,8 @@ const UNBLOCK = {
 const DeviceIcon = ({ label }) => (/iPhone|iPad|Android/.test(label) ? <Smartphone className="h-4 w-4 shrink-0 text-slate-400" /> : <Laptop className="h-4 w-4 shrink-0 text-slate-400" />);
 
 // Account settings > Notifications on this device (also on /install once the app is on the
-// home screen): turn Web Push on or off for this browser, send a test, and remove other devices.
+// home screen): turn Web Push on or off for this browser, send a test, pick which kinds of
+// notification are pushed (to all their devices), and remove other devices.
 // Hidden when the server has no VAPID keys (WebPushSender.configured?).
 export default function PushSettings({ bare = false }) {
   const [state, setState] = useState(null); // { available, public_key, devices }
@@ -82,6 +83,18 @@ export default function PushSettings({ bare = false }) {
     }
   };
 
+  // Optimistic, so the switch moves right away; put back if the save fails
+  const setCategory = async (key, on) => {
+    setError(null);
+    setState((s) => ({ ...s, categories: s.categories.map((c) => (c.key === key ? { ...c, on } : c)) }));
+    try {
+      setState(await api(`/push_subscriptions/categories${endpoint ? `?endpoint=${encodeURIComponent(endpoint)}` : ""}`, { method: "PATCH", body: { key, on } }));
+    } catch (e) {
+      setState((s) => ({ ...s, categories: s.categories.map((c) => (c.key === key ? { ...c, on: !on } : c)) }));
+      setError(e.message);
+    }
+  };
+
   const remove = async (id) => {
     setBusy(`remove-${id}`);
     try {
@@ -138,6 +151,17 @@ export default function PushSettings({ bare = false }) {
     <Card className="space-y-4 p-4">
       {body}
       <ErrorNote error={error} />
+      {state.devices.length > 0 && state.categories?.length > 0 && (
+        <div className="border-t border-neutral-100 pt-3 dark:border-neutral-800">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">What to send</p>
+          <p className="mb-3 text-xs text-slate-500 dark:text-neutral-400">For all your devices. What you turn off still shows in the bell.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {state.categories.map((c) => (
+              <Toggle key={c.key} checked={c.on} onChange={(on) => setCategory(c.key, on)} label={c.label} description={c.description} />
+            ))}
+          </div>
+        </div>
+      )}
       {others.length > 0 && (
         <div className="border-t border-neutral-100 pt-3 dark:border-neutral-800">
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Your other devices</p>

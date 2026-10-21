@@ -105,6 +105,19 @@ class User < ApplicationRecord
   def host_commitments = @host_commitments ||= HostCommitments.new(self)
   def host? = host_commitments.host?
 
+  # Whether a notification of this kind goes to their devices too (account settings >
+  # Notifications on this device). Kinds outside Notification::PUSH_CATEGORIES always do.
+  def wants_push?(kind)
+    category = Notification.push_category(kind)
+    category.nil? || !push_off.include?(category)
+  end
+
+  # The push categories offered to them, each with whether it's on
+  def push_categories
+    Notification::PUSH_CATEGORIES.reject { |_, c| c[:admin_only] && !suite_admin? }
+                                 .map { |key, c| { key: key, label: c[:label], description: c[:description], on: !push_off.include?(key) } }
+  end
+
   # Enough to show and link to them anywhere
   def as_person_json = { id: id, name: display_name, username: username, avatar_url: avatar_url }
 

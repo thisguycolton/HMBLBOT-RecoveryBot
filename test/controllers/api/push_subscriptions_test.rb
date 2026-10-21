@@ -108,6 +108,46 @@ class Api::PushSubscriptionsTest < ActionDispatch::IntegrationTest
     assert_equal 0, PushSubscription.count
   end
 
+  test "kinds turned off aren't pushed but still show in the bell" do
+    subscribe
+    get "/api/push_subscriptions"
+    keys = response.parsed_body["categories"].map { _1["key"] }
+    assert_includes keys, "reactions"
+    assert_not_includes keys, "site_admin"
+    assert response.parsed_body["categories"].all? { _1["on"] }
+
+    patch "/api/push_subscriptions/categories", params: { key: "reactions", on: false }, as: :json
+    assert_response :success
+    assert_equal false, response.parsed_body["categories"].find { _1["key"] == "reactions" }["on"]
+    assert_equal ["reactions"], @user.reload.push_off
+
+    sent = []
+    WebPush.stub(:payload_send, ->(**args) { sent << args; true }) do
+      perform_enqueued_jobs do
+        Notification.deliver(@user, kind: "note.reaction", title: "Sam liked your note")
+        Notification.deliver(@user, kind: "meeting_host.sub_needed", title: "Can you cover Friday?")
+        Notification.deliver(@user, kind: "user.approved", title: "Welcome")
+      end
+    end
+    assert_equal ["Can you cover Friday?", "Welcome"], sent.map { JSON.parse(_1[:message])["title"] }
+    assert_equal 3, @user.notifications.count
+
+    patch "/api/push_subscriptions/categories", params: { key: "reactions", on: true }, as: :json
+    assert_equal [], @user.reload.push_off
+    patch "/api/push_subscriptions/categories", params: { key: "site_admin", on: false }, as: :json
+    assert_response :unprocessable_entity
+    patch "/api/push_subscriptions/categories", params: { key: "nope", on: false }, as: :json
+    assert_response :unprocessable_entity
+  end
+
+  test "every kind of notification the app sends is in a push category or deliberately always pushed" do
+    always = %w[user.approved text_report.resolved]
+    kinds = Dir[Rails.root.join("app/**/*.rb")].flat_map { File.read(_1).scan(/kind: "([a-z_]+\.[a-z_]+)"/).flatten }.uniq
+    kinds += %w[note.reaction comment.reaction schedule_poll.invitee schedule_poll.collaborator] # built from variables
+    kinds.reject! { _1.start_with?("schedule_poll.#") }
+    assert_empty kinds - Notification::PUSH_CATEGORY_BY_KIND.keys - always
+  end
+
   test "no devices or no keys, no push job" do
     assert_no_enqueued_jobs(only: WebPushJob) { Notification.deliver(@user, kind: "x", title: "Hi") }
     subscribe
