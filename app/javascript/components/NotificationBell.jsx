@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 import { clearToasts, showToast } from "../lib/toast";
+import { setAppBadge } from "../lib/push";
 
 const POLL_MS = 60_000;
 const SEEN_KEY = "hb-notifications-seen"; // newest notification id already toasted
@@ -27,6 +28,7 @@ export default function NotificationBell({ align = "right" }) {
   const [data, setData] = useState({ unread: 0, notifications: [] });
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  useEffect(() => setAppBadge(data.unread), [data.unread]);
 
   const load = useCallback(async () => {
     try {

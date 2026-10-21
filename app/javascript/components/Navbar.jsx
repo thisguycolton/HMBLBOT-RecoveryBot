@@ -7,6 +7,7 @@ import { ACCOUNT_ITEMS, ADMIN_ITEMS, NAV_CATEGORIES, currentHref, showItem } fro
 import { RecoveryBotLogo } from "./brand/Logo";
 import MyGroupsModal from "./nav/MyGroupsModal";
 import HostCourtModal from "./nav/HostCourtModal";
+import { forgetPushIfSignedOut, registerServiceWorker } from "../lib/push";
 
 // !bg: the reader styles give every <button> a gray fill
 const linkTone =
@@ -41,6 +42,11 @@ export default function Navbar({
       return "system";
     }
   });
+  // The service worker shows push notifications (lib/push.js); signed out, this browser stops getting them
+  useEffect(() => {
+    registerServiceWorker().then(() => forgetPushIfSignedOut());
+  }, []);
+
   const systemDark = () => window.matchMedia("(prefers-color-scheme: dark)").matches;
   const isDark = theme === "dark" || (theme === "system" && systemDark());
 

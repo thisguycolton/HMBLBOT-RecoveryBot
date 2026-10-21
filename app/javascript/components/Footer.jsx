@@ -52,6 +52,7 @@ export default function Footer() {
         <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
           <div>© {new Date().getFullYear()} RecoveryBot by HMBLBOT</div>
           <div className="flex flex-wrap gap-4">
+            <a href="/install" className="!text-neutral-500 !no-underline hover:!text-white">Get the app</a>
             <a href="/privacy" className="!text-neutral-500 !no-underline hover:!text-white">Privacy</a>
             <a href="/terms" className="!text-neutral-500 !no-underline hover:!text-white">Terms</a>
             <a href="/contact" className="!text-neutral-500 !no-underline hover:!text-white">Contact</a>

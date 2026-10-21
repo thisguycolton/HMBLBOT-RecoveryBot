@@ -36,6 +36,7 @@ const STORAGE = [
   ["hosting-text-size", "Script text size in the Hosting Command Center"],
   ["hosting-share-size", "Text size of a service reading opened to share on screen"],
   ["questScreenName, questChime", "Your screen name and sound setting in The Acid Quest"],
+  ["installNudge.dismissed", "That you closed the “Add RecoveryBot to your home screen” card"],
 ];
 
 function H2({ id, children }) {
@@ -134,6 +135,7 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Your profile:</strong> username, picture, a short bio, an optional sobriety date, and how you lay out your profile page.</li>
             <li><strong>Notes and highlights:</strong> passages you highlight in the library, notes you write on them, and notes on your timeline (with up to six pictures). Each one has its own visibility (see below).</li>
             <li><strong>Follows:</strong> who you follow and who follows you.</li>
+            <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. Turning them off, removing the device in your settings, or signing out on that device deletes it.</li>
             <li><strong>Reactions, comments and reposts:</strong> the Like, Love or Hugs you give a note or comment, comments you write on notes, and notes you repost to your timeline.</li>
             <li><strong>Link previews:</strong> when a note has a link, our server visits that page to read its title, description and picture, and keeps them (with a copy of the picture) with your note. The other site sees a visit from RecoveryBot, not from you or the people reading your note.</li>
             <li><strong>Groups:</strong> the groups you join or ask to join, your role (member, admin, record keeper, host scheduler, treasurer), and the meetings you host or cover. While you have a meeting's Hosting Command Center open, the group's other hosts see that you're there and what you're on, and what you did in it (like copying a chat posting) is kept with that meeting's date.</li>
@@ -186,6 +188,10 @@ export default function PrivacyPage({ turnstile = false }) {
           <Table head={["Cookie", "What it's for", "How long"]} rows={COOKIES} />
           <p>We also save a few settings in your browser's local storage. They never leave your device.</p>
           <Table head={["Setting", "What it's for"]} rows={STORAGE} />
+          <p>
+            Your browser also keeps a small script from us, called a service worker, so it can show notifications while RecoveryBot is closed and
+            open the right page when you tap one. It doesn't save pages or anything about what you do.
+          </p>
 
           <H2 id="outside-services">Outside services</H2>
           <p>These services handle some data for us, only to do the job listed:</p>
@@ -193,6 +199,11 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Hosting:</strong> the site and its database run on a server we rent, managed with CapRover.</li>
             <li><strong>Amazon Web Services (S3):</strong> stores uploaded files such as profile pictures, note pictures and group documents, in the United States.</li>
             <li><strong>Apple iCloud Mail:</strong> sends the site's emails.</li>
+            <li>
+              <strong>Browser push services:</strong> if you turn on notifications, each one goes through the push service of the company that
+              makes your browser (Apple for Safari, iPhone and iPad; Google for Chrome and Android; Mozilla for Firefox; Microsoft for Edge on
+              Windows). It's encrypted so only your device can read it: the service sees that RecoveryBot sent your device something and when, not what it says.
+            </li>
             <li><strong>ipinfo.io:</strong> looks up the shortened IP address of a visit to get the rough location for visit statistics.</li>
             {turnstile && <li><strong>Cloudflare Turnstile:</strong> checks that the sign-up and contact forms are filled in by a person. Cloudflare sees your IP address and browser details when the check runs.</li>}
             <li>
@@ -211,7 +222,7 @@ export default function PrivacyPage({ turnstile = false }) {
             you to a schedule poll, when an event you RSVP'd to posts an update (each has a link to stop them), and a copy of a court
             attendance verification made for you. If you host or co-host and turn on reminders in your account settings, we also email you
             before each meeting you're on, unless you choose notifications only. Other group news, like a scheduled business meeting or a host assignment, shows up in
-            the notification bell on the site instead. We don't send newsletters or marketing.
+            the notification bell on the site instead, and on your phone or computer if you turned on notifications there. We don't send newsletters or marketing.
           </p>
 
           <H2 id="what-we-dont-do">What we don't do</H2>
@@ -230,7 +241,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <ul>
             <li>your account, profile, picture and settings;</li>
             <li>your highlights, notes, timeline notes and their pictures;</li>
-            <li>your follows, reactions, comments, reposts, notifications, RSVPs, group memberships and schedule polls you made.</li>
+            <li>your follows, reactions, comments, reposts, notifications (and the devices you get them on), RSVPs, group memberships and schedule polls you made.</li>
           </ul>
           <p>
             Some things belong to a group or to everyone, so they stay without your account attached: group documents and minutes you
@@ -247,6 +258,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <ul>
             <li>Change your name, picture, bio, sobriety date and email from <a href="/users/edit">your profile</a>.</li>
             <li>Choose who sees each note and highlight, and set the default for new ones in your settings.</li>
+            <li>Turn notifications on or off for each device, or remove a device, under <em>Notifications on this device</em> in <a href="/users/edit#notifications">your settings</a>, or block them in your browser.</li>
             <li>Leave a group at any time from the group's page.</li>
             <li>Ask us, through {contact}, for a copy of what we have about you, to correct it, or to delete something. We'll answer whatever country you live in.</li>
           </ul>

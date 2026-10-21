@@ -6,6 +6,7 @@ import { api } from "../groups/lib";
 import { Card, ErrorNote, Loading } from "../groups/ui";
 import FeedItem from "../notes/FeedItem";
 import NoteEditor from "../notes/NoteEditor";
+import InstallNudge from "../site/InstallNudge";
 
 const sideTitle = "mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
 
@@ -55,6 +56,7 @@ export default function PeopleIndex() {
         </aside>
 
         <main className="order-2 min-w-0 space-y-5 lg:order-1 lg:col-span-2">
+          <InstallNudge />
           <header className="flex flex-wrap items-center gap-3">
             <h1 className="flex-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Notes</h1>
             <Link to="/me" className="inline-flex items-center gap-2 rounded-xl !bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-panel ring-1 ring-neutral-200 hover:ring-accent/50 dark:!bg-neutral-800 dark:text-white dark:ring-neutral-700">

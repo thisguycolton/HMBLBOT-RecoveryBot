@@ -1,0 +1,62 @@
+// RecoveryBot's service worker (served at /service-worker.js, registered by lib/push.js).
+// It only does Web Push: shows what WebPushSender sends, opens the page when it's tapped, and
+// keeps the subscription when the browser renews it. Pages aren't cached, so nothing is ever stale.
+const ICON = "<%= asset_path "favicon/icon-192x192.png" %>";
+const BADGE = "<%= asset_path "favicon/favicon-96x96.png" %>";
+
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (_) {
+    data = { title: event.data && event.data.text() };
+  }
+
+  const shown = self.registration.showNotification(data.title || "RecoveryBot", {
+    body: data.body || "",
+    icon: ICON,
+    badge: BADGE,
+    tag: data.tag,
+    data: { url: data.url || "/" },
+  });
+  // The number on the home-screen icon, where the system supports it
+  const badge = "setAppBadge" in self.navigator && typeof data.unread === "number"
+    ? (data.unread > 0 ? self.navigator.setAppBadge(data.unread) : self.navigator.clearAppBadge()).catch(() => {})
+    : null;
+  event.waitUntil(Promise.all([shown, badge]));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
+
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
+    if (open && "navigate" in open) {
+      await open.focus();
+      return open.navigate(url).catch(() => self.clients.openWindow(url));
+    }
+    return self.clients.openWindow(url);
+  })());
+});
+
+// The browser swapped the subscription for a new one: tell the server, so pushes keep coming
+self.addEventListener("pushsubscriptionchange", (event) => {
+  const old = event.oldSubscription;
+  const options = old && old.options;
+  if (!options || !options.applicationServerKey) return;
+
+  event.waitUntil((async () => {
+    const fresh = event.newSubscription || await self.registration.pushManager.subscribe(options);
+    await fetch("/api/push_subscriptions/renew", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ old_endpoint: old.endpoint, subscription: fresh.toJSON() }),
+    });
+  })());
+});

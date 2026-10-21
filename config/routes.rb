@@ -1,5 +1,11 @@
 Rails.application.routes.draw do
   get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+  # The service worker (app/views/pwa/service-worker.js.erb) shows Web Push notifications; it
+  # has to live at the root so it covers the whole site
+  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+  # Putting RecoveryBot on your home screen, and turning on notifications
+  get "/install", to: "install#show", as: :install
+  get "/notifications/:id/open", to: "notifications#open", as: :open_notification
   resources :topic_sets
   resources :hostificators do
     member do
@@ -41,6 +47,13 @@ Rails.application.routes.draw do
   get "hosting_links/:code", to: "hosting_links#show"
   resources :site_notices, only: :index
   resource :profile, only: %i[show update destroy]
+  resources :push_subscriptions, only: %i[index create destroy] do
+    collection do
+      delete "/", action: :destroy
+      post :test
+      post :renew
+    end
+  end
   resource :hosting, controller: "hosting", only: :show
   get "oiaa/search", to: "oiaa#search"
   get "oiaa/matches", to: "oiaa#matches"
