@@ -86,7 +86,8 @@ export default function DecisionForm({ group, motion = null, motions, kinds, gro
 
   return (
     <Card className="p-4 sm:p-5">
-      <form onSubmit={save} className="space-y-4">
+      {/* Sized by its own width, so it fits in the decisions side pane as well as a full page */}
+      <form onSubmit={save} className="@container space-y-4">
         <h3 className="!text-base font-semibold text-slate-900 dark:text-white">{motion ? "Change this motion" : "Record a motion"}</h3>
         <p className="-mt-2 text-xs text-slate-500 dark:text-neutral-400">The vote is taken in the room; this is the record of it.</p>
         <ErrorNote error={error} />
@@ -108,7 +109,7 @@ export default function DecisionForm({ group, motion = null, motions, kinds, gro
 
         {field("m-title", decision ? "What was moved" : "In short", <input id="m-title" required autoFocus maxLength={160} className={inputClass} value={form.title} onChange={set("title")} placeholder={decision ? "e.g. Send 7th Tradition 60/30/10" : "e.g. Table the urn until next month"} />)}
         {field("m-text", "As worded", (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-3 @2xl:grid-cols-2">
             <textarea id="m-text" rows={4} maxLength={10000} className={`${inputClass} font-mono !text-[13px]`} value={form.text} onChange={set("text")} placeholder="Markdown works." />
             {form.text.trim() && <div className="rounded-xl bg-neutral-50 p-3 ring-1 ring-neutral-200 dark:bg-neutral-950 dark:ring-neutral-800"><Markdown source={form.text} className="ev-md text-sm text-slate-800 dark:text-neutral-200" /></div>}
           </div>
@@ -116,12 +117,12 @@ export default function DecisionForm({ group, motion = null, motions, kinds, gro
 
         {kind.key === "amend" && field("m-amended", "The motion as it now reads", <textarea id="m-amended" rows={3} maxLength={10000} className={`${inputClass} font-mono !text-[13px]`} value={form.amended_text} onChange={set("amended_text")} />, "If the amendment passes, this becomes what the main motion says.")}
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 @md:grid-cols-2">
           {field("m-moved", "Moved by", <input id="m-moved" maxLength={80} className={inputClass} value={form.moved_by_name} onChange={set("moved_by_name")} placeholder="First name, last initial" />)}
           {field("m-seconded", "Seconded by", <input id="m-seconded" maxLength={80} className={inputClass} value={form.seconded_by_name} onChange={set("seconded_by_name")} placeholder={kind.second ? "First name, last initial" : "Not needed"} />)}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 @lg:grid-cols-3">
           {field("m-status", noVote ? "Ruling" : "How it came out", <select id="m-status" className={selectClass} value={form.status} onChange={set("status")}>{statusOptions(kind).map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>)}
           {field("m-date", "On", <input id="m-date" type="date" required={needsDate} className={inputClass} value={form.decided_on} onChange={set("decided_on")} />)}
           {decision && field("m-category", "Kind of decision", <select id="m-category" className={selectClass} value={form.category} onChange={set("category")}>{CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}</select>)}
@@ -133,7 +134,7 @@ export default function DecisionForm({ group, motion = null, motions, kinds, gro
         {!noVote && (
           <fieldset className="space-y-3 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
             <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">The vote</legend>
-            <div className="grid gap-3 sm:grid-cols-4">
+            <div className="grid gap-3 @lg:grid-cols-4">
               {field("m-method", "Taken by", <select id="m-method" className={selectClass} value={form.vote_method ?? ""} onChange={set("vote_method")}><option value="">Not noted</option>{Object.entries(VOTE_METHOD_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>)}
               {field("m-for", "For", <input id="m-for" type="number" min="0" max="9999" className={inputClass} value={form.votes_for ?? ""} onChange={set("votes_for")} />)}
               {field("m-against", "Against", <input id="m-against" type="number" min="0" max="9999" className={inputClass} value={form.votes_against ?? ""} onChange={set("votes_against")} />)}
