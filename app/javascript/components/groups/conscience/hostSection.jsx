@@ -5,13 +5,16 @@
 // the meeting (the Burning Desire, 30 minutes in). Stored as an empty
 // <div data-hc-section data-title=... data-kind=... data-when=... data-days=... data-cue=...>,
 // which the server keeps (DocumentHtml) and documents.css draws when the text is shown as HTML.
-// Also here: {{ milestones }}-style dynamic values shown as chips, and Insert > Dynamic Values.
+// Also here: forms the hosts fill in right in the script (Insert > Milestone Form: who's
+// celebrating, as the Command Center's milestones sidebar has it), stored as an empty
+// <div data-hc-form="milestones">; and {{ milestones }}-style dynamic values shown as chips, and
+// Insert > Dynamic Values.
 import React, { useEffect, useRef, useState } from "react";
 import { Node, Extension, mergeAttributes } from "@tiptap/core";
 import { Plugin } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
-import { AlarmClock, CalendarDays, Filter, Sparkles, Trash2, Braces, X } from "lucide-react";
+import { AlarmClock, CalendarDays, Filter, PartyPopper, Plus, Sparkles, Trash2, Braces, X } from "lucide-react";
 import { ACTIVITY_CONDITIONS, WEEKDAYS, cueLabel, offeredValues, parseCue, valueToken } from "../hosting/lib";
 import { api } from "../lib";
 
@@ -156,6 +159,45 @@ export const HostSection = Node.create({
   addNodeView() { return ReactNodeViewRenderer(SectionView); },
   addCommands() {
     return { addHostSection: () => ({ commands }) => commands.insertContent({ type: this.name, attrs: { title: "" } }) };
+  },
+});
+
+// A form in the script: in the document, a card standing in for it (what the hosts will see
+// there); in the Command Center, the real form (CommandCenter.jsx's ScriptView)
+export const HOST_FORMS = { milestones: { title: "Milestone form", text: "The hosts add who's celebrating and their time here, while they read the script. It's the same list as the Command Center's Celebrating milestones." } };
+
+function FormView({ node, deleteNode, editor }) {
+  const form = HOST_FORMS[node.attrs.form] || HOST_FORMS.milestones;
+  return (
+    <NodeViewWrapper className="hc-form" data-drag-handle="" contentEditable={false}>
+      <div className="hc-form__head">
+        <PartyPopper className="size-4 shrink-0" />
+        <span className="hc-form__title">{form.title}</span>
+        <span className="flex-1" />
+        {editor.isEditable && <button type="button" className="hc-form__remove" onClick={() => deleteNode()} aria-label={`Remove the ${form.title.toLowerCase()}`} title="Remove"><Trash2 className="size-3.5" /></button>}
+      </div>
+      <p className="hc-form__text">{form.text}</p>
+      <div className="hc-form__mock" aria-hidden="true">
+        <span>Screen name</span><span>Time</span><span className="hc-form__plus"><Plus className="size-3.5" /></span>
+      </div>
+    </NodeViewWrapper>
+  );
+}
+
+export const HostForm = Node.create({
+  name: "hostForm",
+  group: "block",
+  atom: true,
+  selectable: true,
+  draggable: true,
+  addAttributes() {
+    return { form: { default: "milestones", parseHTML: (el) => el.getAttribute("data-hc-form") || "milestones", renderHTML: (a) => ({ "data-hc-form": a.form }) } };
+  },
+  parseHTML() { return [{ tag: "div[data-hc-form]" }]; },
+  renderHTML({ HTMLAttributes }) { return ["div", HTMLAttributes]; },
+  addNodeView() { return ReactNodeViewRenderer(FormView); },
+  addCommands() {
+    return { addHostForm: (form = "milestones") => ({ commands }) => commands.insertContent({ type: this.name, attrs: { form } }) };
   },
 });
 

@@ -71,6 +71,20 @@
    <div data-hc-section> draws its tag from data-title. */
 .doc-prose div[data-hc-section] { border-top: 1px dashed #94a3b8; height: 0; margin: 2.2em 0 1.2em; position: relative; }
 .doc-prose div[data-hc-section]::before { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 999px; color: #475569; content: "§ " attr(data-title); font-size: 11px; font-weight: 600; left: 0; line-height: 1.6; padding: 0 8px; position: absolute; top: -0.85em; }
+/* A form the hosts fill in in the script (Insert > Milestone Form, hostSection.jsx): a card in the
+   editor; shown as HTML, the empty <div data-hc-form> draws a small label instead */
+.doc-prose div[data-hc-form] { border: 1px dashed #94a3b8; border-radius: 10px; margin: 1em 0; padding: 6px 10px; }
+.doc-prose div[data-hc-form]::before { color: #475569; content: "🎉 Milestone form: the hosts add who's celebrating here"; font-size: 12px; font-weight: 600; }
+.hc-form { background: #f8fafc; border: 1px dashed #94a3b8; border-radius: 12px; margin: 1em 0; padding: 10px 12px; user-select: none; }
+.hc-form.ProseMirror-selectednode { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
+.hc-form__head { align-items: center; color: #334155; display: flex; gap: 6px; }
+.hc-form__title { font-size: 13px; font-weight: 700; }
+.hc-form__remove { background: transparent !important; border-radius: 6px; color: #64748b; display: inline-grid; height: 24px; place-items: center; width: 24px; }
+.hc-form__remove:hover { background: #fee2e2 !important; color: #be123c; }
+.hc-form__text { color: #64748b; font-size: 12px !important; line-height: 1.45; margin: 4px 0 8px !important; }
+.hc-form__mock { display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) 6rem 2rem; }
+.hc-form__mock > span { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; color: #94a3b8; font-size: 12px; padding: 4px 8px; }
+.hc-form__plus { display: grid; place-items: center; padding: 0 !important; }
 .hc-sec { margin: 1.6em 0 0.9em; user-select: none; }
 .hc-sec__line { border-top: 1px dashed #94a3b8; position: relative; }
 .hc-sec__tag { align-items: center; background: #f1f5f9 !important; border: 1px solid #cbd5e1; border-radius: 999px; color: #475569; cursor: pointer; display: inline-flex; flex-wrap: wrap; font-size: 11px; font-weight: 600; gap: 6px; left: 0; line-height: 1.6; max-width: 100%; padding: 0 8px; position: absolute; top: -0.85em; }
@@ -150,6 +164,10 @@
   .doc-dark .doc-prose div[data-hc-section], .doc-dark .hc-sec__line { border-color: #52525b; }
   .doc-dark .doc-prose div[data-hc-section]::before, .doc-dark .hc-sec__tag { background: #27272a !important; border-color: #52525b; color: #d4d4d8; }
   .doc-dark .hc-sec__cond { border-color: #52525b; }
+  .doc-dark .doc-prose div[data-hc-form], .doc-dark .hc-form { background: #18181b; border-color: #52525b; }
+  .doc-dark .doc-prose div[data-hc-form]::before, .doc-dark .hc-form__head { color: #d4d4d8; }
+  .doc-dark .hc-form__text { color: #a1a1aa; }
+  .doc-dark .hc-form__mock > span { background: #27272a; border-color: #3f3f46; color: #71717a; }
   .doc-dark .hc-sec__pop { background: #18181b; border-color: #3f3f46; }
   .doc-dark .doc-token { background: #0c4a6e; color: #e0f2fe; }
   /* The toolbar's black text would vanish: show it light; highlights keep dark text on their pastel */

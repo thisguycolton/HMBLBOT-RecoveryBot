@@ -128,14 +128,15 @@ function Tile({ icon: Icon, title, text, onClick, pressed }) {
 
 // What can fill the spot: today's page of each daily book, a chapter from the literature, the
 // Topicificator, a speaker, a meditation, or anything else
-function ActivityPicker({ center, act }) {
+// Also on the script's first page, above the service form, until it's picked (`early`)
+export function ActivityPicker({ center, act, early = false }) {
   const options = center.activity_options || { daily: [], books: [], topic_sets: [] };
   const [mode, setMode] = useState(null);
   const pick = (activity) => act("activity", { activity, label: ACTIVITY_TITLE });
   return (
     <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:ring-amber-800/60">
-      <p className="font-semibold text-slate-900 dark:text-white">Pick today's reading or activity</p>
-      <p className="mt-0.5 text-sm text-slate-600 dark:text-neutral-300">Whatever you pick shows here for both hosts, and fills <code className="text-xs">{"{{activity}}"}</code> in chat postings.</p>
+      <p className="font-semibold text-slate-900 dark:text-white">{early ? "Choose your meeting's reading / activity" : "Pick today's reading or activity"}</p>
+      <p className="mt-0.5 text-sm text-slate-600 dark:text-neutral-300">{early ? "Pick it now, or when you get to it in the script. " : ""}Whatever you pick shows {early ? "at its spot in the script" : "here"} for both hosts, and fills <code className="text-xs">{"{{activity}}"}</code> in chat postings.</p>
       {center.previous?.length > 0 && (
         <div className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs text-slate-600 dark:bg-neutral-900/60 dark:text-neutral-300">
           <span className="font-semibold">Recently at this meeting: </span>

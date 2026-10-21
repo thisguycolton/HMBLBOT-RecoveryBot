@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Check, PartyPopper, Plus, Trash2, Users } from "lucide-react";
 import { inputClass } from "../../ui/styles";
 import { quietButton } from "../ui";
@@ -52,8 +52,10 @@ export function ServicePanel({ center, live, act }) {
 const LENGTHS = ["24 hours", "30 days", "60 days", "90 days", "6 months", "9 months", "1 year", "18 months", "2 years", "5 years", "10 years"];
 
 // People counting days or celebrating a milestone today, in the order they'll be called on, as
-// Host Helper had it. Checked off once they've been celebrated.
-export function Milestones({ live, act }) {
+// Host Helper had it. Checked off once they've been celebrated. In the sidebar, and `inScript`
+// where the format has a Milestone Form (Insert > Milestone Form), as a card in the text: the same list.
+export function Milestones({ live, act, inScript = false }) {
+  const lengths = useId();
   const [name, setName] = useState("");
   const [length, setLength] = useState("");
   const list = live.milestones || [];
@@ -66,8 +68,9 @@ export function Milestones({ live, act }) {
   };
   const update = (id, change) => act("milestone_update", { data: { id, ...change } });
   return (
-    <section>
+    <section className={inScript ? "hc-script-form my-5 max-w-[70ch] rounded-2xl bg-white p-4 text-base shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800" : ""}>
       <h2 className={`${label} mb-2 flex items-center gap-1.5`}><PartyPopper className="size-3.5" /> Celebrating milestones</h2>
+      {inScript && list.length === 0 && <p className="mb-2 text-sm text-slate-500 dark:text-neutral-400">Add each person as they speak up. Your co-host sees them too.</p>}
       {list.length > 0 && (
         <ul className="mb-2 space-y-1.5">
           {list.map((m, i) => (
@@ -78,7 +81,7 @@ export function Milestones({ live, act }) {
               </button>
               <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_5.5rem] gap-1">
                 <LiveInput aria-label="Screen name" className={`${inputClass} !px-2 !py-1 ${m.done ? "line-through" : ""}`} maxLength={80} value={m.name} onSave={(v) => v && update(m.id, { name: v })} />
-                <LiveInput aria-label="Time" list="hc-lengths" className={`${inputClass} !px-2 !py-1`} maxLength={60} value={m.length} placeholder="Time" onSave={(v) => update(m.id, { length: v })} />
+                <LiveInput aria-label="Time" list={lengths} className={`${inputClass} !px-2 !py-1`} maxLength={60} value={m.length} placeholder="Time" onSave={(v) => update(m.id, { length: v })} />
               </div>
               <button type="button" className={smallButton} onClick={() => act("milestone_move", { data: { id: m.id, by: -1 } })} disabled={i === 0} aria-label={`Move ${m.name} up`}><ArrowUp className="size-3.5" /></button>
               <button type="button" className={smallButton} onClick={() => act("milestone_move", { data: { id: m.id, by: 1 } })} disabled={i === list.length - 1} aria-label={`Move ${m.name} down`}><ArrowDown className="size-3.5" /></button>
@@ -89,10 +92,10 @@ export function Milestones({ live, act }) {
       )}
       <form onSubmit={add} className="grid grid-cols-[minmax(0,1fr)_5.5rem_auto] gap-1.5">
         <input aria-label="Screen name" className={`${inputClass} !px-2 !py-1.5`} maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder="Screen name" />
-        <input aria-label="Time" list="hc-lengths" className={`${inputClass} !px-2 !py-1.5`} maxLength={60} value={length} onChange={(e) => setLength(e.target.value)} placeholder="Time" />
+        <input aria-label="Time" list={lengths} className={`${inputClass} !px-2 !py-1.5`} maxLength={60} value={length} onChange={(e) => setLength(e.target.value)} placeholder="Time" />
         <button type="submit" className={`${quietButton} !px-2.5`} disabled={!name.trim()} aria-label="Add a milestone"><Plus className="size-4" /></button>
       </form>
-      <datalist id="hc-lengths">{LENGTHS.map((l) => <option key={l} value={l} />)}</datalist>
+      <datalist id={lengths}>{LENGTHS.map((l) => <option key={l} value={l} />)}</datalist>
     </section>
   );
 }
