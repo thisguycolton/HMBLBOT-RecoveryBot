@@ -43,6 +43,47 @@ class BusinessMeeting < ApplicationRecord
     visible_to(group, user).where(status: "planned").where("held_on >= ?", group.zone.today).order(:held_on, :id).first
   end
 
+  # The meetings in `meetings` that have every word of `query` somewhere in them: their minutes
+  # (draft ones only for keepers), agenda, the decisions made there that `motions` lets this
+  # person see, who chaired and the date. Returns { meeting id => up to 3 hits }, newest first,
+  # each hit { where:, label:, text: } with `text` a short stretch around the words.
+  def self.search(meetings, query, motions:, keeper: false)
+    words = query.to_s.downcase.scan(/[[:alnum:]'’&$#-]+/).uniq.first(8)
+    return {} if words.empty?
+
+    seen = motions.where.not(business_meeting_id: nil).select(:business_meeting_id, :title, :text).group_by(&:business_meeting_id)
+    meetings.includes(:agenda_items).each_with_object({}) do |m, found|
+      parts = m.search_parts(keeper, seen[m.id] || [])
+      next unless words.all? { |w| parts.any? { |p| p[:text].downcase.include?(w) } }
+
+      hits = parts.filter_map do |p|
+        n = words.count { |w| p[:text].downcase.include?(w) }
+        [n, p] if n.positive? && p[:where] != "meeting"
+      end
+      found[m.id] = hits.sort_by { |n, _| -n }.first(3).map { |_, p| p.merge(text: snippet(p[:text], words)) }
+    end
+  end
+
+  # ~180 characters around the first word found, cut at word edges
+  def self.snippet(text, words, size = 180)
+    down = text.downcase
+    at = words.filter_map { |w| down.index(w) }.min || 0
+    from = [at - (size / 3), 0].max
+    from = (text.rindex(" ", from) || -1) + 1 if from.positive?
+    piece = text[from, size].to_s
+    piece = piece.sub(/\s+\S*\z/, "") if from + size < text.length
+    "#{"…" if from.positive?}#{piece.strip}#{"…" if from + size < text.length}"
+  end
+
+  # The text a search looks through, labelled by where it came from
+  def search_parts(keeper, motions)
+    parts = [{ where: "meeting", label: "Meeting", text: [held_on.strftime("%A %B %-d %Y %b"), chair_name, secretary_name].compact.join(" ") }]
+    parts << { where: "minutes", label: "Minutes", text: DocumentHtml.text(minutes) } if minutes.present? && (keeper || minutes_status != "draft")
+    agenda_items.each { |i| parts << { where: "agenda", label: "Agenda", text: [i.title, i.details].compact_blank.join(" — ") } }
+    motions.each { |mo| parts << { where: "decision", label: "Decision", text: [mo.title, mo.text].compact_blank.join(" — ") } }
+    parts
+  end
+
   def planned? = status == "planned"
 
   # Motions set aside at earlier meetings (tabled, put off, sent to a committee) and not dealt with

@@ -1,15 +1,26 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CalendarPlus, FileCheck2, FileUp } from "lucide-react";
+import { CalendarPlus, FileCheck2, FileText, FileUp, Search } from "lucide-react";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton, quietButton } from "../ui";
 import MeetingForm from "./MeetingForm";
 import MinutesImport from "./MinutesImport";
 import RulesTable from "./RulesTable";
 import { inputClass, selectClass } from "../../ui/styles";
-import { dateLabel, longDate, meetingsPath } from "./lib";
+import { KIND_INFO, dateLabel, documentsPath, longDate, meetingsPath } from "./lib";
 
-function Row({ slug, m, keeper }) {
+// The words of a search, for marking them in the text that matched
+const searchWords = (query) => [...new Set(query.toLowerCase().match(/[\p{L}\p{N}'’&$#-]+/gu) || [])];
+
+const escapeRegExp = (w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+function Marked({ text, words }) {
+  if (!words.length) return text;
+  const pattern = new RegExp(`(${words.map(escapeRegExp).join("|")})`, "giu");
+  return text.split(pattern).map((part, i) => (i % 2 ? <mark key={i} className="rounded bg-amber-200/70 px-0.5 text-inherit dark:bg-amber-500/30">{part}</mark> : part));
+}
+
+function Row({ slug, m, keeper, words }) {
   const minutes = m.minutes_status === "draft" ? (keeper && m.status === "held" ? <Pill tone="amber">Minutes in draft</Pill> : null) : <Pill tone="green"><FileCheck2 className="size-3" /> Minutes {m.minutes_status}</Pill>;
   return (
     <Link to={meetingsPath(slug, m.id)} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900">
@@ -23,7 +34,64 @@ function Row({ slug, m, keeper }) {
       {m.status === "planned" && <Pill tone="accent">Planned</Pill>}
       {m.visibility === "keepers" && <Pill tone="amber">Record keepers</Pill>}
       {minutes}
+      {m.hits?.length > 0 && (
+        <span className="block w-full space-y-1 border-t border-neutral-100 pt-2 dark:border-neutral-800">
+          {m.hits.map((h, i) => (
+            <span key={i} className="block text-sm text-slate-600 dark:text-neutral-300">
+              <span className="mr-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500">{h.label}</span>
+              <Marked text={h.text} words={words} />
+            </span>
+          ))}
+        </span>
+      )}
     </Link>
+  );
+}
+
+// What a search of the business meetings turns up: meetings by their minutes, agenda and
+// decisions, and the group's documents too (they're often what a meeting talked about)
+function SearchResults({ slug, query, keeper }) {
+  const [found, setFound] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    const q = encodeURIComponent(query);
+    let live = true;
+    const t = setTimeout(() => {
+      Promise.all([api(`/groups/${slug}/business_meetings?q=${q}`), api(`/groups/${slug}/documents?q=${q}`)])
+        .then(([meetings, documents]) => live && (setError(null), setFound({ query, meetings: meetings.meetings, documents: documents.documents })))
+        .catch((e) => live && setError(e.message));
+    }, 250);
+    return () => { live = false; clearTimeout(t); };
+  }, [slug, query]);
+
+  if (error) return <ErrorNote error={error} />;
+  if (!found) return <Loading />;
+  const words = searchWords(found.query);
+  const { meetings, documents } = found;
+  return (
+    <div className={`space-y-5 ${found.query === query ? "" : "opacity-60"}`}>
+      <Tray label={`${meetings.length} ${meetings.length === 1 ? "meeting" : "meetings"}`}>
+        <div className="space-y-1.5">
+          {meetings.length === 0 && <Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">No minutes, agenda or decisions mention “{found.query}”.</Card>}
+          {meetings.map((m) => <Row key={m.id} slug={slug} m={m} keeper={keeper} words={words} />)}
+        </div>
+      </Tray>
+      <Tray label={`${documents.length} ${documents.length === 1 ? "document" : "documents"}`}>
+        <div className="space-y-1.5">
+          {documents.length === 0 && <Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">No documents mention “{found.query}”.</Card>}
+          {documents.map((d) => (
+            <Link key={d.id} to={documentsPath(slug, d.id)} className="flex items-start gap-3 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900">
+              <FileText className="mt-0.5 size-4 shrink-0 text-accent" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium text-slate-900 dark:text-white"><Marked text={d.title} words={words} /></span>
+                <span className="block text-xs text-slate-500 dark:text-neutral-400">{[KIND_INFO[d.kind]?.label, d.file?.name, `Updated ${dateLabel(d.updated_at)}`].filter(Boolean).join(" · ")}</span>
+                {d.excerpt && <span className="mt-0.5 block truncate text-sm text-slate-600 dark:text-neutral-300"><Marked text={d.excerpt} words={words} /></span>}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </Tray>
+    </div>
   );
 }
 
@@ -73,6 +141,7 @@ export default function MeetingsView({ group }) {
   const [error, setError] = useState(null);
   const [scheduling, setScheduling] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [query, setQuery] = useState("");
   const load = useCallback(() => api(`/groups/${slug}/business_meetings`).then(setData).catch((e) => setError(e.message)), [slug]);
   useEffect(() => { load(); }, [load]);
 
@@ -92,6 +161,12 @@ export default function MeetingsView({ group }) {
       {scheduling && (
         <MeetingForm group={group} regular={data.regular_meetings} canMakeEvents={data.can_make_events} onCancel={() => setScheduling(false)} onSaved={(m) => navigate(meetingsPath(slug, m.id))} />
       )}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+        <input type="search" aria-label="Search minutes, agendas, decisions and documents" className={`${inputClass} !pl-9`} placeholder="Search minutes, agendas, decisions and documents" value={query} onChange={(e) => setQuery(e.target.value)} />
+      </div>
+      {query.trim() ? <SearchResults slug={slug} query={query.trim()} keeper={data.can_edit} /> : (
+      <>
       <QuorumCard group={group} quorum={data.quorum} canSet={data.can_make_events} onSaved={load} />
       {data.meetings.length === 0 && (
         <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">
@@ -101,6 +176,8 @@ export default function MeetingsView({ group }) {
       {coming.length > 0 && <Tray label="Coming up"><div className="space-y-1.5">{coming.map((m) => <Row key={m.id} slug={slug} m={m} keeper={data.can_edit} />)}</div></Tray>}
       {past.length > 0 && <Tray label="Past meetings"><div className="space-y-1.5">{past.map((m) => <Row key={m.id} slug={slug} m={m} keeper={data.can_edit} />)}</div></Tray>}
       <RulesTable kinds={data.kinds} groups={data.groups} />
+      </>
+      )}
     </div>
   );
 }

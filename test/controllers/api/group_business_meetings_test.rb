@@ -296,4 +296,37 @@ class Api::GroupBusinessMeetingsTest < ActionDispatch::IntegrationTest
     get "/api/groups/#{@group.slug}/conscience", as: :json
     assert_response :not_found
   end
+
+  test "searching finds meetings by their minutes, agenda and decisions, keeping drafts and hidden decisions out" do
+    posted = @group.business_meetings.create!(held_on: @today - 50, status: "held", minutes_status: "posted",
+                                              minutes: "<p>We talked about the <b>Zoom</b> passcode and who keeps it.</p>")
+    @group.motions.create!(title: "Move the meeting to 9 PM", text: "Later start for the night crew", status: "passed", decided_on: @today - 50, business_meeting: posted)
+    @group.motions.create!(title: "Zoom note still in review", status: "passed", decided_on: @today - 50, business_meeting: @held, needs_review: true)
+
+    sign_in @member
+    get path, params: { q: "zoom passcode" }, as: :json
+    assert_equal [posted.id], body["meetings"].map { |m| m["id"] }
+    hit = body["meetings"][0]["hits"][0]
+    assert_equal "Minutes", hit["label"]
+    assert_includes hit["text"], "Zoom passcode"
+
+    get path, params: { q: "treasurer" }, as: :json
+    assert_equal [@next.id], body["meetings"].map { |m| m["id"] }
+    assert_equal "Agenda", body["meetings"][0]["hits"][0]["label"]
+
+    get path, params: { q: "night crew" }, as: :json
+    assert_equal ["Decision"], body["meetings"][0]["hits"].map { |h| h["label"] }
+
+    # draft minutes and a decision still in review aren't searchable by members
+    get path, params: { q: "draft" }, as: :json
+    assert_empty body["meetings"]
+    get path, params: { q: "zoom" }, as: :json
+    assert_equal [posted.id], body["meetings"].map { |m| m["id"] }
+
+    sign_in @keeper
+    get path, params: { q: "zoom" }, as: :json
+    assert_equal [@held.id, posted.id], body["meetings"].map { |m| m["id"] }
+    get path, params: { q: "draft" }, as: :json
+    assert_equal [@held.id], body["meetings"].map { |m| m["id"] }
+  end
 end

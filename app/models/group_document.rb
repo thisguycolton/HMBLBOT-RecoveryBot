@@ -54,12 +54,13 @@ class GroupDocument < ApplicationRecord
     group.member_or_site_admin?(user) ? docs.where(visibility: %w[public members]) : docs.where(visibility: "public")
   end
 
+  # Documents with every word of the query in their title or text
   def self.search(scope, query)
-    like = "%#{sanitize_sql_like(query.to_s.strip)}%"
+    words = query.to_s.split.uniq.first(8)
     # the tags of an HTML document aren't what people search for: block ends become spaces,
     # inline tags (bold, links) vanish so "the <b>word</b>" still reads as one
     text = "replace(regexp_replace(regexp_replace(group_documents.body, '</(p|h[1-4]|li|tr|td|th|blockquote|pre)>|<br ?/?>', ' ', 'gi'), '<[^>]*>', '', 'g'), '&amp;', '&')"
-    scope.where("group_documents.title ILIKE :q OR #{text} ILIKE :q", q: like)
+    words.reduce(scope) { |docs, w| docs.where("group_documents.title ILIKE :q OR #{text} ILIKE :q", q: "%#{sanitize_sql_like(w)}%") }
   end
 
   def self.file_type_for(filename) = FILE_TYPES[File.extname(filename.to_s).delete(".").downcase]
