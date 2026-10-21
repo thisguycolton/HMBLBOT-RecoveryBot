@@ -83,14 +83,16 @@ export default function DocumentsView({ group }) {
     try {
       for (const file of files) {
         const form = new FormData();
-        form.append("document[kind]", folder || "other");
         if (isImportable(file)) {
-          const { title, html, notes: n } = await importDocument(file);
+          // A RecoveryBot JSON file goes back to its own folder, unless one is open
+          const { title, html, notes: n, kind } = await importDocument(file);
+          form.append("document[kind]", folder || (KIND_INFO[kind] ? kind : "other"));
           form.append("document[title]", title);
           form.append("document[body]", html);
           form.append("document[body_format]", "html");
           notes.push(...n);
         } else {
+          form.append("document[kind]", folder || "other");
           form.append("document[file]", file);
         }
         made.push(await api(`/groups/${slug}/documents`, { method: "POST", form }));
@@ -162,8 +164,8 @@ export default function DocumentsView({ group }) {
           <>
             <input ref={importRef} type="file" multiple hidden accept={IMPORT_ACCEPT} onChange={(e) => { upload([...e.target.files]); e.target.value = ""; }} />
             <input ref={fileRef} type="file" multiple hidden accept={FILE_ACCEPT} onChange={(e) => { upload([...e.target.files]); e.target.value = ""; }} />
-            <button type="button" disabled={busy} onClick={() => importRef.current?.click()} title="Turn a Word (.docx), RTF or Markdown (.md) file into a document you can edit" className="inline-flex items-center gap-1.5 rounded-xl !bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:!bg-neutral-50 disabled:opacity-50 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
-              <FileDown className="size-4" /> {busy ? "Working…" : "Import Word / RTF / Markdown"}
+            <button type="button" disabled={busy} onClick={() => importRef.current?.click()} title="Turn a Word (.docx), RTF, Markdown (.md) or RecoveryBot JSON file into a document you can edit" className="inline-flex items-center gap-1.5 rounded-xl !bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:!bg-neutral-50 disabled:opacity-50 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
+              <FileDown className="size-4" /> {busy ? "Working…" : "Import Word / RTF / Markdown / JSON"}
             </button>
             <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} title="Keep a PDF, Excel file or picture as it is" className="inline-flex items-center gap-1.5 rounded-xl !bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:!bg-neutral-50 disabled:opacity-50 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
               <Upload className="size-4" /> Upload a file

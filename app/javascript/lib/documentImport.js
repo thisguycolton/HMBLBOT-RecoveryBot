@@ -1,19 +1,25 @@
-// Turning a Word (.docx) or RTF file into HTML for the document editor. This happens in the
+// Turning a Word (.docx), RTF, Markdown or RecoveryBot JSON file into HTML for the document editor. This happens in the
 // browser; the server cleans the HTML again before it is kept (DocumentHtml).
 import { rtfToHtml } from "./rtf";
 import { markdownToEditorHtml } from "./markdownHtml";
+import { fromDocumentJson } from "./documentJson";
 
 export const IMPORT_MAX = 10 * 1024 * 1024;
-export const IMPORT_ACCEPT = ".docx,.rtf,.md,.markdown,.txt";
-export const isImportable = (file) => /\.(docx|rtf|md|markdown|txt)$/i.test(file?.name || "");
+export const IMPORT_ACCEPT = ".docx,.rtf,.md,.markdown,.txt,.json";
+export const isImportable = (file) => /\.(docx|rtf|md|markdown|txt|json)$/i.test(file?.name || "");
 
 const titleOf = (file) => file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
 
-// -> { title, html, notes } or throws an Error saying what's wrong with the file
+// -> { title, html, notes, kind } (kind: the folder a RecoveryBot JSON file came from) or throws an Error saying what's wrong with the file
 export async function importDocument(file) {
   if (/\.doc$/i.test(file.name)) throw new Error("Old .doc files can't be imported. Open it in Word and save it as .docx first.");
-  if (!isImportable(file)) throw new Error("Import a Word (.docx), RTF or Markdown (.md) file.");
+  if (!isImportable(file)) throw new Error("Import a Word (.docx), RTF, Markdown (.md) or RecoveryBot JSON file.");
   if (file.size > IMPORT_MAX) throw new Error("That file is over 10 MB.");
+
+  if (/\.json$/i.test(file.name)) {
+    const result = await fromDocumentJson(await file.text());
+    return { ...result, title: result.title || titleOf(file) };
+  }
 
   if (/\.(md|markdown|txt)$/i.test(file.name)) {
     return { title: titleOf(file), html: markdownToEditorHtml(await file.text()), notes: [] };

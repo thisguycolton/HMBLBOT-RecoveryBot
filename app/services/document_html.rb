@@ -1,11 +1,11 @@
 # The HTML of a group document, as the editor (Tiptap) writes it. Documents are read by
 # every member and, when Public, by anyone, so what is stored is cleaned here first: only
 # what the editor can make (text, headings, lists, quotes, tables, links, alignment, text and
-# highlight colors, and the Hosting Command Center's sections: an empty
+# highlight colors, collapsible text as <details><summary>, and the Hosting Command Center's sections: an empty
 # <div data-hc-section data-hc-form data-title=...> where a section of a meeting's script starts, and its
 # forms: an empty <div data-hc-form="milestones"> where the hosts fill one in) stays.
 module DocumentHtml
-  TAGS = %w[p br h1 h2 h3 h4 strong b em i u s strike code pre blockquote ul ol li hr a table thead tbody tfoot tr th td span mark div].freeze
+  TAGS = %w[p br h1 h2 h3 h4 strong b em i u s strike code pre blockquote ul ol li hr a table thead tbody tfoot tr th td span mark div details summary].freeze
   ATTRIBUTES = %w[href colspan rowspan style data-color data-hc-section data-hc-form data-title data-kind data-when data-days data-cue].freeze
   # Gone with everything inside them, not just unwrapped
   DISCARD = "script, style, svg, math, iframe, object, embed, noscript, template, form, head, title".freeze
@@ -33,7 +33,7 @@ module DocumentHtml
   def text(html)
     fragment = Loofah.html5_fragment(html.to_s)
     fragment.css(DISCARD).each(&:remove)
-    spaced = fragment.to_html.gsub(%r{</(p|h[1-4]|li|tr|td|th|blockquote|pre)>|<br\s*/?>}i, " \\0")
+    spaced = fragment.to_html.gsub(%r{</(p|h[1-4]|li|tr|td|th|blockquote|pre|summary)>|<br\s*/?>}i, " \\0")
     Loofah.html5_fragment(spaced).text(encode_special_chars: false).gsub(" ", " ").squish
   end
 end
