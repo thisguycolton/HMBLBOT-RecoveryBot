@@ -8,6 +8,7 @@ class Api::GroupMinutesImportsController < ApplicationController
   MAX_BYTES = 15.megabytes
 
   before_action :set_group
+  before_action :require_premium, only: :create
   before_action :require_keeper
 
   # POST /api/groups/:group_slug/minutes_imports (multipart: files[], names[], dry_run)

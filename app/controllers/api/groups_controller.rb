@@ -219,9 +219,12 @@ class Api::GroupsController < ApplicationController
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
       members_count: @group.members.count,
       follows_roberts_rules: @group.follows_roberts_rules, show_hosts_publicly: @group.show_hosts_publicly,
+      premium: @group.premium?, premium_state: (@group.premium_state if Premium.enforced?),
       logo_url: @group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.logo, only_path: true) : nil,
       cover_url: @group.cover.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.cover, only_path: true) : nil,
     }
+    # The 7th Tradition link hosts share in the meeting (never on the public page)
+    json[:contribution_url] = "#{request.base_url}#{@group.contribution_path}" if @group.takes_contributions? && @group.can_host?(current_user)
     if member
       json[:members] = @group.active_memberships.includes(user: { avatar_attachment: :blob }).sort_by { |m| [m.admin? ? 0 : 1, m.user.display_name.downcase] }
                              .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records, can_schedule_hosts: m.can_schedule_hosts, can_keep_treasury: m.can_keep_treasury, can_host: m.can_host) }

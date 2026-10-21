@@ -36,6 +36,9 @@ class Group < ApplicationRecord
   has_many :document_templates, class_name: "GroupDocumentTemplate", dependent: :destroy
   # The Hosting Command Center: the default kit (meeting_id nil) and each meeting's own
   has_many :hosting_kits, dependent: :destroy
+  # Online 7th Tradition contributions (totals only; see Premium and StripeWebhooksController)
+  has_many :contributions, class_name: "GroupContribution", dependent: :delete_all
+  PLANS = %w[free premium waived].freeze
   LOGO_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
   validate { errors.add(:logo, "has to be a PNG, JPEG, WebP or GIF image") if logo.attached? && !LOGO_TYPES.include?(logo.blob.content_type) }
   validate { errors.add(:logo, "has to be under 5 MB") if logo.attached? && logo.blob.byte_size > 5.megabytes }
@@ -44,6 +47,8 @@ class Group < ApplicationRecord
 
   before_validation :assign_slug
   before_validation { self.join_token ||= self.class.new_token }
+  # A new group tries premium first (Premium::TRIAL)
+  before_validation(on: :create) { self.premium_until ||= Premium::TRIAL.from_now }
   before_validation { self.page_blocks = EventBlocks.normalize(page_blocks, types: EventBlocks::GROUP_TYPES) unless page_blocks.nil? }
   # Text left at the default is stored as blank, so it follows later changes to the default
   before_validation do
@@ -56,6 +61,7 @@ class Group < ApplicationRecord
   validates :page_layout, inclusion: { in: Event::LAYOUTS }
   validates :time_zone, inclusion: { in: TIME_ZONES }
   validates :status, inclusion: { in: STATUSES }
+  validates :plan, inclusion: { in: PLANS }
   validates :description, length: { maximum: 1000 }
   validates :quorum_count, numericality: { only_integer: true, in: 1..9999 }, allow_nil: true
   validates :quorum_percent, numericality: { only_integer: true, in: 1..100 }, allow_nil: true
@@ -123,6 +129,32 @@ class Group < ApplicationRecord
   def page_visible_to?(user) = active? || visible_to?(user)
   def admins = members.merge(GroupMembership.admins)
   def custom_page? = !page_blocks.nil?
+
+  # Premium (see Premium): paid up, given it for good ("waived"), on its trial or a gifted year
+  # (premium_until), or in the grace after a renewal fails. Everyone has it until it's enforced.
+  def premium? = !Premium.enforced? || premium_now?
+  def premium_now? = plan == "waived" || (premium_until.present? && premium_until + Premium::GRACE > Time.current)
+  def subscribed? = stripe_subscription_id.present? && %w[active trialing past_due].include?(subscription_status)
+
+  # What the Plan page says about it: waived | premium | trial | grace | free
+  def premium_state
+    return "waived" if plan == "waived"
+    return "free" if premium_until.blank? || premium_until + Premium::GRACE <= Time.current
+    return "grace" if premium_until <= Time.current
+
+    subscribed? ? "premium" : "trial"
+  end
+
+  # Online contributions: the group's Stripe account is set up and it has premium
+  def takes_contributions? = premium? && stripe_account_id.present? && stripe_account_ready
+
+  # The short link a host shares in the meeting: /g/CODE (never on the public page)
+  def contribution_path
+    update_column(:contribution_code, HostingSession.new_contribution_code) if contribution_code.blank?
+    "/g/#{contribution_code}"
+  end
+
+  def self.find_by_contribution_code(code) = find_by(contribution_code: code.to_s.upcase.gsub(/[^A-Z0-9]/, "").presence)
 
   # Notes members shared to the group, newest first; a note stops showing when its author
   # leaves

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
-  AlarmClock, ArrowLeft, ArrowRight, BookOpen, Check, ChevronRight, Clipboard, ClipboardCheck, ExternalLink, Filter, Gavel, History, KeyRound, Link2, Maximize2,
+  AlarmClock, ArrowLeft, ArrowRight, BookOpen, Check, ChevronRight, Clipboard, ClipboardCheck, ExternalLink, Filter, Gavel, HandHeart, History, KeyRound, Link2, Maximize2,
   MessageSquare, Minus, Moon, Plus, ScrollText, Settings, Sun, Undo2, UserCheck, Users, Video, X,
 } from "lucide-react";
 import { api } from "../lib";
@@ -191,7 +191,7 @@ export default function CommandCenter() {
   if (error) {
     return (
       <div className="min-h-screen bg-neutral-50 px-4 dark:bg-neutral-950">
-        <Message title={error.status === 403 ? "This is for the group's hosts" : "That meeting isn't here"} text={error.message}>
+        <Message title={error.status === 403 ? "This is for the group's hosts" : error.status === 402 ? "The Command Center is a premium tool" : "That meeting isn't here"} text={error.message}>
           <Link to={`/${slug}/hosts`} className="mt-4 inline-block text-sm text-accent hover:underline">Back to the group</Link>
         </Message>
       </div>
@@ -518,6 +518,7 @@ function ActivityCard({ activity, open, onOpen }) {
 function QuickActions({ center }) {
   const [copied, setCopied] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedGive, setCopiedGive] = useState(false);
   const passcode = center.meeting.conference_url_notes;
   const row = "flex w-full items-center gap-3 rounded-xl !bg-transparent px-2.5 py-2 text-left text-sm text-slate-700 hover:!bg-neutral-100 dark:text-neutral-300 dark:hover:!bg-neutral-800";
   const zoom = center.meeting.conference_url;
@@ -536,6 +537,11 @@ function QuickActions({ center }) {
           <button type="button" className={row} onClick={() => copyText(passcodeValue(passcode)).then(() => { setCopiedCode(true); setTimeout(() => setCopiedCode(false), 1500); })}>
             {copiedCode ? <ClipboardCheck className="size-5 shrink-0 text-emerald-500" /> : <KeyRound className="size-5 shrink-0 text-slate-400" />}
             <span className="min-w-0 flex-1 break-words">{copiedCode ? "Copied" : `Copy the passcode (${passcodeLabel(passcode)})`}</span>
+          </button>
+        )}
+        {center.contribution_path && (
+          <button type="button" className={row} onClick={() => copyText(`${window.location.origin}${center.contribution_path}`).then(() => { setCopiedGive(true); setTimeout(() => setCopiedGive(false), 1500); })}>
+            {copiedGive ? <ClipboardCheck className="size-5 shrink-0 text-emerald-500" /> : <HandHeart className="size-5 shrink-0 text-slate-400" />} {copiedGive ? "Copied" : "Copy the 7th Tradition link"}
           </button>
         )}
         <a href={`/groups/${center.group.slug}/hosts`} target="_blank" rel="noopener" className={row}><UserCheck className="size-5 shrink-0 text-slate-400" /> <span className="flex-1">Host schedule</span> <ExternalLink className="size-3.5 text-slate-400" /></a>

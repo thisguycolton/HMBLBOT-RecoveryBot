@@ -3,7 +3,7 @@ import { ScrollText } from "lucide-react";
 
 // The terms of use (/terms, TermsController). Written in plain language to match the privacy
 // policy (/privacy); when a rule here changes, change UPDATED too.
-const UPDATED = "October 19, 2026";
+const UPDATED = "October 22, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -14,6 +14,7 @@ const SECTIONS = [
   ["acceptable-use", "Using the site well"],
   ["your-content", "What you post"],
   ["groups", "Groups and their records"],
+  ["premium", "Premium groups and contributions"],
   ["court", "Court attendance verifications"],
   ["readings", "Readings and copyright"],
   ["no-warranty", "No guarantees"],
@@ -65,7 +66,7 @@ export default function TermsPage() {
 
           <H2 id="short-version">The short version</H2>
           <ul>
-            <li>RecoveryBot is free, run by HMBLBOT, and isn't part of Alcoholics Anonymous.</li>
+            <li>RecoveryBot is free to use, run by HMBLBOT, and isn't part of Alcoholics Anonymous. Groups can pay for premium tools.</li>
             <li>It's a set of tools, not medical, legal or professional advice, and not a crisis service.</li>
             <li>Protect other people's anonymity. Don't share what members post or say outside the place it was shared.</li>
             <li>Be kind, don't spam, don't break the site, and don't post anything you don't have the right to post.</li>
@@ -75,7 +76,7 @@ export default function TermsPage() {
 
           <H2 id="who-we-are">Who we are</H2>
           <p>
-            RecoveryBot is a free set of tools for people in recovery and the groups they belong to, run by HMBLBOT
+            RecoveryBot is a set of tools, free to use, for people in recovery and the groups they belong to, run by HMBLBOT
             (“we” and “us” on this page). It isn't part of, or endorsed by, Alcoholics Anonymous World Services, Inc., the
             General Service Office, or any AA intergroup. Group pages on RecoveryBot are kept by the groups themselves and don't
             speak for AA as a whole.
@@ -148,6 +149,24 @@ export default function TermsPage() {
             records, so keep your own copies of anything you need.
           </p>
 
+          <H2 id="premium">Premium groups and contributions</H2>
+          <ul>
+            <li>
+              A group can pay for premium tools (business meetings, decisions, documents, elected officials, treasury, the Hosting
+              Command Center and online contributions), billed yearly through Stripe. A group admin pays, and can cancel any time in
+              Manage billing; premium then lasts to the end of the year paid for. We don't refund part of a year unless the law requires it.
+            </li>
+            <li>
+              If a renewal fails, premium keeps working for 30 days. After that the group keeps everything it wrote, readable as before,
+              but can't add to or change its premium records until it renews. We never delete a group's records for not paying.
+            </li>
+            <li>
+              Online 7th Tradition contributions go into the group's own Stripe account, under Stripe's terms. The group is the one
+              taking them: it's responsible for its account, refunds and any taxes. RecoveryBot takes no cut, never holds the money,
+              and keeps only totals, not who gave.
+            </li>
+          </ul>
+
           <H2 id="court">Court attendance verifications</H2>
           <p>
             When a group signs an attendance verification, RecoveryBot records what that group confirmed and emails a copy. We
@@ -165,7 +184,7 @@ export default function TermsPage() {
 
           <H2 id="no-warranty">No guarantees</H2>
           <p>
-            RecoveryBot is provided free and “as is”. We work to keep it running, accurate and safe, but we can't promise it will
+            RecoveryBot is provided “as is”. We work to keep it running, accurate and safe, but we can't promise it will
             always be available, free of mistakes, or that nothing will ever be lost. Meeting times and places come from groups and
             public directories and can be out of date, so check with the meeting if it matters. Keep copies of anything important.
           </p>
@@ -173,8 +192,8 @@ export default function TermsPage() {
           <H2 id="liability">Limits on our liability</H2>
           <p>
             As far as the law allows, HMBLBOT and the people who run RecoveryBot aren't liable for indirect or unexpected losses
-            from using the site, for what other members or groups post or do, or for the site being unavailable. Because the site
-            is free, our total liability for anything to do with it is limited to US$50. Some places don't allow these limits, so
+            from using the site, for what other members or groups post or do, or for the site being unavailable. Our total
+            liability for anything to do with it is limited to US$50, or what your group paid us in the last 12 months if that's more. Some places don't allow these limits, so
             they may not all apply to you.
           </p>
 

@@ -8,6 +8,7 @@ class Api::GroupDocumentsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index show file]
   before_action :set_viewable_group, only: %i[index show file]
   before_action :set_group, except: %i[index show file]
+  before_action :require_premium, only: %i[create update destroy bulk restore]
   before_action :set_document, only: %i[show file update destroy versions restore]
   before_action :require_keeper, only: %i[create update restore bulk]
   before_action :require_manager, only: :destroy

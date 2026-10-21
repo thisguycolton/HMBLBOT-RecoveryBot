@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_22_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -305,6 +305,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
     t.index ["group_id"], name: "index_group_books_on_group_id"
   end
 
+  create_table "group_contributions", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.string "stripe_id", null: false
+    t.integer "amount_cents", null: false
+    t.boolean "recurring", default: false, null: false
+    t.datetime "received_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id", "received_at"], name: "index_group_contributions_on_group_id_and_received_at"
+    t.index ["group_id"], name: "index_group_contributions_on_group_id"
+    t.index ["stripe_id"], name: "index_group_contributions_on_stripe_id", unique: true
+  end
+
   create_table "group_document_templates", force: :cascade do |t|
     t.bigint "group_id", null: false
     t.string "kind", null: false
@@ -403,9 +416,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
     t.integer "quorum_percent"
     t.boolean "follows_roberts_rules", default: true, null: false
     t.boolean "show_hosts_publicly", default: true, null: false
+    t.string "plan", default: "free", null: false
+    t.datetime "premium_until"
+    t.string "stripe_customer_id"
+    t.string "stripe_subscription_id"
+    t.string "subscription_status"
+    t.string "stripe_account_id"
+    t.boolean "stripe_account_ready", default: false, null: false
+    t.string "contribution_code"
+    t.text "contribution_note"
+    t.index ["contribution_code"], name: "index_groups_on_contribution_code", unique: true
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
+    t.index ["stripe_account_id"], name: "index_groups_on_stripe_account_id", unique: true
+    t.index ["stripe_customer_id"], name: "index_groups_on_stripe_customer_id", unique: true
   end
 
   create_table "host_chat_postings", force: :cascade do |t|
@@ -1197,6 +1222,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "group_books", "books"
   add_foreign_key "group_books", "groups"
+  add_foreign_key "group_contributions", "groups"
   add_foreign_key "group_document_templates", "groups"
   add_foreign_key "group_document_versions", "group_documents", on_delete: :cascade
   add_foreign_key "group_document_versions", "users", on_delete: :nullify

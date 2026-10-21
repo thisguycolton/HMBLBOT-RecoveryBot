@@ -5,6 +5,7 @@ class Api::GroupBusinessMeetingsController < ApplicationController
   include GroupScoped
 
   before_action :set_group
+  before_action :require_premium, only: %i[create update destroy]
   before_action :require_member
   before_action :require_keeper, only: %i[create update]
   before_action :require_manager, only: :destroy
