@@ -86,7 +86,7 @@ export default function PeopleIndex() {
             <div className="wb space-y-4">
               <Card className="p-4">
                 <NoteEditor groups={data.groups} defaultVisibility={data.default_note_visibility} max={data.note_max} imagesMax={data.images_max}
-                  placeholder="What's on your mind today? Markdown works, and you can add photos."
+                  placeholder="What's on your mind today? Select words to format them, and add photos if you like."
                   onSaved={(note) => setData((d) => ({ ...d, feed: [note, ...d.feed] }))} />
               </Card>
               {data.feed.length === 0 ? (

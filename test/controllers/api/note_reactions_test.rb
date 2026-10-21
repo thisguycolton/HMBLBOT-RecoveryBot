@@ -114,7 +114,9 @@ class Api::NoteReactionsTest < ActionDispatch::IntegrationTest
     sign_in @mo
 
     get "/api/people/#{@lee.username}"
-    assert_equal false, response.parsed_body["context"]["feed"].first["can_repost"]
+    shown = response.parsed_body["context"]["feed"].first
+    assert_equal false, shown["can_repost"]
+    assert_equal "Lee shared this only with their followers, so it can't be reposted. Only notes shared with Members can be.", shown["repost_blocked"]
     post "/api/timeline_notes/#{friends.id}/repost", as: :json
     assert_response :unprocessable_entity
     assert_equal "You can only repost a note shared with Members.", response.parsed_body["error"]

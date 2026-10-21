@@ -170,7 +170,7 @@ function TimelineBlock({ block, compact, editing, context, title }) {
         {canPost && (
           <div className="mb-4">
             <NoteEditor shareTo={context.group.slug} max={context.note_max} defaultVisibility={context.viewer.default_note_visibility}
-              placeholder={`Share something with ${context.group.title}… Markdown and photos work.`} onSaved={() => context.reload?.()} />
+              placeholder={`Share something with ${context.group.title}… You can add photos too.`} onSaved={() => context.reload?.()} />
           </div>
         )}
         {!notes ? (

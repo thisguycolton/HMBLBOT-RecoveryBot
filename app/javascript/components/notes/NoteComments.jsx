@@ -5,7 +5,7 @@ import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
 import { timeAgo } from "../groups/page/lib";
 import { showToast } from "../../lib/toast";
-import MarkdownTextarea from "./MarkdownTextarea";
+import MarkdownEditor from "./MarkdownEditor";
 import NoteActions from "./NoteActions";
 
 const SHOWN = 2;
@@ -110,7 +110,7 @@ const CommentBox = forwardRef(function CommentBox({ noteId, comment = null, onPo
 
   return (
     <form className="wb-comment-box" onSubmit={(e) => { e.preventDefault(); post(); }}>
-      <MarkdownTextarea ref={ref} value={body} onChange={setBody} minRows={1} maxLength={2000} autoFocus={!!comment}
+      <MarkdownEditor ref={ref} value={body} onChange={setBody} minRows={1} maxLength={2000} autoFocus={!!comment}
         placeholder={comment ? "" : "Write a comment…"} aria-label={comment ? "Your comment" : "Write a comment"}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); post(); }

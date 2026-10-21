@@ -14,7 +14,8 @@ const reactionOf = (value) => REACTIONS.find((r) => r.value === value);
 
 // Under a note: Like, Love and Hugs (one each, tap yours again to take it back), who
 // reacted, Comment (with `onComment`), and Repost to your own timeline (only for notes
-// their author shares with Members; the server says so in `can_repost`). `onChange` gets
+// their author shares with Members; the server says so in `can_repost`, and on someone
+// else's other notes says why not in `repost_blocked`, which the dimmed button shows). `onChange` gets
 // the note back. A comment has the same reactions (`path` is where it lives, `small` a
 // tighter row).
 export default function NoteActions({ note, onChange, onComment, path = `/timeline_notes/${note.id}`, small = false }) {
@@ -86,6 +87,12 @@ export default function NoteActions({ note, onChange, onComment, path = `/timeli
         </button>
       ) : note.can_repost ? (
         <RepostMenu count={note.repost_count} onPick={repost} />
+      ) : note.repost_blocked ? (
+        <button type="button" className="wb-note-actions__btn wb-note-actions__btn--repost" aria-disabled="true" title={note.repost_blocked}
+          onClick={() => showToast(note.repost_blocked)}>
+          <Repeat2 size={14} aria-hidden="true" /> <span>Repost</span>
+          {note.repost_count > 0 && <span className="wb-note-actions__count">{note.repost_count}</span>}
+        </button>
       ) : note.repost_count > 0 ? (
         <span className="wb-note-actions__static" title="Reposts"><Repeat2 size={14} aria-hidden="true" /> {note.repost_count}</span>
       ) : null}
