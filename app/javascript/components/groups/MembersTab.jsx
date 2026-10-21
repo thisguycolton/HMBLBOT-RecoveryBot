@@ -1,17 +1,41 @@
-import React, { useState } from "react";
-import { Check, Copy, RefreshCw, UserPlus, X } from "lucide-react";
-import { inputClass } from "../ui/styles";
+import React, { useMemo, useState } from "react";
+import { Check, Copy, RefreshCw, Search, UserPlus, X } from "lucide-react";
+import { iconInputClass, inputClass } from "../ui/styles";
 import { api, ROLE_LABELS, soberFor } from "./lib";
 import Avatar from "./Avatar";
 import { Card, ErrorNote, Pill, Tray, copy, dangerButton, primaryButton, quietButton } from "./ui";
 
 // Members with their pictures and blurbs. Group admins also see join requests, add people
 // by email, share the invite link, change roles and remove people.
+
+// Everything the member search looks at: name, username, email and the roles shown as pills.
+const searchText = (person) => [
+  person.name,
+  person.username,
+  person.email,
+  ROLE_LABELS[person.role],
+  person.can_keep_records && "record keeper",
+  person.can_schedule_hosts && "host coordinator",
+  person.can_keep_treasury && "treasurer",
+  person.can_host && "can host",
+].filter(Boolean).join(" ").toLowerCase();
+
 export default function MembersTab({ group, reload, setGroup }) {
   const manage = group.can_manage;
   const [email, setEmail] = useState("");
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [query, setQuery] = useState("");
+
+  // Every word typed has to match somewhere, so "host coordinator" or "eli gmail" narrow it down.
+  const members = useMemo(() => {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return group.members;
+    return group.members.filter((person) => {
+      const text = searchText(person);
+      return words.every((word) => text.includes(word));
+    });
+  }, [group.members, query]);
 
   const call = async (path, options) => {
     setError(null);
@@ -90,9 +114,27 @@ export default function MembersTab({ group, reload, setGroup }) {
         </Tray>
       )}
 
-      <Tray label={`Members (${group.members.length})`}>
+      <Tray label={query.trim() ? `Members (${members.length} of ${group.members.length})` : `Members (${group.members.length})`}>
+        <div className="relative mb-2">
+          <Search className={iconInputClass} />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && setQuery("")}
+            placeholder="Search members by name, email or role…"
+            aria-label="Search members"
+            className={`${inputClass} pl-9`}
+          />
+        </div>
+        {members.length === 0 && (
+          <Card className="p-4 text-center text-sm text-slate-500 dark:text-neutral-400">
+            No one matches “{query.trim()}”.{" "}
+            <button type="button" onClick={() => setQuery("")} className="font-medium text-blue-600 hover:underline dark:text-blue-400">Clear search</button>
+          </Card>
+        )}
         <div className="grid gap-1.5 sm:grid-cols-2">
-          {group.members.map((person) => (
+          {members.map((person) => (
             <Card key={person.membership_id} className="flex gap-3 p-3">
               <a href={person.username ? `/people/${person.username}` : undefined} className="shrink-0" aria-label={`${person.name}'s profile`}><Avatar person={person} size={48} /></a>
               <div className="min-w-0 flex-1">
