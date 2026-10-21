@@ -130,15 +130,20 @@ export default function CommandCenter() {
     document.title = center ? `Hosting ${center.meeting.name}` : "Hosting Command Center";
   }, [center]);
 
-  const index = Math.min(live?.section_index || 0, Math.max(sections.length - 1, 0));
-  const section = sections[index];
-  // Sections that aren't for today (their days, or the day's activity): dimmed, and Next goes past them
+  // Sections that aren't for today (their days, or the day's activity) are left out completely:
+  // not in the flow, the counts, or Next / Previous
   const weekday = center ? new Date(`${center.on}T12:00:00`).getDay() : 0;
   const skips = useMemo(() => sections.map((sec) => skipReason(sec, { activity: live?.activity, weekday })), [sections, live?.activity, weekday]);
+  const shown = useMemo(() => sections.map((_, i) => i).filter((i) => !skips[i]), [sections, skips]);
   const nextIndex = (from, by) => {
     for (let i = from + by; i >= 0 && i < sections.length; i += by) if (!skips[i]) return i;
     return -1;
   };
+  // The meeting is on a section that's left out today (the activity changed under it): show the
+  // next one that isn't, or the one before when it was the last
+  const stored = Math.min(live?.section_index || 0, Math.max(sections.length - 1, 0));
+  const index = !skips[stored] || !shown.length ? stored : [nextIndex(stored, 1), nextIndex(stored, -1)].find((i) => i >= 0);
+  const section = sections[index];
 
   // What the other host sees beside my name
   const activity = setup ? "Setting up the kit" : reading === "activity" ? `On ${ACTIVITY_TITLE}` : reading ? `Sharing ${reading.title}` : panel === "chat" ? "Looking at chat postings"
@@ -205,10 +210,10 @@ export default function CommandCenter() {
   // Sections with a reminder whose time has come (from a minute before), not done or closed yet
   const cues = sections.map((sec, i) => ({ sec, i, at: cueTime(sec.cue, center.starts_at, center.ends_at) }))
     .filter(({ i, at }) => at && !skips[i] && !live.completed.includes(i) && !dismissed.includes(i) && now >= at - CUE_EARLY_MS && now < at + CUE_SHOWN_MS);
-  const flow = <Flow sections={sections} index={index} completed={live.completed} presences={live.presences} goto={goto} picked={!!live.activity} skips={skips} />;
+  const flow = <Flow sections={sections} shown={shown} index={index} completed={live.completed} presences={live.presences} goto={goto} picked={!!live.activity} />;
   // Today's reading / activity: its place in the script, or on its own when the script has none
   const openActivity = () => {
-    const spot = sections.findIndex((x) => x.activity);
+    const spot = sections.findIndex((x, i) => x.activity && !skips[i]);
     if (spot >= 0) goto(spot);
     else { setReading("activity"); setPanel("script"); }
   };
@@ -286,7 +291,7 @@ export default function CommandCenter() {
           ) : reading ? (
             <ReadingView reading={reading} size={size} onClose={() => setReading(null)} />
           ) : (
-            <ScriptView center={center} sections={sections} index={index} section={section} live={live} size={size} skips={skips} upNextIndex={nextIndex(index, 1)}
+            <ScriptView center={center} sections={sections} shown={shown} index={index} section={section} live={live} size={size} upNextIndex={nextIndex(index, 1)}
               goto={goto} next={next} act={act} openSetup={() => setSetup(true)} flow={<div className="lg:hidden">{flow}</div>} />
           )}
         </main>
@@ -314,38 +319,39 @@ export default function CommandCenter() {
   );
 }
 
-// The meeting's flow: the script's sections, where the meeting is, which are done, and where the
-// other host is looking. The list is half the screen high, and scrolls itself so the section the
-// meeting is on is the first one showing.
-function Flow({ sections, index, completed, presences, goto, picked, skips }) {
+// The meeting's flow: the script's sections for today (ones left out today aren't listed), where the
+// meeting is, which are done, and where the other host is looking. The list is a third of the screen
+// high, and scrolls itself so the section the meeting is on is the first one showing.
+function Flow({ sections, shown, index, completed, presences, goto, picked }) {
   const listRef = useRef(null);
+  const at = shown.indexOf(index);
   useEffect(() => {
     const list = listRef.current;
-    const item = list?.children[index];
+    const item = list?.children[at];
     if (item) list.scrollTo({ top: Math.max(item.offsetTop - 2, 0), behavior: "smooth" });
-  }, [index, sections.length]);
-  if (!sections.length) return null;
+  }, [at, shown.length]);
+  if (!shown.length) return null;
   return (
     <section>
       <h2 className={`${label} mb-2`}>Meeting flow</h2>
-      <ol ref={listRef} className="relative max-h-[50vh] space-y-1 overflow-y-auto overscroll-contain p-0.5">
-        {sections.map((s, i) => {
+      <ol ref={listRef} className="relative max-h-[33vh] space-y-1 overflow-y-auto overscroll-contain p-0.5">
+        {shown.map((i, n) => {
+          const s = sections[i];
           const here = presences.filter((p) => !p.me && p.section_index === i);
           const done = completed.includes(i);
-          const skip = skips[i];
           return (
             <li key={i}>
               <button type="button" onClick={() => goto(i)} aria-current={i === index ? "step" : undefined}
-                title={skip ? `${s.title}: skipped today (${skip.toLowerCase()})` : s.cue ? `${s.title}: reminder ${cueLabel(s.cue)}` : undefined}
-                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm ${skip && i !== index ? "opacity-45" : ""} ${i === index ? "!bg-accent/10 font-semibold text-accent ring-1 ring-accent/30 dark:!bg-accent/20 dark:text-white" : "!bg-transparent text-slate-700 hover:!bg-neutral-100 dark:text-neutral-300 dark:hover:!bg-neutral-800"}`}>
+                title={s.cue ? `${s.title}: reminder ${cueLabel(s.cue)}` : undefined}
+                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm ${i === index ? "!bg-accent/10 font-semibold text-accent ring-1 ring-accent/30 dark:!bg-accent/20 dark:text-white" : "!bg-transparent text-slate-700 hover:!bg-neutral-100 dark:text-neutral-300 dark:hover:!bg-neutral-800"}`}>
                 <span className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold ${i === index ? "bg-accent text-white" : done ? "bg-emerald-500 text-white" : "bg-neutral-200 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300"}`}>
-                  {done && i !== index ? <Check className="size-4" /> : i + 1}
+                  {done && i !== index ? <Check className="size-4" /> : n + 1}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className={`block truncate ${done && i !== index ? "text-slate-500 dark:text-neutral-500" : ""} ${skip ? "line-through decoration-slate-400/60" : ""}`}>{s.title}</span>
-                  {(skip || s.when) && <span className="flex items-center gap-1 truncate text-[11px] font-normal text-slate-500 dark:text-neutral-400"><Filter className="size-3 shrink-0" />{skip || "For today's activity"}</span>}
+                  <span className={`block truncate ${done && i !== index ? "text-slate-500 dark:text-neutral-500" : ""}`}>{s.title}</span>
+                  {s.when && <span className="flex items-center gap-1 truncate text-[11px] font-normal text-slate-500 dark:text-neutral-400"><Filter className="size-3 shrink-0" />For today's activity</span>}
                 </span>
-                {s.cue && !skip && <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" title={`Reminder ${cueLabel(s.cue)}`}><AlarmClock className="size-3" />{s.cue.from === "start" ? `${s.cue.minutes}′` : `−${Math.abs(s.cue.minutes)}′`}</span>}
+                {s.cue && <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" title={`Reminder ${cueLabel(s.cue)}`}><AlarmClock className="size-3" />{s.cue.from === "start" ? `${s.cue.minutes}′` : `−${Math.abs(s.cue.minutes)}′`}</span>}
                 {s.activity && !picked && <span className="size-2 shrink-0 rounded-full bg-amber-500" title="Not picked yet" />}
                 {here.map((p) => <Avatar key={p.user_id} person={p} size={20} className="ring-2 ring-white dark:ring-neutral-950" />)}
               </button>
@@ -353,13 +359,13 @@ function Flow({ sections, index, completed, presences, goto, picked, skips }) {
           );
         })}
         {/* room under the last sections, so even they can scroll up to the top */}
-        <li aria-hidden="true" className="h-[calc(50vh-3.5rem)]" />
+        <li aria-hidden="true" className="h-[calc(33vh-3.5rem)]" />
       </ol>
     </section>
   );
 }
 
-function ScriptView({ center, sections, index, section, live, size, skips, upNextIndex, goto, next, act, openSetup, flow }) {
+function ScriptView({ center, sections, shown, index, section, live, size, upNextIndex, goto, next, act, openSetup, flow }) {
   const kit = center.kit;
   if (!sections.length) {
     return (
@@ -377,25 +383,23 @@ function ScriptView({ center, sections, index, section, live, size, skips, upNex
   }
   const done = live.completed.includes(index);
   const upNext = sections[upNextIndex];
-  const skip = skips[index];
-  const shown = sections.filter((_, i) => !skips[i]);
+  const first = index === shown[0];
   const html = fillValues(section.html, center, live, kit.service_roles);
   return (
     <div className="mx-auto max-w-3xl px-4 py-5 sm:px-8 sm:py-8">
       {flow}
       <div className="mb-2 mt-4 flex items-center justify-between lg:mt-0">
         <p className={label}>Currently</p>
-        <p className="text-sm tabular-nums text-slate-500 dark:text-neutral-400">{skip ? "Skipped today" : `${shown.indexOf(section) + 1} / ${shown.length}`}</p>
+        <p className="text-sm tabular-nums text-slate-500 dark:text-neutral-400">{`${shown.indexOf(index) + 1} / ${shown.length}`}</p>
       </div>
       <h1 className="text-2xl font-bold sm:text-3xl">{section.title}</h1>
-      {(skip || section.cue) && (
+      {section.cue && (
         <p className="mt-2 flex flex-wrap gap-2 text-sm">
-          {skip && <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-200 px-2.5 py-0.5 text-slate-700 dark:bg-neutral-800 dark:text-neutral-300"><Filter className="size-3.5" /> Not for today: {skip.charAt(0).toLowerCase() + skip.slice(1)}</span>}
           {section.cue && <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100"><AlarmClock className="size-3.5" /> {cueLabel(section.cue)}{cueTime(section.cue, center.starts_at, center.ends_at) && ` · ${timeOf(new Date(cueTime(section.cue, center.starts_at, center.ends_at)).toISOString(), center.meeting.time_zone)}`}</span>}
         </p>
       )}
-      {index === 0 && !section.activity && !live.activity && <div className="mt-4"><ActivityPicker center={center} act={act} early /></div>}
-      {index === 0 && !section.activity && <div className="mt-4"><ServicePanel center={center} live={live} act={act} /></div>}
+      {first && !section.activity && !live.activity && <div className="mt-4"><ActivityPicker center={center} act={act} early /></div>}
+      {first && !section.activity && <div className="mt-4"><ServicePanel center={center} live={live} act={act} /></div>}
       {html.trim() && <ScriptText html={html} size={size} live={live} act={act} />}
       {section.activity && <div className="mt-4"><ActivityPanel center={center} live={live} act={act} size={size} /></div>}
 
@@ -404,7 +408,7 @@ function ScriptView({ center, sections, index, section, live, size, skips, upNex
           <>
             <p className={`${label} mb-2`}>Next up</p>
             <button type="button" onClick={() => goto(upNextIndex)} className="flex w-full items-center gap-3 rounded-xl !bg-white p-3 text-left shadow-panel ring-1 ring-neutral-200 hover:ring-accent/40 dark:!bg-neutral-900 dark:ring-neutral-800">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">{upNextIndex + 1}</span>
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">{shown.indexOf(upNextIndex) + 1}</span>
               <span className="min-w-0 flex-1 truncate font-semibold">{upNext.title}</span>
               <ChevronRight className="size-5 text-slate-400" />
             </button>
