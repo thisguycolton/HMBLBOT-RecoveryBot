@@ -16,7 +16,7 @@ const Page = root && PAGES[root.dataset.page];
 if (Page) {
   const props = JSON.parse(root.dataset.props || "{}");
   createRoot(root).render(
-    <Layout isAuthenticated={false} showFooter={false}>
+    <Layout isAuthenticated={false}>
       <Page {...props} />
     </Layout>
   );

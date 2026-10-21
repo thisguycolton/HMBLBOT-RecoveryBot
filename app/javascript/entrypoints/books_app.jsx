@@ -8,7 +8,7 @@ import {
   Outlet,
 } from "react-router-dom";
 
-import Navbar from "../components/Navbar";
+import Layout from "../components/Layout";
 import BooksIndex from "../components/book/BooksIndex";
 import BookEdit from "../components/book/BookEdit";
 import BookToc from "../components/book/BookToc";
@@ -35,14 +35,11 @@ function ErrorBoundary() {
 
 function LibraryShell() {
   return (
-    <>
-      <Navbar isAuthenticated={isAuthenticated} />
-      <main className="pt-[var(--nav-h,56px)]">
-        <div className="mx-auto max-w-6xl px-4 py-6">
-          <Outlet />
-        </div>
-      </main>
-    </>
+    <Layout isAuthenticated={isAuthenticated}>
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <Outlet />
+      </div>
+    </Layout>
   );
 }
 
