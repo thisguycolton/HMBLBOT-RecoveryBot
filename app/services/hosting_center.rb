@@ -119,7 +119,7 @@ class HostingCenter
     shown = kit.nil? || kit.public_postings
     {
       group: { slug: @group.slug, title: @group.title, logo_url: @group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.logo, only_path: true) : nil },
-      meeting: @meeting.as_api_json.slice(:id, :name, :schedule_label, :time_zone, :conference_url),
+      meeting: @meeting.as_api_json.slice(:id, :name, :schedule_label, :time_zone, :conference_url, :conference_url_notes),
       on: @on.iso8601, starts_at: @starts_at&.iso8601, ends_at: @ends_at&.iso8601, hosts: { host: host&.name, co_host: co_host&.name },
       shown: shown, can_host: @group.can_host?(@viewer), code: session.code,
       kit: { postings: shown && kit ? kit.postings.map(&:as_api_json) : [], service_roles: kit ? kit.roles : HostingKit::DEFAULT_SERVICE_ROLES },

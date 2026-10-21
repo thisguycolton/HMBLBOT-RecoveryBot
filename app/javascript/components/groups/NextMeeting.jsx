@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { MapPin, Video } from "lucide-react";
+import MeetingPasscode from "./MeetingPasscode";
 
 // "Next meeting in 2h 14m" or "Live now", with a Join button, from meetings that carry
 // upcoming_start/upcoming_end (Meeting#upcoming and OiaaMeeting#upcoming on the server: the
@@ -114,6 +115,7 @@ export default function NextMeeting({ meetings, buttonClass, quietClass }) {
       ) : meeting.place || meeting.location ? (
         <span className={quietClass}><MapPin className="h-4 w-4" /> {meeting.place || meeting.location}</span>
       ) : null}
+      {meeting.conference_url && <MeetingPasscode notes={meeting.conference_url_notes} copy className={quietClass} />}
     </div>
   );
 }

@@ -175,4 +175,26 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
       assert_equal "2026-10-19T19:00:00-07:00", listing["upcoming_start"]
     end
   end
+
+  test "a meeting's passcode comes with it in search, on its AA Intergroup page and on the group's page" do
+    at_monday_evening do
+      OiaaFeed.sync!([
+        { slug: "tgfi", name: "AA T.G.F.I Thank God For The Internet", day: [1], time: "19:00", end_time: "20:00", timezone: PHOENIX,
+          conference_url: "https://zoom.us/j/81234567899", conference_url_notes: "Password: 415542" },
+      ].to_json)
+      assert_equal ["Password: 415542"], find["meetings"].map { |m| m["conference_url_notes"] }
+
+      get "/api/intergroup_pages/tgfi", as: :json
+      assert_response :success
+      assert_equal "Password: 415542", response.parsed_body.dig("context", "meetings", 0, "conference_url_notes")
+
+      group = groups(:one)
+      group.meetings.create!(name: "Lunch Bunch", day_of_week: 1, start_minute: 19 * 60, end_minute: 20 * 60, time_zone: PHOENIX,
+                             conference_url: "https://zoom.us/j/1", conference_url_notes: "Passcode 12345")
+      assert_includes find["meetings"].map { |m| m["conference_url_notes"] }, "Passcode 12345"
+      get "/api/groups/#{group.slug}/page", as: :json
+      assert_response :success
+      assert_equal ["Passcode 12345"], response.parsed_body.dig("context", "meetings").map { |m| m["conference_url_notes"] }
+    end
+  end
 end

@@ -1,6 +1,7 @@
 // Helpers for the Hosting Command Center (CommandCenter.jsx): the script cut into sections,
 // chat postings filled in and copied, and library chapters as HTML for sharing on screen.
 import { markdownToHtml } from "../../book/Markdown";
+import { passcodeLabel } from "../MeetingPasscode";
 
 // "{{ service_hiw }}" in a script or a chat posting: whoever is doing that service today
 const ROLE_TOKEN = /\{\{\s*service_([a-z0-9_]+)\s*\}\}/gi;
@@ -22,6 +23,7 @@ export const DYNAMIC_VALUES = [
   { key: "host", label: "Host", what: "the host's name" },
   { key: "co_host", label: "Co-host", what: "the co-host's name" },
   { key: "zoom_link", label: "Zoom link", what: "the meeting's Zoom link" },
+  { key: "zoom_passcode", label: "Zoom passcode", what: "the meeting's passcode, like “Password: 415542”" },
   { key: "activity", label: "Reading / activity", what: "the day's reading or activity" },
   { key: "speaker_name", label: "Speaker's name", what: "the speaker, when today's activity is a speaker" },
   { key: "topic", label: "Topic", what: "the latest topic drawn" },
@@ -59,6 +61,7 @@ export function dynamicValues(center, live = null) {
     host: center?.hosts?.host || "",
     co_host: center?.hosts?.co_host || "",
     zoom_link: center?.meeting?.conference_url || "",
+    zoom_passcode: passcodeLabel(center?.meeting?.conference_url_notes),
     activity: activityLabel(activity),
     speaker_name: activity?.kind === "speaker" ? activity.title || "" : "",
     topic: topics.length ? topics[topics.length - 1].title : "",

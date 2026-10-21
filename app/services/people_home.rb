@@ -24,7 +24,8 @@ class PeopleHome
       next unless at && at > 30.minutes.ago
 
       { id: m.id, name: m.name, group: { slug: m.group.slug, title: m.group.title }, next_start: at.iso8601,
-        time_zone: m.time_zone, schedule_label: m.schedule_label, conference_url: m.conference_url }
+        time_zone: m.time_zone, schedule_label: m.schedule_label, conference_url: m.conference_url,
+        conference_url_notes: m.conference_url_notes }
     end.sort_by { |m| m[:next_start] }.first(MEETINGS_MAX)
   end
 

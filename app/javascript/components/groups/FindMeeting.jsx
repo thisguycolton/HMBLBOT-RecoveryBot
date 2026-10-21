@@ -7,6 +7,7 @@ import { DateField, TimeField, todayValue } from "../ui/DateFields";
 import { api, fromTimeValue, toTimeValue, typeLabel } from "./lib";
 import { ErrorNote, Loading, quietButton } from "./ui";
 import { LiveBadge, useNow, viewerZoneName, whenLabel } from "./NextMeeting";
+import MeetingPasscode from "./MeetingPasscode";
 
 // /groups/meetings: "Find a meeting". Every meeting AA Intergroup lists and the groups'
 // own, filtered by words, day, time of day (the viewer's), where and type, soonest first.
@@ -316,6 +317,7 @@ function MeetingCard({ meeting: m, now, back }) {
           <CalendarClock className="h-4 w-4 shrink-0 text-accent" /> {whenLabel(m.starts_at, now)}
         </p>
         <Where meeting={m} />
+        {m.conference_url && <MeetingPasscode notes={m.conference_url_notes} className="text-slate-600 dark:text-neutral-300" />}
         <Types types={m.types} max={4} />
         {(group.description || m.notes) && (
           <p className="line-clamp-2 text-xs text-slate-500 dark:text-neutral-400">{group.description || m.notes}</p>
@@ -348,6 +350,7 @@ function MeetingRow({ meeting: m, now, back }) {
         </p>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
           <Where meeting={m} />
+          {m.conference_url && <MeetingPasscode notes={m.conference_url_notes} className="!text-xs text-slate-500 dark:text-neutral-400" />}
           <span className="hidden md:block"><Types types={m.types} max={3} /></span>
         </div>
       </div>

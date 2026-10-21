@@ -260,7 +260,7 @@ class MeetingFinder
     occurrence_json(hit).merge(
       key: "oiaa-#{record.slug}", name: record.name, group: group, days: record.days.sort, recurrence: "weekly",
       schedule_label: record.schedule_label, time_zone: record.zone.tzinfo.name, types: record.types,
-      attendance: record.attendance, place: record.place, region: record.region, conference_url: record.conference_url,
+      attendance: record.attendance, place: record.place, region: record.region, conference_url: record.conference_url, conference_url_notes: record.conference_url_notes,
       notes: record.notes&.squish&.truncate(NOTES_MAX),
     )
   end
@@ -269,7 +269,7 @@ class MeetingFinder
     occurrence_json(hit).merge(
       key: "meeting-#{meeting.id}", name: meeting.name, group: group, days: meeting.weekly? ? [meeting.day_of_week] : [],
       recurrence: meeting.recurrence, schedule_label: meeting.schedule_label, time_zone: meeting.time_zone, types: meeting.types,
-      attendance: meeting.attendance, place: meeting.place, region: nil, conference_url: meeting.conference_url,
+      attendance: meeting.attendance, place: meeting.place, region: nil, conference_url: meeting.conference_url, conference_url_notes: meeting.conference_url_notes,
       notes: meeting.notes&.squish&.truncate(NOTES_MAX),
     )
   end

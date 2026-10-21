@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
-  AlarmClock, ArrowLeft, ArrowRight, BookOpen, Check, ChevronRight, Clipboard, ClipboardCheck, ExternalLink, Filter, Gavel, History, Link2, Maximize2,
+  AlarmClock, ArrowLeft, ArrowRight, BookOpen, Check, ChevronRight, Clipboard, ClipboardCheck, ExternalLink, Filter, Gavel, History, KeyRound, Link2, Maximize2,
   MessageSquare, Minus, Moon, Plus, ScrollText, Settings, Sun, Undo2, UserCheck, Users, Video, X,
 } from "lucide-react";
 import { api } from "../lib";
@@ -9,6 +9,7 @@ import Avatar from "../Avatar";
 import GroupLogo from "../GroupLogo";
 import LucideIcon from "../../ui/LucideIcon";
 import { ErrorNote, Loading, Message, primaryButton, quietButton } from "../ui";
+import { passcodeLabel, passcodeValue } from "../MeetingPasscode";
 import KitEditor from "./KitEditor";
 import ActivityPanel, { ActivityPicker, ChapterText, activityIcon, shareReading } from "./Activity";
 import { ServicePanel, Milestones } from "./Service";
@@ -516,6 +517,8 @@ function ActivityCard({ activity, open, onOpen }) {
 
 function QuickActions({ center }) {
   const [copied, setCopied] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const passcode = center.meeting.conference_url_notes;
   const row = "flex w-full items-center gap-3 rounded-xl !bg-transparent px-2.5 py-2 text-left text-sm text-slate-700 hover:!bg-neutral-100 dark:text-neutral-300 dark:hover:!bg-neutral-800";
   const zoom = center.meeting.conference_url;
   return (
@@ -527,6 +530,12 @@ function QuickActions({ center }) {
         {zoom && (
           <button type="button" className={row} onClick={() => copyText(zoom).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })}>
             {copied ? <ClipboardCheck className="size-5 shrink-0 text-emerald-500" /> : <Clipboard className="size-5 shrink-0 text-slate-400" />} {copied ? "Copied" : "Copy the Zoom link"}
+          </button>
+        )}
+        {zoom && passcode && (
+          <button type="button" className={row} onClick={() => copyText(passcodeValue(passcode)).then(() => { setCopiedCode(true); setTimeout(() => setCopiedCode(false), 1500); })}>
+            {copiedCode ? <ClipboardCheck className="size-5 shrink-0 text-emerald-500" /> : <KeyRound className="size-5 shrink-0 text-slate-400" />}
+            <span className="min-w-0 flex-1 break-words">{copiedCode ? "Copied" : `Copy the passcode (${passcodeLabel(passcode)})`}</span>
           </button>
         )}
         <a href={`/groups/${center.group.slug}/hosts`} target="_blank" rel="noopener" className={row}><UserCheck className="size-5 shrink-0 text-slate-400" /> <span className="flex-1">Host schedule</span> <ExternalLink className="size-3.5 text-slate-400" /></a>

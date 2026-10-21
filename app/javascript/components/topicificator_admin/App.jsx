@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { showToast } from "../../lib/toast";
 import { BrowserRouter, NavLink, Route, Routes, useLocation } from "react-router-dom";
-import { ChevronDown, ListChecks } from "lucide-react";
+import { ShellStyle } from "../ui/Shell";
+import AdminChrome, { BASE as SUITE_BASE } from "../admin_suite/AdminChrome";
 import { api } from "./api";
 import TopicsPage from "./TopicsPage";
 import SetsPage from "./SetsPage";
@@ -18,7 +19,9 @@ const TABS = [
 export default function TopicificatorAdmin() {
   return (
     <BrowserRouter basename={BASE}>
-      <AdminShell />
+      <ShellStyle.Provider value="card">
+        <AdminShell />
+      </ShellStyle.Provider>
     </BrowserRouter>
   );
 }
@@ -44,63 +47,49 @@ function AdminShell() {
   const page = { meta, reloadMeta, notify };
 
   return (
-    <>
-      <header className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-6 pt-20 pb-8 w-full mt-6">
-        <div className="max-w-7xl mx-auto">
-          <nav className="flex items-center text-sm text-slate-500 dark:text-neutral-400 mb-3">
-            <a href="/topicificator" className="hover:text-accent transition-colors">Topicificator</a>
-            <ChevronDown className="w-4 h-4 mx-2 text-slate-400 -rotate-90" />
-            <span className="text-slate-900 dark:text-white font-medium">Admin · {section}</span>
-          </nav>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-accent-tint dark:bg-accent/30 shadow-panel flex items-center justify-center shrink-0">
-                <ListChecks className="w-5 h-5 text-accent dark:text-white" strokeWidth={2.5} />
-              </div>
-              <div>
-                <h1 className="!text-xl !leading-tight font-semibold text-slate-900 dark:text-white !font-sans">Topicificator admin</h1>
-                <p className="text-sm text-slate-600 dark:text-neutral-400 mt-0.5 !font-sans">
-                  Topics, sets and categories, and how ACID QUEST offers each topic.
-                </p>
-              </div>
-            </div>
-            <nav className="flex items-stretch rounded-panel overflow-hidden shadow-panel bg-white dark:bg-surface-dark divide-x divide-neutral-200 dark:divide-neutral-700">
-              {TABS.map((tab) => (
-                <NavLink
-                  key={tab.to}
-                  to={tab.to}
-                  end={tab.end}
-                  className={({ isActive }) =>
-                    `px-5 py-3 text-sm transition-colors ${
-                      isActive || (tab.end && location.pathname.startsWith("/topics"))
-                        ? "bg-accent-tint !text-accent-ink font-semibold dark:bg-accent/35 dark:!text-white"
-                        : "font-medium !text-slate-900 dark:!text-neutral-300 hover:bg-accent/5 dark:hover:bg-white/5"
-                    }`
-                  }
-                >
-                  {tab.label}
-                </NavLink>
-              ))}
-            </nav>
-          </div>
+    <AdminChrome>
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <h1 className="!text-2xl font-bold !font-sans text-slate-900 dark:text-white">Topicificator admin</h1>
+          <p className="!text-left text-sm text-slate-500 dark:text-neutral-400 !font-sans">Topics, sets and categories, and how ACID QUEST offers each topic.</p>
         </div>
-      </header>
-
-      <div className="bg-slate-50 dark:bg-neutral-950 px-4 min-[1400px]:px-8 py-6 min-h-[70vh]">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {!meta ? (
-            <p className="py-16 text-center text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>
-          ) : (
-            <Routes>
-              <Route path="/" element={<TopicsPage {...page} />} />
-              <Route path="/topics/:topicId" element={<TopicsPage {...page} />} />
-              <Route path="/sets" element={<SetsPage {...page} />} />
-              <Route path="/categories" element={<CategoriesPage {...page} />} />
-            </Routes>
-          )}
+        <div className="order-first w-full text-sm text-slate-500 dark:text-neutral-400 sm:order-none sm:w-auto">
+          <a href={SUITE_BASE} className="hover:underline !text-slate-500 dark:!text-neutral-400">Admin</a>
+          {" / "}
+          <a href="/topicificator" className="hover:underline !text-slate-500 dark:!text-neutral-400">Topicificator</a> / {section}
         </div>
       </div>
-    </>
+      <nav className="mb-6 inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-neutral-800 dark:bg-neutral-900" aria-label="Topicificator admin">
+        {TABS.map((tab) => (
+          <NavLink
+            key={tab.to}
+            to={tab.to}
+            end={tab.end}
+            className={({ isActive }) =>
+              `rounded-lg px-4 py-2 text-sm transition-colors ${
+                isActive || (tab.end && location.pathname.startsWith("/topics"))
+                  ? "bg-accent/15 font-semibold !text-accent-ink dark:!text-sky-300"
+                  : "font-medium !text-slate-700 hover:bg-slate-100 dark:!text-neutral-300 dark:hover:bg-neutral-800"
+              }`
+            }
+          >
+            {tab.label}
+          </NavLink>
+        ))}
+      </nav>
+      <div className="space-y-6">
+        {!meta ? (
+          <p className="py-16 text-center text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>
+        ) : (
+          <Routes>
+            <Route path="/" element={<TopicsPage {...page} />} />
+            <Route path="/topics/:topicId" element={<TopicsPage {...page} />} />
+            <Route path="/sets" element={<SetsPage {...page} />} />
+            <Route path="/categories" element={<CategoriesPage {...page} />} />
+          </Routes>
+        )}
+      </div>
+    </AdminChrome>
   );
 }
 

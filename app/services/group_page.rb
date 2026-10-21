@@ -176,7 +176,8 @@ class GroupPage
   def listing_json(record)
     upcoming = record.upcoming
     { id: record.slug, name: record.name, schedule_label: record.schedule_label, types: record.types,
-      conference_url: record.conference_url, time_zone: record.zone.tzinfo.name, oiaa_url: record.url,
+      conference_url: record.conference_url, conference_url_notes: record.conference_url_notes,
+      time_zone: record.zone.tzinfo.name, oiaa_url: record.url,
       upcoming_start: upcoming&.first&.iso8601, upcoming_end: upcoming&.last&.iso8601 }
   end
 
