@@ -6,7 +6,7 @@ class Api::PushSubscriptionsController < ApplicationController
   # The service worker has no CSRF token; renewing needs the old endpoint, which only that browser knows
   skip_forgery_protection only: :renew
 
-  # GET /api/push_subscriptions?endpoint=... -> { available, public_key, devices: [...] }
+  # GET /api/push_subscriptions?endpoint=... -> { available, public_key, devices: [...], categories: [...] }
   def index
     render json: state_json
   end
@@ -34,6 +34,17 @@ class Api::PushSubscriptionsController < ApplicationController
       PushSubscription.where(endpoint: endpoint_param).destroy_all if endpoint_param.present?
     end
     user_signed_in? ? render(json: state_json(params[:current_endpoint])) : head(:no_content)
+  end
+
+  # PATCH /api/push_subscriptions/categories { key, on }: which kinds of notification are pushed
+  # (Notification::PUSH_CATEGORIES); for every device on the account
+  def categories
+    key = params[:key].to_s
+    return head(:unprocessable_entity) unless current_user.push_categories.any? { |c| c[:key] == key }
+
+    off = ActiveModel::Type::Boolean.new.cast(params[:on]) ? current_user.push_off - [key] : current_user.push_off | [key]
+    current_user.update_column(:push_off, off)
+    render json: state_json
   end
 
   # POST /api/push_subscriptions/test { endpoint }: a sample notification to this device
@@ -67,6 +78,7 @@ class Api::PushSubscriptionsController < ApplicationController
 
   def state_json(current = params[:endpoint])
     { available: WebPushSender.configured?, public_key: WebPushSender.public_key,
-      devices: current_user.push_subscriptions.order(created_at: :desc).map { |s| s.as_api_json(current.presence) } }
+      devices: current_user.push_subscriptions.order(created_at: :desc).map { |s| s.as_api_json(current.presence) },
+      categories: current_user.push_categories }
   end
 end

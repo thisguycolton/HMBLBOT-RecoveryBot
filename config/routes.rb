@@ -52,6 +52,7 @@ Rails.application.routes.draw do
       delete "/", action: :destroy
       post :test
       post :renew
+      patch :categories
     end
   end
   resource :hosting, controller: "hosting", only: :show

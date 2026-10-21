@@ -22,9 +22,9 @@ module WebPushSender
     ENV["VAPID_SUBJECT"].presence || "mailto:support@hmblbot.com"
   end
 
-  # Every device the notification's account turned push on for
+  # Every device the notification's account turned push on for, unless they turned that kind off
   def deliver(notification)
-    return unless configured?
+    return unless configured? && notification.user.wants_push?(notification.kind)
 
     payload = payload_for(notification)
     notification.user.push_subscriptions.find_each { |sub| send_to(sub, payload) }
