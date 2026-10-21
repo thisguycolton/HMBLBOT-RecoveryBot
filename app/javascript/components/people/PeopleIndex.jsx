@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarClock, CalendarDays, ChevronDown, Search, Sparkles, Video } from "lucide-react";
 import Avatar from "../groups/Avatar";
+import MeetingPasscode from "../groups/MeetingPasscode";
 import { api } from "../groups/lib";
 import { Card, ErrorNote, Loading } from "../groups/ui";
 import FeedItem from "../notes/FeedItem";
@@ -149,6 +150,7 @@ function ComingUp({ up }) {
                   </span>
                   {m.name !== m.group.title && <span className="block truncate text-xs text-slate-400">{m.group.title}</span>}
                 </a>
+                {m.conference_url && <MeetingPasscode notes={m.conference_url_notes} copy className="shrink-0 !text-xs text-slate-500 dark:text-neutral-400" />}
                 {m.conference_url && (
                   <a href={m.conference_url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-lg !bg-accent px-2.5 py-1 text-xs font-semibold !text-white hover:opacity-90">
                     <Video className="size-3.5" /> Join

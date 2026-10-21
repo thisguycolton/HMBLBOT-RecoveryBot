@@ -162,8 +162,8 @@ export default function TopicsPage({ meta, reloadMeta, notify }) {
         )}
       </div>
 
-      {/* Editor */}
-      <div className={editing ? "" : "hidden lg:block"}>
+      {/* Editor: on wide screens it stays in view, scrolling on its own, while the list scrolls by */}
+      <div className={`lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:rounded-2xl ${editing ? "" : "hidden lg:block"}`}>
         {editing ? (
           <TopicEditor
             key={editing}

@@ -5,6 +5,7 @@ import { DateTimeField, TimeField } from "../ui/DateFields";
 import SegmentedControl from "../ui/SegmentedControl";
 import { DAYS, ZONES, api, clock, fromTimeValue, localHint, toTimeValue, typeLabel, zoneLabel } from "./lib";
 import { Card, ErrorNote, Pill, Tray, dangerButton, primaryButton, quietButton } from "./ui";
+import MeetingPasscode from "./MeetingPasscode";
 
 // Types offered as checkboxes when adding a meeting by hand
 const COMMON_TYPES = ["O", "C", "D", "SP", "B", "ST", "LIT", "12x12", "MED", "BE", "W", "M", "LGBTQ", "Y"];
@@ -203,7 +204,7 @@ function MeetingCard({ series, group, manage, onEdit, onChanged }) {
             <Video className="h-4 w-4" /> Join online
           </a>
         )}
-        {meeting.conference_url_notes && <span className="text-slate-500 dark:text-neutral-400">{meeting.conference_url_notes}</span>}
+        <MeetingPasscode notes={meeting.conference_url_notes} copy className="text-slate-500 dark:text-neutral-400" />
         {meeting.conference_phone && (
           <a href={`tel:${meeting.conference_phone}`} className="inline-flex items-center gap-1 text-slate-600 hover:text-accent dark:text-neutral-300">
             <Phone className="h-4 w-4" /> {meeting.conference_phone}
