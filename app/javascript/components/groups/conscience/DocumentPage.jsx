@@ -300,6 +300,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
       { label: "Divider line", onClick: () => chain().setHorizontalRule().run() },
       "divider",
       { label: "Add Section", onClick: () => chain().addHostSection().run() },
+      { label: "Milestone Form", onClick: () => chain().addHostForm("milestones").run() },
       { label: "Dynamic Values", onClick: () => setValuesOpen((v) => !v), checked: valuesOpen },
     ] },
   ].filter(Boolean).map((m) => ({ ...m, items: m.items.filter(Boolean) }));

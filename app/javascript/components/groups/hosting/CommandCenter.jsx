@@ -10,7 +10,7 @@ import GroupLogo from "../GroupLogo";
 import LucideIcon from "../../ui/LucideIcon";
 import { ErrorNote, Loading, Message, primaryButton, quietButton } from "../ui";
 import KitEditor from "./KitEditor";
-import ActivityPanel, { ChapterText, activityIcon, shareReading } from "./Activity";
+import ActivityPanel, { ActivityPicker, ChapterText, activityIcon, shareReading } from "./Activity";
 import { ServicePanel, Milestones } from "./Service";
 import PostingPreview from "./PostingPreview";
 import { copyPosting } from "./chatFormat";
@@ -315,13 +315,20 @@ export default function CommandCenter() {
 }
 
 // The meeting's flow: the script's sections, where the meeting is, which are done, and where the
-// other host is looking
+// other host is looking. The list is half the screen high, and scrolls itself so the section the
+// meeting is on is the first one showing.
 function Flow({ sections, index, completed, presences, goto, picked, skips }) {
+  const listRef = useRef(null);
+  useEffect(() => {
+    const list = listRef.current;
+    const item = list?.children[index];
+    if (item) list.scrollTo({ top: Math.max(item.offsetTop - 2, 0), behavior: "smooth" });
+  }, [index, sections.length]);
   if (!sections.length) return null;
   return (
     <section>
       <h2 className={`${label} mb-2`}>Meeting flow</h2>
-      <ol className="space-y-1">
+      <ol ref={listRef} className="relative max-h-[50vh] space-y-1 overflow-y-auto overscroll-contain p-0.5">
         {sections.map((s, i) => {
           const here = presences.filter((p) => !p.me && p.section_index === i);
           const done = completed.includes(i);
@@ -345,6 +352,8 @@ function Flow({ sections, index, completed, presences, goto, picked, skips }) {
             </li>
           );
         })}
+        {/* room under the last sections, so even they can scroll up to the top */}
+        <li aria-hidden="true" className="h-[calc(50vh-3.5rem)]" />
       </ol>
     </section>
   );
@@ -385,8 +394,9 @@ function ScriptView({ center, sections, index, section, live, size, skips, upNex
           {section.cue && <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100"><AlarmClock className="size-3.5" /> {cueLabel(section.cue)}{cueTime(section.cue, center.starts_at, center.ends_at) && ` · ${timeOf(new Date(cueTime(section.cue, center.starts_at, center.ends_at)).toISOString(), center.meeting.time_zone)}`}</span>}
         </p>
       )}
+      {index === 0 && !section.activity && !live.activity && <div className="mt-4"><ActivityPicker center={center} act={act} early /></div>}
       {index === 0 && !section.activity && <div className="mt-4"><ServicePanel center={center} live={live} act={act} /></div>}
-      {html.trim() && <div className="doc-prose hc-script mt-4" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: html }} />}
+      {html.trim() && <ScriptText html={html} size={size} live={live} act={act} />}
       {section.activity && <div className="mt-4"><ActivityPanel center={center} live={live} act={act} size={size} /></div>}
 
       <div className="mt-8 border-t border-neutral-200 pt-5 dark:border-neutral-800">
@@ -410,6 +420,21 @@ function ScriptView({ center, sections, index, section, live, size, skips, upNex
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// A form in the format (Insert > Milestone Form): an empty <div data-hc-form="milestones">
+const FORM = /<div[^>]*\bdata-hc-form="([a-z_]+)"[^>]*>\s*<\/div>/gi;
+
+// A section's text, with the forms in it ready to fill in where they sit
+function ScriptText({ html, size, live, act }) {
+  const parts = html.split(FORM); // text, form, text, form, ... text
+  return (
+    <div className="mt-4">
+      {parts.map((part, i) => (i % 2
+        ? <Milestones key={i} live={live} act={act} inScript />
+        : part.trim() ? <div key={i} className="doc-prose hc-script" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: part }} /> : null))}
     </div>
   );
 }
