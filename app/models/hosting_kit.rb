@@ -20,6 +20,7 @@ class HostingKit < ApplicationRecord
 
   before_validation :tidy_readings
   before_validation :tidy_service_roles
+  before_validation :tidy_allowed_values
   before_validation { self.activity_anchor = activity_anchor.to_s.squish.first(500).presence }
 
   validates :meeting_id, uniqueness: true, allow_nil: true
@@ -34,6 +35,21 @@ class HostingKit < ApplicationRecord
 
   def default? = meeting_id.nil?
   def roles = service_roles.presence || DEFAULT_SERVICE_ROLES
+
+  # How many sections a script document makes in the Command Center: its sections (Insert > Add
+  # Section in the editor), or else roughly what the page cuts it at, its top headings (h1, else h2,
+  # else h3, with two or more). Bold time cues aren't counted here (nil: none of either).
+  def self.section_count(document)
+    body = document.body.to_s
+    return nil if body.blank?
+
+    markers = body.scan(/data-hc-section/).size
+    # what comes before the first section is "Before we begin"
+    return markers + (ActionController::Base.helpers.strip_tags(body.split(/<div[^>]*data-hc-section/).first).squish.present? ? 1 : 0) if markers.positive?
+    return nil if document.body_format == "markdown"
+
+    [1, 2, 3].map { |n| body.scan(/<h#{n}[\s>]/i).size }.find { |count| count >= 2 }
+  end
 
   private
 
@@ -51,6 +67,14 @@ class HostingKit < ApplicationRecord
 
       { "key" => key, "label" => label }
     end.first(MAX_ROLES).presence
+  end
+
+  # The dynamic values offered in the document editor, by key ("milestones", "service" for every
+  # service role); nil offers them all
+  def tidy_allowed_values
+    return if allowed_values.nil?
+
+    self.allowed_values = Array(allowed_values).map(&:to_s).select { |k| k.match?(/\A[a-z0-9_]{1,40}\z/) }.uniq.first(40)
   end
 
   # A reading is a chapter of a library book, or a link: { book_slug, chapter_slug, title } or { url, title }

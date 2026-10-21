@@ -7,12 +7,43 @@ class Api::GroupHostingController < ApplicationController
 
   before_action :set_group
   before_action :require_host
-  before_action :set_meeting, except: :index
+  before_action :set_meeting, except: %i[index capsule service_readings service_reading values]
   before_action :require_coordinator, only: %i[kit reset_kit]
 
-  # GET /api/groups/:group_slug/hosting
+  # GET /api/groups/:group_slug/hosting: the meetings, and their dates over the next week, to pick one
   def index
-    render json: { meetings: HostingCenter.meetings_json(@group, current_user), can_edit: @group.hosts_editable_by?(current_user) }
+    render json: { meetings: HostingCenter.meetings_json(@group, current_user), occurrences: HostingCenter.occurrences_json(@group, current_user),
+                   time_zone: @group.zone.tzinfo.name, can_edit: @group.hosts_editable_by?(current_user) }
+  end
+
+  # GET /api/groups/:group_slug/hosting/capsule?meeting_id=&page=: the Time Capsule, past meetings as the hosts ran them
+  def capsule
+    meeting = @group.meetings.find(params[:meeting_id]) if params[:meeting_id].present?
+    render json: HostingCenter.capsule_json(@group, meeting: meeting, page: [params[:page].to_i, 1].max)
+  end
+
+  # GET /api/groups/:group_slug/hosting/service_readings: the site's service readings (How It Works,
+  # the Traditions...), each title with its versions (sources)
+  def service_readings
+    list = ServiceReading.order(:title, :source, :id).map { |r| { id: r.id, title: r.title.to_s, short_title: r.short_title.presence, source: r.source.presence, icon: r.icon.presence } }
+    render json: { readings: list }
+  end
+
+  # GET /api/groups/:group_slug/hosting/service_readings/:reading_id: one version's text, to share on screen
+  def service_reading
+    r = ServiceReading.find(params[:reading_id])
+    render json: { id: r.id, title: r.title.to_s, source: r.source.presence, html: r.body.to_s }
+  end
+
+  # GET /api/groups/:group_slug/hosting/values?document_id=: the dynamic values the document editor
+  # offers (Insert > Dynamic values) for a script: what the kits using it allow (nil: everything),
+  # and their service roles. A document no kit uses yet follows the group's default kit.
+  def values
+    kits = @group.hosting_kits.where(script_document_id: params[:document_id].presence).to_a
+    kits = @group.hosting_kits.where(meeting_id: nil).to_a if kits.empty?
+    allowed = kits.any? && kits.all?(&:allowed_values) ? kits.flat_map(&:allowed_values).uniq : nil
+    roles = (kits.presence || [HostingKit.new]).flat_map(&:roles).uniq { |r| r["key"] }
+    render json: { allowed: allowed, roles: roles }
   end
 
   # GET /api/groups/:group_slug/hosting/:meeting_id
@@ -69,7 +100,7 @@ class Api::GroupHostingController < ApplicationController
   end
 
   # PUT /api/groups/:group_slug/hosting/:meeting_id/kit
-  # { kit: { scope: "meeting" | "default", script_document_id, activity_anchor, public_postings, service_roles: [{ key, label }], readings: [...], postings: [{ id, title, icon, minute, body }] } }
+  # { kit: { scope: "meeting" | "default", script_document_id, activity_anchor, public_postings, service_roles: [{ key, label }], allowed_values: [key] | nil, readings: [...], postings: [{ id, title, icon, minute, body }] } }
   def kit
     attrs = params.require(:kit)
     kit = if attrs[:scope] == "default"
@@ -82,6 +113,7 @@ class Api::GroupHostingController < ApplicationController
       kit.activity_anchor = attrs[:activity_anchor] if attrs.key?(:activity_anchor)
       kit.public_postings = ActiveModel::Type::Boolean.new.cast(attrs[:public_postings]) if attrs.key?(:public_postings)
       kit.service_roles = attrs.permit(service_roles: %i[key label]).fetch(:service_roles, []).map(&:to_h) if attrs.key?(:service_roles)
+      kit.allowed_values = attrs[:allowed_values].nil? ? nil : attrs.permit(allowed_values: []).fetch(:allowed_values, []) if attrs.key?(:allowed_values)
       kit.readings = attrs.permit(readings: %i[book_slug chapter_slug title book_title url]).fetch(:readings, []).map(&:to_h)
       kit.save!
       sync_postings(kit, attrs.permit(postings: %i[id title icon minute body]).fetch(:postings, []))

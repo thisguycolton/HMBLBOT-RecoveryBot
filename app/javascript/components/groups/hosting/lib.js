@@ -11,19 +11,83 @@ export const roleKey = (label) => label.toLowerCase().replace(/[^a-z0-9]+/g, "_"
 // Who is doing each service today: what the hosts typed, else the schedule's host and co-host
 export const serviceNames = (center, live) => ({ host: center?.hosts?.host || "", co_host: center?.hosts?.co_host || "", ...(live?.service || {}) });
 
-// A section's HTML with today's names in it; a service nobody has yet shows its name, dimmed
-export function fillRoles(html, roles, names) {
-  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  return html.replace(/⟦role:([a-z0-9_]+)⟧/g, (_, key) => {
-    const name = names[key];
-    if (name) return `<span class="hc-role">${esc(name)}</span>`;
-    const role = roles.find((r) => r.key === key);
-    return `<span class="hc-role hc-role--empty" title="Nobody yet: fill it in under Before we begin">${esc(role?.label || key.replace(/_/g, " "))}</span>`;
+// The dynamic values a script or chat posting names as {{ key }}, filled in for the meeting and
+// date. The service roles ({{ service_hiw }}) come on top, from the kit. Host coordinators pick
+// which ones the document editor offers (Insert > Dynamic values); "service" stands for the roles.
+export const DYNAMIC_VALUES = [
+  { key: "meeting", label: "Meeting name", what: "the meeting's name" },
+  { key: "group", label: "Group name", what: "the group's name" },
+  { key: "date", label: "Date", what: "today's date" },
+  { key: "start_time", label: "Start time", what: "when the meeting starts" },
+  { key: "host", label: "Host", what: "the host's name" },
+  { key: "co_host", label: "Co-host", what: "the co-host's name" },
+  { key: "zoom_link", label: "Zoom link", what: "the meeting's Zoom link" },
+  { key: "activity", label: "Reading / activity", what: "the day's reading or activity" },
+  { key: "speaker_name", label: "Speaker's name", what: "the speaker, when today's activity is a speaker" },
+  { key: "topic", label: "Topic", what: "the latest topic drawn" },
+  { key: "milestones", label: "Milestones", what: "who's celebrating, like “Kim (30 days) and Sam (1 year)”" },
+];
+export const SERVICE_VALUES = "service";
+export const valueToken = (key) => `{{ ${key} }}`;
+
+// The values the document editor offers: what the kit allows (null: all), with the roles as their own chips
+export function offeredValues(allowed, roles = []) {
+  const ok = (key) => !allowed || allowed.includes(key);
+  return [
+    ...DYNAMIC_VALUES.filter((v) => ok(v.key)),
+    // the schedule's host and co-host are already above
+    ...(ok(SERVICE_VALUES) ? roles.filter((r) => !["host", "co_host"].includes(r.key)).map((r) => ({ key: `service_${r.key}`, label: r.label, what: `who's doing ${r.label} today`, service: true })) : []),
+  ];
+}
+
+// "Kim (30 days) and Sam (1 year)"
+export function milestonesText(milestones = []) {
+  const parts = milestones.map((m) => (m.length ? `${m.name} (${m.length})` : m.name));
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0] || "";
+}
+
+// Every value for this meeting and date, by key (the roles as service_KEY)
+export function dynamicValues(center, live = null) {
+  const names = serviceNames(center, live);
+  const activity = live?.activity;
+  const topics = activity?.kind === "topics" ? activity.topics || [] : [];
+  const values = {
+    meeting: center?.meeting?.name || "",
+    group: center?.group?.title || "",
+    date: center?.on ? new Date(`${center.on}T12:00:00`).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "",
+    start_time: center?.starts_at ? new Date(center.starts_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", ...(center.meeting?.time_zone ? { timeZone: center.meeting.time_zone } : {}) }) : "",
+    host: center?.hosts?.host || "",
+    co_host: center?.hosts?.co_host || "",
+    zoom_link: center?.meeting?.conference_url || "",
+    activity: activityLabel(activity),
+    speaker_name: activity?.kind === "speaker" ? activity.title || "" : "",
+    topic: topics.length ? topics[topics.length - 1].title : "",
+    milestones: live?.milestones_text ?? milestonesText(live?.milestones),
+  };
+  Object.entries(names).forEach(([key, name]) => { values[`service_${key}`] = name; });
+  return values;
+}
+
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const VALUE_TOKEN = /\{\{\s*([a-z0-9_]+)\s*\}\}/gi;
+const VALUE_MARK = /⟦v:([a-z0-9_]+)⟧/g;
+
+// A section's HTML with today's values in it. One nobody has yet (a service role not filled in, no
+// milestones) shows what it is, dimmed; an unknown {{ name }} stays as it was typed.
+export function fillValues(html, center, live, roles = []) {
+  const values = dynamicValues(center, live);
+  return html.replace(VALUE_MARK, (_, key) => {
+    if (!(key in values) && !key.startsWith("service_")) return `{{ ${key} }}`;
+    if (values[key]) return `<span class="hc-role">${esc(values[key])}</span>`;
+    const role = key.startsWith("service_") && roles.find((r) => `service_${r.key}` === key);
+    const known = DYNAMIC_VALUES.find((v) => v.key === key);
+    const name = role?.label || (key === "milestones" ? "nobody celebrating yet" : known?.label) || key.replace(/^service_/, "").replace(/_/g, " ");
+    const hint = role ? "Nobody yet: fill it in under Before we begin" : key === "milestones" ? "Add them under Celebrating milestones" : "Not known yet";
+    return `<span class="hc-role hc-role--empty" title="${hint}">${esc(name)}</span>`;
   });
 }
 
 const squish = (text) => (text || "").replace(/\s+/g, " ").trim();
-const isHeading = (node) => /^H[1-6]$/.test(node.tagName || "");
 
 // A paragraph that is only bold text, short, like "(Top of the hour)": a script's time cues
 const isCue = (node) => {
@@ -40,12 +104,35 @@ const cueTitle = (node) => {
 export const AUTO_ANCHOR = /you choose the format|reading\s*\/\s*activity|speaker,\s*topic/i;
 export const ACTIVITY_TITLE = "Reading / activity";
 
-// The script's top-level blocks (paragraphs, headings, lists...) as DOM nodes
+// What a section can be shown for (a section's "Only when today's activity is"): the activity
+// kinds, with the three kinds of reading as one
+export const ACTIVITY_CONDITIONS = [["reading", "A reading"], ["topics", "Topicificator"], ["speaker", "Speaker"], ["meditation", "Meditation"], ["other", "Something else"]];
+export const conditionOf = (kind) => (["reading", "daily", "my_reading"].includes(kind) ? "reading" : kind);
+export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// A section's reminder: "start+30" is 30 minutes in, "end-10" ten minutes before the end
+export function parseCue(text) {
+  const m = /^(start|end)([+-]\d{1,3})?$/.exec(String(text || "").trim());
+  return m ? { from: m[1], minutes: Number(m[2] || 0) } : null;
+}
+export function cueLabel(cue) {
+  if (!cue) return "";
+  const n = Math.abs(cue.minutes);
+  if (cue.from === "start") return cue.minutes > 0 ? `${n} min in` : cue.minutes < 0 ? `${n} min before the start` : "At the start";
+  return cue.minutes < 0 ? `${n} min before the end` : cue.minutes > 0 ? `${n} min after the end` : "At the end";
+}
+// When a section's reminder goes off (ms), for the meeting's start and end
+export function cueTime(cue, startsAt, endsAt) {
+  const base = cue?.from === "start" ? startsAt : endsAt;
+  return cue && base ? new Date(base).getTime() + cue.minutes * 60000 : null;
+}
+
+// The script's top-level blocks (paragraphs, headings, lists, section marks...) as DOM nodes
 async function scriptNodes(script) {
   if (!script?.body?.trim()) return [];
-  // {{ service_hiw }} becomes a mark Markdown leaves alone (its underscore could start italics),
-  // filled in with the name when the section shows (fillRoles)
-  const source = script.body.replace(ROLE_TOKEN, (_, key) => `⟦role:${key.toLowerCase()}⟧`);
+  // {{ service_hiw }}, {{ milestones }}... become a mark Markdown leaves alone (an underscore could
+  // start italics), filled in when the section shows (fillValues)
+  const source = script.body.replace(VALUE_TOKEN, (_, key) => `⟦v:${key.toLowerCase()}⟧`);
   const html = script.body_format === "markdown" ? await markdownToHtml(source) : source;
   const body = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html").body.firstChild;
   return [...body.childNodes].filter((n) => n.nodeType === 1 || n.textContent.trim());
@@ -53,7 +140,7 @@ async function scriptNodes(script) {
 
 // The script's paragraphs, for picking which one the reading / activity follows
 export async function scriptParagraphs(script) {
-  return (await scriptNodes(script)).map((n) => squish(n.textContent)).filter((t) => t.length > 0);
+  return (await scriptNodes(script)).filter((n) => !isMarker(n)).map((n) => squish(n.textContent)).filter((t) => t.length > 0);
 }
 
 const matchesAnchor = (node, anchor) => {
@@ -62,35 +149,58 @@ const matchesAnchor = (node, anchor) => {
   return anchor ? text.startsWith(anchor.slice(0, 160)) : AUTO_ANCHOR.test(text);
 };
 
-// The script document as sections. It is cut at its headings (the top level with two or more:
-// h1, else h2, else h3), or failing that at its bold time cues ("(Top of the hour)"); with
-// neither it is one section. The day's reading / activity gets a section of its own, right after
-// the paragraph `anchor` begins (by itself: the "You choose the format!" line; "none": no spot).
+// A section mark (Insert > Add Section in the document editor): <div data-hc-section data-title=...>
+export const isMarker = (node) => node.tagName === "DIV" && node.hasAttribute?.("data-hc-section");
+const list = (text) => String(text || "").split(",").map((x) => x.trim()).filter(Boolean);
+export function markerInfo(node) {
+  const days = list(node.getAttribute("data-days")).map(Number).filter((d) => d >= 0 && d <= 6);
+  const when = list(node.getAttribute("data-when"));
+  const cue = parseCue(node.getAttribute("data-cue"));
+  return {
+    title: squish(node.getAttribute("data-title")) || "Untitled section",
+    ...(node.getAttribute("data-kind") === "activity" ? { activity: true } : {}),
+    ...(when.length ? { when } : {}),
+    ...(days.length ? { days } : {}),
+    ...(cue ? { cue } : {}),
+  };
+}
+
+// The script document as sections. Sections made in the document editor (Insert > Add Section)
+// cut it, each with its title and conditions; else it is cut at its headings (the top level with
+// two or more: h1, else h2, else h3), or at its bold time cues ("(Top of the hour)"); with none
+// of those it is one section. What comes before the first cut is "Before we begin".
+// The day's reading / activity is the section marked as its spot, or else gets a section of its
+// own right after the paragraph `anchor` begins (by itself: the "You choose the format!" line;
+// "none": no spot).
 export async function scriptSections(script, anchor = null) {
   const nodes = await scriptNodes(script);
   if (!nodes.length) return [];
-  const level = [1, 2, 3].find((n) => nodes.filter((el) => el.tagName === `H${n}`).length >= 2);
-  const breaks = level ? (node) => node.tagName === `H${level}` : nodes.filter(isCue).length >= 2 ? isCue : () => false;
-  const titleOf = (node) => (level ? squish(node.textContent) || "Untitled" : cueTitle(node));
-  const spot = anchor === "none" ? null : nodes.find((n) => !breaks(n) && matchesAnchor(n, anchor));
+  const marked = nodes.some(isMarker);
+  const level = !marked && [1, 2, 3].find((n) => nodes.filter((el) => el.tagName === `H${n}`).length >= 2);
+  const breaks = marked ? isMarker : level ? (node) => node.tagName === `H${level}` : nodes.filter(isCue).length >= 2 ? isCue : () => false;
+  const headOf = (node) => (marked ? markerInfo(node) : { title: level ? squish(node.textContent) || "Untitled" : cueTitle(node) });
+  const hasSpot = marked && nodes.some((n) => isMarker(n) && n.getAttribute("data-kind") === "activity");
+  const spot = anchor === "none" || hasSpot ? null : nodes.find((n) => !breaks(n) && matchesAnchor(n, anchor));
 
   const sections = [];
   let current = null;
-  let lastTitle = script.title;
+  let last = { title: script.title };
   for (const node of nodes) {
     if (breaks(node)) {
-      lastTitle = titleOf(node);
-      current = { title: lastTitle, parts: [] };
+      last = headOf(node);
+      current = { ...last, parts: [] };
       sections.push(current);
       continue;
     }
-    if (!current || current.activity) {
-      current = { title: current?.activity ? `${lastTitle} (continued)` : sections.length ? lastTitle : "Before we begin", parts: [] };
+    if (!current || current.spot) {
+      // after the reading / activity spot, the rest of that section carries on (and keeps its conditions)
+      const { activity, ...rest } = last;
+      current = current?.spot ? { ...rest, title: `${last.title} (continued)`, parts: [] } : { title: sections.length ? last.title : "Before we begin", parts: [] };
       sections.push(current);
     }
     current.parts.push(node.outerHTML || node.textContent);
     if (node === spot) {
-      current = { title: ACTIVITY_TITLE, parts: [], activity: true };
+      current = { title: ACTIVITY_TITLE, parts: [], activity: true, spot: true };
       sections.push(current);
     }
   }
@@ -98,24 +208,27 @@ export async function scriptSections(script, anchor = null) {
   const merged = [];
   let carry = [];
   for (const sec of sections) {
-    const onlyHeadings = !sec.activity && sec.parts.length > 0 && sec.parts.every((p) => /^<h[1-6][\s>]/i.test(p));
+    const onlyHeadings = !marked && !sec.activity && sec.parts.length > 0 && sec.parts.every((p) => /^<h[1-6][\s>]/i.test(p));
     if (onlyHeadings && sec !== sections[sections.length - 1]) { carry = carry.concat(sec.parts); continue; }
     merged.push({ ...sec, parts: carry.concat(sec.parts) });
     carry = [];
   }
-  return merged.map(({ title, parts, activity }) => ({ title, html: parts.join(""), ...(activity ? { activity: true } : {}) }));
+  return merged.map(({ parts, spot: _, ...sec }) => ({ ...sec, html: parts.join("") }));
+}
+
+// Whether a section is for today: its days, and the day's reading or activity. Returns null when
+// it is, or why it's skipped ("Only with a speaker", "Only on Sat").
+export function skipReason(section, { activity, weekday }) {
+  if (section.days && !section.days.includes(weekday)) return `Only on ${section.days.map((d) => WEEKDAYS[d]).join(", ")}`;
+  if (section.when && !(activity && section.when.includes(conditionOf(activity.kind)))) {
+    const names = section.when.map((w) => (ACTIVITY_CONDITIONS.find(([k]) => k === w)?.[1] || w).toLowerCase());
+    return `Only with ${names.join(" or ")}`;
+  }
+  return null;
 }
 
 // "{{meeting}}" and friends in a chat posting, filled in for this meeting and date
-export const PLACEHOLDERS = [
-  ["meeting", "the meeting's name"],
-  ["group", "the group's name"],
-  ["date", "today's date"],
-  ["host", "the host's name"],
-  ["co_host", "the co-host's name"],
-  ["zoom_link", "the meeting's Zoom link"],
-  ["activity", "the day's reading or activity"],
-];
+export const PLACEHOLDERS = DYNAMIC_VALUES.map((v) => [v.key, v.what]);
 
 // "Daily Reflections: October 20", "Topic: Gratitude", "Speaker: Kim R."
 export function activityLabel(activity) {
@@ -130,19 +243,9 @@ export function activityLabel(activity) {
 }
 
 export function fillPosting(body, center, live = null) {
-  const names = serviceNames(center, live);
-  const date = center?.on ? new Date(`${center.on}T12:00:00`).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "";
-  const values = {
-    meeting: center?.meeting?.name || "",
-    group: center?.group?.title || "",
-    date,
-    host: center?.hosts?.host || "",
-    co_host: center?.hosts?.co_host || "",
-    zoom_link: center?.meeting?.conference_url || "",
-    activity: activityLabel(live?.activity),
-  };
+  const values = dynamicValues(center, live);
   return (body || "")
-    .replace(ROLE_TOKEN, (_, key) => names[key.toLowerCase()] || "")
+    .replace(ROLE_TOKEN, (_, key) => values[`service_${key.toLowerCase()}`] || "")
     .replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (all, key) => (key in values ? values[key] : all));
 }
 
@@ -168,16 +271,15 @@ export async function copyText(text) {
   }
 }
 
-// "05:00": a posting's minute into the meeting, or the timer
+// "05:00": a posting's minute into the meeting, or the timer (a countdown, before the start)
 export const mmss = (seconds) => {
-  const s = Math.max(0, Math.floor(seconds));
+  const s = Math.abs(Math.floor(seconds));
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const pad = (n) => String(n).padStart(2, "0");
   return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${pad(m)}:${pad(s % 60)}`;
 };
 
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const BLOCKS = { paragraph: "p", blockquote: "blockquote", bulletList: "ul", orderedList: "ol", listItem: "li", table: "table", tableRow: "tr", tableHeader: "th", tableCell: "td" };
 const MARKS = { bold: "strong", italic: "em", underline: "u", strike: "s", code: "code", highlight: "mark" };
 

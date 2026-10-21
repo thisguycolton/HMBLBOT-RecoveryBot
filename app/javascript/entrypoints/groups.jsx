@@ -26,6 +26,8 @@ import GroupPageEditor from "../components/groups/page/GroupPageEditor";
 import CommandCenter from "../components/groups/hosting/CommandCenter";
 import GuestPostings from "../components/groups/hosting/GuestPostings";
 import HostingIndex from "../components/groups/hosting/HostingIndex";
+import ServiceReadingShare from "../components/groups/hosting/ServiceReadingShare";
+import TimeCapsule from "../components/groups/hosting/TimeCapsule";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
@@ -49,6 +51,8 @@ const router = createBrowserRouter(
     { path: "/:slug/page/edit", element: <div className="ev-root w-full"><GroupPageEditor /></div> },
     // The Hosting Command Center takes the whole window too
     { path: "/:slug/host/:meetingId", element: <CommandCenter /> },
+    // A service reading on its own, to share that window in Zoom
+    { path: "/:slug/share/service-reading/:id", element: <ServiceReadingShare /> },
     // What a hosting short link (/h/CODE) shows anyone else: the chat postings
     { path: "/:slug/chat/:code", element: <GuestPostings /> },
     // Group admins and members with a role get the group's dashboard; members the plain tab
@@ -65,6 +69,7 @@ const router = createBrowserRouter(
         { path: "default-page", element: <IntergroupPage template /> },
         { path: ":slug", element: <GroupPage /> },
         { path: ":slug/host", element: <HostingIndex /> },
+        { path: ":slug/host/capsule", element: <TimeCapsule /> },
         { path: ":slug/:tab", element: <GroupPage /> },
         { path: ":slug/edit", element: <GroupForm /> },
       ],

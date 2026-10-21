@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "October 20, 2026";
+const UPDATED = "October 21, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -34,6 +34,7 @@ const STORAGE = [
   ["findMeeting.view", "List or map view in Find a meeting"],
   ["doc-paper", "Page color in the document editor"],
   ["hosting-text-size", "Script text size in the Hosting Command Center"],
+  ["hosting-share-size", "Text size of a service reading opened to share on screen"],
   ["questScreenName, questChime", "Your screen name and sound setting in The Acid Quest"],
 ];
 

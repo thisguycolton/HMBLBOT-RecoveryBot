@@ -14,6 +14,7 @@ import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
+import { HostSection, ValueTokens } from "./hostSection";
 
 // Text color, kept as style="color: ..." on a <span> (the server keeps that, DocumentHtml)
 const TextColor = Extension.create({
@@ -101,6 +102,9 @@ export const documentExtensions = (placeholder = "Start typing…") => [
   StyledHeader,
   StyledCell,
   Placeholder.configure({ placeholder }),
+  // the Hosting Command Center's sections and dynamic values, for a meeting's format
+  HostSection,
+  ValueTokens,
 ];
 
 // A link as someone types it ("example.com", "me@example.com") made into one the editor keeps

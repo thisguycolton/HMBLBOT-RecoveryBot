@@ -67,6 +67,12 @@ Rails.application.routes.draw do
     resources :meeting_host_covers, controller: "group_meeting_host_covers", only: %i[create destroy]
     # The Hosting Command Center (/groups/:slug/host/:meeting_id)
     resources :hosting, controller: "group_hosting", only: %i[index show], param: :meeting_id do
+      collection do
+        get :capsule
+        get :values
+        get :service_readings
+        get "service_readings/:reading_id", action: :service_reading, as: :service_reading
+      end
       member do
         post :ping
         post :act

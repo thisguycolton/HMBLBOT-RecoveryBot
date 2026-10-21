@@ -136,6 +136,14 @@ function ActivityPicker({ center, act }) {
     <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:ring-amber-800/60">
       <p className="font-semibold text-slate-900 dark:text-white">Pick today's reading or activity</p>
       <p className="mt-0.5 text-sm text-slate-600 dark:text-neutral-300">Whatever you pick shows here for both hosts, and fills <code className="text-xs">{"{{activity}}"}</code> in chat postings.</p>
+      {center.previous?.length > 0 && (
+        <div className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs text-slate-600 dark:bg-neutral-900/60 dark:text-neutral-300">
+          <span className="font-semibold">Recently at this meeting: </span>
+          {center.previous.map((p, i) => (
+            <span key={p.on}>{i > 0 && " · "}{p.label}{p.topics.length > 1 ? ` (+${p.topics.length - 1} more)` : ""} <span className="text-slate-400">({new Date(`${p.on}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" })})</span></span>
+          ))}
+        </div>
+      )}
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {options.daily.map((d) => (
           <Tile key={d.book_slug} icon={CalendarDays} title={`Today's ${d.book_title.replace(/^The /, "")}`} text={d.title}
