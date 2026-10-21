@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_21_070000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_21_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -734,6 +734,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_070000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "push_subscriptions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "endpoint", null: false
+    t.string "p256dh", null: false
+    t.string "auth", null: false
+    t.string "user_agent"
+    t.datetime "last_sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["endpoint"], name: "index_push_subscriptions_on_endpoint", unique: true
+    t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
+  end
+
   create_table "quest_inventories", force: :cascade do |t|
     t.bigint "quest_session_id", null: false
     t.text "items"
@@ -1227,6 +1240,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_070000) do
   add_foreign_key "notifications", "users"
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
+  add_foreign_key "push_subscriptions", "users"
   add_foreign_key "quest_inventories", "quest_sessions"
   add_foreign_key "quest_log_entries", "quest_sessions"
   add_foreign_key "quest_log_entries", "topics"

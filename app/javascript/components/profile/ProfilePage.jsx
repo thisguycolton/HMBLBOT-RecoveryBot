@@ -4,6 +4,7 @@ import { VISIBILITY } from "../notes/lib";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { DateField, todayValue } from "../ui/DateFields";
 import Toggle from "../ui/Toggle";
+import PushSettings from "./PushSettings";
 import { api } from "../groups/lib";
 import Avatar from "../groups/Avatar";
 import { soberFor } from "../groups/lib";
@@ -54,9 +55,13 @@ export default function ProfilePage() {
     setRemovePicture(false);
   };
   useEffect(() => { api("/profile").then(load).catch((e) => setError(e.message)); }, []);
-  // /users/edit#hosting (from a reminder email) once the page is there
+  // /users/edit#hosting (from a reminder email) or #notifications once the page is there
   const loaded = Boolean(profile);
-  useEffect(() => { if (loaded && location.hash === "#hosting") document.getElementById("hosting")?.scrollIntoView(); }, [loaded]);
+  useEffect(() => {
+    if (!loaded || !["#hosting", "#notifications"].includes(location.hash)) return;
+    const to = location.hash.slice(1);
+    setTimeout(() => document.getElementById(to)?.scrollIntoView(), 300); // the notifications card loads on its own
+  }, [loaded]);
 
   if (!profile) return error ? <ErrorNote error={error} /> : <p className="py-16 text-center !font-sans text-sm text-slate-500">Loading…</p>;
 
@@ -235,6 +240,8 @@ export default function ProfilePage() {
         </Tray>
       )}
 
+      <PushSettings />
+
       {profile.hosting && <HostingSettings hosting={profile.hosting} save={saveDefault} saved={saved} />}
 
       {profile.groups_open || profile.groups.length > 0 ? (
@@ -317,7 +324,7 @@ function HostingSettings({ hosting, save, saved }) {
           </p>
           <Toggle checked={hosting.reminders} onChange={(v) => save("host_reminders", v)}
             label={<span className="inline-flex items-center gap-2">Remind me before meetings I'm on {saved === "host_reminders" && <Check className="h-3.5 w-3.5 text-emerald-600" />}</span>}
-            description="A notification here (and an email, if you like) before each meeting you host, co-host or cover. Nothing is sent until you turn this on." />
+            description="A notification here (and on your devices with notifications on, and by email if you like) before each meeting you host, co-host or cover. Nothing is sent until you turn this on." />
           {hosting.reminders && (
             <div className="grid gap-3 sm:grid-cols-2">
               <div>

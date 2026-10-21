@@ -201,6 +201,8 @@ GEM
       activesupport (>= 5.0.0)
     jmespath (1.6.2)
     jsonapi-renderer (0.2.2)
+    jwt (3.3.0)
+      base64
     launchy (3.1.1)
       addressable (~> 2.8)
       childprocess (~> 5.0)
@@ -243,6 +245,7 @@ GEM
       racc (~> 1.4)
     nokogiri (1.18.3-x86_64-linux-musl)
       racc (~> 1.4)
+    openssl (3.1.3)
     orm_adapter (0.5.0)
     pagy (9.3.3)
     pdf-reader (2.14.1)
@@ -391,6 +394,9 @@ GEM
       activemodel (>= 6.0.0)
       bindex (>= 0.4.0)
       railties (>= 6.0.0)
+    web-push (3.1.0)
+      jwt (~> 3.0)
+      openssl (>= 3.0)
     webdrivers (5.3.1)
       nokogiri (~> 1.6)
       rubyzip (>= 1.3.0)
@@ -428,6 +434,7 @@ DEPENDENCIES
   letter_opener
   local_time
   nokogiri
+  openssl (~> 3.1.0)
   pdf-reader
   pg (~> 1.5, >= 1.5.4)
   pry
@@ -448,6 +455,7 @@ DEPENDENCIES
   tzinfo-data
   vite_rails
   web-console
+  web-push (~> 3.0)
   webdrivers
 
 RUBY VERSION

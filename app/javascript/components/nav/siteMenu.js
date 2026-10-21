@@ -15,6 +15,7 @@ import {
   Plus,
   ScrollText,
   Settings,
+  Smartphone,
   Sparkles,
   Tags,
   Users,
@@ -66,6 +67,7 @@ export const ACCOUNT_ITEMS = [
   { label: "New Reading", href: "/readings/new", icon: Plus },
   { label: "My highlights", href: "/library/highlights", icon: Highlighter },
   { label: "Profile & account", href: "/users/edit", icon: Settings },
+  { label: "Get the app", href: "/install", icon: Smartphone },
 ];
 
 // Shown only to User#suite_admin? (the server checks again on every page)

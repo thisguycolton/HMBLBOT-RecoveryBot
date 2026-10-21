@@ -59,6 +59,11 @@ An API-driven system for tracking game state, inventories, and player progress.
 - Sign-up uses Devise `:confirmable`: people confirm their email (link good for 3 days, resend at `/users/confirmation/new`) instead of waiting for admin approval. The old `users.confirmed` flag is kept in sync with `confirmed_at` (`User#sync_confirmed`), so queries on it still work and `confirmed: true` in code or fixtures means confirmed. Email changes wait for the new address to be confirmed (`unconfirmed_email`).
 - People delete their own account on the profile page (`DELETE /api/profile` with their password); an account with readings is refused and pointed to /contact.
 
+### 🔔 Web Push and the home-screen app
+- Every `Notification` (the bell) is also pushed to the account's devices that turned it on: `PushSubscription` (endpoint, p256dh, auth, user agent; endpoints must be on a known push service host, `PUSH_HOSTS`), `Notification#push_later` -> `WebPushJob` (Active Job's in-process adapter) -> `WebPushSender` (web-push gem; gone subscriptions are deleted). Needs `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (`bin/rails web_push:keys`; optional `VAPID_SUBJECT`); without them push is hidden. `bin/rails web_push:test EMAIL=...` sends a test.
+- `/service-worker.js` (`app/views/pwa/service-worker.js.erb`, Rails' PWA controller) only shows pushes (with the unread count as the icon badge), opens `/notifications/:id/open` on tap (marks read, redirects to the site-relative url) and renews subscriptions (`POST /api/push_subscriptions/renew`). No page caching. `lib/push.js` registers it from the Navbar and drops this browser's subscription once signed out.
+- Settings: `profile/PushSettings.jsx` ("Notifications on this device" on /users/edit#notifications, also on /install): toggle, test, other devices. `/install` (`InstallController`, `site/InstallPage.jsx`): add-to-home-screen steps for iPhone/iPad (needed there for push), Android and computers, plus Chrome's install prompt; `site/InstallNudge.jsx` points phones there from the home feed. Manifest: `app/views/pwa/manifest.json.erb`.
+
 ### 🛠 Services
 Business logic for complex operations (e.g., importing literature) is encapsulated in `app/services`.
 
