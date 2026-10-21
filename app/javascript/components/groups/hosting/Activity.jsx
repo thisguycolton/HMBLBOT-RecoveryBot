@@ -3,6 +3,7 @@ import { BookMarked, BookOpen, CalendarDays, Dices, ExternalLink, Hash, Maximize
 import { api } from "../lib";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import { ErrorNote, Loading, primaryButton, quietButton } from "../ui";
+import FilterPick from "../../ui/FilterPick";
 import { ACTIVITY_TITLE, activityLabel, chapterHtml, readerHref } from "./lib";
 
 const label = "!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
@@ -187,15 +188,13 @@ function MyReadingPick({ center, onPick }) {
       <ErrorNote error={error} />
       {readings && readings.length === 0 && <p className="text-sm text-slate-600 dark:text-neutral-300">You haven't saved a reading yet. Make one, then come back here.</p>}
       {readings && readings.length > 0 && (
-        <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-wrap items-start gap-2">
           <div className="min-w-0 flex-1">
             <label htmlFor="act-my-reading" className={labelClass}>Your readings</label>
-            <select id="act-my-reading" className={selectClass} value={id} onChange={(e) => setId(e.target.value)}>
-              <option value="">Pick a reading</option>
-              {readings.map((r) => <option key={r.id} value={r.id}>{r.title || "Untitled"}{r.status !== "published" ? ` (${r.status})` : ""}{r.meeting_name ? ` · ${r.meeting_name}` : ""}</option>)}
-            </select>
+            <FilterPick id="act-my-reading" value={id} onChange={(v) => setId(String(v))} placeholder="Type to find a reading" empty="None of your readings match"
+              options={readings.map((r) => ({ value: String(r.id), label: `${r.title || "Untitled"}${r.status !== "published" ? ` (${r.status})` : ""}`, hint: r.meeting_name }))} />
           </div>
-          <button type="button" className={primaryButton} disabled={!reading} onClick={() => onPick({ kind: "my_reading", reading_id: reading.id })}>Use it</button>
+          <button type="button" className={`${primaryButton} mt-[1.375rem]`} disabled={!reading} onClick={() => onPick({ kind: "my_reading", reading_id: reading.id })}>Use it</button>
         </div>
       )}
       {readings === null && !error && <Loading />}
@@ -256,15 +255,13 @@ function ChapterPick({ books, onPick }) {
   const chapter = chapters?.find((c) => c.slug === chapterSlug);
   const book = books.find((b) => b.slug === bookSlug);
   return (
-    <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:items-end">
+    <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:items-start">
       <div><label htmlFor="act-book" className={labelClass}>Book</label><select id="act-book" className={selectClass} value={bookSlug} onChange={(e) => setBookSlug(e.target.value)}>{books.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select></div>
       <div><label htmlFor="act-chapter" className={labelClass}>Chapter</label>
-        <select id="act-chapter" className={selectClass} value={chapterSlug} onChange={(e) => setChapterSlug(e.target.value)} disabled={!chapters}>
-          <option value="">{chapters ? "Pick a chapter" : "Loading…"}</option>
-          {(chapters || []).map((c) => <option key={c.slug} value={c.slug}>{c.title || c.label || c.slug}</option>)}
-        </select>
+        <FilterPick id="act-chapter" value={chapterSlug} onChange={setChapterSlug} disabled={!chapters} placeholder={chapters ? "Type to find a chapter" : "Loading…"} empty="No chapters match"
+          options={(chapters || []).map((c) => ({ value: c.slug, label: c.title || c.label || c.slug }))} />
       </div>
-      <button type="button" className={primaryButton} disabled={!chapter}
+      <button type="button" className={`${primaryButton} sm:mt-[1.375rem]`} disabled={!chapter}
         onClick={() => onPick({ kind: "reading", book_slug: bookSlug, chapter_slug: chapter.slug, title: chapter.title || chapter.label || chapter.slug, book_title: book?.title })}>Use it</button>
     </div>
   );
