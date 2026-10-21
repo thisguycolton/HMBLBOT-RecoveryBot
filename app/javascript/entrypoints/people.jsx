@@ -10,7 +10,7 @@ import "../styles/reader.css";
 import "../styles/events.css";
 import "../styles/writebook.css";
 
-import Navbar from "../components/Navbar";
+import Layout from "../components/Layout";
 import PeopleIndex from "../components/people/PeopleIndex";
 import ProfilePage from "../components/people/ProfilePage";
 import ProfileEditor from "../components/people/ProfileEditor";
@@ -19,14 +19,11 @@ const isAuthenticated = document.body.dataset.currentUser === "true";
 
 function Shell() {
   return (
-    <>
-      <Navbar isAuthenticated={isAuthenticated} />
-      <main className="w-full pt-[var(--nav-h,56px)]">
-        <div className="mx-auto max-w-7xl px-4 py-6">
-          <Outlet />
-        </div>
-      </main>
-    </>
+    <Layout isAuthenticated={isAuthenticated}>
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <Outlet />
+      </div>
+    </Layout>
   );
 }
 

@@ -91,12 +91,11 @@ mountReact("chapter-viewer", (mount) => {
   }
 
   return (
-    <>
-      <Navbar isAuthenticated={isAuthenticated} />
-      <main className="pt-[var(--nav-h,56px)] prose-headings:my-1 md:prose-headings:my-2 xl:prose-headings:my-2 prose-p:my-0 md:prose-p:my-1 xl:prose-p:my-1">
+    <Layout isAuthenticated={isAuthenticated}>
+      <div className="prose-headings:my-1 md:prose-headings:my-2 xl:prose-headings:my-2 prose-p:my-0 md:prose-p:my-1 xl:prose-p:my-1">
         <ChapterViewer bookSlug={bookSlug} slug={chapterSlug} className="pt-16" />
-      </main>
-    </>
+      </div>
+    </Layout>
   );
 });
 
@@ -120,10 +119,9 @@ mountReact("chapter-admin", (admin) => (
 
 // ---------------- Court Verification ----------------
 mountReact("court-verification-root", (rootEl) => (
-  <>
-  <Navbar isAuthenticated={isAuthenticated} />
-  <CourtVerificationForm group={rootEl.dataset.group ? JSON.parse(rootEl.dataset.group) : null} />
-  </>
+  <Layout isAuthenticated={isAuthenticated}>
+    <CourtVerificationForm group={rootEl.dataset.group ? JSON.parse(rootEl.dataset.group) : null} />
+  </Layout>
 ));
 
 // ---------------- Reading Archive ----------------

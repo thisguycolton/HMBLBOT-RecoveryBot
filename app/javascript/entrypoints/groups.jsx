@@ -14,7 +14,7 @@ import "../styles/events.css";
 import "../styles/writebook.css";
 import "../styles/documents.css";
 
-import Navbar from "../components/Navbar";
+import Layout from "../components/Layout";
 import GroupsIndex from "../components/groups/GroupsIndex";
 import GroupForm from "../components/groups/GroupForm";
 import GroupPage from "../components/groups/GroupPage";
@@ -33,14 +33,11 @@ const isAuthenticated = document.body.dataset.currentUser === "true";
 
 function Shell({ children }) {
   return (
-    <>
-      <Navbar isAuthenticated={isAuthenticated} />
-      <main className="w-full pt-[var(--nav-h,56px)]">
-        <div className="mx-auto max-w-7xl px-4 py-6">
-          {children || <Outlet />}
-        </div>
-      </main>
-    </>
+    <Layout isAuthenticated={isAuthenticated}>
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        {children || <Outlet />}
+      </div>
+    </Layout>
   );
 }
 
