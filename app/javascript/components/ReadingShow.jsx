@@ -6,6 +6,8 @@ import {
   Pencil,
   Trash2,
   MessageSquareQuote,
+  MonitorPlay,
+  Users,
 } from "lucide-react";
 
 function hasMeaningfulContent(value) {
@@ -240,292 +242,188 @@ const topicHtml = renderRichContent(topicSource);
     await onDelete(reading);
   }
 
+  const group = reading.group;
+  const hostUrl = reading.host_url;
+  const signedIn = currentUserId != null;
+  const hasTopics = String(topicHtml).replace(/<[^>]*>|&nbsp;/g, "").trim().length > 0;
+
+  const ghostButton =
+    "inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 px-4 py-2.5 text-sm font-semibold !text-white transition hover:bg-white/10 hover:!text-white";
+
   return (
     <>
       <div
         className="fixed top-0 left-0 h-1.5 bg-sky-400 z-[10000] transition-[width] duration-75"
         style={{ width: `${scrollWidth}%` }}
       />
-      <div className="grid grid-cols-6 lg:gap-2 !w-screen">
-      <div className="min-h-screen col-span-6 md:col-span-4 md:col-start-2 bg-stone-50  text-slate-900 ">
+      <div className="min-h-screen w-full bg-stone-50 text-slate-900 dark:bg-neutral-900 dark:text-neutral-100">
         {/* HERO */}
-        {/* HERO */}
-<section
-  className="
-    relative
-    left-1/2
-    w-screen
-    -translate-x-1/2
-    bg-gradient-to-r
-    from-sky-600
-    to-sky-800
-    text-white
-    border-b-8
-    border-sky-200
-    dark:border-neutral-700
-  "
->
-  <div className="mx-auto max-w-5xl px-5 py-10 md:px-6 md:py-14 lg:py-16">
-    <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+        <section className="bg-gradient-to-r from-sky-600 to-sky-800 text-white">
+          <div className="mx-auto max-w-3xl px-5 py-8 md:py-12">
+            <div className="text-xs font-semibold uppercase tracking-widest text-sky-100/90">
+              Meeting reading
+              {group && (
+                <>
+                  <span className="mx-2 text-sky-200/60">·</span>
+                  <a href={group.url} className="!text-sky-100 underline-offset-4 hover:!text-white hover:underline">
+                    {group.name}
+                  </a>
+                </>
+              )}
+            </div>
 
-      {/* Reading information */}
-      <div className="min-w-0 flex-1">
-        <h1 className="text-4xl font-bold tracking-tight md:text-6xl ttSans">
-          {reading.meetingName || "Meeting Reading"}
-        </h1>
+            <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl ttSans">
+              {reading.meetingName || "Meeting Reading"}
+            </h1>
 
-        <h2 className="mt-2 text-2xl font-semibold text-sky-100 md:text-4xl">
-          Meeting Reading
-        </h2>
-
-        <div className="mt-5">
-          <div className="text-xl md:text-3xl">
-            <span>{meetingDateLabel}</span>
-
-            {meetingTimeLabel && (
-              <span className="ml-3 font-light text-sky-100">
-                {meetingTimeLabel}
-              </span>
+            {(meetingDateLabel || meetingTimeLabel) && (
+              <div className="mt-2 text-lg text-sky-50 md:text-xl">
+                {meetingDateLabel}
+                {meetingDateLabel && meetingTimeLabel && <span className="mx-2 text-sky-200/70">·</span>}
+                {meetingTimeLabel && <span className="font-light">{meetingTimeLabel}</span>}
+              </div>
             )}
-          </div>
 
-          {reading.tags?.length > 0 && (
-  <div className="mt-5 w-full overflow-x-auto overflow-y-hidden">
-    <div className="flex w-max min-w-full flex-nowrap gap-2 pb-1">
-      {reading.tags.map((tag) => (
-        <a
-          key={tag.id}
-          href={`/readings?tag=${encodeURIComponent(
-            tag.slug || tag.title
-          )}`}
-          className="
-            inline-flex
-            shrink-0
-            items-center
-            rounded-full
-            border
-            border-white/30
-            bg-white/10
-            px-4
-            py-1.5
-            text-sm
-            font-medium
-            text-white
-            hover:!bg-white/20
-          hover:!text-white
-          focus:!text-white
-          active:!text-white
-          visited:!text-white
-            whitespace-nowrap
-            transition
-            hover:bg-white/20
-          "
-        >
-          {tag.title}
-        </a>
-      ))}
-    </div>
-  </div>
-)}
-        </div>
-      </div>
+            {reading.tags?.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {reading.tags.map((tag) => (
+                  <a
+                    key={tag.id}
+                    href={`/readings?tag=${encodeURIComponent(tag.slug || tag.title)}`}
+                    className="inline-flex items-center rounded-full border border-white/30 bg-white/10 px-3 py-1 text-sm font-medium !text-white transition hover:bg-white/20 hover:!text-white"
+                  >
+                    {tag.title}
+                  </a>
+                ))}
+              </div>
+            )}
 
-      {/* Actions */}
-      <div className="w-full lg:w-auto lg:min-w-[220px]">
-        <div className="flex w-full flex-wrap gap-2 lg:justify-end">
+            {/* Actions */}
+            <div className="mt-6 flex flex-wrap gap-2">
+              {reading.meetingUrl && (
+                <a
+                  href={reading.meetingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex grow items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold !text-sky-800 shadow-sm transition hover:bg-sky-50 hover:!text-sky-900 sm:grow-0"
+                >
+                  <Video size={18} />
+                  Join with Zoom
+                </a>
+              )}
 
-          {reading.meetingUrl && (
-            <a
-              href={reading.meetingUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="
-                inline-flex
-                grow
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                bg-blue-500
-                px-5
-                py-3
-                text-sm
-                font-semibold
-                text-white
-                transition
-                hover:bg-blue-400
-                lg:grow-0
-              "
-            >
-              <Video size={18} />
+              {hostUrl && (
+                <a href={hostUrl} className={ghostButton} title="Open the Hosting Command Center for this meeting">
+                  <MonitorPlay size={18} />
+                  Host
+                </a>
+              )}
 
-              <span className="hidden md:inline">
-                Join With Zoom
-              </span>
+              {group && (
+                <a href={group.url} className={ghostButton} title={`${group.name}'s group page`}>
+                  <Users size={18} />
+                  Group
+                </a>
+              )}
 
-              <span className="md:hidden">
-                Join
-              </span>
-            </a>
-          )}
-
-          <button
-            type="button"
-            onClick={handleCopy}
-            className={`
-              inline-flex
-              items-center
-              justify-center
-              rounded-xl
-              px-4
-              py-3
-              font-semibold
-              transition
-              ${
-                copied
-                  ? "bg-emerald-500 text-white"
-                  : "bg-white text-slate-900 hover:bg-slate-100"
-              }
-            `}
-          >
-            {copied ? <Check size={18} /> : <Copy size={18} />}
-          </button>
-
-          {isOwner && (
-            <>
-              <a
-                href={`/readings/${reading.id}/edit`}
-                className="
-                  inline-flex
-                  items-center
-                  justify-center
-                  rounded-xl
-                  border
-                  border-white/30
-                  px-4
-                  py-3
-                  text-white
-                  transition
-                  hover:bg-white/10
-                "
+              <button
+                type="button"
+                onClick={handleCopy}
+                title="Copy the title, link and topics to paste in the chat"
+                className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                  copied
+                    ? "border-emerald-500 !bg-emerald-500 text-white"
+                    : "border-white/30 !bg-transparent text-white hover:!bg-white/10"
+                }`}
               >
-                <Pencil size={18} />
-              </a>
+                {copied ? <Check size={18} /> : <Copy size={18} />}
+                {copied ? "Copied" : "Copy for chat"}
+              </button>
 
-              {onDelete ? (
+              {isOwner && (
+                <a href={`/readings/${reading.id}/edit`} className={ghostButton} aria-label="Edit this reading" title="Edit this reading">
+                  <Pencil size={18} />
+                  <span className="sr-only">Edit</span>
+                </a>
+              )}
+
+              {isOwner && onDelete && (
                 <button
                   type="button"
                   onClick={handleDelete}
-                  className="
-                    inline-flex
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-red-300/40
-                    px-4
-                    py-3
-                    text-white
-                    transition
-                    hover:bg-red-500/20
-                  "
+                  aria-label="Delete this reading"
+                  className="inline-flex items-center justify-center rounded-xl border border-red-300/40 !bg-transparent px-4 py-2.5 text-white transition hover:bg-red-500/20"
                 >
                   <Trash2 size={18} />
                 </button>
-              ) : null}
-            </>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <div className="mx-auto max-w-3xl px-5 py-8 md:py-12">
+          {/* MAIN READING */}
+          <article>
+            <h2 className="mb-6 text-3xl font-bold uppercase tracking-wide md:text-4xl ttSans">
+              {reading.title}
+            </h2>
+
+            <div className="reading-prose wrap-normal" dangerouslySetInnerHTML={{ __html: contentHtml }} />
+
+            {reading.source && (
+              <div className="mt-8 border-t border-stone-200 pt-4 text-base italic text-neutral-600 dark:border-neutral-700 dark:text-neutral-400 wrap-normal">
+                {reading.source}
+              </div>
+            )}
+          </article>
+
+          {/* TOPICS */}
+          {hasTopics && (
+            <section className="mt-10 rounded-2xl border border-sky-100 bg-sky-50 px-6 py-6 dark:border-neutral-700 dark:bg-neutral-800 md:px-8 md:py-8">
+              <h2 className="text-2xl font-bold ttSans">Example topics for sharing</h2>
+              <div className="mt-1 text-neutral-600 italic dark:text-neutral-400">Feel free to check in!</div>
+              <div
+                className="reading-topics mt-5 text-lg font-medium text-slate-800 dark:text-neutral-100"
+                dangerouslySetInnerHTML={{ __html: topicHtml }}
+              />
+            </section>
+          )}
+
+          {/* CTA, for visitors without an account */}
+          {!signedIn && (
+            <section className="mt-10 flex flex-col items-start gap-4 rounded-2xl border border-stone-200 bg-white px-6 py-6 dark:border-neutral-700 dark:bg-neutral-800/60 sm:flex-row sm:items-center">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-800">
+                <MessageSquareQuote size={24} />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold">Share readings easier</h2>
+                <div className="mt-1 text-slate-600 dark:text-neutral-300">
+                  Sign up to post your readings and share them with others with a simple click.
+                </div>
+              </div>
+              <a
+                href="/users/sign_up"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-blue-500 px-5 py-2.5 font-semibold !text-white hover:bg-blue-400 sm:w-auto"
+              >
+                Sign up
+              </a>
+            </section>
           )}
         </div>
       </div>
-
-    </div>
-  </div>
-</section>
-
-        {/* MAIN READING */}
-        <section className=" bg-stone-100 dark:bg-neutral-900  dark:text-neutral-100">
-          <div className=" max-w-display px-4 py-5 md:py-14">
-            <figure>
-              <h1 className="mb-6 text-3xl font-bold uppercase tracking-widest md:text-5xl ttSans">
-                {reading.title}
-              </h1>
-
-              <blockquote className="reading-prose wrap-normal">
-                <div
-                  dangerouslySetInnerHTML={{ __html: contentHtml }}
-                />
-              </blockquote>
-
-              {reading.source && (
-                <figcaption className="mt-6 text-xl italic text-neutral-600 dark:text-neutral-300 md:text-2xl wrap-normal">
-                  {reading.source}
-                </figcaption>
-              )}
-            </figure>
-          </div>
-        </section>
-
-        {/* TOPICS */}
-<section className="relative left-1/2 w-screen -translate-x-1/2 bg-sky-900 text-white grid grid-cols-6 lg:gap-2">
-  <div className="mx-auto max-w-5xl px-4 py-12 md:py-16 col-span-6 md:col-span-4 md:col-start-2">
-    <h2 className="text-center text-3xl font-bold uppercase md:text-5xl">
-      Example Topics For Sharing
-    </h2>
-
-    <h3 className="mt-2 text-center text-xl italic text-neutral-300 md:text-2xl">
-      Feel free to check in!
-    </h3>
-
-    <div className="mt-8 rounded-[2rem] bg-white px-6 py-8 text-neutral-800 shadow-sm dark:bg-cyan-600 dark:text-neutral-100 md:px-10 md:py-10">
-      <div
-        className="reading-topics text-lg md:text-xl"
-        dangerouslySetInnerHTML={{ __html: topicHtml }}
-      />
-    </div>
-  </div>
-</section>
-
-        {/* CTA */}
-        <section className=" bg-neutral-100 dark:bg-stone-900 dark:text-neutral-100">
-          <div className=" max-w-5xl px-4 py-12 md:py-16">
-            <div className="flex flex-col items-center gap-6 text-center md:flex-row md:text-left">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-sky-100 text-sky-800">
-                <MessageSquareQuote size={38} />
-              </div>
-
-              <div className="flex-1">
-                <h2 className="text-3xl font-semibold md:text-5xl">
-                  Share Readings Easier
-                </h2>
-                <p className="mt-3 text-lg text-slate-600 dark:text-neutral-300 md:text-2xl">
-                  Sign up to post your readings and share them with others with a simple click.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-8  max-w-2xl">
-              <a
-                href="/users/sign_up"
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-blue-500 px-6 py-4 text-lg font-semibold text-white hover:bg-blue-400"
-              >
-                Sign Up
-              </a>
-            </div>
-          </div>
-        </section>
-      </div>
-      </div>
-
     </>
   );
 }
 
 function formatMeetingDate(value) {
   if (!value) return "";
-  const date = new Date(value);
+  // A bare YYYY-MM-DD is the meeting's own date: read it as local, not as midnight UTC
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const date = ymd ? new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3])) : new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
   return date.toLocaleDateString("en-US", {
+    weekday: "long",
     month: "long",
     day: "numeric",
     year: "numeric",
