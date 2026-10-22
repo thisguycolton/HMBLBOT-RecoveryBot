@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Globe, Pencil, Plus, Regex, Search, Trash2, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, Globe, MessagesSquare, Pencil, Plus, Regex, Search, Trash2, X } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { inputClass, selectClass } from "../../ui/styles";
 import { api } from "../lib";
@@ -8,6 +8,7 @@ import { Card, ErrorNote, Loading, Pill, Tray, dangerButton, linkButton, primary
 import DecisionForm from "./DecisionForm";
 import BulkBar, { RowCheck } from "./BulkBar";
 import { relatedIndex, searchableText, toRegex } from "./related";
+import { buildThreads } from "./threads";
 import { CATEGORIES, MOTION_STATUS_LABELS, STATUS_TONES, VOTE_METHOD_SHORT, countLabel, dateLabel, longDate, meetingsPath } from "./lib";
 
 const FILTERS = [
@@ -21,25 +22,13 @@ const FILTERS = [
 const KEEPER_FILTERS = [["to_check", "To check"]];
 const isDecision = (m) => m.kind === "main" || m.kind === "rescind";
 
-// One line for a motion made about another: "Amend: Make it larger, passed (6 for, 2 against)"
-function Aside({ m }) {
-  return (
-    <li className="text-sm text-slate-600 dark:text-neutral-300">
-      <span className="font-medium text-slate-800 dark:text-neutral-100">{m.kind_label}</span>
-      {m.title && m.title !== m.kind_label ? `: ${m.title}` : ""} <Pill tone={STATUS_TONES[m.status]}>{MOTION_STATUS_LABELS[m.status]}</Pill>
-      {countLabel(m) ? <span className="text-xs text-slate-500 dark:text-neutral-400"> {countLabel(m)}</span> : null}
-      {m.committee && <span className="text-xs text-slate-500 dark:text-neutral-400"> · to {m.committee}</span>}
-      {m.postponed_to && <span className="text-xs text-slate-500 dark:text-neutral-400"> · until {m.postponed_to}</span>}
-    </li>
-  );
-}
-
-// One line in the list; clicking it opens the decision in the side pane
-function DecisionRow({ motion: m, parent, current, onOpen, selected, onSelect }) {
+// One line in the list; clicking it opens the decision in the side pane. The first line of a
+// thread also says how many more are in it and how it last came out, and opens or closes it.
+function DecisionRow({ motion: m, current, onOpen, selected, onSelect, dim, thread }) {
   const replaced = isReplaced(m);
   const counts = countLabel(m);
   return (
-    <Card className={`flex gap-2.5 p-3 ${selected ? "ring-2 ring-accent/60" : ""} ${current ? "!bg-accent-tint dark:!bg-accent/25" : ""}`}>
+    <Card className={`flex gap-2.5 p-3 ${selected ? "ring-2 ring-accent/60" : ""} ${current ? "!bg-accent-tint dark:!bg-accent/25" : ""} ${dim && !current ? "opacity-60" : ""}`}>
       {onSelect && <RowCheck checked={selected} onChange={onSelect} label={`Select “${m.title}”`} />}
       <button type="button" id={`decision-${m.id}`} onClick={() => onOpen(m.id)} aria-current={current ? "true" : undefined}
         className="min-w-0 flex-1 !bg-transparent p-0 text-left">
@@ -50,10 +39,61 @@ function DecisionRow({ motion: m, parent, current, onOpen, selected, onSelect })
         <span className="mt-0.5 block text-xs text-slate-500 dark:text-neutral-400">
           {m.decided_on ? dateLabel(m.decided_on) : "Not decided yet"}{counts ? ` · ${counts}` : ""}{m.vote_method ? ` · ${VOTE_METHOD_SHORT[m.vote_method]}` : ""}
           {replaced && m.replaced_by && ` · Replaced${m.replaced_by.title ? ` by “${m.replaced_by.title}”` : ""}${m.replaced_by.decided_on ? ` on ${dateLabel(m.replaced_by.decided_on)}` : ""}`}
-          {parent && ` · On “${parent.title}”`}
         </span>
+        {thread?.latest && <span className="mt-0.5 block text-xs text-slate-500 dark:text-neutral-400">Last: {thread.latest.kind_label === "Main motion" ? "" : `${thread.latest.kind_label.toLowerCase()}, `}{MOTION_STATUS_LABELS[thread.latest.status].toLowerCase()}{thread.latest.decided_on ? ` ${dateLabel(thread.latest.decided_on)}` : ""}</span>}
       </button>
+      {thread && (
+        <button type="button" onClick={thread.onToggle} aria-expanded={thread.open} title={thread.open ? "Hide the thread" : "Show the thread"}
+          className="flex shrink-0 items-center gap-1 self-start rounded-lg !bg-neutral-100 px-2 py-1 text-xs font-semibold text-slate-600 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:text-neutral-300 dark:hover:!bg-neutral-700">
+          <MessagesSquare className="size-3.5" /> {thread.count} <ChevronDown className={`size-3.5 transition-transform ${thread.open ? "rotate-180" : ""}`} />
+        </button>
+      )}
     </Card>
+  );
+}
+
+// A whole thread in the list: its first motion, and when open everything under it, nested
+function ThreadRows({ thread, kids, open, onToggle, row }) {
+  const { root, members, latest } = thread;
+  const more = members.length - 1;
+  const seen = new Set();
+  const node = (m, depth) => {
+    if (seen.has(m.id)) return null;
+    seen.add(m.id);
+    const children = (kids.get(m.id) || []).filter((k) => !seen.has(k.id));
+    return (
+      <div key={m.id} className="space-y-1.5">
+        {depth === 0
+          ? row(m, more > 0 ? { count: more, open, onToggle, latest: latest.id !== root.id ? latest : null } : null)
+          : row(m, null)}
+        {children.length > 0 && (depth > 0 || open) && (
+          <div className="ml-3 space-y-1.5 border-l-2 border-neutral-300 pl-2 dark:border-neutral-700 sm:ml-5 sm:pl-3">{children.map((k) => node(k, depth + 1))}</div>
+        )}
+      </div>
+    );
+  };
+  return node(root, 0);
+}
+
+// The open motion's whole thread, in the side pane
+function ThreadCard({ thread, currentId, onOpen }) {
+  return (
+    <div>
+      <p className={paneLabel}>The thread</p>
+      <ul className="-mx-2">
+        {thread.members.map(({ motion: o, depth }) => (
+          <li key={o.id} style={{ paddingLeft: `${Math.min(depth, 6) * 0.9}rem` }}>
+            <button type="button" onClick={() => onOpen(o.id)} aria-current={o.id === currentId ? "true" : undefined}
+              className={`w-full rounded-lg px-2 py-1.5 text-left ${o.id === currentId ? "!bg-accent-tint dark:!bg-accent/25" : "!bg-transparent hover:!bg-neutral-100 dark:hover:!bg-neutral-800"} ${depth ? "border-l-2 border-neutral-200 dark:border-neutral-700" : ""}`}>
+              <span className={`block text-sm font-medium text-slate-900 dark:text-white ${isReplaced(o) ? "line-through decoration-slate-400" : ""}`}>{o.title}</span>
+              <span className="block text-xs text-slate-500 dark:text-neutral-400">
+                {o.kind_label} · {MOTION_STATUS_LABELS[o.status]}{o.decided_on ? ` · ${dateLabel(o.decided_on)}` : ""}{countLabel(o) ? ` · ${countLabel(o)}` : ""}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -64,7 +104,7 @@ function Badges({ m }) {
     <>
       {!isDecision(m) && <Pill>{m.kind_label}</Pill>}
       {m.kind === "rescind" && <Pill tone="accent">Rescinds</Pill>}
-      {m.status !== "passed" && <Pill tone={STATUS_TONES[m.status]}>{MOTION_STATUS_LABELS[m.status]}</Pill>}
+      <Pill tone={STATUS_TONES[m.status]}>{MOTION_STATUS_LABELS[m.status]}</Pill>
       {m.amended_text && <Pill>As amended</Pill>}
       {m.visibility === "public" && <Pill tone="green"><Globe className="size-3" /> Public</Pill>}
       {m.needs_review && <Pill tone="amber">To check</Pill>}
@@ -79,7 +119,7 @@ const paneLabel = "mb-1 text-xs font-semibold uppercase tracking-wide text-slate
 const inlineLink = "!bg-transparent p-0 text-left text-accent hover:underline";
 
 // The open decision, in the side pane: everything about it, then what else it might be related to
-function DecisionDetail({ slug, motion: m, parent, children, canEdit, canDelete, onEdit, onDelete, onOpen, onClose, finder }) {
+function DecisionDetail({ slug, motion: m, parent, thread, canEdit, canDelete, onEdit, onDelete, onOpen, onClose, finder }) {
   const replaced = isReplaced(m);
   const counts = countLabel(m);
   return (
@@ -125,12 +165,6 @@ function DecisionDetail({ slug, motion: m, parent, children, canEdit, canDelete,
               <Markdown source={m.minority_opinion} className="ev-md" />
             </div>
           )}
-          {children.length > 0 && (
-            <div>
-              <p className={paneLabel}>Motions on it</p>
-              <ul className="space-y-1">{children.map((c) => <Aside key={c.id} m={c} />)}</ul>
-            </div>
-          )}
           {m.warnings?.length > 0 && (
             <ul className="space-y-1 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">{m.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
           )}
@@ -142,17 +176,19 @@ function DecisionDetail({ slug, motion: m, parent, children, canEdit, canDelete,
           {canEdit && <button type="button" onClick={() => onEdit(m)} className={quietButton}><Pencil className="size-4" /> Change</button>}
         </div>
       </Card>
-      <RelatedDecisions key={m.id} motion={m} finder={finder} onOpen={onOpen} />
+      {thread.members.length > 1 && <Card className="p-4"><ThreadCard thread={thread} currentId={m.id} onOpen={onOpen} /></Card>}
+      <RelatedDecisions key={m.id} motion={m} finder={finder} onOpen={onOpen} skip={new Set(thread.members.map((x) => x.motion.id))} />
     </div>
   );
 }
 
 // "Might be related": a similarity ranking over every motion's words, and a pattern search
 // prefilled with this one's most telling words, for when the ranking misses something
-function RelatedDecisions({ motion: m, finder, onOpen }) {
+function RelatedDecisions({ motion: m, finder, onOpen, skip }) {
   const suggested = useMemo(() => finder.index.keyTerms(m.id).join("|"), [finder, m.id]);
   const [pattern, setPattern] = useState(suggested);
-  const similar = useMemo(() => finder.index.related(m.id), [finder, m.id]);
+  // the rest of its own thread is listed above, so it isn't repeated here
+  const similar = useMemo(() => finder.index.related(m.id, { skip }), [finder, m.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const { re, error } = toRegex(pattern);
   const matches = useMemo(() => (re ? finder.motions.filter((o) => o.id !== m.id && re.test(searchableText(o))) : []), [re?.source, finder, m.id]);
   const line = (o, extra) => (
@@ -193,7 +229,8 @@ function RelatedDecisions({ motion: m, finder, onOpen }) {
 
 // The decisions log (/groups/:slug/conscience/decisions): what the group decided, with the count and
 // what it replaced, standing decisions first by kind. The other motions made around them
-// (amendments, tabling, referrals...) are under "Procedure" and inside the motion they applied to.
+// (amendments, tabling, referrals...) are under "Procedure", and nested in the thread of the motion
+// they applied to (see threads.js).
 // Record keepers record and change them, and can type in past ones to backfill the history.
 // Clicking one opens it in a side pane (?open=ID), with the decisions that might be related to it.
 export default function DecisionsView({ group }) {
@@ -212,21 +249,12 @@ export default function DecisionsView({ group }) {
   const [editing, setEditing] = useState(null); // "new" | a motion
   const [selected, setSelected] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
+  const [threadOpen, setThreadOpen] = useState(() => new Map()); // root id -> opened or closed by hand
   const arrived = useRef(false);
 
   // The whole log comes down at once; searching and the related list both work on it here
   const load = useCallback(() => api(`/groups/${slug}/motions`).then(setData).catch((e) => setError(e.message)), [slug]);
   useEffect(() => { load(); }, [load]);
-
-  // Arriving from a link to one decision: show it in the list too, even if the filter would hide it
-  useEffect(() => {
-    if (!openId || !data || arrived.current) return;
-    arrived.current = true;
-    const target = data.motions.find((m) => m.id === openId);
-    if (target && !(isDecision(target) ? filter === "all" || (filter === "standing" && target.standing) : filter === "procedure")) setFilter(isDecision(target) ? "all" : "procedure");
-    setTimeout(() => document.getElementById(`decision-${openId}`)?.scrollIntoView({ block: "center" }), 50);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openId, !!data]);
 
   const open = (id) => {
     setEditing(null);
@@ -239,36 +267,52 @@ export default function DecisionsView({ group }) {
   };
 
   const index = useMemo(() => {
-    const byId = new Map();
-    const kids = new Map();
-    (data?.motions || []).forEach((m) => { byId.set(m.id, m); if (m.parent_id) kids.set(m.parent_id, [...(kids.get(m.parent_id) || []), m]); });
-    return { byId, kids };
+    const byId = new Map((data?.motions || []).map((m) => [m.id, m]));
+    return { byId, ...buildThreads(data?.motions || []) };
   }, [data]);
   const finder = useMemo(() => ({ motions: data?.motions || [], index: relatedIndex(data?.motions || []) }), [data]);
 
+  // Whether one motion is what the filters ask for ("any": only the search and dates). A thread is
+  // listed when any motion in it is.
   const { re: pattern, error: patternError } = usePattern ? toRegex(query) : { re: null, error: null };
-  const shown = useMemo(() => {
-    if (!data) return [];
+  const matcher = useCallback((show) => {
     const monthStart = new Date().toLocaleDateString("en-CA").slice(0, 8) + "01";
     const older = (m) => !!m.decided_on && m.decided_on < monthStart;
     const q = query.trim().toLowerCase();
-    return data.motions.filter((m) => {
+    return (m) => {
       if (usePattern ? pattern && !pattern.test(searchableText(m)) : q && !searchableText(m).toLowerCase().includes(q)) return false;
       if (when === "imported" && !m.imported) return false;
       if (when === "older" && !older(m)) return false;
       if (when === "imported_or_older" && !(m.imported || older(m))) return false;
       if (when === "this_month" && !(m.decided_on && m.decided_on >= monthStart)) return false;
       if (when === "range" && (from || until) && !(m.decided_on && (!from || m.decided_on >= from) && (!until || m.decided_on <= until))) return false;
-      if (filter === "to_check") return m.needs_review;
-      if (filter === "procedure") return !isDecision(m);
+      if (show === "any") return true;
+      if (show === "to_check") return m.needs_review;
+      if (show === "procedure") return !isDecision(m);
       if (!isDecision(m)) return false;
       if (category && m.category !== category) return false;
-      if (filter === "standing") return m.standing;
-      if (filter === "failed") return m.status === "failed";
-      if (filter === "unfinished") return ["tabled", "referred", "postponed"].includes(m.status);
+      if (show === "standing") return m.standing;
+      if (show === "failed") return m.status === "failed";
+      if (show === "unfinished") return ["tabled", "referred", "postponed"].includes(m.status);
       return true;
-    });
-  }, [data, query, usePattern, pattern?.source, filter, category, when, from, until]);
+    };
+  }, [query, usePattern, pattern?.source, category, when, from, until]); // eslint-disable-line react-hooks/exhaustive-deps
+  const matches = useMemo(() => matcher(filter), [matcher, filter]);
+  // In a listed thread, the motions the search or dates leave out are dimmed (the tabs only pick threads)
+  const found = useMemo(() => matcher("any"), [matcher]);
+  const shown = useMemo(() => index.threads.filter((t) => t.members.some((x) => matches(x.motion))), [index, matches]);
+  const narrowed = !!(query.trim() || when);
+
+  // Arriving from a link to one decision: show its thread, open, even if the filter would hide it
+  useEffect(() => {
+    if (!openId || !data || arrived.current) return;
+    arrived.current = true;
+    const target = index.byId.get(openId);
+    const thread = target && index.threads.find((t) => t.members.some((x) => x.motion.id === openId));
+    if (thread && !thread.members.some((x) => matches(x.motion))) setFilter(thread.members.some((x) => isDecision(x.motion)) ? "all" : "procedure");
+    setTimeout(() => document.getElementById(`decision-${openId}`)?.scrollIntoView({ block: "center" }), 50);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId, !!data]);
 
   const remove = async (m) => {
     const note = m.replaces ? ` “${m.replaces.title}” will be standing again.` : "";
@@ -285,8 +329,14 @@ export default function DecisionsView({ group }) {
   if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
   const canEdit = data.can_edit;
   const current = openId ? index.byId.get(openId) : null;
+  const currentThread = current ? index.threads.find((t) => t.members.some((x) => x.motion.id === current.id)) : null;
+  // A thread opens by itself when the open motion is inside it, or a search found something inside it
+  const isOpen = (t) => (threadOpen.has(t.root.id) ? threadOpen.get(t.root.id)
+    : (t === currentThread && current.id !== t.root.id) || (narrowed && t.members.some((x) => x.depth > 0 && matches(x.motion))));
+  const toggleThread = (t) => setThreadOpen((o) => new Map(o).set(t.root.id, !isOpen(t)));
   const toggle = (id, on) => setSelected((s) => { const n = new Set(s); on ? n.add(id) : n.delete(id); return n; });
-  const picked = shown.filter((m) => selected.has(m.id));
+  const listed = shown.flatMap((t) => t.members.map((x) => x.motion).filter(matches));
+  const picked = listed.filter((m) => selected.has(m.id));
   const runBulk = async (action, value) => {
     setBusy(true);
     setError(null);
@@ -312,10 +362,13 @@ export default function DecisionsView({ group }) {
   ];
   const saved = async () => { setEditing(null); await load(); };
   const form = (m) => <DecisionForm key={m?.id || "new"} group={group} motion={m} motions={data.motions} kinds={data.kinds} groups={data.groups} onSaved={saved} onCancel={() => setEditing(null)} />;
-  const row = (m) => (
-    <DecisionRow key={m.id} motion={m} parent={index.byId.get(m.parent_id)} current={m.id === openId} onOpen={open}
+  const row = (m, thread) => (
+    <DecisionRow key={m.id} motion={m} current={m.id === openId} onOpen={open} dim={!found(m)} thread={thread}
       selected={selected.has(m.id)} onSelect={canEdit ? (on) => toggle(m.id, on) : null} />
   );
+  const threadRows = (t) => <ThreadRows key={t.root.id} thread={t} kids={index.kids} open={isOpen(t)} onToggle={() => toggleThread(t)} row={row} />;
+  // A thread goes under the kind of its first motion the filters ask for
+  const threadCategory = (t) => (t.members.find((x) => matches(x.motion)) || t.members[0]).motion.category;
 
   const grouped = filter === "standing" && !query.trim() && !when;
   const decisionsCount = data.motions.filter(isDecision).length;
@@ -370,7 +423,7 @@ export default function DecisionsView({ group }) {
             )}
           </div>
           <ErrorNote error={error} />
-          {canEdit && <BulkBar count={picked.length} total={shown.length} onSelectAll={() => setSelected(new Set(shown.map((m) => m.id)))} onClear={() => setSelected(new Set())} actions={bulkActions} onRun={runBulk} busy={busy} />}
+          {canEdit && <BulkBar count={picked.length} total={listed.length} onSelectAll={() => setSelected(new Set(listed.map((m) => m.id)))} onClear={() => setSelected(new Set())} actions={bulkActions} onRun={runBulk} busy={busy} />}
 
           {shown.length === 0 && (
             <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">
@@ -381,10 +434,10 @@ export default function DecisionsView({ group }) {
           )}
 
           {grouped
-            ? CATEGORIES.filter((c) => shown.some((m) => m.category === c.key)).map((c) => (
-                <Tray key={c.key} label={c.label}><div className="space-y-1.5">{shown.filter((m) => m.category === c.key).map(row)}</div></Tray>
+            ? CATEGORIES.filter((c) => shown.some((t) => threadCategory(t) === c.key)).map((c) => (
+                <Tray key={c.key} label={c.label}><div className="space-y-1.5">{shown.filter((t) => threadCategory(t) === c.key).map(threadRows)}</div></Tray>
               ))
-            : shown.length > 0 && <Tray label={`${shown.length} ${filter === "procedure" ? (shown.length === 1 ? "motion" : "motions") : shown.length === 1 ? "decision" : "decisions"}`}><div className="space-y-1.5">{shown.map(row)}</div></Tray>}
+            : shown.length > 0 && <Tray label={`${listed.length} ${filter === "procedure" ? (listed.length === 1 ? "motion" : "motions") : listed.length === 1 ? "decision" : "decisions"}${shown.length < listed.length ? ` in ${shown.length} ${shown.length === 1 ? "thread" : "threads"}` : ""}`}><div className="space-y-1.5">{shown.map(threadRows)}</div></Tray>}
           {!canEdit && !group.is_member && !group.is_site_admin && decisionsCount > 0 && (
             <p className="text-xs text-slate-500 dark:text-neutral-400">Members see all of the group's decisions.</p>
           )}
@@ -393,7 +446,7 @@ export default function DecisionsView({ group }) {
         {/* The side pane stays in view on its own scroll while the list scrolls past */}
         <aside aria-label="Decision" className={`min-w-0 @4xl:sticky @4xl:top-20 @4xl:max-h-[calc(100dvh-6rem)] @4xl:overflow-y-auto @4xl:overscroll-contain @4xl:rounded-2xl ${paneOpen ? "" : "hidden @4xl:block"}`}>
           {editing ? form(editing === "new" ? null : editing) : current ? (
-            <DecisionDetail slug={slug} motion={current} parent={index.byId.get(current.parent_id)} children={index.kids.get(current.id) || []}
+            <DecisionDetail slug={slug} motion={current} parent={index.byId.get(current.parent_id)} thread={currentThread}
               canEdit={canEdit} canDelete={data.can_delete} onEdit={setEditing} onDelete={remove} onOpen={open} onClose={close} finder={finder} />
           ) : (
             <div className="rounded-2xl border-2 border-dashed border-neutral-200 p-10 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-neutral-400">

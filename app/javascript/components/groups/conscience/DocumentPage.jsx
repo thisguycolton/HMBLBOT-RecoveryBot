@@ -10,6 +10,7 @@ import Markdown, { markdownToHtml } from "../../book/Markdown";
 import { importDocument } from "../../../lib/documentImport";
 import { labelClass, selectClass } from "../../ui/styles";
 import Toggle from "../../ui/Toggle";
+import FilterPick from "../../ui/FilterPick";
 import { api } from "../lib";
 import { ErrorNote, Loading, Message, Pill, dangerButton, primaryButton, quietButton } from "../ui";
 import DocumentToolbar from "./DocumentToolbar";
@@ -17,7 +18,7 @@ import PdfViewer from "./PdfViewer";
 import ShareMenu from "./ShareMenu";
 import { documentExtensions } from "./editorKit";
 import { DynamicValuesBar } from "./hostSection";
-import { FILE_ACCEPT, KIND_INFO, KINDS, VISIBILITIES, VISIBILITY_LABELS, STATUSES, dateLabel, decisionsPath, documentsPath, fileUrl, sizeLabel } from "./lib";
+import { FILE_ACCEPT, KIND_INFO, KINDS, VISIBILITIES, VISIBILITY_LABELS, STATUSES, dateLabel, decisionsPath, documentsPath, fileUrl, motionOptions, sizeLabel } from "./lib";
 
 // The folder's letterhead at the top of the page: its logo or seal, a heading and a line under it
 function Letterhead({ template: t, groupTitle }) {
@@ -361,10 +362,8 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
             {adopters.length > 0 && (
               <div>
                 <label htmlFor="doc-adopted" className={labelClass}>Adopted by</label>
-                <select id="doc-adopted" className={selectClass} value={form.approved_by_motion_id ?? ""} onChange={(e) => change("approved_by_motion_id")(e.target.value)}>
-                  <option value="">Not recorded</option>
-                  {adopters.map((m) => <option key={m.id} value={m.id}>{m.title}{m.decided_on ? ` (${dateLabel(m.decided_on)})` : ""}</option>)}
-                </select>
+                <FilterPick id="doc-adopted" value={form.approved_by_motion_id ?? ""} onChange={change("approved_by_motion_id")} placeholder="Type to find the decision" empty="No decision matches"
+                  options={motionOptions(adopters, "Not recorded")} />
                 <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">The group conscience decision that adopted it, shown under the title.</p>
               </div>
             )}

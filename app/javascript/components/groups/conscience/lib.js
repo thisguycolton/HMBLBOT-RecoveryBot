@@ -82,6 +82,14 @@ export const countLabel = (m) => {
   const parts = [[m.votes_for, "for"], [m.votes_against, "against"], [m.abstentions, "abstained"]].filter(([n]) => n != null);
   return parts.map(([n, word]) => `${n} ${word}`).join(", ");
 };
+// Motions as FilterPick options, newest first as the log lists them; `none` is the empty choice
+export const motionOptions = (motions, none) => [
+  ...(none ? [{ value: "", label: none }] : []),
+  ...motions.map((m) => ({
+    value: String(m.id), label: m.title,
+    hint: [m.kind !== "main" && m.kind_label, m.status !== "passed" && MOTION_STATUS_LABELS[m.status], m.decided_on && dateLabel(m.decided_on)].filter(Boolean).join(" · "),
+  })),
+];
 export const decisionsPath = (slug, open) => `/${slug}/conscience/decisions${open ? `?open=${open}` : ""}`;
 
 export const NAMES_REMINDER = "First names and last initials only.";
