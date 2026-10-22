@@ -9,7 +9,7 @@ class Api::GroupMotionsController < ApplicationController
   skip_before_action :authenticate_user!, only: :index
   before_action :set_viewable_group, only: :index
   before_action :set_group, except: :index
-  before_action :require_keeper, only: %i[create update check bulk]
+  before_action :require_keeper, only: %i[create update check bulk export import]
   before_action :require_manager, only: :destroy
   before_action :set_motion, only: %i[update destroy]
 
@@ -96,6 +96,22 @@ class Api::GroupMotionsController < ApplicationController
       end
     end
     render json: { updated: n }
+  end
+
+  # GET /api/groups/:group_slug/motions/export -> every motion as a RecoveryBot decisions file
+  # (DecisionsJson), for record keepers
+  def export
+    send_data JSON.pretty_generate(DecisionsJson.export(@group)), type: :json, disposition: "attachment",
+                                                                  filename: "#{@group.slug}-decisions.recoverybot.json"
+  end
+
+  # POST /api/groups/:group_slug/motions/import { file: "<the file's text>", dry_run } -> what it
+  # changes, row by row; saved only when dry_run is false and nothing in it has a problem
+  def import
+    dry = params.key?(:dry_run) ? ActiveModel::Type::Boolean.new.cast(params[:dry_run]) : true
+    render json: DecisionsJson.new(@group, params[:file], can_delete: @group.manageable_by?(current_user), user: current_user).run(dry_run: dry)
+  rescue DecisionsJson::Invalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   private

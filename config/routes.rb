@@ -113,6 +113,8 @@ Rails.application.routes.draw do
     resources :motions, controller: "group_motions", only: %i[index create update destroy] do
       post :check, on: :collection
       post :bulk, on: :collection
+      get :export, on: :collection
+      post :import, on: :collection
     end
     resources :documents, controller: "group_documents", only: %i[index show create update destroy] do
       member do
