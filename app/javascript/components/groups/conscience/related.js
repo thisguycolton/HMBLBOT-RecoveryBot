@@ -63,8 +63,15 @@ export function relatedIndex(motions) {
   bags.forEach(({ terms }, id) => {
     const v = new Map();
     let norm = 0;
-    terms.forEach((tf, s) => { const w = (1 + Math.log(tf)) * idf(s); v.set(s, w); norm += w * w; });
-    vectors.set(id, { v, norm: Math.sqrt(norm) || 1 });
+    // stems by their first four letters, so part matches don't compare every pair of words
+    const pre = new Map();
+    terms.forEach((tf, s) => {
+      const w = (1 + Math.log(tf)) * idf(s);
+      v.set(s, w);
+      norm += w * w;
+      if (s.length >= 4) pre.set(s.slice(0, 4), [...(pre.get(s.slice(0, 4)) || []), s]);
+    });
+    vectors.set(id, { v, pre, norm: Math.sqrt(norm) || 1 });
   });
 
   // The motion's rarest words, the ones that say what it's about, as a ready-made pattern
@@ -80,12 +87,12 @@ export function relatedIndex(motions) {
       .map(([s]) => (b.shown.get(s).startsWith(s) ? s : b.shown.get(s)));
   };
 
-  const related = (id, { limit = 8, min = 0.08 } = {}) => {
+  const related = (id, { limit = 8, min = 0.08, skip = null } = {}) => {
     const a = vectors.get(id);
     if (!a) return [];
     const results = [];
     motions.forEach((m) => {
-      if (m.id === id) return;
+      if (m.id === id || skip?.has(m.id)) return;
       const b = vectors.get(m.id);
       let dot = 0;
       const shared = [];
@@ -96,8 +103,9 @@ export function relatedIndex(motions) {
         // part credit for a shared beginning of at least four letters
         let best = 0;
         let bestStem = null;
-        b.v.forEach((w, t) => {
-          if (t.length >= 4 && t !== s && (t.startsWith(s) || s.startsWith(t)) && w > best) { best = w; bestStem = t; }
+        (b.pre.get(s.slice(0, 4)) || []).forEach((t) => {
+          const w = b.v.get(t);
+          if (t !== s && (t.startsWith(s) || s.startsWith(t)) && w > best) { best = w; bestStem = t; }
         });
         if (bestStem) { dot += 0.6 * wa * best; shared.push([s, 0.6 * wa * best]); }
       });
