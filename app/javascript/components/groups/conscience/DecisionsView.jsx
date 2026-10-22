@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ChevronDown, Globe, MessagesSquare, Pencil, Plus, Regex, Search, Trash2, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, Download, Globe, MessagesSquare, Pencil, Plus, Regex, Search, Trash2, Upload, X } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { inputClass, selectClass } from "../../ui/styles";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, dangerButton, linkButton, primaryButton, quietButton } from "../ui";
 import DecisionForm from "./DecisionForm";
+import DecisionsImport from "./DecisionsImport";
 import BulkBar, { RowCheck } from "./BulkBar";
 import { relatedIndex, searchableText, toRegex } from "./related";
 import { buildThreads } from "./threads";
@@ -250,6 +251,9 @@ export default function DecisionsView({ group }) {
   const [selected, setSelected] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const [threadOpen, setThreadOpen] = useState(() => new Map()); // root id -> opened or closed by hand
+  const [importing, setImporting] = useState(null); // { file: { name, text }, preview }
+  const [imported, setImported] = useState(null);
+  const fileInput = useRef(null);
   const arrived = useRef(false);
 
   // The whole log comes down at once; searching and the related list both work on it here
@@ -258,6 +262,7 @@ export default function DecisionsView({ group }) {
 
   const open = (id) => {
     setEditing(null);
+    setImporting(null);
     setParams((p) => { const n = new URLSearchParams(p); n.set("open", id); return n; });
     setTimeout(() => document.getElementById(`decision-${id}`)?.scrollIntoView({ block: "nearest" }), 50);
   };
@@ -326,6 +331,26 @@ export default function DecisionsView({ group }) {
     }
   };
 
+  // A decisions file (Download JSON, changed and brought back): see what it would change first
+  const chooseFile = async (e) => {
+    const picked = e.target.files?.[0];
+    e.target.value = "";
+    if (!picked) return;
+    setError(null);
+    setImported(null);
+    try {
+      const file = { name: picked.name, text: await picked.text() };
+      const preview = await api(`/groups/${slug}/motions/import`, { method: "POST", body: { file: file.text, dry_run: true } });
+      setEditing(null);
+      setImporting({ file, preview });
+    } catch (err) { setError(err.message); }
+  };
+  const importDone = async (result) => {
+    setImporting(null);
+    setImported(`Imported: ${[result.summary.create && `${result.summary.create} new`, result.summary.update && `${result.summary.update} changed`, result.summary.delete && `${result.summary.delete} deleted`].filter(Boolean).join(", ")}.`);
+    await load();
+  };
+
   if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
   const canEdit = data.can_edit;
   const current = openId ? index.byId.get(openId) : null;
@@ -373,7 +398,7 @@ export default function DecisionsView({ group }) {
   const grouped = filter === "standing" && !query.trim() && !when;
   const decisionsCount = data.motions.filter(isDecision).length;
   // On a narrow screen the pane takes the list's place while something is open, like the Topicificator
-  const paneOpen = !!(editing || current);
+  const paneOpen = !!(editing || current || importing);
   return (
     <div className="@container">
       <div className="grid items-start gap-5 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -388,7 +413,18 @@ export default function DecisionsView({ group }) {
                   .*
                 </button>
               </div>
-              {canEdit && <button type="button" onClick={() => setEditing("new")} className={primaryButton}><Plus className="size-4" /> Record a motion</button>}
+              {canEdit && <button type="button" onClick={() => { setImporting(null); setEditing("new"); }} className={primaryButton}><Plus className="size-4" /> Record a motion</button>}
+              {canEdit && (
+                <>
+                  <a href={`/api/groups/${slug}/motions/export`} download className={quietButton} title="Every motion as a RecoveryBot JSON file, to fix and import again">
+                    <Download className="size-4" /> Download JSON
+                  </a>
+                  <button type="button" className={quietButton} onClick={() => fileInput.current?.click()} title="Bring in a decisions file; you'll see every change first">
+                    <Upload className="size-4" /> Import JSON
+                  </button>
+                  <input ref={fileInput} type="file" accept=".json,application/json" className="hidden" onChange={chooseFile} />
+                </>
+              )}
             </div>
             {usePattern && <p className={`text-xs ${patternError ? "text-red-600 dark:text-red-400" : "text-slate-500 dark:text-neutral-400"}`}>{patternError || "Searching with a regular expression, ignoring case, in the title, wording, notes and names."}</p>}
           </div>
@@ -423,6 +459,7 @@ export default function DecisionsView({ group }) {
             )}
           </div>
           <ErrorNote error={error} />
+          {imported && <p className="text-sm text-emerald-700 dark:text-emerald-300">{imported}</p>}
           {canEdit && <BulkBar count={picked.length} total={listed.length} onSelectAll={() => setSelected(new Set(listed.map((m) => m.id)))} onClear={() => setSelected(new Set())} actions={bulkActions} onRun={runBulk} busy={busy} />}
 
           {shown.length === 0 && (
@@ -445,7 +482,9 @@ export default function DecisionsView({ group }) {
 
         {/* The side pane stays in view on its own scroll while the list scrolls past */}
         <aside aria-label="Decision" className={`min-w-0 @4xl:sticky @4xl:top-20 @4xl:max-h-[calc(100dvh-6rem)] @4xl:overflow-y-auto @4xl:overscroll-contain @4xl:rounded-2xl ${paneOpen ? "" : "hidden @4xl:block"}`}>
-          {editing ? form(editing === "new" ? null : editing) : current ? (
+          {importing ? (
+            <DecisionsImport slug={slug} file={importing.file} preview={importing.preview} onDone={importDone} onCancel={() => setImporting(null)} />
+          ) : editing ? form(editing === "new" ? null : editing) : current ? (
             <DecisionDetail slug={slug} motion={current} parent={index.byId.get(current.parent_id)} thread={currentThread}
               canEdit={canEdit} canDelete={data.can_delete} onEdit={setEditing} onDelete={remove} onOpen={open} onClose={close} finder={finder} />
           ) : (

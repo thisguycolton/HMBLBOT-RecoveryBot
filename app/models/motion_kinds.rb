@@ -46,6 +46,8 @@ module MotionKinds
     kind("rescind", "Rescind or amend something already adopted", "bring_back", vote: "rescind", help: "Two thirds, or a majority if notice was given"),
     kind("reconsider", "Reconsider", "bring_back", effect: "proposed", pending: true, help: "Has the vote on a motion taken again"),
     kind("discharge_committee", "Discharge a committee", "bring_back", vote: "rescind"),
+    # Routine: kept with the meeting (under Procedure), never a standing decision
+    kind("accept_report", "Accept minutes, the agenda or a report", "main", help: "Approving last month's minutes, this month's agenda, or the treasurer's, host coordinators' or another service report"),
   ].freeze
 
   BY_KEY = ALL.index_by { |k| k[:key] }.freeze

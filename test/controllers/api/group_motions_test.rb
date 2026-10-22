@@ -155,4 +155,95 @@ class Api::GroupMotionsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [["money", 3], ["all", 5]], @group.reload.page_blocks.map { |b| [b["category"], b["limit"]] }
   end
+
+  test "record keepers download every motion as a decisions file" do
+    get path("export"), as: :json
+    assert_response :unauthorized
+
+    sign_in @member
+    get path("export")
+    assert_response :forbidden
+
+    sign_in @keeper
+    get path("export")
+    assert_response :success
+    assert_match "attachment", response.headers["Content-Disposition"]
+    data = JSON.parse(response.body)
+    assert_equal ["recoverybot-decisions", 1], data.values_at("format", "version")
+    assert_equal ["This meeting is closed", "Send 7th Tradition 60/30/10", "Add a second meeting"], data["decisions"].map { |d| d["title"] }
+    assert_equal [@closed.id, "2025-01-05", 11, "public"], data["decisions"].first.values_at("id", "decided_on", "votes_for", "visibility")
+  end
+
+  test "importing a decisions file shows the changes first, then saves all of them" do
+    meeting = @group.business_meetings.create!(held_on: Date.new(2024, 8, 18), status: "held")
+    sign_in @keeper
+    get path("export")
+    data = JSON.parse(response.body)
+    data["decisions"].find { |d| d["id"] == @closed.id }["title"] = "This meeting is closed to visitors"
+    data["decisions"] << { "ref" => "amend1", "title" => "Amend the closed rule", "kind" => "amend", "parent_id" => @closed.id, "status" => "tabled", "meeting" => "2024-08-18" }
+    data["decisions"] << { "ref" => "accept", "title" => "Accept the treasurer's report", "kind" => "accept_report", "status" => "passed", "meeting" => "2024-08-18", "moved_by" => "Kim B" }
+    data["decisions"] << { "title" => "Open to visitors", "status" => "passed", "decided_on" => "2026-06-01", "supersedes_id" => @closed.id.to_s }
+
+    post path("import"), params: { file: data.to_json, dry_run: true }, as: :json
+    assert_response :success
+    body = response.parsed_body
+    assert body["ok"], body.inspect
+    assert_not body["saved"]
+    assert_equal({ "create" => 3, "update" => 1, "delete" => 0, "unchanged" => 2 }, body["summary"])
+    assert_equal ["This meeting is closed", "This meeting is closed to visitors"], body["rows"].first["changes"]["title"]
+    assert_equal "This meeting is closed", @closed.reload.title, "a preview saves nothing"
+    assert_equal 3, @group.motions.count
+
+    post path("import"), params: { file: data.to_json, dry_run: false }, as: :json
+    assert response.parsed_body["saved"]
+    assert_equal "This meeting is closed to visitors", @closed.reload.title
+    amend = @group.motions.find_by!(title: "Amend the closed rule")
+    assert_equal [@closed.id, meeting.id, Date.new(2024, 8, 18), true], [amend.parent_id, amend.business_meeting_id, amend.decided_on, amend.imported]
+    assert_not @group.motions.find_by!(title: "Accept the treasurer's report").decision?, "routine approvals stay out of the log"
+    assert_equal @closed.id, @group.motions.find_by!(title: "Open to visitors").supersedes_id
+    assert_not_includes @group.motions.standing.pluck(:id), @closed.id
+  end
+
+  test "a new decision can point at another new one by its ref" do
+    sign_in @keeper
+    file = { format: "recoverybot-decisions", version: 1, decisions: [
+      { ref: "a", title: "Amend it", kind: "amend", parent_id: "b", status: "proposed" },
+      { ref: "b", title: "Ban political artifacts", status: "passed", decided_on: "2024-06-16" },
+    ] }
+    post path("import"), params: { file: file.to_json, dry_run: false }, as: :json
+    assert response.parsed_body["saved"], response.parsed_body.inspect
+    assert_equal @group.motions.find_by!(title: "Ban political artifacts").id, @group.motions.find_by!(title: "Amend it").parent_id
+  end
+
+  test "one problem in the file saves nothing, and says where" do
+    sign_in @keeper
+    file = { format: "recoverybot-decisions", version: 1, decisions: [
+      { id: @money.id, title: "Send it 50/50" },
+      { id: 999_999, title: "Ghost" },
+      { title: "No meeting", status: "passed", decided_on: "2024-01-01", meeting: "2024-01-01" },
+      { id: @failed.id, delete: true },
+    ] }
+    post path("import"), params: { file: file.to_json, dry_run: false }, as: :json
+    body = response.parsed_body
+    assert_not body["ok"]
+    assert_not body["saved"]
+    errors = body["rows"].to_h { |r| [r["index"], r["errors"]] }
+    assert_match "no decision 999999", errors[1].join
+    assert_match "no business meeting", errors[2].join
+    assert_match "admins", errors[3].join
+    assert_equal "Send 7th Tradition 60/30/10", @money.reload.title
+    assert @group.motions.exists?(@failed.id)
+  end
+
+  test "group admins can delete decisions from a file; a file that isn't one is refused" do
+    sign_in @leader
+    post path("import"), params: { file: { format: "recoverybot-decisions", version: 1, decisions: [{ id: @failed.id, delete: true }] }.to_json, dry_run: false }, as: :json
+    assert response.parsed_body["saved"]
+    assert_not @group.motions.exists?(@failed.id)
+
+    post path("import"), params: { file: "{nope" }, as: :json
+    assert_response :unprocessable_entity
+    post path("import"), params: { file: { format: "recoverybot-document" }.to_json }, as: :json
+    assert_match "isn't a RecoveryBot decisions file", response.parsed_body["error"]
+  end
 end
