@@ -25,10 +25,10 @@
             min-height: auto !important;
           }
 
-          p {
-  font-family: "Gentium Book Plus", serif !important;
-  font-optical-sizing: auto;
-}
+          .reading-prose p {
+            font-family: "Gentium Book Plus", serif !important;
+            font-optical-sizing: auto;
+          }
         </style>
 
         <div id="reading-show-root" class="w-screen min-h-screen" data-reading="<%= json_escape({
@@ -46,5 +46,7 @@
         topic_html: @reading.topic&.body&.to_s,
         tags: @reading.tags.order(:title).map { |tag|
           { id: tag.id, title: tag.title, slug: tag.slug }
-        }
+        },
+        group: reading_group_link(@reading, current_user),
+        host_url: reading_host_url(@reading, current_user)
       }.to_json) %>" data-current-user="<%= json_escape(current_user ? { id: current_user.id }.to_json : '{}') %>"></div>
