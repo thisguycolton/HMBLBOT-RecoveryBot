@@ -1,11 +1,13 @@
 module ReadingsHelper
-  # The reading's group, as its page shows it: { name, url }, or nil when it has none the
-  # viewer can see
+  # The reading's group, as its page shows it: { name, url, logo_url, cover_url }, or nil
+  # when it has none the viewer can see
   def reading_group_link(reading, user)
     group = reading.group
     return unless group&.page_visible_to?(user)
 
-    { name: group.title.to_s, url: "/groups/#{group.slug}" }
+    { name: group.title.to_s, url: "/groups/#{group.slug}",
+      logo_url: group.logo.attached? ? rails_storage_proxy_path(group.logo, only_path: true) : nil,
+      cover_url: group.cover.attached? ? rails_storage_proxy_path(group.cover, only_path: true) : nil }
   end
 
   # The Hosting Command Center for the reading's meeting, for someone who can host it: the

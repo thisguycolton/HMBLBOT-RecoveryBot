@@ -244,6 +244,7 @@ const topicHtml = renderRichContent(topicSource);
 
   const group = reading.group;
   const hostUrl = reading.host_url;
+  const coverUrl = group?.cover_url;
   const signedIn = currentUserId != null;
   const hasTopics = String(topicHtml).replace(/<[^>]*>|&nbsp;/g, "").trim().length > 0;
 
@@ -258,8 +259,16 @@ const topicHtml = renderRichContent(topicSource);
       />
       <div className="min-h-screen w-full bg-stone-50 text-slate-900 dark:bg-neutral-900 dark:text-neutral-100">
         {/* HERO */}
-        <section className="bg-gradient-to-r from-sky-600 to-sky-800 text-white">
+        {/* The group's cover photo (as on its page), else the site's blue */}
+        <section className={`relative overflow-hidden text-white ${coverUrl ? "bg-neutral-900" : "bg-gradient-to-r from-sky-600 to-sky-800"}`}>
+          {coverUrl && <img src={coverUrl} alt="" className="absolute inset-0 size-full object-cover" />}
+          <div className={`relative ${coverUrl ? "bg-gradient-to-t from-black/85 via-black/55 to-black/30" : ""}`}>
           <div className="mx-auto max-w-3xl px-5 py-8 md:py-12">
+            {group?.logo_url && (
+              <a href={group.url} className="mb-4 inline-block" title={`${group.name}'s group page`}>
+                <img src={group.logo_url} alt={group.name} className="size-14 rounded-[28%] object-cover shadow-lg ring-2 ring-white/70 md:size-16" />
+              </a>
+            )}
             <div className="text-xs font-semibold uppercase tracking-widest text-sky-100/90">
               Meeting reading
               {group && (
@@ -358,6 +367,7 @@ const topicHtml = renderRichContent(topicSource);
                 </button>
               )}
             </div>
+          </div>
           </div>
         </section>
 
