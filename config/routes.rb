@@ -120,9 +120,11 @@ Rails.application.routes.draw do
       member do
         get :file
         get :versions
+        get "versions/:version_id", action: :version
         post "versions/:version_id/restore", action: :restore
       end
       post :bulk, on: :collection
+      resources :comments, controller: "group_document_comments", only: %i[index create update destroy]
     end
     resource :page, controller: "group_pages", only: %i[show update] do
       post :images

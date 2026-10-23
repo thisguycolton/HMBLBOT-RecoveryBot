@@ -221,3 +221,25 @@
 /* A filled table cell keeps dark text on its light fill on the dark page too */
 @media screen { .doc-dark .doc-prose td[style*="background-color"], .doc-dark .doc-prose th[style*="background-color"] { color: #0f172a; } }
 .doc-letterhead--right { flex-direction: row-reverse; text-align: right; }
+
+/* Version history's diff (DocumentHistory.jsx, lib/documentDiff.js): words added and taken out,
+   and a bar beside each block that changed */
+.doc-diff ins, .doc-diff-ins { background: #dcfce7; border-radius: 3px; color: #166534; padding: 0 1px; text-decoration: none; }
+.doc-diff del, .doc-diff-del { background: #fee2e2; border-radius: 3px; color: #991b1b; padding: 0 1px; text-decoration: line-through; text-decoration-color: rgb(153 27 27 / 0.5); }
+.doc-diff-changed, .doc-diff-added, .doc-diff-removed { border-left: 3px solid #f59e0b; margin-left: -15px; padding-left: 12px; position: relative; }
+.doc-diff-added { background: #f0fdf4; border-color: #22c55e; }
+.doc-diff-removed { background: #fef2f2; border-color: #ef4444; color: #991b1b; text-decoration: line-through; text-decoration-color: rgb(153 27 27 / 0.4); }
+.doc-diff-changed[data-note]::after { color: #b45309; content: attr(data-note); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-weight: 600; }
+.doc-diff table { margin: 0; }
+.doc-diff-summary { font-weight: 600; }
+.doc-diff-summary::before { content: "▸ "; }
+.doc-dark .doc-diff ins, .doc-dark .doc-diff-ins { background: rgb(22 101 52 / 0.45); color: #bbf7d0; }
+.doc-dark .doc-diff del, .doc-dark .doc-diff-del { background: rgb(153 27 27 / 0.45); color: #fecaca; }
+.doc-dark .doc-diff-added { background: rgb(22 101 52 / 0.18); }
+.doc-dark .doc-diff-removed { background: rgb(153 27 27 / 0.18); color: #fecaca; }
+
+/* Words a comment is about (commentAnchors.js), underlined while the Comments pane is open */
+.doc-comments-on .doc-comment-anchor { background: rgb(254 243 199 / 0.7); border-bottom: 2px solid #f59e0b; cursor: pointer; }
+.doc-comments-on .doc-comment-anchor.is-active { background: #fde68a; }
+.doc-dark .doc-comments-on .doc-comment-anchor { background: rgb(180 83 9 / 0.3); }
+.doc-dark .doc-comments-on .doc-comment-anchor.is-active { background: rgb(180 83 9 / 0.55); }
