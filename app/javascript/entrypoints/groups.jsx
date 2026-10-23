@@ -25,6 +25,7 @@ import IntergroupPage from "../components/groups/page/IntergroupPage";
 import GroupPageEditor from "../components/groups/page/GroupPageEditor";
 import CommandCenter from "../components/groups/hosting/CommandCenter";
 import DeckPage from "../components/groups/hosting/deck/DeckPage";
+import GuestDeck from "../components/groups/hosting/deck/GuestDeck";
 import GuestPostings from "../components/groups/hosting/GuestPostings";
 import HostingIndex from "../components/groups/hosting/HostingIndex";
 import ServiceReadingShare from "../components/groups/hosting/ServiceReadingShare";
@@ -52,6 +53,8 @@ const router = createBrowserRouter(
     { path: "/:slug/host/:meetingId", element: <CommandCenter /> },
     // A HostDeck of its own (a business meeting's, onboarding...), the whole window as well
     { path: "/:slug/decks/:deckId", element: <DeckPage /> },
+    // A shared deck followed without an account (its /h/CODE link), read-only
+    { path: "/:slug/view/:code", element: <GuestDeck /> },
     // A service reading on its own, to share that window in Zoom
     { path: "/:slug/share/service-reading/:id", element: <ServiceReadingShare /> },
     // What a hosting short link (/h/CODE) shows anyone else: the chat postings

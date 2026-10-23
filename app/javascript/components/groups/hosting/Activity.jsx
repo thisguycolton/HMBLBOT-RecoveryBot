@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { BookMarked, BookOpen, CalendarDays, Dices, ExternalLink, Hash, Maximize2, Mic, Plus, Repeat, RefreshCw, Shuffle, Sparkles, TriangleAlert, Wind, X } from "lucide-react";
+import { BookMarked, BookOpen, CalendarDays, Clipboard, ClipboardCheck, Dices, ExternalLink, Hash, Maximize2, Mic, Monitor, Plus, Repeat, RefreshCw, Shuffle, Sparkles, Timer, TriangleAlert, UserCheck, Wind, X } from "lucide-react";
 import { api } from "../lib";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import { ErrorNote, Loading, primaryButton, quietButton } from "../ui";
 import FilterPick from "../../ui/FilterPick";
-import { ACTIVITY_TITLE, activityLabel, chapterHtml, readerHref } from "./lib";
+import { ACTIVITY_TITLE, activityLabel, chapterHtml, copyText, readerHref } from "./lib";
 
 const label = "!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
 const KIND_ICONS = { reading: BookOpen, my_reading: BookMarked, daily: CalendarDays, topics: Dices, speaker: Mic, meditation: Wind, other: Sparkles };
@@ -58,7 +58,7 @@ export default function ActivityPanel({ center, live, act, size }) {
         </>
       )}
       {activity.kind === "my_reading" && <MyReading center={center} activity={activity} size={size} />}
-      {activity.kind === "topics" && <Topics activity={activity} act={act} size={size} />}
+      {activity.kind === "topics" && <Topics center={center} live={live} activity={activity} act={act} size={size} />}
       {["speaker", "meditation", "other"].includes(activity.kind) && (
         <>
           {activity.title && <h2 className="mt-5 text-xl font-bold sm:text-2xl">{activity.title}</h2>}
@@ -69,11 +69,43 @@ export default function ActivityPanel({ center, live, act, size }) {
   );
 }
 
-// Topics drawn from a Topicificator set, the latest one big, for both hosts
-function Topics({ activity, act, size }) {
+// Seconds to pick from for the Topicificator's timer
+const TIMER_CHOICES = [60, 120, 180, 300, 600];
+const minutesLabel = (seconds) => (seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} sec`);
+
+// The live Topicificator page (/topicificator?live=CODE): the real page, in its own window to share
+// in Zoom, which shows what's up here and is run from here. It says when it's connected.
+function LiveWindow({ code, connected }) {
+  const [copied, setCopied] = useState(false);
+  if (!code) return null;
+  const href = `/topicificator?live=${encodeURIComponent(code)}`;
+  const open = () => window.open(href, "topicificator-live", "popup,width=1280,height=800");
+  const copy = () => copyText(`${window.location.origin}${href}`).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  return (
+    <div className="mt-4 rounded-xl bg-white p-3 shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
+      <div className="flex flex-wrap items-center gap-2">
+        <Monitor className="size-4 shrink-0 text-slate-500" />
+        <p className="min-w-0 flex-1 text-sm font-semibold">Live Topicificator window</p>
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${connected ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200" : "bg-neutral-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300"}`}>
+          <span className={`size-2 rounded-full ${connected ? "animate-pulse bg-emerald-500" : "bg-slate-400"}`} /> {connected ? "Connected" : "Not open"}
+        </span>
+        <button type="button" className={`${quietButton} !px-2.5 !py-1 !text-xs`} onClick={open}><Maximize2 className="size-3.5" /> {connected ? "Open again" : "Open to share"}</button>
+        <button type="button" className={`${quietButton} !px-2.5 !py-1 !text-xs`} onClick={copy} title="For another screen or device">{copied ? <><ClipboardCheck className="size-3.5" /> Copied</> : <><Clipboard className="size-3.5" /> Copy link</>}</button>
+      </div>
+      <p className="mt-1.5 text-xs text-slate-500 dark:text-neutral-400">The real Topicificator page, in its own window to share in Zoom. It shows whatever you draw below and its timer; you run it from here.</p>
+    </div>
+  );
+}
+
+// Topics drawn from a Topicificator set, the one on screen big, for both hosts. What's here is
+// what the live Topicificator window shows (LiveWindow).
+function Topics({ center, live, activity, act, size }) {
   const [number, setNumber] = useState("");
   const topics = activity.topics || [];
-  const latest = topics[topics.length - 1];
+  const free = activity.shown === "free";
+  const current = free ? null : topics.find((t) => String(t.id) === String(activity.shown)) || topics[topics.length - 1];
+  const seconds = activity.timer_seconds || 180;
+  const choices = TIMER_CHOICES.includes(seconds) ? TIMER_CHOICES : [...TIMER_CHOICES, seconds].sort((a, b) => a - b);
   const byNumber = (e) => {
     e.preventDefault();
     if (!number.trim()) return;
@@ -82,34 +114,52 @@ function Topics({ activity, act, size }) {
   };
   return (
     <div className="mt-5">
-      {latest ? (
+      {free ? (
         <div className="rounded-2xl bg-white p-5 text-center shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
-          {latest.number && <p className={label}>Topic {latest.number}</p>}
-          <p className="mt-1 font-bold" style={{ fontSize: Math.round(size * 1.6) }}>{latest.title}</p>
-          {latest.subtitle && <p className="mt-2 text-slate-600 dark:text-neutral-300" style={{ fontSize: size }}>{latest.subtitle}</p>}
+          <p className="font-bold" style={{ fontSize: Math.round(size * 1.6) }}>Free Share / Check-In</p>
+          <p className="mt-2 text-slate-600 dark:text-neutral-300" style={{ fontSize: size }}>What is happening in your sobriety?</p>
+        </div>
+      ) : current ? (
+        <div className="rounded-2xl bg-white p-5 text-center shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
+          {current.number && <p className={label}>Topic {current.number}</p>}
+          <p className="mt-1 font-bold" style={{ fontSize: Math.round(size * 1.6) }}>{current.title}</p>
+          {current.subtitle && <p className="mt-2 text-slate-600 dark:text-neutral-300" style={{ fontSize: size }}>{current.subtitle}</p>}
         </div>
       ) : (
         <p className="text-sm text-slate-600 dark:text-neutral-300">Draw a topic from {activity.topic_set_name || "the set"}, at random or by its number.</p>
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button type="button" className={primaryButton} onClick={() => act("draw_topic")}><Shuffle className="size-4" /> {latest ? "Draw another" : "Draw a topic"}</button>
+        <button type="button" className={primaryButton} onClick={() => act("draw_topic")}><Shuffle className="size-4" /> {current || free ? "Draw another" : "Draw a topic"}</button>
         <form onSubmit={byNumber} className="flex items-center gap-1.5">
           <label htmlFor="topic-number" className="sr-only">Topic number</label>
           <input id="topic-number" inputMode="numeric" className={`${inputClass} !w-24`} value={number} onChange={(e) => setNumber(e.target.value)} placeholder="Number" />
           <button type="submit" className={quietButton} disabled={!number.trim()}><Hash className="size-4" /> Pick</button>
         </form>
-        <a href="/topicificator" target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline">Open the Topicificator</a>
+        <button type="button" className={quietButton} onClick={() => act("topic_show", { index: "free" })} aria-pressed={free}><UserCheck className="size-4" /> Free share</button>
       </div>
-      {topics.length > 1 && (
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Timer className="size-4 text-slate-500" />
+        <label htmlFor="topic-timer" className="sr-only">Timer length</label>
+        <select id="topic-timer" className={`${selectClass} !w-auto`} value={seconds} onChange={(e) => act("topic_timer", { data: { op: "set", value: e.target.value } })}>
+          {choices.map((n) => <option key={n} value={n}>{minutesLabel(n)}</option>)}
+        </select>
+        <button type="button" className={quietButton} onClick={() => act("topic_timer", { data: { op: "restart" } })}><RefreshCw className="size-4" /> Restart</button>
+        <button type="button" className={quietButton} onClick={() => act("topic_timer", { data: { op: "stop" } })} disabled={!activity.timer_started_at}>Stop</button>
+      </div>
+      <LiveWindow code={center.link?.code} connected={!!live.topicificator_connected} />
+      {topics.length > 0 && (
         <div className="mt-4">
           <p className={`${label} mb-1.5`}>Drawn today</p>
           <ul className="flex flex-wrap gap-1.5">
-            {topics.slice(0, -1).reverse().map((t) => (
-              <li key={t.id} className="inline-flex items-center gap-1 rounded-full bg-neutral-200 py-0.5 pl-2.5 pr-1 text-sm text-slate-700 dark:bg-neutral-800 dark:text-neutral-200">
-                {t.title}
-                <button type="button" aria-label={`Take ${t.title} off`} className="inline-grid size-5 place-items-center rounded-full !bg-transparent text-slate-500 hover:text-rose-600" onClick={() => act("drop_topic", { index: t.id })}><X className="size-3" /></button>
-              </li>
-            ))}
+            {[...topics].reverse().map((t) => {
+              const on = !free && current && t.id === current.id;
+              return (
+                <li key={t.id} className={`inline-flex items-center gap-1 rounded-full py-0.5 pl-2.5 pr-1 text-sm ${on ? "bg-accent/15 font-semibold text-accent dark:bg-accent/25 dark:text-sky-200" : "bg-neutral-200 text-slate-700 dark:bg-neutral-800 dark:text-neutral-200"}`}>
+                  <button type="button" className="!bg-transparent !p-0 text-inherit hover:underline" title="Put this topic back on screen" onClick={() => act("topic_show", { index: t.id })}>{t.title}</button>
+                  <button type="button" aria-label={`Take ${t.title} off`} className="inline-grid size-5 place-items-center rounded-full !bg-transparent text-slate-500 hover:text-rose-600" onClick={() => act("drop_topic", { index: t.id })}><X className="size-3" /></button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

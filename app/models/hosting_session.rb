@@ -4,7 +4,7 @@
 # every change bumps `version`. Kept after the meeting, it's the Time Capsule's record of that day.
 # The meeting timer runs from the meeting's start time, in the page (timer_* columns are unused).
 class HostingSession < ApplicationRecord
-  ACTS = %w[goto complete uncomplete posted unposted activity clear_activity draw_topic drop_topic
+  ACTS = %w[goto complete uncomplete posted unposted activity clear_activity draw_topic drop_topic topic_show topic_timer
             service milestone_add milestone_update milestone_remove milestone_move block clock_start clock_reset reset].freeze
   LOG_SIZE = 30
   # What fills the script's reading / activity spot: a chapter from the literature, one of the
@@ -17,6 +17,11 @@ class HostingSession < ApplicationRecord
   # The key a my_reading activity's chat posting is kept under in `posted` (it isn't a HostChatPosting)
   POSTED_READING = "reading"
   MAX_TOPICS = 20
+  # The Topicificator's timer, as its own page has it: three minutes unless the host sets another
+  TOPIC_SECONDS = 180
+  TOPIC_SECONDS_RANGE = (10..7200)
+  # A live Topicificator window (/topicificator?live=CODE) asks every couple of seconds
+  WINDOW_AWAY = 10.seconds
   MAX_MILESTONES = 40
   # The short link's code: no 0/O, 1/I/L to mix up when it's read out
   CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789".chars.freeze
@@ -34,7 +39,7 @@ class HostingSession < ApplicationRecord
   def self.new_code
     loop do
       code = Array.new(CODE_LENGTH) { CODE_CHARS.sample(random: SecureRandom) }.join
-      return code unless exists?(code: code)
+      return code unless exists?(code: code) || Deck.exists?(share_code: code)
     end
   end
 
@@ -53,6 +58,7 @@ class HostingSession < ApplicationRecord
     with_lock do
       # topics are drawn only into a Topicificator activity
       act = nil if act == "draw_topic" && (activity&.dig("kind") != "topics" || topic.nil?)
+      act = nil if act.in?(%w[topic_show topic_timer]) && activity&.dig("kind") != "topics"
       did = case act
             when "goto"
               self.section_index = [index.to_i, 0].max
@@ -85,7 +91,7 @@ class HostingSession < ApplicationRecord
               "Took the reading / activity off"
             when "draw_topic"
               drawn = { "id" => topic.id, "title" => topic.title.to_s, "subtitle" => topic.subtitle.presence, "number" => topic.searchable_number.presence }.compact
-              self.activity = activity.merge("topics" => (Array(activity["topics"]) + [drawn]).last(MAX_TOPICS))
+              self.activity = activity.merge("topics" => (Array(activity["topics"]) + [drawn]).last(MAX_TOPICS), "shown" => drawn["id"].to_s, "timer_started_at" => now.iso8601(3))
               "Drew the topic #{topic.title.to_s.squish.first(60)}"
             when "service"
               key = index.to_s.downcase.gsub(/[^a-z0-9_]/, "").first(40)
@@ -125,7 +131,29 @@ class HostingSession < ApplicationRecord
               self.timer_started_at = nil
               nil
             when "drop_topic"
-              self.activity = activity.merge("topics" => Array(activity&.dig("topics")).reject { |t| t["id"].to_s == index.to_s }) if activity
+              if activity
+                dropped = activity.merge("topics" => Array(activity["topics"]).reject { |t| t["id"].to_s == index.to_s })
+                dropped.delete("shown") if dropped["shown"].to_s == index.to_s
+                self.activity = dropped
+              end
+              nil
+            # Bring a topic drawn earlier back on screen, or the free share / check-in (index "free"),
+            # and start its timer over
+            when "topic_show"
+              shown = index.to_s == "free" ? "free" : Array(activity["topics"]).find { |t| t["id"].to_s == index.to_s }&.dig("id")&.to_s
+              if shown
+                self.activity = activity.merge("shown" => shown, "timer_started_at" => now.iso8601(3))
+                shown == "free" ? "Put up the free share / check-in" : "Went back to #{Array(activity["topics"]).find { |t| t["id"].to_s == shown }&.dig("title").to_s.squish.first(60)}"
+              end
+            # The timer: `data["op"]` "restart", "stop", or "set" (with `data["value"]`, seconds; starts it over)
+            when "topic_timer"
+              case data["op"]
+              when "stop" then self.activity = activity.except("timer_started_at")
+              when "set"
+                seconds = data["value"].to_i
+                self.activity = activity.merge("timer_seconds" => seconds, "timer_started_at" => now.iso8601(3)) if TOPIC_SECONDS_RANGE.cover?(seconds)
+              else self.activity = activity.merge("timer_started_at" => now.iso8601(3))
+              end
               nil
             end
       self.log = (log + [{ "by" => user.display_name, "user_id" => user.id, "text" => did, "at" => now.iso8601 }]).last(LOG_SIZE) if did
@@ -221,15 +249,42 @@ class HostingSession < ApplicationRecord
     {
       version: version, section_index: section_index, completed: completed, posted: posted, log: log.last(12).reverse, activity: live_activity,
       service: service, milestones: milestones, block_state: block_state, clock_started_at: timer_started_at&.iso8601(3),
-      server_now: now.iso8601(3),
+      server_now: now.iso8601(3), topicificator_connected: topicificator_connected?(now),
       presences: presences.includes(:user).select { |p| p.last_seen_at > HostingPresence::AWAY.ago }.sort_by { |p| p.created_at }.map { |p| p.as_api_json(viewer) },
     }
+  end
+
+  # What someone following a shared deck without an account sees (Api::DeckLinksController):
+  # where the hosts are, what's ticked off and the blocks' state, but not who's here, the hosts'
+  # log, or the names of the people who ticked things off
+  def guest_live_json(now = Time.current)
+    shown = block_state.transform_values do |state|
+      state.is_a?(Hash) && state["done"].is_a?(Hash) ? state.merge("done" => state["done"].transform_values { |v| v.is_a?(Hash) ? v.slice("at") : v }) : state
+    end
+    { version: version, section_index: section_index, completed: completed, posted: {}, log: [], activity: nil, service: {}, milestones: [], block_state: shown,
+      clock_started_at: timer_started_at&.iso8601(3), server_now: now.iso8601(3), presences: [] }
   end
 
   # What the short link shows people without an account, next to the chat postings: which went
   # out and the names that fill them in, but not the hosts' log or who's celebrating
   def public_json(now = Time.current)
     { version: version, posted: posted, activity: live_activity, service: service, server_now: now.iso8601(3) }
+  end
+
+  def topicificator_connected?(now = Time.current) = !!topicificator_seen_at && topicificator_seen_at > now - WINDOW_AWAY
+
+  # What the live Topicificator window shows (GET /api/topicificator_links/:code): the topic on
+  # screen (or the free share), its timer, and what's been drawn. `server_now` lets the window
+  # count down on the server's clock. Nothing here but what the Topicificator page shows anyway.
+  def topicificator_json(now = Time.current)
+    a = activity
+    return { active: false, version: version, server_now: now.iso8601(3) } unless a&.dig("kind") == "topics"
+
+    topics = Array(a["topics"])
+    free = a["shown"] == "free"
+    current = free ? { "title" => "Free Share / Check-In", "subtitle" => "What is happening in your sobriety?" } : topics.find { |t| t["id"].to_s == a["shown"].to_s } || topics.last
+    { active: true, version: version, free: free, topic: current, covered: topics.map { |t| t.slice("id", "title", "subtitle") }, set_name: a["topic_set_name"],
+      timer: { seconds: a["timer_seconds"].to_i.nonzero? || TOPIC_SECONDS, started_at: a["timer_started_at"] }, server_now: now.iso8601(3) }
   end
 
   # The activity as it stands now: a reading of the hosts' own is published or not by its

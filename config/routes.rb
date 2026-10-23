@@ -48,6 +48,10 @@ Rails.application.routes.draw do
 
   resources :text_reports, only: :create
   get "hosting_links/:code", to: "hosting_links#show"
+  # A shared HostDeck of its own, followed without an account; the live Topicificator window
+  get "deck_links/:code", to: "deck_links#show"
+  get "deck_links/:code/live", to: "deck_links#live"
+  get "topicificator_links/:code", to: "topicificator_links#show"
   resources :site_notices, only: :index
   resource :profile, only: %i[show update destroy]
   resources :push_subscriptions, only: %i[index create destroy] do
@@ -110,6 +114,7 @@ Rails.application.routes.draw do
         put :arrangement
         post :ping
         post :act
+        post :reshare
       end
     end
     resources :host_sub_requests, controller: "group_host_sub_requests", only: %i[create destroy] do

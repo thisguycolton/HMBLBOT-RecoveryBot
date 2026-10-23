@@ -11,7 +11,7 @@ class Api::DecksController < ApplicationController
   before_action :set_group
   before_action :require_member
   before_action :set_deck, except: %i[index create]
-  before_action :require_editor, only: %i[create update destroy arrangement]
+  before_action :require_editor, only: %i[create update destroy arrangement reshare]
 
   # GET /api/groups/:group_slug/decks?document_id=: the group's decks (run from that document);
   # with a document, also the meetings whose script it is
@@ -29,7 +29,7 @@ class Api::DecksController < ApplicationController
     render json: json
   end
 
-  # POST /api/groups/:group_slug/decks { deck: { name, purpose, script_document_id, intro_title } }
+  # POST /api/groups/:group_slug/decks { deck: { name, purpose, script_document_id, intro_title, guest_access, guest_script } }
   def create
     deck = @group.decks.new(deck_params.merge(created_by: current_user))
     deck.save ? render(json: deck.as_list_json, status: :created) : render_errors(deck)
@@ -40,7 +40,7 @@ class Api::DecksController < ApplicationController
     render json: center
   end
 
-  # PATCH /api/groups/:group_slug/decks/:id { deck: { name, purpose, script_document_id, intro_title } }
+  # PATCH /api/groups/:group_slug/decks/:id { deck: { name, purpose, script_document_id, intro_title, guest_access, guest_script } }
   def update
     @deck.update(deck_params) ? render(json: DeckCenter.new(@deck.reload, current_user)) : render_errors(@deck)
   end
@@ -54,6 +54,12 @@ class Api::DecksController < ApplicationController
   # PUT /api/groups/:group_slug/decks/:id/arrangement { arrangement }
   def arrangement
     @deck.update!(arrangement: params.require(:arrangement).permit!.to_h)
+    render json: DeckCenter.new(@deck.reload, current_user)
+  end
+
+  # POST /api/groups/:group_slug/decks/:id/reshare: a new share link; the old one stops working
+  def reshare
+    @deck.reshare!
     render json: DeckCenter.new(@deck.reload, current_user)
   end
 
@@ -92,7 +98,7 @@ class Api::DecksController < ApplicationController
   def center = @center ||= DeckCenter.new(@deck, current_user)
 
   def deck_params
-    attrs = params.require(:deck).permit(:name, :purpose, :script_document_id, :intro_title)
+    attrs = params.require(:deck).permit(:name, :purpose, :script_document_id, :intro_title, :guest_access, :guest_script)
     attrs[:script_document_id] = @group.documents.find_by(id: attrs[:script_document_id])&.id if attrs.key?(:script_document_id)
     attrs
   end
