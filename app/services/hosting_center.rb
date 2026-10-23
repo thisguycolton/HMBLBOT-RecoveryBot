@@ -182,6 +182,7 @@ class HostingCenter
       postings: kit ? kit.postings.map(&:as_api_json) : [],
       readings: kit ? kit.readings : [],
       activity_anchor: kit&.activity_anchor,
+      intro_title: kit&.intro_title,
       service_roles: kit ? kit.roles : HostingKit::DEFAULT_SERVICE_ROLES,
       custom_service_roles: kit&.service_roles.present?,
       allowed_values: kit&.allowed_values,

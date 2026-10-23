@@ -73,7 +73,14 @@ class Api::DecksTest < ActionDispatch::IntegrationTest
 
     post path(deck.id, "act"), params: { act: "clock_start" }, as: :json
     assert response.parsed_body["clock_started_at"]
-    post path(deck.id, "act"), params: { act: "milestone_add", data: { name: "Kim" } }, as: :json
+    # a deck has milestones too (its Milestones form block), but no reading / activity
+    post path(deck.id, "act"), params: { act: "milestone_add", data: { name: "Kim", length: "30 days" } }, as: :json
+    assert_response :success
+    kim = response.parsed_body["milestones"].sole
+    assert_equal ["Kim", "30 days"], kim.values_at("name", "length")
+    post path(deck.id, "act"), params: { act: "milestone_update", data: { id: kim["id"], done: true } }, as: :json
+    assert response.parsed_body["milestones"].sole["done"]
+    post path(deck.id, "act"), params: { act: "activity", activity: { kind: "other", title: "Hi" } }, as: :json
     assert_response :unprocessable_entity
 
     session = deck.sessions.sole
@@ -84,6 +91,32 @@ class Api::DecksTest < ActionDispatch::IntegrationTest
     assert_empty response.parsed_body.dig("block_state", "list", "done")
 
     assert_raises(ActiveRecord::RecordInvalid) { HostingSession.create!(meeting: @meeting, deck: deck, on: Date.current) }
+  end
+
+  test "Reset takes a deck back to its first section with nothing ticked off, and keeps what was filled in" do
+    deck = @group.decks.create!(name: "Onboarding", purpose: "onboarding", script_document: @doc, created_by: @keeper, arrangement: ARRANGEMENT)
+    sign_in @member
+    post path(deck.id, "act"), params: { act: "complete", index: 0, label: "Old business" }, as: :json
+    post path(deck.id, "act"), params: { act: "goto", index: 1, label: "New business" }, as: :json
+    post path(deck.id, "act"), params: { act: "milestone_add", data: { name: "Kim" } }, as: :json
+    post path(deck.id, "act"), params: { act: "reset", index: 0, label: "Old business" }, as: :json
+    assert_response :success
+    live = response.parsed_body
+    assert_equal 0, live["section_index"]
+    assert_empty live["completed"]
+    assert_equal ["Kim"], live["milestones"].map { |m| m["name"] }
+    assert_equal "Reset the deck to Old business", live["log"].first["text"]
+  end
+
+  test "a deck names what comes before its document's first section" do
+    deck = @group.decks.create!(name: "Onboarding", purpose: "onboarding", script_document: @doc, created_by: @keeper)
+    sign_in @keeper
+    patch path(deck.id), params: { deck: { intro_title: "  Setting   up  " } }, as: :json
+    assert_response :success
+    assert_equal "Setting up", response.parsed_body.dig("kit", "intro_title")
+    assert_equal "Setting up", response.parsed_body.dig("deck", "intro_title")
+    patch path(deck.id), params: { deck: { intro_title: "" } }, as: :json
+    assert_nil deck.reload.intro_title
   end
 
   test "a document becomes a meeting's script from the File menu" do

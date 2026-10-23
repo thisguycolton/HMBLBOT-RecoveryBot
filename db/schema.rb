@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_23_090000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_23_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -248,6 +248,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_090000) do
     t.bigint "created_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "intro_title"
     t.index ["created_by_id"], name: "index_decks_on_created_by_id"
     t.index ["group_id"], name: "index_decks_on_group_id"
     t.index ["script_document_id"], name: "index_decks_on_script_document_id"
@@ -554,6 +555,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_090000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "allowed_values"
+    t.string "intro_title"
     t.index ["group_id"], name: "index_hosting_kits_on_group_id"
     t.index ["group_id"], name: "index_hosting_kits_one_default", unique: true, where: "(meeting_id IS NULL)"
     t.index ["meeting_id"], name: "index_hosting_kits_one_per_meeting", unique: true, where: "(meeting_id IS NOT NULL)"

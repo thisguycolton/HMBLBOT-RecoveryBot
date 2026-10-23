@@ -101,7 +101,7 @@ class Api::GroupHostingController < ApplicationController
   end
 
   # PUT /api/groups/:group_slug/hosting/:meeting_id/kit
-  # { kit: { scope: "meeting" | "default", script_document_id, activity_anchor, public_postings, service_roles: [{ key, label }], allowed_values: [key] | nil, readings: [...], postings: [{ id, title, icon, minute, body }] } }
+  # { kit: { scope: "meeting" | "default", script_document_id, activity_anchor, intro_title, public_postings, service_roles: [{ key, label }], allowed_values: [key] | nil, readings: [...], postings: [{ id, title, icon, minute, body }] } }
   def kit
     attrs = params.require(:kit)
     kit = if attrs[:scope] == "default"
@@ -112,6 +112,7 @@ class Api::GroupHostingController < ApplicationController
     HostingKit.transaction do
       kit.script_document_id = attrs[:script_document_id].presence
       kit.activity_anchor = attrs[:activity_anchor] if attrs.key?(:activity_anchor)
+      kit.intro_title = attrs[:intro_title] if attrs.key?(:intro_title)
       kit.public_postings = ActiveModel::Type::Boolean.new.cast(attrs[:public_postings]) if attrs.key?(:public_postings)
       kit.service_roles = attrs.permit(service_roles: %i[key label]).fetch(:service_roles, []).map(&:to_h) if attrs.key?(:service_roles)
       kit.allowed_values = attrs[:allowed_values].nil? ? nil : attrs.permit(allowed_values: []).fetch(:allowed_values, []) if attrs.key?(:allowed_values)
@@ -188,7 +189,7 @@ class Api::GroupHostingController < ApplicationController
   def own_kit
     @group.hosting_kits.find_by(meeting_id: @meeting.series.select(:id)) || HostingKit.transaction do
       default = @group.hosting_kits.find_by(meeting_id: nil)
-      kit = @group.hosting_kits.create!(meeting: @meeting, **(default&.attributes&.slice("script_document_id", "readings", "activity_anchor", "service_roles", "public_postings", "allowed_values")&.symbolize_keys || {}))
+      kit = @group.hosting_kits.create!(meeting: @meeting, **(default&.attributes&.slice("script_document_id", "readings", "activity_anchor", "intro_title", "service_roles", "public_postings", "allowed_values")&.symbolize_keys || {}))
       default&.postings&.each { |p| kit.postings.create!(p.attributes.slice("title", "icon", "minute", "body", "position")) }
       kit
     end

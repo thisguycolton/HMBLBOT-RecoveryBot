@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Check, Copy, Globe, Link2, Lock, UserCheck, Users } from "lucide-react";
+import React, { useState } from "react";
+import { Globe, Lock, UserCheck, Users } from "lucide-react";
 import { api } from "../lib";
 import { selectClass } from "../../ui/styles";
 import { quietButton } from "../ui";
+import ShareButton from "../../share/ShareButton";
 import { VISIBILITIES } from "./lib";
 
 const WHO = {
@@ -12,37 +13,15 @@ const WHO = {
   keepers: [Lock, "Only the group's record keepers can open the link."],
 };
 
-// "Share link" at the top of a document: copies its address and says who can open it. Record
-// keepers can change that right here (it takes effect at once, and isn't a new copy of the text).
+// "Share" on a document: its link, the preview a Public one shows when it's sent (the card
+// ShareCard draws), and who can open it. Record keepers can change that right here (it takes
+// effect at once, and isn't a new copy of the text).
 // With `open`/`onOpenChange` the File menu opens it, and its own button is left out (`bare`).
-export default function ShareMenu({ group, doc, canEdit, onChanged, open: openProp, onOpenChange, bare = false }) {
-  const [openState, setOpenState] = useState(false);
-  const open = openProp ?? openState;
-  const setOpen = (v) => { const next = typeof v === "function" ? v(open) : v; onOpenChange ? onOpenChange(next) : setOpenState(next); };
-  const [copied, setCopied] = useState(false);
+export default function ShareMenu({ group, doc, canEdit, onChanged, open, onOpenChange, bare = false, buttonClass = quietButton, iconOnly = false }) {
   const [error, setError] = useState(null);
-  const box = useRef(null);
-  const url = `${window.location.origin}/groups/${group.slug}/conscience/documents/${doc.id}`;
   const [Icon, note] = WHO[doc.visibility];
+  const everyone = doc.visibility === "public" && doc.status === "current";
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const close = (e) => { if (!box.current?.contains(e.target)) setOpen(false); };
-    const esc = (e) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", close);
-    window.addEventListener("keydown", esc);
-    return () => { document.removeEventListener("mousedown", close); window.removeEventListener("keydown", esc); };
-  }, [open]);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      window.prompt("Copy this link:", url);
-    }
-  };
   const setVisibility = async (visibility) => {
     if (visibility === "public" && !window.confirm("This will be visible to anyone who opens the group's page. Make it Public?")) return;
     setError(null);
@@ -55,28 +34,22 @@ export default function ShareMenu({ group, doc, canEdit, onChanged, open: openPr
   };
 
   return (
-    <div ref={box} className="relative">
-      {!bare && <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} title="Share link" aria-label="Share link" className={quietButton}><Link2 className="size-4" /> <span className="max-sm:sr-only">Share link</span></button>}
-      {open && (
-        <div role="dialog" aria-label="Share link" className="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--nav-h,56px)+4rem)] max-sm:mt-0 max-sm:w-auto space-y-3 rounded-2xl bg-white p-4 text-sm shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
-          <div className="flex gap-2">
-            <input readOnly value={url} onFocus={(e) => e.target.select()} aria-label="Link to this document" className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-slate-700 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200" />
-            <button type="button" onClick={copy} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl !bg-accent px-3 py-2 text-xs font-semibold !text-white">
-              {copied ? <><Check className="size-4" /> Copied</> : <><Copy className="size-4" /> Copy</>}
-            </button>
-          </div>
-          <p className="flex items-start gap-2 text-slate-600 dark:text-neutral-300"><Icon className="mt-0.5 size-4 shrink-0" /> {note}</p>
-          {canEdit && (
-            <div>
-              <label htmlFor="share-visibility" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Who can see it</label>
-              <select id="share-visibility" className={selectClass} value={doc.visibility} onChange={(e) => setVisibility(e.target.value)}>
-                {VISIBILITIES.map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
-              </select>
-            </div>
-          )}
-          {error && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{error}</p>}
+    <ShareButton
+      url={`/groups/${group.slug}/conscience/documents/${doc.id}`}
+      title={`${doc.title} · ${group.title}`}
+      image={everyone ? `/share_cards/document/${doc.id}.png?v=${encodeURIComponent(doc.updated_at || "")}` : null}
+      panelTitle="Share document" className={buttonClass} iconOnly={iconOnly} open={open} onOpenChange={onOpenChange} bare={bare}
+      note={<p className="flex items-start gap-2 text-slate-600 dark:text-neutral-300"><Icon className="mt-0.5 size-4 shrink-0" /> {note}</p>}
+    >
+      {canEdit && (
+        <div>
+          <label htmlFor="share-visibility" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Who can see it</label>
+          <select id="share-visibility" className={`${selectClass} max-sm:!text-base`} value={doc.visibility} onChange={(e) => setVisibility(e.target.value)}>
+            {VISIBILITIES.map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
+          </select>
         </div>
       )}
-    </div>
+      {error && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{error}</p>}
+    </ShareButton>
   );
 }

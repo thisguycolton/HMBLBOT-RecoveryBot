@@ -22,6 +22,8 @@ class HostingKit < ApplicationRecord
   before_validation :tidy_service_roles
   before_validation :tidy_allowed_values
   before_validation { self.activity_anchor = activity_anchor.to_s.squish.first(500).presence }
+  # What comes before the script's first section is called (blank: "Before we begin")
+  before_validation { self.intro_title = intro_title.to_s.squish.first(80).presence }
 
   validates :meeting_id, uniqueness: true, allow_nil: true
   validate { errors.add(:meeting, "isn't one of this group's") if meeting && meeting.group_id != group_id }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CalendarPlus, Check, DownloadCloud, ExternalLink, Link2, Link2Off, Pencil, Phone, Plus, RefreshCw, Search, Trash2, Video, X } from "lucide-react";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { DateTimeField, TimeField } from "../ui/DateFields";
@@ -6,6 +6,7 @@ import SegmentedControl from "../ui/SegmentedControl";
 import { DAYS, ZONES, api, clock, fromTimeValue, localHint, toTimeValue, typeLabel, zoneLabel } from "./lib";
 import { Card, ErrorNote, Pill, Tray, dangerButton, primaryButton, quietButton } from "./ui";
 import MeetingPasscode from "./MeetingPasscode";
+import ShareButton from "../share/ShareButton";
 
 // Types offered as checkboxes when adding a meeting by hand
 const COMMON_TYPES = ["O", "C", "D", "SP", "B", "ST", "LIT", "12x12", "MED", "BE", "W", "M", "LGBTQ", "Y"];
@@ -49,7 +50,7 @@ export function scheduleLabel(series) {
 
 // A group's meetings: weekly by weekday, then one-time ones. Group admins add them by
 // hand (with AA Intergroup matches offered as they type), import them from AA Intergroup, and refresh.
-export default function MeetingsTab({ group, setGroup, reload, isNew }) {
+export default function MeetingsTab({ group, setGroup, reload, isNew, focusId }) {
   const [editing, setEditing] = useState(null); // "new" | [meetings of one series]
   const [importing, setImporting] = useState(isNew && group.meetings.length === 0);
   const [refreshing, setRefreshing] = useState(false);
@@ -124,7 +125,7 @@ export default function MeetingsTab({ group, setGroup, reload, isNew }) {
         <Tray label="Every week">
           <div className="space-y-1.5">
             {toSeries(weekly).map((series) => (
-              <MeetingCard key={series.map((m) => m.id).join("-")} series={series} group={group} manage={manage} onEdit={() => setEditing(series)} onChanged={reload} />
+              <MeetingCard key={series.map((m) => m.id).join("-")} series={series} group={group} manage={manage} focus={series.some((m) => m.id === focusId)} onEdit={() => setEditing(series)} onChanged={reload} />
             ))}
           </div>
         </Tray>
@@ -132,7 +133,7 @@ export default function MeetingsTab({ group, setGroup, reload, isNew }) {
       {upcoming.length > 0 && (
         <Tray label="Coming up">
           <div className="space-y-1.5">
-            {upcoming.map((m) => <MeetingCard key={m.id} series={[m]} group={group} manage={manage} onEdit={() => setEditing([m])} onChanged={reload} />)}
+            {upcoming.map((m) => <MeetingCard key={m.id} series={[m]} group={group} manage={manage} focus={m.id === focusId} onEdit={() => setEditing([m])} onChanged={reload} />)}
           </div>
         </Tray>
       )}
@@ -148,9 +149,12 @@ export default function MeetingsTab({ group, setGroup, reload, isNew }) {
   );
 }
 
-function MeetingCard({ series, group, manage, onEdit, onChanged }) {
+function MeetingCard({ series, group, manage, focus = false, onEdit, onChanged }) {
   const [error, setError] = useState(null);
   const meeting = series[0];
+  // A shared link to this meeting (/groups/:slug/meetings/:id) scrolls to it
+  const card = useRef(null);
+  useEffect(() => { if (focus) card.current?.scrollIntoView({ block: "center", behavior: "smooth" }); }, [focus]);
   const label = scheduleLabel(series);
   // the next of the series' days, for "… your time"
   const soonest = [...series].sort((a, b) => new Date(a.next_start) - new Date(b.next_start))[0];
@@ -173,7 +177,7 @@ function MeetingCard({ series, group, manage, onEdit, onChanged }) {
     each((m) => api(`/groups/${group.slug}/meetings/${m.id}`, { method: "DELETE" }));
 
   return (
-    <Card className="p-3.5">
+    <Card ref={card} className={`scroll-mt-24 p-3.5 ${focus ? "ring-2 ring-accent" : ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-medium text-slate-900 dark:text-white">{meeting.name}</p>
@@ -189,6 +193,11 @@ function MeetingCard({ series, group, manage, onEdit, onChanged }) {
             ) : <Pill tone="green"><Link2 className="h-3 w-3" /> AA Intergroup</Pill>
           )}
           {meeting.oiaa_missing && <Pill tone="amber"><AlertTriangle className="h-3 w-3" /> No longer listed on AA Intergroup</Pill>}
+          {group.status === "active" && (
+            <ShareButton url={`/groups/${group.slug}/meetings/${meeting.id}`} title={meeting.name === group.title ? meeting.name : `${meeting.name} · ${group.title}`}
+              text={`${meeting.name}: ${label}`} image={`/share_cards/meeting/${meeting.id}.png`} panelTitle="Share this meeting" iconOnly label="Share this meeting"
+              className="grid size-8 place-items-center rounded-lg !bg-transparent text-slate-500 hover:!bg-neutral-100 hover:text-accent dark:text-neutral-400 dark:hover:!bg-neutral-800" />
+          )}
         </div>
       </div>
 

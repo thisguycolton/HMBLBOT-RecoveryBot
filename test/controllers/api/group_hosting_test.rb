@@ -132,6 +132,28 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "Reset takes both hosts back to the first section; the day's picks stay" do
+    sign_in @admin
+    save_kit
+    put path(@meeting.id, "kit"), params: { kit: { scope: "meeting", script_document_id: @script.id, intro_title: "Getting ready" } }, as: :json
+    assert_equal "Getting ready", response.parsed_body.dig("kit", "intro_title")
+
+    sign_in @host
+    post path(@meeting.id, "act"), params: { act: "complete", index: 0 }, as: :json
+    post path(@meeting.id, "act"), params: { act: "goto", index: 2, label: "Readings" }, as: :json
+    post path(@meeting.id, "act"), params: { act: "milestone_add", data: { name: "Kim" } }, as: :json
+    post path(@meeting.id, "act"), params: { act: "reset", index: 0, label: "Getting ready" }, as: :json
+    assert_response :success
+
+    sign_in @co_host
+    post path(@meeting.id, "ping"), params: {}, as: :json
+    live = response.parsed_body
+    assert_equal 0, live["section_index"]
+    assert_empty live["completed"]
+    assert_equal ["Kim"], live["milestones"].map { |m| m["name"] }
+    assert_equal "Reset the deck to Getting ready", live["log"].first["text"]
+  end
+
   test "the court verification link picks the meeting and fills in the host" do
     get "/court_verifications/new", params: { group: @group.slug, meeting: @meeting.id, host: "Hal" }
     assert_response :success

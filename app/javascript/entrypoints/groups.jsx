@@ -70,6 +70,8 @@ const router = createBrowserRouter(
         { path: ":slug", element: <GroupPage /> },
         { path: ":slug/host", element: <HostingIndex /> },
         { path: ":slug/host/capsule", element: <TimeCapsule /> },
+        // One of the group's meetings, as a shared link opens it: the Meetings tab, that one picked out
+        { path: ":slug/meetings/:meetingId", element: <GroupPage /> },
         { path: ":slug/:tab", element: <GroupPage /> },
         { path: ":slug/edit", element: <GroupForm /> },
       ],

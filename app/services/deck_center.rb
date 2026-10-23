@@ -20,12 +20,12 @@ class DeckCenter
     visible = script && GroupDocument.visible_to(@group, @viewer).exists?(id: script.id)
     started = session.timer_started_at
     json = {
-      deck: { id: @deck.id, name: @deck.name, purpose: @deck.purpose, script_document_id: @deck.script_document_id },
+      deck: { id: @deck.id, name: @deck.name, purpose: @deck.purpose, script_document_id: @deck.script_document_id, intro_title: @deck.intro_title },
       group: { slug: @group.slug, title: @group.title, logo_url: @group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.logo, only_path: true) : nil },
       meeting: { id: nil, name: @deck.name, time_zone: @group.zone.tzinfo.name },
       on: @on.iso8601, starts_at: started&.iso8601, ends_at: nil, hosts: {}, my_role: nil,
       kit: {
-        own: true, exists: true, script_hidden: !!script && !visible, activity_anchor: "none", postings: [], readings: [], service_roles: [],
+        own: true, exists: true, script_hidden: !!script && !visible, activity_anchor: "none", intro_title: @deck.intro_title, postings: [], readings: [], service_roles: [],
         script: visible ? { id: script.id, title: script.title, body: script.body.to_s, body_format: script.body_format, updated_at: script.updated_at.iso8601 } : nil,
       },
       can_edit: editor, can_arrange: editor,
