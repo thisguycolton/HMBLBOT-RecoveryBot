@@ -84,10 +84,11 @@ export function Milestones({ live, act, inScript = false }) {
     setName("");
     setLength("");
   };
-  const timeCol = inScript ? "grid-cols-[minmax(0,1fr)_6rem] sm:grid-cols-[minmax(0,1fr)_9rem]" : "grid-cols-[minmax(0,1fr)_5.5rem]";
+  // in a narrow sidebar (the left one, or a phone's), a name goes above its time so it isn't squeezed out
+  const timeCol = inScript ? "grid-cols-[minmax(0,1fr)_6rem] sm:grid-cols-[minmax(0,1fr)_9rem]" : "grid-cols-1 @[19rem]:grid-cols-[minmax(0,1fr)_5.5rem]";
   const update = (id, change) => act("milestone_update", { data: { id, ...change } });
   return (
-    <section className={inScript ? "hc-script-form my-5 max-w-[70ch] rounded-2xl bg-white p-4 text-base shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800" : ""}>
+    <section className={inScript ? "hc-script-form @container my-5 max-w-[70ch] rounded-2xl bg-white p-4 text-base shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800" : "@container"}>
       <h2 className={`${label} mb-2 flex items-center gap-1.5`}><PartyPopper className="size-3.5" /> Celebrating milestones</h2>
       {inScript && list.length === 0 && <p className="mb-2 text-sm text-slate-500 dark:text-neutral-400">Add each person as they speak up. Your co-host sees them too.</p>}
       {list.length > 0 && (

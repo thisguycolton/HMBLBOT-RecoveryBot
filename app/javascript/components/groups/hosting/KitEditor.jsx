@@ -9,7 +9,7 @@ import MarkdownTextarea from "../../notes/MarkdownTextarea";
 import { ErrorNote, dangerButton, primaryButton, quietButton } from "../ui";
 import { documentsPath } from "../conscience/lib";
 import PostingPreview from "./PostingPreview";
-import { AUTO_ANCHOR, DYNAMIC_VALUES, PLACEHOLDERS, SERVICE_VALUES, cueLabel, fillPosting, roleKey, roleToken, scriptParagraphs, scriptSections, valueToken } from "./lib";
+import { AUTO_ANCHOR, DYNAMIC_VALUES, INTRO_TITLE, PLACEHOLDERS, SERVICE_VALUES, cueLabel, fillPosting, roleKey, roleToken, scriptParagraphs, scriptSections, valueToken } from "./lib";
 
 const move = (list, i, by) => {
   const j = i + by;
@@ -32,6 +32,7 @@ export default function KitEditor({ center, onClose, onSaved, only = null }) {
   const [scope, setScope] = useState(kit.own || !editor.has_default ? "meeting" : "default");
   const [scriptId, setScriptId] = useState(editor.script_document_id ? String(editor.script_document_id) : "");
   const [anchor, setAnchor] = useState(kit.activity_anchor || "");
+  const [intro, setIntro] = useState(kit.intro_title || "");
   const [publicPostings, setPublicPostings] = useState(center.link?.public_postings !== false);
   const [postings, setPostings] = useState(() => kit.postings.map((p) => ({ ...p, key: `p${p.id}` })));
   const [readings, setReadings] = useState(kit.readings);
@@ -65,7 +66,7 @@ export default function KitEditor({ center, onClose, onSaved, only = null }) {
     try {
       const saved = await api(`/groups/${group.slug}/hosting/${meeting.id}/kit?on=${center.on}`, {
         method: "PUT",
-        body: { kit: { scope, script_document_id: scriptId || null, activity_anchor: anchor || null, public_postings: publicPostings, readings, allowed_values: allowed, postings: postings.map(({ id, title, icon, minute, body }) => ({ id, title, icon, minute, body })),
+        body: { kit: { scope, script_document_id: scriptId || null, activity_anchor: anchor || null, intro_title: intro.trim() || null, public_postings: publicPostings, readings, allowed_values: allowed, postings: postings.map(({ id, title, icon, minute, body }) => ({ id, title, icon, minute, body })),
           ...(rolesEdited ? { service_roles: roles.map(({ key, label }) => ({ key, label })) } : {}) } },
       });
       onSaved(saved);
@@ -114,7 +115,7 @@ export default function KitEditor({ center, onClose, onSaved, only = null }) {
             </p>
           </div>
 
-          {shows("script") && <ScriptPicker documents={editor.documents} value={scriptId} onChange={setScriptId} current={kit.script} anchor={anchor} setAnchor={setAnchor} slug={group.slug} />}
+          {shows("script") && <ScriptPicker documents={editor.documents} value={scriptId} onChange={setScriptId} current={kit.script} anchor={anchor} setAnchor={setAnchor} intro={intro} setIntro={setIntro} slug={group.slug} />}
 
           {shows("script") && <ValuesPicker allowed={allowed} setAllowed={setAllowed} />}
 
@@ -158,18 +159,29 @@ export default function KitEditor({ center, onClose, onSaved, only = null }) {
 }
 
 // Which document is the script, the sections it makes, and where the day's reading / activity goes
-function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor, slug }) {
+// What the deck calls what comes before the script's first section (a deck's settings have it too)
+export function IntroTitle({ id, value, onChange }) {
+  return (
+    <div className="mt-3">
+      <label htmlFor={id} className={labelClass}>First section's name</label>
+      <input id={id} className={inputClass} maxLength={80} value={value} onChange={(e) => onChange(e.target.value)} placeholder={INTRO_TITLE} />
+      <p className="mt-1.5 text-xs text-slate-500 dark:text-neutral-400">What comes before the document's first section. Leave it empty for "{INTRO_TITLE}".</p>
+    </div>
+  );
+}
+
+function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor, intro, setIntro, slug }) {
   const [sections, setSections] = useState([]);
   const [paragraphs, setParagraphs] = useState([]);
   const shown = current && String(current.id) === value;
   useEffect(() => {
     let gone = false;
     if (shown) {
-      scriptSections(current, anchor || null).then((s) => !gone && setSections(s));
+      scriptSections(current, anchor || null, intro.trim() || null).then((s) => !gone && setSections(s));
       scriptParagraphs(current).then((p) => !gone && setParagraphs(p));
     } else { setSections([]); setParagraphs([]); }
     return () => { gone = true; };
-  }, [current, shown, anchor]);
+  }, [current, shown, anchor, intro]);
   const auto = paragraphs.find((t) => AUTO_ANCHOR.test(t));
   // a section marked as the reading / activity spot in the document takes the place of picking one here
   const marked = shown && /data-kind="activity"/.test(current.body || "");
@@ -196,6 +208,7 @@ function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor, 
           <p className="mt-1.5 text-xs text-slate-500 dark:text-neutral-400">The hosts pick what fills it each day: a reading, today's daily reading, the Topicificator, a speaker…</p>
         </div>
       )}
+      {value && <IntroTitle id="kit-intro" value={intro} onChange={setIntro} />}
       {sections.length > 0 && (
         <ol className="mt-2 flex flex-wrap gap-1.5 text-xs">
           {sections.map((s, i) => (
