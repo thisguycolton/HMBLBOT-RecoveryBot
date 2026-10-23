@@ -16,6 +16,7 @@ import { ErrorNote, Loading, Message, Pill, dangerButton, primaryButton, quietBu
 import DocumentToolbar from "./DocumentToolbar";
 import PdfViewer from "./PdfViewer";
 import ShareMenu from "./ShareMenu";
+import CreateDeckDialog from "../hosting/deck/CreateDeckDialog";
 import { documentExtensions } from "./editorKit";
 import { DynamicValuesBar } from "./hostSection";
 import { LivePresence, liveExtensions, useLiveDocument, useShareViewing } from "./live";
@@ -151,6 +152,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   const fileRef = useRef(null);
   const importRef = useRef(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [deckOpen, setDeckOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
   // The folder's letterhead (Document templates): from the document, or for record keepers the
   // current one for whichever folder is picked, so changing the folder shows it at once
@@ -524,6 +526,8 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
       file && doc && !pdfOnly && { label: `Download ${file.name}`, onClick: () => window.open(fileUrl(slug, doc.id, "?download=1")) },
       "divider",
       doc && { label: "Share…", onClick: () => setShareOpen(true) },
+      // Run it in HostDeck: a deck of its own, or a meeting's script (and open the ones that do)
+      doc && isMember && !pdfOnly && { label: "Create New HostDeck…", onClick: () => setDeckOpen(true) },
       canEdit && { label: "Document details…", onClick: () => setDetails((v) => !v), checked: details },
       isMember && doc && { label: "Version history", onClick: () => toggleSide("history"), checked: side === "history" },
       commentsOn && { label: "Comments", onClick: () => toggleSide("comments"), checked: side === "comments" },
@@ -581,6 +585,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
             </button>
           )}
           {canEdit && <button type="button" onClick={requestSave} disabled={saving || !canSave} title={live ? "Your edits save as you type. Saving a version marks this point in the history." : undefined} className={primaryButton}><Save className="size-4" /> {saving ? "Saving…" : saveLabel}</button>}
+          {deckOpen && doc && <CreateDeckDialog group={group} doc={doc} onClose={() => setDeckOpen(false)} />}
           <input ref={importRef} type="file" hidden accept={IMPORT_ACCEPT} onChange={(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importFile(f); }} />
         </div>
         {canEdit && showPaper && <DocumentToolbar editor={editor} />}

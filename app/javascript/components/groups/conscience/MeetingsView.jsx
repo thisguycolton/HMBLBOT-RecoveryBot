@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CalendarPlus, FileCheck2, FileText, FileUp, Search } from "lucide-react";
+import { CalendarPlus, FileCheck2, FileText, FileUp, MonitorPlay, Search } from "lucide-react";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton, quietButton } from "../ui";
 import MeetingForm from "./MeetingForm";
@@ -134,6 +134,27 @@ function QuorumCard({ group, quorum, canSet, onSaved }) {
 }
 
 // Business meetings (/conscience/meetings): coming up first, then past ones with their minutes
+// The group's business meeting decks (HostDeck), so everyone at the meeting can follow along,
+// not only the members who host
+function BusinessDecks({ slug }) {
+  const [decks, setDecks] = useState([]);
+  useEffect(() => { api(`/groups/${slug}/decks`).then((d) => setDecks(d.decks.filter((x) => x.purpose === "business_meeting"))).catch(() => {}); }, [slug]);
+  if (!decks.length) return null;
+  return (
+    <Tray label="Run it in HostDeck">
+      <div className="space-y-1.5">
+        {decks.map((d) => (
+          <Link key={d.id} to={`/${slug}/decks/${d.id}`} className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900">
+            <MonitorPlay className="size-5 shrink-0 text-accent" />
+            <span className="min-w-0 flex-1 truncate font-medium text-slate-900 dark:text-white">{d.name}</span>
+            <span className="text-xs text-slate-500 dark:text-neutral-400">Everyone in the group can open it</span>
+          </Link>
+        ))}
+      </div>
+    </Tray>
+  );
+}
+
 export default function MeetingsView({ group }) {
   const slug = group.slug;
   const navigate = useNavigate();
@@ -168,6 +189,7 @@ export default function MeetingsView({ group }) {
       {query.trim() ? <SearchResults slug={slug} query={query.trim()} keeper={data.can_edit} /> : (
       <>
       <QuorumCard group={group} quorum={data.quorum} canSet={data.can_make_events} onSaved={load} />
+      <BusinessDecks slug={slug} />
       {data.meetings.length === 0 && (
         <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">
           {data.can_edit ? "No business meetings yet. Schedule the next one, or add one that already happened to keep its minutes here." : "No business meetings have been scheduled yet."}

@@ -4,7 +4,7 @@ import { LogIn, Moon, Sun } from "lucide-react";
 import { api } from "../lib";
 import GroupLogo from "../GroupLogo";
 import { Loading, Message, quietButton } from "../ui";
-import { ChatPostings, MeetingClock, timeOf, useDarkMode, useMeetingClock } from "./CommandCenter";
+import { ChatPostings, MeetingClock, timeOf, useDarkMode, useMeetingClock } from "./parts";
 import "./hosting.css";
 
 const POLL_MS = 5000;
@@ -57,12 +57,12 @@ export default function GuestPostings() {
             <ChatPostings center={page} live={live} elapsed={elapsed} act={null} />
           </>
         ) : (
-          <p className="rounded-xl bg-white p-4 text-sm text-slate-600 shadow-panel dark:bg-neutral-900 dark:text-neutral-300">This group keeps its chat postings to hosts. Sign in to open the Hosting Command Center.</p>
+          <p className="rounded-xl bg-white p-4 text-sm text-slate-600 shadow-panel dark:bg-neutral-900 dark:text-neutral-300">This group keeps its chat postings to hosts. Sign in to open HostDeck.</p>
         )}
         {!page.can_host && (
-          <a href={signIn} className={`${quietButton} w-full justify-center`}><LogIn className="size-4" /> Host with an account? Sign in for the Command Center</a>
+          <a href={signIn} className={`${quietButton} w-full justify-center`}><LogIn className="size-4" /> Host with an account? Sign in for HostDeck</a>
         )}
-        {page.can_host && <a href={`/h/${page.code}`} className={`${quietButton} w-full justify-center`}>Open the Hosting Command Center</a>}
+        {page.can_host && <a href={`/h/${page.code}`} className={`${quietButton} w-full justify-center`}>Open HostDeck</a>}
       </main>
     </div>
   );

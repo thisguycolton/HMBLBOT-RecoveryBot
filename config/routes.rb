@@ -94,6 +94,19 @@ Rails.application.routes.draw do
         get :reading
         put :kit
         delete :kit, action: :reset_kit
+        put :arrangement
+        delete :arrangement, action: :reset_arrangement
+        put :script
+      end
+    end
+    # HostDeck's templates: the group's own and the site-wide gallery
+    resources :deck_templates, only: %i[index create update destroy]
+    # HostDeck's decks of their own (/groups/:slug/decks/:id)
+    resources :decks, only: %i[index create show update destroy] do
+      member do
+        put :arrangement
+        post :ping
+        post :act
       end
     end
     resources :host_sub_requests, controller: "group_host_sub_requests", only: %i[create destroy] do

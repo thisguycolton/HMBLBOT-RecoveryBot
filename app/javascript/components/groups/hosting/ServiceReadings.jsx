@@ -12,7 +12,8 @@ export const shareServiceReading = (slug, id) => window.open(`/groups/${slug}/sh
 // The site's service readings (How It Works, the Traditions, the Promises...) in the Command
 // Center's left column. A reading with more than one version (its sources) opens a box to pick
 // one; the one picked opens in its own window, ready to share.
-export default function ServiceReadings({ slug }) {
+// `grid`: as cards, two across, for the middle of a deck.
+export default function ServiceReadings({ slug, grid = false }) {
   const [groups, setGroups] = useState(null);
   const [picking, setPicking] = useState(null);
   useEffect(() => {
@@ -27,10 +28,10 @@ export default function ServiceReadings({ slug }) {
   return (
     <section>
       <h2 className={`${label} mb-2`}>Service readings</h2>
-      <ul className="space-y-0.5">
+      <ul className={grid ? "grid gap-2 sm:grid-cols-2" : "space-y-0.5"}>
         {groups.map((g) => (
           <li key={g.title}>
-            <button type="button" className={row} onClick={() => open(g)} title={g.versions.length > 1 ? "Pick a version" : "Opens in its own window, to share in Zoom"}>
+            <button type="button" className={grid ? `${row} !bg-white py-3 shadow-panel ring-1 ring-neutral-200 hover:!bg-white hover:ring-accent/40 dark:!bg-neutral-900 dark:ring-neutral-800` : row} onClick={() => open(g)} title={g.versions.length > 1 ? "Pick a version" : "Opens in its own window, to share in Zoom"}>
               <LucideIcon name={g.icon} fallback={BookText} size={20} className="shrink-0 text-slate-400" />
               <span className="min-w-0 flex-1 truncate">{g.title}</span>
               {g.versions.length > 1 ? <span className="rounded-full bg-neutral-200 px-1.5 text-[11px] font-semibold text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">{g.versions.length}</span> : <Maximize2 className="size-3.5 text-slate-400" />}
