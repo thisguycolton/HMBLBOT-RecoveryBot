@@ -135,7 +135,10 @@ function OtherDecks({ slug, decks }) {
   if (!decks) return null;
   return (
     <section className="space-y-2">
-      <h2 className="!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Other decks</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="flex-1 !text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Other decks</h2>
+        {decks.length > 0 && <Link to={`/${slug}/decks`} className="text-xs font-medium text-accent hover:underline">All HostDecks</Link>}
+      </div>
       {decks.map((d) => (
         <Link key={d.id} to={`/${slug}/decks/${d.id}`} className="block">
           <Card className="flex items-center gap-3 p-3 hover:ring-2 hover:ring-accent/30">

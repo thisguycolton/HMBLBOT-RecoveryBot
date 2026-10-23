@@ -5,6 +5,7 @@ import { api } from "../../lib";
 import { ErrorNote, Loading, primaryButton, quietButton } from "../../ui";
 import { inputClass, labelClass, selectClass } from "../../../ui/styles";
 import { PURPOSES } from "./templates";
+import { decksFromDocument } from "./DeckList";
 
 // Document > File > Create New HostDeck: run this document as a deck of its own (a business
 // meeting, host onboarding, anything), or make it a meeting's script. It lists the decks and
@@ -34,8 +35,7 @@ export default function CreateDeckDialog({ group, doc, onClose }) {
     } catch (err) { setError(err.message); setSaving(false); }
   };
 
-  const using = data ? [...data.decks.map((d) => ({ key: `d${d.id}`, to: `/${slug}/decks/${d.id}`, label: d.name })),
-    ...(data.meetings || []).filter((m) => m.id).map((m) => ({ key: `m${m.id}`, to: `/${slug}/host/${m.id}`, label: `${m.name} (meeting script)` }))] : [];
+  const using = decksFromDocument(slug, data);
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="new-deck" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <form onSubmit={create} className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-5 text-left shadow-2xl dark:bg-neutral-900">
@@ -49,7 +49,7 @@ export default function CreateDeckDialog({ group, doc, onClose }) {
         {using.length > 0 && (
           <div className="rounded-xl bg-neutral-50 p-3 text-sm dark:bg-neutral-800/60">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Already running from it</p>
-            <ul className="space-y-1">{using.map((u) => <li key={u.key}><Link to={u.to} className="text-accent hover:underline">{u.label}</Link></li>)}</ul>
+            <ul className="space-y-1">{using.map((u) => <li key={u.key}><Link to={u.to} className="text-accent hover:underline">{u.label}</Link> <span className="text-xs text-slate-500 dark:text-neutral-400">{u.note}</span></li>)}</ul>
           </div>
         )}
         {data && !data.can_create && <p className="text-sm text-amber-800 dark:text-amber-200">Only the members your group picked in Group settings &gt; HostDeck can make decks.</p>}

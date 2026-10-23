@@ -17,6 +17,7 @@ import DocumentToolbar from "./DocumentToolbar";
 import PdfViewer from "./PdfViewer";
 import ShareMenu from "./ShareMenu";
 import CreateDeckDialog from "../hosting/deck/CreateDeckDialog";
+import { OpenDeckDialog, decksFromDocument } from "../hosting/deck/DeckList";
 import { documentExtensions } from "./editorKit";
 import { DynamicValuesBar } from "./hostSection";
 import { LivePresence, liveExtensions, useLiveDocument, useShareViewing } from "./live";
@@ -153,6 +154,10 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   const importRef = useRef(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [deckOpen, setDeckOpen] = useState(false);
+  // the HostDecks that run from this document (its decks, and meetings whose script it is), for
+  // File > Open HostDeck; with more than one, it asks which
+  const [runFrom, setRunFrom] = useState([]);
+  const [pickDeck, setPickDeck] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
   // The folder's letterhead (Document templates): from the document, or for record keepers the
   // current one for whichever folder is picked, so changing the folder shows it at once
@@ -225,6 +230,12 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
     document.body.classList.add("doc-printing");
     return () => document.body.classList.remove("doc-printing");
   }, []);
+  const docId = doc?.id;
+  useEffect(() => {
+    if (!docId || !isMember) return;
+    api(`/groups/${slug}/decks?document_id=${docId}`).then((d) => setRunFrom(decksFromDocument(slug, d))).catch(() => {});
+  }, [slug, docId, isMember]);
+  const openDeck = () => (runFrom.length === 1 ? navigate(runFrom[0].to) : setPickDeck(true));
   useEffect(() => {
     if (!canEdit) return;
     api(`/groups/${slug}/motions`).then((d) => setAdopters(d.motions.filter((m) => m.status === "passed"))).catch(() => {});
@@ -306,7 +317,6 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   };
 
   // Version history
-  const docId = doc?.id;
   useEffect(() => {
     if (side !== "history" || versions || !docId) return;
     api(`/groups/${slug}/documents/${docId}/versions`).then((d) => setVersions(d.versions)).catch((e) => setError(e.message));
@@ -527,6 +537,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
       "divider",
       doc && { label: "Share…", onClick: () => setShareOpen(true) },
       // Run it in HostDeck: a deck of its own, or a meeting's script (and open the ones that do)
+      runFrom.length > 0 && { label: runFrom.length > 1 ? "Open HostDeck…" : "Open HostDeck", onClick: openDeck },
       doc && isMember && !pdfOnly && { label: "Create New HostDeck…", onClick: () => setDeckOpen(true) },
       canEdit && { label: "Document details…", onClick: () => setDetails((v) => !v), checked: details },
       isMember && doc && { label: "Version history", onClick: () => toggleSide("history"), checked: side === "history" },
@@ -585,6 +596,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
           )}
           {canEdit && <button type="button" onClick={requestSave} disabled={saving || !canSave} title={live ? "Your edits save as you type. Saving a version marks this point in the history." : undefined} className={primaryButton}><Save className="size-4" /> {saving ? "Saving…" : saveLabel}</button>}
           {deckOpen && doc && <CreateDeckDialog group={group} doc={doc} onClose={() => setDeckOpen(false)} />}
+          {pickDeck && doc && <OpenDeckDialog doc={doc} options={runFrom} onPick={(o) => navigate(o.to)} onClose={() => setPickDeck(false)} />}
           <input ref={importRef} type="file" hidden accept={IMPORT_ACCEPT} onChange={(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importFile(f); }} />
         </div>
         {canEdit && showPaper && <DocumentToolbar editor={editor} />}

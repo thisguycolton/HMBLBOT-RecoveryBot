@@ -25,7 +25,10 @@ class Deck < ApplicationRecord
     sessions.find_by!(on: day)
   end
 
-  def as_list_json
-    { id: id, name: name, purpose: purpose, script_document_id: script_document_id, path: "/groups/#{group.slug}/decks/#{id}", updated_at: updated_at.iso8601 }
+  # `documents`: the titles of the scripts this viewer may see, by id (a deck run from a document
+  # only its keepers see doesn't give its title away)
+  def as_list_json(documents: {})
+    { id: id, name: name, purpose: purpose, script_document_id: script_document_id, path: "/groups/#{group.slug}/decks/#{id}", updated_at: updated_at.iso8601,
+      script_document: (documents[script_document_id] && { id: script_document_id, title: documents[script_document_id] }) }
   end
 end
