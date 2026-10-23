@@ -5,6 +5,7 @@ import { api } from "../../lib";
 import { ErrorNote, dangerButton, primaryButton, quietButton } from "../../ui";
 import FilterPick from "../../../ui/FilterPick";
 import { inputClass, labelClass, selectClass } from "../../../ui/styles";
+import { IntroTitle } from "../KitEditor";
 import DeckView from "./DeckView";
 import { EditorToolbar } from "./LayoutEditor";
 import useHostingDeck from "./useHostingDeck";
@@ -43,12 +44,12 @@ export default function DeckPage() {
   );
 }
 
-// The gear on a deck of its own: its name, what it's for (which template it starts from) and
-// the document it runs from; or deleting it
+// The gear on a deck of its own: its name, what it's for (which template it starts from), the
+// document it runs from and what its first section is called; or deleting it
 function DeckSettings({ deck, onClose }) {
   const navigate = useNavigate();
   const { center } = deck;
-  const [form, setForm] = useState({ name: center.deck.name, purpose: center.deck.purpose, script_document_id: center.deck.script_document_id });
+  const [form, setForm] = useState({ name: center.deck.name, purpose: center.deck.purpose, script_document_id: center.deck.script_document_id, intro_title: center.deck.intro_title || "" });
   const [error, setError] = useState(null);
   const documents = center.editor?.documents || [];
   const save = async (e) => {
@@ -83,6 +84,7 @@ function DeckSettings({ deck, onClose }) {
           <label className={labelClass}>Document it runs from</label>
           <FilterPick options={documents.map((d) => ({ value: String(d.id), label: d.title }))} value={form.script_document_id ? String(form.script_document_id) : ""}
             onChange={(v) => setForm({ ...form, script_document_id: v ? Number(v) : null })} placeholder="Type to find a document" />
+          {form.script_document_id && <IntroTitle id="deck-intro" value={form.intro_title} onChange={(v) => setForm({ ...form, intro_title: v })} />}
         </div>
         <ErrorNote error={error} />
         <div className="flex items-center gap-2">

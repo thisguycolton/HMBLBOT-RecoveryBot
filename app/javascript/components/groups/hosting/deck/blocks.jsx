@@ -140,7 +140,7 @@ export const BLOCKS = {
     component: ({ deck, size }) => <ServicePanel center={deck.center} live={deck.live} act={deck.act} compact={size !== "main"} />,
   },
   milestones: {
-    label: "Milestones", icon: PartyPopper, barGrow: true, sizes: ["side", "main", "bar"], tab: "people", meetingOnly: true,
+    label: "Milestones form", icon: PartyPopper, barGrow: true, sizes: ["side", "main", "bar"], tab: "people",
     component: bySize({ side: ({ deck }) => <Milestones live={deck.live} act={deck.act} />, main: ({ deck }) => <Milestones live={deck.live} act={deck.act} inScript />, bar: MilestonesBar }),
   },
   activity_log: {

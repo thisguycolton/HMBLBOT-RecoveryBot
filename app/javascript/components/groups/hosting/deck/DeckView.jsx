@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, BookOpen, LayoutDashboard, LayoutGrid, MessageSquare, Minus, Moon, Plus, RefreshCw, ScrollText, Settings, Sun, UserCheck, Users } from "lucide-react";
+import { ArrowLeft, BookOpen, LayoutDashboard, LayoutGrid, MessageSquare, Minus, Moon, Plus, RefreshCw, RotateCcw, ScrollText, Settings, Sun, UserCheck, Users } from "lucide-react";
 import GroupLogo from "../../GroupLogo";
 import { ErrorNote, Loading, Message, quietButton } from "../../ui";
 import KitEditor from "../KitEditor";
@@ -141,6 +141,7 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
         <div className="flex items-center">
           <button type="button" className={iconButton} onClick={() => deck.changeSize(-1)} disabled={size === SIZES[0]} aria-label="Smaller script text" title="Smaller text"><Minus className="size-4" /></button>
           <button type="button" className={iconButton} onClick={() => deck.changeSize(1)} disabled={size === SIZES[SIZES.length - 1]} aria-label="Bigger script text" title="Bigger text"><Plus className="size-4" /></button>
+          {!editor && <button type="button" className={iconButton} onClick={deck.reset} disabled={!deck.sections.length} aria-label="Reset the deck" title="Reset: back to the first section, nothing ticked off"><RotateCcw className="size-5" /></button>}
           <button type="button" className={iconButton} onClick={deck.toggleDark} aria-label={dark ? "Light mode" : "Dark mode"} title={dark ? "Light mode" : "Dark mode"}>{dark ? <Sun className="size-5" /> : <Moon className="size-5" />}</button>
           {canArrange && !editor && <button type="button" className={`${iconButton} !hidden lg:!inline-grid`} onClick={onEdit} aria-label="Edit the layout" title="Edit the layout: move blocks, pick sidebars"><LayoutDashboard className="size-5" /></button>}
           {center.can_edit && <button type="button" className={iconButton} onClick={() => deck.setSetup(true)} aria-label={center.deck ? "Deck settings" : "Set up the kit"} title={center.deck ? "The deck's name and document" : "Set up the script, postings and readings"}><Settings className="size-5" /></button>}

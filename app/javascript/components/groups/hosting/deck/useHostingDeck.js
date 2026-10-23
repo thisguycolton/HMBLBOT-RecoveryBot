@@ -45,9 +45,9 @@ export default function useHostingDeck(base) {
 
   useEffect(() => {
     let gone = false;
-    scriptSections(center?.kit?.script, center?.kit?.activity_anchor).then((s) => !gone && setSections(s));
+    scriptSections(center?.kit?.script, center?.kit?.activity_anchor, center?.kit?.intro_title).then((s) => !gone && setSections(s));
     return () => { gone = true; };
-  }, [center?.kit?.script, center?.kit?.activity_anchor]);
+  }, [center?.kit?.script, center?.kit?.activity_anchor, center?.kit?.intro_title]);
 
   useEffect(() => {
     document.title = center ? (center.deck ? center.deck.name : `Hosting ${center.meeting.name}`) : "HostDeck";
@@ -98,6 +98,16 @@ export default function useHostingDeck(base) {
     if (!live.completed.includes(index)) act("complete", { index, label: section?.title });
     goto(nextIndex(index, 1));
   };
+  // Start over: the first section for today, nothing ticked off (for both hosts). What the hosts
+  // picked or filled in (the reading, service, milestones, postings, blocks) stays.
+  const reset = () => {
+    if (!window.confirm("Reset the deck? Everyone goes back to the first section and nothing is ticked off. The reading, service, milestones and postings stay.")) return;
+    const first = shown.length ? shown[0] : 0;
+    setReading(null);
+    setPanel("script");
+    setDismissed([]);
+    act("reset", { index: first, label: sections[first]?.title });
+  };
 
   // Arrow keys move through the script (not while typing)
   useEffect(() => {
@@ -137,7 +147,7 @@ export default function useHostingDeck(base) {
 
   return {
     slug, base, q, center, setCenter, applyLive, error, actionError, live, act, sections, skips, shown, index, section, nextIndex, goto, next,
-    reading, setReading, openActivity, openReading, panel, setPanel, setup, setSetup, dark, toggleDark, size, changeSize,
+    reset, reading, setReading, openActivity, openReading, panel, setPanel, setup, setSetup, dark, toggleDark, size, changeSize,
     now, elapsed, cues, upcoming, dismiss: (i) => setDismissed((d) => [...d, i]),
     // Someone rearranged the deck since this page loaded it
     layoutChanged: !!(layoutKey && center?.layout?.key && layoutKey !== center.layout.key),
