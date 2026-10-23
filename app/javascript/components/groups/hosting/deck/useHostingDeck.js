@@ -121,6 +121,11 @@ export default function useHostingDeck(base) {
     ? sections.map((sec, i) => ({ sec, i, at: cueTime(sec.cue, center.starts_at, center.ends_at) }))
       .filter(({ i, at }) => at && !skips[i] && !live.completed.includes(i) && !dismissed.includes(i) && now >= at - CUE_EARLY_MS && now < at + CUE_SHOWN_MS)
     : [];
+  // Every reminder still to come (or due), for a list of them in a sidebar
+  const upcoming = center && live
+    ? sections.map((sec, i) => ({ sec, i, at: cueTime(sec.cue, center.starts_at, center.ends_at) }))
+      .filter(({ i, at }) => at && !skips[i] && !live.completed.includes(i)).sort((x, y) => x.at - y.at)
+    : [];
   // Today's reading / activity: its place in the script, or on its own on the stage when the script has none
   const openActivity = () => {
     const spot = sections.findIndex((x, i) => x.activity && !skips[i]);
@@ -133,7 +138,7 @@ export default function useHostingDeck(base) {
   return {
     slug, base, q, center, setCenter, applyLive, error, actionError, live, act, sections, skips, shown, index, section, nextIndex, goto, next,
     reading, setReading, openActivity, openReading, panel, setPanel, setup, setSetup, dark, toggleDark, size, changeSize,
-    now, elapsed, cues, dismiss: (i) => setDismissed((d) => [...d, i]),
+    now, elapsed, cues, upcoming, dismiss: (i) => setDismissed((d) => [...d, i]),
     // Someone rearranged the deck since this page loaded it
     layoutChanged: !!(layoutKey && center?.layout?.key && layoutKey !== center.layout.key),
     reload: () => { setLayoutKey(null); load(); },

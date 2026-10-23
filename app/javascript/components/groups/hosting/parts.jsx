@@ -61,7 +61,8 @@ export function useMeetingClock(startsAt, serverNow) {
 }
 
 // The bottom bar's clock: a countdown to the start, then the time in, and how long is left
-export function MeetingClock({ center, elapsed, compact = false }) {
+// (`big`: on a card of its own, "side" or "main")
+export function MeetingClock({ center, elapsed, compact = false, big = false }) {
   const length = center.starts_at && center.ends_at ? (new Date(center.ends_at) - new Date(center.starts_at)) / 1000 : null;
   if (elapsed == null) return <p className="text-sm text-slate-500 dark:text-neutral-400">No start time</p>;
   const before = elapsed < 0;
@@ -70,7 +71,7 @@ export function MeetingClock({ center, elapsed, compact = false }) {
   return (
     <div className="min-w-0 text-center">
       {!compact && <p className={`${label} !text-[10px] sm:!text-xs`}>{caption}</p>}
-      <p className={`font-mono font-semibold tabular-nums ${compact ? "text-lg" : "text-2xl sm:text-3xl"} ${before ? "text-slate-500 dark:text-neutral-400" : ""}`} aria-live="off" title={caption}>
+      <p className={`font-mono font-semibold tabular-nums ${compact ? "text-lg" : big === "main" ? "text-6xl sm:text-7xl" : big ? "text-4xl" : "text-2xl sm:text-3xl"} ${before ? "text-slate-500 dark:text-neutral-400" : ""}`} aria-live="off" title={caption}>
         {before ? `−${mmss(-elapsed)}` : mmss(elapsed)}
       </p>
       {!compact && !before && left != null && <p className="text-[11px] tabular-nums text-slate-500 dark:text-neutral-400">{left >= 0 ? `${Math.ceil(left / 60)} min left` : `${Math.floor(-left / 60)} min over`}</p>}
@@ -85,20 +86,21 @@ export const iconButton = "inline-grid size-9 shrink-0 place-items-center rounde
 
 // The meeting's flow: the script's sections for today (ones left out today aren't listed), where the
 // meeting is, which are done, and where the other host is looking. The list is a third of the screen
-// high, and scrolls itself so the section the meeting is on is the first one showing.
-export function Flow({ sections, shown, index, completed, presences, goto, picked }) {
+// high, and scrolls itself so the section the meeting is on is the first one showing (`full`: the
+// whole list, in the middle of a deck).
+export function Flow({ sections, shown, index, completed, presences, goto, picked, full = false }) {
   const listRef = useRef(null);
   const at = shown.indexOf(index);
   useEffect(() => {
     const list = listRef.current;
     const item = list?.children[at];
-    if (item) list.scrollTo({ top: Math.max(item.offsetTop - 2, 0), behavior: "smooth" });
-  }, [at, shown.length]);
+    if (item && !full) list.scrollTo({ top: Math.max(item.offsetTop - 2, 0), behavior: "smooth" });
+  }, [at, shown.length, full]);
   if (!shown.length) return null;
   return (
     <section>
       <h2 className={`${label} mb-2`}>Meeting flow</h2>
-      <ol ref={listRef} className="relative max-h-[33vh] space-y-1 overflow-y-auto overscroll-contain p-0.5">
+      <ol ref={listRef} className={full ? "space-y-1 p-0.5" : "relative max-h-[33vh] space-y-1 overflow-y-auto overscroll-contain p-0.5"}>
         {shown.map((i, n) => {
           const s = sections[i];
           const here = presences.filter((p) => !p.me && p.section_index === i);
@@ -123,7 +125,7 @@ export function Flow({ sections, shown, index, completed, presences, goto, picke
           );
         })}
         {/* room under the last sections, so even they can scroll up to the top */}
-        <li aria-hidden="true" className="h-[calc(33vh-3.5rem)]" />
+        {!full && <li aria-hidden="true" className="h-[calc(33vh-3.5rem)]" />}
       </ol>
     </section>
   );
@@ -281,31 +283,80 @@ export function ActivityCard({ activity, open, onOpen }) {
   );
 }
 
-export function QuickActions({ center }) {
-  const [copied, setCopied] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
+// The quick actions a group can pick from (a block's settings.actions; all of them when it has none)
+export const QUICK_ACTIONS = [
+  ["court", "Send a court verification"], ["zoom_open", "Open the Zoom meeting"], ["zoom_copy", "Copy the Zoom link"],
+  ["passcode", "Copy the passcode"], ["host_schedule", "Host schedule"], ["time_capsule", "Time Capsule"],
+];
+
+// Links and copy buttons the hosts reach for: the ones the block's settings keep, then its own links.
+// In a sidebar a list, in the middle big buttons, in the bar a row of icons.
+export function QuickActions({ center, settings = null, size = "side" }) {
+  const [copied, setCopied] = useState(null);
+  const on = (key) => !settings?.actions || settings.actions.includes(key);
   const passcode = center.meeting.conference_url_notes;
-  const row = "flex w-full items-center gap-3 rounded-xl !bg-transparent px-2.5 py-2 text-left text-sm text-slate-700 hover:!bg-neutral-100 dark:text-neutral-300 dark:hover:!bg-neutral-800";
   const zoom = center.meeting.conference_url;
+  const slug = center.group.slug;
+  const items = [
+    on("court") && { key: "court", icon: Gavel, text: "Send a court verification", href: center.court_url },
+    zoom && on("zoom_open") && { key: "zoom_open", icon: Video, text: "Open the Zoom meeting", href: zoom },
+    zoom && on("zoom_copy") && { key: "zoom_copy", icon: Clipboard, text: "Copy the Zoom link", copy: zoom },
+    zoom && passcode && on("passcode") && { key: "passcode", icon: KeyRound, text: `Copy the passcode (${passcodeLabel(passcode)})`, copy: passcodeValue(passcode), wrap: true },
+    on("host_schedule") && { key: "host_schedule", icon: UserCheck, text: "Host schedule", href: `/groups/${slug}/hosts`, ours: true },
+    on("time_capsule") && { key: "time_capsule", icon: History, text: "Time Capsule", href: `/groups/${slug}/host/capsule?meeting=${center.meeting.id}`, ours: true },
+    ...(settings?.links || []).map((l, i) => ({ key: `link-${i}`, icon: Link2, text: l.title || l.url.replace(/^https?:\/\//, ""), href: l.url, ours: true, outside: true })),
+  ].filter(Boolean);
+  if (!items.length) return null;
+  const copy = (item) => copyText(item.copy).then(() => { setCopied(item.key); setTimeout(() => setCopied((k) => (k === item.key ? null : k)), 1500); });
+  const linkProps = (item) => ({ href: item.href, target: "_blank", rel: item.ours && !item.outside ? "noopener" : "noopener noreferrer" });
+
+  if (size === "bar") {
+    return (
+      <div className="flex items-center gap-0.5" role="group" aria-label="Quick actions">
+        {items.map((item) => {
+          const Icon = copied === item.key ? ClipboardCheck : item.icon;
+          const props = { className: iconButton, title: copied === item.key ? "Copied" : item.text, "aria-label": item.text };
+          return item.href ? <a key={item.key} {...linkProps(item)} {...props}><Icon className="size-5" /></a>
+            : <button key={item.key} type="button" onClick={() => copy(item)} {...props}><Icon className={`size-5 ${copied === item.key ? "text-emerald-500" : ""}`} /></button>;
+        })}
+      </div>
+    );
+  }
+  if (size === "main") {
+    const big = "flex items-center gap-3 rounded-xl !bg-white p-4 text-left text-base font-medium shadow-panel ring-1 ring-neutral-200 hover:ring-accent/40 dark:!bg-neutral-900 dark:ring-neutral-800";
+    return (
+      <section>
+        <h2 className={`${label} mb-2`}>Quick actions</h2>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {items.map((item) => {
+            const Icon = copied === item.key ? ClipboardCheck : item.icon;
+            const inner = <><Icon className={`size-6 shrink-0 ${copied === item.key ? "text-emerald-500" : "text-accent"}`} /><span className="min-w-0 flex-1 break-words">{copied === item.key ? "Copied" : item.text}</span>{item.ours && <ExternalLink className="size-4 text-slate-400" />}</>;
+            return item.href ? <a key={item.key} {...linkProps(item)} className={big}>{inner}</a> : <button key={item.key} type="button" className={big} onClick={() => copy(item)}>{inner}</button>;
+          })}
+        </div>
+      </section>
+    );
+  }
+  const row = "flex w-full items-center gap-3 rounded-xl !bg-transparent px-2.5 py-2 text-left text-sm text-slate-700 hover:!bg-neutral-100 dark:text-neutral-300 dark:hover:!bg-neutral-800";
   return (
     <section>
       <h2 className={`${label} mb-2`}>Quick actions</h2>
       <div className="space-y-1">
-        <a href={center.court_url} target="_blank" rel="noopener noreferrer" className={row}><Gavel className="size-5 shrink-0 text-slate-400" /> Send a court verification</a>
-        {zoom && <a href={zoom} target="_blank" rel="noopener noreferrer" className={row}><Video className="size-5 shrink-0 text-slate-400" /> Open the Zoom meeting</a>}
-        {zoom && (
-          <button type="button" className={row} onClick={() => copyText(zoom).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })}>
-            {copied ? <ClipboardCheck className="size-5 shrink-0 text-emerald-500" /> : <Clipboard className="size-5 shrink-0 text-slate-400" />} {copied ? "Copied" : "Copy the Zoom link"}
-          </button>
-        )}
-        {zoom && passcode && (
-          <button type="button" className={row} onClick={() => copyText(passcodeValue(passcode)).then(() => { setCopiedCode(true); setTimeout(() => setCopiedCode(false), 1500); })}>
-            {copiedCode ? <ClipboardCheck className="size-5 shrink-0 text-emerald-500" /> : <KeyRound className="size-5 shrink-0 text-slate-400" />}
-            <span className="min-w-0 flex-1 break-words">{copiedCode ? "Copied" : `Copy the passcode (${passcodeLabel(passcode)})`}</span>
-          </button>
-        )}
-        <a href={`/groups/${center.group.slug}/hosts`} target="_blank" rel="noopener" className={row}><UserCheck className="size-5 shrink-0 text-slate-400" /> <span className="flex-1">Host schedule</span> <ExternalLink className="size-3.5 text-slate-400" /></a>
-        <a href={`/groups/${center.group.slug}/host/capsule?meeting=${center.meeting.id}`} target="_blank" rel="noopener" className={row}><History className="size-5 shrink-0 text-slate-400" /> <span className="flex-1">Time Capsule</span> <ExternalLink className="size-3.5 text-slate-400" /></a>
+        {items.map((item) => {
+          const Icon = item.icon;
+          if (item.href) {
+            return item.ours
+              ? <a key={item.key} {...linkProps(item)} className={row}><Icon className="size-5 shrink-0 text-slate-400" /> <span className="flex-1">{item.text}</span> <ExternalLink className="size-3.5 text-slate-400" /></a>
+              : <a key={item.key} {...linkProps(item)} className={row}><Icon className="size-5 shrink-0 text-slate-400" /> {item.text}</a>;
+          }
+          const done = copied === item.key;
+          return (
+            <button key={item.key} type="button" className={row} onClick={() => copy(item)}>
+              {done ? <ClipboardCheck className="size-5 shrink-0 text-emerald-500" /> : <Icon className="size-5 shrink-0 text-slate-400" />}
+              {item.wrap ? <span className="min-w-0 flex-1 break-words">{done ? "Copied" : item.text}</span> : <> {done ? "Copied" : item.text}</>}
+            </button>
+          );
+        })}
       </div>
     </section>
   );
@@ -313,9 +364,8 @@ export function QuickActions({ center }) {
 
 // The postings to paste into the Zoom chat, in the order they go out. The next one due (by the
 // meeting timer) stands out; a copied one says who copied it, for both hosts.
-export function ChatPostings({ center, live, elapsed, act }) {
+function usePostings(center, live, elapsed, act) {
   const [justCopied, setJustCopied] = useState(null);
-  const [openId, setOpenId] = useState(null);
   const kitPostings = center.kit.postings;
   // A reading picked from the hosts' own comes with its posting (what its page copies), first in the list
   const reading = useMemo(() => readingPosting(live.activity), [live.activity]);
@@ -329,6 +379,13 @@ export function ChatPostings({ center, live, elapsed, act }) {
     setTimeout(() => setJustCopied((id) => (id === p.id ? null : id)), 1800);
     act?.("posted", { posting_id: p.id });
   };
+  return { postings, due, filled, copy, justCopied };
+}
+
+// `expanded`: what each one pastes shows without opening it (in the middle of a deck)
+export function ChatPostings({ center, live, elapsed, act, expanded = false }) {
+  const [openId, setOpenId] = useState(null);
+  const { postings, due, filled, copy, justCopied } = usePostings(center, live, elapsed, act);
   return (
     <section>
       <h2 className={`${label} mb-2`}>Chat postings</h2>
@@ -339,11 +396,11 @@ export function ChatPostings({ center, live, elapsed, act }) {
           {postings.map((p) => {
             const posted = live.posted[p.id];
             const isDue = due?.id === p.id;
-            const open = openId === p.id;
+            const open = expanded ? openId !== p.id : openId === p.id;
             return (
               <li key={p.id} className={`rounded-xl bg-white shadow-panel ring-1 dark:bg-neutral-900 ${isDue ? "ring-2 ring-accent" : "ring-neutral-200 dark:ring-neutral-800"}`}>
                 <div className="flex items-center gap-3 p-3">
-                  <button type="button" onClick={() => setOpenId(open ? null : p.id)} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-3 !bg-transparent p-0 text-left" title="Show what gets pasted">
+                  <button type="button" onClick={() => setOpenId(openId === p.id ? null : p.id)} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-3 !bg-transparent p-0 text-left" title="Show what gets pasted">
                     <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${posted ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-neutral-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300"}`}>
                       <LucideIcon name={p.icon} fallback={MessageSquare} size={18} />
                     </span>
@@ -369,6 +426,27 @@ export function ChatPostings({ center, live, elapsed, act }) {
         </ul>
       )}
     </section>
+  );
+}
+
+// In the bottom bar: the posting that's due (else the next one not copied yet), to copy
+export function ChatPostingBar({ center, live, elapsed, act }) {
+  const { postings, due, copy, justCopied } = usePostings(center, live, elapsed, act);
+  const p = due || postings.find((x) => !live.posted[x.id]);
+  if (!postings.length) return <p className="text-sm text-slate-500 dark:text-neutral-400">No chat postings</p>;
+  if (!p) return <p className="flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-300"><ClipboardCheck className="size-4" /> Every posting is copied</p>;
+  const isDue = due?.id === p.id;
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300"><LucideIcon name={p.icon} fallback={MessageSquare} size={16} /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-mono text-[11px] tabular-nums text-slate-500 dark:text-neutral-400">{p.virtual ? "With today's reading" : mmss(p.minute * 60)}{isDue && <span className="ml-1.5 font-sans font-semibold text-accent dark:text-sky-300">Now</span>}</span>
+        <span className="block truncate text-sm font-semibold">{p.title}</span>
+      </span>
+      <button type="button" onClick={() => copy(p)} className={`${isDue ? primaryButton : quietButton} !px-3 !py-1.5`} aria-label={`Copy ${p.title}`}>
+        {justCopied === p.id ? <><ClipboardCheck className="size-4" /> Copied</> : <><Clipboard className="size-4" /> Copy</>}
+      </button>
+    </div>
   );
 }
 

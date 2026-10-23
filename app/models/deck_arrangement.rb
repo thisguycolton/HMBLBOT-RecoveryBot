@@ -14,16 +14,22 @@
 #   notes      title, markdown
 #   checklist  title, items [{ id, text }]
 #   timer      title, minutes
+#   quick_actions  actions (which of QUICK_ACTIONS show; all when there's none), links [{ title, url }]
 module DeckArrangement
   LAYOUTS = %w[both left right focus].freeze
   REGIONS = %w[strip left main right bar].freeze
   # What size each block has (deck/blocks.jsx)
   SIZES = {
-    "stage" => %w[main], "reminders" => %w[bar], "flow" => %w[side], "activity" => %w[side], "meeting_readings" => %w[side],
-    "service_readings" => %w[side], "quick_actions" => %w[side], "chat_postings" => %w[side], "share_link" => %w[side],
-    "hosts_here" => %w[side], "milestones" => %w[side], "activity_log" => %w[side], "previous" => %w[bar], "clock" => %w[bar], "next" => %w[bar],
-    "notes" => %w[side main], "checklist" => %w[side main], "timer" => %w[side bar main],
+    "stage" => %w[main], "now_next" => %w[side bar main], "reminders" => %w[bar side], "flow" => %w[side main bar],
+    "activity" => %w[side main bar], "meeting_readings" => %w[side main], "service_readings" => %w[side main],
+    "quick_actions" => %w[side main bar], "chat_postings" => %w[side main bar], "share_link" => %w[side bar],
+    "hosts_here" => %w[side main bar], "service_roles" => %w[side main], "milestones" => %w[side main bar],
+    "activity_log" => %w[side main bar], "previous" => %w[bar], "clock" => %w[bar side main], "next" => %w[bar],
+    "notes" => %w[side main], "checklist" => %w[side main bar], "timer" => %w[side bar main],
   }.freeze
+  # The quick actions a block can show (parts.jsx QUICK_ACTIONS)
+  QUICK_ACTIONS = %w[court zoom_open zoom_copy passcode host_schedule time_capsule].freeze
+  MAX_LINKS = 20
   # Blocks a deck can have more than one of
   MULTI = %w[notes checklist timer].freeze
   MAX_ITEMS = 50
@@ -69,6 +75,14 @@ module DeckArrangement
       end
       { "title" => title, "items" => items.uniq { |i| i["id"] } }.compact
     when "timer" then { "title" => title, "minutes" => raw["minutes"].to_i.clamp(1, 180) }.compact
+    when "quick_actions"
+      actions = (QUICK_ACTIONS & Array(raw["actions"]).map(&:to_s) if raw.key?("actions") && !raw["actions"].nil?)
+      links = Array(raw["links"]).first(MAX_LINKS).filter_map do |l|
+        l = l.respond_to?(:to_h) ? l.to_h.stringify_keys : {}
+        url = l["url"].to_s.strip.first(500)
+        { "title" => l["title"].to_s.squish.first(80), "url" => url } if url.match?(%r{\Ahttps?://\S+\z}i)
+      end
+      { "actions" => actions, "links" => (links if links.any?) }.compact.presence
     end
   end
 end

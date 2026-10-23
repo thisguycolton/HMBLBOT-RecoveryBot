@@ -22,8 +22,12 @@ const TAB_ICONS = { script: ScrollText, chat: MessageSquare, readings: BookOpen,
 // The blocks in a region that have something to show
 const present = (list, deck) => (list || []).filter((b) => BLOCKS[b.type] && !BLOCKS[b.type].empty?.(deck));
 const tabOf = (b) => BLOCKS[b.type].tab;
-// On a phone, a block shows under its own tab; "all" is every tab, null none (big screens only)
-const onPhone = (b, panel) => tabOf(b) === "all" || tabOf(b) === panel;
+// On a phone, a block in a column shows under its own tab (a bar block's "all": the script's), null
+// under none (big screens only)
+const onPhone = (b, panel) => (tabOf(b) === "all" ? panel === "script" : tabOf(b) === panel);
+// A block in the middle other than the script, as wide as the script's text
+const mainFrame = (first) => `mx-auto max-w-3xl px-4 pb-6 sm:px-8 ${first ? "pt-5 sm:pt-8" : ""}`;
+const STRIP_FRAME = "shrink-0 border-b border-neutral-200 bg-white px-4 py-2 dark:border-neutral-800 dark:bg-neutral-900";
 
 function Block({ block, size, deck }) {
   const Component = BLOCKS[block.type].component;
@@ -62,9 +66,13 @@ function Sidebar({ side, list, deck, editor }) {
 // A block in the layout editor, with what it says when it has nothing to show yet
 function Editable({ block, region, size, deck, editor, className }) {
   const info = BLOCKS[block.type];
-  const placeholder = info.empty?.(deck) || info.placeholder?.(deck) ? info.note : null;
+  const placeholder = info.empty?.(deck) || info.placeholder?.(deck, size) ? info.note : null;
+  // A meeting's kit part (its postings, readings...) is set up from its block, for host coordinators;
+  // a deck's script from the deck's settings
+  const kit = deck.center.can_edit && info.kit && (deck.center.deck ? info.kit === "script" : true);
   return (
-    <EditBlock block={block} region={region} setDraft={editor.setDraft} placeholder={placeholder} className={className}>
+    <EditBlock block={block} region={region} setDraft={editor.setDraft} placeholder={placeholder} className={className}
+      onKit={kit ? () => deck.setSetup(deck.center.deck ? true : info.kit) : null}>
       <Block block={block} size={size} deck={deck} />
     </EditBlock>
   );
@@ -162,15 +170,19 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
         <EditRegion region="strip" ids={strip.map((b) => b.id)} className="m-2 flex shrink-0 gap-2">
           {strip.map((b) => <Editable key={b.id} block={b} region="strip" size="bar" deck={deck} editor={editor} className="flex-1" />)}
         </EditRegion>
-      ) : strip.map((b) => <Block key={b.id} block={b} size="bar" deck={deck} />)}
+      ) : strip.map((b) => (b.type === "reminders" ? <Block key={b.id} block={b} size="bar" deck={deck} />
+        : <div key={b.id} className={STRIP_FRAME}><Block block={b} size="bar" deck={deck} /></div>))}
 
-      <div className={`grid min-h-0 flex-1 ${GRID[columns]}`}>
+      {/* on a phone, the columns with something under the tab stack up and scroll together */}
+      <div className={`grid min-h-0 flex-1 max-lg:content-start max-lg:overflow-y-auto ${GRID[columns]}`}>
         {hasLeft && <Sidebar side="left" list={left} deck={deck} editor={editor} />}
 
         <main className={`min-h-0 overflow-y-auto lg:block ${mainOnPhone || editor ? "block" : "hidden"} ${editor ? "p-2" : ""}`}>
           {editor
             ? <EditRegion region="main" ids={main.map((b) => b.id)} className="space-y-3">{main.map((b) => <Editable key={b.id} block={b} region="main" size="main" deck={deck} editor={editor} />)}</EditRegion>
-            : main.map((b) => <Block key={b.id} block={b} size="main" deck={deck} />)}
+            : main.map((b, i) => (b.type === "stage"
+              ? <div key={b.id} className={onPhone(b, panel) ? "" : "hidden lg:block"}><Block block={b} size="main" deck={deck} /></div>
+              : <div key={b.id} className={`${mainFrame(i === 0)} ${onPhone(b, panel) ? "" : "hidden lg:block"} ${BLOCKS[b.type].collapse ? "empty:hidden" : ""}`}><Block block={b} size="main" deck={deck} /></div>))}
         </main>
 
         {hasRight && <Sidebar side="right" list={right} deck={deck} editor={editor} />}
@@ -182,14 +194,20 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
             <EditRegion region="bar" ids={bar.map((b) => b.id)} className="flex min-w-0 flex-1 items-stretch gap-2">
               {bar.map((b) => <Editable key={b.id} block={b} region="bar" size="bar" deck={deck} editor={editor} className={b.grow ? "flex-1" : "w-40 shrink-0"} />)}
             </EditRegion>
-          ) : bar.map((b) => (b.grow
+          ) : bar.map((b, i) => (b.grow
             ? <div key={b.id} className="min-w-0 flex-1"><Block block={b} size="bar" deck={deck} /></div>
-            : <Block key={b.id} block={b} size="bar" deck={deck} />))}
+            : (
+              <React.Fragment key={b.id}>
+                {/* nothing stretches: the last block (Next) still goes to the right */}
+                {i === bar.length - 1 && i > 0 && !bar.some((x) => x.grow) && <span className="flex-1" />}
+                <Block block={b} size="bar" deck={deck} />
+              </React.Fragment>
+            )))}
         </footer>
       )}
 
       {deck.setup && renderSetup && renderSetup()}
-      {deck.setup && !renderSetup && <KitEditor center={center} onClose={() => deck.setSetup(false)} onSaved={(c) => { deck.setCenter(c); deck.applyLive(c.live); }} />}
+      {deck.setup && !renderSetup && <KitEditor center={center} only={typeof deck.setup === "string" ? deck.setup : null} onClose={() => deck.setSetup(false)} onSaved={(c) => { deck.setCenter(c); deck.applyLive(c.live); }} />}
     </div>
   );
   return editor ? <EditDnd draft={editor.draft} setDraft={editor.setDraft}>{page}</EditDnd> : page;

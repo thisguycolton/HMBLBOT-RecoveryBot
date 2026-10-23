@@ -24,9 +24,26 @@ function LiveInput({ value, onSave, ...props }) {
 
 // Who is doing service today (Host Helper's scratch paper), at the top of "Before we begin". The
 // names go into the script wherever it says {{ service_hiw }}, and into chat postings.
-export function ServicePanel({ center, live, act }) {
+// `compact`: one under the other, for a deck's sidebar.
+export function ServicePanel({ center, live, act, compact = false }) {
   const roles = center.kit.service_roles;
   const names = serviceNames(center, live);
+  if (compact) {
+    return (
+      <section>
+        <h2 className={`${label} mb-2 flex items-center gap-1.5`}><Users className="size-3.5" /> Doing service today</h2>
+        <div className="space-y-1.5">
+          {roles.map((r) => (
+            <div key={r.key} className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-2">
+              <label htmlFor={`svc-side-${r.key}`} className="truncate text-xs text-slate-600 dark:text-neutral-400" title={roleToken(r.key)}>{r.label}</label>
+              <LiveInput id={`svc-side-${r.key}`} className={`${inputClass} !px-2 !py-1`} maxLength={80} value={names[r.key]} placeholder="Name"
+                onSave={(value) => act("service", { index: r.key, label: r.label, data: { value } })} />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="rounded-2xl bg-white p-4 shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
       <div className="mb-3 flex items-center gap-2">

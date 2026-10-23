@@ -3,7 +3,7 @@ import { Check, Pause, Play, Plus, RotateCcw, Trash2 } from "lucide-react";
 import Markdown from "../../../book/Markdown";
 import { inputClass, labelClass } from "../../../ui/styles";
 import { primaryButton, quietButton } from "../../ui";
-import { label, timeOf } from "../parts";
+import { QUICK_ACTIONS, label, timeOf } from "../parts";
 import { mmss } from "../lib";
 
 // HostDeck's blocks that the group writes (notes, a checklist) or that keep time (a timer, a
@@ -17,7 +17,7 @@ const card = "rounded-xl bg-white p-3 shadow-panel ring-1 ring-neutral-200 dark:
 export function NotesBlock({ block, size }) {
   const { title, markdown } = block.settings || {};
   return (
-    <section className={size === "main" ? "mx-auto max-w-3xl px-4 pb-6 sm:px-8" : ""}>
+    <section>
       {title && <h2 className={`${label} mb-2`}>{title}</h2>}
       {markdown?.trim() ? <div className={`${card} text-sm`}><Markdown source={markdown} className="ev-md" /></div>
         : <p className="text-sm text-slate-500 dark:text-neutral-400">No notes yet.</p>}
@@ -34,14 +34,28 @@ export function NotesSettings({ settings, change }) {
   );
 }
 
-// Things to do, ticked off for everyone, with who did each
+// Things to do, ticked off for everyone, with who did each. In the bar: the next one to do.
 export function ChecklistBlock({ block, size, deck }) {
   const { title, items = [] } = block.settings || {};
   const done = deck.live.block_state?.[block.id]?.done || {};
   const count = items.filter((i) => done[i.id]).length;
   const toggle = (item) => deck.act("block", { label: item.text, data: { block_id: block.id, op: "toggle", item: item.id } });
+  if (size === "bar") {
+    const next = items.find((i) => !done[i.id]);
+    return (
+      <div className="flex min-w-0 items-center gap-2 text-sm">
+        <span className="shrink-0 text-xs tabular-nums text-slate-500 dark:text-neutral-400">{title || "Checklist"} {count}/{items.length}</span>
+        {next ? (
+          <button type="button" onClick={() => toggle(next)} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg !bg-transparent px-1.5 py-1 text-left hover:!bg-neutral-100 dark:hover:!bg-neutral-800" aria-label={`Check off ${next.text}`}>
+            <span className="grid size-5 shrink-0 place-items-center rounded-md ring-1 ring-neutral-300 dark:ring-neutral-600" />
+            <span className="min-w-0 flex-1 truncate">{next.text}</span>
+          </button>
+        ) : <span className="flex min-w-0 flex-1 items-center gap-1.5 text-emerald-700 dark:text-emerald-300"><Check className="size-4" /> {items.length ? "All done" : "Nothing on the list"}</span>}
+      </div>
+    );
+  }
   return (
-    <section className={size === "main" ? "mx-auto max-w-3xl px-4 pb-6 sm:px-8" : ""}>
+    <section>
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className={label}>{title || "Checklist"}</h2>
         {items.length > 0 && <span className="text-xs tabular-nums text-slate-500 dark:text-neutral-400">{count} / {items.length}</span>}
@@ -113,7 +127,7 @@ export function TimerBlock({ block, size, deck }) {
     return <div className="flex items-center gap-2"><span className="hidden truncate text-xs text-slate-500 sm:inline dark:text-neutral-400">{title || "Timer"}</span><span className="text-lg">{time}</span>{controls}</div>;
   }
   return (
-    <section className={size === "main" ? "mx-auto max-w-3xl px-4 pb-6 sm:px-8" : ""}>
+    <section>
       <h2 className={`${label} mb-2`}>{title || "Timer"}</h2>
       <div className={`${card} flex items-center gap-3`}>
         <span className={size === "main" ? "flex-1 text-5xl" : "flex-1 text-3xl"}>{time}</span>
@@ -132,8 +146,8 @@ export function TimerSettings({ settings, change }) {
   );
 }
 
-// A deck's own clock (it has no start time): from when a host starts it
-export function DeckClock({ deck }) {
+// A deck's own clock (it has no start time): from when a host starts it (`big`: on a card, "side" or "main")
+export function DeckClock({ deck, big = false }) {
   const started = deck.live.clock_started_at;
   if (!started) {
     return <div className="flex justify-center"><button type="button" className={`${primaryButton} !px-4`} onClick={() => deck.act("clock_start")} aria-label="Start the clock"><Play className="size-4" /> Start</button></div>;
@@ -143,9 +157,49 @@ export function DeckClock({ deck }) {
     <div className="flex items-center justify-center gap-2 text-center">
       <div>
         <p className={`${label} !text-[10px] sm:!text-xs`}>Running for</p>
-        <p className="font-mono text-2xl font-semibold tabular-nums sm:text-3xl">{mmss(elapsed)}</p>
+        <p className={`font-mono font-semibold tabular-nums ${big === "main" ? "text-6xl sm:text-7xl" : big ? "text-4xl" : "text-2xl sm:text-3xl"}`}>{mmss(elapsed)}</p>
       </div>
       <button type="button" className={`${quietButton} !px-2 !py-1.5`} onClick={() => window.confirm("Put the clock back to the start?") && deck.act("clock_reset")} aria-label="Reset the clock" title="Back to the start"><RotateCcw className="size-4" /></button>
+    </div>
+  );
+}
+
+// Which quick actions show, and the group's own links (a meeting's Zoom ones show only when it has Zoom)
+export function QuickActionsSettings({ settings, change }) {
+  const actions = settings.actions || QUICK_ACTIONS.map(([k]) => k);
+  const links = settings.links || [];
+  const [link, setLink] = useState({ title: "", url: "" });
+  const ok = /^https?:\/\/\S+$/i.test(link.url.trim());
+  const toggle = (key) => {
+    const next = actions.includes(key) ? actions.filter((k) => k !== key) : QUICK_ACTIONS.map(([k]) => k).filter((k) => k === key || actions.includes(k));
+    change({ actions: next.length === QUICK_ACTIONS.length ? undefined : next });
+  };
+  const add = () => { if (ok) { change({ links: [...links, { title: link.title.trim(), url: link.url.trim() }] }); setLink({ title: "", url: "" }); } };
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1">
+        {QUICK_ACTIONS.map(([key, text]) => (
+          <label key={key} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={actions.includes(key)} onChange={() => toggle(key)} /> {text}</label>
+        ))}
+      </div>
+      <div>
+        <p className={labelClass}>Your own links</p>
+        <ul className="space-y-1">
+          {links.map((l, i) => (
+            <li key={i} className="flex items-center gap-1 text-sm">
+              <span className="min-w-0 flex-1 truncate">{l.title || l.url}<span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{l.url}</span></span>
+              <button type="button" className={`${quietButton} !px-2`} onClick={() => change({ links: links.filter((_, j) => j !== i) })} aria-label={`Remove ${l.title || l.url}`}><Trash2 className="size-4" /></button>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-1 grid gap-1">
+          <input className={`${inputClass} !py-1.5`} maxLength={80} value={link.title} placeholder="Title, like Intergroup calendar" aria-label="Link title" onChange={(e) => setLink({ ...link, title: e.target.value })} />
+          <div className="flex gap-1">
+            <input className={`${inputClass} !py-1.5`} type="url" value={link.url} placeholder="https://" aria-label="Link" onChange={(e) => setLink({ ...link, url: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+            <button type="button" className={`${quietButton} !px-2`} onClick={add} disabled={!ok} aria-label="Add the link"><Plus className="size-4" /></button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

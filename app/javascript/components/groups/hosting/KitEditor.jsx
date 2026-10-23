@@ -22,8 +22,12 @@ const smallButton = `${quietButton} !px-2 !py-1 !text-xs`;
 
 // The gear in the Command Center, for host coordinators: which document is the script, the chat
 // postings and the readings, for this meeting (all its days) or as the group's default for every
-// meeting without its own.
-export default function KitEditor({ center, onClose, onSaved }) {
+// meeting without its own. `only`: just one part ("script", "postings", "roles" or "readings"),
+// opened from its block on HostDeck; the rest of the kit is saved as it was.
+const PARTS = { script: "The script", postings: "Chat postings", roles: "Service roles", readings: "Meeting readings" };
+
+export default function KitEditor({ center, onClose, onSaved, only = null }) {
+  const shows = (part) => !only || only === part;
   const { kit, editor, meeting, group } = center;
   const [scope, setScope] = useState(kit.own || !editor.has_default ? "meeting" : "default");
   const [scriptId, setScriptId] = useState(editor.script_document_id ? String(editor.script_document_id) : "");
@@ -85,7 +89,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
       <div className="flex h-full w-full max-w-2xl flex-col bg-neutral-50 shadow-2xl dark:bg-neutral-950">
         <header className="flex items-center gap-3 border-b border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900">
           <div className="min-w-0 flex-1">
-            <h2 id="kit-title" className="font-semibold">Set up HostDeck</h2>
+            <h2 id="kit-title" className="font-semibold">{only ? PARTS[only] : "Set up HostDeck"}</h2>
             <p className="truncate text-xs text-slate-500 dark:text-neutral-400">What the hosts of {meeting.name} get. Host coordinators and group admins change it.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="inline-grid size-9 place-items-center rounded-xl !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:hover:!bg-neutral-800"><X className="size-5" /></button>
@@ -110,11 +114,11 @@ export default function KitEditor({ center, onClose, onSaved }) {
             </p>
           </div>
 
-          <ScriptPicker documents={editor.documents} value={scriptId} onChange={setScriptId} current={kit.script} anchor={anchor} setAnchor={setAnchor} slug={group.slug} />
+          {shows("script") && <ScriptPicker documents={editor.documents} value={scriptId} onChange={setScriptId} current={kit.script} anchor={anchor} setAnchor={setAnchor} slug={group.slug} />}
 
-          <ValuesPicker allowed={allowed} setAllowed={setAllowed} />
+          {shows("script") && <ValuesPicker allowed={allowed} setAllowed={setAllowed} />}
 
-          <section>
+          {shows("postings") && <section>
             <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className={labelClass}>Chat postings</h3>
               <button type="button" className={smallButton} onClick={addPosting}><Plus className="size-3.5" /> Add a posting</button>
@@ -135,11 +139,11 @@ export default function KitEditor({ center, onClose, onSaved }) {
                   remove={() => setPostings(postings.filter((x) => x.key !== p.key))} />
               ))}
             </ul>
-          </section>
+          </section>}
 
-          <RolesEditor roles={roles} setRoles={changeRoles} custom={kit.custom_service_roles || rolesEdited} />
+          {shows("roles") && <RolesEditor roles={roles} setRoles={changeRoles} custom={kit.custom_service_roles || rolesEdited} />}
 
-          <ReadingsEditor books={editor.books} readings={readings} setReadings={setReadings} />
+          {shows("readings") && <ReadingsEditor books={editor.books} readings={readings} setReadings={setReadings} />}
         </div>
 
         <footer className="flex items-center gap-2 border-t border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900">

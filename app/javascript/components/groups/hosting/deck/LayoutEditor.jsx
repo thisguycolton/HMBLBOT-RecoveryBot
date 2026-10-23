@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, MoveHorizontal, Plus, RotateCcw, Settings2, X } from "lucide-react";
+import { GripVertical, MoveHorizontal, Plus, RotateCcw, Settings2, SlidersHorizontal, X } from "lucide-react";
 import { ErrorNote, primaryButton, quietButton } from "../../ui";
 import { selectClass } from "../../../ui/styles";
 import { BLOCKS } from "./blocks";
@@ -68,7 +68,8 @@ export function EditRegion({ region, ids, className = "", children }) {
 
 // A block while editing: its name to drag it by, a button to take it off (not the stage), and in
 // the bar whether it stretches. What's in it is the real thing, but can't be clicked.
-export function EditBlock({ block, region, setDraft, placeholder, className = "", children }) {
+// `onKit`: opens the part of the meeting's kit it shows (saved on its own, right away).
+export function EditBlock({ block, region, setDraft, placeholder, onKit = null, className = "", children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const [open, setOpen] = useState(!!block.fresh && !!BLOCKS[block.type].settings);
   const info = BLOCKS[block.type];
@@ -85,6 +86,9 @@ export function EditBlock({ block, region, setDraft, placeholder, className = ""
           <GripVertical className="size-3.5 shrink-0" /><Icon className="size-3.5 shrink-0" /><span className="truncate">{info.label}</span>
         </button>
         <span className="flex-1" />
+        {onKit && (
+          <button type="button" className={small} onClick={onKit} aria-label={`Set up ${info.label}`} title={`Set up ${info.label.toLowerCase()} (saved for the meeting right away)`}><SlidersHorizontal className="size-3.5" /></button>
+        )}
         {Settings && (
           <button type="button" className={`${small} ${open ? "!text-accent" : ""}`} onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={`${info.label} settings`} title="Settings"><Settings2 className="size-3.5" /></button>
         )}
@@ -124,7 +128,7 @@ export function EditorToolbar({ center, draft, setDraft, scope, setScope, saving
     if (!region) return;
     const info = BLOCKS[type];
     const id = info.multi ? `${type}-${Math.random().toString(36).slice(2, 8)}` : type;
-    setDraft((d) => ({ ...d, [region]: [...d[region], { id, type, fresh: true, ...(info.defaults ? { settings: structuredClone(info.defaults) } : {}) }] }));
+    setDraft((d) => ({ ...d, [region]: [...d[region], { id, type, fresh: true, ...(region === "bar" && info.barGrow ? { grow: true } : {}), ...(info.defaults ? { settings: structuredClone(info.defaults) } : {}) }] }));
     setAdding(false);
   };
   // A sidebar that goes away hands its blocks to the one that stays

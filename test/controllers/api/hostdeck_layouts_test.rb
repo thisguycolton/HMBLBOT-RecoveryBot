@@ -30,12 +30,22 @@ class Api::HostdeckLayoutsTest < ActionDispatch::IntegrationTest
 
   test "an arrangement keeps only blocks it knows, where they have a size, once each, and always the stage" do
     out = DeckArrangement.normalize(layout: "sideways", left: [{ type: "flow" }, { type: "flow" }, { type: "stage" }, { type: "nope" }],
-                                    bar: [{ id: "x y", type: "clock", grow: "true" }, { type: "chat_postings" }])
+                                    bar: [{ id: "x y", type: "clock", grow: "true" }, { type: "service_roles" }])
     assert_equal "both", out["layout"]
     assert_equal [{ "id" => "flow", "type" => "flow" }], out["left"]
     assert_equal [{ "id" => "clock", "type" => "clock", "grow" => true }], out["bar"]
     assert_equal [{ "id" => "stage", "type" => "stage" }], out["main"]
     assert_nil DeckArrangement.normalize(nil)
+  end
+
+  test "every block goes where it has a size, and quick actions keep the ones picked and links that are links" do
+    out = DeckArrangement.normalize(layout: "focus", strip: [{ type: "chat_postings" }], main: [{ type: "clock" }, { type: "stage" }, { type: "share_link" }],
+                                    bar: [{ type: "flow", grow: true }, { type: "quick_actions", settings: { actions: %w[court nope zoom_open], links: [{ title: "Intergroup", url: "https://aa-intergroup.org" }, { title: "Bad", url: "javascript:alert(1)" }] } }])
+    assert_equal %w[chat_postings], out["strip"].map { _1["type"] }
+    assert_equal %w[clock stage], out["main"].map { _1["type"] }
+    assert_equal({ "actions" => %w[court zoom_open], "links" => [{ "title" => "Intergroup", "url" => "https://aa-intergroup.org" }] }, out["bar"].last["settings"])
+    assert_nil DeckArrangement.settings("quick_actions", {})
+    assert_equal({ "actions" => [] }, DeckArrangement.settings("quick_actions", { actions: [] }))
   end
 
   test "host coordinators, record keepers and admins rearrange by default; hosts only when the group says so" do
