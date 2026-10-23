@@ -41,6 +41,12 @@ class Event < ApplicationRecord
 
   scope :published, -> { where(status: "published") }
   scope :upcoming_first, -> { order(Arel.sql("starts_at IS NULL, starts_at ASC"), created_at: :desc) }
+  scope :latest_first, -> { order(starts_at: :desc, created_at: :desc) }
+  # Over once it ends; one with only a start time is over OVER_AFTER later. No date yet: never over.
+  OVER_AFTER = 12.hours
+  ENDED_AT_SQL = "COALESCE(events.ends_at, events.starts_at + interval '#{OVER_AFTER.to_i} seconds')".freeze
+  scope :past, -> { where("#{ENDED_AT_SQL} < ?", Time.current) }
+  scope :not_past, -> { where("events.starts_at IS NULL OR #{ENDED_AT_SQL} >= ?", Time.current) }
 
   def to_param = token
   def path = "/events/#{token}"
@@ -54,6 +60,7 @@ class Event < ApplicationRecord
   def collaborator?(user) = !!user && collaborators.exists?(user_id: user.id)
   def editable_by?(user) = manager?(user) || collaborator?(user)
   def visible_to?(user) = published? || editable_by?(user)
+  def past? = !!starts_at && (ends_at || starts_at + OVER_AFTER) < Time.current
 
   # Group admins only: everyone who edits it is told about updates by the editor itself
   def editors = (group.admins.to_a + collaborator_users.to_a).uniq
@@ -113,7 +120,7 @@ class Event < ApplicationRecord
     {
       token: token, title: title, short_description: short_description, status: status,
       starts_at: starts_at&.iso8601, when_label: when_label, location: location,
-      cover_url: image_path(cover), going_count: rsvps.going.count,
+      cover_url: image_path(cover), going_count: rsvps.going.count, past: past?,
     }
   end
 

@@ -20,9 +20,10 @@ export default function RsvpCard({ event, setEvent, preview = false }) {
   const [flyer, setFlyer] = useState(false);
   const mine = event.my_rsvp;
   const draft = event.status !== "published";
+  const over = !!event.past;
 
   const send = async (status) => {
-    if (preview || draft) return;
+    if (preview || draft || over) return;
     setBusy(true);
     setError(null);
     try {
@@ -51,7 +52,7 @@ export default function RsvpCard({ event, setEvent, preview = false }) {
     const active = mine?.status === c.status;
     const Icon = c.icon;
     return (
-      <button key={c.status} type="button" disabled={busy || draft || preview} onClick={() => send(c.status)} aria-pressed={active}
+      <button key={c.status} type="button" disabled={busy || draft || over || preview} onClick={() => send(c.status)} aria-pressed={active}
         className={`inline-flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2 py-2 text-sm font-semibold disabled:opacity-60 ${
           active ? "!bg-accent !text-white shadow-panel" : "!bg-neutral-100 text-slate-700 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:text-neutral-200 dark:hover:!bg-neutral-700"
         }`}>
@@ -65,10 +66,10 @@ export default function RsvpCard({ event, setEvent, preview = false }) {
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-base font-semibold text-slate-900 dark:text-white">
-            {draft ? "RSVPs open once it's published" : mine ? (mine.status === "following" ? "You're following this event" : `You're ${STATUS_LABEL[mine.status].toLowerCase()}`) : "Are you coming?"}
+            {draft ? "RSVPs open once it's published" : over ? "This event is over" : mine ? (mine.status === "following" ? "You're following this event" : `You're ${STATUS_LABEL[mine.status].toLowerCase()}`) : "Are you coming?"}
           </p>
           <p className="text-xs text-slate-500 dark:text-neutral-400">
-            {event.counts.going} going{event.counts.maybe ? ` · ${event.counts.maybe} maybe` : ""}
+            {event.counts.going} {over ? "went" : "going"}{!over && event.counts.maybe ? ` · ${event.counts.maybe} maybe` : ""}
           </p>
         </div>
         {event.flyer_url && (
@@ -79,7 +80,7 @@ export default function RsvpCard({ event, setEvent, preview = false }) {
         )}
       </div>
 
-      {needsEmail && !draft && (
+      {needsEmail && !draft && !over && (
         <div className="mt-3 space-y-2">
           <input className={inputClass} placeholder="Your first name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="given-name" />
           <input className={inputClass} type="email" placeholder="Email, for updates" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
@@ -89,9 +90,9 @@ export default function RsvpCard({ event, setEvent, preview = false }) {
         </div>
       )}
 
-      <div className="mt-3 flex gap-2">{CHOICES.map(choice)}</div>
+      {!over && <div className="mt-3 flex gap-2">{CHOICES.map(choice)}</div>}
 
-      {mine && mine.status !== "not_going" && (
+      {mine && mine.status !== "not_going" && !over && (
         <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400">
           <BellRing className="size-3.5" /> You'll get updates{mine.email ? ` at ${mine.email}` : ""}.
           <button type="button" onClick={withdraw} disabled={busy} className="ml-auto !bg-transparent !p-0 text-xs text-slate-500 underline hover:text-rose-600">Remove my RSVP</button>
