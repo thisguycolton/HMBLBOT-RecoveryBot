@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_23_170000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_23_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -249,9 +249,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_170000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "intro_title"
+    t.string "share_code"
+    t.string "guest_access", default: "off", null: false
+    t.boolean "guest_script", default: true, null: false
     t.index ["created_by_id"], name: "index_decks_on_created_by_id"
     t.index ["group_id"], name: "index_decks_on_group_id"
     t.index ["script_document_id"], name: "index_decks_on_script_document_id"
+    t.index ["share_code"], name: "index_decks_on_share_code", unique: true
   end
 
   create_table "event_collaborators", force: :cascade do |t|
@@ -606,6 +610,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_170000) do
     t.datetime "updated_at", null: false
     t.bigint "deck_id"
     t.jsonb "block_state", default: {}, null: false
+    t.datetime "topicificator_seen_at"
     t.index ["code"], name: "index_hosting_sessions_on_code", unique: true
     t.index ["deck_id", "on"], name: "index_hosting_sessions_on_deck_id_and_on", unique: true
     t.index ["meeting_id", "on"], name: "index_hosting_sessions_on_meeting_id_and_on", unique: true

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, BookOpen, LayoutDashboard, LayoutGrid, MessageSquare, Minus, Moon, Plus, RefreshCw, RotateCcw, ScrollText, Settings, Sun, UserCheck, Users } from "lucide-react";
+import { ArrowLeft, BookOpen, Eye, LayoutDashboard, LayoutGrid, MessageSquare, Minus, Moon, Plus, RefreshCw, RotateCcw, ScrollText, Settings, Sun, UserCheck, Users } from "lucide-react";
 import GroupLogo from "../../GroupLogo";
 import { ErrorNote, Loading, Message, quietButton } from "../../ui";
 import KitEditor from "../KitEditor";
@@ -90,7 +90,8 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
   const { slug, center, live, error, panel, setPanel } = deck;
   // A deck of its own goes back to the group's HostDecks (a business meeting's to the group's
   // business meetings, where every member finds it); a meeting's to its hosts
-  const back = center?.deck ? (center.deck.purpose === "business_meeting" ? meetingsPath(slug) : `/${slug}/decks`) : `/${slug}/hosts`;
+  const guest = deck.readOnly;
+  const back = guest ? "/" : center?.deck ? (center.deck.purpose === "business_meeting" ? meetingsPath(slug) : `/${slug}/decks`) : `/${slug}/hosts`;
   if (error) {
     return (
       <div className="min-h-screen bg-neutral-50 px-4 dark:bg-neutral-950">
@@ -124,7 +125,7 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
   const page = (
     <div className={`hc-root flex h-dvh flex-col bg-neutral-50 !font-sans text-slate-900 dark:bg-neutral-950 dark:text-white ${dark ? "doc-dark" : ""}`}>
       <header className="flex shrink-0 items-center gap-2 border-b border-neutral-200 bg-white px-3 py-2 sm:gap-3 sm:px-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <Link to={back} className={iconButton} aria-label={center.deck ? "Back to HostDeck" : "Back to the group's hosts"} title="Back to the group"><ArrowLeft className="size-5" /></Link>
+        {!guest && <Link to={back} className={iconButton} aria-label={center.deck ? "Back to HostDeck" : "Back to the group's hosts"} title="Back to the group"><ArrowLeft className="size-5" /></Link>}
         <GroupLogo group={center.group} className="hidden size-8 text-xs sm:grid" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold sm:text-base">HostDeck</p>
@@ -133,15 +134,16 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
             {center.starts_at && ` at ${timeOf(center.starts_at, center.meeting.time_zone)}`}
           </p>
         </div>
-        <span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold sm:inline-flex ${others.length ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200" : "bg-neutral-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300"}`}
+        {guest && <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-800 dark:bg-sky-900/40 dark:text-sky-200" title="You're following along. The hosts move through the deck."><Eye className="size-3.5" /> Following along</span>}
+        {!guest && <span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold sm:inline-flex ${others.length ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200" : "bg-neutral-100 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300"}`}
           title={others.length ? `${others.map((p) => p.name).join(", ")} here too` : "Nobody else has this open"}>
           <span className={`size-2 rounded-full ${others.length ? "animate-pulse bg-emerald-500" : "bg-slate-400"}`} /> {others.length ? "Live" : "Only you"}
-        </span>
+        </span>}
         {hosts && <span className="hidden max-w-xs truncate text-sm text-slate-600 lg:inline dark:text-neutral-300"><UserCheck className="mr-1 inline size-4" />{hosts}</span>}
         <div className="flex items-center">
           <button type="button" className={iconButton} onClick={() => deck.changeSize(-1)} disabled={size === SIZES[0]} aria-label="Smaller script text" title="Smaller text"><Minus className="size-4" /></button>
           <button type="button" className={iconButton} onClick={() => deck.changeSize(1)} disabled={size === SIZES[SIZES.length - 1]} aria-label="Bigger script text" title="Bigger text"><Plus className="size-4" /></button>
-          {!editor && <button type="button" className={iconButton} onClick={deck.reset} disabled={!deck.sections.length} aria-label="Reset the deck" title="Reset: back to the first section, nothing ticked off"><RotateCcw className="size-5" /></button>}
+          {!editor && !guest && <button type="button" className={iconButton} onClick={deck.reset} disabled={!deck.sections.length} aria-label="Reset the deck" title="Reset: back to the first section, nothing ticked off"><RotateCcw className="size-5" /></button>}
           <button type="button" className={iconButton} onClick={deck.toggleDark} aria-label={dark ? "Light mode" : "Dark mode"} title={dark ? "Light mode" : "Dark mode"}>{dark ? <Sun className="size-5" /> : <Moon className="size-5" />}</button>
           {canArrange && !editor && <button type="button" className={`${iconButton} !hidden lg:!inline-grid`} onClick={onEdit} aria-label="Edit the layout" title="Edit the layout: move blocks, pick sidebars"><LayoutDashboard className="size-5" /></button>}
           {center.can_edit && <button type="button" className={iconButton} onClick={() => deck.setSetup(true)} aria-label={center.deck ? "Deck settings" : "Set up the kit"} title={center.deck ? "The deck's name and document" : "Set up the script, postings and readings"}><Settings className="size-5" /></button>}

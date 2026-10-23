@@ -124,6 +124,97 @@ class Api::DecksTest < ActionDispatch::IntegrationTest
     assert_equal "Reset the deck to Old business", live["log"].first["text"]
   end
 
+  test "a deck's share link opens it for members, and for people without an account only if the group allows" do
+    deck = @group.decks.create!(name: "Onboarding", purpose: "onboarding", script_document: @doc, created_by: @keeper, arrangement: ARRANGEMENT)
+    code = deck.share_code
+    assert_match(/\A[A-Z0-9]{6}\z/, code)
+
+    # off: the link brings members to the deck, and everyone else to sign in
+    get "/h/#{code}"
+    assert_redirected_to "/h/#{code}?sign_in=1"
+    get "/api/deck_links/#{code}", as: :json
+    assert_response :not_found
+    sign_in @outsider
+    get "/h/#{code}"
+    assert_redirected_to "/groups/meetings"
+    sign_in @member
+    get "/h/#{code}"
+    assert_redirected_to "/groups/#{@group.slug}/decks/#{deck.id}"
+
+    # the members who edit decks decide, and see the link
+    sign_in @member
+    patch path(deck.id), params: { deck: { guest_access: "view" } }, as: :json
+    assert_response :forbidden
+    sign_in @keeper
+    patch path(deck.id), params: { deck: { guest_access: "view", guest_script: false } }, as: :json
+    assert_response :success
+    assert_equal "/h/#{code}", response.parsed_body.dig("deck", "share_path")
+    assert_equal "view", response.parsed_body.dig("deck", "guest_access")
+    patch path(deck.id), params: { deck: { guest_access: "everything" } }, as: :json
+    assert_equal "off", deck.reload.guest_access, "anything but a known level is off"
+    patch path(deck.id), params: { deck: { guest_access: "view" } }, as: :json
+
+    # on: an outsider and a visitor with no account follow it read-only
+    session = deck.session_on(@group.zone.today)
+    session.act!("block", user: @keeper, label: "Open", data: { block_id: "list", op: "toggle", item: "a" })
+    session.act!("goto", user: @keeper, index: 1, label: "New business")
+    [@outsider, nil].each do |who|
+      who ? sign_in(who) : reset!
+      get "/h/#{code}"
+      assert_redirected_to "/groups/#{@group.slug}/view/#{code}"
+      get "/api/deck_links/#{code}", as: :json
+      assert_response :success
+      page = response.parsed_body
+      assert page["read_only"]
+      assert_not page["can_edit"]
+      assert_not page["can_arrange"]
+      assert_nil page.dig("editor"), "no editor"
+      assert_nil page.dig("deck", "share_path"), "the link is for people who can edit"
+      assert_equal "Onboarding", page.dig("deck", "name")
+      assert page.dig("layout", "arrangement"), "the same layout the hosts have"
+      assert_equal 1, page.dig("live", "section_index")
+      assert_nil page.dig("kit", "script"), "the script is kept back when the group says so"
+      assert page.dig("kit", "script_hidden")
+      assert_empty page.dig("live", "presences")
+      assert_nil page.dig("live", "block_state", "list", "done", "a", "by"), "who ticked it off stays private"
+      assert page.dig("live", "block_state", "list", "done", "a", "at")
+      get "/api/deck_links/#{code}/live", as: :json
+      assert_equal 1, response.parsed_body["section_index"]
+    end
+
+    sign_in @keeper
+    patch path(deck.id), params: { deck: { guest_script: true } }, as: :json
+    reset!
+    get "/api/deck_links/#{code}", as: :json
+    assert_equal "Business meeting agenda", response.parsed_body.dig("kit", "script", "title")
+
+    # nothing a guest can post changes the deck
+    post "/api/groups/#{@group.slug}/decks/#{deck.id}/act", params: { act: "goto", index: 0 }, as: :json
+    assert_response :unauthorized
+    assert_equal 1, session.reload.section_index
+
+    # a new link kills the old one
+    sign_in @keeper
+    post path(deck.id, "reshare"), as: :json
+    assert_response :success
+    assert_not_equal code, deck.reload.share_code
+    reset!
+    get "/api/deck_links/#{code}", as: :json
+    assert_response :not_found
+    get "/api/deck_links/#{deck.share_code}", as: :json
+    assert_response :success
+  end
+
+  test "a deck's dated link from before sharing still opens it, and old decks get a share link when asked" do
+    deck = @group.decks.create!(name: "Old", purpose: "general")
+    deck.update_column(:share_code, nil)
+    session = deck.session_on(@group.zone.today)
+    sign_in @member
+    get "/h/#{session.code}"
+    assert_redirected_to "/groups/#{@group.slug}/decks/#{deck.id}"
+    assert_match(/\A\/h\/[A-Z0-9]{6}\z/, deck.share_path)
+  end
+
   test "a deck names what comes before its document's first section" do
     deck = @group.decks.create!(name: "Onboarding", purpose: "onboarding", script_document: @doc, created_by: @keeper)
     sign_in @keeper

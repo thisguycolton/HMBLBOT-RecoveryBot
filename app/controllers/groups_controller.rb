@@ -5,8 +5,8 @@ class GroupsController < ApplicationController
   layout "reader"
   # /groups/meetings, /groups/find/<listing>, /groups/<slug> and its public tabs, and the
   # group's documents and decisions (the API only gives a visitor the Public ones), and the chat
-  # postings a hosting short link opens (/h/:code)
-  PUBLIC_PATHS = %r{\A(meetings|find/[^/]+|[a-z0-9-]+/chat/[A-Za-z0-9]+|(?!(new|find|default-page)\z)[a-z0-9-]+(/(home|meetings|events)|/meetings/\d+|/conscience(/documents(/\d+)?|/decisions)?)?)\z}
+  # postings a hosting short link opens (/h/:code), and a shared HostDeck (/:slug/view/:code)
+  PUBLIC_PATHS = %r{\A(meetings|find/[^/]+|[a-z0-9-]+/(chat|view)/[A-Za-z0-9]+|(?!(new|find|default-page)\z)[a-z0-9-]+(/(home|meetings|events)|/meetings/\d+|/conscience(/documents(/\d+)?|/decisions)?)?)\z}
 
   before_action :authenticate_user!, except: %i[app join ask]
   after_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }

@@ -3,8 +3,11 @@
 # be, its script document, its layout, and the live state of today's session. Its clock runs from
 # when a host starts it, not from a start time.
 class DeckCenter
-  def initialize(deck, viewer, now: Time.current)
+  # `guest`: someone following the shared link without an account (viewer nil): the deck read-only,
+  # its script shown if the group allows (Deck#guest_script)
+  def initialize(deck, viewer, now: Time.current, guest: false)
     @deck = deck
+    @guest = guest
     @group = deck.group
     @viewer = viewer
     @now = now
@@ -17,7 +20,7 @@ class DeckCenter
   def as_json(*)
     editor = @group.decks_editable_by?(@viewer)
     script = @deck.script_document
-    visible = script && GroupDocument.visible_to(@group, @viewer).exists?(id: script.id)
+    visible = script && (@guest ? @deck.guest_script : GroupDocument.visible_to(@group, @viewer).exists?(id: script.id))
     started = session.timer_started_at
     json = {
       deck: { id: @deck.id, name: @deck.name, purpose: @deck.purpose, script_document_id: @deck.script_document_id, intro_title: @deck.intro_title },
@@ -30,8 +33,10 @@ class DeckCenter
       },
       can_edit: editor, can_arrange: editor,
       layout: { arrangement: @deck.arrangement, scope: "deck", key: layout_key },
-      live: session.live_json(@viewer, @now), activity_options: { daily: [], books: [], topic_sets: [] }, previous: [], link: nil,
+      live: @guest ? session.guest_live_json(@now) : session.live_json(@viewer, @now), activity_options: { daily: [], books: [], topic_sets: [] }, previous: [], link: nil,
+      read_only: @guest,
     }
+    json[:deck].merge!(share_path: @deck.share_path, guest_access: @deck.guest_access, guest_script: @deck.guest_script) if editor
     json[:editor] = { documents: documents } if editor
     json
   end

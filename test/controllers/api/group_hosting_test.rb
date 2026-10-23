@@ -166,6 +166,62 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
     assert_nil group.dig("preselect", "host_name")
   end
 
+  test "the live Topicificator window follows what the hosts draw, and the hosts run its timer and what's on screen" do
+    set = TopicSet.create!(name: "Acid Test topics")
+    gratitude = Topic.create!(topic_set_id: set.id, title: "Gratitude", subtitle: "What are you thankful for?", searchable_number: "7")
+    Topic.create!(topic_set_id: set.id, title: "Fear", searchable_number: "8")
+    sign_in @host
+    get path(@meeting.id), as: :json
+    code = response.parsed_body.dig("link", "code")
+
+    # not asked for yet: nothing to show, and nobody needs to sign in to ask
+    reset!
+    get "/api/topicificator_links/#{code}", as: :json
+    assert_response :success
+    assert_equal false, response.parsed_body["active"]
+    get "/api/topicificator_links/NOPE00", as: :json
+    assert_response :not_found
+
+    sign_in @host
+    post path(@meeting.id, "act"), params: { act: "activity", activity: { kind: "topics", topic_set_id: set.id, topic_set_name: set.name } }, as: :json
+    assert_not response.parsed_body["topicificator_connected"]
+    post path(@meeting.id, "act"), params: { act: "draw_topic", number: "7" }, as: :json
+    post path(@meeting.id, "act"), params: { act: "draw_topic" }, as: :json
+
+    reset!
+    get "/api/topicificator_links/#{code}", as: :json
+    live = response.parsed_body
+    assert live["active"]
+    assert_equal "Fear", live["topic"]["title"], "the latest draw is on screen"
+    assert_equal %w[Gratitude Fear], live["covered"].map { |t| t["title"] }
+    assert_equal 180, live.dig("timer", "seconds")
+    assert live.dig("timer", "started_at"), "a draw starts the timer"
+
+    sign_in @host
+    get path(@meeting.id), as: :json
+    assert response.parsed_body.dig("live", "topicificator_connected"), "the deck sees the window asked"
+
+    # back to an earlier topic, the free share, then the timer
+    post path(@meeting.id, "act"), params: { act: "topic_show", index: gratitude.id }, as: :json
+    assert_equal gratitude.id.to_s, response.parsed_body.dig("activity", "shown")
+    post path(@meeting.id, "act"), params: { act: "topic_show", index: "free" }, as: :json
+    post path(@meeting.id, "act"), params: { act: "topic_timer", data: { op: "set", value: "300" } }, as: :json
+    post path(@meeting.id, "act"), params: { act: "topic_timer", data: { op: "set", value: "5" } }, as: :json
+    assert_equal 300, response.parsed_body.dig("activity", "timer_seconds"), "a length out of range is ignored"
+    reset!
+    get "/api/topicificator_links/#{code}", as: :json
+    assert response.parsed_body["free"]
+    assert_equal "Free Share / Check-In", response.parsed_body.dig("topic", "title")
+    assert_equal 300, response.parsed_body.dig("timer", "seconds")
+
+    sign_in @host
+    post path(@meeting.id, "act"), params: { act: "topic_timer", data: { op: "stop" } }, as: :json
+    assert_nil response.parsed_body.dig("activity", "timer_started_at")
+    post path(@meeting.id, "act"), params: { act: "topic_show", index: gratitude.id }, as: :json
+    post path(@meeting.id, "act"), params: { act: "drop_topic", index: gratitude.id }, as: :json
+    assert_nil response.parsed_body.dig("activity", "shown"), "dropping the topic on screen puts the latest back"
+  end
+
   test "the hosts pick the day's reading or activity: today's page of a daily book, or Topicificator topics" do
     book = Book.create!(slug: "daily-reflections", title: "Daily Reflections")
     on = nil

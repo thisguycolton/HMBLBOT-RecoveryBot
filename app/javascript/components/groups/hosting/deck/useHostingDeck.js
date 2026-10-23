@@ -11,13 +11,14 @@ import { CUE_EARLY_MS, CUE_SHOWN_MS, PING_MS, SIZES, store, useDarkMode, useMeet
 // (text size, dark mode, setup). The page checks in every few seconds (ping), which is how the
 // host and co-host see each other. Blocks never fetch or poll on their own.
 // `base`: where its API is, a meeting's (/groups/:slug/hosting/:meetingId) or a deck's own
-// (/groups/:slug/decks/:id)
-export default function useHostingDeck(base) {
+// (/groups/:slug/decks/:id), or a shared deck's (/deck_links/:code) with `readOnly`: someone without
+// an account follows where the hosts are and changes nothing (no check-in, `act` does nothing)
+export default function useHostingDeck(base, { readOnly = false } = {}) {
   const { slug } = useParams();
   // ?on=: the date a short link (/h/CODE) opened, so both hosts stay on that day
   const [params] = useSearchParams();
   const on = /^\d{4}-\d{2}-\d{2}$/.test(params.get("on") || "") ? params.get("on") : null;
-  const q = on ? `?on=${on}` : "";
+  const q = on && !readOnly ? `?on=${on}` : "";
   const [center, setCenter] = useState(null);
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
@@ -73,8 +74,12 @@ export default function useHostingDeck(base) {
     : section ? `On ${section.title}` : "Here";
 
   const ping = useCallback(() => {
+    if (readOnly) {
+      api(`${base}/live`).then((l) => { applyLive(l); if (l?.layout_key) setLayoutKey(l.layout_key); }).catch(() => {});
+      return;
+    }
     api(`${base}/ping${q}`, { method: "POST", body: { activity, section_index: index } }).then((l) => { applyLive(l); if (l?.layout_key) setLayoutKey(l.layout_key); }).catch(() => {});
-  }, [base, q, activity, index, applyLive]);
+  }, [base, q, activity, index, applyLive, readOnly]);
   useEffect(() => {
     if (!center) return undefined;
     ping();
@@ -83,6 +88,7 @@ export default function useHostingDeck(base) {
   }, [center, ping]);
 
   const act = async (what, extra = {}) => {
+    if (readOnly) return;
     setActionError(null);
     try {
       applyLive(await api(`${base}/act${q}`, { method: "POST", body: { act: what, ...extra } }));
@@ -146,7 +152,7 @@ export default function useHostingDeck(base) {
   const openReading = (r) => { setReading(r); setPanel("script"); };
 
   return {
-    slug, base, q, center, setCenter, applyLive, error, actionError, live, act, sections, skips, shown, index, section, nextIndex, goto, next,
+    slug, base, q, readOnly, center, setCenter, applyLive, error, actionError, live, act, sections, skips, shown, index, section, nextIndex, goto, next,
     reset, reading, setReading, openActivity, openReading, panel, setPanel, setup, setSetup, dark, toggleDark, size, changeSize,
     now, elapsed, cues, upcoming, dismiss: (i) => setDismissed((d) => [...d, i]),
     // Someone rearranged the deck since this page loaded it

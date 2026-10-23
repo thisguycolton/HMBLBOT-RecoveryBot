@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { X } from "lucide-react";
+import { Clipboard, ClipboardCheck, Link2, RefreshCw, X } from "lucide-react";
 import { api } from "../../lib";
+import { copyText } from "../lib";
 import { ErrorNote, dangerButton, primaryButton, quietButton } from "../../ui";
 import FilterPick from "../../../ui/FilterPick";
 import { inputClass, labelClass, selectClass } from "../../../ui/styles";
@@ -49,7 +50,7 @@ export default function DeckPage() {
 function DeckSettings({ deck, onClose }) {
   const navigate = useNavigate();
   const { center } = deck;
-  const [form, setForm] = useState({ name: center.deck.name, purpose: center.deck.purpose, script_document_id: center.deck.script_document_id, intro_title: center.deck.intro_title || "" });
+  const [form, setForm] = useState({ name: center.deck.name, purpose: center.deck.purpose, script_document_id: center.deck.script_document_id, intro_title: center.deck.intro_title || "", guest_access: center.deck.guest_access || "off", guest_script: center.deck.guest_script !== false });
   const [error, setError] = useState(null);
   const documents = center.editor?.documents || [];
   const save = async (e) => {
@@ -86,6 +87,7 @@ function DeckSettings({ deck, onClose }) {
             onChange={(v) => setForm({ ...form, script_document_id: v ? Number(v) : null })} placeholder="Type to find a document" />
           {form.script_document_id && <IntroTitle id="deck-intro" value={form.intro_title} onChange={(v) => setForm({ ...form, intro_title: v })} />}
         </div>
+        <Sharing deck={deck} form={form} setForm={setForm} setError={setError} />
         <ErrorNote error={error} />
         <div className="flex items-center gap-2">
           <button type="button" className={dangerButton} onClick={remove}>Delete deck</button>
@@ -95,5 +97,43 @@ function DeckSettings({ deck, onClose }) {
         </div>
       </form>
     </div>
+  );
+}
+
+// The deck's share link (/h/CODE) and what people without an account may do with it. Members of the
+// group always get the deck itself; the rest follow it read-only when "view" is on.
+function Sharing({ deck, form, setForm, setError }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}${deck.center.deck.share_path}`;
+  const copy = () => copyText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  const renew = async () => {
+    if (!window.confirm("Make a new link? The old one stops working for everyone who has it.")) return;
+    try { const c = await api(`${deck.base}/reshare`, { method: "POST" }); deck.setCenter(c); } catch (err) { setError(err.message); }
+  };
+  return (
+    <fieldset className="space-y-2 rounded-xl bg-neutral-50 p-3 ring-1 ring-neutral-200 dark:bg-neutral-800/50 dark:ring-neutral-700">
+      <legend className={`${labelClass} flex items-center gap-1.5 px-1`}><Link2 className="size-3.5" /> Share this deck</legend>
+      <div className="flex items-center gap-2">
+        <code className="min-w-0 flex-1 truncate font-mono text-sm font-semibold" title={url}>{url.replace(/^https?:\/\//, "")}</code>
+        <button type="button" className={`${quietButton} !px-3`} onClick={copy}>{copied ? <><ClipboardCheck className="size-4" /> Copied</> : <><Clipboard className="size-4" /> Copy</>}</button>
+        <button type="button" className={`${quietButton} !px-2.5`} onClick={renew} aria-label="Make a new link" title="Make a new link (the old one stops working)"><RefreshCw className="size-4" /></button>
+      </div>
+      <label htmlFor="deck-guests" className={labelClass}>Anyone with the link who isn't in the group</label>
+      <select id="deck-guests" className={selectClass} value={form.guest_access} onChange={(e) => setForm({ ...form, guest_access: e.target.value })}>
+        <option value="off">Can't open it (they're asked to sign in)</option>
+        <option value="view">Can follow along, no account needed (read-only)</option>
+      </select>
+      {form.guest_access === "view" && (
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-0.5" checked={form.guest_script} onChange={(e) => setForm({ ...form, guest_script: e.target.checked })} />
+          <span>Show them the script too<span className="block text-xs text-slate-500 dark:text-neutral-400">Off: they see the deck's other blocks (checklists, timers, notes) but not the document it runs from.</span></span>
+        </label>
+      )}
+      <p className="text-xs text-slate-500 dark:text-neutral-400">
+        {form.guest_access === "view"
+          ? "They see what the deck shows as the hosts move through it, and can't change anything. Members of the group get the full deck from the same link."
+          : "Members of the group get the full deck from this link."}
+      </p>
+    </fieldset>
   );
 }
