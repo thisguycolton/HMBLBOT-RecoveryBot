@@ -39,3 +39,24 @@ export const HOST_A_MEETING = {
 };
 
 export const TEMPLATES = [HOST_A_MEETING];
+
+export const REGIONS = ["strip", "left", "main", "right", "bar"];
+// What size a region draws its blocks at
+export const REGION_SIZE = { strip: "bar", left: "side", main: "main", right: "side", bar: "bar" };
+// Which columns each layout shows
+export const LAYOUT_SIDES = { both: ["left", "right"], left: ["left"], right: ["right"], focus: [] };
+export const LAYOUT_CHOICES = [["both", "Both sidebars"], ["left", "Left sidebar"], ["right", "Right sidebar"], ["focus", "No sidebars"]];
+
+// The deck as a meeting has it: its saved layout (its own, or the group's default), or "Host a
+// meeting". The phone tabs come from the template either way.
+export function deckTemplate(center) {
+  const saved = center?.layout?.arrangement;
+  if (!saved) return HOST_A_MEETING;
+  return { ...HOST_A_MEETING, ...Object.fromEntries(REGIONS.map((r) => [r, saved[r] || []])), layout: saved.layout || "both", key: "saved" };
+}
+
+// What the layout editor saves (DeckArrangement on the server)
+export const toArrangement = (t) => ({ layout: t.layout, ...Object.fromEntries(REGIONS.map((r) => [r, t[r].map(({ id, type, tight, grow }) => ({ id, type, tight, grow }))])) });
+
+// A copy to edit
+export const draftOf = (t) => ({ ...t, ...Object.fromEntries(REGIONS.map((r) => [r, (t[r] || []).map((b) => ({ ...b }))])) });

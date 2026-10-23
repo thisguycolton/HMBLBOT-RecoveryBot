@@ -85,7 +85,7 @@ export default function KitEditor({ center, onClose, onSaved }) {
       <div className="flex h-full w-full max-w-2xl flex-col bg-neutral-50 shadow-2xl dark:bg-neutral-950">
         <header className="flex items-center gap-3 border-b border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900">
           <div className="min-w-0 flex-1">
-            <h2 id="kit-title" className="font-semibold">Set up the Command Center</h2>
+            <h2 id="kit-title" className="font-semibold">Set up HostDeck</h2>
             <p className="truncate text-xs text-slate-500 dark:text-neutral-400">What the hosts of {meeting.name} get. Host coordinators and group admins change it.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="inline-grid size-9 place-items-center rounded-xl !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:hover:!bg-neutral-800"><X className="size-5" /></button>

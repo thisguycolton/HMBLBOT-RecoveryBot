@@ -9,6 +9,7 @@ class Api::GroupHostingController < ApplicationController
   before_action :require_host
   before_action :set_meeting, except: %i[index capsule service_readings service_reading values]
   before_action :require_coordinator, only: %i[kit reset_kit]
+  before_action :require_deck_editor, only: %i[arrangement reset_arrangement]
 
   # GET /api/groups/:group_slug/hosting: the meetings, and their dates over the next week, to pick one
   def index
@@ -55,13 +56,13 @@ class Api::GroupHostingController < ApplicationController
   def ping
     presence = hosting_session.presences.find_or_initialize_by(user: current_user)
     presence.update!(activity: params[:activity], section_index: params[:section_index].presence&.to_i, last_seen_at: Time.current)
-    render json: hosting_session.live_json(current_user)
+    render json: hosting_session.live_json(current_user).merge(layout_key: center.layout_key)
   end
 
   # POST /api/groups/:group_slug/hosting/:meeting_id/act { act, index, label, posting_id, activity, number, data }
   def act
     act = params[:act].to_s
-    return render(json: { error: "That isn't something the Command Center does." }, status: :unprocessable_entity) unless HostingSession::ACTS.include?(act)
+    return render(json: { error: "That isn't something HostDeck does." }, status: :unprocessable_entity) unless HostingSession::ACTS.include?(act)
 
     if act.in?(%w[posted unposted])
       posting = posted_posting(params[:posting_id])
@@ -123,6 +124,33 @@ class Api::GroupHostingController < ApplicationController
     render_errors(e.record)
   end
 
+  # PUT /api/groups/:group_slug/hosting/:meeting_id/arrangement { scope: "meeting" | "default", arrangement: { layout, strip, left, main, right, bar } }
+  # Where the HostDeck's blocks go (HostingLayout), for this meeting (all the days it runs) or
+  # for every meeting without its own (and this one: saving it for everyone takes this meeting's
+  # own layout away, since that's the one the person was looking at)
+  def arrangement
+    layout = if params[:scope] == "default"
+               @group.hosting_layouts.find_or_initialize_by(meeting_id: nil)
+             else
+               @group.hosting_layouts.find_by(meeting_id: @meeting.series.select(:id)) || @group.hosting_layouts.new(meeting: @meeting)
+             end
+    HostingLayout.transaction do
+      layout.update!(arrangement: params.require(:arrangement).permit!.to_h, updated_by: current_user)
+      @group.hosting_layouts.where(meeting_id: @meeting.series.select(:id)).destroy_all if layout.default?
+    end
+    render json: center.as_json
+  rescue ActiveRecord::RecordInvalid => e
+    render_errors(e.record)
+  end
+
+  # DELETE /api/groups/:group_slug/hosting/:meeting_id/arrangement?scope=: this meeting goes back
+  # to the group's default layout, or (scope=default) the default to the built-in "Host a meeting"
+  def reset_arrangement
+    scope = params[:scope] == "default" ? { meeting_id: nil } : { meeting_id: @meeting.series.select(:id) }
+    @group.hosting_layouts.where(scope).destroy_all
+    render json: center.as_json
+  end
+
   # DELETE /api/groups/:group_slug/hosting/:meeting_id/kit: this meeting goes back to the group's default
   def reset_kit
     @group.hosting_kits.where(meeting_id: @meeting.series.select(:id)).destroy_all
@@ -134,7 +162,13 @@ class Api::GroupHostingController < ApplicationController
   def require_host
     return if @group.can_host?(current_user)
 
-    render json: { error: "The Hosting Command Center is for the members who host this group's meetings." }, status: :forbidden
+    render json: { error: "HostDeck is for the members who host this group's meetings." }, status: :forbidden
+  end
+
+  def require_deck_editor
+    return if @group.decks_editable_by?(current_user)
+
+    render json: { error: "Only the members the group picked in its settings can rearrange HostDeck." }, status: :forbidden
   end
 
   def require_coordinator

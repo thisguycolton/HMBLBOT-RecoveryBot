@@ -94,6 +94,8 @@ Rails.application.routes.draw do
         get :reading
         put :kit
         delete :kit, action: :reset_kit
+        put :arrangement
+        delete :arrangement, action: :reset_arrangement
       end
     end
     resources :host_sub_requests, controller: "group_host_sub_requests", only: %i[create destroy] do

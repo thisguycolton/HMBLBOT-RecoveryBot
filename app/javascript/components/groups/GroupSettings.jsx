@@ -9,10 +9,17 @@ import GroupLogo from "./GroupLogo";
 
 export { GroupLogo };
 
+// Who can rearrange HostDeck besides admins (Group::DECK_EDITOR_ROLES)
+const DECK_EDITORS = [
+  ["host_coordinators", "Host coordinators", "The members who schedule the hosts."],
+  ["record_keepers", "Record keepers", "The members who keep the group's documents and minutes."],
+  ["hosts", "Everyone who can host", "Any member who hosts or co-hosts. The layout they save is the same for every host."],
+];
+
 // Group settings in the group dashboard (group admins): its name, about, website, time zone and logo
 export default function GroupSettings({ group, setGroup }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ title: group.title || "", description: group.description || "", website: group.website || "", time_zone: group.time_zone, follows_roberts_rules: group.follows_roberts_rules !== false, show_hosts_publicly: group.show_hosts_publicly !== false });
+  const [form, setForm] = useState({ title: group.title || "", description: group.description || "", website: group.website || "", time_zone: group.time_zone, follows_roberts_rules: group.follows_roberts_rules !== false, show_hosts_publicly: group.show_hosts_publicly !== false, deck_editors: group.deck_editors || ["host_coordinators", "record_keepers"] });
   const [logo, setLogo] = useState(null); // a File waiting to be saved
   const [removeLogo, setRemoveLogo] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -27,7 +34,11 @@ export default function GroupSettings({ group, setGroup }) {
     setSaving(true);
     setError(null);
     const body = new FormData();
-    Object.entries(form).forEach(([k, v]) => body.append(`group[${k}]`, v ?? ""));
+    Object.entries(form).forEach(([k, v]) => {
+      // a list goes as group[k][] (an empty one as a single blank, so "nobody" is saved too)
+      if (Array.isArray(v)) (v.length ? v : [""]).forEach((x) => body.append(`group[${k}][]`, x));
+      else body.append(`group[${k}]`, v ?? "");
+    });
     if (logo) body.append("group[logo]", logo);
     if (removeLogo && !logo) body.append("group[remove_logo]", "1");
     try {
@@ -99,6 +110,17 @@ export default function GroupSettings({ group, setGroup }) {
         <h2 className="font-semibold text-slate-900 dark:text-white">Meeting schedule</h2>
         <Toggle checked={form.show_hosts_publicly} onChange={(v) => set({ show_hosts_publicly: v })} label="Show who hosts each meeting"
           description="The meetings on the group's page say who hosts and co-hosts the next one, from the Hosts tab. Anyone can see the group's page, so turn this off if your hosts would rather not be named there. Meetings with nobody on the schedule look the same either way." />
+      </Card>
+
+      <Card className="space-y-3 p-4 sm:p-5">
+        <h2 className="font-semibold text-slate-900 dark:text-white">HostDeck</h2>
+        <p className="text-sm text-slate-600 dark:text-neutral-400">Who can rearrange the group's decks: move the blocks around, pick the sidebars and the bottom bar. Group admins always can.</p>
+        {DECK_EDITORS.map(([key, label, text]) => (
+          <div key={key}>
+            <Toggle checked={form.deck_editors.includes(key)} label={label} description={text}
+              onChange={(on) => set({ deck_editors: on ? [...form.deck_editors, key] : form.deck_editors.filter((k) => k !== key) })} />
+          </div>
+        ))}
       </Card>
 
       <ErrorNote error={error} />

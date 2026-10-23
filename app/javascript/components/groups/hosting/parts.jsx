@@ -384,7 +384,7 @@ export function ShareLink({ link }) {
         <button type="button" className={`${quietButton} !px-3`} onClick={copy}>{copied ? <><ClipboardCheck className="size-4" /> Copied</> : <><Clipboard className="size-4" /> Copy</>}</button>
       </div>
       <p className="mt-1.5 text-xs text-slate-500 dark:text-neutral-400">
-        Just for this meeting's date. {link.public_postings ? "Hosts get this Command Center. Anyone without an account can still see and copy the chat postings." : "It opens this Command Center for hosts. The chat postings are kept to hosts."}
+        Just for this meeting's date. {link.public_postings ? "Hosts get this HostDeck. Anyone without an account can still see and copy the chat postings." : "It opens this HostDeck for hosts. The chat postings are kept to hosts."}
       </p>
     </div>
   );
@@ -422,7 +422,7 @@ export function HostsHere({ live, now }) {
           );
         })}
       </ul>
-      {live.presences.length < 2 && <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">When the other host opens this meeting's Command Center, you'll see what they're on here.</p>}
+      {live.presences.length < 2 && <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">When the other host opens this meeting's HostDeck, you'll see what they're on here.</p>}
     </div>
   );
 }

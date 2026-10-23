@@ -322,7 +322,7 @@ const topicHtml = renderRichContent(topicSource);
               )}
 
               {hostUrl && (
-                <a href={hostUrl} className={ghostButton} title="Open the Hosting Command Center for this meeting">
+                <a href={hostUrl} className={ghostButton} title="Open HostDeck for this meeting">
                   <MonitorPlay size={18} />
                   Host
                 </a>

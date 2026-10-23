@@ -193,7 +193,7 @@ class Api::GroupsController < ApplicationController
 
   def group_params
     params.require(:group).permit(:title, :description, :website, :time_zone, :court_email_subject, :court_email_body, :court_email_reply_to,
-                                  :quorum_count, :quorum_percent, :logo, :follows_roberts_rules, :show_hosts_publicly)
+                                  :quorum_count, :quorum_percent, :logo, :follows_roberts_rules, :show_hosts_publicly, deck_editors: [])
   end
 
   def group_card(group, membership)
@@ -218,7 +218,7 @@ class Api::GroupsController < ApplicationController
       meetings: @group.meetings.ordered.map(&:as_api_json),
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
       members_count: @group.members.count,
-      follows_roberts_rules: @group.follows_roberts_rules, show_hosts_publicly: @group.show_hosts_publicly,
+      follows_roberts_rules: @group.follows_roberts_rules, show_hosts_publicly: @group.show_hosts_publicly, deck_editors: @group.deck_editors,
       logo_url: @group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.logo, only_path: true) : nil,
       cover_url: @group.cover.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.cover, only_path: true) : nil,
     }

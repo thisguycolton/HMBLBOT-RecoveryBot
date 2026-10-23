@@ -1,11 +1,13 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, BookOpen, LayoutGrid, MessageSquare, Minus, Moon, Plus, ScrollText, Settings, Sun, UserCheck, Users } from "lucide-react";
+import { ArrowLeft, BookOpen, LayoutDashboard, LayoutGrid, MessageSquare, Minus, Moon, Plus, RefreshCw, ScrollText, Settings, Sun, UserCheck, Users } from "lucide-react";
 import GroupLogo from "../../GroupLogo";
-import { ErrorNote, Loading, Message } from "../../ui";
+import { ErrorNote, Loading, Message, quietButton } from "../../ui";
 import KitEditor from "../KitEditor";
 import { AWAY_MS, SIZES, iconButton, timeOf } from "../parts";
 import { BLOCKS } from "./blocks";
+import { EditBlock, EditDnd, EditRegion } from "./LayoutEditor";
+import { LAYOUT_SIDES } from "./templates";
 import "../hosting.css";
 
 // The columns each layout has, and their widths on a big screen
@@ -29,10 +31,20 @@ function Block({ block, size, deck }) {
 }
 
 // A sidebar's blocks, one under the other
-function Sidebar({ side, list, deck }) {
+function Sidebar({ side, list, deck, editor }) {
   const shownOnPhone = list.some((b) => onPhone(b, deck.panel));
+  const frame = `min-h-0 overflow-y-auto border-neutral-200 p-4 lg:block ${side === "left" ? "lg:border-r" : "lg:border-l"} dark:border-neutral-800`;
+  if (editor) {
+    return (
+      <aside className={`${frame} hidden`}>
+        <EditRegion region={side} ids={list.map((b) => b.id)} className="space-y-3">
+          {list.map((b) => <Editable key={b.id} block={b} region={side} size="side" deck={deck} editor={editor} />)}
+        </EditRegion>
+      </aside>
+    );
+  }
   return (
-    <aside className={`min-h-0 overflow-y-auto border-neutral-200 p-4 lg:block ${side === "left" ? "lg:border-r" : "lg:border-l"} dark:border-neutral-800 ${shownOnPhone ? "block" : "hidden"}`}>
+    <aside className={`${frame} ${shownOnPhone ? "block" : "hidden"}`}>
       <div>
         {list.map((b, i) => {
           const gap = i === list.length - 1 ? "" : list[i + 1].tight ? "mb-5" : "mb-6";
@@ -47,10 +59,24 @@ function Sidebar({ side, list, deck }) {
   );
 }
 
+// A block in the layout editor, with what it says when it has nothing to show yet
+function Editable({ block, region, size, deck, editor, className }) {
+  const info = BLOCKS[block.type];
+  const placeholder = info.empty?.(deck) || info.placeholder?.(deck) ? info.note : null;
+  return (
+    <EditBlock block={block} region={region} setDraft={editor.setDraft} placeholder={placeholder} className={className}>
+      <Block block={block} size={size} deck={deck} />
+    </EditBlock>
+  );
+}
+
 // A meeting's HostDeck (/groups/:slug/host/:meetingId), laid out by `template` (templates.js):
 // the header, the phone tabs, the strip of reminders, the columns, and the bar along the bottom.
 // The header is the same on every deck.
-export default function DeckView({ deck, template }) {
+// While the layout is being edited (`editor`: { draft, setDraft, toolbar }), the template is
+// the draft, every region takes dropped blocks, and the blocks can't be clicked.
+export default function DeckView({ deck, template: saved, editor = null, canArrange = false, onEdit }) {
+  const template = editor ? editor.draft : saved;
   const { slug, center, live, error, panel, setPanel } = deck;
   if (error) {
     return (
@@ -67,20 +93,28 @@ export default function DeckView({ deck, template }) {
   const others = live.presences.filter((p) => !p.me && deck.now - new Date(p.last_seen_at).getTime() < AWAY_MS);
   const hosts = [center.hosts.host && `Host: ${center.hosts.host}`, center.hosts.co_host && `Co-host: ${center.hosts.co_host}`].filter(Boolean).join(" · ");
   const layout = GRID[template.layout] != null ? template.layout : "both";
-  const left = layout === "both" || layout === "left" ? present(template.left, deck) : [];
-  const right = layout === "both" || layout === "right" ? present(template.right, deck) : [];
-  const main = present(template.main, deck);
-  const bar = present(template.bar, deck);
+  // While editing, every block shows, even one with nothing in it yet
+  const pick = editor ? (list) => (list || []).filter((b) => BLOCKS[b.type]) : (list) => present(list, deck);
+  const sides = LAYOUT_SIDES[layout];
+  const left = sides.includes("left") ? pick(template.left) : [];
+  const right = sides.includes("right") ? pick(template.right) : [];
+  const main = pick(template.main);
+  const bar = pick(template.bar);
+  const strip = pick(template.strip);
+  // The columns there are: a sidebar with no blocks isn't one (unless it's being edited)
+  const hasLeft = left.length > 0 || (!!editor && sides.includes("left"));
+  const hasRight = right.length > 0 || (!!editor && sides.includes("right"));
+  const columns = hasLeft && hasRight ? "both" : hasLeft ? "left" : hasRight ? "right" : "focus";
   const tabs = template.tabs.filter(([key]) => [...left, ...main, ...right].some((b) => tabOf(b) === key));
   const mainOnPhone = main.some((b) => onPhone(b, panel));
 
-  return (
+  const page = (
     <div className={`hc-root flex h-dvh flex-col bg-neutral-50 !font-sans text-slate-900 dark:bg-neutral-950 dark:text-white ${dark ? "doc-dark" : ""}`}>
       <header className="flex shrink-0 items-center gap-2 border-b border-neutral-200 bg-white px-3 py-2 sm:gap-3 sm:px-4 dark:border-neutral-800 dark:bg-neutral-900">
         <Link to={`/${slug}/hosts`} className={iconButton} aria-label="Back to the group's hosts" title="Back to the group"><ArrowLeft className="size-5" /></Link>
         <GroupLogo group={center.group} className="hidden size-8 text-xs sm:grid" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold sm:text-base">Hosting Command Center</p>
+          <p className="truncate text-sm font-semibold sm:text-base">HostDeck</p>
           <p className="truncate text-xs text-slate-500 dark:text-neutral-400">
             {center.meeting.name} · {new Date(`${center.on}T12:00:00`).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}
             {center.starts_at && ` at ${timeOf(center.starts_at, center.meeting.time_zone)}`}
@@ -95,12 +129,13 @@ export default function DeckView({ deck, template }) {
           <button type="button" className={iconButton} onClick={() => deck.changeSize(-1)} disabled={size === SIZES[0]} aria-label="Smaller script text" title="Smaller text"><Minus className="size-4" /></button>
           <button type="button" className={iconButton} onClick={() => deck.changeSize(1)} disabled={size === SIZES[SIZES.length - 1]} aria-label="Bigger script text" title="Bigger text"><Plus className="size-4" /></button>
           <button type="button" className={iconButton} onClick={deck.toggleDark} aria-label={dark ? "Light mode" : "Dark mode"} title={dark ? "Light mode" : "Dark mode"}>{dark ? <Sun className="size-5" /> : <Moon className="size-5" />}</button>
+          {canArrange && !editor && <button type="button" className={`${iconButton} !hidden lg:!inline-grid`} onClick={onEdit} aria-label="Edit the layout" title="Edit the layout: move blocks, pick sidebars"><LayoutDashboard className="size-5" /></button>}
           {center.can_edit && <button type="button" className={iconButton} onClick={() => deck.setSetup(true)} aria-label="Set up the kit" title="Set up the script, postings and readings"><Settings className="size-5" /></button>}
         </div>
       </header>
 
       {/* On a phone, one column at a time */}
-      <nav className="flex shrink-0 gap-1 border-b border-neutral-200 bg-white px-2 lg:hidden dark:border-neutral-800 dark:bg-neutral-900" aria-label="Command Center sections">
+      <nav className="flex shrink-0 gap-1 border-b border-neutral-200 bg-white px-2 lg:hidden dark:border-neutral-800 dark:bg-neutral-900" aria-label="HostDeck sections">
         {tabs.map(([key, text]) => {
           const Icon = TAB_ICONS[key] || LayoutGrid;
           return (
@@ -113,21 +148,38 @@ export default function DeckView({ deck, template }) {
       </nav>
 
       {deck.actionError && <div className="px-4 pt-2"><ErrorNote error={deck.actionError} /></div>}
-      {present(template.strip, deck).map((b) => <Block key={b.id} block={b} size="bar" deck={deck} />)}
+      {editor?.toolbar}
+      {deck.layoutChanged && !editor && (
+        <div role="status" className="flex shrink-0 items-center gap-2 border-b border-sky-200 bg-sky-50 px-4 py-2 text-sm text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100">
+          <LayoutDashboard className="size-4 shrink-0" /><p className="min-w-0 flex-1">This deck's layout was changed. Reload when you're ready to see it.</p>
+          <button type="button" className={`${quietButton} !px-3 !py-1`} onClick={deck.reload}><RefreshCw className="size-4" /> Reload</button>
+        </div>
+      )}
+      {editor ? (
+        <EditRegion region="strip" ids={strip.map((b) => b.id)} className="m-2 flex shrink-0 gap-2">
+          {strip.map((b) => <Editable key={b.id} block={b} region="strip" size="bar" deck={deck} editor={editor} className="flex-1" />)}
+        </EditRegion>
+      ) : strip.map((b) => <Block key={b.id} block={b} size="bar" deck={deck} />)}
 
-      <div className={`grid min-h-0 flex-1 ${GRID[layout]}`}>
-        {left.length > 0 && <Sidebar side="left" list={left} deck={deck} />}
+      <div className={`grid min-h-0 flex-1 ${GRID[columns]}`}>
+        {hasLeft && <Sidebar side="left" list={left} deck={deck} editor={editor} />}
 
-        <main className={`min-h-0 overflow-y-auto lg:block ${mainOnPhone ? "block" : "hidden"}`}>
-          {main.map((b) => <Block key={b.id} block={b} size="main" deck={deck} />)}
+        <main className={`min-h-0 overflow-y-auto lg:block ${mainOnPhone || editor ? "block" : "hidden"} ${editor ? "p-2" : ""}`}>
+          {editor
+            ? <EditRegion region="main" ids={main.map((b) => b.id)} className="space-y-3">{main.map((b) => <Editable key={b.id} block={b} region="main" size="main" deck={deck} editor={editor} />)}</EditRegion>
+            : main.map((b) => <Block key={b.id} block={b} size="main" deck={deck} />)}
         </main>
 
-        {right.length > 0 && <Sidebar side="right" list={right} deck={deck} />}
+        {hasRight && <Sidebar side="right" list={right} deck={deck} editor={editor} />}
       </div>
 
-      {bar.length > 0 && (
+      {(bar.length > 0 || editor) && (
         <footer className="flex shrink-0 items-center gap-2 border-t border-neutral-200 bg-white px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 dark:border-neutral-800 dark:bg-neutral-900">
-          {bar.map((b) => (b.grow
+          {editor ? (
+            <EditRegion region="bar" ids={bar.map((b) => b.id)} className="flex min-w-0 flex-1 items-stretch gap-2">
+              {bar.map((b) => <Editable key={b.id} block={b} region="bar" size="bar" deck={deck} editor={editor} className={b.grow ? "flex-1" : "w-40 shrink-0"} />)}
+            </EditRegion>
+          ) : bar.map((b) => (b.grow
             ? <div key={b.id} className="min-w-0 flex-1"><Block block={b} size="bar" deck={deck} /></div>
             : <Block key={b.id} block={b} size="bar" deck={deck} />))}
         </footer>
@@ -136,4 +188,5 @@ export default function DeckView({ deck, template }) {
       {deck.setup && <KitEditor center={center} onClose={() => deck.setSetup(false)} onSaved={(c) => { deck.setCenter(c); deck.applyLive(c.live); }} />}
     </div>
   );
+  return editor ? <EditDnd draft={editor.draft} setDraft={editor.setDraft}>{page}</EditDnd> : page;
 }

@@ -36,6 +36,7 @@ class Group < ApplicationRecord
   has_many :document_templates, class_name: "GroupDocumentTemplate", dependent: :destroy
   # The Hosting Command Center: the default kit (meeting_id nil) and each meeting's own
   has_many :hosting_kits, dependent: :destroy
+  has_many :hosting_layouts, dependent: :destroy
   LOGO_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
   validate { errors.add(:logo, "has to be a PNG, JPEG, WebP or GIF image") if logo.attached? && !LOGO_TYPES.include?(logo.blob.content_type) }
   validate { errors.add(:logo, "has to be under 5 MB") if logo.attached? && logo.blob.byte_size > 5.megabytes }
@@ -54,6 +55,7 @@ class Group < ApplicationRecord
   validates :title, presence: true, length: { maximum: 120 }
   validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9-]+\z/ }, exclusion: { in: RESERVED_SLUGS }
   validates :page_layout, inclusion: { in: Event::LAYOUTS }
+  before_validation { self.deck_editors = DECK_EDITOR_ROLES & Array(deck_editors).map(&:to_s) }
   validates :time_zone, inclusion: { in: TIME_ZONES }
   validates :status, inclusion: { in: STATUSES }
   validates :description, length: { maximum: 1000 }
@@ -101,6 +103,18 @@ class Group < ApplicationRecord
   # documents kept for hosts (the format) and are the ones asked when a host won't be there
   def can_host?(user) = hosts_editable_by?(user) || records_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_host }
   def host_pool = User.where(id: active_memberships.where(can_host: true).select(:user_id))
+  # Who may rearrange the group's HostDecks (the layout editor): its admins always, and the roles
+  # it picked in Group settings (deck_editors): host coordinators and record keepers unless it
+  # changed that, and everyone who can host if it chose to
+  DECK_EDITOR_ROLES = %w[host_coordinators record_keepers hosts].freeze
+  def decks_editable_by?(user)
+    return false unless user
+    return true if manageable_by?(user)
+
+    roles = Array(deck_editors)
+    (roles.include?("host_coordinators") && hosts_editable_by?(user)) || (roles.include?("record_keepers") && records_editable_by?(user)) ||
+      (roles.include?("hosts") && can_host?(user))
+  end
 
   def member_or_site_admin?(user) = !!user && (user.suite_admin? || member?(user))
   # Record keepers write the group's documents (and, later, minutes and decisions): group

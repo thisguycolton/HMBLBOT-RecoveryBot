@@ -33,10 +33,10 @@ export default function TimeCapsule() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 !font-sans [&_*]:!font-sans">
-      <Link to={`/${slug}/host`} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Hosting Command Center</Link>
+      <Link to={`/${slug}/host`} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← HostDeck</Link>
       <div>
         <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><History className="size-6 text-accent" /> Time Capsule</h1>
-        <p className="mt-1 !text-left text-sm text-slate-600 dark:text-neutral-300">The meetings hosts ran from the Command Center: what was read, the topics, who did service and who celebrated. Only the group's hosts see this.</p>
+        <p className="mt-1 !text-left text-sm text-slate-600 dark:text-neutral-300">The meetings hosts ran from HostDeck: what was read, the topics, who did service and who celebrated. Only the group's hosts see this.</p>
       </div>
       {meetings.length > 1 && (
         <select aria-label="Meeting" className={`${selectClass} sm:!w-auto`} value={meeting} onChange={(e) => pick(e.target.value)}>
@@ -46,7 +46,7 @@ export default function TimeCapsule() {
       )}
       <ErrorNote error={error} />
       {!sessions ? <Loading /> : sessions.length === 0 ? (
-        <Card className="p-5 text-sm text-slate-600 dark:text-neutral-400">Nothing here yet. Once hosts pick a reading or activity, fill in service or add milestones in the Command Center, the meeting is kept here.</Card>
+        <Card className="p-5 text-sm text-slate-600 dark:text-neutral-400">Nothing here yet. Once hosts pick a reading or activity, fill in service or add milestones in HostDeck, the meeting is kept here.</Card>
       ) : (
         <ol className="relative space-y-4 border-l-2 border-neutral-200 pl-5 dark:border-neutral-800">
           {sessions.map((s) => <Entry key={s.id} s={s} />)}

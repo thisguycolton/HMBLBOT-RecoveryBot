@@ -28,6 +28,7 @@ export default function useHostingDeck() {
   const [dark, toggleDark] = useDarkMode();
   const [size, setSize] = useState(() => Number(store.get("hosting-text-size", 20)) || 20);
   const [dismissed, setDismissed] = useState([]); // reminders this host closed
+  const [layoutKey, setLayoutKey] = useState(null); // the layout's key as the server last had it
   const { now, elapsed } = useMeetingClock(center?.starts_at, live?.server_now);
 
   const applyLive = useCallback((next) => {
@@ -71,7 +72,7 @@ export default function useHostingDeck() {
     : section ? `On ${section.title}` : "Here";
 
   const ping = useCallback(() => {
-    api(`${base}/ping${q}`, { method: "POST", body: { activity, section_index: index } }).then(applyLive).catch(() => {});
+    api(`${base}/ping${q}`, { method: "POST", body: { activity, section_index: index } }).then((l) => { applyLive(l); if (l?.layout_key) setLayoutKey(l.layout_key); }).catch(() => {});
   }, [base, q, activity, index, applyLive]);
   useEffect(() => {
     if (!center) return undefined;
@@ -132,5 +133,8 @@ export default function useHostingDeck() {
     slug, center, setCenter, applyLive, error, actionError, live, act, sections, skips, shown, index, section, nextIndex, goto, next,
     reading, setReading, openActivity, openReading, panel, setPanel, setup, setSetup, dark, toggleDark, size, changeSize,
     now, elapsed, cues, dismiss: (i) => setDismissed((d) => [...d, i]),
+    // Someone rearranged the deck since this page loaded it
+    layoutChanged: !!(layoutKey && center?.layout?.key && layoutKey !== center.layout.key),
+    reload: () => { setLayoutKey(null); load(); },
   };
 }

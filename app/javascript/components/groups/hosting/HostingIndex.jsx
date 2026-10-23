@@ -54,7 +54,7 @@ export default function HostingIndex() {
       <Link to={`/${slug}/hosts`} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Hosts</Link>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> Hosting Command Center</h1>
+          <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> HostDeck</h1>
           <p className="mt-1 !text-left text-sm text-slate-600 dark:text-neutral-300">Pick the meeting you're hosting. Each date opens on its own, so you can get one ready ahead of time.</p>
         </div>
         <Link to={`/${slug}/host/capsule`} className={quietButton}><History className="size-4" /> Time Capsule</Link>

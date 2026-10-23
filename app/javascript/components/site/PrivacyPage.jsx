@@ -33,7 +33,7 @@ const STORAGE = [
   ["theme", "Light, dark or system appearance"],
   ["findMeeting.view", "List or map view in Find a meeting"],
   ["doc-paper", "Page color in the document editor"],
-  ["hosting-text-size", "Script text size in the Hosting Command Center"],
+  ["hosting-text-size", "Script text size in HostDeck"],
   ["hosting-share-size", "Text size of a service reading opened to share on screen"],
   ["questScreenName, questChime", "Your screen name and sound setting in The Acid Quest"],
   ["installNudge.dismissed", "That you closed the “Add RecoveryBot to your home screen” card"],
@@ -138,7 +138,7 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. Turning them off, removing the device in your settings, or signing out on that device deletes it.</li>
             <li><strong>Reactions, comments and reposts:</strong> the Like, Love or Hugs you give a note or comment, comments you write on notes, and notes you repost to your timeline.</li>
             <li><strong>Link previews:</strong> when a note has a link, our server visits that page to read its title, description and picture, and keeps them (with a copy of the picture) with your note. The other site sees a visit from RecoveryBot, not from you or the people reading your note.</li>
-            <li><strong>Groups:</strong> the groups you join or ask to join, your role (member, admin, record keeper, host scheduler, treasurer), and the meetings you host or cover. While you have a meeting's Hosting Command Center open, the group's other hosts see that you're there and what you're on, and what you did in it (like copying a chat posting) is kept with that meeting's date.</li>
+            <li><strong>Groups:</strong> the groups you join or ask to join, your role (member, admin, record keeper, host scheduler, treasurer), and the meetings you host or cover. While you have a meeting's HostDeck open, the group's other hosts see that you're there and what you're on, and what you did in it (like copying a chat posting) is kept with that meeting's date.</li>
             <li><strong>Group records:</strong> documents, decisions, business meeting agendas and minutes, elected officials, host schedules and treasurer reports that members write for their group.</li>
             <li><strong>Events:</strong> events you create, and RSVPs. If you RSVP without an account we ask for a name and email address so we can send you the event's updates.</li>
             <li><strong>Schedule polls:</strong> your answers, and a name if you vote without an account. To stop the same person voting twice without an account, we keep a scrambled (hashed) form of your IP address with the vote, not the address itself.</li>

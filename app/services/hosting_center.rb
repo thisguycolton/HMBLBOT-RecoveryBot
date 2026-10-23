@@ -28,6 +28,12 @@ class HostingCenter
 
   def can_edit? = @group.hosts_editable_by?(@viewer)
 
+  # Where the HostDeck's blocks go (HostingLayout), nil for the built-in "Host a meeting" template
+  def layout = defined?(@layout) ? @layout : (@layout = HostingLayout.for(@meeting))
+
+  # Changes whenever the arrangement does, so a deck that's open can say it was rearranged
+  def layout_key = Digest::MD5.hexdigest(layout&.arrangement.to_json)[0, 12]
+
   def as_json(*)
     host = @meeting.holder_on("host", @on)
     co_host = @meeting.holder_on("co_host", @on)
@@ -38,7 +44,9 @@ class HostingCenter
       hosts: { host: host&.name, co_host: co_host&.name },
       my_role: [["host", host], ["co_host", co_host]].find { |_, h| h&.user_id && h.user_id == @viewer&.id }&.first,
       court_url: "/court_verifications/new?#{{ group: @group.slug, meeting: @meeting.id, host: (host || co_host)&.name }.compact.to_query}",
-      kit: kit_json, can_edit: can_edit?, live: session.live_json(@viewer, @now), activity_options: activity_options, previous: previous_json,
+      kit: kit_json, can_edit: can_edit?, can_arrange: @group.decks_editable_by?(@viewer),
+      layout: { arrangement: layout&.arrangement, scope: layout && (layout.default? ? "default" : "meeting"), key: layout_key },
+      live: session.live_json(@viewer, @now), activity_options: activity_options, previous: previous_json,
       link: { code: session.code, path: session.link_path, public_postings: kit.nil? || kit.public_postings },
     }
     json[:editor] = editor_json if can_edit?

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_23_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -403,6 +403,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
     t.integer "quorum_percent"
     t.boolean "follows_roberts_rules", default: true, null: false
     t.boolean "show_hosts_publicly", default: true, null: false
+    t.string "deck_editors", default: ["host_coordinators", "record_keepers"], null: false, array: true
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -479,6 +480,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
     t.index ["group_id"], name: "index_hosting_kits_one_default", unique: true, where: "(meeting_id IS NULL)"
     t.index ["meeting_id"], name: "index_hosting_kits_one_per_meeting", unique: true, where: "(meeting_id IS NOT NULL)"
     t.index ["script_document_id"], name: "index_hosting_kits_on_script_document_id"
+  end
+
+  create_table "hosting_layouts", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "meeting_id"
+    t.jsonb "arrangement", default: {}, null: false
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id"], name: "index_hosting_layouts_on_group_default", unique: true, where: "(meeting_id IS NULL)"
+    t.index ["group_id"], name: "index_hosting_layouts_on_group_id"
+    t.index ["meeting_id"], name: "index_hosting_layouts_on_meeting_id", unique: true
+    t.index ["updated_by_id"], name: "index_hosting_layouts_on_updated_by_id"
   end
 
   create_table "hosting_presences", force: :cascade do |t|
@@ -1218,6 +1232,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
   add_foreign_key "hosting_kits", "group_documents", column: "script_document_id", on_delete: :nullify
   add_foreign_key "hosting_kits", "groups"
   add_foreign_key "hosting_kits", "meetings", on_delete: :cascade
+  add_foreign_key "hosting_layouts", "groups", on_delete: :cascade
+  add_foreign_key "hosting_layouts", "meetings", on_delete: :cascade
+  add_foreign_key "hosting_layouts", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "hosting_presences", "hosting_sessions", on_delete: :cascade
   add_foreign_key "hosting_presences", "users", on_delete: :cascade
   add_foreign_key "hosting_sessions", "meetings", on_delete: :cascade

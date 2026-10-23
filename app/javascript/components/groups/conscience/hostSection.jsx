@@ -74,7 +74,7 @@ function SectionView({ node, updateAttributes, deleteNode, editor, getPos }) {
     <NodeViewWrapper className="hc-sec" data-drag-handle="" contentEditable={false}>
       <div ref={ref} className="hc-sec__line">
         <button type="button" className={`hc-sec__tag ${open ? "hc-sec__tag--open" : ""}`} onClick={() => setOpen((v) => !v)} aria-expanded={open}
-          title={editable ? "Section: click to change it" : "A section of the Hosting Command Center's script"}>
+          title={editable ? "Section: click to change it" : "A section of the HostDeck script"}>
           <span className="hc-sec__num">§{number || ""}</span>
           <span className="hc-sec__title">{attrs.title || "New section"}</span>
           {tags.map(({ icon: Icon, text }) => <span key={text} className="hc-sec__cond"><Icon className="size-3" /> {text}</span>)}
@@ -121,7 +121,7 @@ function SectionView({ node, updateAttributes, deleteNode, editor, getPos }) {
                       <option value="end">minutes before the end</option>
                     </select>
                   </div>
-                  <span className="block mt-1 text-xs text-slate-500 dark:text-neutral-400">The Command Center tells the hosts when it's time, like the Burning Desire 30 minutes in.</span>
+                  <span className="block mt-1 text-xs text-slate-500 dark:text-neutral-400">HostDeck tells the hosts when it's time, like the Burning Desire 30 minutes in.</span>
                 </div>
                 <div className="flex items-center gap-2 border-t border-neutral-200 pt-3 dark:border-neutral-700">
                   <button type="button" className="inline-flex items-center gap-1 rounded-lg !bg-transparent px-2 py-1 text-xs font-medium text-rose-700 hover:!bg-rose-50 dark:text-rose-300 dark:hover:!bg-rose-950/40" onClick={() => deleteNode()}><Trash2 className="size-3.5" /> Remove the section</button>
@@ -132,7 +132,7 @@ function SectionView({ node, updateAttributes, deleteNode, editor, getPos }) {
             ) : (
               <div className="space-y-1 text-sm text-slate-700 dark:text-neutral-200">
                 <span className="block font-semibold">{attrs.title}</span>
-                <span className="block text-xs text-slate-500 dark:text-neutral-400">A section of the meeting's script in the Hosting Command Center{tags.length ? ":" : "."}</span>
+                <span className="block text-xs text-slate-500 dark:text-neutral-400">A section of the meeting's script in HostDeck{tags.length ? ":" : "."}</span>
                 {tags.map(({ icon: Icon, text }) => <span key={text} className="flex items-center gap-1.5 text-xs"><Icon className="size-3.5" /> {text}</span>)}
               </div>
             )}
@@ -164,7 +164,7 @@ export const HostSection = Node.create({
 
 // A form in the script: in the document, a card standing in for it (what the hosts will see
 // there); in the Command Center, the real form (CommandCenter.jsx's ScriptView)
-export const HOST_FORMS = { milestones: { title: "Milestone form", text: "The hosts add who's celebrating and their time here, while they read the script. It's the same list as the Command Center's Celebrating milestones." } };
+export const HOST_FORMS = { milestones: { title: "Milestone form", text: "The hosts add who's celebrating and their time here, while they read the script. It's the same list as HostDeck's Celebrating milestones." } };
 
 function FormView({ node, deleteNode, editor }) {
   const form = HOST_FORMS[node.attrs.form] || HOST_FORMS.milestones;
@@ -241,7 +241,7 @@ export function DynamicValuesBar({ editor, slug, documentId, onClose }) {
           {v.label}
         </button>
       ))}
-      {values && values.length === 0 && <span className="text-xs text-slate-500">None allowed. A host coordinator turns them on in the Command Center's settings.</span>}
+      {values && values.length === 0 && <span className="text-xs text-slate-500">None allowed. A host coordinator turns them on in HostDeck's settings.</span>}
       <span className="flex-1" />
       <button type="button" onClick={onClose} aria-label="Close dynamic values" className="grid size-7 shrink-0 place-items-center rounded-lg !bg-transparent text-slate-500 hover:!bg-neutral-200/70 dark:hover:!bg-neutral-700/60"><X className="size-4" /></button>
     </div>

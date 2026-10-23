@@ -21,6 +21,8 @@ import { ActivityCard, ActivityLog, ChatPostings, Flow, HostsHere, MeetingClock,
 // offered there. `tab` is the phone tab it shows under (null: not on phones, the stage shows the
 // flow itself there). `empty(deck)` says when there's nothing to show, so the block takes no room;
 // `collapse` is for a block that finds that out itself (it loads what it lists) and draws nothing.
+// `note` is what the layout editor shows for a block with nothing in it yet (`empty`, or
+// `placeholder(deck)` for one that takes room anyway).
 //
 // Phase 0 of HostDeck: every block has the one size it had in the Command Center. The others
 // come with the layout editor (hostdeck/plan.md in the project files).
@@ -81,7 +83,7 @@ function NextBlock({ deck }) {
 
 export const BLOCKS = {
   stage: { label: "Script", icon: ScrollText, sizes: ["main"], tab: "script", component: StageBlock },
-  reminders: { label: "Reminders", icon: AlarmClock, sizes: ["bar"], tab: "all", component: RemindersBlock },
+  reminders: { label: "Reminders", icon: AlarmClock, sizes: ["bar"], tab: "all", placeholder: (deck) => !deck.cues.length, note: "A section's reminder shows here when its time comes.", component: RemindersBlock },
   flow: { label: "Meeting flow", icon: LayoutList, sizes: ["side"], tab: null, component: FlowBlock },
   activity: {
     label: "Reading / activity", icon: Zap, sizes: ["side"], tab: "readings",
@@ -100,7 +102,7 @@ export const BLOCKS = {
   share_link: { label: "Share link", icon: Link2, sizes: ["side"], tab: "people", component: ({ deck }) => <ShareLink link={deck.center.link} /> },
   hosts_here: { label: "Hosts here", icon: Users, sizes: ["side"], tab: "people", component: ({ deck }) => <HostsHere live={deck.live} now={deck.now} /> },
   milestones: { label: "Milestones", icon: PartyPopper, sizes: ["side"], tab: "people", component: ({ deck }) => <Milestones live={deck.live} act={deck.act} /> },
-  activity_log: { label: "Done so far", icon: History, sizes: ["side"], tab: "people", empty: (deck) => !deck.live.log.length, component: ({ deck }) => <ActivityLog live={deck.live} /> },
+  activity_log: { label: "Done so far", icon: History, sizes: ["side"], tab: "people", empty: (deck) => !deck.live.log.length, note: "What the hosts have done shows here once they start.", component: ({ deck }) => <ActivityLog live={deck.live} /> },
   previous: { label: "Previous", icon: ArrowLeft, sizes: ["bar"], tab: "all", component: PreviousBlock },
   clock: { label: "Meeting clock", icon: Clock, sizes: ["bar"], tab: "all", component: ({ deck }) => <MeetingClock center={deck.center} elapsed={deck.elapsed} /> },
   next: { label: "Next", icon: ArrowRight, sizes: ["bar"], tab: "all", component: NextBlock },
