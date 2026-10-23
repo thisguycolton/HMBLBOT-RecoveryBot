@@ -568,10 +568,9 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
           <span aria-live="polite" className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-neutral-400">{status}</span>
           {live && <LivePresence live={live} editor={editor} offline={offline} />}
           {doc && (
-            <span className="relative">
-              <ShareMenu group={group} doc={doc} canEdit={canEdit} bare open={shareOpen} onOpenChange={setShareOpen}
-                onChanged={(d) => { setDoc(d); setForm((f) => ({ ...f, visibility: d.visibility })); }} />
-            </span>
+            <ShareMenu group={group} doc={doc} canEdit={canEdit} open={shareOpen} onOpenChange={setShareOpen} iconOnly
+              buttonClass={`grid size-8 place-items-center rounded-lg ${shareOpen ? "!bg-accent/15 text-accent" : "!bg-transparent text-slate-600 hover:!bg-neutral-200/70 dark:text-neutral-300 dark:hover:!bg-neutral-700/60"}`}
+              onChanged={(d) => { setDoc(d); setForm((f) => ({ ...f, visibility: d.visibility })); }} />
           )}
           {isMember && doc && (
             <button type="button" onClick={() => toggleSide("history")} title="Version history" aria-label="Version history" aria-pressed={side === "history"}

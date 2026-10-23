@@ -141,6 +141,19 @@ class GroupDocument < ApplicationRecord
     revise(attrs, user, message: message.presence || "Restored version #{version.number}", kind: "restored", restored_from: version)
   end
 
+  # The start of the text as one plain line (table dividers and Markdown marks left out)
+  def excerpt
+    return DocumentHtml.text(body).first(160) if body_format == "html"
+
+    body.to_s.lines.reject { |l| l.match?(/\A\s*\|?[\s:|-]+\|?\s*\z/) }.join(" ").delete("#>*_`[]").tr("|", " ").squish.first(160)
+  end
+
+  # The excerpt ending on a whole word, with "…" when the text goes on (link previews)
+  def summary
+    text = excerpt
+    text.size < 160 ? text : "#{text.sub(/\s+\S*\z/, '')}…"
+  end
+
   def as_api_json(viewer: nil, full: false)
     json = {
       id: id, title: title, kind: kind, visibility: visibility, status: status, pinned: pinned, position: position,
@@ -179,13 +192,6 @@ class GroupDocument < ApplicationRecord
     return unless approved_by
 
     errors.add(:approved_by, "must be a decision this group passed") unless approved_by.group_id == group_id && approved_by.passed?
-  end
-
-  # The start of the text as one plain line (table dividers and Markdown marks left out)
-  def excerpt
-    return DocumentHtml.text(body).first(160) if body_format == "html"
-
-    body.to_s.lines.reject { |l| l.match?(/\A\s*\|?[\s:|-]+\|?\s*\z/) }.join(" ").delete("#>*_`[]").tr("|", " ").squish.first(160)
   end
 
   def file_allowed

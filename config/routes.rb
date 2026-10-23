@@ -32,6 +32,9 @@ Rails.application.routes.draw do
   get "/schedule_polls", to: "schedule_polls#app", as: :schedule_polls
   get "/schedule_polls/:token(/*path)", to: "schedule_polls#app", as: :schedule_poll
 
+  # The picture a shared link shows (og:image)
+  get "/share_cards/:kind/:id.png", to: "share_cards#show", as: :share_card, format: false,
+      constraints: { kind: /document|reading|event|group|meeting|listing|site/, id: %r{[^/]+} }
   # Events: a React app (app/javascript/entrypoints/events.jsx) with the HMBLBOT Editor
   get "/events/:token/unsubscribe", to: "events#unsubscribe", as: :event_unsubscribe
   get "/events/:token(/*path)", to: "events#app", as: :event, format: false

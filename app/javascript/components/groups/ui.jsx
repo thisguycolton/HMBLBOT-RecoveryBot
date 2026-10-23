@@ -53,8 +53,8 @@ export function Tray({ label, action, children, className = "" }) {
   );
 }
 
-export function Card({ children, className = "" }) {
-  return <div className={`rounded-xl bg-white shadow-panel dark:bg-neutral-900 ${className}`}>{children}</div>;
+export function Card({ children, className = "", ref }) {
+  return <div ref={ref} className={`rounded-xl bg-white shadow-panel dark:bg-neutral-900 ${className}`}>{children}</div>;
 }
 
 export function copy(text, done) {

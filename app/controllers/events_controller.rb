@@ -6,6 +6,7 @@ class EventsController < ApplicationController
 
   def app
     @event = Event.find_by(token: params[:token])
+    @share = @event && ShareMeta.safely { ShareMeta.event(@event) }
     authenticate_user! if params[:path] == "edit"
   end
 

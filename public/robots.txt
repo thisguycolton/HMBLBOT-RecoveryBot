@@ -28,6 +28,22 @@ User-agent: Timpibot
 User-agent: YouBot
 Disallow: /
 
+# The apps that show a shared link's preview card: a reading's link gets its title and
+# picture (never its text, ReadingsController#answer_robots); the rest stays off
+User-agent: facebookexternalhit
+User-agent: Facebot
+User-agent: Twitterbot
+User-agent: Slackbot-LinkExpanding
+User-agent: Discordbot
+User-agent: WhatsApp
+User-agent: TelegramBot
+User-agent: LinkedInBot
+Disallow: /library
+Disallow: /books
+Disallow: /service_readings
+Disallow: /api/
+Disallow: /admin_panel
+
 # Everyone else: the home page and tools are fine, the texts are not
 User-agent: *
 Disallow: /library

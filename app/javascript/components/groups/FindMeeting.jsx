@@ -7,6 +7,7 @@ import { DateField, TimeField, todayValue } from "../ui/DateFields";
 import { api, fromTimeValue, toTimeValue, typeLabel } from "./lib";
 import { ErrorNote, Loading, quietButton } from "./ui";
 import { LiveBadge, useNow, viewerZoneName, whenLabel } from "./NextMeeting";
+import ShareButton from "../share/ShareButton";
 import MeetingPasscode from "./MeetingPasscode";
 
 // /groups/meetings: "Find a meeting". Every meeting AA Intergroup lists and the groups'
@@ -300,8 +301,9 @@ function MeetingCard({ meeting: m, now, back }) {
   const { group } = m;
   const sameName = m.name.trim().toLowerCase() === group.title.trim().toLowerCase();
   return (
+    <div className="relative flex flex-col">
     <Link to={group.href} state={{ back }}
-      className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-panel ring-1 ring-neutral-200 transition hover:-translate-y-0.5 hover:ring-accent/60 dark:bg-neutral-900 dark:ring-neutral-800">
+      className="group flex flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-panel ring-1 ring-neutral-200 transition hover:-translate-y-0.5 hover:ring-accent/60 dark:bg-neutral-900 dark:ring-neutral-800">
       <Cover group={group} className="h-32">
         <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/25 to-transparent p-4">
           <p className="ev-heading line-clamp-2 text-xl font-extrabold leading-tight tracking-tight text-white">{group.title}</p>
@@ -325,6 +327,18 @@ function MeetingCard({ meeting: m, now, back }) {
         <p className="mt-auto pt-1 text-[11px] text-slate-400 dark:text-neutral-500">{m.schedule_label}</p>
       </div>
     </Link>
+    <MeetingShare meeting={m} className="absolute left-3 top-3 grid size-8 place-items-center rounded-full !bg-black/35 !text-white backdrop-blur hover:!bg-black/55" />
+    </div>
+  );
+}
+
+// Share a meeting from the results: its own link when it's one of our groups', else the AA Intergroup listing's
+function MeetingShare({ meeting: m, className }) {
+  if (!m.share) return null;
+  const title = m.name.trim().toLowerCase() === m.group.title.trim().toLowerCase() ? m.name : `${m.name} · ${m.group.title}`;
+  return (
+    <ShareButton url={m.share.path} title={title} text={`${m.name}: ${m.schedule_label}`} image={m.share.image}
+      panelTitle="Share this meeting" iconOnly label="Share this meeting" className={className} />
   );
 }
 
@@ -332,8 +346,9 @@ function MeetingRow({ meeting: m, now, back }) {
   const { group } = m;
   const at = new Date(m.starts_at);
   return (
+    <div className="flex items-center gap-1 rounded-xl bg-white pr-1.5 shadow-panel hover:ring-1 hover:ring-accent/50 dark:bg-neutral-900">
     <Link to={group.href} state={{ back }}
-      className="group flex items-center gap-3 rounded-xl bg-white p-2.5 shadow-panel hover:ring-1 hover:ring-accent/50 dark:bg-neutral-900">
+      className="group flex min-w-0 flex-1 items-center gap-3 p-2.5">
       <div className="w-20 shrink-0 text-center">
         <p className="!text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
           {whenLabel(m.starts_at, now).split(",")[0]}
@@ -357,6 +372,8 @@ function MeetingRow({ meeting: m, now, back }) {
       <LiveBadge start={start(m)} end={end(m)} now={now} className={start(m) <= now ? "" : "!bg-neutral-100 !text-slate-700 dark:!bg-neutral-800 dark:!text-neutral-200"} />
       <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 dark:text-neutral-600" />
     </Link>
+    <MeetingShare meeting={m} className="grid size-8 shrink-0 place-items-center rounded-lg !bg-transparent text-slate-400 hover:!bg-neutral-100 hover:text-accent dark:text-neutral-500 dark:hover:!bg-neutral-800" />
+    </div>
   );
 }
 

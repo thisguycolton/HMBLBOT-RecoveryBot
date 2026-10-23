@@ -34,6 +34,7 @@
         <div id="reading-show-root" class="w-screen min-h-screen" data-reading="<%= json_escape({
         id: @reading.id,
         title: @reading.title,
+        published: @reading.published?,
         source: @reading.source,
         user_id: @reading.user_id,
         host: @reading.host,

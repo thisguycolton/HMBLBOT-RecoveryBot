@@ -226,10 +226,12 @@ class MeetingFinder
       if hit.kind == "oiaa"
         record = listings[hit.id] or next
         group = groups[record.slug]
-        listing_json(record, hit, group ? group_json(group, counts) : intergroup_json(record, template_cover))
+        linked = @linked[record.slug]
+        share = linked && linked.group == group ? share_json(linked) : group ? share_json(group) : share_json(record)
+        listing_json(record, hit, group ? group_json(group, counts) : intergroup_json(record, template_cover)).merge(share: share)
       else
         meeting = meetings[hit.id] or next
-        meeting_json(meeting, hit, group_json(meeting.group, counts))
+        meeting_json(meeting, hit, group_json(meeting.group, counts)).merge(share: share_json(meeting))
       end
     end
   end
@@ -237,7 +239,8 @@ class MeetingFinder
   # The group here that a listing belongs to: one of its meetings is linked to it, or it
   # has the listing's name; only groups whose page the viewer may see
   def groups_for(records)
-    linked = Meeting.where(oiaa_slug: records.map(&:slug)).includes(group: { cover_attachment: :blob }).to_h { |m| [m.oiaa_slug, m.group] }
+    @linked = Meeting.where(oiaa_slug: records.map(&:slug)).includes(group: { cover_attachment: :blob }).index_by(&:oiaa_slug)
+    linked = @linked.transform_values(&:group)
     names = records.flat_map { |r| [r.group_name, r.name] }.compact.map(&:downcase).uniq
     by_title = Group.where("LOWER(title) IN (?)", names.presence || [""]).includes(cover_attachment: :blob).index_by { |g| g.title.downcase }
     records.each_with_object({}) do |r, found|
@@ -272,6 +275,14 @@ class MeetingFinder
       attendance: meeting.attendance, place: meeting.place, region: nil, conference_url: meeting.conference_url, conference_url_notes: meeting.conference_url_notes,
       notes: meeting.notes&.squish&.truncate(NOTES_MAX),
     )
+  end
+
+  # The link the card's Share button sends (ShareMeta's path), and its picture when the
+  # group's page is for everyone
+  def share_json(record)
+    meta = ShareMeta.path_for(record)
+    image = record.is_a?(OiaaMeeting) || (record.is_a?(Group) ? record : record.group).active?
+    { path: meta[:path], image: image ? "/share_cards/#{meta[:kind]}/#{ERB::Util.url_encode(meta[:id].to_s)}.png" : nil }
   end
 
   def occurrence_json(hit)
