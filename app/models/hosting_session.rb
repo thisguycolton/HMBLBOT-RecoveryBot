@@ -5,7 +5,7 @@
 # The meeting timer runs from the meeting's start time, in the page (timer_* columns are unused).
 class HostingSession < ApplicationRecord
   ACTS = %w[goto complete uncomplete posted unposted activity clear_activity draw_topic drop_topic
-            service milestone_add milestone_update milestone_remove milestone_move].freeze
+            service milestone_add milestone_update milestone_remove milestone_move block clock_start clock_reset].freeze
   LOG_SIZE = 30
   # What fills the script's reading / activity spot: a chapter from the literature, one of the
   # host's own readings (a Reading: the page's copy comes along as a chat posting, POSTED_READING),
@@ -22,10 +22,13 @@ class HostingSession < ApplicationRecord
   CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789".chars.freeze
   CODE_LENGTH = 6
 
-  belongs_to :meeting
+  # A meeting's date, or a deck's (Deck): one or the other
+  belongs_to :meeting, optional: true
+  belongs_to :deck, optional: true
   has_many :presences, class_name: "HostingPresence", dependent: :delete_all
 
   validates :on, presence: true
+  validate { errors.add(:base, "belongs to a meeting or a deck") unless meeting_id.present? ^ deck_id.present? }
   before_validation(on: :create) { self.code ||= self.class.new_code }
 
   def self.new_code
@@ -107,6 +110,14 @@ class HostingSession < ApplicationRecord
               j = i && i + (data["by"].to_i.negative? ? -1 : 1)
               self.milestones = milestones.dup.tap { |l| l[i], l[j] = l[j], l[i] } if i && j.between?(0, milestones.size - 1)
               nil
+            when "block" then block_act(data, label, user, now)
+            # A deck's clock (a meeting's runs from its start time): from when a host starts it
+            when "clock_start"
+              self.timer_started_at = now
+              "Started the clock"
+            when "clock_reset"
+              self.timer_started_at = nil
+              nil
             when "drop_topic"
               self.activity = activity.merge("topics" => Array(activity&.dig("topics")).reject { |t| t["id"].to_s == index.to_s }) if activity
               nil
@@ -116,6 +127,36 @@ class HostingSession < ApplicationRecord
       save!
       did
     end
+  end
+
+  # What a block that keeps something does (block_state, by the block's id): a checklist's
+  # items ticked off (who and when), a timer started, paused or put back
+  def block_act(data, label, user, now)
+    key = data["block_id"].to_s
+    return unless key.match?(DeckArrangement::ID)
+
+    state = (block_state[key] || {}).dup
+    label = label.to_s.squish.first(80).presence
+    did = case data["op"]
+          when "toggle"
+            item = data["item"].to_s.first(40)
+            done = (state["done"] || {}).dup
+            ticked = !done.key?(item)
+            ticked ? done[item] = { "by" => user.display_name, "at" => now.iso8601 } : done.delete(item)
+            state["done"] = done
+            ticked && label ? "Checked off #{label}" : nil
+          when "timer_start"
+            state["started_at"] ||= now.iso8601(3)
+            label && "Started #{label}"
+          when "timer_pause"
+            state["banked"] = state["banked"].to_f + (now - Time.iso8601(state.delete("started_at"))) if state["started_at"]
+            nil
+          when "timer_reset"
+            state = {}
+            nil
+          end
+    self.block_state = block_state.merge(key => state)
+    did
   end
 
   # {{ milestones }} in a chat posting: "Kim (30 days) and Sam (1 year)" (the page fills it the same way, lib.js)
@@ -156,7 +197,7 @@ class HostingSession < ApplicationRecord
   def live_json(viewer, now = Time.current)
     {
       version: version, section_index: section_index, completed: completed, posted: posted, log: log.last(12).reverse, activity: activity,
-      service: service, milestones: milestones,
+      service: service, milestones: milestones, block_state: block_state, clock_started_at: timer_started_at&.iso8601(3),
       server_now: now.iso8601(3),
       presences: presences.includes(:user).select { |p| p.last_seen_at > HostingPresence::AWAY.ago }.sort_by { |p| p.created_at }.map { |p| p.as_api_json(viewer) },
     }

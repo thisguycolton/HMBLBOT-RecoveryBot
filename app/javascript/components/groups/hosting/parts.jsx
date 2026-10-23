@@ -137,11 +137,13 @@ export function ScriptView({ center, sections, shown, index, section, live, size
         <ScrollText className="mx-auto size-10 text-slate-400" />
         <h1 className="mt-3 text-lg font-semibold">No script yet</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-neutral-400">
-          {kit.script_hidden ? "The script for this meeting is a document only record keepers can read. A host coordinator can set it to Hosts in Group conscience > Documents."
+          {center.deck ? (kit.script_hidden ? "This deck runs from a document you can't read. A record keeper can share it with members in Group conscience > Documents."
+            : center.can_edit ? "Pick the document this deck runs from with the gear above. It shows here a section at a time." : "Nobody has picked the document this deck runs from yet.")
+            : kit.script_hidden ? "The script for this meeting is a document only record keepers can read. A host coordinator can set it to Hosts in Group conscience > Documents."
             : center.can_edit ? "Pick the group's format or script document, and it shows here a section at a time, cut at its sections (Insert > Add Section in the document) or its headings."
             : "A host coordinator hasn't picked this meeting's script yet. The chat postings and readings still work."}
         </p>
-        {center.can_edit && <button type="button" className={`${primaryButton} mt-4`} onClick={openSetup}><Settings className="size-4" /> Set up this meeting</button>}
+        {center.can_edit && <button type="button" className={`${primaryButton} mt-4`} onClick={openSetup}><Settings className="size-4" /> {center.deck ? "Pick the document" : "Set up this meeting"}</button>}
       </div>
     );
   }
@@ -162,10 +164,11 @@ export function ScriptView({ center, sections, shown, index, section, live, size
           {section.cue && <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100"><AlarmClock className="size-3.5" /> {cueLabel(section.cue)}{cueTime(section.cue, center.starts_at, center.ends_at) && ` · ${timeOf(new Date(cueTime(section.cue, center.starts_at, center.ends_at)).toISOString(), center.meeting.time_zone)}`}</span>}
         </p>
       )}
-      {first && !section.activity && !live.activity && <div className="mt-4"><ActivityPicker center={center} act={act} early /></div>}
-      {first && !section.activity && <div className="mt-4"><ServicePanel center={center} live={live} act={act} /></div>}
+      {/* a meeting's day starts with picking its reading / activity and who does service */}
+      {!center.deck && first && !section.activity && !live.activity && <div className="mt-4"><ActivityPicker center={center} act={act} early /></div>}
+      {!center.deck && first && !section.activity && <div className="mt-4"><ServicePanel center={center} live={live} act={act} /></div>}
       {html.trim() && <ScriptText html={html} size={size} live={live} act={act} />}
-      {section.activity && <div className="mt-4"><ActivityPanel center={center} live={live} act={act} size={size} /></div>}
+      {section.activity && !center.deck && <div className="mt-4"><ActivityPanel center={center} live={live} act={act} size={size} /></div>}
 
       <div className="mt-8 border-t border-neutral-200 pt-5 dark:border-neutral-800">
         {upNext && (
@@ -403,10 +406,10 @@ export function People({ center, live, now, act }) {
 }
 
 // Who has the Command Center open, and what each of them is on
-export function HostsHere({ live, now }) {
+export function HostsHere({ live, now, ownDeck = false }) {
   return (
     <div>
-      <h2 className={`${label} mb-2`}>Hosts here</h2>
+      <h2 className={`${label} mb-2`}>{ownDeck ? "Who's here" : "Hosts here"}</h2>
       <ul className="space-y-2">
         {live.presences.map((p) => {
           const away = now - new Date(p.last_seen_at).getTime() >= AWAY_MS;
@@ -422,7 +425,7 @@ export function HostsHere({ live, now }) {
           );
         })}
       </ul>
-      {live.presences.length < 2 && <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">When the other host opens this meeting's HostDeck, you'll see what they're on here.</p>}
+      {live.presences.length < 2 && <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">{ownDeck ? "When someone else opens this deck, you'll see what they're on here." : "When the other host opens this meeting's HostDeck, you'll see what they're on here."}</p>}
     </div>
   );
 }

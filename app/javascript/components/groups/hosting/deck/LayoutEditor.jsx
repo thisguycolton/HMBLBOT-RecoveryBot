@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, MoveHorizontal, Plus, RotateCcw, X } from "lucide-react";
+import { GripVertical, MoveHorizontal, Plus, RotateCcw, Settings2, X } from "lucide-react";
 import { ErrorNote, primaryButton, quietButton } from "../../ui";
 import { selectClass } from "../../../ui/styles";
 import { BLOCKS } from "./blocks";
-import { HOST_A_MEETING, LAYOUT_CHOICES, LAYOUT_SIDES, REGIONS, REGION_SIZE, draftOf } from "./templates";
+import { LAYOUT_CHOICES, LAYOUT_SIDES, REGIONS, REGION_SIZE, baseTemplate, draftOf } from "./templates";
 
 // HostDeck's layout editor: the deck itself, live, with its blocks to drag between the columns,
 // the strip and the bottom bar (a block only goes where it has a size), a layout to pick, blocks
@@ -70,7 +70,9 @@ export function EditRegion({ region, ids, className = "", children }) {
 // the bar whether it stretches. What's in it is the real thing, but can't be clicked.
 export function EditBlock({ block, region, setDraft, placeholder, className = "", children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const [open, setOpen] = useState(!!block.fresh && !!BLOCKS[block.type].settings);
   const info = BLOCKS[block.type];
+  const Settings = info.settings;
   const Icon = info.icon;
   const patch = (p) => setDraft((d) => ({ ...d, [region]: d[region].map((b) => (b.id === block.id ? { ...b, ...p } : b)) }));
   const remove = () => setDraft((d) => ({ ...d, [region]: d[region].filter((b) => b.id !== block.id) }));
@@ -83,6 +85,9 @@ export function EditBlock({ block, region, setDraft, placeholder, className = ""
           <GripVertical className="size-3.5 shrink-0" /><Icon className="size-3.5 shrink-0" /><span className="truncate">{info.label}</span>
         </button>
         <span className="flex-1" />
+        {Settings && (
+          <button type="button" className={`${small} ${open ? "!text-accent" : ""}`} onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={`${info.label} settings`} title="Settings"><Settings2 className="size-3.5" /></button>
+        )}
         {region === "bar" && (
           <button type="button" className={`${small} ${block.grow ? "!text-accent" : ""}`} onClick={() => patch({ grow: !block.grow || undefined })} aria-pressed={!!block.grow} title={block.grow ? "Stretches to fill the bar" : "Stretch to fill the bar"}>
             <MoveHorizontal className="size-3.5" />
@@ -90,6 +95,11 @@ export function EditBlock({ block, region, setDraft, placeholder, className = ""
         )}
         {block.type !== "stage" && <button type="button" className={small} onClick={remove} aria-label={`Take ${info.label} off the deck`} title="Take it off"><X className="size-3.5" /></button>}
       </div>
+      {Settings && open && (
+        <div className="mb-2 rounded-lg bg-white p-2.5 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
+          <Settings settings={block.settings || {}} change={(p) => patch({ settings: { ...(block.settings || {}), ...p } })} />
+        </div>
+      )}
       <div className="pointer-events-none select-none" inert>
         {placeholder ? <p className="px-2 py-3 text-center text-xs text-slate-500 dark:text-neutral-400">{placeholder}</p> : children}
       </div>
@@ -101,14 +111,20 @@ export function EditBlock({ block, region, setDraft, placeholder, className = ""
 export function EditorToolbar({ center, draft, setDraft, scope, setScope, saving, error, onSave, onCancel, onRemoveOwn }) {
   const [adding, setAdding] = useState(false);
   const present = onDeck(draft);
-  const missing = Object.entries(BLOCKS).filter(([type]) => !present.has(type));
+  const isDeck = !!center.deck;
+  const base = baseTemplate(center);
+  // What can go on: a block not on yet (notes, checklists and timers as many as wanted), and on a
+  // deck of its own, only ones that don't need a meeting
+  const missing = Object.entries(BLOCKS).filter(([type, info]) => type !== "stage" && (info.multi || !present.has(type)) && !(isDeck && info.meetingOnly));
   const shown = shownRegions(draft.layout);
   // A new block goes in the right sidebar (else the left), the strip (reminders) or the bar
   const add = (type) => {
     const region = ["strip", "right", "left", "bar", "main"].find((r) => shown.includes(r) && fits(type, r) && (r !== "strip" || type === "reminders"))
       || shown.find((r) => fits(type, r));
     if (!region) return;
-    setDraft((d) => ({ ...d, [region]: [...d[region], { id: type, type }] }));
+    const info = BLOCKS[type];
+    const id = info.multi ? `${type}-${Math.random().toString(36).slice(2, 8)}` : type;
+    setDraft((d) => ({ ...d, [region]: [...d[region], { id, type, fresh: true, ...(info.defaults ? { settings: structuredClone(info.defaults) } : {}) }] }));
     setAdding(false);
   };
   // A sidebar that goes away hands its blocks to the one that stays
@@ -147,22 +163,22 @@ export function EditorToolbar({ center, draft, setDraft, scope, setScope, saving
             </div>
           )}
         </div>
-        <button type="button" className={`${quietButton} !px-3 !py-1.5`} onClick={() => setDraft(draftOf(HOST_A_MEETING))} title="Put every block back where Host a meeting has it"><RotateCcw className="size-4" /> Start from Host a meeting</button>
+        <button type="button" className={`${quietButton} !px-3 !py-1.5`} onClick={() => setDraft(draftOf(base))} title={`Put every block back where ${base.name} has it`}><RotateCcw className="size-4" /> Start from {base.name}</button>
         <span className="flex-1" />
-        <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-neutral-300">
+        {!isDeck && <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-neutral-300">
           Save for
           <select className={`${selectClass} !w-auto !py-1.5 !text-sm`} value={scope} onChange={(e) => setScope(e.target.value)}>
             <option value="meeting">{center.meeting.name} only</option>
             <option value="default">All the group's meetings{center.layout?.scope === "meeting" ? ` (${center.meeting.name} too)` : ""}</option>
           </select>
-        </label>
+        </label>}
         <button type="button" className={`${quietButton} !px-3 !py-1.5`} onClick={onCancel}>Cancel</button>
         <button type="button" className={`${primaryButton} !px-4 !py-1.5`} onClick={onSave} disabled={saving}>{saving ? "Saving…" : "Save layout"}</button>
       </div>
       {draft.layout === "focus" && REGIONS.some((r) => (r === "left" || r === "right") && draft[r].length) && (
         <p className="mt-1.5 text-xs text-slate-600 dark:text-neutral-300">The sidebars' blocks are kept, and come back when you pick a layout with a sidebar.</p>
       )}
-      {center.layout?.scope === "meeting" && (
+      {!isDeck && center.layout?.scope === "meeting" && (
         <p className="mt-1.5 text-xs text-slate-600 dark:text-neutral-300">
           {center.meeting.name} has its own layout. <button type="button" className="!bg-transparent p-0 font-semibold text-accent hover:underline" onClick={onRemoveOwn}>Use the group's layout instead</button>
         </p>

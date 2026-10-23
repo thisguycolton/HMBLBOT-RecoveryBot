@@ -4,7 +4,7 @@
 class Api::HostingLinksController < ApplicationController
   def show
     hosting = HostingSession.find_by_code(params[:code])
-    group = hosting&.meeting&.group
+    group = hosting&.meeting&.group # (a deck's date has no chat postings)
     return render(json: { error: "That hosting link isn't right. Check it with your host." }, status: :not_found) unless group&.page_visible_to?(current_user)
 
     response.headers["X-Robots-Tag"] = "noindex, nofollow"

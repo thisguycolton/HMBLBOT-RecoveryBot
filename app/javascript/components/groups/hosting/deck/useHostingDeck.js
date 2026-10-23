@@ -10,12 +10,13 @@ import { CUE_EARLY_MS, CUE_SHOWN_MS, PING_MS, SIZES, store, useDarkMode, useMeet
 // stage (the script, a kit reading or the activity), the phone tab, and the page's own settings
 // (text size, dark mode, setup). The page checks in every few seconds (ping), which is how the
 // host and co-host see each other. Blocks never fetch or poll on their own.
-export default function useHostingDeck() {
-  const { slug, meetingId } = useParams();
+// `base`: where its API is, a meeting's (/groups/:slug/hosting/:meetingId) or a deck's own
+// (/groups/:slug/decks/:id)
+export default function useHostingDeck(base) {
+  const { slug } = useParams();
   // ?on=: the date a short link (/h/CODE) opened, so both hosts stay on that day
   const [params] = useSearchParams();
   const on = /^\d{4}-\d{2}-\d{2}$/.test(params.get("on") || "") ? params.get("on") : null;
-  const base = `/groups/${slug}/hosting/${meetingId}`;
   const q = on ? `?on=${on}` : "";
   const [center, setCenter] = useState(null);
   const [error, setError] = useState(null);
@@ -49,7 +50,7 @@ export default function useHostingDeck() {
   }, [center?.kit?.script, center?.kit?.activity_anchor]);
 
   useEffect(() => {
-    document.title = center ? `Hosting ${center.meeting.name}` : "HostDeck";
+    document.title = center ? (center.deck ? center.deck.name : `Hosting ${center.meeting.name}`) : "HostDeck";
   }, [center]);
 
   // Sections that aren't for today (their days, or the day's activity) are left out completely:
@@ -130,7 +131,7 @@ export default function useHostingDeck() {
   const openReading = (r) => { setReading(r); setPanel("script"); };
 
   return {
-    slug, center, setCenter, applyLive, error, actionError, live, act, sections, skips, shown, index, section, nextIndex, goto, next,
+    slug, base, q, center, setCenter, applyLive, error, actionError, live, act, sections, skips, shown, index, section, nextIndex, goto, next,
     reading, setReading, openActivity, openReading, panel, setPanel, setup, setSetup, dark, toggleDark, size, changeSize,
     now, elapsed, cues, dismiss: (i) => setDismissed((d) => [...d, i]),
     // Someone rearranged the deck since this page loaded it

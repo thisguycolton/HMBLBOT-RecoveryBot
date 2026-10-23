@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { api } from "../lib";
 import CommandCenterClassic from "./CommandCenterClassic";
 import DeckView from "./deck/DeckView";
@@ -20,7 +20,8 @@ export default function CommandCenter() {
 }
 
 function HostDeck() {
-  const deck = useHostingDeck();
+  const { slug, meetingId } = useParams();
+  const deck = useHostingDeck(`/groups/${slug}/hosting/${meetingId}`);
   const [draft, setDraft] = useState(null); // the layout being edited
   const [scope, setScope] = useState("meeting");
   const [saving, setSaving] = useState(false);

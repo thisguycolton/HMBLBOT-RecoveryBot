@@ -75,14 +75,17 @@ function Editable({ block, region, size, deck, editor, className }) {
 // The header is the same on every deck.
 // While the layout is being edited (`editor`: { draft, setDraft, toolbar }), the template is
 // the draft, every region takes dropped blocks, and the blocks can't be clicked.
-export default function DeckView({ deck, template: saved, editor = null, canArrange = false, onEdit }) {
+// `renderSetup()`: what the gear opens (a meeting's kit, else a deck's settings).
+export default function DeckView({ deck, template: saved, editor = null, canArrange = false, onEdit, renderSetup = null }) {
   const template = editor ? editor.draft : saved;
   const { slug, center, live, error, panel, setPanel } = deck;
+  // A deck of its own goes back to the group's HostDeck list; a meeting's to its hosts
+  const back = center?.deck ? `/${slug}/host` : `/${slug}/hosts`;
   if (error) {
     return (
       <div className="min-h-screen bg-neutral-50 px-4 dark:bg-neutral-950">
         <Message title={error.status === 403 ? "This is for the group's hosts" : "That meeting isn't here"} text={error.message}>
-          <Link to={`/${slug}/hosts`} className="mt-4 inline-block text-sm text-accent hover:underline">Back to the group</Link>
+          <Link to={back} className="mt-4 inline-block text-sm text-accent hover:underline">Back to the group</Link>
         </Message>
       </div>
     );
@@ -111,7 +114,7 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
   const page = (
     <div className={`hc-root flex h-dvh flex-col bg-neutral-50 !font-sans text-slate-900 dark:bg-neutral-950 dark:text-white ${dark ? "doc-dark" : ""}`}>
       <header className="flex shrink-0 items-center gap-2 border-b border-neutral-200 bg-white px-3 py-2 sm:gap-3 sm:px-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <Link to={`/${slug}/hosts`} className={iconButton} aria-label="Back to the group's hosts" title="Back to the group"><ArrowLeft className="size-5" /></Link>
+        <Link to={back} className={iconButton} aria-label={center.deck ? "Back to HostDeck" : "Back to the group's hosts"} title="Back to the group"><ArrowLeft className="size-5" /></Link>
         <GroupLogo group={center.group} className="hidden size-8 text-xs sm:grid" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold sm:text-base">HostDeck</p>
@@ -130,7 +133,7 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
           <button type="button" className={iconButton} onClick={() => deck.changeSize(1)} disabled={size === SIZES[SIZES.length - 1]} aria-label="Bigger script text" title="Bigger text"><Plus className="size-4" /></button>
           <button type="button" className={iconButton} onClick={deck.toggleDark} aria-label={dark ? "Light mode" : "Dark mode"} title={dark ? "Light mode" : "Dark mode"}>{dark ? <Sun className="size-5" /> : <Moon className="size-5" />}</button>
           {canArrange && !editor && <button type="button" className={`${iconButton} !hidden lg:!inline-grid`} onClick={onEdit} aria-label="Edit the layout" title="Edit the layout: move blocks, pick sidebars"><LayoutDashboard className="size-5" /></button>}
-          {center.can_edit && <button type="button" className={iconButton} onClick={() => deck.setSetup(true)} aria-label="Set up the kit" title="Set up the script, postings and readings"><Settings className="size-5" /></button>}
+          {center.can_edit && <button type="button" className={iconButton} onClick={() => deck.setSetup(true)} aria-label={center.deck ? "Deck settings" : "Set up the kit"} title={center.deck ? "The deck's name and document" : "Set up the script, postings and readings"}><Settings className="size-5" /></button>}
         </div>
       </header>
 
@@ -185,7 +188,8 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
         </footer>
       )}
 
-      {deck.setup && <KitEditor center={center} onClose={() => deck.setSetup(false)} onSaved={(c) => { deck.setCenter(c); deck.applyLive(c.live); }} />}
+      {deck.setup && renderSetup && renderSetup()}
+      {deck.setup && !renderSetup && <KitEditor center={center} onClose={() => deck.setSetup(false)} onSaved={(c) => { deck.setCenter(c); deck.applyLive(c.live); }} />}
     </div>
   );
   return editor ? <EditDnd draft={editor.draft} setDraft={editor.setDraft}>{page}</EditDnd> : page;

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_23_030000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_23_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -219,6 +219,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_030000) do
     t.index ["meeting_at"], name: "index_court_verifications_on_meeting_at"
     t.index ["meeting_id"], name: "index_court_verifications_on_meeting_id"
     t.index ["respondent_email"], name: "index_court_verifications_on_respondent_email"
+  end
+
+  create_table "decks", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.string "name", null: false
+    t.string "purpose", default: "general", null: false
+    t.bigint "script_document_id"
+    t.jsonb "arrangement"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_decks_on_created_by_id"
+    t.index ["group_id"], name: "index_decks_on_group_id"
+    t.index ["script_document_id"], name: "index_decks_on_script_document_id"
   end
 
   create_table "event_collaborators", force: :cascade do |t|
@@ -509,7 +523,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_030000) do
   end
 
   create_table "hosting_sessions", force: :cascade do |t|
-    t.bigint "meeting_id", null: false
+    t.bigint "meeting_id"
     t.date "on", null: false
     t.integer "section_index", default: 0, null: false
     t.jsonb "completed", default: [], null: false
@@ -524,9 +538,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_030000) do
     t.string "code", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "deck_id"
+    t.jsonb "block_state", default: {}, null: false
     t.index ["code"], name: "index_hosting_sessions_on_code", unique: true
+    t.index ["deck_id", "on"], name: "index_hosting_sessions_on_deck_id_and_on", unique: true
     t.index ["meeting_id", "on"], name: "index_hosting_sessions_on_meeting_id_and_on", unique: true
     t.index ["meeting_id"], name: "index_hosting_sessions_on_meeting_id"
+    t.check_constraint "(meeting_id IS NULL) <> (deck_id IS NULL)", name: "hosting_sessions_meeting_or_deck"
   end
 
   create_table "icons", force: :cascade do |t|
@@ -1198,6 +1216,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_030000) do
   add_foreign_key "contact_requests", "users", on_delete: :nullify
   add_foreign_key "court_verifications", "groups"
   add_foreign_key "court_verifications", "meetings", on_delete: :nullify
+  add_foreign_key "decks", "group_documents", column: "script_document_id", on_delete: :nullify
+  add_foreign_key "decks", "groups", on_delete: :cascade
+  add_foreign_key "decks", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "event_collaborators", "events"
   add_foreign_key "event_collaborators", "users"
   add_foreign_key "event_collaborators", "users", column: "added_by_id", on_delete: :nullify
@@ -1237,6 +1258,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_030000) do
   add_foreign_key "hosting_layouts", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "hosting_presences", "hosting_sessions", on_delete: :cascade
   add_foreign_key "hosting_presences", "users", on_delete: :cascade
+  add_foreign_key "hosting_sessions", "decks", on_delete: :cascade
   add_foreign_key "hosting_sessions", "meetings", on_delete: :cascade
   add_foreign_key "intergroup_follows", "users"
   add_foreign_key "meeting_host_covers", "meetings", on_delete: :cascade

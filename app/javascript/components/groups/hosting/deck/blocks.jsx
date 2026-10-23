@@ -1,12 +1,13 @@
 import React from "react";
 import {
-  AlarmClock, ArrowLeft, ArrowRight, BookOpen, BookText, Clock, History, LayoutList, Link2, MessageSquare, PartyPopper, ScrollText, Users, X, Zap,
+  AlarmClock, ArrowLeft, ArrowRight, BookOpen, BookText, Clock, History, LayoutList, Link2, ListChecks, MessageSquare, NotebookText, PartyPopper, ScrollText, Timer, Users, X, Zap,
 } from "lucide-react";
 import { primaryButton, quietButton } from "../../ui";
 import ActivityPanel from "../Activity";
 import { Milestones } from "../Service";
 import ServiceReadings from "../ServiceReadings";
 import { ACTIVITY_TITLE, cueLabel } from "../lib";
+import { ChecklistBlock, ChecklistSettings, DeckClock, NotesBlock, NotesSettings, TimerBlock, TimerSettings } from "./keepingBlocks";
 import { ActivityCard, ActivityLog, ChatPostings, Flow, HostsHere, MeetingClock, QuickActions, ReadingView, Readings, ScriptView, ShareLink } from "../parts";
 
 // HostDeck's blocks: each module of a meeting's HostDeck (what was the Hosting Command Center) as
@@ -24,11 +25,13 @@ import { ActivityCard, ActivityLog, ChatPostings, Flow, HostsHere, MeetingClock,
 // `note` is what the layout editor shows for a block with nothing in it yet (`empty`, or
 // `placeholder(deck)` for one that takes room anyway).
 //
-// Phase 0 of HostDeck: every block has the one size it had in the Command Center. The others
-// come with the layout editor (hostdeck/plan.md in the project files).
+// `meetingOnly` blocks need a meeting (its kit, schedule or Zoom): a deck of its own (Deck) doesn't
+// offer them. `settings` is the form for what a block keeps (notes, a checklist's items...) and
+// `defaults` what a new one starts with. The Command Center's blocks have the one size they had
+// there for now (hostdeck/plan.md in the project files).
 
 const FlowBlock = ({ deck }) => (
-  <Flow sections={deck.sections} shown={deck.shown} index={deck.index} completed={deck.live.completed} presences={deck.live.presences} goto={deck.goto} picked={!!deck.live.activity} />
+  <Flow sections={deck.sections} shown={deck.shown} index={deck.index} completed={deck.live.completed} presences={deck.live.presences} goto={deck.goto} picked={!!deck.live.activity || !!deck.center.deck} />
 );
 
 // The middle of the deck: the script a section at a time, or what another block opened here
@@ -86,24 +89,27 @@ export const BLOCKS = {
   reminders: { label: "Reminders", icon: AlarmClock, sizes: ["bar"], tab: "all", placeholder: (deck) => !deck.cues.length, note: "A section's reminder shows here when its time comes.", component: RemindersBlock },
   flow: { label: "Meeting flow", icon: LayoutList, sizes: ["side"], tab: null, component: FlowBlock },
   activity: {
-    label: "Reading / activity", icon: Zap, sizes: ["side"], tab: "readings",
+    label: "Reading / activity", icon: Zap, sizes: ["side"], tab: "readings", meetingOnly: true,
     component: ({ deck }) => <ActivityCard activity={deck.live.activity} open={deck.reading === "activity" || !!deck.section?.activity} onOpen={deck.openActivity} />,
   },
   meeting_readings: {
-    label: "Meeting readings", icon: BookOpen, sizes: ["side"], tab: "readings",
+    label: "Meeting readings", icon: BookOpen, sizes: ["side"], tab: "readings", meetingOnly: true,
     component: ({ deck }) => <Readings kit={deck.center.kit} open={deck.reading} onOpen={deck.openReading} />,
   },
   service_readings: { label: "Service readings", icon: BookText, sizes: ["side"], tab: "readings", collapse: true, component: ({ deck }) => <ServiceReadings slug={deck.slug} /> },
-  quick_actions: { label: "Quick actions", icon: History, sizes: ["side"], tab: "readings", component: ({ deck }) => <QuickActions center={deck.center} /> },
+  quick_actions: { label: "Quick actions", icon: Zap, sizes: ["side"], tab: "readings", meetingOnly: true, component: ({ deck }) => <QuickActions center={deck.center} /> },
   chat_postings: {
-    label: "Chat postings", icon: MessageSquare, sizes: ["side"], tab: "chat",
+    label: "Chat postings", icon: MessageSquare, sizes: ["side"], tab: "chat", meetingOnly: true,
     component: ({ deck }) => <ChatPostings center={deck.center} live={deck.live} elapsed={deck.elapsed} act={deck.act} />,
   },
-  share_link: { label: "Share link", icon: Link2, sizes: ["side"], tab: "people", component: ({ deck }) => <ShareLink link={deck.center.link} /> },
-  hosts_here: { label: "Hosts here", icon: Users, sizes: ["side"], tab: "people", component: ({ deck }) => <HostsHere live={deck.live} now={deck.now} /> },
-  milestones: { label: "Milestones", icon: PartyPopper, sizes: ["side"], tab: "people", component: ({ deck }) => <Milestones live={deck.live} act={deck.act} /> },
+  share_link: { label: "Share link", icon: Link2, sizes: ["side"], tab: "people", meetingOnly: true, component: ({ deck }) => <ShareLink link={deck.center.link} /> },
+  hosts_here: { label: "Who's here", icon: Users, sizes: ["side"], tab: "people", component: ({ deck }) => <HostsHere live={deck.live} now={deck.now} ownDeck={!!deck.center.deck} /> },
+  milestones: { label: "Milestones", icon: PartyPopper, sizes: ["side"], tab: "people", meetingOnly: true, component: ({ deck }) => <Milestones live={deck.live} act={deck.act} /> },
   activity_log: { label: "Done so far", icon: History, sizes: ["side"], tab: "people", empty: (deck) => !deck.live.log.length, note: "What the hosts have done shows here once they start.", component: ({ deck }) => <ActivityLog live={deck.live} /> },
   previous: { label: "Previous", icon: ArrowLeft, sizes: ["bar"], tab: "all", component: PreviousBlock },
-  clock: { label: "Meeting clock", icon: Clock, sizes: ["bar"], tab: "all", component: ({ deck }) => <MeetingClock center={deck.center} elapsed={deck.elapsed} /> },
+  clock: { label: "Clock", icon: Clock, sizes: ["bar"], tab: "all", component: ({ deck }) => (deck.center.deck ? <DeckClock deck={deck} /> : <MeetingClock center={deck.center} elapsed={deck.elapsed} />) },
   next: { label: "Next", icon: ArrowRight, sizes: ["bar"], tab: "all", component: NextBlock },
+  notes: { label: "Notes", icon: NotebookText, sizes: ["side", "main"], tab: "readings", multi: true, settings: NotesSettings, defaults: { title: "Notes", markdown: "" }, component: NotesBlock },
+  checklist: { label: "Checklist", icon: ListChecks, sizes: ["side", "main"], tab: "readings", multi: true, settings: ChecklistSettings, defaults: { title: "Checklist", items: [] }, component: ChecklistBlock },
+  timer: { label: "Timer", icon: Timer, sizes: ["side", "bar", "main"], tab: "readings", multi: true, settings: TimerSettings, defaults: { title: "Timer", minutes: 3 }, component: TimerBlock },
 };

@@ -8,6 +8,9 @@ class HostingLinksController < ApplicationController
 
   def show
     hosting = HostingSession.find_by_code(params[:code])
+    # a deck's date (it has no chat postings page): the deck, for the group's members
+    return redirect_to("/groups/#{hosting.deck.group.slug}/decks/#{hosting.deck_id}") if hosting&.deck && hosting.deck.group.member_or_site_admin?(current_user)
+
     group = hosting&.meeting&.group
     return redirect_to("/groups/meetings", alert: "That hosting link isn't right. Check it with your host.") unless group&.page_visible_to?(current_user)
 

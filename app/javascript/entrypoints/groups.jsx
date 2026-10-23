@@ -24,6 +24,7 @@ import FindMeeting from "../components/groups/FindMeeting";
 import IntergroupPage from "../components/groups/page/IntergroupPage";
 import GroupPageEditor from "../components/groups/page/GroupPageEditor";
 import CommandCenter from "../components/groups/hosting/CommandCenter";
+import DeckPage from "../components/groups/hosting/deck/DeckPage";
 import GuestPostings from "../components/groups/hosting/GuestPostings";
 import HostingIndex from "../components/groups/hosting/HostingIndex";
 import ServiceReadingShare from "../components/groups/hosting/ServiceReadingShare";
@@ -46,8 +47,10 @@ const router = createBrowserRouter(
     // The HMBLBOT Editor takes the whole window
     { path: "/default-page/edit", element: <div className="ev-root w-full"><GroupPageEditor template /></div> },
     { path: "/:slug/page/edit", element: <div className="ev-root w-full"><GroupPageEditor /></div> },
-    // The Hosting Command Center takes the whole window too
+    // HostDeck (what was the Hosting Command Center) takes the whole window too
     { path: "/:slug/host/:meetingId", element: <CommandCenter /> },
+    // A HostDeck of its own (a business meeting's, onboarding...), the whole window as well
+    { path: "/:slug/decks/:deckId", element: <DeckPage /> },
     // A service reading on its own, to share that window in Zoom
     { path: "/:slug/share/service-reading/:id", element: <ServiceReadingShare /> },
     // What a hosting short link (/h/CODE) shows anyone else: the chat postings
