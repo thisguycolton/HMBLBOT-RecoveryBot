@@ -9,6 +9,7 @@ import {
   MonitorPlay,
   Users,
 } from "lucide-react";
+import ShareButton from "./share/ShareButton";
 
 function hasMeaningfulContent(value) {
   if (value == null) return false;
@@ -348,6 +349,10 @@ const topicHtml = renderRichContent(topicSource);
                 {copied ? <Check size={18} /> : <Copy size={18} />}
                 {copied ? "Copied" : "Copy for chat"}
               </button>
+
+              <ShareButton url={`/readings/${reading.id}`} title={[reading.title || reading.meetingName, group?.name].filter(Boolean).join(" · ")}
+                text={reading.title || reading.meetingName} image={reading.published ? `/share_cards/reading/${reading.id}.png` : null}
+                panelTitle="Share this reading" className={`${ghostButton} !bg-transparent`} />
 
               {isOwner && (
                 <a href={`/readings/${reading.id}/edit`} className={ghostButton} aria-label="Edit this reading" title="Edit this reading">

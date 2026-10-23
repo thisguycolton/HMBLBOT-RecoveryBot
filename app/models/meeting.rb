@@ -111,6 +111,15 @@ class Meeting < ApplicationRecord
     end
   end
 
+  # The schedule across the series' days, for a shared link: "Mon, Wed, Fri, 7:00–8:00 PM MST"
+  def share_schedule_label
+    days = weekly? ? series.pluck(:day_of_week).uniq.sort : []
+    return schedule_label if days.size < 2
+
+    label = days.size == 7 ? "Every day" : days.map { |d| Date::ABBR_DAYNAMES[d] }.join(", ")
+    "#{label}, #{self.class.clock(start_minute)}#{end_minute ? "–#{self.class.clock(end_minute)}" : ""} #{next_start.strftime('%Z')}"
+  end
+
   def self.clock(minutes)
     minutes = minutes.to_i % DAY_MINUTES
     Time.utc(2000, 1, 1).advance(minutes: minutes).strftime("%-I:%M %p")

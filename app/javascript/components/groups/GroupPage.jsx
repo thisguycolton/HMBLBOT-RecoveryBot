@@ -15,6 +15,7 @@ import CourtTab from "./CourtTab";
 import EventsTab from "./EventsTab";
 import ConscienceTab from "./conscience/ConscienceTab";
 import HostsTab from "./HostsTab";
+import ShareButton from "../share/ShareButton";
 
 const TABS = [
   { key: "home", label: "Home", icon: House },
@@ -33,7 +34,7 @@ const TABS = [
 // conscience (/:slug/conscience/*) is members' tab, but a Public document opens for anyone.
 export default function GroupPage({ tab: fixedTab }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { slug, tab: routeTab = searchParams.get("new") === "1" ? "meetings" : "home" } = useParams();
+  const { slug, meetingId, tab: routeTab = meetingId ? "meetings" : searchParams.get("new") === "1" ? "meetings" : "home" } = useParams();
   const tab = fixedTab || routeTab;
   const navigate = useNavigate();
   // Opened from Find a meeting: back goes to those results
@@ -135,6 +136,10 @@ export default function GroupPage({ tab: fixedTab }) {
             {group.membership_status === "active" && (
               <button type="button" disabled={busy} onClick={() => act("leave", `Leave ${group.title}?`)} className={heroQuietButton}>Leave</button>
             )}
+            {group.status === "active" && (
+              <ShareButton url={`/groups/${slug}`} title={group.title} text={`${group.title} on RecoveryBot`}
+                image={`/share_cards/group/${slug}.png`} panelTitle="Share this group" className={heroQuietButton} />
+            )}
           </>
         }
       />
@@ -165,7 +170,7 @@ export default function GroupPage({ tab: fixedTab }) {
       )}
 
       {current.key === "home" && <GroupHome slug={slug} onJoin={() => act("join")} />}
-      {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={load} isNew={searchParams.get("new") === "1"} />}
+      {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={load} isNew={searchParams.get("new") === "1"} focusId={Number(meetingId) || null} />}
       {current.key === "hosts" && <HostsTab group={group} />}
       {current.key === "events" && <EventsTab group={group} />}
       {current.key === "readings" && <ReadingsTab group={group} />}

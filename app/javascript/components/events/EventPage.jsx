@@ -4,6 +4,7 @@ import { Megaphone, Pencil } from "lucide-react";
 import Markdown from "../book/Markdown";
 import { api } from "./lib";
 import { EventHero } from "./EventLayout";
+import ShareButton from "../share/ShareButton";
 import EventBlocks from "./EventLayout";
 import RsvpCard from "./RsvpCard";
 
@@ -42,7 +43,12 @@ export default function EventPage() {
         </div>
       )}
 
-      <EventHero event={event} aside={<RsvpCard event={event} setEvent={setEvent} />} />
+      <EventHero event={event} aside={<RsvpCard event={event} setEvent={setEvent} />}
+        share={event.status === "published" && (
+          <ShareButton url={`/events/${event.token || token}`} title={`${event.title} · ${event.group.title}`} text={[event.title, event.when_label].filter(Boolean).join(", ")}
+            image={`/share_cards/event/${event.token || token}.png`} panelTitle="Share this event"
+            className="inline-flex items-center gap-1.5 rounded-full !bg-white/15 px-3 py-1.5 text-xs font-semibold !text-white ring-1 ring-white/30 backdrop-blur hover:!bg-white/25" />
+        )} />
 
       {event.updates.length > 0 && (
         <section className="rounded-2xl bg-accent/5 p-4 ring-1 ring-accent/20 dark:bg-accent/10">
