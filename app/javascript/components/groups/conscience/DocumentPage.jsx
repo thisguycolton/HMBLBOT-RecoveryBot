@@ -579,10 +579,9 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
           <span aria-live="polite" className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-neutral-400">{status}</span>
           {live && <LivePresence live={live} editor={editor} offline={offline} />}
           {doc && (
-            <span className="relative">
-              <ShareMenu group={group} doc={doc} canEdit={canEdit} bare open={shareOpen} onOpenChange={setShareOpen}
-                onChanged={(d) => { setDoc(d); setForm((f) => ({ ...f, visibility: d.visibility })); }} />
-            </span>
+            <ShareMenu group={group} doc={doc} canEdit={canEdit} open={shareOpen} onOpenChange={setShareOpen} iconOnly
+              buttonClass={`grid size-8 place-items-center rounded-lg ${shareOpen ? "!bg-accent/15 text-accent" : "!bg-transparent text-slate-600 hover:!bg-neutral-200/70 dark:text-neutral-300 dark:hover:!bg-neutral-700/60"}`}
+              onChanged={(d) => { setDoc(d); setForm((f) => ({ ...f, visibility: d.visibility })); }} />
           )}
           {isMember && doc && (
             <button type="button" onClick={() => toggleSide("history")} title="Version history" aria-label="Version history" aria-pressed={side === "history"}
@@ -716,7 +715,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
 
       {side && doc && (
         <aside aria-label={side === "history" ? "Version history" : "Comments"}
-          className="order-first mx-auto mb-4 max-h-[50vh] w-full max-w-[816px] space-y-3 overflow-y-auto print:hidden xl:order-none xl:mb-0 xl:sticky xl:top-[calc(var(--nav-h,56px)+110px)] xl:mt-0 xl:max-h-[calc(100dvh-var(--nav-h,56px)-130px)] xl:w-[340px] xl:shrink-0 xl:overflow-y-auto xl:pb-4">
+          className="order-first mx-auto mb-4 max-h-[50vh] w-full max-w-[816px] space-y-3 overflow-y-auto p-1 print:hidden xl:order-none xl:mb-0 xl:sticky xl:top-[calc(var(--nav-h,56px)+110px)] xl:mt-0 xl:max-h-[calc(100dvh-var(--nav-h,56px)-130px)] xl:w-[340px] xl:shrink-0 xl:overflow-y-auto xl:pb-4">
           <div className="flex items-center gap-1 px-1">
             {[["history", "History", isMember], ["comments", `Comments${openThreads ? ` (${openThreads})` : ""}`, commentsOn]].filter((t) => t[2]).map(([key, label]) => (
               <button key={key} type="button" onClick={() => setSide(key)} aria-pressed={side === key}

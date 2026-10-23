@@ -85,7 +85,7 @@ export function fillValues(html, center, live, roles = []) {
     const role = key.startsWith("service_") && roles.find((r) => `service_${r.key}` === key);
     const known = DYNAMIC_VALUES.find((v) => v.key === key);
     const name = role?.label || (key === "milestones" ? "nobody celebrating yet" : known?.label) || key.replace(/^service_/, "").replace(/_/g, " ");
-    const hint = role ? "Nobody yet: fill it in under Before we begin" : key === "milestones" ? "Add them under Celebrating milestones" : "Not known yet";
+    const hint = role ? "Nobody yet: fill it in on the first section" : key === "milestones" ? "Add them under Celebrating milestones" : "Not known yet";
     return `<span class="hc-role hc-role--empty" title="${hint}">${esc(name)}</span>`;
   });
 }
@@ -106,6 +106,8 @@ const cueTitle = (node) => {
 // Where the day's reading or activity goes when nobody said: the line most formats have there
 export const AUTO_ANCHOR = /you choose the format|reading\s*\/\s*activity|speaker,\s*topic/i;
 export const ACTIVITY_TITLE = "Reading / activity";
+// What comes before the script's first section, unless the kit (or deck) names it
+export const INTRO_TITLE = "Before we begin";
 
 // What a section can be shown for (a section's "Only when today's activity is"): the activity
 // kinds, with the three kinds of reading as one
@@ -171,11 +173,12 @@ export function markerInfo(node) {
 // The script document as sections. Sections made in the document editor (Insert > Add Section)
 // cut it, each with its title and conditions; else it is cut at its headings (the top level with
 // two or more: h1, else h2, else h3), or at its bold time cues ("(Top of the hour)"); with none
-// of those it is one section. What comes before the first cut is "Before we begin".
+// of those it is one section. What comes before the first cut is `intro` ("Before we begin" unless
+// the kit or deck names it).
 // The day's reading / activity is the section marked as its spot, or else gets a section of its
 // own right after the paragraph `anchor` begins (by itself: the "You choose the format!" line;
 // "none": no spot).
-export async function scriptSections(script, anchor = null) {
+export async function scriptSections(script, anchor = null, intro = null) {
   const nodes = await scriptNodes(script);
   if (!nodes.length) return [];
   const marked = nodes.some(isMarker);
@@ -198,7 +201,7 @@ export async function scriptSections(script, anchor = null) {
     if (!current || current.spot) {
       // after the reading / activity spot, the rest of that section carries on (and keeps its conditions)
       const { activity, ...rest } = last;
-      current = current?.spot ? { ...rest, title: `${last.title} (continued)`, parts: [] } : { title: sections.length ? last.title : "Before we begin", parts: [] };
+      current = current?.spot ? { ...rest, title: `${last.title} (continued)`, parts: [] } : { title: sections.length ? last.title : intro || INTRO_TITLE, parts: [] };
       sections.push(current);
     }
     current.parts.push(node.outerHTML || node.textContent);

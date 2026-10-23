@@ -8,10 +8,14 @@ class Api::GroupEventsController < ApplicationController
   before_action :set_group, except: :index
   before_action :require_manager, only: :create
 
-  # GET /api/groups/:group_slug/events
+  # GET /api/groups/:group_slug/events -> what's coming up, and past events (newest first) as an archive
   def index
-    events = @group.events.with_attached_cover.upcoming_first.to_a.select { |e| e.visible_to?(current_user) }
-    render json: { can_create: Event.creatable_by?(@group, current_user), events: events.map(&:card_json) }
+    visible = ->(scope) { scope.with_attached_cover.to_a.select { |e| e.visible_to?(current_user) }.map(&:card_json) }
+    render json: {
+      can_create: Event.creatable_by?(@group, current_user),
+      events: visible.(@group.events.not_past.upcoming_first),
+      past_events: visible.(@group.events.past.latest_first),
+    }
   end
 
   # POST /api/groups/:group_slug/events { event: { title } } -> a draft, opened in the editor

@@ -54,9 +54,9 @@ export default function CommandCenterClassic() {
 
   useEffect(() => {
     let gone = false;
-    scriptSections(center?.kit?.script, center?.kit?.activity_anchor).then((s) => !gone && setSections(s));
+    scriptSections(center?.kit?.script, center?.kit?.activity_anchor, center?.kit?.intro_title).then((s) => !gone && setSections(s));
     return () => { gone = true; };
-  }, [center?.kit?.script, center?.kit?.activity_anchor]);
+  }, [center?.kit?.script, center?.kit?.activity_anchor, center?.kit?.intro_title]);
 
   useEffect(() => {
     document.title = center ? `Hosting ${center.meeting.name}` : "Hosting Command Center";

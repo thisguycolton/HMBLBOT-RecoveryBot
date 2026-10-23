@@ -34,7 +34,7 @@ class GroupPage
         viewer: viewer_json.merge(is_member: !!membership&.active?, membership_status: membership&.status, role: membership&.role,
                                   can_manage: group.manageable_by?(@viewer), can_keep_records: group.records_editable_by?(@viewer), default_note_visibility: @viewer&.default_note_visibility),
         meetings: meetings(group),
-        events: group.events.published.with_attached_cover.where("starts_at IS NULL OR starts_at > ?", 12.hours.ago)
+        events: group.events.published.not_past.with_attached_cover
                      .upcoming_first.limit(20).map(&:card_json),
         literature: literature(group),
         readings: member ? readings(group) : nil,

@@ -6,7 +6,7 @@ class Api::DecksController < ApplicationController
   include GroupScoped
 
   # What a deck does on its own (a meeting's acts that need a meeting aren't here)
-  ACTS = %w[goto complete uncomplete block clock_start clock_reset].freeze
+  ACTS = %w[goto complete uncomplete reset milestone_add milestone_update milestone_remove milestone_move block clock_start clock_reset].freeze
 
   before_action :set_group
   before_action :require_member
@@ -29,7 +29,7 @@ class Api::DecksController < ApplicationController
     render json: json
   end
 
-  # POST /api/groups/:group_slug/decks { deck: { name, purpose, script_document_id } }
+  # POST /api/groups/:group_slug/decks { deck: { name, purpose, script_document_id, intro_title } }
   def create
     deck = @group.decks.new(deck_params.merge(created_by: current_user))
     deck.save ? render(json: deck.as_list_json, status: :created) : render_errors(deck)
@@ -40,7 +40,7 @@ class Api::DecksController < ApplicationController
     render json: center
   end
 
-  # PATCH /api/groups/:group_slug/decks/:id { deck: { name, purpose, script_document_id } }
+  # PATCH /api/groups/:group_slug/decks/:id { deck: { name, purpose, script_document_id, intro_title } }
   def update
     @deck.update(deck_params) ? render(json: DeckCenter.new(@deck.reload, current_user)) : render_errors(@deck)
   end
@@ -69,7 +69,7 @@ class Api::DecksController < ApplicationController
     act = params[:act].to_s
     return render(json: { error: "That isn't something a deck does." }, status: :unprocessable_entity) unless ACTS.include?(act)
 
-    data = params[:data].respond_to?(:permit) ? params[:data].permit(:block_id, :op, :item).to_h : {}
+    data = params[:data].respond_to?(:permit) ? params[:data].permit(:block_id, :op, :item, :id, :name, :length, :done, :by).to_h : {}
     center.session.act!(act, user: current_user, index: params[:index], label: params[:label], data: data)
     render json: center.session.live_json(current_user)
   end
@@ -92,7 +92,7 @@ class Api::DecksController < ApplicationController
   def center = @center ||= DeckCenter.new(@deck, current_user)
 
   def deck_params
-    attrs = params.require(:deck).permit(:name, :purpose, :script_document_id)
+    attrs = params.require(:deck).permit(:name, :purpose, :script_document_id, :intro_title)
     attrs[:script_document_id] = @group.documents.find_by(id: attrs[:script_document_id])&.id if attrs.key?(:script_document_id)
     attrs
   end

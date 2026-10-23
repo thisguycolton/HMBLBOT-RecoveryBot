@@ -6,6 +6,8 @@ import React, { createContext, useContext } from "react";
 export const ShellStyle = createContext("panel");
 
 // Gray rounded frame that holds stacked panels, like the DateTimePicker popup.
+// The first and last panels always get the frame's rounded corners, so a stack that ends
+// on a "middle" panel doesn't show square corners poking into the frame's curve.
 export function Shell({ as: Tag = "section", className = "", children }) {
   if (useContext(ShellStyle) === "card") {
     return (
@@ -15,7 +17,7 @@ export function Shell({ as: Tag = "section", className = "", children }) {
     );
   }
   return (
-    <Tag className={`bg-neutral-200 dark:bg-neutral-800 rounded-4xl p-3 shadow-lg flex flex-col gap-2 ${className}`}>
+    <Tag className={`bg-neutral-200 dark:bg-neutral-800 rounded-4xl p-3 shadow-lg flex flex-col gap-2 [&>:first-child]:rounded-t-panel [&>:last-child]:rounded-b-panel ${className}`}>
       {children}
     </Tag>
   );

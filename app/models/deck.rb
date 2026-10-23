@@ -12,6 +12,7 @@ class Deck < ApplicationRecord
 
   before_validation { self.name = name.to_s.squish.first(120) }
   before_validation { self.purpose = "general" unless PURPOSES.include?(purpose) }
+  before_validation { self.intro_title = intro_title.to_s.squish.first(80).presence }
   before_validation { self.arrangement = DeckArrangement.normalize(arrangement) }
 
   validates :name, presence: true

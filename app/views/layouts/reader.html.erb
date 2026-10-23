@@ -6,12 +6,13 @@
   <title>
     <%= content_for(:page_title) || "RecoveryBot" %>
   </title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%= render "application/viewport" %>
   <%= csrf_meta_tags %>
   <%= vite_client_tag %>
   <%= vite_react_refresh_tag if Rails.env.development? %>
 
   <%= render 'application/favicon' %>
+  <%= render "application/share_meta" %>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400..800;1,400..800&display=swap">

@@ -1,9 +1,12 @@
 class ReadingsController < ApplicationController
   include KeepsRobotsOut
-  keep_robots_out
+  keep_robots_out except: :show
   before_action :authenticate_user!, only: %i[ mine new create edit update destroy ]
   before_action :set_reading, only: %i[ show edit update destroy ]
   before_action :authorize_owner!, only: %i[ edit update destroy ]
+  # A shared reading's link shows its title and card in Messages and the like; its text stays for people
+  before_action :answer_robots, only: :show
+  after_action :tag_noindex, only: :show
   layout "reader", only: %i[new index show edit mine]
   READINGS_PER_PAGE = 24
 
@@ -70,6 +73,7 @@ class ReadingsController < ApplicationController
     end
 
     ahoy.track "Viewed Reading", title: @reading.title
+    @share = ShareMeta.safely { ShareMeta.reading(@reading) }
   end
 
   # GET /readings/new
@@ -124,6 +128,13 @@ end
   end
 
   private
+
+  def answer_robots
+    return unless robot_request?
+
+    share = link_preview_request? && !request.format.json? && ShareMeta.safely { ShareMeta.reading(@reading) }
+    share ? link_preview(share) : turn_robots_away
+  end
 
   # A reading can only be tagged to a group its author is in (admins: any group)
   def reading_group_id(id)

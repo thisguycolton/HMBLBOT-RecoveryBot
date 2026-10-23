@@ -106,6 +106,7 @@ class Api::EventsController < ApplicationController
   # Without an account, an email is needed so updates can reach them.
   def rsvp
     return render(json: { error: "This event isn't open for RSVPs yet." }, status: :unprocessable_entity) unless @event.published?
+    return render(json: { error: "This event is over." }, status: :unprocessable_entity) if @event.past?
 
     status = params[:status].presence_in(EventRsvp::STATUSES - ["following"]) || "going"
     rsvp = if current_user
@@ -205,7 +206,7 @@ class Api::EventsController < ApplicationController
       token: e.token, title: e.title, short_description: e.short_description, status: e.status,
       layout: e.layout, time_zone: e.time_zone, location: e.location,
       starts_at: Event.local_value(e.starts_at, e.zone), ends_at: Event.local_value(e.ends_at, e.zone),
-      starts_at_iso: e.starts_at&.iso8601, when_label: e.when_label, zone_label: e.zone.now.strftime("%Z"),
+      starts_at_iso: e.starts_at&.iso8601, when_label: e.when_label, past: e.past?, zone_label: e.zone.now.strftime("%Z"),
       cover_url: e.image_path(e.cover), flyer_url: e.image_path(e.flyer),
       blocks: blocks_for_viewer(e),
       group: { slug: e.group.slug, title: e.group.title },

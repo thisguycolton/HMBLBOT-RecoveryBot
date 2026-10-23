@@ -5,7 +5,7 @@
 # The meeting timer runs from the meeting's start time, in the page (timer_* columns are unused).
 class HostingSession < ApplicationRecord
   ACTS = %w[goto complete uncomplete posted unposted activity clear_activity draw_topic drop_topic
-            service milestone_add milestone_update milestone_remove milestone_move block clock_start clock_reset].freeze
+            service milestone_add milestone_update milestone_remove milestone_move block clock_start clock_reset reset].freeze
   LOG_SIZE = 30
   # What fills the script's reading / activity spot: a chapter from the literature, one of the
   # host's own readings (a Reading: the page's copy comes along as a chat posting, POSTED_READING),
@@ -63,6 +63,12 @@ class HostingSession < ApplicationRecord
             when "uncomplete"
               self.completed = completed - [index.to_i]
               nil
+            # Back to the first section (`index`: the first one for today), nothing ticked off; the
+            # day's reading, postings, service, milestones and blocks stay as they are
+            when "reset"
+              self.section_index = [index.to_i, 0].max
+              self.completed = []
+              "Reset the deck#{" to #{label}" if label}"
             when "posted"
               self.posted = posted.merge(posting.id.to_s => { "by" => user.display_name, "at" => now.iso8601 })
               "Copied #{posting.title}"

@@ -99,6 +99,27 @@ class Api::EventsTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "events that are over move to the past list, newest first, and stop taking RSVPs" do
+    upcoming = @group.events.create!(title: "Picnic", status: "published", time_zone: @group.time_zone, starts_at: 2.days.from_now)
+    undated = @group.events.create!(title: "Someday", status: "published", time_zone: @group.time_zone)
+    today = @group.events.create!(title: "Earlier today", status: "published", time_zone: @group.time_zone, starts_at: 2.hours.ago)
+    long = @group.events.create!(title: "Retreat", status: "published", time_zone: @group.time_zone, starts_at: 2.days.ago, ends_at: 1.day.from_now)
+    older = @group.events.create!(title: "Workshop", status: "published", time_zone: @group.time_zone, starts_at: 10.days.ago)
+    recent = @group.events.create!(title: "Potluck", status: "published", time_zone: @group.time_zone, starts_at: 5.days.ago, ends_at: 5.days.ago + 3.hours)
+
+    get "/api/groups/#{@group.slug}/events", as: :json
+    assert_response :success
+    assert_equal [long, today, upcoming, undated].map(&:token), response.parsed_body["events"].map { |e| e["token"] }
+    assert_equal [recent, older].map(&:token), response.parsed_body["past_events"].map { |e| e["token"] }
+    assert response.parsed_body["past_events"].all? { |e| e["past"] }
+    assert_equal [long, today, upcoming, undated].map(&:token), GroupPage.new(nil).group_json(@group)[:context][:events].map { |e| e[:token] }
+
+    get "/api/events/#{recent.token}", as: :json
+    assert response.parsed_body["past"]
+    put "/api/events/#{recent.token}/rsvp", params: { status: "going", name: "Al", email: "al@example.com" }, as: :json
+    assert_response :unprocessable_entity
+  end
+
   test "group admins add members of the group as collaborators, who can then edit" do
     event = create_event
     get "/api/events/#{event.token}/people", params: { q: "mo" }, as: :json
