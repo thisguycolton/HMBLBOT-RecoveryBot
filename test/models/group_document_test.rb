@@ -19,6 +19,13 @@ class GroupDocumentTest < ActiveSupport::TestCase
     @group.documents.create!({ title: "Format", kind: "format", body: "Welcome", created_by: @leader }.merge(attrs))
   end
 
+  # A document as the editor makes one: its first save is version 1
+  def written(attrs = {}, user = @leader)
+    d = @group.documents.new(created_by: user)
+    assert d.revise({ title: "Format", kind: "format", body: "Welcome" }.merge(attrs), user)
+    d
+  end
+
   test "who keeps records" do
     assert @group.records_editable_by?(@leader)
     assert @group.records_editable_by?(@keeper)
@@ -60,42 +67,55 @@ class GroupDocumentTest < ActiveSupport::TestCase
     assert pdf.valid?
   end
 
-  test "every save keeps the copy it replaced, with its author" do
-    d = doc
-    assert_empty d.versions
+  test "each save of new text is a numbered version, with who saved it and their note" do
+    d = written
+    assert_equal [[1, "created", "Welcome", @leader]], d.versions.map { |v| [v.number, v.kind, v.body, v.user] }
+    assert_equal 1, d.head.number
 
-    assert d.revise({ body: "Welcome to all" }, @keeper)
-    assert_equal 1, d.versions.count
-    old = d.versions.first
-    assert_equal "Welcome", old.body
-    assert_equal @leader, old.user
+    assert d.revise({ body: "Welcome to all" }, @keeper, message: "  Friendlier   welcome ")
+    v = d.head
+    assert_equal [2, "saved", "Welcome to all", @keeper, "Friendlier welcome"], [v.number, v.kind, v.body, v.user, v.message]
+    assert_equal [2, 0, [@keeper.id]], [v.words_added, v.words_removed, v.contributor_ids]
     assert_equal @keeper, d.updated_by
 
     assert d.revise({ visibility: "public" }, @keeper)
-    assert_equal 1, d.versions.count, "a save that leaves the title and text alone makes no version"
+    assert_equal 2, d.versions.count, "a save that leaves the title, text and file alone makes no version"
   end
 
-  test "restoring an old copy is a new save" do
+  test "a document from before version history starts it with what it had" do
     d = doc
+    assert_empty d.versions
+    d.revise({ body: "Changed" }, @keeper, message: "First change")
+    assert_equal [[2, "Changed", @keeper, "First change"], [1, "Welcome", @leader, nil]], d.versions.map { |v| [v.number, v.body, v.user, v.message] }
+    assert_equal "created", d.versions.last.kind
+  end
+
+  test "restoring an old version is a new version, so nothing is lost" do
+    d = written
     d.revise({ title: "Format v2", body: "Second" }, @keeper)
-    d.restore(d.versions.first, @leader)
+    d.restore(d.versions.last, @leader)
 
     d.reload
     assert_equal ["Format", "Welcome"], [d.title, d.body]
-    assert_equal 2, d.versions.count
-    assert_equal "Second", d.versions.first.body
+    assert_equal [3, 2, 1], d.versions.map(&:number)
+    assert_equal ["restored", "Restored version 1", 1], [d.head.kind, d.head.message, d.head.restored_from.number]
+
+    assert d.restore(d.head, @leader)
+    assert_equal 3, d.versions.count, "restoring the version it already is changes nothing"
   end
 
-  test "a replaced file stays with the copy that had it" do
-    d = doc
-    d.file.attach(io: StringIO.new("%PDF-old"), filename: "old.pdf", content_type: "application/pdf")
+  test "each version keeps its file, and a restore brings it back" do
+    d = written
+    d.revise({ file: Rack::Test::UploadedFile.new(StringIO.new("%PDF-old"), "application/pdf", original_filename: "old.pdf") }, @keeper)
     d.revise({ file: Rack::Test::UploadedFile.new(file_fixture("avatar.png"), "image/png") }, @keeper)
 
     assert_equal "avatar.png", d.reload.file.filename.to_s
-    assert_equal "old.pdf", d.versions.first.file.filename.to_s
+    assert_equal ["avatar.png", "old.pdf", nil], d.versions.map { |v| v.file.attached? ? v.file.filename.to_s : nil }
 
-    d.restore(d.versions.first, @keeper)
+    d.restore(d.versions.second, @keeper)
     assert_equal "old.pdf", d.reload.file.filename.to_s
+    d.restore(d.versions.find_by(number: 1), @keeper)
+    assert_not d.reload.file.attached?
   end
 
   test "search looks in titles and text" do
@@ -106,10 +126,12 @@ class GroupDocumentTest < ActiveSupport::TestCase
     assert_empty GroupDocument.search(@group.documents, "100%")
   end
 
-  test "deleting a group removes its documents and their history" do
-    d = doc
+  test "deleting a group removes its documents, their history and comments" do
+    d = written(comment_mode: "members")
     d.revise({ body: "Changed" }, @keeper)
-    assert_difference -> { GroupDocument.count } => -1, -> { GroupDocumentVersion.count } => -1 do
+    thread = d.comments.create!(user: @member, body: "Hm", quote: "Changed")
+    d.comments.create!(user: @keeper, parent: thread, body: "Yes?")
+    assert_difference -> { GroupDocument.count } => -1, -> { GroupDocumentVersion.count } => -2, -> { GroupDocumentComment.count } => -2 do
       @group.destroy!
     end
   end
@@ -132,16 +154,26 @@ class GroupDocumentTest < ActiveSupport::TestCase
     assert_not @group.documents.new(title: "X", body_format: "docx").valid?
   end
 
-  test "each copy keeps the format it was written in, and a restore brings it back" do
-    d = doc(body: "# Old *text*", body_format: "markdown")
+  test "each version keeps the format it was written in, and a restore brings it back" do
+    d = written(body: "# Old *text*", body_format: "markdown")
     assert d.revise({ body: "<p>New text</p>", body_format: "html" }, @keeper)
     assert_equal "html", d.reload.body_format
-    old = d.versions.first
+    old = d.versions.last
     assert_equal ["# Old *text*", "markdown"], [old.body, old.body_format]
-    assert_equal "markdown", old.as_api_json[:body_format]
+    assert_equal "markdown", old.as_api_json(full: true)[:body_format]
 
     d.restore(old, @leader)
     assert_equal ["# Old *text*", "markdown"], [d.reload.body, d.body_format]
+  end
+
+  test "comments are off until the document turns them on, for its editors or every member" do
+    d = written
+    [@leader, @keeper, @member, @outsider, nil].each { |u| assert_not d.commentable_by?(u) }
+    d.update!(comment_mode: "editors")
+    assert_equal [true, true, false, false], [@leader, @keeper, @member, @outsider].map { |u| d.commentable_by?(u) }
+    d.update!(comment_mode: "members")
+    assert_equal [true, true, true, false], [@leader, @keeper, @member, @outsider].map { |u| d.commentable_by?(u) }
+    assert_not @group.documents.new(title: "X", comment_mode: "everyone").valid?
   end
 
   test "searching and excerpts see the words, not the tags" do

@@ -51,10 +51,10 @@ class Api::GroupDocumentLiveTest < ActionDispatch::IntegrationTest
     assert_equal b64("A"), json["state"]
   end
 
-  test "edits are numbered and kept, and a folded copy replaces them, keeping one version" do
+  test "edits are numbered and kept, a folded copy replaces them, and Save version makes the version" do
     @doc.live_start!("S", 0)
     assert_equal 1, @doc.live_append!("u1", @keeper, 0)
-    assert_equal 2, @doc.live_append!("u2", @keeper, 0)
+    assert_equal 2, @doc.live_append!("u2", @member, 0)
     assert_nil @doc.live_append!("u3", @keeper, 7), "an old copy's edit isn't taken"
 
     sign_in @member
@@ -70,21 +70,27 @@ class Api::GroupDocumentLiveTest < ActionDispatch::IntegrationTest
     assert_equal "Format v2", @doc.title
     assert_equal @keeper, @doc.updated_by
     assert_equal 0, @doc.live_updates.count
-    assert_equal ["<p>Welcome</p>"], @doc.versions.map(&:body), "the copy it had is kept once"
+    assert_equal ["<p>Welcome</p>"], @doc.versions.map(&:body), "a document from before history keeps what it had"
 
     @doc.live_append!("u3", @keeper, 0)
     post path, params: { state: b64("S+1+2+3"), upto: 3, epoch: 0, title: "Format v2", body: "<p>Welcome all, again</p>" }, as: :json
-    assert_equal 1, @doc.versions.count, "later live edits don't make more versions"
+    assert_equal 1, @doc.versions.count, "live edits don't make versions on their own"
 
     post path, params: { state: b64("old"), upto: 1, epoch: 0, title: "x", body: "<p>old</p>" }, as: :json
     assert_not json["ok"], "a copy older than the one kept is dropped"
 
-    # Save version: the next live change keeps a copy again
-    patch "/api/groups/#{@group.slug}/documents/#{@doc.id}?checkpoint=1", params: { document: { status: "current" } }, as: :json
+    # Save version: the text as it stands, with the note, crediting everyone who typed
+    patch "/api/groups/#{@group.slug}/documents/#{@doc.id}?checkpoint=1", params: { document: { status: "current" }, message: "Reworded the welcome" }, as: :json
     assert_response :success
-    @doc.live_append!("u4", @keeper, 0)
-    post path, params: { state: b64("S+4"), upto: 4, epoch: 0, title: "Format v2", body: "<p>Third</p>" }, as: :json
-    assert_equal ["<p>Welcome all, again</p>", "<p>Welcome</p>"], @doc.reload.versions.map(&:body)
+    head = @doc.reload.head
+    assert_equal [2, "<p>Welcome all, again</p>", "Format v2", "Reworded the welcome"], [head.number, head.body, head.title, head.message]
+    assert_equal [@keeper.id, @member.id].sort, head.contributor_ids.sort
+    assert_equal [false, []], [@doc.live_unversioned, @doc.live_contributor_ids]
+    assert_equal 2, json["version"]
+
+    # nothing changed since: another Save version doesn't add one
+    patch "/api/groups/#{@group.slug}/documents/#{@doc.id}?checkpoint=1", params: { document: { status: "current" } }, as: :json
+    assert_equal 2, @doc.versions.count
   end
 
   test "putting an old copy back starts everyone over" do
@@ -93,7 +99,7 @@ class Api::GroupDocumentLiveTest < ActionDispatch::IntegrationTest
     @doc.revise({ body: "<p>Changed</p>" }, @keeper)
     assert_equal [nil, 1], [@doc.live_state, @doc.live_epoch], "a save from a tab that isn't live starts it over too"
     @doc.live_start!("S2", 1)
-    version = @doc.versions.first
+    version = @doc.versions.last # the first: "Welcome"
     sign_in @keeper
     assert_broadcasts(@doc.live_stream, 1) { post "/api/groups/#{@group.slug}/documents/#{@doc.id}/versions/#{version.id}/restore", as: :json }
     @doc.reload

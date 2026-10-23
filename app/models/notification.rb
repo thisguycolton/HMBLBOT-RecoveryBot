@@ -25,6 +25,8 @@ class Notification < ApplicationRecord
                           kinds: %w[schedule_poll.invitee schedule_poll.collaborator schedule_poll.vote] },
     "comments" => { label: "Comments on your notes", description: "When someone comments on one of your notes.",
                     kinds: %w[note.comment] },
+    "document_comments" => { label: "Comments on group documents", description: "New comments on documents you saved, and replies in comment threads you're in.",
+                             kinds: %w[document.comment] },
     "reactions" => { label: "Reactions and reposts", description: "When someone reacts to your notes or comments, or reposts a note.",
                      kinds: %w[note.reaction comment.reaction note.repost] },
     "follows" => { label: "New followers", description: "When someone follows you.", kinds: %w[follow.created] },

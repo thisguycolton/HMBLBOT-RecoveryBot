@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { ChevronLeft, Download, FileUp, Paperclip, Pin, RotateCcw, Save, Trash2 } from "lucide-react";
+import { ChevronLeft, Download, FileUp, History, MessageSquare, MessageSquarePlus, Paperclip, Pin, Save, Trash2, X } from "lucide-react";
 import { download, safeName, toDocx, toMarkdown, toRtf } from "../../../lib/documentExport";
 import { toDocumentJson } from "../../../lib/documentJson";
 import { IMPORT_ACCEPT } from "../../../lib/documentImport";
 import MenuBar from "./MenuBar";
-import Markdown, { markdownToHtml } from "../../book/Markdown";
+import { markdownToHtml } from "../../book/Markdown";
 import { importDocument } from "../../../lib/documentImport";
 import { labelClass, selectClass } from "../../ui/styles";
 import Toggle from "../../ui/Toggle";
@@ -19,6 +19,10 @@ import ShareMenu from "./ShareMenu";
 import { documentExtensions } from "./editorKit";
 import { DynamicValuesBar } from "./hostSection";
 import { LivePresence, liveExtensions, useLiveDocument, useShareViewing } from "./live";
+import { CommentAnchors, currentAnchors, locate, quoteFor } from "./commentAnchors";
+import CommentsPane from "./DocumentComments";
+import { HistoryPane, SaveVersionDialog, VersionDiff } from "./DocumentHistory";
+import { diffStats } from "../../../lib/documentDiff";
 import { FILE_ACCEPT, KIND_INFO, KINDS, VISIBILITIES, VISIBILITY_LABELS, STATUSES, dateLabel, decisionsPath, documentsPath, fileUrl, motionOptions, sizeLabel } from "./lib";
 
 // The folder's letterhead at the top of the page: its logo or seal, a heading and a line under it
@@ -87,8 +91,8 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   const isMember = group.is_member || group.is_site_admin;
   const [doc, setDoc] = useState(initialDoc);
   const [form, setForm] = useState(() => (initialDoc
-    ? { title: initialDoc.title, kind: initialDoc.kind, visibility: initialDoc.visibility, status: initialDoc.status, pinned: initialDoc.pinned, approved_by_motion_id: initialDoc.approved_by?.id ?? "" }
-    : { title: "", kind: KINDS.some((k) => k.key === params.get("kind")) ? params.get("kind") : "other", visibility: "members", status: "current", pinned: false, approved_by_motion_id: "" }));
+    ? { title: initialDoc.title, kind: initialDoc.kind, visibility: initialDoc.visibility, status: initialDoc.status, pinned: initialDoc.pinned, approved_by_motion_id: initialDoc.approved_by?.id ?? "", comment_mode: initialDoc.comment_mode }
+    : { title: "", kind: KINDS.some((k) => k.key === params.get("kind")) ? params.get("kind") : "other", visibility: "members", status: "current", pinned: false, approved_by_motion_id: "", comment_mode: "off" }));
   // live: the connection ("live" / "offline"), our edits the server hasn't taken yet, and whether
   // the text changed since the last Save version
   const [liveStatus, setLiveStatus] = useState("live");
@@ -97,6 +101,8 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   const [upload, setUpload] = useState(null);
   const [removeFile, setRemoveFile] = useState(false);
   const [dirty, setDirty] = useState(false);
+  // The title, text or file changed: saving that makes a new version (with a note)
+  const [contentDirty, setContentDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
@@ -125,8 +131,20 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
       document.body.style.overflow = "";
     };
   }, [fullScreen]);
-  const [history, setHistory] = useState(null);
-  const [showHistory, setShowHistory] = useState(false);
+  // The pane beside the page: "history" or "comments"
+  const [side, setSide] = useState(() => (params.get("comment") && initialDoc?.can_comment ? "comments" : null));
+  const [versions, setVersions] = useState(null);
+  const [picked, setPicked] = useState(null); // a version's id, or "working"
+  const [compare, setCompare] = useState(null); // { from: version id | null, to: version id | "working" }
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [headHtml, setHeadHtml] = useState(initialHtml); // the newest version's text, as HTML
+  const [working, setWorking] = useState(null); // what changed since it: words added, removed, sections
+  const [threads, setThreads] = useState(null);
+  const [canResolve, setCanResolve] = useState(false);
+  const [activeComment, setActiveComment] = useState(() => Number(params.get("comment")) || null);
+  const [pendingComment, setPendingComment] = useState(null); // { quote, prefix, suffix }
+  const [anchorOrder, setAnchorOrder] = useState({ order: [], located: new Set() });
+  const [commentButton, setCommentButton] = useState(null); // where the floating Comment button goes
   const [adopters, setAdopters] = useState([]);
   const [withText, setWithText] = useState(() => !!initialHtml || !initialDoc?.file);
   const titleRef = useRef(null);
@@ -148,11 +166,11 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   })();
 
   const editor = useEditor({
-    extensions: documentExtensions("Start typing, or import a Word or RTF file from the toolbar…", live ? liveExtensions(live) : []),
+    extensions: [...documentExtensions("Start typing, or import a Word or RTF file from the toolbar…", live ? liveExtensions(live) : []), CommentAnchors],
     content: live ? undefined : initialHtml,
     editable: canEdit,
     // live, the text saves itself (LiveDocument)
-    onUpdate: () => { if (!live) { setDirty(true); setSaved(false); } },
+    onUpdate: () => { if (!live) { setDirty(true); setContentDirty(true); setSaved(false); } },
     editorProps: { attributes: { class: "doc-prose", "aria-label": "Document text" } },
   });
 
@@ -165,7 +183,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
       setUnversioned(!!m.unversioned);
       if (m.updated_at) setDoc((d) => ({ ...d, updated_at: m.updated_at, updated_by: m.updated_by }));
       // someone saved a version, maybe with new details (folder, visibility…)
-      if (m.details) api(`/groups/${slug}/documents/${initialDoc.id}`).then((d) => { setDoc(d); setForm((f) => ({ ...f, kind: d.kind, visibility: d.visibility, status: d.status, pinned: d.pinned, approved_by_motion_id: d.approved_by?.id ?? "" })); setHistory(null); }).catch(() => {});
+      if (m.details) api(`/groups/${slug}/documents/${initialDoc.id}`).then((d) => { setDoc(d); setForm((f) => ({ ...f, kind: d.kind, visibility: d.visibility, status: d.status, pinned: d.pinned, approved_by_motion_id: d.approved_by?.id ?? "", comment_mode: d.comment_mode })); setVersions(null); setCompare(null); setPicked(null); startingHtml(d).then(setHeadHtml); }).catch(() => {});
     };
     const onTitle = () => setForm((f) => ({ ...f, title: live.title.toString() }));
     if (live.title.length) onTitle();
@@ -180,6 +198,8 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
     return () => { live.getHtml = null; };
   }, [live, editor]);
   useShareViewing(live, editor);
+  // live, the text is "changed" (worth a new version) while it differs from the last Save version
+  useEffect(() => { if (live) setContentDirty(unversioned); }, [live, unversioned]);
   // edits that haven't gone through for a while: the connection dropped without saying so
   const [stuck, setStuck] = useState(false);
   useEffect(() => {
@@ -195,6 +215,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
     if (live && key === "title") { live.setTitle(value); return; }
     setDirty(true);
     setSaved(false);
+    if (key === "title") setContentDirty(true);
   };
   const file = removeFile ? null : doc?.file;
 
@@ -212,7 +233,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty, pending]);
 
-  const save = useCallback(async () => {
+  const save = useCallback(async (message = "") => {
     if (!canEdit || saving || !editor) return;
     if (!form.title.trim() && !upload) { setError("Give the document a title."); titleRef.current?.focus(); return; }
     if (form.visibility === "public" && doc?.visibility !== "public" && !window.confirm("This will be visible to anyone who opens the group's page. Save it as Public?")) return;
@@ -230,14 +251,19 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
       }
       if (upload) body.append("document[file]", upload);
       if (removeFile && !upload) body.append("document[remove_file]", "true");
+      if (message) body.append("message", message);
       const result = await api(`/groups/${slug}/documents${doc ? `/${doc.id}` : ""}${live ? "?checkpoint=1" : ""}`, { method: doc ? "PATCH" : "POST", form: body });
       setUnversioned(false);
       setDirty(false);
+      setContentDirty(false);
+      setSaveOpen(false);
       setSaved(true);
       setUpload(null);
       setRemoveFile(false);
-      setHistory(null);
-      if (doc) setDoc(result);
+      setVersions(null);
+      setCompare(null);
+      setPicked(null);
+      if (doc) { setDoc(result); setHeadHtml(await startingHtml(result)); }
       else navigate(documentsPath(slug, result.id), { replace: true });
     } catch (e) {
       setError(e.message);
@@ -246,11 +272,19 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
     }
   }, [canEdit, saving, editor, form, upload, removeFile, doc, slug, navigate, live]);
 
+  // Save: a change to the title, text or file asks for a note and becomes a new version; a new
+  // document, or one whose details alone changed, just saves
+  const requestSave = useCallback(() => {
+    if (!canEdit || saving) return;
+    if (doc && contentDirty) setSaveOpen(true);
+    else save();
+  }, [canEdit, saving, doc, contentDirty, save]);
+
   useEffect(() => {
-    const onKey = (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); } };
+    const onKey = (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); if (!saveOpen) requestSave(); } };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [save]);
+  }, [requestSave, saveOpen]);
 
   const importFile = async (picked) => {
     setError(null);
@@ -262,34 +296,165 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
       if (!form.title.trim()) setForm((f) => ({ ...f, title }));
       setWithText(true);
       setDirty(true);
+      setContentDirty(true);
       setNotice([`Imported “${picked.name}”.`, ...notes, "Save when it looks right."].join(" "));
     } catch (e) {
       setError(e.message);
     }
   };
 
-  const loadHistory = useCallback(() => api(`/groups/${slug}/documents/${doc.id}/versions`).then((d) => setHistory(d.versions)).catch((e) => setError(e.message)), [slug, doc]);
-  const toggleHistory = () => {
-    if (!showHistory && !history) loadHistory();
-    setShowHistory((v) => !v);
+  // Version history
+  const docId = doc?.id;
+  useEffect(() => {
+    if (side !== "history" || versions || !docId) return;
+    api(`/groups/${slug}/documents/${docId}/versions`).then((d) => setVersions(d.versions)).catch((e) => setError(e.message));
+  }, [side, versions, slug, docId]);
+  // What the working copy changed since the newest version, worked out a moment after typing stops
+  useEffect(() => {
+    if (side !== "history" || !contentDirty || !editor) { setWorking(null); return undefined; }
+    const count = () => setWorking(diffStats(headHtml, editor.isEmpty ? "" : editor.getHTML()));
+    count();
+    const later = () => { clearTimeout(count.timer); count.timer = setTimeout(count, 700); };
+    editor.on("update", later);
+    return () => { clearTimeout(count.timer); editor.off("update", later); };
+  }, [side, contentDirty, editor, headHtml]);
+  const toggleSide = (pane) => setSide((s) => (s === pane ? null : pane));
+  const pickVersion = (v) => {
+    setPicked(v.id);
+    const i = versions.indexOf(v);
+    setCompare({ from: versions[i + 1]?.id ?? null, to: v.id });
   };
+  const compareWorking = () => { setPicked("working"); setCompare({ from: versions?.[0]?.id ?? null, to: "working" }); };
   const restore = async (version) => {
-    if (dirty && !window.confirm("You have changes that aren't saved. Put this copy back anyway?")) return;
-    if (!window.confirm("Put this copy back? The current one stays in the history.")) return;
+    if (contentDirty && !window.confirm("You have changes that aren't saved as a version. Restoring replaces them. Go ahead?")) return;
+    if (!window.confirm(`Restore version ${version.number}? It comes back as a new version, so nothing in the history is lost.`)) return;
     try {
       const result = await api(`/groups/${slug}/documents/${doc.id}/versions/${version.id}/restore`, { method: "POST" });
       // live, everyone (this tab too) starts again from the copy put back
       if (live) { onReload?.(); return; }
-      editor.commands.setContent(await startingHtml(result), false);
+      const html = await startingHtml(result);
+      editor.commands.setContent(html, false);
       setDoc(result);
+      setHeadHtml(html);
       setForm((f) => ({ ...f, title: result.title }));
       setDirty(false);
+      setContentDirty(false);
       setSaved(true);
-      setHistory(null);
-      await loadHistory();
+      setVersions(null);
+      setCompare(null);
+      setPicked(null);
     } catch (e) {
       setError(e.message);
     }
+  };
+
+  // Comments in the margin, when the document has them on
+  const commentsOn = !!doc && doc.comment_mode !== "off" && doc.can_comment;
+  useEffect(() => {
+    if (!commentsOn) { setThreads(null); return; }
+    api(`/groups/${slug}/documents/${docId}/comments`).then((d) => { setThreads(d.comments); setCanResolve(d.can_resolve); }).catch((e) => setError(e.message));
+  }, [commentsOn, slug, docId]);
+  // Find each thread's words (again when the threads change, or the text is replaced) and underline them
+  const placeComments = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
+    const shown = commentsOn && threads ? threads.filter((t) => !t.resolved || t.id === activeComment) : [];
+    const found = locate(editor.state.doc, shown);
+    editor.commands.setCommentAnchors(found, activeComment);
+    const all = threads ? locate(editor.state.doc, threads) : {};
+    setAnchorOrder({ order: Object.entries(all).sort((a, b) => a[1].from - b[1].from).map(([id]) => Number(id)), located: new Set(Object.keys(all).map(Number)) });
+  }, [editor, commentsOn, threads]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { placeComments(); }, [placeComments, headHtml]);
+  // The active thread's words stand out (where they are now, after any edits)
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const anchors = currentAnchors(editor);
+    const id = activeComment;
+    if (id && !anchors[id] && threads) Object.assign(anchors, locate(editor.state.doc, threads.filter((t) => t.id === id)));
+    editor.commands.setCommentAnchors(anchors, id);
+  }, [activeComment, editor]); // eslint-disable-line react-hooks/exhaustive-deps
+  const selectComment = (id) => {
+    setActiveComment(id);
+    const at = currentAnchors(editor)[id];
+    if (at && editor) {
+      try {
+        const top = editor.view.coordsAtPos(at.from).top;
+        if (top < 120 || top > window.innerHeight - 80) window.scrollBy({ top: top - window.innerHeight / 3, behavior: "smooth" });
+      } catch {}
+    }
+  };
+  // Clicking underlined words opens their thread
+  useEffect(() => {
+    if (!editor || !commentsOn) return undefined;
+    const dom = editor.view.dom;
+    const onClick = (e) => {
+      const mark = e.target.closest?.("[data-comment-id]");
+      if (!mark) return;
+      const id = Number(mark.dataset.commentId);
+      setSide("comments");
+      setActiveComment(id);
+      setTimeout(() => document.getElementById(`comment-${id}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 50);
+    };
+    dom.addEventListener("click", onClick);
+    return () => dom.removeEventListener("click", onClick);
+  }, [editor, commentsOn]);
+  // Selecting words shows a Comment button beside them
+  const selectedRange = () => {
+    const sel = window.getSelection();
+    if (!editor || !sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    if (!editor.view.dom.contains(range.startContainer) || !editor.view.dom.contains(range.endContainer)) return null;
+    try {
+      return { range, from: editor.view.posAtDOM(range.startContainer, range.startOffset), to: editor.view.posAtDOM(range.endContainer, range.endOffset) };
+    } catch { return null; }
+  };
+  useEffect(() => {
+    if (!commentsOn || !editor) return undefined;
+    const onChange = () => {
+      const picked = selectedRange();
+      if (!picked || picked.to <= picked.from) { setCommentButton(null); return; }
+      const rect = picked.range.getBoundingClientRect();
+      setCommentButton({ top: Math.max(8, rect.top - 40), left: Math.min(window.innerWidth - 130, rect.left + rect.width / 2 - 52) });
+    };
+    const onScroll = () => setCommentButton(null);
+    document.addEventListener("selectionchange", onChange);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { document.removeEventListener("selectionchange", onChange); window.removeEventListener("scroll", onScroll); };
+  }, [commentsOn, editor]); // eslint-disable-line react-hooks/exhaustive-deps
+  const startComment = () => {
+    const picked = selectedRange();
+    if (!picked) return;
+    const q = quoteFor(editor.state.doc, picked.from, picked.to);
+    if (!q.quote) return;
+    setPendingComment(q);
+    setActiveComment(null);
+    setSide("comments");
+    setCommentButton(null);
+  };
+  const commentsApi = `/groups/${slug}/documents/${docId}/comments`;
+  const upsertThread = (thread) => setThreads((list) => (list.some((t) => t.id === thread.id) ? list.map((t) => (t.id === thread.id ? thread : t)) : [...list, thread]));
+  const createComment = async (body) => {
+    try {
+      const thread = await api(commentsApi, { method: "POST", body: { ...pendingComment, body } });
+      setPendingComment(null);
+      setThreads((list) => [...list, thread]);
+      setActiveComment(thread.id);
+    } catch (e) { setError(e.message); throw e; }
+  };
+  const replyComment = async (thread, body) => {
+    try { upsertThread(await api(commentsApi, { method: "POST", body: { parent_id: thread.id, body } })); } catch (e) { setError(e.message); throw e; }
+  };
+  const resolveComment = async (thread, resolved) => {
+    try {
+      upsertThread(await api(`${commentsApi}/${thread.id}`, { method: "PATCH", body: { resolved } }));
+      if (resolved) setActiveComment(null);
+    } catch (e) { setError(e.message); }
+  };
+  const deleteComment = async (comment) => {
+    if (!window.confirm(comment.replies ? "Delete this comment and its replies?" : "Delete this reply?")) return;
+    try {
+      await api(`${commentsApi}/${comment.id}`, { method: "DELETE" });
+      setThreads((list) => (comment.replies ? list.filter((t) => t.id !== comment.id) : list.map((t) => ({ ...t, replies: t.replies.filter((r) => r.id !== comment.id) }))));
+    } catch (e) { setError(e.message); }
   };
   const remove = async () => {
     if (!window.confirm(`Delete “${doc.title}” and its history? This can't be undone.`)) return;
@@ -323,12 +488,14 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   const showPaper = canEdit ? withText : !!initialHtml.trim();
   const isPdf = file?.type === "application/pdf";
   const pdfOnly = isPdf && !showPaper;
-  const status = saving ? "Saving…" : dirty ? "Unsaved changes"
-    : live ? (offline ? (canEdit ? "Offline: your changes will sync when you're back" : "Offline") : !canEdit ? "" : pending ? "Saving…" : "All changes saved")
-    : saved ? "All changes saved" : "";
+  const status = saving ? "Saving…"
+    : live ? (offline ? (canEdit ? "Offline: your changes will sync when you're back" : "Offline") : !canEdit ? "" : pending ? "Saving…" : dirty ? "Unsaved changes"
+      : contentDirty ? `All changes saved · changes since version ${doc?.version ?? 1}` : `All changes saved${doc?.version ? ` as version ${doc.version}` : ""}`)
+    : contentDirty && doc ? `Changes since version ${doc.version ?? 1}` : dirty ? "Unsaved changes" : saved ? `Saved${doc?.version ? ` as version ${doc.version}` : ""}` : "";
   // live, Save version is worth pressing once the text changed or a detail did
   const canSave = live ? dirty || unversioned || !!upload || removeFile : dirty || !doc;
-  const saveLabel = live ? "Save version" : "Save";
+  const saveLabel = doc && contentDirty ? "Save version" : live ? "Save version" : "Save";
+  const openThreads = threads ? threads.filter((t) => !t.resolved).length : 0;
 
   const exportAs = async (kind) => {
     const html = editor?.isEmpty ? "" : editor?.getHTML() || "";
@@ -344,7 +511,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   const hasText = showPaper && editor && !editor.isEmpty;
   const menus = [
     { label: "File", items: [
-      canEdit && { label: saveLabel, shortcut: "⌘S", onClick: save, disabled: saving || !canSave },
+      canEdit && { label: doc && contentDirty ? "Save version…" : saveLabel, shortcut: "⌘S", onClick: requestSave, disabled: saving || !canSave },
       canEdit && { label: "New document", onClick: () => navigate(`${documentsPath(slug, "new")}?kind=${form.kind}`) },
       canEdit && { label: "Import Word, RTF, Markdown or JSON…", onClick: () => importRef.current?.click() },
       canEdit && "divider",
@@ -358,7 +525,8 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
       "divider",
       doc && { label: "Share…", onClick: () => setShareOpen(true) },
       canEdit && { label: "Document details…", onClick: () => setDetails((v) => !v), checked: details },
-      isMember && doc && { label: "Version history", onClick: toggleHistory, checked: showHistory },
+      isMember && doc && { label: "Version history", onClick: () => toggleSide("history"), checked: side === "history" },
+      commentsOn && { label: "Comments", onClick: () => toggleSide("comments"), checked: side === "comments" },
       doc?.can_delete && "divider",
       doc?.can_delete && { label: "Delete document…", onClick: remove },
     ] },
@@ -401,14 +569,26 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
                 onChanged={(d) => { setDoc(d); setForm((f) => ({ ...f, visibility: d.visibility })); }} />
             </span>
           )}
-          {canEdit && <button type="button" onClick={save} disabled={saving || !canSave} title={live ? "Your edits save as you type. Saving a version marks this point in the history." : undefined} className={primaryButton}><Save className="size-4" /> {saving ? "Saving…" : saveLabel}</button>}
+          {isMember && doc && (
+            <button type="button" onClick={() => toggleSide("history")} title="Version history" aria-label="Version history" aria-pressed={side === "history"}
+              className={`grid size-8 place-items-center rounded-lg ${side === "history" ? "!bg-accent/15 text-accent" : "!bg-transparent text-slate-600 hover:!bg-neutral-200/70 dark:text-neutral-300 dark:hover:!bg-neutral-700/60"}`}><History className="size-4" /></button>
+          )}
+          {commentsOn && (
+            <button type="button" onClick={() => toggleSide("comments")} title="Comments" aria-label={`Comments (${openThreads} open)`} aria-pressed={side === "comments"}
+              className={`relative grid size-8 place-items-center rounded-lg ${side === "comments" ? "!bg-accent/15 text-accent" : "!bg-transparent text-slate-600 hover:!bg-neutral-200/70 dark:text-neutral-300 dark:hover:!bg-neutral-700/60"}`}>
+              <MessageSquare className="size-4" />
+              {openThreads > 0 && <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-4 text-white">{openThreads}</span>}
+            </button>
+          )}
+          {canEdit && <button type="button" onClick={requestSave} disabled={saving || !canSave} title={live ? "Your edits save as you type. Saving a version marks this point in the history." : undefined} className={primaryButton}><Save className="size-4" /> {saving ? "Saving…" : saveLabel}</button>}
           <input ref={importRef} type="file" hidden accept={IMPORT_ACCEPT} onChange={(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importFile(f); }} />
         </div>
         {canEdit && showPaper && <DocumentToolbar editor={editor} />}
         {canEdit && showPaper && valuesOpen && <DynamicValuesBar editor={editor} slug={slug} documentId={doc?.id} onClose={() => setValuesOpen(false)} />}
       </div>
 
-      <div className="mx-auto max-w-[816px] space-y-3 print:max-w-none">
+      <div className={`mx-auto print:max-w-none ${side ? "flex max-w-[1180px] flex-col xl:flex-row xl:items-start xl:gap-5" : "max-w-[816px]"}`}>
+      <div className={`mx-auto w-full max-w-[816px] min-w-0 space-y-3 print:max-w-none ${side ? "xl:mx-0 xl:flex-1" : ""}`}>
         <div className="space-y-3 print:hidden">
           <ErrorNote error={error} />
           {notice && <p role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{notice}</p>}
@@ -443,14 +623,23 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
             )}
             <Toggle checked={form.pinned} onChange={change("pinned")} label="Pin it" description="Pinned documents lead their folder and the Documents block on the group's page." />
             <div>
+              <label htmlFor="doc-comments" className={labelClass}>Comments</label>
+              <select id="doc-comments" className={selectClass} value={form.comment_mode} onChange={(e) => change("comment_mode")(e.target.value)}>
+                <option value="off">Off</option>
+                <option value="editors">Record keepers only</option>
+                <option value="members">Every member who can see it</option>
+              </select>
+              <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Comments sit in the margin beside the words they're about. Off keeps the page quiet; comments already made come back if you turn them on again.</p>
+            </div>
+            <div>
               <span className={labelClass}>Attached file</span>
-              <input ref={fileRef} type="file" hidden accept={FILE_ACCEPT} onChange={(e) => { setUpload(e.target.files[0] || null); setRemoveFile(false); setDirty(true); setSaved(false); e.target.value = ""; }} />
+              <input ref={fileRef} type="file" hidden accept={FILE_ACCEPT} onChange={(e) => { setUpload(e.target.files[0] || null); setRemoveFile(false); setDirty(true); setContentDirty(true); setSaved(false); e.target.value = ""; }} />
               <div className="flex flex-wrap items-center gap-2">
                 {upload || file ? (
                   <span className="rounded-xl bg-neutral-100 px-3 py-2 text-sm dark:bg-neutral-800">{upload ? upload.name : file.name} <span className="text-xs text-slate-500">({sizeLabel(upload ? upload.size : file.size)})</span></span>
                 ) : <span className="text-sm text-slate-500 dark:text-neutral-400">None. A PDF shows right on the page; Word, Excel and pictures download.</span>}
                 <button type="button" onClick={() => fileRef.current?.click()} className={quietButton}><Paperclip className="size-4" /> {upload || file ? "Replace" : "Attach a file"}</button>
-                {(upload || file) && <button type="button" onClick={() => { setUpload(null); setRemoveFile(!!doc?.file); setDirty(true); }} className={dangerButton}>Remove</button>}
+                {(upload || file) && <button type="button" onClick={() => { setUpload(null); setRemoveFile(!!doc?.file); setDirty(true); setContentDirty(true); }} className={dangerButton}>Remove</button>}
               </div>
             </div>
             {!withText && <button type="button" onClick={() => setWithText(true)} className={quietButton}><FileUp className="size-4" /> Add text to this page</button>}
@@ -458,8 +647,14 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
           </section>
         )}
 
+        {compare && versions && (
+          <VersionDiff slug={slug} docId={doc.id} versions={versions} from={compare.from} to={compare.to} canEdit={canEdit} onRestore={restore}
+            workingHtml={editor && !editor.isEmpty ? editor.getHTML() : ""} onFrom={(from) => setCompare((c) => ({ ...c, from }))}
+            onClose={() => { setCompare(null); setPicked(null); }} />
+        )}
+
         {showPaper && (
-          <article className="doc-paper" aria-label={form.title || "Untitled document"}>
+          <article className={`doc-paper ${commentsOn && side === "comments" ? "doc-comments-on" : ""} ${compare ? "hidden" : ""}`} aria-label={form.title || "Untitled document"}>
             {letterhead && <Letterhead template={letterhead} groupTitle={group.title} />}
             {canEdit ? (
               <input ref={titleRef} className="doc-title" value={form.title} maxLength={160} onChange={(e) => change("title")(e.target.value)} placeholder="Untitled document" aria-label="Title" />
@@ -500,35 +695,42 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
           </div>
         )}
 
-        {showHistory && isMember && doc && (
-          <section aria-label="History" className="space-y-1.5 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 print:hidden">
-            <h2 className="!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">History</h2>
-            {!history ? <Loading /> : history.length === 0 ? (
-              <p className="text-sm text-slate-600 dark:text-neutral-400">Nobody has changed this document since it was first saved.</p>
-            ) : (
-              <>
-                <p className="text-xs text-slate-500 dark:text-neutral-400">The copies this document had before each change, newest first.</p>
-                {history.map((v) => (
-                  <details key={v.id} className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
-                    <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                      <span className="font-medium text-slate-900 dark:text-white">{dateLabel(v.created_at)}</span>
-                      <span className="text-slate-500 dark:text-neutral-400">{v.user ? `by ${v.user}` : ""}</span>
-                      <span className="min-w-0 flex-1 truncate text-slate-600 dark:text-neutral-300">{v.title}</span>
-                    </summary>
-                    <div className="mt-3 space-y-3">
-                      {!v.body.trim() ? <p className="text-sm italic text-slate-500">No text.</p>
-                        : v.body_format === "markdown" ? <Markdown source={v.body} className="ev-md text-sm text-slate-800 dark:text-neutral-200" />
-                        : <div className="doc-prose doc-prose--small" dangerouslySetInnerHTML={{ __html: v.body }} />}
-                      {v.file && <a href={fileUrl(slug, doc.id, `?version_id=${v.id}&download=1`)} className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"><Download className="size-4" /> {v.file.name} ({sizeLabel(v.file.size)})</a>}
-                      {canEdit && <div><button type="button" onClick={() => restore(v)} className={quietButton}><RotateCcw className="size-4" /> Put this copy back</button></div>}
-                    </div>
-                  </details>
-                ))}
-              </>
-            )}
-          </section>
-        )}
       </div>
+
+      {side && doc && (
+        <aside aria-label={side === "history" ? "Version history" : "Comments"}
+          className="order-first mx-auto mb-4 max-h-[50vh] w-full max-w-[816px] space-y-3 overflow-y-auto print:hidden xl:order-none xl:mb-0 xl:sticky xl:top-[calc(var(--nav-h,56px)+110px)] xl:mt-0 xl:max-h-[calc(100dvh-var(--nav-h,56px)-130px)] xl:w-[340px] xl:shrink-0 xl:overflow-y-auto xl:pb-4">
+          <div className="flex items-center gap-1 px-1">
+            {[["history", "History", isMember], ["comments", `Comments${openThreads ? ` (${openThreads})` : ""}`, commentsOn]].filter((t) => t[2]).map(([key, label]) => (
+              <button key={key} type="button" onClick={() => setSide(key)} aria-pressed={side === key}
+                className={`rounded-lg px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${side === key ? "!bg-accent/15 text-accent" : "!bg-transparent text-slate-500 hover:text-slate-800 dark:text-neutral-400"}`}>{label}</button>
+            ))}
+            <button type="button" onClick={() => { setSide(null); setCompare(null); setPicked(null); }} title="Close" aria-label="Close the side pane"
+              className="ml-auto grid size-7 place-items-center rounded-lg !bg-transparent text-slate-500 hover:!bg-neutral-200/70 dark:hover:!bg-neutral-700/60"><X className="size-4" /></button>
+          </div>
+          {side === "history" && (
+            <HistoryPane versions={versions} dirty={contentDirty} working={working} selected={picked} onPick={pickVersion} onCompareWorking={compareWorking}
+              canEdit={canEdit} onRestore={restore} slug={slug} docId={doc.id} />
+          )}
+          {side === "comments" && commentsOn && (
+            <CommentsPane threads={threads} order={anchorOrder.order} located={anchorOrder.located} active={activeComment} pending={pendingComment} canResolve={canResolve}
+              onSelect={selectComment} onCreate={createComment} onCancelPending={() => setPendingComment(null)} onReply={replyComment} onResolve={resolveComment} onDelete={deleteComment} />
+          )}
+        </aside>
+      )}
+      </div>
+
+      {commentButton && commentsOn && !compare && (
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={startComment} style={{ top: commentButton.top, left: commentButton.left }}
+          aria-label="Comment on the selected words"
+          className="fixed z-[2100] inline-flex items-center gap-1.5 rounded-full !bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg hover:!bg-slate-700 print:hidden">
+          <MessageSquarePlus className="size-3.5" /> Comment
+        </button>
+      )}
+      {saveOpen && (
+        <SaveVersionDialog number={(doc?.version || 0) + 1} headHtml={headHtml} workingHtml={editor && !editor.isEmpty ? editor.getHTML() : ""}
+          saving={saving} onSave={(message) => save(message)} onCancel={() => setSaveOpen(false)} />
+      )}
     </div>
   );
 }

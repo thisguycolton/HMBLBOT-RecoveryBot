@@ -98,11 +98,11 @@ class Api::GroupDocumentsTest < ActionDispatch::IntegrationTest
     created = GroupDocument.find(response.parsed_body["id"])
     assert_equal [@keeper, "public", "current"], [created.created_by, created.visibility, created.status]
 
-    patch path(@members.id), params: { document: { body: "Be kinder", pinned: true } }, as: :json
+    patch path(@members.id), params: { document: { body: "Be kinder", pinned: true }, message: "Kinder" }, as: :json
     assert_response :success
     assert_equal true, response.parsed_body["pinned"]
-    assert_equal 1, @members.versions.count
-    assert_equal "Be kind", @members.versions.first.body
+    assert_equal 2, response.parsed_body["version"]
+    assert_equal [["Be kinder", "Kinder", @keeper], ["Be kind", nil, nil]], @members.versions.map { |v| [v.body, v.message, v.user] }
 
     patch path(@members.id), params: { document: { title: "" } }, as: :json
     assert_response :unprocessable_entity
@@ -144,8 +144,8 @@ class Api::GroupDocumentsTest < ActionDispatch::IntegrationTest
   end
 
   test "history is for members; restoring is for record keepers" do
-    @members.revise({ body: "Be kinder" }, @keeper)
-    version = @members.versions.first
+    @members.revise({ body: "Be kinder" }, @keeper, message: "Kinder")
+    version = @members.versions.last
 
     get path(@public.id, "versions"), as: :json
     assert_response :unauthorized
@@ -153,15 +153,19 @@ class Api::GroupDocumentsTest < ActionDispatch::IntegrationTest
     sign_in @member
     get path(@members.id, "versions"), as: :json
     assert_response :success
-    assert_equal ["Be kind"], response.parsed_body["versions"].map { |v| v["body"] }
+    list = response.parsed_body["versions"]
+    assert_equal [[2, "Kinder", "Kay", 1, 1], [1, nil, nil, 0, 0]], list.map { |v| [v["number"], v["message"], v.dig("user", "name"), v["words_added"], v["words_removed"]] }
+    assert_nil list.first["body"], "the list leaves out the text"
+    get path(@members.id, "versions", version.id), as: :json
+    assert_equal ["Be kind", "html"], response.parsed_body.values_at("body", "body_format")
     post path(@members.id, "versions/#{version.id}/restore"), as: :json
     assert_response :forbidden
 
     sign_in @keeper
-    post path(@members.id, "versions/#{version.id}/restore"), as: :json
+    post path(@members.id, "versions/#{version.id}/restore"), params: { message: "Back to the short one" }, as: :json
     assert_response :success
     assert_equal "Be kind", @members.reload.body
-    assert_equal 2, @members.versions.count
+    assert_equal [3, "restored", "Back to the short one"], [@members.head.number, @members.head.kind, @members.head.message]
   end
 
   test "only group admins delete" do
@@ -214,11 +218,12 @@ class Api::GroupDocumentsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "html", response.parsed_body["body_format"]
     assert_equal "<h2>Format</h2><p>Hello <strong>all</strong></p>", response.parsed_body["body"]
-    assert_equal ["Be kind", "html"], @members.versions.first.then { |v| [v.body, v.body_format] }
+    assert_equal ["Be kind", "html"], @members.versions.last.then { |v| [v.body, v.body_format] }
 
     sign_in @member
     get path(@members.id, "versions"), as: :json
-    assert_equal ["html"], response.parsed_body["versions"].map { |v| v["body_format"] }
+    get path(@members.id, "versions", @members.versions.last.id), as: :json
+    assert_equal "html", response.parsed_body["body_format"]
   end
 
   test "a document written as HTML shows visitors cleaned HTML only" do

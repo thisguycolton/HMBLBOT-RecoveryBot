@@ -5,8 +5,8 @@
 # server only numbers each edit, passes it on and keeps it. Every so often a browser that's been
 # typing sends back the whole merged copy along with its HTML, which becomes `body` (so reading,
 # search, export and the Command Center keep working as before), and the edits it covers are
-# dropped. Live edits never make a version on their own: the first one after a Save version keeps
-# the copy the document had, the way a save does, and later ones until the next Save don't.
+# dropped. Live edits never make a version on their own: the newest version stays what was last
+# saved, and Save version adds one with the text as it stands, crediting everyone who typed since.
 #
 # Switched on with COLLAB_EDITING=1.
 module GroupDocument::Live
@@ -62,14 +62,14 @@ module GroupDocument::Live
 
       seq = live_seq + 1
       live_updates.create!(seq: seq, data: data, user: user, created_at: Time.current)
-      update_columns(live_seq: seq)
+      update_columns(live_seq: seq, live_contributor_ids: (live_contributor_ids | [user&.id].compact))
       seq
     end
   end
 
-  # The merged copy as of edit `upto`, with its title and HTML. Keeps the copy the document had
-  # (a version) if this is the first change since the last Save version. Returns whether it took
-  # (a copy older than the one kept, or from before a restore, doesn't).
+  # The merged copy as of edit `upto`, with its title and HTML (no version: the newest one is still
+  # what was last saved). Returns whether it took (a copy older than the one kept, or from before a
+  # restore, doesn't).
   def live_fold!(state, upto:, epoch:, title:, body:, user:)
     upto = upto.to_i
     return false if state.bytesize > STATE_MAX
@@ -82,8 +82,10 @@ module GroupDocument::Live
       next false if body.length > GroupDocument::BODY_MAX
 
       changed = title != self.title || body != self.body
-      if changed && !live_unversioned
-        versions.create!(user_id: updated_by_id || created_by_id, title: self.title, body: self.body, body_format: body_format, created_at: updated_at)
+      # a document from before version history starts its history with what it had
+      if changed && !versions.exists?
+        versions.create!(number: 1, kind: "created", user_id: updated_by_id || created_by_id, title: self.title, body: self.body, body_format: body_format,
+                         contributor_ids: [updated_by_id || created_by_id].compact, created_at: updated_at)
       end
       attrs = { live_state: state, live_state_seq: upto }
       attrs.merge!(title: title.first(160), body: body, body_format: "html", updated_by_id: user&.id, updated_at: Time.current, live_unversioned: true) if changed
@@ -93,8 +95,19 @@ module GroupDocument::Live
     end
   end
 
-  # Save version: the text as it stands is the one the next live edit keeps a copy of
-  def live_checkpoint! = update_columns(live_unversioned: false)
+  # Save version: the text as it stands becomes a new version (unless the save that came with it
+  # already made one, or nothing changed since the last), saved by `user` with their `message` and
+  # crediting everyone who typed since
+  def live_checkpoint!(user, message: nil)
+    with_lock do
+      last = versions.reload.first
+      if !last || last.title != title || last.body != body || last.body_format != body_format
+        add_version(user, message: message, kind: "saved", restored_from: nil, contributor_ids: live_contributor_ids)
+        versions.reset
+      end
+      update_columns(live_unversioned: false, live_contributor_ids: [])
+    end
+  end
 
   # The text was replaced another way (a restore, or a save from a tab that isn't live): the
   # browsers drop their copies and start again from the new text
@@ -102,7 +115,7 @@ module GroupDocument::Live
     return if live_state.nil? && live_seq.zero?
 
     live_updates.delete_all
-    update_columns(live_state: nil, live_state_seq: 0, live_seq: 0, live_epoch: live_epoch + 1, live_unversioned: false)
+    update_columns(live_state: nil, live_state_seq: 0, live_seq: 0, live_epoch: live_epoch + 1, live_unversioned: false, live_contributor_ids: [])
     ActionCable.server.broadcast(live_stream, { type: "reset", epoch: live_epoch })
   end
 

@@ -8,11 +8,11 @@ class Api::GroupDocumentsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index show file live]
   before_action :set_viewable_group, only: %i[index show file live]
   before_action :set_group, except: %i[index show file live]
-  before_action :set_document, only: %i[show file update destroy versions restore live live_save]
+  before_action :set_document, only: %i[show file update destroy versions version restore live live_save]
   before_action :require_keeper, only: %i[create update restore bulk live_save]
   before_action :require_live, only: %i[live live_save]
   before_action :require_manager, only: :destroy
-  before_action :require_member, only: :versions
+  before_action :require_member, only: %i[versions version]
 
   # GET /api/groups/:group_slug/documents?q=
   def index
@@ -41,18 +41,20 @@ class Api::GroupDocumentsController < ApplicationController
   # POST /api/groups/:group_slug/documents (multipart when a file comes along)
   def create
     @document = @group.documents.new(created_by: current_user)
-    return render_errors(@document) unless @document.revise(document_params, current_user)
+    return render_errors(@document) unless @document.revise(document_params, current_user, message: params[:message])
 
     render json: document_json, status: :created
   end
 
-  # PATCH /api/groups/:group_slug/documents/:id
-  # (checkpoint=1, from a document open live: Save version, see GroupDocument::Live)
+  # PATCH /api/groups/:group_slug/documents/:id { document: {...}, message: "what changed" }
+  # A change to the title, text or file is saved as a new version with that note. From a document
+  # open live (checkpoint=1: Save version) the text is already saved, so the version is what the
+  # live edits made of it, crediting everyone who typed (see GroupDocument::Live)
   def update
-    return render_errors(@document) unless @document.revise(document_params, current_user)
+    return render_errors(@document) unless @document.revise(document_params, current_user, message: params[:message])
 
     if ActiveModel::Type::Boolean.new.cast(params[:checkpoint]) && GroupDocument.live_editing?
-      @document.live_checkpoint!
+      @document.live_checkpoint!(current_user, message: params[:message])
       ActionCable.server.broadcast(@document.live_stream, { type: "saved", unversioned: false, details: true })
     end
     render json: document_json
@@ -95,15 +97,23 @@ class Api::GroupDocumentsController < ApplicationController
     render json: { updated: n }
   end
 
-  # GET /api/groups/:group_slug/documents/:id/versions -> the copies it had before each save
+  # GET /api/groups/:group_slug/documents/:id/versions -> its versions, newest (the document as it is) first, without their text
   def versions
-    render json: { versions: @document.versions.with_attached_file.includes(:user).map(&:as_api_json) }
+    list = @document.versions.with_attached_file.includes(:user, :restored_from).to_a
+    people = User.where(id: list.flat_map(&:contributor_ids).uniq).index_by(&:id)
+    render json: { versions: list.map { |v| v.as_api_json(people: people) } }
   end
 
-  # POST /api/groups/:group_slug/documents/:id/versions/:version_id/restore
+  # GET /api/groups/:group_slug/documents/:id/versions/:version_id -> one version with its text
+  def version
+    v = @document.versions.find(params[:version_id])
+    render json: v.as_api_json(people: User.where(id: v.contributor_ids).index_by(&:id), full: true)
+  end
+
+  # POST /api/groups/:group_slug/documents/:id/versions/:version_id/restore { message }
   def restore
     version = @document.versions.find(params[:version_id])
-    @document.restore(version, current_user) ? render(json: document_json) : render_errors(@document)
+    @document.restore(version, current_user, message: params[:message]) ? render(json: document_json) : render_errors(@document)
   end
 
   # GET /api/groups/:group_slug/documents/:id/live(?after=seq) -> the shared copy and the edits
@@ -155,11 +165,12 @@ class Api::GroupDocumentsController < ApplicationController
   def document_json
     template = GroupDocumentTemplate.for(@group, @document.kind)
     @document.as_api_json(viewer: current_user, full: true).merge(can_edit: keeper?, can_delete: @group.manageable_by?(current_user), live: GroupDocument.live_editing?,
+                                                                  can_comment: @document.commentable_by?(current_user),
                                                                   letterhead: template.blank? ? nil : template.as_api_json)
   end
 
   def document_params
-    attrs = params.require(:document).permit(:title, :kind, :body, :body_format, :visibility, :status, :pinned, :file, :remove_file, :approved_by_motion_id)
+    attrs = params.require(:document).permit(:title, :kind, :body, :body_format, :visibility, :status, :pinned, :file, :remove_file, :approved_by_motion_id, :comment_mode)
     # A new upload with no title takes its file's name
     if attrs[:title].blank? && attrs[:file].respond_to?(:original_filename) && @document&.title.blank?
       attrs[:title] = File.basename(attrs[:file].original_filename, ".*").tr("_-", " ")

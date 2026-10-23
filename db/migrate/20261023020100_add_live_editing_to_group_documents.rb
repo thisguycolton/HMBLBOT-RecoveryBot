@@ -14,6 +14,8 @@ class AddLiveEditingToGroupDocuments < ActiveRecord::Migration[8.0]
       # live edits changed the text since the last Save version (so the next edit doesn't keep
       # another copy of what it had)
       t.boolean :live_unversioned, null: false, default: false
+      # who typed live since the last Save version (credited on the version it makes)
+      t.bigint :live_contributor_ids, array: true, null: false, default: []
     end
 
     create_table :group_document_live_updates do |t|
