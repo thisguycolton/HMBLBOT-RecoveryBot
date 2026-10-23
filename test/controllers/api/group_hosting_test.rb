@@ -323,6 +323,28 @@ class Api::GroupHostingTest < ActionDispatch::IntegrationTest
     assert_response :not_found, "there is no reading posting without a reading"
   end
 
+  test "a reading scheduled to go live at the meeting's start shows as published once it does, without picking it again" do
+    starts = 1.hour.from_now.change(sec: 0)
+    scheduled = Reading.create!(user: @host, title: "Step One", published_at: starts, content: "<p>We admitted</p>")
+
+    sign_in @host
+    post path(@meeting.id, "act"), params: { act: "activity", activity: { kind: "my_reading", reading_id: scheduled.id } }, as: :json
+    assert_response :success
+    assert_not response.parsed_body.dig("activity", "reading_published"), "it isn't live yet"
+
+    travel_to starts do
+      post path(@meeting.id, "ping"), as: :json
+      assert response.parsed_body.dig("activity", "reading_published"), "it went live at its publish time"
+
+      get path(@meeting.id), as: :json
+      assert response.parsed_body.dig("live", "activity", "reading_published"), "and a reload shows it live too"
+
+      code = HostingSession.last.code
+      get "/api/hosting_links/#{code}", as: :json
+      assert response.parsed_body.to_json.include?('"reading_published":true'), "the short link's page sees it live"
+    end
+  end
+
   test "the picker lists the week's meetings by date, with who hosts each" do
     sign_in @host
     get path, as: :json

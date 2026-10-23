@@ -155,7 +155,7 @@ class HostingSession < ApplicationRecord
 
   def live_json(viewer, now = Time.current)
     {
-      version: version, section_index: section_index, completed: completed, posted: posted, log: log.last(12).reverse, activity: activity,
+      version: version, section_index: section_index, completed: completed, posted: posted, log: log.last(12).reverse, activity: live_activity,
       service: service, milestones: milestones,
       server_now: now.iso8601(3),
       presences: presences.includes(:user).select { |p| p.last_seen_at > HostingPresence::AWAY.ago }.sort_by { |p| p.created_at }.map { |p| p.as_api_json(viewer) },
@@ -165,6 +165,16 @@ class HostingSession < ApplicationRecord
   # What the short link shows people without an account, next to the chat postings: which went
   # out and the names that fill them in, but not the hosts' log or who's celebrating
   def public_json(now = Time.current)
-    { version: version, posted: posted, activity: activity, service: service, server_now: now.iso8601(3) }
+    { version: version, posted: posted, activity: live_activity, service: service, server_now: now.iso8601(3) }
+  end
+
+  # The activity as it stands now: a reading of the hosts' own is published or not by its
+  # published_at, so one scheduled to go live at the meeting's start shows as live once it does
+  # (the flag kept at pick time would say it's still a draft)
+  def live_activity
+    return activity unless activity&.dig("kind") == "my_reading"
+
+    reading = Reading.find_by(id: activity["reading_id"])
+    activity.merge("reading_published" => reading&.published? || false)
   end
 end
