@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, MoveHorizontal, Plus, RotateCcw, Settings2, SlidersHorizontal, X } from "lucide-react";
+import { GripVertical, LayoutTemplate, MoveHorizontal, Plus, RotateCcw, Settings2, SlidersHorizontal, X } from "lucide-react";
 import { ErrorNote, primaryButton, quietButton } from "../../ui";
 import { selectClass } from "../../../ui/styles";
 import { BLOCKS } from "./blocks";
+import TemplateGallery from "./TemplateGallery";
 import { LAYOUT_CHOICES, LAYOUT_SIDES, REGIONS, REGION_SIZE, baseTemplate, draftOf } from "./templates";
 
 // HostDeck's layout editor: the deck itself, live, with its blocks to drag between the columns,
@@ -114,6 +115,7 @@ export function EditBlock({ block, region, setDraft, placeholder, onKit = null, 
 // Above the deck while editing: the layout, blocks to add, where it's saved, and saving
 export function EditorToolbar({ center, draft, setDraft, scope, setScope, saving, error, onSave, onCancel, onRemoveOwn }) {
   const [adding, setAdding] = useState(false);
+  const [templates, setTemplates] = useState(false);
   const present = onDeck(draft);
   const isDeck = !!center.deck;
   const base = baseTemplate(center);
@@ -168,6 +170,8 @@ export function EditorToolbar({ center, draft, setDraft, scope, setScope, saving
           )}
         </div>
         <button type="button" className={`${quietButton} !px-3 !py-1.5`} onClick={() => setDraft(draftOf(base))} title={`Put every block back where ${base.name} has it`}><RotateCcw className="size-4" /> Start from {base.name}</button>
+        <button type="button" className={`${quietButton} !px-3 !py-1.5`} onClick={() => setTemplates(true)}><LayoutTemplate className="size-4" /> Templates</button>
+        {templates && <TemplateGallery center={center} draft={draft} setDraft={setDraft} onClose={() => setTemplates(false)} />}
         <span className="flex-1" />
         {!isDeck && <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-neutral-300">
           Save for

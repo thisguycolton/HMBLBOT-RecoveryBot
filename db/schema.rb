@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_23_060000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_23_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -219,6 +219,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_060000) do
     t.index ["meeting_at"], name: "index_court_verifications_on_meeting_at"
     t.index ["meeting_id"], name: "index_court_verifications_on_meeting_id"
     t.index ["respondent_email"], name: "index_court_verifications_on_respondent_email"
+  end
+
+  create_table "deck_templates", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.string "name", null: false
+    t.string "description"
+    t.string "purpose", default: "general", null: false
+    t.jsonb "arrangement", default: {}, null: false
+    t.string "gallery", default: "none", null: false
+    t.bigint "created_by_id"
+    t.bigint "reviewed_by_id"
+    t.datetime "published_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_deck_templates_on_created_by_id"
+    t.index ["gallery"], name: "index_deck_templates_on_gallery"
+    t.index ["group_id"], name: "index_deck_templates_on_group_id"
+    t.index ["reviewed_by_id"], name: "index_deck_templates_on_reviewed_by_id"
   end
 
   create_table "decks", force: :cascade do |t|
@@ -1216,6 +1234,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_060000) do
   add_foreign_key "contact_requests", "users", on_delete: :nullify
   add_foreign_key "court_verifications", "groups"
   add_foreign_key "court_verifications", "meetings", on_delete: :nullify
+  add_foreign_key "deck_templates", "groups", on_delete: :cascade
+  add_foreign_key "deck_templates", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "deck_templates", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "decks", "group_documents", column: "script_document_id", on_delete: :nullify
   add_foreign_key "decks", "groups", on_delete: :cascade
   add_foreign_key "decks", "users", column: "created_by_id", on_delete: :nullify

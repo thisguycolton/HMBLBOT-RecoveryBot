@@ -4,6 +4,7 @@ import { ArrowLeft, BookOpen, LayoutDashboard, LayoutGrid, MessageSquare, Minus,
 import GroupLogo from "../../GroupLogo";
 import { ErrorNote, Loading, Message, quietButton } from "../../ui";
 import KitEditor from "../KitEditor";
+import { meetingsPath } from "../../conscience/lib";
 import { AWAY_MS, SIZES, iconButton, timeOf } from "../parts";
 import { BLOCKS } from "./blocks";
 import { EditBlock, EditDnd, EditRegion } from "./LayoutEditor";
@@ -87,8 +88,9 @@ function Editable({ block, region, size, deck, editor, className }) {
 export default function DeckView({ deck, template: saved, editor = null, canArrange = false, onEdit, renderSetup = null }) {
   const template = editor ? editor.draft : saved;
   const { slug, center, live, error, panel, setPanel } = deck;
-  // A deck of its own goes back to the group's HostDeck list; a meeting's to its hosts
-  const back = center?.deck ? `/${slug}/host` : `/${slug}/hosts`;
+  // A deck of its own goes back to the group's HostDeck list (a business meeting's to the group's
+  // business meetings, where every member finds it); a meeting's to its hosts
+  const back = center?.deck ? (center.deck.purpose === "business_meeting" ? meetingsPath(slug) : `/${slug}/host`) : `/${slug}/hosts`;
   if (error) {
     return (
       <div className="min-h-screen bg-neutral-50 px-4 dark:bg-neutral-950">

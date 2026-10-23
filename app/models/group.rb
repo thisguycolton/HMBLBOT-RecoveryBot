@@ -38,6 +38,7 @@ class Group < ApplicationRecord
   has_many :hosting_kits, dependent: :destroy
   has_many :hosting_layouts, dependent: :destroy
   has_many :decks, dependent: :destroy
+  has_many :deck_templates, dependent: :delete_all
   LOGO_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
   validate { errors.add(:logo, "has to be a PNG, JPEG, WebP or GIF image") if logo.attached? && !LOGO_TYPES.include?(logo.blob.content_type) }
   validate { errors.add(:logo, "has to be under 5 MB") if logo.attached? && logo.blob.byte_size > 5.megabytes }

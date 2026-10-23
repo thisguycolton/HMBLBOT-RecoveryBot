@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  AlarmClock, ArrowLeft, ArrowRight, BookOpen, BookText, Clock, History, LayoutList, Link2, ListChecks, ListOrdered, MessageSquare, NotebookText, PartyPopper, ScrollText, Timer, UserCheck, Users, X, Zap,
+  AlarmClock, ArrowLeft, ArrowRight, BookOpen, BookText, Clock, History, LayoutList, Link2, ListChecks, Link, ListOrdered, MessageSquare, Mic, FileText, NotebookText, PartyPopper, ScrollText, Timer, UserCheck, Users, X, Zap,
 } from "lucide-react";
 import { primaryButton, quietButton } from "../../ui";
 import ActivityPanel from "../Activity";
@@ -8,6 +8,7 @@ import { Milestones, ServicePanel } from "../Service";
 import ServiceReadings from "../ServiceReadings";
 import { ACTIVITY_TITLE, cueLabel } from "../lib";
 import { ChecklistBlock, ChecklistSettings, DeckClock, NotesBlock, NotesSettings, QuickActionsSettings, TimerBlock, TimerSettings } from "./keepingBlocks";
+import { DocumentBlock, DocumentSettings, LinksBlock, LinksSettings, ShareQueueBlock, ShareQueueSettings } from "./moreBlocks";
 import { ActivityBar, ClockCard, FlowBar, HostsBar, LogBar, MilestonesBar, NowNext, ReadingsGrid, RemindersList, ShareLinkBar } from "./sizedBlocks";
 import { ActivityCard, ActivityLog, ChatPostingBar, ChatPostings, Flow, HostsHere, MeetingClock, QuickActions, ReadingView, Readings, ScriptView, ShareLink, label } from "../parts";
 
@@ -154,5 +155,8 @@ export const BLOCKS = {
   next: { label: "Next", icon: ArrowRight, sizes: ["bar"], tab: "all", component: NextBlock },
   notes: { label: "Notes", icon: NotebookText, sizes: ["side", "main"], tab: "readings", multi: true, settings: NotesSettings, defaults: { title: "Notes", markdown: "" }, component: NotesBlock },
   checklist: { label: "Checklist", icon: ListChecks, barGrow: true, sizes: ["side", "main", "bar"], tab: "readings", multi: true, settings: ChecklistSettings, defaults: { title: "Checklist", items: [] }, component: ChecklistBlock },
+  share_queue: { label: "Share queue", icon: Mic, barGrow: true, sizes: ["side", "main", "bar"], tab: "people", multi: true, settings: ShareQueueSettings, defaults: { title: "Share queue" }, component: ShareQueueBlock },
+  document: { label: "Document", icon: FileText, sizes: ["side", "main"], tab: "readings", multi: true, settings: DocumentSettings, defaults: {}, component: DocumentBlock },
+  links: { label: "Links", icon: Link, barGrow: true, sizes: ["side", "main", "bar"], tab: "readings", multi: true, settings: LinksSettings, defaults: { title: "Links", links: [] }, component: LinksBlock },
   timer: { label: "Timer", icon: Timer, sizes: ["side", "bar", "main"], tab: "readings", multi: true, settings: TimerSettings, defaults: { title: "Timer", minutes: 3 }, component: TimerBlock },
 };

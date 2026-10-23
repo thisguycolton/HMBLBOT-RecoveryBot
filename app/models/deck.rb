@@ -1,9 +1,9 @@
-# A HostDeck of its own, not a meeting's: a business meeting's, host and co-host onboarding, or
-# anything a group runs from one of its documents (its script). Where its blocks go is
+# A HostDeck of its own, not a meeting's: a business meeting's, host and co-host onboarding, an
+# event's day, or anything a group runs from one of its documents (its script). Where its blocks go is
 # `arrangement` (DeckArrangement; nil is its purpose's template, in the page). It's run like a
 # meeting: a HostingSession for each date, which is its live state and what it keeps.
 class Deck < ApplicationRecord
-  PURPOSES = %w[business_meeting onboarding general].freeze
+  PURPOSES = %w[business_meeting onboarding event general].freeze
 
   belongs_to :group
   belongs_to :script_document, class_name: "GroupDocument", optional: true

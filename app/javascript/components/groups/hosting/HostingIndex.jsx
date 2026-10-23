@@ -128,7 +128,7 @@ export default function HostingIndex() {
   );
 }
 
-const PURPOSE_LABELS = { business_meeting: "Business meeting", onboarding: "Host onboarding", general: "Deck" };
+const PURPOSE_LABELS = { business_meeting: "Business meeting", onboarding: "Host onboarding", event: "Event day", general: "Deck" };
 
 // The group's decks of their own (business meetings, onboarding...), and how to make one
 function OtherDecks({ slug, decks }) {

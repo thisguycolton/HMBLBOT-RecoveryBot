@@ -154,6 +154,23 @@ class HostingSession < ApplicationRecord
           when "timer_reset"
             state = {}
             nil
+          # A share queue: who's sharing now, and who's next (names, kept for the day like milestones)
+          when "queue_add"
+            name = data["item"].to_s.squish.first(80)
+            queue = Array(state["queue"])
+            state["queue"] = queue + [{ "id" => SecureRandom.hex(4), "name" => name }] if name.present? && queue.size < 100
+            nil
+          when "queue_remove"
+            state["queue"] = Array(state["queue"]).reject { |q| q["id"] == data["item"].to_s }
+            nil
+          when "queue_next"
+            queue = Array(state["queue"])
+            state["now"] = queue.first && { "name" => queue.first["name"], "since" => now.iso8601 }
+            state["queue"] = queue.drop(1)
+            state["now"] && "Called on #{state["now"]["name"]}"
+          when "queue_done"
+            state.delete("now")
+            nil
           end
     self.block_state = block_state.merge(key => state)
     did

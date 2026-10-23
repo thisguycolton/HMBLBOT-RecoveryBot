@@ -15,6 +15,9 @@
 #   checklist  title, items [{ id, text }]
 #   timer      title, minutes
 #   quick_actions  actions (which of QUICK_ACTIONS show; all when there's none), links [{ title, url }]
+#   share_queue    title
+#   document       title, document_id (one of the group's; the page checks the viewer can read it)
+#   links          title, links [{ title, url }]
 module DeckArrangement
   LAYOUTS = %w[both left right focus].freeze
   REGIONS = %w[strip left main right bar].freeze
@@ -26,12 +29,13 @@ module DeckArrangement
     "hosts_here" => %w[side main bar], "service_roles" => %w[side main], "milestones" => %w[side main bar],
     "activity_log" => %w[side main bar], "previous" => %w[bar], "clock" => %w[bar side main], "next" => %w[bar],
     "notes" => %w[side main], "checklist" => %w[side main bar], "timer" => %w[side bar main],
+    "share_queue" => %w[side main bar], "document" => %w[side main], "links" => %w[side main bar],
   }.freeze
   # The quick actions a block can show (parts.jsx QUICK_ACTIONS)
   QUICK_ACTIONS = %w[court zoom_open zoom_copy passcode host_schedule time_capsule].freeze
   MAX_LINKS = 20
   # Blocks a deck can have more than one of
-  MULTI = %w[notes checklist timer].freeze
+  MULTI = %w[notes checklist timer share_queue document links].freeze
   MAX_ITEMS = 50
   REGION_SIZE = { "strip" => "bar", "left" => "side", "main" => "main", "right" => "side", "bar" => "bar" }.freeze
   ID = /\A[A-Za-z0-9_-]{1,40}\z/
@@ -77,12 +81,20 @@ module DeckArrangement
     when "timer" then { "title" => title, "minutes" => raw["minutes"].to_i.clamp(1, 180) }.compact
     when "quick_actions"
       actions = (QUICK_ACTIONS & Array(raw["actions"]).map(&:to_s) if raw.key?("actions") && !raw["actions"].nil?)
-      links = Array(raw["links"]).first(MAX_LINKS).filter_map do |l|
-        l = l.respond_to?(:to_h) ? l.to_h.stringify_keys : {}
-        url = l["url"].to_s.strip.first(500)
-        { "title" => l["title"].to_s.squish.first(80), "url" => url } if url.match?(%r{\Ahttps?://\S+\z}i)
-      end
+      links = links(raw["links"])
       { "actions" => actions, "links" => (links if links.any?) }.compact.presence
+    when "share_queue" then { "title" => title }.compact
+    when "document" then { "title" => title, "document_id" => (raw["document_id"].to_i if raw["document_id"].to_i.positive?) }.compact
+    when "links" then { "title" => title, "links" => links(raw["links"]) }.compact
+    end
+  end
+
+  # Links people can open: http(s) only
+  def self.links(raw)
+    Array(raw).first(MAX_LINKS).filter_map do |l|
+      l = l.respond_to?(:to_h) ? l.to_h.stringify_keys : {}
+      url = l["url"].to_s.strip.first(500)
+      { "title" => l["title"].to_s.squish.first(80), "url" => url } if url.match?(%r{\Ahttps?://\S+\z}i)
     end
   end
 end

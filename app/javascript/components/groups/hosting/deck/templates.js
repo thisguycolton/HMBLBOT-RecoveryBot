@@ -88,6 +88,32 @@ export const HOST_ONBOARDING = {
   tabs: DECK_TABS,
 };
 
+// An event's day (a workshop, a convention, a picnic), run from its program: setting up, the
+// speakers' queue and their time, and who to call
+export const EVENT_DAY = {
+  key: "event",
+  name: "Event day",
+  layout: "both",
+  strip: [{ id: "reminders", type: "reminders" }],
+  left: [
+    { id: "flow", type: "flow" },
+    { id: "setup", type: "checklist", settings: { title: "Setting up", items: [
+      { id: "room", text: "Room open, chairs and tables out" }, { id: "signs", text: "Signs up outside" }, { id: "coffee", text: "Coffee on" },
+      { id: "literature", text: "Literature table out" }, { id: "greeters", text: "Greeters at the door" }, { id: "basket", text: "7th Tradition basket ready" },
+    ] } },
+    { id: "contacts", type: "notes", settings: { title: "Who to call", markdown: "- Venue: \n- Event chair: \n- Treasurer: " } },
+  ],
+  main: [{ id: "stage", type: "stage" }],
+  right: [
+    { id: "speakers", type: "share_queue", settings: { title: "Speakers" } },
+    { id: "speaker_timer", type: "timer", settings: { title: "Speaker's time", minutes: 15 } },
+    { id: "hosts_here", type: "hosts_here" },
+    { id: "activity_log", type: "activity_log", tight: true },
+  ],
+  bar: STEPS_BAR,
+  tabs: DECK_TABS,
+};
+
 // Anything else run from a document
 export const GENERAL_DECK = {
   key: "general",
@@ -101,10 +127,10 @@ export const GENERAL_DECK = {
   tabs: DECK_TABS,
 };
 
-export const TEMPLATES = [HOST_A_MEETING, BUSINESS_MEETING, HOST_ONBOARDING, GENERAL_DECK];
+export const TEMPLATES = [HOST_A_MEETING, BUSINESS_MEETING, HOST_ONBOARDING, EVENT_DAY, GENERAL_DECK];
 // What a deck of its own (Deck) starts as, by what it's for
-export const DECK_TEMPLATES = { business_meeting: BUSINESS_MEETING, onboarding: HOST_ONBOARDING, general: GENERAL_DECK };
-export const PURPOSES = [["business_meeting", "A business meeting"], ["onboarding", "Host and co-host onboarding"], ["general", "Something else"]];
+export const DECK_TEMPLATES = { business_meeting: BUSINESS_MEETING, onboarding: HOST_ONBOARDING, event: EVENT_DAY, general: GENERAL_DECK };
+export const PURPOSES = [["business_meeting", "A business meeting"], ["onboarding", "Host and co-host onboarding"], ["event", "An event's day"], ["general", "Something else"]];
 
 export const REGIONS = ["strip", "left", "main", "right", "bar"];
 // What size a region draws its blocks at
