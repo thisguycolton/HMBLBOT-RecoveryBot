@@ -58,7 +58,7 @@ export default function ShareMenu({ group, doc, canEdit, onChanged, open: openPr
     <div ref={box} className="relative">
       {!bare && <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} title="Share link" aria-label="Share link" className={quietButton}><Link2 className="size-4" /> <span className="max-sm:sr-only">Share link</span></button>}
       {open && (
-        <div role="dialog" aria-label="Share link" className="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] space-y-3 rounded-2xl bg-white p-4 text-sm shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
+        <div role="dialog" aria-label="Share link" className="absolute right-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--nav-h,56px)+4rem)] max-sm:mt-0 max-sm:w-auto space-y-3 rounded-2xl bg-white p-4 text-sm shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
           <div className="flex gap-2">
             <input readOnly value={url} onFocus={(e) => e.target.select()} aria-label="Link to this document" className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-slate-700 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200" />
             <button type="button" onClick={copy} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl !bg-accent px-3 py-2 text-xs font-semibold !text-white">

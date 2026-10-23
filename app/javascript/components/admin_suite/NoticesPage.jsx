@@ -112,7 +112,7 @@ export default function NoticesPage({ notify }) {
             {editing === notice.id ? (
               <NoticeForm notice={notice} onSave={(v) => save(notice.id, v)} onCancel={() => setEditing(null)} />
             ) : (
-              <div className="flex items-start gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <div className="flex-1 min-w-0 !font-sans">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="text-sm font-semibold text-slate-900 dark:text-white">{notice.title}</div>
@@ -126,20 +126,22 @@ export default function NoticesPage({ notify }) {
                     {notice.author && ` · by ${notice.author}`}
                   </div>
                 </div>
-                {notice.body && (
-                  <button type="button" onClick={() => setPreviewing(notice)} className={buttonClass.secondary} aria-label="View the write-up" title="View the write-up">
-                    <Eye className="w-4 h-4" />
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {notice.body && (
+                    <button type="button" onClick={() => setPreviewing(notice)} className={buttonClass.secondary} aria-label="View the write-up" title="View the write-up">
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button type="button" className={buttonClass.secondary} onClick={() => toggle(notice)}>
+                    {notice.active ? "Turn off" : "Turn on"}
                   </button>
-                )}
-                <button type="button" className={buttonClass.secondary} onClick={() => toggle(notice)}>
-                  {notice.active ? "Turn off" : "Turn on"}
-                </button>
-                <button type="button" className={buttonClass.secondary} onClick={() => setEditing(notice.id)} aria-label={`Edit ${notice.title}`}>
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button type="button" className={buttonClass.danger} onClick={() => destroy(notice)} aria-label={`Delete ${notice.title}`}>
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  <button type="button" className={buttonClass.secondary} onClick={() => setEditing(notice.id)} aria-label={`Edit ${notice.title}`}>
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button type="button" className={buttonClass.danger} onClick={() => destroy(notice)} aria-label={`Delete ${notice.title}`}>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             )}
           </ShellPanel>

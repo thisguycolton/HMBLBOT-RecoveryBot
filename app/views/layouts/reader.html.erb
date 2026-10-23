@@ -6,7 +6,7 @@
   <title>
     <%= content_for(:page_title) || "RecoveryBot" %>
   </title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%= render "application/viewport" %>
   <%= csrf_meta_tags %>
   <%= vite_client_tag %>
   <%= vite_react_refresh_tag if Rails.env.development? %>
