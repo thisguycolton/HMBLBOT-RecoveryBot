@@ -5,11 +5,12 @@
 class Api::GroupDocumentsController < ApplicationController
   include GroupScoped
 
-  skip_before_action :authenticate_user!, only: %i[index show file]
-  before_action :set_viewable_group, only: %i[index show file]
-  before_action :set_group, except: %i[index show file]
-  before_action :set_document, only: %i[show file update destroy versions restore]
-  before_action :require_keeper, only: %i[create update restore bulk]
+  skip_before_action :authenticate_user!, only: %i[index show file live]
+  before_action :set_viewable_group, only: %i[index show file live]
+  before_action :set_group, except: %i[index show file live]
+  before_action :set_document, only: %i[show file update destroy versions restore live live_save]
+  before_action :require_keeper, only: %i[create update restore bulk live_save]
+  before_action :require_live, only: %i[live live_save]
   before_action :require_manager, only: :destroy
   before_action :require_member, only: :versions
 
@@ -46,8 +47,15 @@ class Api::GroupDocumentsController < ApplicationController
   end
 
   # PATCH /api/groups/:group_slug/documents/:id
+  # (checkpoint=1, from a document open live: Save version, see GroupDocument::Live)
   def update
-    @document.revise(document_params, current_user) ? render(json: document_json) : render_errors(@document)
+    return render_errors(@document) unless @document.revise(document_params, current_user)
+
+    if ActiveModel::Type::Boolean.new.cast(params[:checkpoint]) && GroupDocument.live_editing?
+      @document.live_checkpoint!
+      ActionCable.server.broadcast(@document.live_stream, { type: "saved", unversioned: false, details: true })
+    end
+    render json: document_json
   end
 
   # DELETE /api/groups/:group_slug/documents/:id (group admins)
@@ -98,7 +106,43 @@ class Api::GroupDocumentsController < ApplicationController
     @document.restore(version, current_user) ? render(json: document_json) : render_errors(@document)
   end
 
+  # GET /api/groups/:group_slug/documents/:id/live(?after=seq) -> the shared copy and the edits
+  # since (GroupDocument#live_snapshot), and who's asking (for the cursors and pictures)
+  def live
+    json = @document.live_snapshot(after: params[:after].presence)
+    json[:me] = current_user ? current_user.as_person_json : { id: nil, name: "Guest", avatar_url: nil } unless params[:after]
+    render json: json
+  end
+
+  # POST /api/groups/:group_slug/documents/:id/live
+  #   { start: base64, epoch:, html? } -> the first shared copy (only one browser's is kept)
+  #   { state: base64, upto:, epoch:, title:, body: } -> the merged copy, written down
+  # Answers with the snapshot when a start lost the race, otherwise { ok: }
+  def live_save
+    if params[:start].present?
+      started = (state = decode64(params[:start])) && @document.live_start!(state, params[:epoch], html: params[:html])
+      json = @document.reload.live_snapshot
+      ActionCable.server.broadcast(@document.live_stream, { type: "started", epoch: @document.live_epoch }) if started
+      return render(json: json.merge(started: !!started))
+    end
+
+    state = decode64(params[:state]) or return render(json: { error: "That copy didn't come through." }, status: :unprocessable_entity)
+    ok = @document.live_fold!(state, upto: params[:upto], epoch: params[:epoch], title: params[:title], body: params[:body], user: current_user)
+    ActionCable.server.broadcast(@document.live_stream, { type: "saved", unversioned: @document.live_unversioned, updated_at: @document.updated_at.iso8601, updated_by: current_user.display_name }) if ok
+    render json: { ok: ok }
+  end
+
   private
+
+  def require_live
+    render json: { error: "Live editing is off." }, status: :not_found unless GroupDocument.live_editing?
+  end
+
+  def decode64(value)
+    Base64.strict_decode64(value.to_s)
+  rescue ArgumentError
+    nil
+  end
 
   def set_document
     @document = GroupDocument.visible_to(@group, current_user).find(params[:id])
@@ -110,7 +154,7 @@ class Api::GroupDocumentsController < ApplicationController
 
   def document_json
     template = GroupDocumentTemplate.for(@group, @document.kind)
-    @document.as_api_json(viewer: current_user, full: true).merge(can_edit: keeper?, can_delete: @group.manageable_by?(current_user),
+    @document.as_api_json(viewer: current_user, full: true).merge(can_edit: keeper?, can_delete: @group.manageable_by?(current_user), live: GroupDocument.live_editing?,
                                                                   letterhead: template.blank? ? nil : template.as_api_json)
   end
 

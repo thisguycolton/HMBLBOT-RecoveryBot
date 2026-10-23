@@ -5,6 +5,6 @@ test:
   adapter: test
 
 production:
-  adapter: redis
-  url: <%= ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" } %>
-  channel_prefix: acid_test_production
+  # The app's own Postgres database (LISTEN/NOTIFY), so live editing needs no Redis. Fine for one
+  # app container; a message can't be over 8,000 bytes (DocumentChannel keeps under that).
+  adapter: postgresql

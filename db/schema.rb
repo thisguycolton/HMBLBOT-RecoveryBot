@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_23_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -305,6 +305,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
     t.index ["group_id"], name: "index_group_books_on_group_id"
   end
 
+  create_table "group_document_live_updates", force: :cascade do |t|
+    t.bigint "group_document_id", null: false
+    t.bigint "user_id"
+    t.bigint "seq", null: false
+    t.binary "data", null: false
+    t.datetime "created_at", null: false
+    t.index ["group_document_id", "seq"], name: "index_group_document_live_updates_on_group_document_id_and_seq", unique: true
+    t.index ["user_id"], name: "index_group_document_live_updates_on_user_id"
+  end
+
   create_table "group_document_templates", force: :cascade do |t|
     t.bigint "group_id", null: false
     t.string "kind", null: false
@@ -346,6 +356,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
     t.datetime "updated_at", null: false
     t.bigint "approved_by_motion_id"
     t.string "body_format", default: "html", null: false
+    t.binary "live_state"
+    t.bigint "live_state_seq", default: 0, null: false
+    t.bigint "live_seq", default: 0, null: false
+    t.integer "live_epoch", default: 0, null: false
+    t.boolean "live_unversioned", default: false, null: false
     t.index ["approved_by_motion_id"], name: "index_group_documents_on_approved_by_motion_id"
     t.index ["created_by_id"], name: "index_group_documents_on_created_by_id"
     t.index ["group_id", "kind", "position"], name: "index_group_documents_on_group_id_and_kind_and_position"
@@ -1197,6 +1212,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_220000) do
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "group_books", "books"
   add_foreign_key "group_books", "groups"
+  add_foreign_key "group_document_live_updates", "group_documents", on_delete: :cascade
+  add_foreign_key "group_document_live_updates", "users", on_delete: :nullify
   add_foreign_key "group_document_templates", "groups"
   add_foreign_key "group_document_versions", "group_documents", on_delete: :cascade
   add_foreign_key "group_document_versions", "users", on_delete: :nullify

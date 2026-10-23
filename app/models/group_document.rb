@@ -2,6 +2,8 @@
 # reports, service position descriptions. The kinds are its folders. Who sees one is its
 # visibility (see .visible_to); every save keeps the copy it replaced (GroupDocumentVersion).
 class GroupDocument < ApplicationRecord
+  include Live
+
   KINDS = %w[format guidelines treasury service outreach other].freeze
   VISIBILITIES = %w[public members hosts keepers].freeze
   STATUSES = %w[draft current archived].freeze
@@ -84,14 +86,18 @@ class GroupDocument < ApplicationRecord
     return save if new_record? || !(title_changed? || body_changed? || body_format_changed? || upload.present? || remove)
 
     saved = false
+    text_changed = false
     transaction do
       saved = save
       raise ActiveRecord::Rollback unless saved
 
+      text_changed = saved_change_to_title? || saved_change_to_body?
       file.detach if remove
       version = versions.create!(user_id: before[:user_id], title: before[:title], body: before[:body], body_format: before[:body_format], created_at: before[:at])
       version.file.attach(before[:blob]) if before[:blob]
     end
+    # anyone editing live starts again from the new text (see Live)
+    live_reset! if saved && text_changed
     saved
   end
 
