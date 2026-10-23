@@ -121,6 +121,8 @@ Rails.application.routes.draw do
         get :file
         get :versions
         post "versions/:version_id/restore", action: :restore
+        get :live
+        post :live, action: :live_save
       end
       post :bulk, on: :collection
     end

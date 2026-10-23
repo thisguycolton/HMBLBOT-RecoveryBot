@@ -221,3 +221,36 @@
 /* A filled table cell keeps dark text on its light fill on the dark page too */
 @media screen { .doc-dark .doc-prose td[style*="background-color"], .doc-dark .doc-prose th[style*="background-color"] { color: #0f172a; } }
 .doc-letterhead--right { flex-direction: row-reverse; text-align: right; }
+
+/* Live editing: the others' cursors, a caret in their color with their name over it
+   (components/groups/conscience/live.jsx) */
+.doc-prose .collaboration-cursor__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 2px solid;
+  word-break: normal;
+  pointer-events: none;
+}
+.doc-prose .collaboration-cursor__label {
+  position: absolute;
+  bottom: 100%;
+  left: -2px;
+  padding: 1px 6px;
+  border-radius: 4px 4px 4px 0;
+  color: #fff;
+  font: 600 11px/1.4 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+  white-space: nowrap;
+  user-select: none;
+  opacity: 0.92;
+}
+.doc-prose .collaboration-cursor__caret--flash .collaboration-cursor__label { animation: doc-cursor-flash 1.4s ease-out; }
+@keyframes doc-cursor-flash {
+  0%, 30% { transform: scale(1.35); transform-origin: bottom left; box-shadow: 0 0 0 4px rgb(255 255 255 / 0.7); }
+  100% { transform: scale(1); }
+}
+@media print {
+  .doc-prose .collaboration-cursor__caret { border: 0; }
+  .doc-prose .collaboration-cursor__label { display: none; }
+}

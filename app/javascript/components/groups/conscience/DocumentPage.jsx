@@ -18,6 +18,7 @@ import PdfViewer from "./PdfViewer";
 import ShareMenu from "./ShareMenu";
 import { documentExtensions } from "./editorKit";
 import { DynamicValuesBar } from "./hostSection";
+import { LivePresence, liveExtensions, useLiveDocument, useShareViewing } from "./live";
 import { FILE_ACCEPT, KIND_INFO, KINDS, VISIBILITIES, VISIBILITY_LABELS, STATUSES, dateLabel, decisionsPath, documentsPath, fileUrl, motionOptions, sizeLabel } from "./lib";
 
 // The folder's letterhead at the top of the page: its logo or seal, a heading and a line under it
@@ -43,11 +44,15 @@ async function startingHtml(doc) {
 
 // /conscience/documents/:id (and /new): a group document as a page, like a word processor's. Record
 // keepers type straight into it; everyone else reads it. Loads the document, then hands over to
-// DocumentSheet, which holds the editor.
+// DocumentSheet, which holds the editor. With live editing on, everyone who has it open is on
+// the same copy (LiveSheet).
 export default function DocumentPage({ group, id = null, embedded = false }) {
   const slug = group.slug;
   const [loaded, setLoaded] = useState(null); // { doc, html }
   const [error, setError] = useState(null);
+  // goes up when the live copy has to start over (someone put an old version back)
+  const [reloads, setReloads] = useState(0);
+  const reload = useCallback(() => setReloads((n) => n + 1), []);
 
   useEffect(() => {
     setLoaded(null);
@@ -56,16 +61,26 @@ export default function DocumentPage({ group, id = null, embedded = false }) {
     api(`/groups/${slug}/documents/${id}`)
       .then(async (doc) => setLoaded({ doc, html: await startingHtml(doc) }))
       .catch((e) => setError(e.message));
-  }, [slug, id]);
+  }, [slug, id, reloads]);
 
   if (error) return <Message title="That document isn't here" text={error}><Link to={documentsPath(slug)} className="mt-4 inline-block text-sm text-accent hover:underline">Back to documents</Link></Message>;
   if (!loaded) return <Loading />;
   const canEdit = loaded.doc ? loaded.doc.can_edit : !!(group.can_keep_records || group.is_site_admin);
   if (!loaded.doc && !canEdit) return <Message title="You can't write documents here" text="Only this group's record keepers can write or upload documents." />;
-  return <DocumentSheet key={id || "new"} group={group} initialDoc={loaded.doc} initialHtml={loaded.html} canEdit={canEdit} embedded={embedded} />;
+  const props = { group, initialDoc: loaded.doc, initialHtml: loaded.html, canEdit, embedded };
+  if (loaded.doc?.live) return <LiveSheet key={`${id}-${reloads}`} {...props} onReload={reload} />;
+  return <DocumentSheet key={id || "new"} {...props} />;
 }
 
-function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
+// The document open live: waits for the shared copy, then shows it. If it can't connect, or a
+// reader opens one nobody has edited live yet, it's the page as it always was.
+function LiveSheet({ onReload, ...props }) {
+  const { live, state } = useLiveDocument({ slug: props.group.slug, doc: props.initialDoc, html: props.initialHtml, canEdit: props.canEdit, onReset: onReload });
+  if (state === "loading") return <Loading />;
+  return <DocumentSheet {...props} live={state === "ready" ? live : null} onReload={onReload} />;
+}
+
+function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live = null, onReload }) {
   const slug = group.slug;
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -74,6 +89,11 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
   const [form, setForm] = useState(() => (initialDoc
     ? { title: initialDoc.title, kind: initialDoc.kind, visibility: initialDoc.visibility, status: initialDoc.status, pinned: initialDoc.pinned, approved_by_motion_id: initialDoc.approved_by?.id ?? "" }
     : { title: "", kind: KINDS.some((k) => k.key === params.get("kind")) ? params.get("kind") : "other", visibility: "members", status: "current", pinned: false, approved_by_motion_id: "" }));
+  // live: the connection ("live" / "offline"), our edits the server hasn't taken yet, and whether
+  // the text changed since the last Save version
+  const [liveStatus, setLiveStatus] = useState("live");
+  const [pending, setPending] = useState(0);
+  const [unversioned, setUnversioned] = useState(!!live?.unversioned);
   const [upload, setUpload] = useState(null);
   const [removeFile, setRemoveFile] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -128,14 +148,54 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
   })();
 
   const editor = useEditor({
-    extensions: documentExtensions("Start typing, or import a Word or RTF file from the toolbar…"),
-    content: initialHtml,
+    extensions: documentExtensions("Start typing, or import a Word or RTF file from the toolbar…", live ? liveExtensions(live) : []),
+    content: live ? undefined : initialHtml,
     editable: canEdit,
-    onUpdate: () => { setDirty(true); setSaved(false); },
+    // live, the text saves itself (LiveDocument)
+    onUpdate: () => { if (!live) { setDirty(true); setSaved(false); } },
     editorProps: { attributes: { class: "doc-prose", "aria-label": "Document text" } },
   });
 
-  const change = (key) => (value) => { setForm((f) => ({ ...f, [key]: value })); setDirty(true); setSaved(false); };
+  // Live: the title is shared too; what the others do shows up here as they do it
+  useEffect(() => {
+    if (!live) return undefined;
+    live.onStatus = setLiveStatus;
+    live.onPending = setPending;
+    live.onSaved = (m) => {
+      setUnversioned(!!m.unversioned);
+      if (m.updated_at) setDoc((d) => ({ ...d, updated_at: m.updated_at, updated_by: m.updated_by }));
+      // someone saved a version, maybe with new details (folder, visibility…)
+      if (m.details) api(`/groups/${slug}/documents/${initialDoc.id}`).then((d) => { setDoc(d); setForm((f) => ({ ...f, kind: d.kind, visibility: d.visibility, status: d.status, pinned: d.pinned, approved_by_motion_id: d.approved_by?.id ?? "" })); setHistory(null); }).catch(() => {});
+    };
+    const onTitle = () => setForm((f) => ({ ...f, title: live.title.toString() }));
+    if (live.title.length) onTitle();
+    live.title.observe(onTitle);
+    const onEdit = (_u, origin) => { if (origin !== "remote") setUnversioned(true); };
+    live.doc.on("update", onEdit);
+    return () => { live.title.unobserve(onTitle); live.doc.off("update", onEdit); live.onStatus = live.onPending = live.onSaved = null; };
+  }, [live]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!live || !editor) return undefined;
+    live.getHtml = () => (editor.isEmpty ? "" : editor.getHTML());
+    return () => { live.getHtml = null; };
+  }, [live, editor]);
+  useShareViewing(live, editor);
+  // edits that haven't gone through for a while: the connection dropped without saying so
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    setStuck(false);
+    if (!pending) return undefined;
+    const t = setTimeout(() => setStuck(true), 5000);
+    return () => clearTimeout(t);
+  }, [pending > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  const offline = liveStatus === "offline" || stuck;
+
+  const change = (key) => (value) => {
+    setForm((f) => ({ ...f, [key]: value }));
+    if (live && key === "title") { live.setTitle(value); return; }
+    setDirty(true);
+    setSaved(false);
+  };
   const file = removeFile ? null : doc?.file;
 
   useEffect(() => {
@@ -147,10 +207,10 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
     api(`/groups/${slug}/motions`).then((d) => setAdopters(d.motions.filter((m) => m.status === "passed"))).catch(() => {});
   }, [slug, canEdit]);
   useEffect(() => {
-    const warn = (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } };
+    const warn = (e) => { if (dirty || pending) { e.preventDefault(); e.returnValue = ""; } };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  }, [dirty, pending]);
 
   const save = useCallback(async () => {
     if (!canEdit || saving || !editor) return;
@@ -160,12 +220,18 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
     setError(null);
     try {
       const body = new FormData();
-      Object.entries(form).forEach(([k, v]) => body.append(`document[${k}]`, v));
-      body.append("document[body]", editor.isEmpty ? "" : editor.getHTML());
-      body.append("document[body_format]", "html");
+      // live, the text and title are already saved: this writes down the details and makes the
+      // text as it stands the one the next edit keeps a copy of
+      if (live) await live.flush();
+      Object.entries(form).forEach(([k, v]) => { if (!(live && k === "title")) body.append(`document[${k}]`, v); });
+      if (!live) {
+        body.append("document[body]", editor.isEmpty ? "" : editor.getHTML());
+        body.append("document[body_format]", "html");
+      }
       if (upload) body.append("document[file]", upload);
       if (removeFile && !upload) body.append("document[remove_file]", "true");
-      const result = await api(`/groups/${slug}/documents${doc ? `/${doc.id}` : ""}`, { method: doc ? "PATCH" : "POST", form: body });
+      const result = await api(`/groups/${slug}/documents${doc ? `/${doc.id}` : ""}${live ? "?checkpoint=1" : ""}`, { method: doc ? "PATCH" : "POST", form: body });
+      setUnversioned(false);
       setDirty(false);
       setSaved(true);
       setUpload(null);
@@ -178,7 +244,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
     } finally {
       setSaving(false);
     }
-  }, [canEdit, saving, editor, form, upload, removeFile, doc, slug, navigate]);
+  }, [canEdit, saving, editor, form, upload, removeFile, doc, slug, navigate, live]);
 
   useEffect(() => {
     const onKey = (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); } };
@@ -212,6 +278,8 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
     if (!window.confirm("Put this copy back? The current one stays in the history.")) return;
     try {
       const result = await api(`/groups/${slug}/documents/${doc.id}/versions/${version.id}/restore`, { method: "POST" });
+      // live, everyone (this tab too) starts again from the copy put back
+      if (live) { onReload?.(); return; }
       editor.commands.setContent(await startingHtml(result), false);
       setDoc(result);
       setForm((f) => ({ ...f, title: result.title }));
@@ -255,7 +323,12 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
   const showPaper = canEdit ? withText : !!initialHtml.trim();
   const isPdf = file?.type === "application/pdf";
   const pdfOnly = isPdf && !showPaper;
-  const status = saving ? "Saving…" : dirty ? "Unsaved changes" : saved ? "All changes saved" : "";
+  const status = saving ? "Saving…" : dirty ? "Unsaved changes"
+    : live ? (offline ? (canEdit ? "Offline: your changes will sync when you're back" : "Offline") : !canEdit ? "" : pending ? "Saving…" : "All changes saved")
+    : saved ? "All changes saved" : "";
+  // live, Save version is worth pressing once the text changed or a detail did
+  const canSave = live ? dirty || unversioned || !!upload || removeFile : dirty || !doc;
+  const saveLabel = live ? "Save version" : "Save";
 
   const exportAs = async (kind) => {
     const html = editor?.isEmpty ? "" : editor?.getHTML() || "";
@@ -271,7 +344,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
   const hasText = showPaper && editor && !editor.isEmpty;
   const menus = [
     { label: "File", items: [
-      canEdit && { label: "Save", shortcut: "⌘S", onClick: save, disabled: saving || (!dirty && !!doc) },
+      canEdit && { label: saveLabel, shortcut: "⌘S", onClick: save, disabled: saving || !canSave },
       canEdit && { label: "New document", onClick: () => navigate(`${documentsPath(slug, "new")}?kind=${form.kind}`) },
       canEdit && { label: "Import Word, RTF, Markdown or JSON…", onClick: () => importRef.current?.click() },
       canEdit && "divider",
@@ -321,13 +394,14 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded }) {
           <Link to={folderLink} title={`Back to ${isMember ? KIND_INFO[form.kind].label : "Documents"}`} aria-label="Back to the folder" className="grid size-8 place-items-center rounded-lg text-accent hover:bg-neutral-200/70 dark:hover:bg-neutral-700/60"><ChevronLeft className="size-5" /></Link>
           <MenuBar menus={menus} />
           <span aria-live="polite" className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-neutral-400">{status}</span>
+          {live && <LivePresence live={live} editor={editor} offline={offline} />}
           {doc && (
             <span className="relative">
               <ShareMenu group={group} doc={doc} canEdit={canEdit} bare open={shareOpen} onOpenChange={setShareOpen}
                 onChanged={(d) => { setDoc(d); setForm((f) => ({ ...f, visibility: d.visibility })); }} />
             </span>
           )}
-          {canEdit && <button type="button" onClick={save} disabled={saving || (!dirty && !!doc)} className={primaryButton}><Save className="size-4" /> {saving ? "Saving…" : "Save"}</button>}
+          {canEdit && <button type="button" onClick={save} disabled={saving || !canSave} title={live ? "Your edits save as you type. Saving a version marks this point in the history." : undefined} className={primaryButton}><Save className="size-4" /> {saving ? "Saving…" : saveLabel}</button>}
           <input ref={importRef} type="file" hidden accept={IMPORT_ACCEPT} onChange={(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importFile(f); }} />
         </div>
         {canEdit && showPaper && <DocumentToolbar editor={editor} />}

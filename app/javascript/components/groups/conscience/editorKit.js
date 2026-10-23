@@ -89,8 +89,9 @@ const MarkdownPaste = Extension.create({
   },
 });
 
-export const documentExtensions = (placeholder = "Start typing…") => [
-  StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false, code: false }),
+// `live`: extensions for editing together (liveExtensions), which bring their own undo
+export const documentExtensions = (placeholder = "Start typing…", live = []) => [
+  StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false, code: false, ...(live.length ? { history: false } : {}) }),
   Underline,
   TextStyle,
   TextColor,
@@ -110,6 +111,7 @@ export const documentExtensions = (placeholder = "Start typing…") => [
   HostSection,
   HostForm,
   ValueTokens,
+  ...live,
 ];
 
 // A link as someone types it ("example.com", "me@example.com") made into one the editor keeps
