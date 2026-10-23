@@ -4,7 +4,7 @@ import { LogIn, Moon, Sun } from "lucide-react";
 import { api } from "../lib";
 import GroupLogo from "../GroupLogo";
 import { Loading, Message, quietButton } from "../ui";
-import { ChatPostings, MeetingClock, timeOf, useDarkMode, useMeetingClock } from "./CommandCenter";
+import { ChatPostings, MeetingClock, timeOf, useDarkMode, useMeetingClock } from "./parts";
 import "./hosting.css";
 
 const POLL_MS = 5000;

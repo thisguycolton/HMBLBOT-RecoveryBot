@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { Minus, Moon, Plus, Sun } from "lucide-react";
 import { api } from "../lib";
 import { Loading, Message } from "../ui";
-import { useDarkMode } from "./CommandCenter";
+import { useDarkMode } from "./parts";
 import "./hosting.css";
 
 const SIZES = [20, 24, 28, 32, 38, 44];

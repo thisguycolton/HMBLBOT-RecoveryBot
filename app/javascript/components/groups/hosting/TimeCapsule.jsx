@@ -5,7 +5,7 @@ import { api } from "../lib";
 import { Card, ErrorNote, Loading, quietButton } from "../ui";
 import { selectClass } from "../../ui/styles";
 import { activityIcon } from "./Activity";
-import { timeOf } from "./CommandCenter";
+import { timeOf } from "./parts";
 
 const label = "!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
 

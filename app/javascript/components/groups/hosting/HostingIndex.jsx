@@ -4,7 +4,7 @@ import { ArrowRight, ChevronRight, History, MonitorPlay, Search, UserCheck } fro
 import { DAYS, api, clock } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton, quietButton } from "../ui";
 import { inputClass } from "../../ui/styles";
-import { timeOf, useNow } from "./CommandCenter";
+import { timeOf, useNow } from "./parts";
 
 const short = (days) => (days.length === 7 ? "Every day" : days.map((d) => DAYS[d].slice(0, 3)).join(", "));
 const dayLabel = (on, today, tomorrow) => {
