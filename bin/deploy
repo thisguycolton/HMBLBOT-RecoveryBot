@@ -36,6 +36,8 @@ git archive "$ref" | tar -x -C "$src"
 echo "==> Building Vite assets"
 (cd "$src" && npm ci --no-audit --no-fund && npx vite build)
 test -f "$src/public/vite/.vite/manifest.json" || { echo "Vite build produced no manifest" >&2; exit 1; }
+# Icons picked by name must keep their file names across deploys, or open pages lose them
+(cd "$src" && node bin/check-icon-chunks public/vite)
 
 echo "==> Packing"
 tarball="$work/deploy-$sha.tar.gz"
