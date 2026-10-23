@@ -29,6 +29,7 @@ import GuestPostings from "../components/groups/hosting/GuestPostings";
 import HostingIndex from "../components/groups/hosting/HostingIndex";
 import ServiceReadingShare from "../components/groups/hosting/ServiceReadingShare";
 import TimeCapsule from "../components/groups/hosting/TimeCapsule";
+import DeckListPage from "../components/groups/hosting/deck/DeckList";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
@@ -70,6 +71,7 @@ const router = createBrowserRouter(
         { path: ":slug", element: <GroupPage /> },
         { path: ":slug/host", element: <HostingIndex /> },
         { path: ":slug/host/capsule", element: <TimeCapsule /> },
+        { path: ":slug/decks", element: <DeckListPage /> },
         { path: ":slug/:tab", element: <GroupPage /> },
         { path: ":slug/edit", element: <GroupForm /> },
       ],

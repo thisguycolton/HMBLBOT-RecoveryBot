@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { selectClass } from "../../ui/styles";
 import DecisionsView from "./DecisionsView";
+import { DeckList } from "../hosting/deck/DeckList";
 import DocumentPage from "./DocumentPage";
 import DocumentsView from "./DocumentsView";
 import MeetingPage from "./MeetingPage";
@@ -16,6 +17,7 @@ const SECTIONS = [
   { key: "meetings", label: "Meetings", path: "/meetings" },
   { key: "decisions", label: "Decisions", path: "/decisions" },
   { key: "documents", label: "Documents", path: "/documents" },
+  { key: "decks", label: "HostDecks", path: "/decks" },
   { key: "officials", label: "Elected officials", path: "/officials" },
   { key: "treasury", label: "Treasury", path: "/treasury" },
 ];
@@ -27,6 +29,7 @@ const SECTIONS = [
 //   /conscience/meetings(/:id)        business meetings, agendas and minutes
 //   /conscience/decisions             what the group voted on
 //   /conscience/documents(/:id|/new)  document folders, and a document as a page
+//   /conscience/decks                 the group's HostDecks
 //   /conscience/officials             the group's elected officials and who holds each office
 //   /conscience/treasury(/:id|/new)   the treasurer's monthly reports
 // What one section shows, for the tab and for the group dashboard (GroupDashboard.jsx)
@@ -35,6 +38,7 @@ export function ConscienceBody({ group, view, id, embedded = false }) {
   if (!isMember && view !== "documents" && view !== "decisions") return <DocumentsView group={group} />;
   if (view === "meetings") return id ? <MeetingPage key={id} group={group} id={id} /> : <MeetingsView group={group} />;
   if (view === "decisions") return <DecisionsView group={group} />;
+  if (view === "decks") return <DeckList slug={group.slug} />;
   if (view === "documents") return id === "new" ? <DocumentPage group={group} embedded={embedded} /> : id ? <DocumentPage group={group} id={id} embedded={embedded} /> : <DocumentsView group={group} />;
   if (view === "officials") return <ServiceView group={group} />;
   if (view === "treasury") return id === "new" ? <ReportPage group={group} /> : id ? <ReportPage key={id} group={group} id={id} /> : <TreasuryView group={group} />;

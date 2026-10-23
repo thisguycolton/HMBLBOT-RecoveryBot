@@ -56,6 +56,22 @@ class Api::DecksTest < ActionDispatch::IntegrationTest
     assert_includes [403, 404], response.status
   end
 
+  test "the list names each deck's document, unless it's one this person can't see" do
+    hidden = @group.documents.create!(title: "Keepers' notes", kind: "other", body: "x", visibility: "keepers")
+    a = @group.decks.create!(name: "Business", purpose: "business_meeting", script_document: @doc)
+    b = @group.decks.create!(name: "Onboarding", purpose: "onboarding", script_document: hidden)
+
+    sign_in @member
+    get path, as: :json
+    titles = response.parsed_body["decks"].to_h { |d| [d["id"], d.dig("script_document", "title")] }
+    assert_equal({ a.id => "Business meeting agenda", b.id => nil }, titles)
+    assert_not response.parsed_body["can_host"], "meeting scripts are only offered to people who can host"
+
+    sign_in @keeper
+    get path, as: :json
+    assert_equal "Keepers' notes", response.parsed_body["decks"].find { |d| d["id"] == b.id }.dig("script_document", "title")
+  end
+
   test "a deck's checklist, timer and clock are shared on its session, and only a deck's acts are allowed" do
     deck = @group.decks.create!(name: "Onboarding", purpose: "onboarding", script_document: @doc, created_by: @keeper, arrangement: ARRANGEMENT)
     sign_in @member

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpRight, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, FileText, Gavel, LayoutDashboard, LayoutTemplate,
-  Landmark, Menu, Moon, Settings, Stamp, Sun, UserCheck, Users, X,
+  Landmark, Menu, MonitorPlay, Moon, Settings, Stamp, Sun, UserCheck, Users, X,
 } from "lucide-react";
 import NotificationBell from "../NotificationBell";
 import Avatar from "./Avatar";
@@ -41,6 +41,7 @@ const SECTIONS = [
       { key: "officials", path: "/officials", label: "Elected officials", icon: BookOpenCheck },
       { key: "treasury", path: "/treasury", label: "Treasury", icon: Landmark },
       { key: "hosts", path: "/hosts", label: "Hosts", icon: UserCheck, show: (g) => g.can_schedule_hosts },
+      { key: "decks", path: "/decks", label: "HostDecks", icon: MonitorPlay },
     ],
   },
   {

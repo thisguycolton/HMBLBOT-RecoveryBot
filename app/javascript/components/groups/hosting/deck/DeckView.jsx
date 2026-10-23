@@ -88,9 +88,9 @@ function Editable({ block, region, size, deck, editor, className }) {
 export default function DeckView({ deck, template: saved, editor = null, canArrange = false, onEdit, renderSetup = null }) {
   const template = editor ? editor.draft : saved;
   const { slug, center, live, error, panel, setPanel } = deck;
-  // A deck of its own goes back to the group's HostDeck list (a business meeting's to the group's
+  // A deck of its own goes back to the group's HostDecks (a business meeting's to the group's
   // business meetings, where every member finds it); a meeting's to its hosts
-  const back = center?.deck ? (center.deck.purpose === "business_meeting" ? meetingsPath(slug) : `/${slug}/host`) : `/${slug}/hosts`;
+  const back = center?.deck ? (center.deck.purpose === "business_meeting" ? meetingsPath(slug) : `/${slug}/decks`) : `/${slug}/hosts`;
   if (error) {
     return (
       <div className="min-h-screen bg-neutral-50 px-4 dark:bg-neutral-950">
