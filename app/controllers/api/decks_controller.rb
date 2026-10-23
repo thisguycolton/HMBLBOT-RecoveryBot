@@ -14,11 +14,15 @@ class Api::DecksController < ApplicationController
   before_action :require_editor, only: %i[create update destroy arrangement]
 
   # GET /api/groups/:group_slug/decks?document_id=: the group's decks (run from that document);
-  # with a document, also the meetings whose script it is
+  # with a document, also the meetings whose script it is. Each deck names its document when this
+  # person may read it.
   def index
     decks = @group.decks.order(updated_at: :desc)
     decks = decks.where(script_document_id: params[:document_id]) if params[:document_id].present?
-    json = { decks: decks.map(&:as_list_json), can_create: @group.decks_editable_by?(current_user) }
+    decks = decks.includes(:group).to_a
+    titles = GroupDocument.visible_to(@group, current_user).where(id: decks.map(&:script_document_id).compact).pluck(:id, :title).to_h
+    json = { decks: decks.map { |d| d.as_list_json.merge(document_title: titles[d.script_document_id]) },
+             can_create: @group.decks_editable_by?(current_user), can_host: @group.can_host?(current_user) }
     if params[:document_id].present?
       kits = @group.hosting_kits.where(script_document_id: params[:document_id]).includes(:meeting)
       json[:meetings] = kits.map { |k| k.meeting ? { id: k.meeting.id, name: k.meeting.name } : { id: nil, name: "All the group's meetings" } }

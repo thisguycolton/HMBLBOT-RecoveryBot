@@ -17,6 +17,7 @@ import DocumentToolbar from "./DocumentToolbar";
 import PdfViewer from "./PdfViewer";
 import ShareMenu from "./ShareMenu";
 import CreateDeckDialog from "../hosting/deck/CreateDeckDialog";
+import OpenDeckDialog, { hostDecksFor } from "../hosting/deck/OpenDeckDialog";
 import { documentExtensions } from "./editorKit";
 import { DynamicValuesBar } from "./hostSection";
 import { LivePresence, liveExtensions, useLiveDocument, useShareViewing } from "./live";
@@ -153,6 +154,14 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   const importRef = useRef(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [deckOpen, setDeckOpen] = useState(false);
+  // The HostDecks this document runs, for File > Open HostDeck (a chooser when there's more than one)
+  const [hostDecks, setHostDecks] = useState([]);
+  const [openDecks, setOpenDecks] = useState(false);
+  useEffect(() => {
+    if (!isMember || !doc?.id) return;
+    api(`/groups/${slug}/decks?document_id=${doc.id}`).then((d) => setHostDecks(hostDecksFor(slug, d))).catch(() => {});
+  }, [slug, doc?.id, isMember]);
+  const openHostDeck = () => (hostDecks.length === 1 ? navigate(hostDecks[0].to) : setOpenDecks(true));
   const [valuesOpen, setValuesOpen] = useState(false);
   // The folder's letterhead (Document templates): from the document, or for record keepers the
   // current one for whichever folder is picked, so changing the folder shows it at once
@@ -527,6 +536,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
       "divider",
       doc && { label: "Share…", onClick: () => setShareOpen(true) },
       // Run it in HostDeck: a deck of its own, or a meeting's script (and open the ones that do)
+      doc && isMember && hostDecks.length > 0 && { label: hostDecks.length === 1 ? "Open HostDeck" : "Open HostDeck…", onClick: openHostDeck },
       doc && isMember && !pdfOnly && { label: "Create New HostDeck…", onClick: () => setDeckOpen(true) },
       canEdit && { label: "Document details…", onClick: () => setDetails((v) => !v), checked: details },
       isMember && doc && { label: "Version history", onClick: () => toggleSide("history"), checked: side === "history" },
@@ -586,6 +596,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
           )}
           {canEdit && <button type="button" onClick={requestSave} disabled={saving || !canSave} title={live ? "Your edits save as you type. Saving a version marks this point in the history." : undefined} className={primaryButton}><Save className="size-4" /> {saving ? "Saving…" : saveLabel}</button>}
           {deckOpen && doc && <CreateDeckDialog group={group} doc={doc} onClose={() => setDeckOpen(false)} />}
+          {openDecks && doc && <OpenDeckDialog doc={doc} decks={hostDecks} onClose={() => setOpenDecks(false)} />}
           <input ref={importRef} type="file" hidden accept={IMPORT_ACCEPT} onChange={(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importFile(f); }} />
         </div>
         {canEdit && showPaper && <DocumentToolbar editor={editor} />}

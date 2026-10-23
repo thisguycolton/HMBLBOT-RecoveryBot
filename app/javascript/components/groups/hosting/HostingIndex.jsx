@@ -5,6 +5,7 @@ import { DAYS, api, clock } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton, quietButton } from "../ui";
 import { inputClass } from "../../ui/styles";
 import { timeOf, useNow } from "./parts";
+import { PURPOSE_LABELS } from "./deck/OpenDeckDialog";
 
 const short = (days) => (days.length === 7 ? "Every day" : days.map((d) => DAYS[d].slice(0, 3)).join(", "));
 const dayLabel = (on, today, tomorrow) => {
@@ -127,8 +128,6 @@ export default function HostingIndex() {
     </div>
   );
 }
-
-const PURPOSE_LABELS = { business_meeting: "Business meeting", onboarding: "Host onboarding", event: "Event day", general: "Deck" };
 
 // The group's decks of their own (business meetings, onboarding...), and how to make one
 function OtherDecks({ slug, decks }) {

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, useParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpRight, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, FileText, Gavel, LayoutDashboard, LayoutTemplate,
-  Landmark, Menu, Moon, Settings, Stamp, Sun, UserCheck, Users, X,
+  Landmark, Menu, MonitorPlay, Moon, Settings, Stamp, Sun, UserCheck, Users, X,
 } from "lucide-react";
 import NotificationBell from "../NotificationBell";
 import Avatar from "./Avatar";
@@ -32,6 +32,7 @@ const SECTIONS = [
       { key: "meetings", path: "/meetings", label: "Business meetings", icon: CalendarDays },
       { key: "decisions", path: "/decisions", label: "Decisions", icon: Gavel },
       { key: "documents", path: "/documents", label: "Documents", icon: FileText },
+      { key: "hostdecks", path: "/hostdecks", label: "HostDecks", icon: MonitorPlay },
       { key: "templates", path: "/templates", label: "Document templates", icon: Stamp, show: (g) => g.can_keep_records },
     ],
   },
