@@ -54,7 +54,7 @@ class PeopleHome
   def safe_date(year, start) = Date.new(year, start.month, [start.day, Time.days_in_month(start.month, year)].min)
 
   def events
-    Event.published.where(group_id: @groups.map(&:id)).where("starts_at > ?", 3.hours.ago).includes(:group).with_attached_cover
+    Event.published.where(group_id: @groups.map(&:id)).where.not(starts_at: nil).not_past.includes(:group).with_attached_cover
          .upcoming_first.limit(EVENTS_MAX).map { |e| e.card_json.merge(group: { slug: e.group.slug, title: e.group.title }) }
   end
 end
