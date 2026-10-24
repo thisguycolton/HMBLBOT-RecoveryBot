@@ -179,10 +179,9 @@ export function TopicificatorMini({ deck }) {
         <button type="button" className={`${quietButton} !px-2.5 !py-1.5`} onClick={() => act("topic_show", { index: "free" })} aria-pressed={free} aria-label="Free share" title="Free share / check-in"><UserCheck className="size-4" /></button>
         <button type="button" className={`${quietButton} !px-2.5 !py-1.5`} onClick={() => act("topic_timer", { data: { op: "restart" } })} aria-label="Restart the timer" title={`Restart the ${minutesLabel(seconds)} timer`}><Timer className="size-4" /></button>
         <CopyTopicsButton topics={topics} compact />
-        <form onSubmit={byNumber} className="flex min-w-0 flex-1 items-center gap-1">
-          <label htmlFor="mini-topic-number" className="sr-only">Topic number</label>
-          <input id="mini-topic-number" inputMode="numeric" className={`${inputClass} !w-14 !py-1`} value={number} onChange={(e) => setNumber(e.target.value)} placeholder="#" />
-          <button type="submit" className={`${quietButton} !px-2 !py-1.5`} disabled={!number.trim()} aria-label="Pick that topic number"><Hash className="size-4" /></button>
+        <form onSubmit={byNumber} className="min-w-[4.5rem] flex-1">
+          <label htmlFor="mini-topic-number" className="sr-only">Topic number (press Enter)</label>
+          <input id="mini-topic-number" inputMode="numeric" className={`${inputClass} !w-full !py-1`} value={number} onChange={(e) => setNumber(e.target.value)} placeholder="#" title="Type a topic number and press Enter" />
         </form>
       </div>
       {topics.length > 1 && (
