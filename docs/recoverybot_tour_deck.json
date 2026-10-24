@@ -1,0 +1,63 @@
+{
+  "format": "recoverybot-deck",
+  "version": 1,
+  "about": "A tour of RecoveryBot's current features, from User Signup to Group Tools. Create the document, make a deck from it, then apply the arrangement (Edit the layout).",
+  "document": {
+    "title": "RecoveryBot Tour",
+    "kind": "format",
+    "visibility": "members",
+    "status": "current",
+    "body_format": "html",
+    "body": "<p><strong>Welcome to RecoveryBot.</strong> This deck walks through everything the site does today, from signing up to the tools a group runs itself with. Move through it with Next / Previous or the arrow keys, and open each part on screen as you go.</p><h2>User Signup</h2><p>Anyone can make a free account. There is no admin approval; people confirm their email instead.</p><p><strong>How to use it</strong></p><ol><li>Go to the sign-up page and enter your name, email and a password.</li><li>Tick the “I’m not a robot” box (a small puzzle that solves itself) and agree to the Terms.</li><li>Open the confirmation email and click the link within 3 days. Didn’t get it? Ask for a new one at <code>/users/confirmation/new</code>.</li><li>Sign in. You land on your home page, <code>/people</code>.</li></ol><p><em>Privacy first: no cookie banner (every cookie is needed and first-party), and the Privacy page lists exactly what is collected.</em></p><h2>Your Home Feed</h2><p>After signing in you land on <code>/people</code>. Two thirds is your Notes feed (yours plus what people you follow share). The other third shows your next meetings, sobriety birthdays and events from your groups.</p><p><strong>How to use it</strong></p><ol><li>Write a note at the top of the feed, or scroll to read.</li><li>Use the side panel to see what is coming up in your groups.</li><li>On a phone, the side panel folds under the feed.</li></ol><h2>Profile and Settings</h2><p>Your page lives at <code>/people/your-username</code> and is laid out in the HMBLBOT Editor. Account settings are at <code>/users/edit</code>.</p><p><strong>How to use it</strong></p><ol><li>Open Settings to change your name, username, email (a new address must be confirmed) and password.</li><li>Choose who can see your new notes and highlights by default: Private, Followers or Members.</li><li>Use <em>Edit my page</em> to arrange blocks: feed, about, groups, people, headings, photos and notes.</li><li>You can delete your own account on the profile page with your password.</li></ol><h2>Timeline Notes</h2><p>Notes are short posts written in Markdown, with up to 6 pictures, on your timeline. You decide who sees each one.</p><p><strong>How to use it</strong></p><ol><li>Write a note and pick its visibility: Private, Followers or Members; share it with your groups if you want them to see it.</li><li>Others who can see it can react (Like, Love, Hugs), comment, and repost notes shared with Members.</li><li>Paste a link and a preview card appears. Remove it with the X if you don’t want it.</li><li>Select text to bold, italicise, underline, strike through or add a link.</li></ol><p><em>A repost never widens who can see a note: narrowing or deleting the original removes its reposts.</em></p><h2>Following People</h2><p>Follow people to see what they share. There is no approval step, and the person you follow gets a notification.</p><p><strong>How to use it</strong></p><ol><li>Open someone’s profile at <code>/people/their-username</code>.</li><li>Press Follow. Their shared notes appear in your home feed.</li><li>Unfollow any time from the same button.</li></ol><h2>The Literature Library</h2><p>Recovery books are organised as Books, Chapters and Readings, and read in the browser.</p><p><strong>How to use it</strong></p><ol><li>Browse the library and open a book, then a chapter.</li><li>Use the rich-text reader; admins edit chapters in the chapter editor.</li><li>Groups pick which books they approve, so their members see their own shelf first.</li></ol><h2>Readings</h2><p>Readings are pieces people write and share: a title, the text, and example topics for sharing.</p><p><strong>How to use it</strong></p><ol><li>Open <em>My readings</em> and press <em>New reading</em>.</li><li>Write it in the editor, add example topics, and choose draft, scheduled or published.</li><li>Share the link; link previews show the title and a card, never the full text, to chat apps.</li></ol><h2>The Topicificator</h2><p>A random topic generator for group discussion, with sets of topics, a timer and a copy button.</p><p><strong>How to use it</strong></p><ol><li>Open <code>/topicificator</code> and choose a Topic Set in Settings.</li><li>Press Shuffle for a random topic, the # button to pick by number, or Previous to go back.</li><li>Use Free Share / Check-In when there is no topic, and the Copy button to paste the list into chat.</li><li>Hosts can run it from a HostDeck: open the live window in <em>Open to share</em>, then draw topics and run the timer from the deck.</li></ol><h2>Notifications and the Home-Screen App</h2><p>Everything that reaches the bell can also be pushed to your phone or computer.</p><p><strong>How to use it</strong></p><ol><li>Open <code>/install</code> and follow the steps for iPhone/iPad, Android or computer to add RecoveryBot to your home screen.</li><li>In Settings, turn on <em>Notifications on this device</em> and send yourself a test.</li><li>Tap a notification to open the right page; it is marked read.</li></ol><p><em>On iPhone, adding it to the home screen is required for push notifications.</em></p><h2>Finding a Meeting</h2><p>Find a meeting lists AA meetings from AA Intergroup and RecoveryBot’s own groups, in your time zone. No account needed.</p><p><strong>How to use it</strong></p><ol><li>Open <code>/groups/meetings</code> and search or filter.</li><li>Open a listing to see details, the group’s page and how to join.</li><li>Press Share for a card, link, or your phone’s share sheet.</li></ol><h2>Joining and Using a Group</h2><p>A group has a public page, a members’ area and tools to run itself. Access is rolling out, so some accounts see Groups first.</p><p><strong>How to use it</strong></p><ol><li>Find your group and press <em>Ask to join</em>, or use an invite link.</li><li>Wait for an admin to approve the request; you then see the members’ tabs.</li><li>Group admins design the Home tab in the HMBLBOT Editor (<em>Edit page</em>) and manage members, roles and settings.</li></ol><h2>Hosts and the Meeting Schedule</h2><p>Every weekly meeting has a host and a co-host place. The Hosts tab keeps the schedule and fills gaps.</p><p><strong>How to use it</strong></p><ol><li>Open the group’s <em>Hosts</em> tab.</li><li>Schedulers assign names (and link them to accounts) for the whole series or one date.</li><li>Anyone holding a place can press <em>I can’t make it</em> to ask for a sub; people marked <em>can host</em> are told and can take it.</li><li>Turn on host reminders in Settings to be notified before your date.</li></ol><h2>HostDeck</h2><p>HostDeck (the Hosting Command Center) is the one screen a host runs a meeting from: script, chat postings, readings, timer, service and milestones, shared live with the co-host.</p><p><strong>How to use it</strong></p><ol><li>Open <em>Host</em> and pick a meeting (or a date).</li><li>Move through the script with Next / Previous; both hosts see where you are.</li><li>Copy chat postings with one tap; the ones already posted are marked.</li><li>Pick the day’s reading or activity: a chapter, today’s daily page, your own reading, Topicificator topics, a speaker or a meditation.</li><li>Share the short link under <em>Share with your co-host</em> (<code>/h/CODE</code>); people without accounts see the chat postings.</li><li>Host coordinators set up the script, postings and layout from the gear.</li></ol><h2>Decks of Your Own and Sharing Them</h2><p>A deck is HostDeck for anything a group runs from a document: a business meeting, host onboarding, an event day.</p><p><strong>How to use it</strong></p><ol><li>Open a document and choose to make a deck from it, or create one on the group’s HostDeck page.</li><li>Lay it out in the layout editor: flow, notes, checklists, timers, share queue and more.</li><li>In the deck’s gear, use <em>Share this deck</em>: copy the link, and choose whether people without an account can follow it read-only (with or without the script).</li><li>Make a new link any time to retire the old one.</li></ol><h2>Group Tools: The Group Conscience</h2><p>The group’s record-keeping area, at <code>/groups/your-group/conscience</code>, for members. Record keepers (marked by an admin) write; everyone in the group reads.</p><p><strong>How to use it</strong></p><ol><li><strong>Documents:</strong> bylaws, formats and minutes in folders, each Public, Members, Hosts or Keepers only; edit in place, keep version history, import Word, RTF or PDF, and Save as PDF.</li><li><strong>Decisions:</strong> record motions, votes and who moved them, link what replaces what, and see the standing decisions. Robert’s Rules guidance flags missing seconds or counts that don’t carry.</li><li><strong>Business meetings:</strong> plan a meeting, build its agenda (members suggest items), record minutes, post them for the group; unfinished business carries over.</li><li><strong>Elected officials:</strong> positions, terms and reminders when a term is nearly up.</li><li><strong>Treasury:</strong> monthly treasurer’s reports with the prudent reserve and splits.</li><li><strong>Court verifications:</strong> a group’s own form at <code>/court_verifications/new?group=your-group</code>.</li></ol><p><em>That is the tour. Thank you for being here.</em></p>"
+  },
+  "deck": {
+    "name": "RecoveryBot Tour",
+    "purpose": "general",
+    "intro_title": "Welcome"
+  },
+  "arrangement": {
+    "layout": "both",
+    "left": [
+      {
+        "id": "flow",
+        "type": "flow"
+      }
+    ],
+    "main": [
+      {
+        "id": "stage",
+        "type": "stage"
+      }
+    ],
+    "right": [
+      {
+        "id": "notes",
+        "type": "notes",
+        "settings": {
+          "title": "Presenter notes",
+          "markdown": ""
+        }
+      },
+      {
+        "id": "activity_log",
+        "type": "activity_log",
+        "tight": true
+      }
+    ],
+    "bar": [
+      {
+        "id": "previous",
+        "type": "previous"
+      },
+      {
+        "id": "clock",
+        "type": "clock",
+        "grow": true
+      },
+      {
+        "id": "next",
+        "type": "next"
+      }
+    ]
+  }
+}
