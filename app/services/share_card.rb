@@ -1,13 +1,13 @@
 # The picture a link shows when it's shared (og:image): 1200×630 PNGs drawn with ImageMagick,
 # with the RecoveryBot mark in the bottom right corner.
-#   page    - a document or reading: a sheet of paper with its title and group (and the start of a document's text)
+#   page    - a document or reading: a sheet of paper with its title and group (and the start of its text)
 #   flyer   - an event or meeting: its name, when it is and the group, on the cover (or the site's blue)
 #   group   - a group: its logo and name on its cover
 #   site    - RecoveryBot itself, for every other page
 # Cards are kept in tmp/share_cards under a key made of everything drawn on them, so an edit
 # draws a new one and an unchanged one is drawn once.
 class ShareCard
-  VERSION = 1
+  VERSION = 2
   WIDTH = 1200
   HEIGHT = 630
   ASSETS = Rails.root.join("lib/share_cards")
@@ -24,7 +24,7 @@ class ShareCard
   def initialize(style:, title:, subtitle: nil, kicker: nil, text: nil, logo: nil, cover: nil)
     @style = style
     @title = clean(title).truncate(style == :page ? 110 : 90)
-    @subtitle = clean(subtitle).truncate(80).presence
+    @subtitle = clean(subtitle).truncate(style == :page ? 140 : 80).presence
     @kicker = clean(kicker).truncate(60).presence
     @text = clean(text).truncate(260).presence
     @logo = picture(logo)
@@ -36,7 +36,8 @@ class ShareCard
     when GroupDocument
       new(style: :page, title: record.title, kicker: record.group.title, text: record.summary, logo: record.group.logo)
     when Reading
-      new(style: :page, title: record.title.presence || record.meetingName, kicker: record.group&.title || "Meeting reading", subtitle: record.source, logo: record.group&.logo)
+      new(style: :page, title: record.title.presence || record.meetingName, kicker: record.group&.title || "Meeting reading", subtitle: record.source,
+          text: record.share_excerpt, logo: record.group&.logo)
     when Event
       new(style: :flyer, title: record.title.presence || "Event", subtitle: record.when_label || "Date to be decided",
           kicker: record.group.title, cover: record.cover.attached? ? record.cover : record.group.cover)
@@ -200,8 +201,10 @@ class ShareCard
     args += text_block(name, font: :bold, size: 60, color: "#0f172a", width: width, height: title_h, x: left, y: y)
     y += title_h + 18
     if subtitle
-      args += text_block(subtitle, font: :semibold, size: 30, color: "#475569", width: width, height: 44, x: left, y: y)
-      y += 56
+      # a long source ("AA Grapevine | NAME | COUNTY, REGION") takes two lines
+      sub, sub_h = fit(subtitle, font: :semibold, size: 30, width: width, max: 2)
+      args += text_block(sub, font: :semibold, size: 30, color: "#475569", width: width, height: sub_h, x: left, y: y)
+      y += sub_h + 16
     end
     if text && y < HEIGHT - 90
       args += text_block(text, font: :regular, size: 28, color: "#64748b", width: width, height: HEIGHT - y, x: left, y: y)

@@ -55,7 +55,7 @@ class ShareMeta
     new(title: [name, from].compact.join(" · "),
         description: ["A meeting reading#{" from #{from}" if from}", reading.source.presence].compact.join(" · "),
         path: "/readings/#{reading.id}", kind: "reading", id: reading.id,
-        card: from ? ShareCard.for(reading) : ShareCard.new(style: :page, title: name, kicker: "Meeting reading", subtitle: reading.source))
+        card: from ? ShareCard.for(reading) : ShareCard.new(style: :page, title: name, kicker: "Meeting reading", subtitle: reading.source, text: reading.share_excerpt))
   end
 
   def self.event(event)

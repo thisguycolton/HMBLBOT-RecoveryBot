@@ -37,6 +37,26 @@ class Reading < ApplicationRecord
     published_at.present? && published_at <= Time.current
   end
 
+  # The start of the reading as plain text, ending on a whole word with "…" when it goes on (the
+  # share card's sheet of paper). The text is its rich text, else the newer editor's: HTML or Tiptap JSON.
+  def share_excerpt(limit = 240)
+    text = plain_text.squish
+    return text if text.size <= limit
+
+    "#{text.first(limit).sub(/\s+\S*\z/, '')}…"
+  end
+
+  def plain_text
+    html = content.to_s.presence
+    richer = richer_content&.body.to_s.strip
+    if html.nil? && richer.start_with?("{")
+      doc = (JSON.parse(richer) rescue nil)
+      return tiptap_text(doc) if doc
+    end
+    spaced = (html || richer).to_s.gsub(%r{</(p|div|li|h[1-6]|blockquote)>|<br\s*/?>}i) { "#{$&} " }
+    CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(spaced).to_s).tr("\u00a0", " ")
+  end
+
   def scheduled_for_later?
     # A reading has a future publish time set
     published_at.present? && published_at > Time.current
@@ -79,5 +99,15 @@ class Reading < ApplicationRecord
     if hour.present? && minute.present? && meridiem.present?
       self.meetingTime = DateTime.parse("#{hour}:#{minute}#{meridiem}")
     end
+  end
+
+  private
+
+  # The words in a Tiptap document, a space between blocks
+  def tiptap_text(node)
+    return node["text"].to_s if node["type"] == "text"
+
+    inner = Array(node["content"]).map { |c| tiptap_text(c) }
+    node["type"] == "doc" || node["type"] == "text" ? inner.join(" ") : inner.join + " "
   end
 end
