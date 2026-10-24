@@ -4,7 +4,7 @@ import { api } from "../lib";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import { ErrorNote, Loading, primaryButton, quietButton } from "../ui";
 import FilterPick from "../../ui/FilterPick";
-import { ACTIVITY_TITLE, activityLabel, chapterHtml, copyText, readerHref } from "./lib";
+import { ACTIVITY_TITLE, activityLabel, chapterHtml, copyText, mmss, readerHref } from "./lib";
 
 const label = "!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
 const KIND_ICONS = { reading: BookOpen, my_reading: BookMarked, daily: CalendarDays, topics: Dices, speaker: Mic, meditation: Wind, other: Sparkles };
@@ -97,6 +97,106 @@ function LiveWindow({ code, connected }) {
   );
 }
 
+// The Topicificator page's copy button: the topics shared so far under its name and link, the
+// latest in bold, as rich text with a plain-text fallback, to paste into the chat
+const escapeHtml = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+export async function copyTopics(topics) {
+  if (!topics.length) return false;
+  const header = `<strong>The Topicificator 9002</strong><br>${window.location.origin}/topicificator`;
+  const earlier = topics.slice(0, -1).map((t) => `• ${escapeHtml(t.title)}`).join("<br>");
+  const latest = `• <strong>${escapeHtml(topics[topics.length - 1].title)}</strong>`;
+  const html = [header, earlier, latest].filter(Boolean).join("<br>");
+  const plain = html.replace(/<br>/g, "\n").replace(/<\/?[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([plain], { type: "text/plain" }) })]);
+    return true;
+  } catch {
+    return copyText(plain);
+  }
+}
+
+// A button that copies the topics shared so far and says so
+function CopyTopicsButton({ topics, compact = false }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => copyTopics(topics).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  return (
+    <button type="button" className={compact ? `${quietButton} !px-2.5 !py-1.5` : quietButton} onClick={copy} disabled={!topics.length}
+      aria-label="Copy the topics shared so far" title="Copy the topics shared so far, to paste into the chat">
+      {copied ? <ClipboardCheck className="size-4" /> : <Clipboard className="size-4" />}{!compact && (copied ? " Copied" : " Copy topics")}
+    </button>
+  );
+}
+
+// The Topicificator in a sidebar (the "Topicificator" block): what's on screen, draw / pick by
+// number / free share, the timer and copy, all small. It runs the same activity as the full
+// panel, and the live Topicificator window. With no reading / activity picked it offers the topic sets.
+export function TopicificatorMini({ deck }) {
+  const { center, live, act, now } = deck;
+  const activity = live.activity;
+  const [number, setNumber] = useState("");
+  const sets = center.activity_options?.topic_sets || [];
+  if (!activity) {
+    return (
+      <section>
+        <h2 className={`${label} mb-2 flex items-center gap-1.5`}><Dices className="size-3.5" /> Topicificator</h2>
+        {sets.length ? <TopicSetPick sets={sets} onPick={(pick) => act("activity", { activity: pick })} /> : <p className="text-sm text-slate-500 dark:text-neutral-400">No topic sets yet.</p>}
+      </section>
+    );
+  }
+  if (activity.kind !== "topics") return null;
+
+  const topics = activity.topics || [];
+  const free = activity.shown === "free";
+  const current = free ? null : topics.find((t) => String(t.id) === String(activity.shown)) || topics[topics.length - 1];
+  const seconds = activity.timer_seconds || 180;
+  const left = activity.timer_started_at ? Math.max(0, Math.ceil(seconds - (now - Date.parse(activity.timer_started_at)) / 1000)) : null;
+  const byNumber = (e) => {
+    e.preventDefault();
+    if (!number.trim()) return;
+    act("draw_topic", { number: number.trim() });
+    setNumber("");
+  };
+  const open = () => center.link?.code && window.open(`/topicificator?live=${encodeURIComponent(center.link.code)}`, "topicificator-live", "popup,width=1280,height=800");
+  return (
+    <section>
+      <div className="mb-2 flex items-center gap-1.5">
+        <h2 className={`${label} flex flex-1 items-center gap-1.5`}><Dices className="size-3.5" /> Topicificator</h2>
+        {left != null && <span className={`font-mono text-sm font-semibold tabular-nums ${left === 0 ? "text-rose-600" : ""}`} title="Topicificator timer">{mmss(left)}</span>}
+        {center.link?.code && (
+          <button type="button" onClick={open} aria-label="Open the live Topicificator window" title={live.topicificator_connected ? "Live window connected. Open again" : "Open the live window to share"}
+            className="inline-flex items-center gap-1 !bg-transparent !p-0 text-xs text-accent hover:underline">
+            <span className={`size-2 rounded-full ${live.topicificator_connected ? "bg-emerald-500" : "bg-slate-400"}`} /> Window
+          </button>
+        )}
+      </div>
+      <div className="rounded-xl bg-white p-3 text-center shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
+        {free ? <p className="font-semibold">Free Share / Check-In</p>
+          : current ? <><p className="font-semibold leading-snug">{current.title}</p>{current.subtitle && <p className="mt-0.5 text-xs text-slate-600 dark:text-neutral-300">{current.subtitle}</p>}</>
+          : <p className="text-sm text-slate-500 dark:text-neutral-400">Draw a topic from {activity.topic_set_name || "the set"}.</p>}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <button type="button" className={`${primaryButton} !px-2.5 !py-1.5`} onClick={() => act("draw_topic")} aria-label="Draw a topic" title="Draw a random topic"><Shuffle className="size-4" /></button>
+        <button type="button" className={`${quietButton} !px-2.5 !py-1.5`} onClick={() => act("topic_show", { index: "free" })} aria-pressed={free} aria-label="Free share" title="Free share / check-in"><UserCheck className="size-4" /></button>
+        <button type="button" className={`${quietButton} !px-2.5 !py-1.5`} onClick={() => act("topic_timer", { data: { op: "restart" } })} aria-label="Restart the timer" title={`Restart the ${minutesLabel(seconds)} timer`}><Timer className="size-4" /></button>
+        <CopyTopicsButton topics={topics} compact />
+        <form onSubmit={byNumber} className="flex min-w-0 flex-1 items-center gap-1">
+          <label htmlFor="mini-topic-number" className="sr-only">Topic number</label>
+          <input id="mini-topic-number" inputMode="numeric" className={`${inputClass} !w-14 !py-1`} value={number} onChange={(e) => setNumber(e.target.value)} placeholder="#" />
+          <button type="submit" className={`${quietButton} !px-2 !py-1.5`} disabled={!number.trim()} aria-label="Pick that topic number"><Hash className="size-4" /></button>
+        </form>
+      </div>
+      {topics.length > 1 && (
+        <ul className="mt-2 flex flex-wrap gap-1">
+          {[...topics].reverse().map((t) => (
+            <li key={t.id}><button type="button" className={`rounded-full px-2 py-0.5 text-xs ${!free && current && t.id === current.id ? "!bg-accent/15 font-semibold text-accent" : "!bg-neutral-200 text-slate-700 dark:!bg-neutral-800 dark:text-neutral-200"}`}
+              onClick={() => act("topic_show", { index: t.id })} title="Put this topic back on screen">{t.title}</button></li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 // Topics drawn from a Topicificator set, the one on screen big, for both hosts. What's here is
 // what the live Topicificator window shows (LiveWindow).
 function Topics({ center, live, activity, act, size }) {
@@ -136,6 +236,7 @@ function Topics({ center, live, activity, act, size }) {
           <button type="submit" className={quietButton} disabled={!number.trim()}><Hash className="size-4" /> Pick</button>
         </form>
         <button type="button" className={quietButton} onClick={() => act("topic_show", { index: "free" })} aria-pressed={free}><UserCheck className="size-4" /> Free share</button>
+        <CopyTopicsButton topics={topics} />
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Timer className="size-4 text-slate-500" />

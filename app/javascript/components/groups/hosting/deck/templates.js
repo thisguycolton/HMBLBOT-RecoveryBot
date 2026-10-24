@@ -18,6 +18,7 @@ export const HOST_A_MEETING = {
   left: [
     { id: "flow", type: "flow" },
     { id: "activity", type: "activity" },
+    { id: "topicificator", type: "topicificator" },
     { id: "meeting_readings", type: "meeting_readings" },
     { id: "service_readings", type: "service_readings" },
     { id: "quick_actions", type: "quick_actions" },

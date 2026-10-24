@@ -124,6 +124,13 @@ class Api::DecksTest < ActionDispatch::IntegrationTest
     assert_equal "Reset the deck to Old business", live["log"].first["text"]
   end
 
+  test "the Topicificator block is a sidebar block, once" do
+    out = DeckArrangement.normalize(layout: "both", left: [{ type: "topicificator" }, { type: "topicificator" }], main: [{ type: "topicificator" }], bar: [{ type: "topicificator" }])
+    assert_equal %w[topicificator], out["left"].map { |b| b["type"] }
+    assert_empty out["bar"]
+    assert_equal %w[stage], out["main"].map { |b| b["type"] }
+  end
+
   test "a deck's share link opens it for members, and for people without an account only if the group allows" do
     deck = @group.decks.create!(name: "Onboarding", purpose: "onboarding", script_document: @doc, created_by: @keeper, arrangement: ARRANGEMENT)
     code = deck.share_code

@@ -300,23 +300,22 @@ const fetchTopicByNumber = async () => {
 </div>
     <div className="fixed inset-x-0 top-14 bottom-0 z-0 bg-neutral-50 dark:bg-gray-900 text-white flex items-center justify-center">
       <div
-  className="
+  className={`
     relative
     w-full
     h-full
-    md:h-auto
-    md:aspect-video
-    md:max-w-5xl
     bg-gray-800
-    md:rounded-lg
     overflow-hidden
     flex
     flex-col
     items-center
     justify-between
     px-0
-    md:px-6 py-0 md:py-8 mx-0 md:mx-auto shadow-lg
-  "
+    py-0
+    ${liveCode
+      ? ""
+      : "md:h-auto md:aspect-video md:max-w-5xl md:rounded-lg md:px-6 md:py-8 mx-0 md:mx-auto shadow-lg"}
+  `}
 >
         {/* Timer */}
         <LavaOverlay progress={(timerDuration - timer) / timerDuration} />

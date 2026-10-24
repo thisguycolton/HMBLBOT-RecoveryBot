@@ -1,9 +1,9 @@
 import React from "react";
 import {
-  AlarmClock, ArrowLeft, ArrowRight, BookOpen, BookText, Clock, History, LayoutList, Link2, ListChecks, Link, ListOrdered, MessageSquare, Mic, FileText, NotebookText, PartyPopper, ScrollText, Timer, UserCheck, Users, X, Zap,
+  AlarmClock, ArrowLeft, ArrowRight, BookOpen, BookText, Clock, Dices, History, LayoutList, Link2, ListChecks, Link, ListOrdered, MessageSquare, Mic, FileText, NotebookText, PartyPopper, ScrollText, Timer, UserCheck, Users, X, Zap,
 } from "lucide-react";
 import { primaryButton, quietButton } from "../../ui";
-import ActivityPanel from "../Activity";
+import ActivityPanel, { TopicificatorMini } from "../Activity";
 import { Milestones, ServicePanel } from "../Service";
 import ServiceReadings from "../ServiceReadings";
 import { ACTIVITY_TITLE, cueLabel } from "../lib";
@@ -114,6 +114,12 @@ export const BLOCKS = {
       main: ({ deck }) => <section><h2 className={`${label} mb-2`}>{ACTIVITY_TITLE}</h2><ActivityPanel center={deck.center} live={deck.live} act={deck.act} size={deck.size} /></section>,
       bar: ActivityBar,
     }),
+  },
+  // The Topicificator's controls small, in a sidebar: draw, number, free share, timer, copy
+  topicificator: {
+    label: "Topicificator", icon: Dices, sizes: ["side"], tab: "readings", meetingOnly: true,
+    empty: (deck) => !!deck.live.activity && deck.live.activity.kind !== "topics", note: "Shows here when the day's activity is the Topicificator.",
+    component: ({ deck }) => <TopicificatorMini deck={deck} />,
   },
   meeting_readings: {
     label: "Meeting readings", icon: BookOpen, sizes: ["side", "main"], tab: "readings", meetingOnly: true, kit: "readings",
