@@ -24,7 +24,7 @@ module DeckArrangement
   # What size each block has (deck/blocks.jsx)
   SIZES = {
     "stage" => %w[main], "now_next" => %w[side bar main], "reminders" => %w[bar side], "flow" => %w[side main bar],
-    "activity" => %w[side main bar], "meeting_readings" => %w[side main], "service_readings" => %w[side main],
+    "activity" => %w[side main bar], "topicificator" => %w[side], "meeting_readings" => %w[side main], "service_readings" => %w[side main],
     "quick_actions" => %w[side main bar], "chat_postings" => %w[side main bar], "share_link" => %w[side bar],
     "hosts_here" => %w[side main bar], "service_roles" => %w[side main], "milestones" => %w[side main bar],
     "activity_log" => %w[side main bar], "previous" => %w[bar], "clock" => %w[bar side main], "next" => %w[bar],
