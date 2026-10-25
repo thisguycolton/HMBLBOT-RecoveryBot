@@ -4,6 +4,7 @@ import { ArrowLeft, LayoutGrid, List, BookOpen, Pencil } from "lucide-react";
 import BookCover from "./BookCover.jsx";
 import { lastReadFor } from "./readingProgress.js";
 import { SearchButton, SearchDialog, useSearchHotkey } from "./BookSearch.jsx";
+import GoToPage from "./GoToPage.jsx";
 import "../../styles/writebook.css";
 
 const VIEW_KEY = "hb:toc-view-v2"; // v2: cards became the default
@@ -154,6 +155,7 @@ export default function BookToc() {
             {book.author && <span className="wb-book__byline">{book.author}</span>}
           </h1>
           {book.description && <p className="wb-book__description">{book.description}</p>}
+          {chapters.length > 1 && <GoToPage bookSlug={slug} chapters={chapters} />}
 
           <div className="wb-toolbar">
             <Link to="/" className="wb-btn wb-btn--icon" aria-label="Back to the library" title="Library">

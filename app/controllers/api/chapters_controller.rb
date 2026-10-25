@@ -73,6 +73,7 @@ class Api::ChaptersController < ApplicationController
           :slug,
           :title,
           :index,
+          :number,
           :first_page,
           :last_page,
           :kind,
