@@ -8,7 +8,9 @@ export default function BooksIndex({ isAdmin: isAdminProp }) {
   const [books, setBooks] = useState(null);
   const [isAdmin, setIsAdmin] = useState(!!isAdminProp);
   const [showUploader, setShowUploader] = useState(false);
-  const [openSearch, setOpenSearch] = useState(false);
+  // ?q= (from the search box at the top of the page) opens the library search on it
+  const [initialQuery] = useState(() => new URLSearchParams(window.location.search).get("q") || "");
+  const [openSearch, setOpenSearch] = useState(!!initialQuery);
   useSearchHotkey(useCallback(() => setOpenSearch(true), []));
 
   async function loadBooks() {
@@ -63,7 +65,7 @@ export default function BooksIndex({ isAdmin: isAdminProp }) {
         <p className="py-12 text-center opacity-70">No books yet.</p>
       )}
 
-      <SearchDialog open={openSearch} onClose={() => setOpenSearch(false)} />
+      <SearchDialog open={openSearch} onClose={() => setOpenSearch(false)} initialQuery={initialQuery} />
     </div>
   );
 }

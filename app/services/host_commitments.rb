@@ -58,6 +58,19 @@ class HostCommitments
     end
   end
 
+  # Open "Need a sub" requests from today on that they could take: in groups where they'd be
+  # asked (they can host there, or nobody there is marked as able to), asked by someone else
+  def open_sub_requests
+    @open_sub_requests ||= begin
+      mine = @user.group_memberships.active.includes(:group).to_a
+      group_ids = mine.select { |m| m.can_host || !m.group.active_memberships.exists?(can_host: true) }.map(&:group_id)
+      HostSubRequest.open.joins(:meeting).includes(meeting: :group).where(meetings: { group_id: group_ids })
+                    .where("host_sub_requests.on >= ?", Date.current)
+                    .where("host_sub_requests.requested_by_id IS NULL OR host_sub_requests.requested_by_id <> ?", @user.id)
+                    .order(:on).to_a
+    end
+  end
+
   private
 
   # Host assignments not over yet (a day's slack for time zones) and covers from yesterday on

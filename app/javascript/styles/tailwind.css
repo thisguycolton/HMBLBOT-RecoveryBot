@@ -22,6 +22,16 @@
 
 
 @layer base {
+  /* The height of the shell's top bar (components/shell/TopBar.jsx): sticky things sit under it */
+  :root {
+    --nav-h: 56px;
+  }
+  @media (min-width: 1024px) {
+    :root {
+      --nav-h: 64px;
+    }
+  }
+
   html {
     color-scheme: light;
   }

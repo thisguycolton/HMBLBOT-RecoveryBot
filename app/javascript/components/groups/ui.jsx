@@ -53,8 +53,9 @@ export function Tray({ label, action, children, className = "" }) {
   );
 }
 
-export function Card({ children, className = "", ref }) {
-  return <div ref={ref} className={`rounded-xl bg-white shadow-panel dark:bg-neutral-900 ${className}`}>{children}</div>;
+// On the shell's white stage a card is set off by a hairline as much as by its shadow
+export function Card({ children, className = "", ref, ...rest }) {
+  return <div ref={ref} {...rest} className={`rounded-xl bg-white shadow-panel ring-1 ring-neutral-200/80 dark:bg-neutral-900 dark:ring-neutral-800 ${className}`}>{children}</div>;
 }
 
 export function copy(text, done) {
