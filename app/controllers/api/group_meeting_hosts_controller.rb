@@ -1,7 +1,8 @@
 # Who hosts and co-hosts each of a group's weekly meetings (app/models/meeting_host.rb), as a
 # schedule (app/services/host_schedule.rb). Members read it; group admins and the members they
-# marked as scheduling hosts change it. Putting someone in ends whoever was in that place the
-# day before, and can apply to every day the meeting runs.
+# marked as scheduling hosts change it (a coordinator limited to some time slots, only those).
+# Putting someone in ends whoever was in that place the day before, and can apply to every day
+# the meeting runs. Coordinators of a meeting's time slot hear about each change to it.
 class Api::GroupMeetingHostsController < ApplicationController
   include GroupScoped
 
@@ -9,6 +10,7 @@ class Api::GroupMeetingHostsController < ApplicationController
   before_action :require_member
   before_action :require_scheduler, except: :index
   before_action :set_host, only: %i[update destroy]
+  before_action -> { require_scheduler(@host.meeting) }, only: %i[update destroy]
 
   # GET /api/groups/:group_slug/meeting_hosts
   def index
@@ -19,7 +21,10 @@ class Api::GroupMeetingHostsController < ApplicationController
   # { meeting_host: { meeting_id, role, name, user_id, starts_on, ends_on, all_days } }
   def create
     meeting = @group.meetings.weekly.find(params.require(:meeting_host)[:meeting_id])
+    return require_scheduler(meeting) unless @group.hosts_editable_by?(current_user, meeting)
+
     meetings = ActiveModel::Type::Boolean.new.cast(params[:meeting_host][:all_days]) ? meeting.series.to_a : [meeting]
+    meetings = meetings.select { |m| @group.hosts_editable_by?(current_user, m) }
     made = []
     MeetingHost.transaction do
       meetings.each do |m|
@@ -33,6 +38,7 @@ class Api::GroupMeetingHostsController < ApplicationController
       end
     end
     tell(made.first, meetings.first) if made.first&.user
+    made.each { |host| tell_slot_coordinators(host.meeting, "#{host.name} is now #{MeetingHost::ROLE_LABELS[host.role].downcase} from #{host.starts_on.strftime("%b %-d")}") }
     render json: schedule, status: :created
   rescue ActiveRecord::RecordInvalid => e
     render_errors(e.record)
@@ -40,7 +46,12 @@ class Api::GroupMeetingHostsController < ApplicationController
 
   # PATCH /api/groups/:group_slug/meeting_hosts/:id (a change of dates or name; stepping down sets ends_on)
   def update
-    @host.update(host_params) ? render(json: schedule) : render_errors(@host)
+    return render_errors(@host) unless @host.update(host_params)
+
+    if @host.saved_change_to_ends_on? && @host.ends_on
+      tell_slot_coordinators(@host.meeting, "#{@host.name} steps down as #{MeetingHost::ROLE_LABELS[@host.role].downcase} after #{@host.ends_on.strftime("%b %-d")}")
+    end
+    render json: schedule
   end
 
   # POST /api/groups/:group_slug/meeting_hosts/link { name, user_id }
@@ -52,8 +63,9 @@ class Api::GroupMeetingHostsController < ApplicationController
     user = params[:user_id].presence && @group.members.find_by(id: params[:user_id])
     return render(json: { error: "That person isn't a member of the group." }, status: :unprocessable_entity) if params[:user_id].present? && !user
 
+    meeting_ids = @group.coordinated_meeting_ids(current_user) || @group.meetings.select(:id)
     changed = [MeetingHost, MeetingHostCover].sum do |model|
-      model.where(meeting_id: @group.meetings.select(:id)).where("LOWER(name) = ?", name.downcase)
+      model.where(meeting_id: meeting_ids).where("LOWER(name) = ?", name.downcase)
            .where("user_id IS DISTINCT FROM ?", user&.id).update_all(user_id: user&.id, updated_at: Time.current)
     end
     if user && changed.positive? && user != current_user
@@ -66,15 +78,17 @@ class Api::GroupMeetingHostsController < ApplicationController
   # DELETE /api/groups/:group_slug/meeting_hosts/:id
   def destroy
     @host.destroy!
+    tell_slot_coordinators(@host.meeting, "#{@host.name} was taken off as #{MeetingHost::ROLE_LABELS[@host.role].downcase}")
     render json: schedule
   end
 
   private
 
-  def require_scheduler
-    return if @group.hosts_editable_by?(current_user)
+  def require_scheduler(meeting = nil)
+    return if @group.hosts_editable_by?(current_user, meeting)
 
-    render json: { error: "Only host coordinators can do that." }, status: :forbidden
+    error = meeting && @group.hosts_editable_by?(current_user) ? "You coordinate other time slots, not #{meeting.name} on #{meeting.schedule_label}." : "Only host coordinators can do that."
+    render json: { error: error }, status: :forbidden
   end
 
   def set_host
@@ -89,6 +103,12 @@ class Api::GroupMeetingHostsController < ApplicationController
     attrs[:user_id] = nil unless attrs[:user_id].present? && @group.members.exists?(attrs[:user_id])
     attrs[:starts_on] = @group.zone.today.to_s if attrs[:starts_on].blank? && action_name == "create"
     attrs
+  end
+
+  # A change to a meeting's schedule, for the coordinators of its time slot (not whoever made it)
+  def tell_slot_coordinators(meeting, what)
+    Notification.deliver(@group.slot_coordinators(meeting).where.not(id: current_user.id), kind: "meeting_host.slot_changed",
+                         title: "#{meeting.name}: #{what}", body: meeting.schedule_label, url: "/groups/#{@group.slug}/hosts")
   end
 
   def tell(host, meeting)

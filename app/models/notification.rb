@@ -11,8 +11,8 @@ class Notification < ApplicationRecord
   PUSH_CATEGORIES = {
     "host_reminders" => { label: "Host reminders", description: "Before each meeting you host, co-host or cover (if reminders are on under Hosting).",
                           kinds: %w[meeting_host.reminder] },
-    "host_schedule" => { label: "Host schedule changes", description: "When you're put on a schedule, assigned a role or covering for someone.",
-                         kinds: %w[meeting_host.assigned meeting_host.covering meeting_host.linked] },
+    "host_schedule" => { label: "Host schedule changes", description: "When you're put on a schedule, assigned a role or covering for someone, and changes in the time slots you coordinate.",
+                         kinds: %w[meeting_host.assigned meeting_host.covering meeting_host.linked meeting_host.slot_changed] },
     "sub_requests" => { label: "Sub requests", description: "When a host needs someone to fill in, and when someone takes it.",
                         kinds: %w[meeting_host.sub_needed meeting_host.sub_found] },
     "business" => { label: "Business meetings and service", description: "Business meetings scheduled, minutes posted, agenda items suggested, service terms ending.",

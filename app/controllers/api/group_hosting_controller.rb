@@ -195,10 +195,17 @@ class Api::GroupHostingController < ApplicationController
     end
   end
 
+  # A coordinator of this meeting; the group's default kit is for those who coordinate every meeting
   def require_coordinator
-    return if @group.hosts_editable_by?(current_user)
+    whole_group = (params[:kit].is_a?(ActionController::Parameters) ? params[:kit][:scope] : params[:scope]) == "default"
+    return if whole_group ? @group.all_hosts_editable_by?(current_user) : @group.hosts_editable_by?(current_user, @meeting)
 
-    render json: { error: "Only host coordinators can change what hosts get." }, status: :forbidden
+    error = if @group.hosts_editable_by?(current_user)
+              whole_group ? "Only the coordinators of the whole group can change the group's default." : "You coordinate other time slots, not this one."
+            else
+              "Only host coordinators can change what hosts get."
+            end
+    render json: { error: error }, status: :forbidden
   end
 
   def set_meeting

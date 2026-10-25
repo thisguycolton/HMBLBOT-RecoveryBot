@@ -26,7 +26,7 @@ class HostingCenter
     end
   end
 
-  def can_edit? = @group.hosts_editable_by?(@viewer)
+  def can_edit? = @group.hosts_editable_by?(@viewer, @meeting)
 
   # Where the HostDeck's blocks go (HostingLayout), nil for the built-in "Host a meeting" template
   def layout = defined?(@layout) ? @layout : (@layout = HostingLayout.for(@meeting))

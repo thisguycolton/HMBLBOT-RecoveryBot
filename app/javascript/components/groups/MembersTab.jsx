@@ -142,7 +142,7 @@ export default function MembersTab({ group, reload, setGroup }) {
                   {person.username ? <a href={`/people/${person.username}`} className="!text-slate-900 hover:underline dark:!text-white">{person.name}</a> : person.name}
                   {person.role === "admin" && <Pill tone="accent">{ROLE_LABELS.admin}</Pill>}
                   {person.can_keep_records && <Pill tone="green">Record keeper</Pill>}
-                  {person.can_schedule_hosts && <Pill tone="green">Host coordinator</Pill>}
+                  {person.can_schedule_hosts && <Pill tone="green">{person.host_slots_only && person.role !== "admin" ? `Host coordinator · ${person.host_slot_count} ${person.host_slot_count === 1 ? "time slot" : "time slots"}` : "Host coordinator"}</Pill>}
                   {person.can_keep_treasury && <Pill tone="green">Treasurer</Pill>}
                   {person.can_host && <Pill tone="green">Can host</Pill>}
                 </p>

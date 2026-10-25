@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BellRing, CalendarClock, CalendarX, Link2, MonitorPlay, Plus, Printer, ScrollText, Trash2, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
+import Avatar from "./Avatar";
 import Toggle from "../ui/Toggle";
 import usePrintable, { printTitled } from "../../lib/usePrintable";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
@@ -136,7 +137,7 @@ function SubForm({ slug, slot, roles = ROLES, mine = false, onDone, onCancel, se
 }
 
 // The open "Need a sub" requests, at the top of the tab, for every member to take
-function SubRequests({ requests, edit, call }) {
+function SubRequests({ requests, call }) {
   if (!requests?.length) return null;
   return (
     <Card className="space-y-2 p-3 ring-1 ring-amber-300/60 dark:ring-amber-500/40">
@@ -150,7 +151,7 @@ function SubRequests({ requests, edit, call }) {
             </div>
             <div className="flex gap-2">
               <button type="button" className={`${primaryButton} flex-1 !py-1.5 !text-sm sm:flex-none`} onClick={() => window.confirm(`Cover the ${SHORT[r.role].toLowerCase()} place at ${r.meeting_name} on ${longDate(r.on)}?`) && call(`host_sub_requests/${r.id}/take`, "POST")}>I'll cover it</button>
-              {(edit || r.asked_by_me) && <button type="button" className={`${quietButton} !py-1.5 !text-sm`} onClick={() => window.confirm("Call off this request?") && call(`host_sub_requests/${r.id}`, "DELETE")}>Call off</button>}
+              {(r.can_edit || r.asked_by_me) && <button type="button" className={`${quietButton} !py-1.5 !text-sm`} onClick={() => window.confirm("Call off this request?") && call(`host_sub_requests/${r.id}`, "DELETE")}>Call off</button>}
             </div>
           </li>
         ))}
@@ -171,6 +172,65 @@ function Formats({ slug, formats }) {
         </Link>
       ))}
     </Card>
+  );
+}
+
+// Group admins pick, for each host coordinator, whether they look after the whole group or only
+// some time slots: then the open places, sub requests and schedule changes they see and hear
+// about are those slots', and they change only those
+function HostCoordinators({ slug, coordinators, slots, reload }) {
+  const [error, setError] = useState(null);
+  const save = async (c, body) => {
+    setError(null);
+    try {
+      await api(`/groups/${slug}/memberships/${c.membership_id}`, { method: "PATCH", body });
+      await reload();
+    } catch (e) { setError(e.message); }
+  };
+  const flip = (c, id) => {
+    const ids = c.host_meeting_ids.includes(id) ? c.host_meeting_ids.filter((x) => x !== id) : [...c.host_meeting_ids, id];
+    save(c, { host_meeting_ids: ids });
+  };
+  return (
+    <Tray label={`Host coordinators (${coordinators.length})`}>
+      <div className="space-y-2">
+        <ErrorNote error={error} />
+        {coordinators.length === 0 && <Card className="p-3 text-sm text-slate-600 dark:text-neutral-300">Make someone a host coordinator on the Members tab, then pick their time slots here. Admins coordinate every meeting.</Card>}
+        {coordinators.map((c) => (
+          <Card key={c.membership_id} className="space-y-3 p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Avatar person={{ name: c.name, avatar_url: c.avatar_url }} size={40} />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-slate-900 dark:text-white">{c.name}</p>
+                <p className="text-xs text-slate-500 dark:text-neutral-400">Host coordinator</p>
+              </div>
+              <label htmlFor={`hc-scope-${c.membership_id}`} className="sr-only">What {c.name} coordinates</label>
+              <select id={`hc-scope-${c.membership_id}`} className={`${selectClass} !w-auto`} value={c.host_slots_only ? "slots" : "group"}
+                onChange={(e) => save(c, { host_slots_only: e.target.value === "slots" })}>
+                <option value="group">Whole group</option>
+                <option value="slots">Only these time slots</option>
+              </select>
+            </div>
+            {c.host_slots_only ? (
+              <>
+                <p className="text-sm text-slate-600 dark:text-neutral-300">Gets open places, sub requests and schedule changes for these slots only.{c.host_meeting_ids.length === 0 && " Pick at least one."}</p>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {slots.map((slot) => {
+                    const on = c.host_meeting_ids.includes(slot.id);
+                    return (
+                      <label key={slot.id} className={`flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm ring-1 ${on ? "bg-sky-100 text-slate-900 ring-sky-200 dark:bg-sky-900/40 dark:text-white dark:ring-sky-800" : "text-slate-700 ring-neutral-200 dark:text-neutral-200 dark:ring-neutral-700"}`}>
+                        <input type="checkbox" className="size-4 accent-[var(--color-accent,#2563eb)]" checked={on} onChange={() => flip(c, slot.id)} />
+                        <span className="min-w-0 truncate">{DAYS[slot.day_of_week].slice(0, 3)} {clock(slot.start_minute)} · {slot.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </>
+            ) : <p className="text-sm text-slate-600 dark:text-neutral-300">Gets open places, sub requests and schedule changes for every meeting.</p>}
+          </Card>
+        ))}
+      </div>
+    </Tray>
   );
 }
 
@@ -212,6 +272,7 @@ export default function HostsTab({ group }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [onlyOpen, setOnlyOpen] = useState(false);
+  const [onlyMine, setOnlyMine] = useState(true);
   const [open, setOpen] = useState(null); // { slotId, role | "cover" | "sub" | "mine" }
   const load = useCallback(() => api(`/groups/${slug}/meeting_hosts`).then(setData).catch((e) => setError(e.message)), [slug]);
   useEffect(() => { load(); }, [load]);
@@ -223,11 +284,14 @@ export default function HostsTab({ group }) {
     try { setData(await api(`/groups/${slug}/${path}`, { method, body })); } catch (e) { setError(e.message); }
   };
   const isOpen = (slot) => !slot.host && !slot.host_lined_up || !slot.co_host && !slot.co_host_lined_up;
-  const slots = data.slots.filter((s) => !onlyOpen || isOpen(s));
+  // a coordinator limited to some time slots sees theirs first (the rest are a toggle away)
+  const mySlots = data.my_slot_ids;
+  const slots = data.slots.filter((s) => (!onlyOpen || isOpen(s)) && (!mySlots || !onlyMine || mySlots.includes(s.id)));
   const s = data.summary;
   const openTotal = s.open_hosts + s.open_co_hosts;
 
   const cell = (slot, role) => {
+    const edit = slot.can_edit;
     const person = slot[role];
     const later = slot[`${role}_lined_up`];
     const showing = open?.slotId === slot.id && open?.role === role;
@@ -255,7 +319,7 @@ export default function HostsTab({ group }) {
     );
   };
 
-  const row = (slot) => (
+  const row = (slot) => { const edit = slot.can_edit; return (
     <Card key={slot.id} className="p-3">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-start">
         <div className="min-w-0">
@@ -295,7 +359,7 @@ export default function HostsTab({ group }) {
       {open?.slotId === slot.id && !["cover", "sub", "mine"].includes(open.role) && !open.role.startsWith("link-") && <AssignForm slug={slug} slot={slot} role={open.role} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
       {open?.slotId === slot.id && open.role === "cover" && <CoverForm slug={slug} slot={slot} members={data.members || []} setData={setData} onDone={() => setOpen(null)} onCancel={() => setOpen(null)} />}
     </Card>
-  );
+  ); };
 
   const days = DAYS.map((name, d) => ({ name, d, slots: slots.filter((x) => x.day_of_week === d) })).filter((x) => x.slots.length);
   const named = (p, later) => p?.name || later?.name || "";
@@ -306,17 +370,21 @@ export default function HostsTab({ group }) {
           <p className="min-w-0 basis-full text-sm text-slate-600 sm:basis-auto sm:flex-1 dark:text-neutral-300">
             {data.slots.length === 0 ? "The group has no weekly meetings yet. Add them on the Meetings tab, then put a host and co-host on each."
               : openTotal === 0 ? `Every one of the ${s.places} places has someone in it.`
-              : <><strong className="text-slate-900 dark:text-white">{openTotal}</strong> of {s.places} places are open: {s.open_hosts} {s.open_hosts === 1 ? "host" : "hosts"} and {s.open_co_hosts} {s.open_co_hosts === 1 ? "co-host" : "co-hosts"}.</>}
+              : mySlots && s.places === 0 ? "No time slots are picked for you yet. A group admin picks them under Host coordinators."
+              : openTotal === 0 ? `Every one of the ${s.places} places${mySlots ? " in your time slots" : ""} has someone in it.`
+              : <><strong className="text-slate-900 dark:text-white">{openTotal}</strong> of {s.places} places{mySlots ? " in your time slots" : ""} are open: {s.open_hosts} {s.open_hosts === 1 ? "host" : "hosts"} and {s.open_co_hosts} {s.open_co_hosts === 1 ? "co-host" : "co-hosts"}.</>}
           </p>
+          {mySlots && <Toggle checked={onlyMine} onChange={setOnlyMine} label="Only my time slots" />}
           {data.slots.length > 0 && <Toggle checked={onlyOpen} onChange={setOnlyOpen} label="Only meetings with an open place" />}
           {data.slots.length > 0 && <button type="button" className={quietButton} onClick={() => printTitled(`${group.title} hosts`)}><Printer className="size-4" /> Print</button>}
           {data.can_host && <Link to={`/${slug}/host`} className={primaryButton}><MonitorPlay className="size-4" /> HostDeck</Link>}
         </div>
         <ErrorNote error={error} />
-        <SubRequests requests={data.sub_requests} edit={edit} call={call} />
+        <SubRequests requests={data.sub_requests} call={call} />
         <Formats slug={slug} formats={data.formats} />
         {days.map((day) => <Tray key={day.d} label={day.name}><div className="space-y-1.5">{day.slots.map(row)}</div></Tray>)}
-        {slots.length === 0 && data.slots.length > 0 && <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">Every place is filled.</Card>}
+        {slots.length === 0 && data.slots.length > 0 && <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">{onlyOpen ? "Every place is filled." : "None of the group's meetings are your time slots."}</Card>}
+        {data.coordinators && data.slots.length > 0 && <HostCoordinators slug={slug} coordinators={data.coordinators} slots={data.slots} reload={load} />}
         {edit && data.members?.length > 0 && <WhoCanHost slug={slug} members={data.members} reload={load} />}
       </div>
 

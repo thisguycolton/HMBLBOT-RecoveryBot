@@ -98,9 +98,40 @@ class Group < ApplicationRecord
   def admin?(user) = !!membership_for(user)&.then { |m| m.active? && m.admin? }
   def manageable_by?(user) = !!user && (user.suite_admin? || admin?(user))
   # Who schedules the hosts of its meetings: group admins, and members an admin marked in the
-  # Members tab (the person doing that needn't keep the records)
-  def hosts_editable_by?(user) = manageable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_schedule_hosts }
-  def host_schedulers = User.where(id: active_memberships.where("group_memberships.role = 'admin' OR group_memberships.can_schedule_hosts").select(:user_id))
+  # Members tab (the person doing that needn't keep the records). A coordinator an admin limited
+  # to some time slots (GroupMembership#host_slots_only) schedules only those meetings, so given
+  # a meeting this asks about that one; without one, about the Hosts tab as a whole.
+  def hosts_editable_by?(user, meeting = nil)
+    return true if manageable_by?(user)
+
+    !!membership_for(user)&.then { |m| m.active? && m.can_schedule_hosts && (meeting.nil? || m.coordinates?(meeting)) }
+  end
+
+  # A coordinator for every meeting (not limited to time slots): sets up the group's default kit
+  def all_hosts_editable_by?(user) = manageable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_schedule_hosts && !m.host_slots_only }
+
+  # The weekly meetings a slot-limited coordinator looks after (nil: all of them)
+  def coordinated_meeting_ids(user)
+    return if manageable_by?(user)
+
+    m = membership_for(user)
+    m.host_meeting_ids if m&.active? && m.slot_coordinator?
+  end
+
+  # Who hears about a meeting's hosts: admins and the coordinators of the whole group, and those
+  # whose time slots include the meeting (all of them when no meeting is given)
+  def host_schedulers(meeting = nil)
+    coordinators = active_memberships.where(can_schedule_hosts: true)
+    coordinators = coordinators.coordinating(meeting) if meeting
+    User.where(id: active_memberships.admins.select(:user_id)).or(User.where(id: coordinators.select(:user_id)))
+  end
+
+  # The coordinators limited to time slots that include this meeting: they hear about every
+  # change to its schedule (the whole group's coordinators don't, as there'd be too many)
+  def slot_coordinators(meeting)
+    User.where(id: active_memberships.where(can_schedule_hosts: true, host_slots_only: true).where.not(role: "admin")
+                                     .where("? = ANY(group_memberships.host_meeting_ids)", meeting.id).select(:user_id))
+  end
   # Members marked as able to host or co-host (by an admin or a host coordinator): they read the
   # documents kept for hosts (the format) and are the ones asked when a host won't be there
   def can_host?(user) = hosts_editable_by?(user) || records_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_host }
