@@ -20,6 +20,7 @@ class Meeting < ApplicationRecord
   has_many :host_sub_requests, dependent: :destroy
 
   before_validation :tidy
+  after_create :join_coordinators_slots, if: :weekly?
 
   validates :name, presence: true, length: { maximum: 255 }
   validates :recurrence, inclusion: { in: RECURRENCES }
@@ -163,6 +164,16 @@ class Meeting < ApplicationRecord
   end
 
   private
+
+  # A new day of a meeting goes to the host coordinators who have every other day of it among
+  # their time slots (someone coordinating "9:00 AM, every day" keeps every day)
+  def join_coordinators_slots
+    others = series.where.not(id: id).ids
+    return if others.empty?
+
+    group.memberships.where(host_slots_only: true).where("group_memberships.host_meeting_ids @> ARRAY[?]::bigint[]", others)
+         .find_each { |m| m.update!(host_meeting_ids: (m.host_meeting_ids + [id]).sort) }
+  end
 
   def tidy
     self.time_zone = group&.time_zone if time_zone.blank?

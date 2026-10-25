@@ -1,7 +1,8 @@
 # "Need a sub": a host coordinator (a group admin, or a member marked as scheduling hosts), or the
 # host or co-host who won't be there, asks the group to fill a place at one meeting on one date.
-# The members who can host hear about it (every member, if the group hasn't marked any); any
-# member can take it, which puts them on as a cover for that date.
+# The members who can host hear about it (every member, if the group hasn't marked any), and the
+# coordinators of that meeting (a coordinator limited to time slots only hears about theirs, and
+# only asks for subs there); any member can take it, which puts them on as a cover for that date.
 class Api::GroupHostSubRequestsController < ApplicationController
   include GroupScoped
 
@@ -14,10 +15,10 @@ class Api::GroupHostSubRequestsController < ApplicationController
     attrs = params.require(:sub_request).permit(:meeting_id, :role, :on, :note)
     meeting = @group.meetings.weekly.includes(:hosts, :host_covers).find(attrs[:meeting_id])
     request = meeting.host_sub_requests.new(attrs.except(:meeting_id).merge(requested_by: current_user))
-    return require_scheduler unless may_ask_for_sub?(meeting, request)
+    return require_scheduler(meeting) unless may_ask_for_sub?(meeting, request)
     return render_errors(request) unless request.save
 
-    Notification.deliver(sub_askees, kind: "meeting_host.sub_needed",
+    Notification.deliver(sub_askees(meeting), kind: "meeting_host.sub_needed",
                          title: request.headline, body: request.note || "Can you fill in? Open the Hosts tab to take it.", url: hosts_url)
     render json: schedule, status: :created
   end
@@ -33,7 +34,7 @@ class Api::GroupHostSubRequestsController < ApplicationController
       cover.save!
       @request.update!(status: "filled", filled_by: current_user)
     end
-    tell = (@group.host_schedulers.to_a + [@request.requested_by]).compact.uniq - [current_user]
+    tell = (@group.host_schedulers(meeting).to_a + [@request.requested_by]).compact.uniq - [current_user]
     Notification.deliver(tell, kind: "meeting_host.sub_found", title: "#{current_user.display_name} is covering #{@request.place_label} for #{meeting.name} on #{@request.on.strftime("%b %-d")}",
                                body: meeting.schedule_label, url: hosts_url)
     render json: schedule
@@ -43,7 +44,7 @@ class Api::GroupHostSubRequestsController < ApplicationController
 
   # DELETE /api/groups/:group_slug/host_sub_requests/:id (called off, by a host coordinator or whoever asked)
   def destroy
-    return require_scheduler unless @request.requested_by_id == current_user.id
+    return require_scheduler(@request.meeting) unless @request.requested_by_id == current_user.id
 
     @request.update!(status: "cancelled") if @request.open?
     render json: schedule
@@ -51,15 +52,15 @@ class Api::GroupHostSubRequestsController < ApplicationController
 
   private
 
-  def require_scheduler
-    return if @group.hosts_editable_by?(current_user)
+  def require_scheduler(meeting)
+    return if @group.hosts_editable_by?(current_user, meeting)
 
     render json: { error: "Only host coordinators, or the host who won't be there, can ask for a sub." }, status: :forbidden
   end
 
   # A host coordinator, or the one in that place on that date (covering it, or holding it)
   def may_ask_for_sub?(meeting, request)
-    return true if @group.hosts_editable_by?(current_user)
+    return true if @group.hosts_editable_by?(current_user, meeting)
     return false unless request.on.is_a?(Date) && MeetingHost::ROLES.include?(request.role)
 
     meeting.holder_on(request.role, request.on)&.user_id == current_user.id
@@ -67,9 +68,9 @@ class Api::GroupHostSubRequestsController < ApplicationController
 
   # Who hears that a sub is needed: the members who can host, and the host coordinators (so
   # they know when a host asked for one); every member when nobody is marked as able to host
-  def sub_askees
+  def sub_askees(meeting)
     pool = @group.host_pool.to_a
-    people = pool.any? ? pool + @group.host_schedulers.to_a : @group.members.to_a
+    people = pool.any? ? pool + @group.host_schedulers(meeting).to_a : @group.members.to_a
     people.uniq - [current_user]
   end
 

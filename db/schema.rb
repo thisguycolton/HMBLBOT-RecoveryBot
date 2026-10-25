@@ -447,6 +447,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_210000) do
     t.boolean "can_schedule_hosts", default: false, null: false
     t.boolean "can_keep_treasury", default: false, null: false
     t.boolean "can_host", default: false, null: false
+    t.boolean "host_slots_only", default: false, null: false
+    t.bigint "host_meeting_ids", default: [], null: false, array: true
     t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
     t.index ["group_id"], name: "index_group_memberships_on_group_id"
     t.index ["user_id"], name: "index_group_memberships_on_user_id"
