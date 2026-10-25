@@ -278,6 +278,79 @@
   max-width: 60ch;
 }
 
+/* ---------- Go to page (book page) ---------- */
+
+.wb-goto {
+  margin: 0 0 1rem;
+  max-width: 36rem;
+}
+
+.wb-goto__row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.wb-goto__input {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle-dark);
+  border-radius: 2em;
+  color: var(--wb-ink);
+  flex: 1;
+  font-size: 1rem;
+  max-width: 16rem;
+  min-width: 0;
+  padding: 0.5em 1.1em;
+}
+
+.wb-goto__input:focus {
+  border-color: var(--wb-link);
+  outline: 2px solid color-mix(in oklab, var(--wb-link) 30%, transparent);
+  outline-offset: 0;
+}
+
+.wb-goto__btn:not([disabled]) {
+  --wb-btn-bg: var(--wb-link);
+  --wb-btn-color: #fff;
+  border-color: var(--wb-link);
+}
+
+.wb-goto__btn:not([disabled]):hover {
+  background-color: var(--wb-link);
+  opacity: 0.85;
+}
+
+.wb-goto__status {
+  font-family: inherit !important;
+  font-size: 0.9rem;
+  text-align: start !important;
+  line-height: 1.4;
+  margin: 0.5rem 0 0;
+  min-height: 1.4em;
+}
+
+.wb-goto__arrow {
+  display: inline;
+  vertical-align: -0.15em;
+}
+
+.wb-goto__soft {
+  color: var(--wb-ink-soft);
+}
+
+.wb-goto__error {
+  color: oklch(55% 0.2 27);
+}
+
+/* A page the reader jumped to with #page-N */
+.wb-page-target {
+  animation: wb-page-flash 2.4s ease-out;
+}
+
+@keyframes wb-page-flash {
+  0%, 30% { background-color: color-mix(in oklab, var(--wb-link) 18%, transparent); }
+  100% { background-color: transparent; }
+}
+
 .wb-toolbar {
   align-items: center;
   background: color-mix(in oklab, var(--wb-bg) 85%, transparent);

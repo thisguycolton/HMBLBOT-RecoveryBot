@@ -802,6 +802,29 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const [pageEl, setPageEl] = useState(null);
   const inText = useInTextSearch(pageEl, searchQuery);
 
+  // A #page-N in the URL (from "Go to page" on the book's page) scrolls to printed page N
+  // once the chapter's text is drawn. The chapter's first page is already at the top.
+  useEffect(() => {
+    if (!pageEl || !chapter) return;
+    const m = location.hash.match(/^#page-(\d+)$/);
+    if (!m || String(chapter.first_page) === m[1]) return;
+    let tries = 0;
+    let timer = null;
+    const seek = () => {
+      const el = pageEl.querySelector(`[data-page="${m[1]}"]`);
+      if (!el) {
+        if (++tries < 40) timer = setTimeout(seek, 100);
+        return;
+      }
+      const top = window.scrollY + el.getBoundingClientRect().top - nudgeForSticky(90);
+      window.scrollTo({ top, left: 0, behavior: "auto" });
+      el.classList.add("wb-page-target");
+      timer = setTimeout(() => el.classList.remove("wb-page-target"), 2500);
+    };
+    seek();
+    return () => clearTimeout(timer);
+  }, [pageEl, chapter]);
+
   // Tapping a highlight opens its card (note, share, color, delete). Listening on
   // the page rather than the editor survives TipTap swapping its DOM on load.
   useEffect(() => {
