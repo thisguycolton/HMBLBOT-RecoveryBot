@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_23_190000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_25_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1133,6 +1133,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_190000) do
     t.string "visibility", default: "private", null: false
     t.bigint "repost_of_id"
     t.jsonb "link_preview"
+    t.string "hashtags", default: [], null: false, array: true
+    t.index ["hashtags"], name: "index_timeline_notes_on_hashtags", using: :gin
     t.index ["repost_of_id", "user_id"], name: "index_timeline_notes_on_repost_of_id_and_user_id", unique: true, where: "(repost_of_id IS NOT NULL)"
     t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_timeline_notes_on_user_id"
@@ -1306,13 +1308,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_190000) do
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "group_books", "books"
   add_foreign_key "group_books", "groups"
-  add_foreign_key "group_document_live_updates", "group_documents", on_delete: :cascade
-  add_foreign_key "group_document_live_updates", "users", on_delete: :nullify
   add_foreign_key "group_document_comments", "group_document_comments", column: "parent_id", on_delete: :cascade
   add_foreign_key "group_document_comments", "group_document_versions", column: "version_id", on_delete: :nullify
   add_foreign_key "group_document_comments", "group_documents"
   add_foreign_key "group_document_comments", "users", column: "resolved_by_id", on_delete: :nullify
   add_foreign_key "group_document_comments", "users", on_delete: :nullify
+  add_foreign_key "group_document_live_updates", "group_documents", on_delete: :cascade
+  add_foreign_key "group_document_live_updates", "users", on_delete: :nullify
   add_foreign_key "group_document_templates", "groups"
   add_foreign_key "group_document_versions", "group_documents", on_delete: :cascade
   add_foreign_key "group_document_versions", "users", on_delete: :nullify

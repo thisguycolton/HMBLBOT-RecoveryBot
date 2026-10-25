@@ -9,6 +9,7 @@ import { Bold, Italic, Link2, Strikethrough, Underline as UnderlineIcon } from "
 import MarkdownTextarea from "./MarkdownTextarea";
 import { editorCanHold, markdownToNoteHtml, noteJsonToMarkdown } from "./noteMarkdown";
 import { looksLikeMarkdown } from "../../lib/markdownHtml";
+import { api } from "../groups/lib";
 
 // Each pill button, and the mark it turns on or off. Any of them go together: bold and italic,
 // bold underlined, and so on.
@@ -32,15 +33,35 @@ const StrikeKey = Extension.create({
 // typing Markdown (**bold**, *italic*, - lists, > quotes) still works. ⌘/Ctrl+B, I, U,
 // Shift+X and K format the selection. A note with a table stays in the plain text box.
 // `onKeyDown` and `onPaste` see the keys and pastes first (preventDefault to keep them).
+// With `hashtags`, typing # offers the tags already on notes you can see, most used first
+// (↑↓ to move, Enter or Tab to pick, Esc to close).
 const MarkdownEditor = forwardRef(function MarkdownEditor(props, ref) {
   const [plain] = useState(() => !editorCanHold(props.value));
-  if (plain) return <MarkdownTextarea ref={ref} {...props} />;
+  if (plain) {
+    const { hashtags, ...rest } = props;
+    return <MarkdownTextarea ref={ref} {...rest} />;
+  }
   return <RichEditor ref={ref} {...props} />;
 });
 
+// A # after a space (or at the start), then the tag so far, right before the cursor, the
+// way app/models/hashtags.rb finds them
+const TAG_BEFORE_CURSOR = /(?:^|[^\p{L}\p{N}_&#/])#(\p{L}[\p{L}\p{N}_]{0,49}|)$/u;
+
+// The tags starting with `query` on notes you can see, kept for a while so typing back
+// and forth doesn't ask again
+const tagCache = new Map();
+function suggestTags(query) {
+  const hit = tagCache.get(query);
+  if (hit && Date.now() - hit.at < 60_000) return Promise.resolve(hit.items);
+  return api(`/hashtags?q=${encodeURIComponent(query)}`)
+    .then((d) => { tagCache.set(query, { at: Date.now(), items: d.hashtags }); return d.hashtags; })
+    .catch(() => []);
+}
+
 const RichEditor = forwardRef(function RichEditor({
   value, onChange, onKeyDown, onPaste, minRows = 3, placeholder = "", autoFocus = false, className = "",
-  "aria-label": ariaLabel,
+  "aria-label": ariaLabel, hashtags = false,
 }, ref) {
   const wrapRef = useRef(null);
   const sent = useRef(value || ""); // the Markdown last given to onChange
@@ -48,6 +69,9 @@ const RichEditor = forwardRef(function RichEditor({
   handlers.current = { onChange, onKeyDown, onPaste };
   const [bar, setBar] = useState(null); // { top, left } while text is selected
   const [linking, setLinking] = useState(null); // { from, to, url } while asking for a link
+  const [tags, setTags] = useState(null); // { from, to, query, items, index, top, left } while typing a #tag
+  const tagsRef = useRef(null);
+  tagsRef.current = tags;
 
   const editor = useEditor({
     extensions: [
@@ -68,6 +92,7 @@ const RichEditor = forwardRef(function RichEditor({
         ...(ariaLabel ? { "aria-label": ariaLabel } : {}),
       },
       handleKeyDown: (view, event) => {
+        if (tagsRef.current?.items.length && pickTagKey(event)) return true;
         if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "k") {
           event.preventDefault();
           askLink();
@@ -127,6 +152,60 @@ const RichEditor = forwardRef(function RichEditor({
     return () => { editor.off("selectionUpdate", place); editor.off("focus", place); editor.off("blur", hide); };
   }, [editor, place]);
 
+  // The #tag being typed just before the cursor, if any, and the tags it could be
+  useEffect(() => {
+    if (!editor || !hashtags) return undefined;
+    let timer;
+    let current = 0;
+    const look = () => {
+      clearTimeout(timer);
+      const { $from, empty } = editor.state.selection;
+      const before = empty && !editor.isActive("code") && $from.parent.textBetween(0, $from.parentOffset, undefined, "\ufffc");
+      const typed = before && before.match(TAG_BEFORE_CURSOR);
+      if (!typed || !editor.isFocused) { setTags(null); return; }
+      const query = typed[1].toLowerCase();
+      const from = $from.pos - typed[1].length - 1;
+      const box = wrapRef.current?.getBoundingClientRect();
+      const at = editor.view.coordsAtPos(from);
+      const spot = box ? { top: at.bottom - box.top, left: Math.max(Math.min(at.left - box.left, (wrapRef.current.clientWidth || 0) - 240), 0) } : { top: 0, left: 0 };
+      setTags((t) => ({ items: t?.query === query ? t.items : t?.items || [], index: t?.query === query ? t.index : 0, ...spot, from, to: $from.pos, query }));
+      const asked = ++current;
+      timer = setTimeout(() => {
+        suggestTags(query).then((items) => {
+          if (asked === current) setTags((t) => (t && t.query === query ? { ...t, items, index: Math.min(t.index, Math.max(items.length - 1, 0)) } : t));
+        });
+      }, 120);
+    };
+    const close = () => setTimeout(() => { if (!editor.isFocused) setTags(null); }, 150);
+    editor.on("selectionUpdate", look);
+    editor.on("update", look);
+    editor.on("blur", close);
+    return () => { clearTimeout(timer); editor.off("selectionUpdate", look); editor.off("update", look); editor.off("blur", close); };
+  }, [editor, hashtags]);
+
+  const pickTag = (name) => {
+    const t = tagsRef.current;
+    if (!t || !editor) return;
+    setTags(null);
+    editor.chain().focus().insertContentAt({ from: t.from, to: t.to }, `#${name} `).run();
+  };
+
+  // ↑↓ move through the suggestions, Enter or Tab picks one, Esc closes them
+  function pickTagKey(event) {
+    const t = tagsRef.current;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      setTags({ ...t, index: (t.index + step + t.items.length) % t.items.length });
+    } else if (event.key === "Enter" || event.key === "Tab") {
+      if (event.metaKey || event.ctrlKey) return false;
+      pickTag(t.items[t.index].name);
+    } else if (event.key === "Escape") {
+      setTags(null);
+    } else return false;
+    event.preventDefault();
+    return true;
+  }
+
   function askLink() {
     const e = editorRef.current;
     if (!e) return;
@@ -150,6 +229,19 @@ const RichEditor = forwardRef(function RichEditor({
   return (
     <div ref={wrapRef} className="wb-md-input">
       <EditorContent editor={editor} />
+      {tags?.items.length > 0 && (
+        <ul className="wb-tag-suggest" style={{ top: tags.top, left: tags.left }} role="listbox" aria-label="Hashtags"
+          onMouseDown={(e) => e.preventDefault()}>
+          {tags.items.map((item, i) => (
+            <li key={item.name} role="option" aria-selected={i === tags.index}>
+              <button type="button" onClick={() => pickTag(item.name)} onMouseEnter={() => setTags((t) => t && { ...t, index: i })}>
+                <span className="wb-tag-suggest__name">#{item.name}</span>
+                <span className="wb-tag-suggest__count">· {item.count.toLocaleString()}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {(bar || linking) && (
         <div className="wb-md-input__bar" style={{ top: bar?.top ?? 0, left: bar?.left ?? 0 }} role="toolbar" aria-label="Format the selected text"
           onMouseDown={(e) => { if (e.target.tagName !== "INPUT") e.preventDefault(); }}>

@@ -10,6 +10,9 @@
 # author's name. Only notes their author shares with Members can be reposted, so a repost
 # never shows a note to anyone its author didn't; when the author narrows who sees it (or
 # deletes it), its reposts go.
+#
+# The #hashtags in its words (Hashtags) are kept in `hashtags`: each tag has a page listing
+# the notes the viewer can see that have it (/people/tags/:tag, Api::HashtagsController).
 class TimelineNote < ApplicationRecord
   include Visibility
   include Reactable
@@ -32,6 +35,7 @@ class TimelineNote < ApplicationRecord
   validate :can_be_reposted, if: :repost?
   validates :repost_of_id, uniqueness: { scope: :user_id, message: "is already on your timeline" }, if: :repost?
 
+  before_save { self.hashtags = Hashtags.in(body) if body_changed? || new_record? }
   after_update_commit :drop_reposts, if: -> { saved_change_to_visibility? && visibility != "public" }
 
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
@@ -42,6 +46,37 @@ class TimelineNote < ApplicationRecord
                                   comments: [people, { reactions: people, timeline_note: :groups }] }]
     includes(*shown, repost_of: shown)
   }
+
+  scope :tagged, ->(tag) { where("timeline_notes.hashtags @> ARRAY[?]::varchar[]", tag) }
+
+  # Every note `viewer` may see, as visible_to? says for one: their own, what people share
+  # on their profiles with them (when profiles are open to them), and notes shared to a
+  # group they're both in. Reposts are left out: they show a note that's already here.
+  def self.seen_by(viewer)
+    return none unless viewer
+
+    in_group = <<~SQL.squish
+      EXISTS (SELECT 1 FROM timeline_note_shares s
+        JOIN group_memberships vm ON vm.group_id = s.group_id AND vm.user_id = :viewer AND vm.status = 'active'
+        JOIN group_memberships am ON am.group_id = s.group_id AND am.user_id = timeline_notes.user_id AND am.status = 'active'
+        WHERE s.timeline_note_id = timeline_notes.id)
+    SQL
+    seen = where(user_id: viewer.id).or(where(in_group, viewer: viewer.id))
+    if User.profiles_open_to?(viewer)
+      followed = Follow.where(follower_id: viewer.id).select(:followed_id)
+      seen = seen.or(where(visibility: "public")).or(where(visibility: "followers", user_id: followed))
+    end
+    seen.where(repost_of_id: nil)
+  end
+
+  # The tags on notes `viewer` can see that start with `prefix`, most used first, as
+  # [{ name:, count: }], counting only those notes
+  def self.hashtag_counts(viewer, prefix: "", limit: 8)
+    tags = seen_by(viewer).where.not(hashtags: []).select("unnest(timeline_notes.hashtags) AS tag")
+    unscoped.from(tags, :tags).where("tags.tag LIKE ?", "#{sanitize_sql_like(prefix.to_s.downcase)}%")
+            .group("tags.tag").order(Arel.sql("COUNT(*) DESC, tags.tag")).limit(limit).count
+            .map { |name, count| { name: name, count: count } }
+  end
 
   def repost? = repost_of_id.present?
 

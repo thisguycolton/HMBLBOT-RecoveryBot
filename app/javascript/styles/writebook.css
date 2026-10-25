@@ -2156,3 +2156,40 @@ body:has(.wb) {
 /* The reader styles give every button a fill; a picked group chip stays dark */
 .wb .wb-note-editor__chip { background-color: transparent !important; }
 .wb .wb-note-editor__chip[aria-pressed="true"] { background-color: var(--wb-ink) !important; color: var(--wb-bg) !important; }
+
+/* Hashtags typed in a note (MarkdownEditor's suggestions) and shown in one (book/Markdown.jsx) */
+.wb-tag-suggest {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 28px -10px rgb(0 0 0 / 0.35);
+  list-style: none;
+  margin: 0.3rem 0 0;
+  max-width: calc(100% - 0.5rem);
+  min-width: 14rem;
+  padding: 0.3rem;
+  position: absolute;
+  z-index: 40;
+}
+.wb .wb-tag-suggest button {
+  align-items: baseline;
+  background: none;
+  border: 0;
+  border-radius: 0.5rem;
+  color: var(--wb-ink);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 0.95rem;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  width: 100%;
+}
+.wb .wb-tag-suggest [aria-selected="true"] button { background: color-mix(in srgb, var(--color-accent, #0b6bcb) 12%, transparent); }
+.wb .wb-tag-suggest [aria-selected="true"] .wb-tag-suggest__name,
+.wb .wb-tag-suggest [aria-selected="true"] .wb-tag-suggest__count { color: var(--color-accent, #0b6bcb); font-weight: 600; }
+.wb-tag-suggest__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-tag-suggest__count { color: var(--wb-ink-soft); flex: none; }
+.wb .wb-md a.wb-hashtag { color: var(--color-accent, #0b6bcb); font-weight: 500; text-decoration: none; }
+.wb .wb-md a.wb-hashtag:hover { text-decoration: underline; }

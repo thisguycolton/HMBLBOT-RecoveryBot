@@ -13,7 +13,7 @@ const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 // pictures (pick, drop or paste them) and say who sees them on your profile. `groups` are
 // the groups you can share it to; `shareTo` is the one group it goes to (a group page's
 // Timeline block). It's written formatted, not as Markdown symbols, and selecting text
-// offers Bold, Italic, Underline, Strikethrough and Link (MarkdownEditor). The first link gets a preview card, which the X takes off. Needs a
+// offers Bold, Italic, Underline, Strikethrough and Link (MarkdownEditor). Typing # suggests hashtags. The first link gets a preview card, which the X takes off. Needs a
 // `.wb` around it for the highlight-note look.
 export default function NoteEditor({
   note = null, groups = null, shareTo = null, defaultVisibility = "private", max = 10000, imagesMax = 6,
@@ -105,6 +105,7 @@ export default function NoteEditor({
         minRows={note ? 5 : 3}
         maxLength={max}
         placeholder={placeholder}
+        hashtags
         onChange={setBody}
         onPaste={(e) => { if (e.clipboardData?.files?.length) { e.preventDefault(); addFiles(e.clipboardData.files); } }}
         onKeyDown={(e) => {
