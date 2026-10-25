@@ -182,6 +182,7 @@ Rails.application.routes.draw do
       delete :reaction, action: :unreact
     end
   end
+  resources :hashtags, only: %i[index show], param: :tag
   get "link_preview", to: "link_previews#show"
   get "link_preview/image", to: "link_previews#image", as: :link_preview_image
   get "people", to: "people#index"

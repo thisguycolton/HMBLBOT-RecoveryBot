@@ -20,7 +20,7 @@ class User < ApplicationRecord
   has_many :followers, through: :follows_received, source: :follower
 
   USERNAME = /\A[a-z0-9][a-z0-9-]{1,29}\z/
-  RESERVED_USERNAMES = %w[me edit].freeze
+  RESERVED_USERNAMES = %w[me edit tags].freeze
 
   before_validation :assign_username, on: :create
   before_validation { self.page_blocks = EventBlocks.normalize(page_blocks, types: EventBlocks::PROFILE_TYPES) unless page_blocks.nil? }

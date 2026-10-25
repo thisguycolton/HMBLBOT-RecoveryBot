@@ -162,7 +162,7 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
   const images = item.images || [];
   return (
     <>
-      {item.body?.trim() && <Markdown source={item.body} className={`wb-feed-item__body ${compact ? "wb-feed-item__body--compact" : ""}`} />}
+      {item.body?.trim() && <Markdown source={item.body} hashtags className={`wb-feed-item__body ${compact ? "wb-feed-item__body--compact" : ""}`} />}
       {images.length > 0 && (
         <div className={`wb-feed-item__images wb-feed-item__images--${Math.min(images.length, 4)}`}>
           {images.slice(0, 4).map((image, i) => (
