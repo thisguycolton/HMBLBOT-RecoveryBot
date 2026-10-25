@@ -570,9 +570,9 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   return (
     <div className={`${darkPaper ? "doc-dark " : ""}${fullScreen
       ? "doc-desk doc-fullscreen fixed inset-0 z-[2200] overflow-y-auto px-2 pb-16 sm:px-4"
-      : embedded ? "doc-desk min-h-[calc(100dvh-61px)] px-2 pb-16 sm:px-4"
+      : embedded ? "doc-desk min-h-[calc(100dvh-var(--nav-h))] px-2 pb-16 sm:px-4"
       : "doc-desk -mx-4 -mt-1 rounded-2xl px-2 pb-10 sm:mx-0 sm:px-4"}`}>
-      <div className={`doc-chrome z-20 -mx-2 mb-6 space-y-px border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 print:hidden ${fullScreen ? "sticky top-0 sm:-mx-4" : embedded ? "sticky top-[61px] sm:-mx-4" : "sm:sticky sm:top-[var(--nav-h,56px)] sm:-mx-4 sm:rounded-t-2xl"}`}>
+      <div className={`doc-chrome z-20 -mx-2 mb-6 space-y-px border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 print:hidden ${fullScreen ? "sticky top-0 sm:-mx-4" : embedded ? "sticky top-[var(--nav-h)] sm:-mx-4" : "sm:sticky sm:top-[var(--nav-h,56px)] sm:-mx-4 sm:rounded-t-2xl"}`}>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 py-1.5">
           <Link to={folderLink} title={`Back to ${isMember ? KIND_INFO[form.kind].label : "Documents"}`} aria-label="Back to the folder" className="grid size-8 place-items-center rounded-lg text-accent hover:bg-neutral-200/70 dark:hover:bg-neutral-700/60"><ChevronLeft className="size-5" /></Link>
           <MenuBar menus={menus} />

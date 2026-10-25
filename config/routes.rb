@@ -63,6 +63,9 @@ Rails.application.routes.draw do
     end
   end
   resource :hosting, controller: "hosting", only: :show
+  # The shell: your groups and roles, the Hosting badge, Today; and the search box
+  resource :nav, controller: "nav", only: :show
+  get "search", to: "search#index"
   get "oiaa/search", to: "oiaa#search"
   get "oiaa/matches", to: "oiaa#matches"
   get "groups/find", to: "groups#find"

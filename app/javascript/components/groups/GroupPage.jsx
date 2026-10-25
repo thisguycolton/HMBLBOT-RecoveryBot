@@ -16,6 +16,7 @@ import EventsTab from "./EventsTab";
 import ConscienceTab from "./conscience/ConscienceTab";
 import HostsTab from "./HostsTab";
 import ShareButton from "../share/ShareButton";
+import { refreshNav } from "../shell/useShell";
 
 const TABS = [
   { key: "home", label: "Home", icon: House },
@@ -89,6 +90,7 @@ export default function GroupPage({ tab: fixedTab }) {
     setActionError(null);
     try {
       const result = await api(`/groups/${slug}/${path}`, { method: "POST" });
+      refreshNav(); // joined or left: the sidebar's groups change
       if (path === "leave") navigate("/");
       else if (result) setGroup(result);
     } catch (e) {

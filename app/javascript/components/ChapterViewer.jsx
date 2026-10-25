@@ -835,7 +835,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
   return (
     <div className="wb wb-reader">
       {/* Progress bar */}
-      <div className="fixed top-14 left-0 w-full h-0.5 z-50 overflow-hidden pointer-events-none">
+      <div className="fixed top-[var(--nav-h)] left-0 w-full h-0.5 z-50 overflow-hidden pointer-events-none lg:left-72">
         <div
           ref={progRef}
           className="h-0.5 bg-[oklch(70%_0.2_44)] origin-left will-change-transform"

@@ -29,13 +29,14 @@ import Layout from "../components/Layout";
 const body = document.body;
 const isAuthenticated = body.dataset.currentUser === "true";
 
+// The Topicificator takes the whole window: the shell's top bar only, the sidebar behind its menu
 mountReact("topicificator-root", () => (
-  <Layout
-    isAuthenticated={isAuthenticated}
-    showFooter={false}
-  >
-    <TopicificatorApp />
-  </Layout>
+  <div className="w-full">
+    <Navbar isAuthenticated={isAuthenticated} />
+    <main className="pt-[var(--nav-h)]">
+      <TopicificatorApp />
+    </main>
+  </div>
 ));
 
 const csrf = document
@@ -150,10 +151,9 @@ mountReact("my-readings-root", (rootEl) => {
   const readings = JSON.parse(rootEl.dataset.readings || "[]");
 
   return (
-    <>
-    <Navbar isAuthenticated={isAuthenticated} />
-    <MyReadings readings={readings} />
-    </>
+    <Layout isAuthenticated={isAuthenticated}>
+      <MyReadings readings={readings} />
+    </Layout>
   );
 });
 

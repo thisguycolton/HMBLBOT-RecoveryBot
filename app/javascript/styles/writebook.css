@@ -1037,7 +1037,7 @@ body:has(.wb) {
   align-items: center;
   background: var(--wb-ink);
   border-radius: 2em;
-  bottom: 5.5rem;
+  bottom: calc(var(--shell-bottom, 0px) + 5.5rem);
   box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.4);
   color: var(--wb-bg);
   display: flex;

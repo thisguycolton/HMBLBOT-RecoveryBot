@@ -61,7 +61,7 @@ export default function ReaderBubbleMenu({
   }, [trayOpen]);
 
   return (
-        <div className="fixed bottom-4 right-4 z-50 flex items-end justify-end gap-3">
+        <div className="fixed bottom-[calc(var(--shell-bottom,0px)+1rem)] right-4 z-50 flex items-end justify-end gap-3">
       {/* Highlight Options (NotebookPen) */}
       <div className="relative">
         <button

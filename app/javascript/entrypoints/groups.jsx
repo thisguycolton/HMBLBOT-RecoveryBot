@@ -15,6 +15,7 @@ import "../styles/writebook.css";
 import "../styles/documents.css";
 
 import Layout from "../components/Layout";
+import { registerRouter } from "../components/shell/useShell";
 import GroupsIndex from "../components/groups/GroupsIndex";
 import GroupForm from "../components/groups/GroupForm";
 import GroupPage from "../components/groups/GroupPage";
@@ -37,7 +38,7 @@ const isAuthenticated = document.body.dataset.currentUser === "true";
 function Shell({ children }) {
   return (
     <Layout isAuthenticated={isAuthenticated}>
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
         {children || <Outlet />}
       </div>
     </Layout>
@@ -82,6 +83,8 @@ const router = createBrowserRouter(
   ],
   { basename: "/groups" }
 );
+// The sidebar's links into this app move without a load
+registerRouter(router, "/groups");
 
 const mount = document.getElementById("groups-root");
 if (mount) createRoot(mount).render(<RouterProvider router={router} />);

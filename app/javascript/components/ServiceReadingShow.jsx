@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Navbar from "./Navbar";
 import { Copy, Pencil, Trash2, MessageSquareQuote, BookOpen } from "lucide-react";
 
 export default function ServiceReadingShow({
@@ -51,9 +50,7 @@ export default function ServiceReadingShow({
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-900 text-slate-900 dark:text-white w-screen">
-      <Navbar isAuthenticated={isAuthenticated} />
-
+    <div className="min-h-screen bg-white dark:bg-neutral-900 text-slate-900 dark:text-white w-full">
       {/* Scroll progress */}
       <div
         className="fixed top-0 left-0 h-1 bg-cyan-500 z-50"
