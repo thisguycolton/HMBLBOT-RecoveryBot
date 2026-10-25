@@ -187,10 +187,20 @@ function HostCoordinators({ slug, coordinators, slots, reload }) {
       await reload();
     } catch (e) { setError(e.message); }
   };
-  const flip = (c, id) => {
-    const ids = c.host_meeting_ids.includes(id) ? c.host_meeting_ids.filter((x) => x !== id) : [...c.host_meeting_ids, id];
-    save(c, { host_meeting_ids: ids });
+  const pick = (c, ids, on) => {
+    const rest = c.host_meeting_ids.filter((x) => !ids.includes(x));
+    save(c, { host_meeting_ids: on ? [...rest, ...ids] : rest });
   };
+  // A meeting that runs on several days is one time slot per day: they're grouped by time, so a
+  // coordinator of "9:00 AM, every day" is one box
+  const times = [];
+  slots.forEach((slot) => {
+    const key = `${slot.start_minute}|${slot.end_minute}|${slot.name}`;
+    let t = times.find((x) => x.key === key);
+    if (!t) times.push(t = { key, name: slot.name, start_minute: slot.start_minute, slots: [] });
+    t.slots.push(slot);
+  });
+  times.sort((x, y) => x.start_minute - y.start_minute || x.name.localeCompare(y.name));
   return (
     <Tray label={`Host coordinators (${coordinators.length})`}>
       <div className="space-y-2">
@@ -205,7 +215,7 @@ function HostCoordinators({ slug, coordinators, slots, reload }) {
                 <p className="text-xs text-slate-500 dark:text-neutral-400">Host coordinator</p>
               </div>
               <label htmlFor={`hc-scope-${c.membership_id}`} className="sr-only">What {c.name} coordinates</label>
-              <select id={`hc-scope-${c.membership_id}`} className={`${selectClass} !w-auto`} value={c.host_slots_only ? "slots" : "group"}
+              <select id={`hc-scope-${c.membership_id}`} className={`${selectClass} sm:!w-auto`} value={c.host_slots_only ? "slots" : "group"}
                 onChange={(e) => save(c, { host_slots_only: e.target.value === "slots" })}>
                 <option value="group">Whole group</option>
                 <option value="slots">Only these time slots</option>
@@ -214,14 +224,32 @@ function HostCoordinators({ slug, coordinators, slots, reload }) {
             {c.host_slots_only ? (
               <>
                 <p className="text-sm text-slate-600 dark:text-neutral-300">Gets open places, sub requests and schedule changes for these slots only.{c.host_meeting_ids.length === 0 && " Pick at least one."}</p>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {slots.map((slot) => {
-                    const on = c.host_meeting_ids.includes(slot.id);
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {times.map((t) => {
+                    const ids = t.slots.map((x) => x.id);
+                    const count = ids.filter((id) => c.host_meeting_ids.includes(id)).length;
+                    const all = count === ids.length;
+                    const days = t.slots.length === 7 ? "every day" : t.slots.map((x) => DAYS[x.day_of_week].slice(0, 3)).join(", ");
                     return (
-                      <label key={slot.id} className={`flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm ring-1 ${on ? "bg-sky-100 text-slate-900 ring-sky-200 dark:bg-sky-900/40 dark:text-white dark:ring-sky-800" : "text-slate-700 ring-neutral-200 dark:text-neutral-200 dark:ring-neutral-700"}`}>
-                        <input type="checkbox" className="size-4 accent-[var(--color-accent,#2563eb)]" checked={on} onChange={() => flip(c, slot.id)} />
-                        <span className="min-w-0 truncate">{DAYS[slot.day_of_week].slice(0, 3)} {clock(slot.start_minute)} · {slot.name}</span>
-                      </label>
+                      <div key={t.key} className={`rounded-xl px-3 py-2 ring-1 ${count ? "bg-sky-100 ring-sky-200 dark:bg-sky-900/40 dark:ring-sky-800" : "ring-neutral-200 dark:ring-neutral-700"}`}>
+                        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-900 dark:text-white">
+                          <input type="checkbox" className="size-4" checked={all} ref={(el) => { if (el) el.indeterminate = count > 0 && !all; }} onChange={() => pick(c, ids, !all)} />
+                          <span className="min-w-0 truncate"><span className="font-medium">{clock(t.start_minute)} · {t.name}</span> <span className="text-slate-500 dark:text-neutral-400">{days}</span></span>
+                        </label>
+                        {ids.length > 1 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1 pl-6">
+                            {t.slots.map((x) => {
+                              const on = c.host_meeting_ids.includes(x.id);
+                              return (
+                                <button key={x.id} type="button" aria-pressed={on} title={`${DAYS[x.day_of_week]} ${clock(x.start_minute)}`} onClick={() => pick(c, [x.id], !on)}
+                                  className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${on ? "!bg-accent !text-white ring-transparent" : "!bg-white text-slate-600 ring-neutral-200 dark:!bg-neutral-900 dark:text-neutral-300 dark:ring-neutral-700"}`}>
+                                  {DAYS[x.day_of_week].slice(0, 3)}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>

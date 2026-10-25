@@ -120,4 +120,12 @@ class Api::HostCoordinatorSlotsTest < ActionDispatch::IntegrationTest
     assert_equal 2, HostSchedule.new(@group, @slotty).summary[:places]
     assert_equal 4, HostSchedule.new(@group, @whole).summary[:places]
   end
+
+  test "a new day of a meeting joins the slots of coordinators who have every other day of it" do
+    limit!
+    monday = @group.meetings.create!(name: "Sunrise", recurrence: "weekly", day_of_week: (@today.wday + 2) % 7, start_minute: 420)
+    assert_includes @slot_membership.reload.host_meeting_ids, monday.id
+    other = @group.meetings.create!(name: "Step Study", recurrence: "weekly", day_of_week: (@today.wday + 3) % 7, start_minute: 1080)
+    assert_not_includes @slot_membership.reload.host_meeting_ids, other.id
+  end
 end
