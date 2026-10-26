@@ -46,14 +46,13 @@ export default function HostingIndex() {
   }, [occurrences, query]);
   const byDay = useMemo(() => shown.reduce((days, o) => ({ ...days, [o.on]: [...(days[o.on] || []), o] }), {}), [shown]);
 
-  if (error) return <div className="mx-auto max-w-3xl space-y-4"><Link to={`/${slug}/hosts`} className="text-sm text-slate-500 hover:text-accent">← Hosts</Link><ErrorNote error={error} /></div>;
+  if (error) return <div className="mx-auto max-w-3xl"><ErrorNote error={error} /></div>;
   if (!data) return <Loading />;
   const today = isoDay(new Date(now));
   const tomorrow = isoDay(new Date(now + 86400000));
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 !font-sans [&_*]:!font-sans">
-      <Link to={`/${slug}/hosts`} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Hosts</Link>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> HostDeck</h1>

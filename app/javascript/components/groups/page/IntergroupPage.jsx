@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { BellRing, Check, LayoutTemplate } from "lucide-react";
 import { PageBlocks } from "../../events/EventLayout";
 import { api } from "../lib";
@@ -14,20 +14,18 @@ import { hiddenFor } from "./lib";
 export default function IntergroupPage({ template = false }) {
   const { oiaaSlug } = useParams();
   const navigate = useNavigate();
-  const back = useLocation().state?.back;
   // "Find your group" is for people who see Groups; everyone else came from Find a meeting
-  const canFind = document.body.dataset.groups === "true";
   const [page, setPage] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     setPage(null);
     api(template ? "/group_page_template" : `/intergroup_pages/${encodeURIComponent(oiaaSlug)}`).then((data) => {
-      if (data.group_slug) return navigate(`/${data.group_slug}`, { replace: true, state: { back } });
+      if (data.group_slug) return navigate(`/${data.group_slug}`, { replace: true });
       setPage(data);
       document.title = `${template ? "The default group page" : data.context.group.title} | RecoveryBot`;
     }).catch((e) => setError(e.message));
-  }, [oiaaSlug, template, navigate, back]);
+  }, [oiaaSlug, template, navigate]);
 
   if (error) {
     return (
@@ -54,10 +52,8 @@ export default function IntergroupPage({ template = false }) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <Link to={template ? "/" : back || (canFind ? "/find" : "/meetings")} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">
-        {template ? "← Groups" : back || !canFind ? "← Find a meeting" : "← Find your group"}
-      </Link>
       <GroupHero
+        bleed
         group={context.group}
         coverUrl={page.cover_url}
         note={template ? "A made-up group, to show the default page" : "Listed by AA Intergroup · not on RecoveryBot yet"}
