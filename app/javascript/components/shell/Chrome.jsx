@@ -17,11 +17,15 @@ export function useChrome() {
   return { open, show: (which) => setOpen(which), close: () => setOpen(null) };
 }
 
-export function ChromeSheets({ chrome, nav, isAuthenticated, theme, path }) {
+// Inside the shell (Layout.jsx) the menu and Today lie under the stage, which slides aside:
+// `pushed` is the one showing, kept while the stage slides back. Elsewhere they slide over.
+export function ChromeSheets({ chrome, nav, isAuthenticated, theme, path, pushed }) {
   const { open, close, show } = chrome;
+  const push = pushed !== undefined;
+  const showing = (which) => (push ? pushed === which : open === which);
   return (
     <>
-      <Sheet open={open === "menu"} onClose={close} side="left" label="Menu" className="shell-side">
+      <Sheet open={showing("menu")} onClose={close} side="left" label="Menu" push={push} className="shell-side">
         <div className="flex-1 overflow-y-auto px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
           {isAuthenticated && <AccountRow nav={nav} />}
           <SearchBox className="my-4" onDone={close} />
@@ -44,7 +48,7 @@ export function ChromeSheets({ chrome, nav, isAuthenticated, theme, path }) {
         </div>
       </Sheet>
 
-      <Sheet open={open === "today"} onClose={close} side="right" label="Today">
+      <Sheet open={showing("today")} onClose={close} side="right" label="Today" push={push}>
         <div className="flex items-center justify-between px-5 pb-2 pt-[max(1.25rem,env(safe-area-inset-top))]">
           <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Today</h2>
           <SheetClose onClose={close} />

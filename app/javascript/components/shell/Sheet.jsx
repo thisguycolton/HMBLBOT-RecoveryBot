@@ -8,9 +8,13 @@ const SIDES = {
   bottom: "inset-x-0 bottom-0 max-h-[85dvh] rounded-t-[28px]",
 };
 
+// How far the stage slides aside for a pushed sheet (Layout.jsx), and so the sheet's width
+export const PUSH_WIDTH = { left: "min(22rem, 85vw)", right: "min(24rem, 85vw)" };
+
 // A panel that slides over the page on phones: the menu (left), Today or the page's side panel
-// (right) and quick actions (bottom). Escape or the backdrop closes it.
-export default function Sheet({ open, onClose, side = "left", label, children, className = "" }) {
+// (right) and quick actions (bottom). Escape or the backdrop closes it. A `push` sheet lies
+// under the stage instead, and the shell slides the stage aside to show it (Layout.jsx).
+export default function Sheet({ open, onClose, side = "left", label, push = false, children, className = "" }) {
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -20,6 +24,16 @@ export default function Sheet({ open, onClose, side = "left", label, children, c
     return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = overflow; };
   }, [open, onClose]);
   if (!open) return null;
+
+  if (push) {
+    return createPortal(
+      <div role="dialog" aria-modal="true" aria-label={label} style={{ width: PUSH_WIDTH[side] }}
+        className={`shell-sheet fixed inset-y-0 z-[2100] flex flex-col overflow-hidden bg-[#ececec] !font-sans dark:bg-neutral-950 ${side === "left" ? "left-0" : "right-0"} ${className}`}>
+        {children}
+      </div>,
+      document.body
+    );
+  }
 
   return createPortal(
     <div className="shell-sheet fixed inset-0 z-[2200] !font-sans" role="dialog" aria-modal="true" aria-label={label}>
