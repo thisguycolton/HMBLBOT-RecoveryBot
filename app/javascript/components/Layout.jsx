@@ -48,11 +48,16 @@ export default function Layout({ children, isAuthenticated, showFooter = true })
           </div>
         </aside>
 
-        <div className={`fixed inset-x-0 top-0 z-50 h-[var(--nav-h)] bg-[#ececec]/90 backdrop-blur lg:left-72 dark:bg-neutral-950/90 print:!hidden ${chrome.open ? "z-[2100]" : ""}`}>
+        <div className={`fixed inset-x-0 top-0 z-50 h-[var(--nav-h)] bg-[#ececec]/90 backdrop-blur lg:left-72 lg:bg-[#ececec] dark:bg-neutral-950/90 lg:dark:bg-neutral-950 print:!hidden ${chrome.open ? "z-[2100]" : ""}`}>
           <TopBar nav={nav} isAuthenticated={isAuthenticated} theme={theme}
             onMenu={() => chrome.show("menu")} onSearch={() => chrome.show("search")} onDonate={() => chrome.show("donate")} onCourt={() => chrome.show("court")}
             onAside={aside ? openAside : null} asideLabel={aside?.title} />
         </div>
+
+        {/* The window scrolls, so the stage's rounded corner would scroll away under the top bar:
+            this stays put over that corner, drawn in the shell's color (the bar is solid on wide screens) */}
+        <div aria-hidden="true"
+          className="pointer-events-none fixed left-72 top-[var(--nav-h)] z-40 hidden size-8 bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#ececec_32px)] dark:bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,var(--color-neutral-950)_32px)] lg:block print:!hidden" />
 
         <div className="pt-[var(--nav-h)] lg:pl-72 print:!p-0">
           <div className="stage flex min-h-[calc(100dvh-var(--nav-h))] bg-white dark:bg-neutral-900 lg:overflow-clip lg:rounded-tl-[32px] print:!rounded-none">
