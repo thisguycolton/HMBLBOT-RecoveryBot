@@ -38,7 +38,7 @@ export default function ProfilePage() {
             <a href="/users/edit" className={heroQuietButton}><Settings className="size-4" /> Settings</a>
           </>
         )} />
-      <PageBlocks layout={page.layout} blocks={page.blocks} context={context} hidden={(b) => hiddenFor(b, context)} />
+      <PageBlocks info layout={page.layout} blocks={page.blocks} context={context} hidden={(b) => hiddenFor(b, context)} />
     </div>
   );
 }

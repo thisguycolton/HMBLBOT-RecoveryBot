@@ -7,7 +7,7 @@ import { ChromeSheets, useChrome } from "./shell/Chrome";
 import { PUSH_WIDTH } from "./shell/Sheet";
 import Sidebar from "./shell/Sidebar";
 import TopBar from "./shell/TopBar";
-import { ShellContext, usePath, useNav, useTheme } from "./shell/useShell";
+import { ShellContext, useMedia, usePath, useNav, useTheme } from "./shell/useShell";
 import { forgetPushIfSignedOut, registerServiceWorker } from "../lib/push";
 
 // The site's shell, around every page: the sidebar on the left (You, Your groups, Explore),
@@ -95,24 +95,13 @@ export default function Layout({ children, isAuthenticated, showFooter = true })
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{aside?.title}</h2>
             <button type="button" onClick={() => setAsideOpen(false)} aria-label="Close" className="inline-grid size-9 place-items-center rounded-full !bg-white/80 dark:!bg-neutral-800"><X className="size-4" /></button>
           </div>
-          <div ref={setPhoneAside} className="m-3 mt-2 flex-1 overflow-y-auto rounded-3xl bg-white p-5 dark:bg-neutral-900" />
+          <div ref={setPhoneAside} className={`m-3 mt-2 flex-1 overflow-y-auto ${aside?.plain ? "pb-6" : "rounded-3xl bg-white p-5 dark:bg-neutral-900"}`} />
         </aside>
 
         <ChromeSheets chrome={chrome} nav={nav} isAuthenticated={isAuthenticated} theme={theme} path={path} pushed={push?.which ?? null} />
       </div>
     </ShellContext.Provider>
   );
-}
-
-function useMedia(query) {
-  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
-  useEffect(() => {
-    const list = window.matchMedia(query);
-    const onChange = () => setMatches(list.matches);
-    list.addEventListener("change", onChange);
-    return () => list.removeEventListener("change", onChange);
-  }, [query]);
-  return matches;
 }
 
 const SLIDE_MS = 420;

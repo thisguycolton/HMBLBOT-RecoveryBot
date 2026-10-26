@@ -77,7 +77,7 @@ function FeedBlock({ block, compact, editing, context, title }) {
     : "Nothing shared here yet.";
 
   return (
-    <Card block={block} compact={compact} title={title} icon={MessagesSquare}>
+    <Card block={block} compact={compact} title={title} icon={MessagesSquare} bleed={!compact && !editing}>
       <div className="wb">
         {me && !editing && kind !== "highlight" && (
           <div className="mb-4">

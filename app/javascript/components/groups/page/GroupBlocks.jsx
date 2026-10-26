@@ -33,10 +33,11 @@ export default function GroupBlockView({ block, compact, editing, context, fill 
 }
 
 // A block's card in its palette color, with its title; profile blocks use it too
-export function Card({ block, compact, title, icon: Icon, action, children }) {
+// A `bleed` card (a profile's timeline) runs edge to edge on phones, so what's in it has room
+export function Card({ block, compact, title, icon: Icon, action, bleed = false, children }) {
   const t = tone(block);
   return (
-    <section className={`rounded-2xl ${t.card} ${compact ? "p-4" : "p-5 sm:p-6"}`}>
+    <section className={`rounded-2xl ${t.card} ${compact ? "p-4" : "p-5 sm:p-6"} ${bleed ? "max-sm:-mx-4 max-sm:rounded-none max-sm:px-4 max-sm:shadow-none max-sm:ring-0" : ""}`}>
       {(title || action) && (
         <div className="mb-3 flex items-center gap-2">
           {Icon && <span className={`grid size-7 shrink-0 place-items-center rounded-lg ${t.soft}`}><Icon className="size-4" /></span>}
