@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { CalendarHeart, Lock, MessagesSquare, UserRound, Users, UsersRound } from "lucide-react";
 import Avatar from "../groups/Avatar";
+import GroupLogo from "../groups/GroupLogo";
 import { api } from "../groups/lib";
 import { Card, Empty } from "../groups/page/GroupBlocks";
 import FeedItem from "../notes/FeedItem";
@@ -117,9 +118,14 @@ function GroupsBlock({ block, compact, editing, context, title }) {
       <ul className="space-y-1">
         {groups.map((g) => (
           <li key={g.slug}>
-            <a href={`/groups/${g.slug}`} onClick={(e) => editing && e.preventDefault()} className="block rounded-xl p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800/60">
-              <span className="block truncate font-semibold text-slate-900 dark:text-white">{g.title}</span>
-              {g.description && !compact && <span className="block truncate text-sm text-slate-500 dark:text-neutral-400">{g.description}</span>}
+            <a href={`/groups/${g.slug}`} onClick={(e) => editing && e.preventDefault()} className="flex items-center gap-3 rounded-xl p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800/60">
+              <GroupLogo group={g} className="size-10 text-xs" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold text-slate-900 dark:text-white">{g.title}</span>
+                <span className="block truncate text-sm text-slate-500 dark:text-neutral-400">
+                  {g.members_count} {g.members_count === 1 ? "member" : "members"}{g.description && !compact ? ` · ${g.description}` : ""}
+                </span>
+              </span>
             </a>
           </li>
         ))}

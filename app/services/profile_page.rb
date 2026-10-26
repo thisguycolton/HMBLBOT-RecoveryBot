@@ -87,7 +87,11 @@ class ProfilePage
   def groups(person, me)
     scope = person.groups.order(:title)
     scope = scope.where(id: @viewer.groups.select(:id)) unless me || @viewer&.suite_admin?
-    scope.map { |g| { slug: g.slug, title: g.title, description: g.description } }
+    list = scope.includes(logo_attachment: :blob).to_a
+    counts = GroupMembership.active.where(group_id: list.map(&:id)).group(:group_id).count
+    list.map do |g|
+      { slug: g.slug, title: g.title, description: g.description, logo_url: image_path(g.logo), members_count: counts[g.id] || 0 }
+    end
   end
 
   def people(scope)
