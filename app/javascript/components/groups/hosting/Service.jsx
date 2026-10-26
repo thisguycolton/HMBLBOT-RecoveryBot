@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Check, PartyPopper, Plus, Trash2, Users } from "luc
 import { inputClass } from "../../ui/styles";
 import { quietButton } from "../ui";
 import { roleToken, serviceNames } from "./lib";
+import { confetti } from "../../../lib/confetti";
 
 const label = "!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
 const smallButton = "inline-grid size-7 shrink-0 place-items-center rounded-lg !bg-transparent text-slate-400 hover:!bg-neutral-100 hover:text-slate-700 disabled:opacity-30 dark:hover:!bg-neutral-800 dark:hover:text-neutral-200";
@@ -70,7 +71,7 @@ const LENGTHS = ["24 hours", "30 days", "60 days", "90 days", "6 months", "9 mon
 
 // People counting days or celebrating a milestone today, in the order they'll be called on, as
 // Host Helper had it. Only the name is needed: not everyone says their time. Checked off once
-// they've been celebrated. In the sidebar, and `inScript` where the format has a Milestone Form
+// they've been celebrated (with confetti on the host's screen). In the sidebar, and `inScript` where the format has a Milestone Form
 // (Insert > Milestone Form), as a card in the text: the same list.
 export function Milestones({ live, act, inScript = false }) {
   const lengths = useId();
@@ -95,7 +96,7 @@ export function Milestones({ live, act, inScript = false }) {
         <ul className="mb-2 space-y-1.5">
           {list.map((m, i) => (
             <li key={m.id} className={`flex items-center gap-1.5 rounded-xl bg-white p-1.5 pl-2 shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 ${m.done ? "opacity-60" : ""}`}>
-              <button type="button" onClick={() => update(m.id, { done: !m.done })} aria-pressed={!!m.done} aria-label={m.done ? `${m.name} celebrated (undo)` : `Mark ${m.name} celebrated`}
+              <button type="button" onClick={() => { if (!m.done) confetti(); update(m.id, { done: !m.done }); }} aria-pressed={!!m.done} aria-label={m.done ? `${m.name} celebrated (undo)` : `Mark ${m.name} celebrated`}
                 className={`grid size-5 shrink-0 place-items-center rounded-md border ${m.done ? "border-emerald-500 !bg-emerald-500 text-white" : "border-neutral-300 !bg-transparent dark:border-neutral-600"}`}>
                 {m.done && <Check className="size-3.5" />}
               </button>

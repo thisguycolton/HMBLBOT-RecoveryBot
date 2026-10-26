@@ -1,0 +1,122 @@
+/* The day count on sign-in (components/DayCount.jsx). Plain CSS: it mounts with the toasts
+   on the older Bootstrap pages too, which don't load Tailwind. */
+.hb-daycount {
+  align-items: center;
+  animation: hb-daycount-fade 0.15s ease-out;
+  background: rgb(15 23 42 / 0.5);
+  display: flex;
+  font-family: "Public Sans", system-ui, sans-serif;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 2300;
+}
+
+.hb-daycount__panel {
+  --hb-daycount-edge: #0b6ede;
+  --hb-daycount-bg: #fff;
+  --hb-daycount-ink: #0f172a;
+  --hb-daycount-muted: #475569;
+  --hb-daycount-line: #e2e8f0;
+  animation: hb-daycount-pop 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  background: var(--hb-daycount-bg);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
+  color: var(--hb-daycount-ink);
+  max-height: calc(100dvh - 2rem);
+  max-width: 28rem;
+  overflow: hidden auto;
+  position: relative;
+  width: 100%;
+}
+html.dark .hb-daycount__panel {
+  --hb-daycount-bg: #1c1c1e;
+  --hb-daycount-ink: #f5f5f4;
+  --hb-daycount-muted: #a8a29e;
+  --hb-daycount-line: #333;
+}
+.hb-daycount__panel--milestone { --hb-daycount-edge: #d97706; }
+
+.hb-daycount__head {
+  background: linear-gradient(160deg, var(--hb-daycount-edge), color-mix(in srgb, var(--hb-daycount-edge) 70%, #000));
+  color: #fff;
+  padding: 2rem 1.5rem 1.6rem;
+  text-align: center;
+}
+.hb-daycount__meta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
+.hb-daycount .hb-daycount__title {
+  color: #fff;
+  font-family: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0.35rem 0 0;
+}
+.hb-daycount__number {
+  font-size: 3.5rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin-top: 0.4rem;
+}
+.hb-daycount__unit { font-size: 1.25rem; font-weight: 600; letter-spacing: 0; opacity: 0.9; }
+.hb-daycount__since { font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9; }
+
+.hb-daycount__close {
+  align-items: center;
+  background: rgb(255 255 255 / 0.15);
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  position: absolute;
+  right: 0.9rem;
+  top: 0.9rem;
+  width: 2rem;
+}
+.hb-daycount__close:hover { background: rgb(255 255 255 / 0.3); }
+.hb-daycount__close svg { fill: none; height: 1rem; stroke: currentColor; stroke-linecap: round; stroke-width: 2.25; width: 1rem; }
+
+.hb-daycount__body { line-height: 1.55; padding: 1.25rem 1.5rem 0.5rem; text-align: center; }
+.hb-daycount__body p { font-family: inherit; hyphens: none; margin: 0 0 0.75rem; text-align: center; }
+.hb-daycount .hb-daycount__next { color: var(--hb-daycount-muted); font-size: 0.9rem; }
+
+.hb-daycount__foot {
+  align-items: center;
+  border-top: 1px solid var(--hb-daycount-line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding: 0.9rem 1.25rem;
+}
+.hb-daycount .hb-daycount__link { color: var(--hb-daycount-muted); font-size: 0.85rem; margin-right: auto; text-decoration: underline; }
+.hb-daycount__button {
+  background: transparent;
+  border: 1px solid var(--hb-daycount-line);
+  border-radius: 0.75rem;
+  color: var(--hb-daycount-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+}
+.hb-daycount__button:hover { background: rgb(127 127 127 / 0.1); }
+.hb-daycount .hb-daycount__button--primary { background: var(--hb-daycount-edge); border-color: var(--hb-daycount-edge); color: #fff; }
+.hb-daycount .hb-daycount__button--primary:hover { background: var(--hb-daycount-edge); filter: brightness(1.08); }
+
+@keyframes hb-daycount-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hb-daycount-pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .hb-daycount, .hb-daycount__panel { animation: none; } }

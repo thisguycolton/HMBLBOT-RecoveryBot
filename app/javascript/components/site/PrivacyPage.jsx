@@ -37,6 +37,7 @@ const STORAGE = [
   ["hosting-share-size", "Text size of a service reading opened to share on screen"],
   ["questScreenName, questChime", "Your screen name and sound setting in The Acid Quest"],
   ["installNudge.dismissed", "That you closed the “Add RecoveryBot to your home screen” card"],
+  ["hb-day-count-seen", "The day your day count last popped up, so a milestone celebration shows once that day"],
 ];
 
 function H2({ id, children }) {

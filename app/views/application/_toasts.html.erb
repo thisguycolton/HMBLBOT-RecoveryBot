@@ -1,3 +1,7 @@
-<%# Toasts (app/javascript/entrypoints/toasts.jsx). The flash arrives as toasts. %>
-<div id="hb-toasts" data-flash="<%= flash.to_hash.slice("notice", "alert").to_json %>"></div>
+<%# Toasts (app/javascript/entrypoints/toasts.jsx). The flash arrives as toasts. A member with a
+    sobriety date gets their day count in a modal after signing in (config/initializers/day_count.rb
+    marks the sign-in; the first page after it shows the modal and clears the mark). %>
+<% sober_since = user_signed_in? && current_user.sobriety_date %>
+<% day_count_login = sober_since && session.delete(:day_count_pending) %>
+<div id="hb-toasts" data-flash="<%= flash.to_hash.slice("notice", "alert").to_json %>"<% if sober_since %> data-sober-since="<%= sober_since.iso8601 %>"<% end %><% if day_count_login %> data-day-count-login="true"<% end %>></div>
 <%= vite_javascript_tag "toasts.jsx" %>
