@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_28_182000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_28_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -202,6 +202,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_182000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "design"
+    t.bigint "chip_edition_id"
+    t.index ["chip_edition_id"], name: "index_chip_awards_on_chip_edition_id"
     t.index ["claim_token"], name: "index_chip_awards_on_claim_token", unique: true
     t.index ["email"], name: "index_chip_awards_on_email"
     t.index ["given_by_id"], name: "index_chip_awards_on_given_by_id"
@@ -215,6 +217,49 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_182000) do
     t.jsonb "design", null: false
     t.datetime "created_at", null: false
     t.index ["owner_type", "owner_id", "created_at"], name: "idx_on_owner_type_owner_id_created_at_7d14f4e150"
+  end
+
+  create_table "chip_edition_chips", force: :cascade do |t|
+    t.bigint "chip_edition_id", null: false
+    t.bigint "user_id"
+    t.bigint "chip_award_id"
+    t.string "slot", null: false
+    t.string "milestone_key"
+    t.integer "years"
+    t.integer "count"
+    t.date "earned_on", null: false
+    t.integer "serial", null: false
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chip_award_id"], name: "index_chip_edition_chips_on_chip_award_id"
+    t.index ["chip_edition_id", "serial"], name: "index_chip_edition_chips_on_chip_edition_id_and_serial", unique: true
+    t.index ["chip_edition_id", "user_id", "slot"], name: "index_edition_chips_once_per_slot", unique: true, where: "(chip_award_id IS NULL)"
+    t.index ["chip_edition_id"], name: "index_chip_edition_chips_on_chip_edition_id"
+    t.index ["user_id"], name: "index_chip_edition_chips_on_user_id"
+  end
+
+  create_table "chip_editions", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.string "name", null: false
+    t.string "kind", default: "milestone", null: false
+    t.jsonb "design", default: {}, null: false
+    t.date "starts_on", null: false
+    t.date "ends_on", null: false
+    t.string "window", default: "custom", null: false
+    t.string "milestones", default: [], null: false, array: true
+    t.bigint "meeting_ids", default: [], null: false, array: true
+    t.integer "target_count"
+    t.string "how_many", default: "everyone", null: false
+    t.integer "limit"
+    t.boolean "numbered", default: true, null: false
+    t.datetime "published_at"
+    t.datetime "locked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_chip_editions_on_created_by_id"
+    t.index ["group_id"], name: "index_chip_editions_on_group_id"
   end
 
   create_table "chip_template_versions", force: :cascade do |t|
@@ -1387,9 +1432,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_182000) do
   add_foreign_key "business_meetings", "meetings", on_delete: :nullify
   add_foreign_key "business_meetings", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chapters", "books"
+  add_foreign_key "chip_awards", "chip_editions", on_delete: :nullify
   add_foreign_key "chip_awards", "groups", on_delete: :cascade
   add_foreign_key "chip_awards", "users", column: "given_by_id", on_delete: :nullify
   add_foreign_key "chip_awards", "users", on_delete: :cascade
+  add_foreign_key "chip_edition_chips", "chip_awards", on_delete: :cascade
+  add_foreign_key "chip_edition_chips", "chip_editions", on_delete: :cascade
+  add_foreign_key "chip_edition_chips", "users", on_delete: :cascade
+  add_foreign_key "chip_editions", "groups", on_delete: :cascade
+  add_foreign_key "chip_editions", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chip_template_versions", "chip_templates", on_delete: :cascade
   add_foreign_key "chip_templates", "groups", on_delete: :cascade
   add_foreign_key "chip_templates", "users", column: "created_by_id", on_delete: :nullify

@@ -30,7 +30,8 @@ class Notification < ApplicationRecord
     "reactions" => { label: "Reactions and reposts", description: "When someone reacts to your notes or comments, or reposts a note.",
                      kinds: %w[note.reaction comment.reaction note.repost] },
     "follows" => { label: "New followers", description: "When someone follows you.", kinds: %w[follow.created] },
-    "chips" => { label: "Chips", description: "When someone gives you a chip.", kinds: %w[chip.given] },
+    "chips" => { label: "Chips", description: "When someone gives you a chip, you earn a Special Edition, or your group makes a new one.",
+                 kinds: %w[chip.given chip.edition chip.edition_new] },
     "site_admin" => { label: "Site admin", description: "New groups waiting for approval and text reports.",
                       kinds: %w[group.pending text_report.created], admin_only: true },
   }.freeze

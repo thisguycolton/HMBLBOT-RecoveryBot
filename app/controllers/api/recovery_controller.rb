@@ -12,6 +12,8 @@ class Api::RecoveryController < ApplicationController
       design: ChipDesign::DEFAULT,
       chips: Chips.ordered(catalog[:chips], current_user.chip_tops),
       upcoming: catalog[:upcoming],
+      # Special Editions they can claim: a milestone they reached during one of their groups' runs
+      available: ChipEdition.available_for(current_user, today),
       streaks: catalog[:streaks],
       totals: catalog[:totals],
       favorites: current_user.chip_favorites,
@@ -42,6 +44,21 @@ class Api::RecoveryController < ApplicationController
     current_user.show_chips_on_profile = ActiveModel::Type::Boolean.new.cast(params[:show_on_profile]) if params.key?(:show_on_profile)
     current_user.save!
     show
+  end
+
+  # POST /api/recovery/claim { edition_id, slot } -> a Special Edition for a milestone they
+  # reached in its window, numbered (they can claim it any time after)
+  def claim
+    edition = ChipEdition.published.where(group_id: current_user.groups.select(:id)).find_by(id: params[:edition_id])
+    return render(json: { error: "That edition isn't one you can claim." }, status: :not_found) unless edition
+
+    chip = edition.claim!(current_user, params[:slot].to_s, today)
+    current_user.update!(chip_tops: current_user.chip_tops.merge(chip.slot => "edition:#{chip.id}")) # the new one goes on top
+    render json: { chip: chip.as_chip_json }, status: :created
+  rescue ChipEdition::NotYours
+    render json: { error: "That milestone isn't one this edition is for." }, status: :unprocessable_entity
+  rescue ChipEdition::SoldOut
+    render json: { error: "They're all claimed. Every one of this edition is out." }, status: :unprocessable_entity
   end
 
   private

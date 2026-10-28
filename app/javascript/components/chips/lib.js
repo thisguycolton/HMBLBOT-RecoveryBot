@@ -38,6 +38,13 @@ export function storedScene(scene) {
   return rest;
 }
 
+// A design as it's saved: its scenes without their art
+export function storedDesign(design) {
+  const out = { ...design };
+  ["round", "meeting"].forEach((k) => { if (out[k]?.scene) out[k] = { ...out[k], scene: storedScene(out[k].scene) }; });
+  return out;
+}
+
 // Reads a picked file as text (an SVG upload)
 export const readText = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();

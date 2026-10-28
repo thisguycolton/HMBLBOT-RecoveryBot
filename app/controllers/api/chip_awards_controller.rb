@@ -14,7 +14,12 @@ class Api::ChipAwardsController < ApplicationController
     render json: {
       groups: groups.map do |g|
         { slug: g.slug, title: g.title, logo_url: g.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(g.logo, only_path: true) : nil,
-          design: ChipDesign.for_group(g) }
+          design: ChipDesign.for_group(g),
+          # Special Editions running now that hosts can give
+          editions: g.chip_editions.running_on(Date.current).where(kind: "milestone").select(&:givable?).map do |e|
+            { id: e.id, name: e.name, design: e.chip_design, milestones: e.milestones, window_label: e.window_label,
+              left: e.limited? ? e.limit - e.issued : nil, numbered: e.numbered, limit: e.limit }
+          end }
       end,
       given: given_scope(groups).includes(:group, :user, :given_by).order(created_at: :desc).limit(100).map(&:as_api_json),
     }
@@ -36,7 +41,7 @@ class Api::ChipAwardsController < ApplicationController
     render json: { members: members, account: account && { name: account.display_name, avatar_url: account.avatar_url, member: group.members.exists?(account.id) } }
   end
 
-  # POST /api/chip_awards { group_slug, user_id | email, milestone_key, years, on, note }
+  # POST /api/chip_awards { group_slug, user_id | email, milestone_key, years, on, note, chip_edition_id }
   def create
     group = giving_groups.find { |g| g.slug == params[:group_slug].to_s }
     return render(json: { error: "You can only give chips for a group you host for." }, status: :forbidden) unless group
@@ -46,17 +51,32 @@ class Api::ChipAwardsController < ApplicationController
 
     award = group.chip_awards.new(given_by: current_user, email: member&.email || params[:email].to_s, milestone_key: params[:milestone_key].to_s,
                                   years: params[:years].presence&.to_i, on: StepInventory.parse_day(params[:on]) || Date.current, note: params[:note].to_s.strip)
+    if params[:chip_edition_id].present?
+      award.chip_edition = group.chip_editions.running_on(Date.current).find_by(id: params[:chip_edition_id], kind: "milestone")
+      return render(json: { error: "That Special Edition isn't running now." }, status: :unprocessable_entity) unless award.chip_edition&.givable?
+      if award.chip_edition.milestones.any? && !award.chip_edition.milestones.include?(award.milestone_key)
+        return render(json: { error: "#{award.chip_edition.name} isn't for #{award.label} chips." }, status: :unprocessable_entity)
+      end
+    end
     return render(json: { error: award.errors.full_messages.to_sentence }, status: :unprocessable_entity) unless award.valid?
 
     account = member || User.where.not(confirmed_at: nil).find_by("lower(email) = ?", award.email)
-    if account
-      award.save!
-      award.claim!(account)
-    else
+    unless account
       sent_today = current_user.chip_awards_given.where(created_at: 1.day.ago.., user_id: nil).count
       return render(json: { error: "That's as many chips as you can email in a day. Try again tomorrow." }, status: :too_many_requests) if sent_today >= EMAILS_PER_DAY
-
-      award.save!
+    end
+    begin
+      ChipAward.transaction do
+        award.save!
+        award.chip_edition&.issue!(chip_award: award, slot: award.slot, milestone_key: award.milestone_key, years: award.years, earned_on: award.on)
+      end
+    rescue ChipEdition::SoldOut
+      return render(json: { error: "Every one of #{award.chip_edition.name} is out." }, status: :unprocessable_entity)
+    end
+    award.reload
+    if account
+      award.claim!(account)
+    else
       ChipMailer.with(award: award).given.deliver_later
     end
     render json: { award: award.as_api_json, emailed: account.nil? }, status: :created

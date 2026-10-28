@@ -42,6 +42,7 @@ class Group < ApplicationRecord
   # Chips its hosts gave (ChipAward)
   has_many :chip_awards, dependent: :delete_all
   has_many :chip_templates, dependent: :destroy
+  has_many :chip_editions, dependent: :destroy
   LOGO_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
   validate { errors.add(:logo, "has to be a PNG, JPEG, WebP or GIF image") if logo.attached? && !LOGO_TYPES.include?(logo.blob.content_type) }
   validate { errors.add(:logo, "has to be under 5 MB") if logo.attached? && logo.blob.byte_size > 5.megabytes }

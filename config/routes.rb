@@ -64,7 +64,9 @@ Rails.application.routes.draw do
   end
   resource :hosting, controller: "hosting", only: :show
   # A member's own recovery tools (/recovery): chips, 10th step inventories, gratitude lists
-  resource :recovery, controller: "recovery", only: %i[show update]
+  resource :recovery, controller: "recovery", only: %i[show update] do
+    post :claim
+  end
   resources :chip_awards, only: %i[index create destroy] do
     get :lookup, on: :collection
   end
@@ -98,6 +100,13 @@ Rails.application.routes.draw do
       post :relief
       post :templates, action: :create_template
       delete "templates/:id", action: :destroy_template
+    end
+    # Special Editions (ChipEdition), in Group dashboard > Chips
+    resources :chip_editions, controller: "group_chip_editions", only: %i[index create update destroy] do
+      member do
+        post :publish
+        post :duplicate
+      end
     end
     resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy] do
       post :link, on: :collection

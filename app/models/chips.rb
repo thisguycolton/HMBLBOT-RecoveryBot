@@ -7,6 +7,10 @@
 # - Meeting Maker triangle chips, one series for each meeting, for each time they clicked Join
 #   in the half hour before it started (MeetingJoin, MEETING_COUNTS).
 #
+# - Special Editions (ChipEdition) a group made for a window of time: milestone ones a member
+#   claimed (or a host gave, on the ChipAward), Meeting Maker ones they earned; and the ones
+#   they can claim (ChipEdition.available_for).
+#
 # Earned chips are RecoveryBot's own design (ChipDesign::DEFAULT). Round chips a group's hosts
 # give (ChipAward) are drawn in that group's design, and a Meeting Maker series in its meeting's.
 # Each chip has an id, and a slot: the milestone it marks. When two chips mark the same one (the
@@ -116,7 +120,9 @@ module Chips
       round[:earned].each { |m| chips << round_chip(m) }
       upcoming << round_chip(round[:next]).merge(upcoming: true, to_go: (round[:next][:on] - today).to_i) if round[:next]
     end
-    user.chip_awards.claimed.includes(:given_by, group: { logo_attachment: :blob }).find_each { |a| chips << a.as_chip_json }
+    user.chip_awards.claimed.includes(:given_by, :edition_chip, :chip_edition, group: { logo_attachment: :blob }).find_each { |a| chips << a.as_chip_json }
+    ChipEdition.award_meeting_makers(user)
+    ChipEditionChip.claimed.where(user: user, chip_award_id: nil).includes(chip_edition: { group: { logo_attachment: :blob } }).find_each { |c| chips << c.as_chip_json }
 
     streaks = {}
     totals = {}
