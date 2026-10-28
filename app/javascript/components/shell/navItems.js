@@ -1,7 +1,7 @@
 import {
   BookHeart, CalendarClock, CalendarRange, Gamepad2, Highlighter, House, LayoutDashboard, Library, MapPinned, MonitorPlay,
   NotebookPen, Pickaxe, Scale, ScrollText, Settings, Sparkles, UserRound, Users, Bookmark, Presentation, Medal, MoonStar,
-  HandHeart, Gift,
+  HandHeart, Gift, FileCheck2,
 } from "lucide-react";
 
 // What the shell's sidebar (Sidebar.jsx) lists. "You" and "Explore" are fixed; "Your groups"
@@ -34,7 +34,8 @@ export const EXTRA_ITEMS = [
 ];
 
 // A group's pages in its folder: the same pages for everyone in it, a role deciding what they
-// can change there (so no page of its own per role), plus Give a chip for its hosts, Settings
+// can change there (so no page of its own per role), plus Court verification (the group's form,
+// never linked publicly) and Give a chip for its hosts, Settings
 // for its admins and the Dashboard (what needs you) for anyone with a role. `group` is the
 // group from /api/nav (its roles and can_give); without one, every page (pageInfo.js).
 export function groupItems(slug, group = null) {
@@ -44,6 +45,7 @@ export function groupItems(slug, group = null) {
   return [
     { key: "home", label: "Home", href: `/groups/${slug}`, icon: House, exact: true },
     { key: "meetings", label: "Meetings", href: `/groups/${slug}/meetings`, icon: CalendarClock },
+    (all || group.can_give) && { key: "court", label: "Court verification", href: `/court_verifications/new?group=${slug}`, icon: FileCheck2 },
     { key: "events", label: "Events", href: `/groups/${slug}/events`, icon: CalendarRange },
     { key: "conscience", label: "Conscience", href: `/groups/${slug}/conscience`, icon: Scale },
     { key: "members", label: "Members", href: `/groups/${slug}/members`, icon: Users, count: "requests" },
@@ -55,7 +57,7 @@ export function groupItems(slug, group = null) {
 }
 
 const matches = (href, path, exact) => {
-  // Give a chip is in every group's folder (?group=): only the group in the address lights up
+  // Give a chip and Court verification are in every group's folder (?group=): only the group in the address lights up
   const [base, query] = href.split("?");
   if (query && !window.location.search.includes(query)) return false;
   return path === base || (!exact && path.startsWith(`${base}/`));

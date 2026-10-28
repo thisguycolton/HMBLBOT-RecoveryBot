@@ -1249,6 +1249,12 @@ body:has(.wb) {
   padding: 0.35em 0.7em;
 }
 
+/* Share to timeline, once that highlight is on their timeline */
+.wb-hl-shared {
+  --wb-btn-color: var(--wb-link);
+  border-color: var(--wb-link);
+}
+
 /* A highlight with a note gets a small dot after it */
 .wb-reader mark.hb-hl[data-note]::after {
   background: oklch(55% 0.17 44);

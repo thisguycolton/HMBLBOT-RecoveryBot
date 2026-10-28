@@ -47,7 +47,9 @@ class Api::PeopleTest < ActionDispatch::IntegrationTest
     sign_in @lee
     get "/api/people/me", as: :json
     assert_response :success
-    assert_equal 6, response.parsed_body.dig("context", "feed").size
+    feed = response.parsed_body.dig("context", "feed")
+    assert_equal 5, feed.size, "your own timeline leaves off the highlights you haven't shared"
+    assert_not_includes feed.map { |i| i["quote"] }, "private words"
     assert response.parsed_body["can_edit"]
 
     sign_in @oz
@@ -87,14 +89,40 @@ class Api::PeopleTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test "new highlights and notes take your default, and notes hold pictures" do
-    @mo.update!(default_highlight_visibility: "public", default_note_visibility: "followers")
+  test "highlights stay private until shared to the timeline" do
+    @mo.update!(default_highlight_visibility: "public")
+    @lee.follows_given.create!(followed: @mo)
+    old = highlight!(@mo, "private")
+    old.update_columns(created_at: 2.weeks.ago)
     sign_in @mo
     post "/api/highlights", params: { highlight: { chapter_slug: "how-it-works", style: { color: "yellow" }, selector: { quote: { exact: "Rarely" } } } }, as: :json
     assert_response :created
-    assert_equal "public", response.parsed_body["visibility"]
-    patch "/api/highlights/#{response.parsed_body['id']}", params: { highlight: { visibility: "private" } }, as: :json
-    assert_equal "private", response.parsed_body["visibility"]
+    assert_equal ["private", nil], response.parsed_body.values_at("visibility", "shared_at"), "the old default no longer shares new ones"
+    get "/api/people/me", as: :json
+    assert_empty response.parsed_body.dig("context", "feed")
+
+    patch "/api/highlights/#{old.id}", params: { highlight: { visibility: "followers" } }, as: :json
+    assert_equal "followers", response.parsed_body["visibility"]
+    assert response.parsed_body["shared_at"]
+    item = UserHighlight.find(old.id).as_feed_json(viewer: @mo)
+    assert_operator Time.iso8601(item[:created_at]), :>, 1.minute.ago, "it's dated in the feed when it was shared"
+    get "/api/people/me", as: :json
+    assert_equal ["private words"], response.parsed_body.dig("context", "feed").map { |i| i["quote"] }
+    sign_in @lee
+    get "/api/people", as: :json
+    assert_equal ["private words"], response.parsed_body["feed"].map { |i| i["quote"] }
+
+    sign_in @mo
+    patch "/api/highlights/#{old.id}", params: { highlight: { visibility: "private" } }, as: :json
+    assert_nil response.parsed_body["shared_at"]
+    sign_in @lee
+    get "/api/people", as: :json
+    assert_empty response.parsed_body["feed"]
+  end
+
+  test "new notes take your default, and notes hold pictures" do
+    @mo.update!(default_note_visibility: "followers")
+    sign_in @mo
 
     picture = fixture_file_upload("avatar.png", "image/png")
     post "/api/timeline_notes", params: { note: { body: "**Day 30**", images: [picture] } }
