@@ -13,6 +13,9 @@ class ChipAward < ApplicationRecord
   scope :claimed, -> { where.not(claimed_at: nil) }
   scope :unclaimed, -> { where(claimed_at: nil) }
 
+  # Open pages show it in a popup straight away (ChipsChannel, ChipArrival)
+  after_commit :announce, on: %i[create update], if: -> { saved_change_to_claimed_at? && claimed? }
+
   before_validation { self.email = email.to_s.strip.downcase }
   before_validation { self.claim_token ||= SecureRandom.urlsafe_base64(24) }
   before_validation { self.years = nil unless milestone_key == "year" }
@@ -33,6 +36,15 @@ class ChipAward < ApplicationRecord
                                   body: note.presence || "From #{group.title}", url: "/recovery?chip=award:#{id}")
   end
 
+  # What the popup says (ChipArrival), as the notification does
+  def arrival_title = "#{given_by&.display_name || group.title} gave you a #{label} chip"
+
+  # Seen in the popup: it doesn't show again, and its notification is read
+  def celebrated!
+    update!(celebrated_at: Time.current) unless celebrated_at
+    user.notifications.unread.where(kind: "chip.given", url: "/recovery?chip=award:#{id}").update_all(read_at: Time.current)
+  end
+
   # An account confirmed with an address chips were sent to
   def self.claim_for(user)
     unclaimed.where(email: user.email.to_s.downcase).find_each { |a| a.claim!(user) }
@@ -51,4 +63,8 @@ class ChipAward < ApplicationRecord
     { id: id, label: label, on: on.iso8601, note: note, email: user ? nil : email, to: user&.display_name || email,
       claimed: claimed?, group_slug: group.slug, group_title: group.title, given_by: given_by&.display_name, created_at: created_at.iso8601 }
   end
+
+  private
+
+  def announce = ChipsChannel.broadcast_to(user, { type: "arrived", id: id })
 end

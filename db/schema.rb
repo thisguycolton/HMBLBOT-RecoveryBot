@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_28_050000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_28_193000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -201,6 +201,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_050000) do
     t.datetime "claimed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "celebrated_at"
     t.index ["claim_token"], name: "index_chip_awards_on_claim_token", unique: true
     t.index ["email"], name: "index_chip_awards_on_email"
     t.index ["given_by_id"], name: "index_chip_awards_on_given_by_id"

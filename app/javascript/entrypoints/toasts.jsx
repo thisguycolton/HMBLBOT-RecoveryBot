@@ -1,10 +1,12 @@
 // Toasts on every page. Both layouts mount this into #hb-toasts and pass the
 // Rails flash ({ notice, alert }) in data-flash, so redirects' messages arrive as toasts.
 // A signed-in member with a sobriety date gets their day count too (DayCount), and their clicks
-// on a meeting's Join button count toward Meeting Maker chips.
+// on a meeting's Join button count toward Meeting Maker chips. A chip someone gives them pops up
+// with confetti on whatever page they have open (ChipArrival).
 import React from "react";
 import { createRoot } from "react-dom/client";
 import DayCount from "../components/DayCount";
+import ChipArrival from "../components/recovery/ChipArrival";
 import Toasts from "../components/Toasts";
 import { showToast } from "../lib/toast";
 
@@ -16,6 +18,7 @@ if (root && !root.dataset.mounted) {
     <>
       <Toasts />
       {since && <DayCount since={since} signedIn={root.dataset.dayCountLogin === "true"} />}
+      {root.dataset.signedIn === "true" && <ChipArrival />}
     </>,
   );
   // Meeting Maker: a Join button (any that carries data-meeting-join) clicked in the half hour
