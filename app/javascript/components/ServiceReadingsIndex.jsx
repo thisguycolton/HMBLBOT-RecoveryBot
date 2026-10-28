@@ -111,7 +111,7 @@ export default function ServiceReadingsIndex({
   const [openGroup, setOpenGroup] = useState(null);
 
   return (
-    <div className="min-h-screen bg-stone-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-w-screen">
+    <div className="min-h-screen bg-stone-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-w-screen md:min-w-full">
       <section className="border-b-8 border-cyan-200 bg-teal-700 text-white shadow-sm dark:border-cyan-900">
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
           <div className="flex flex-col items-center text-center pt-0">
