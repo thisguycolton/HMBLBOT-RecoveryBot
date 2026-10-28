@@ -5,6 +5,7 @@ import { api } from "../groups/lib";
 import { Card, ErrorNote, Loading, linkButton } from "../groups/ui";
 import { showToast } from "../../lib/toast";
 import ChipModal from "./ChipModal";
+import ChipShare from "./ChipShare";
 import { Streak } from "./ChipsPage";
 import { dayLabel, localDate, nightLabel, shiftDay } from "./lib";
 
@@ -110,7 +111,7 @@ export function EntryShell({ base, title, intro, state, summary, children }) {
         {list?.more && <button type="button" className={linkButton} onClick={() => loadList(list.entries[list.entries.length - 1].on)}>Show older days</button>}
       </section>
 
-      {earned && <ChipModal {...earned} onClose={closeEarned} />}
+      {earned && <ChipModal {...earned} onClose={closeEarned}><ChipShare chip={earned.chip} /></ChipModal>}
     </div>
   );
 }

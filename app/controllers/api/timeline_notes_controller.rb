@@ -26,13 +26,20 @@ class Api::TimelineNotesController < ApplicationController
   end
 
   # POST /api/timeline_notes (multipart when pictures come along)
-  # note: body, visibility, group_slugs[], images[], link_url
+  # note: body, visibility, group_slugs[], images[], link_url, chip_id (one of your chips, with
+  # today: YYYY-MM-DD, your date, for which chips you have)
   def create
     problem = TimelineNote.upload_problem(uploads)
     return render(json: { error: problem }, status: :unprocessable_entity) if problem
 
     note = current_user.timeline_notes.new(body: note_params[:body].to_s.strip,
                                            visibility: visibility_param || current_user.default_note_visibility)
+    if note_params[:chip_id].present?
+      note.chip = TimelineNote.chip_for(current_user, note_params[:chip_id], StepInventory.parse_day(note_params[:today]) || Date.current)
+      return render(json: { error: "That isn't one of your chips." }, status: :unprocessable_entity) unless note.chip
+
+      note.chip_id = note.chip["id"]
+    end
     note.images.attach(uploads) if uploads.any?
     note.link_url = note_params[:link_url] if note_params.key?(:link_url)
     TimelineNote.transaction do
@@ -53,7 +60,7 @@ class Api::TimelineNotesController < ApplicationController
     body = note_params.key?(:body) ? note_params[:body].to_s.strip : @note.body
     kept = @note.images.attachments.size - removing.size + uploads.size
     problem = TimelineNote.upload_problem(uploads, already: kept - uploads.size)
-    problem ||= "Write something or add a picture" if body.blank? && kept.zero?
+    problem ||= "Write something or add a picture" if body.blank? && kept.zero? && !@note.chip_id
     return render(json: { error: problem }, status: :unprocessable_entity) if problem
 
     TimelineNote.transaction do
@@ -149,7 +156,7 @@ class Api::TimelineNotesController < ApplicationController
   end
 
   def note_params
-    params.require(:note).permit(:body, :visibility, :link_url, group_slugs: [], images: [], remove_image_ids: [])
+    params.require(:note).permit(:body, :visibility, :link_url, :chip_id, :today, group_slugs: [], images: [], remove_image_ids: [])
   end
 
   def visibility_param

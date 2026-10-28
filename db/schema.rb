@@ -201,12 +201,97 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_193000) do
     t.datetime "claimed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "design"
+    t.bigint "chip_edition_id"
     t.datetime "celebrated_at"
+    t.index ["chip_edition_id"], name: "index_chip_awards_on_chip_edition_id"
     t.index ["claim_token"], name: "index_chip_awards_on_claim_token", unique: true
     t.index ["email"], name: "index_chip_awards_on_email"
     t.index ["given_by_id"], name: "index_chip_awards_on_given_by_id"
     t.index ["group_id"], name: "index_chip_awards_on_group_id"
     t.index ["user_id"], name: "index_chip_awards_on_user_id"
+  end
+
+  create_table "chip_design_versions", force: :cascade do |t|
+    t.string "owner_type", null: false
+    t.bigint "owner_id", null: false
+    t.jsonb "design", null: false
+    t.datetime "created_at", null: false
+    t.index ["owner_type", "owner_id", "created_at"], name: "idx_on_owner_type_owner_id_created_at_7d14f4e150"
+  end
+
+  create_table "chip_edition_chips", force: :cascade do |t|
+    t.bigint "chip_edition_id", null: false
+    t.bigint "user_id"
+    t.bigint "chip_award_id"
+    t.string "slot", null: false
+    t.string "milestone_key"
+    t.integer "years"
+    t.integer "count"
+    t.date "earned_on", null: false
+    t.integer "serial", null: false
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chip_award_id"], name: "index_chip_edition_chips_on_chip_award_id"
+    t.index ["chip_edition_id", "serial"], name: "index_chip_edition_chips_on_chip_edition_id_and_serial", unique: true
+    t.index ["chip_edition_id", "user_id", "slot"], name: "index_edition_chips_once_per_slot", unique: true, where: "(chip_award_id IS NULL)"
+    t.index ["chip_edition_id"], name: "index_chip_edition_chips_on_chip_edition_id"
+    t.index ["user_id"], name: "index_chip_edition_chips_on_user_id"
+  end
+
+  create_table "chip_editions", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.string "name", null: false
+    t.string "kind", default: "milestone", null: false
+    t.jsonb "design", default: {}, null: false
+    t.date "starts_on", null: false
+    t.date "ends_on", null: false
+    t.string "window", default: "custom", null: false
+    t.string "milestones", default: [], null: false, array: true
+    t.bigint "meeting_ids", default: [], null: false, array: true
+    t.integer "target_count"
+    t.string "how_many", default: "everyone", null: false
+    t.integer "limit"
+    t.boolean "numbered", default: true, null: false
+    t.datetime "published_at"
+    t.datetime "locked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_chip_editions_on_created_by_id"
+    t.index ["group_id"], name: "index_chip_editions_on_group_id"
+  end
+
+  create_table "chip_template_versions", force: :cascade do |t|
+    t.bigint "chip_template_id", null: false
+    t.integer "number", null: false
+    t.jsonb "art", default: {}, null: false
+    t.jsonb "palettes", default: {}, null: false
+    t.jsonb "defaults", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chip_template_id", "number"], name: "index_chip_template_versions_on_chip_template_id_and_number", unique: true
+    t.index ["chip_template_id"], name: "index_chip_template_versions_on_chip_template_id"
+  end
+
+  create_table "chip_templates", force: :cascade do |t|
+    t.bigint "group_id"
+    t.bigint "created_by_id"
+    t.string "title", null: false
+    t.string "fits", default: "round", null: false
+    t.string "status", default: "draft", null: false
+    t.string "source", default: "", null: false
+    t.string "license", default: "", null: false
+    t.boolean "hidden", default: false, null: false
+    t.jsonb "art", default: {}, null: false
+    t.jsonb "palettes", default: {}, null: false
+    t.jsonb "defaults", default: {}, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_chip_templates_on_created_by_id"
+    t.index ["group_id"], name: "index_chip_templates_on_group_id"
   end
 
   create_table "contact_requests", force: :cascade do |t|
@@ -1191,10 +1276,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_193000) do
     t.bigint "repost_of_id"
     t.jsonb "link_preview"
     t.string "hashtags", default: [], null: false, array: true
+    t.string "chip_id"
+    t.jsonb "chip"
+    t.boolean "chip_hidden", default: false, null: false
     t.index ["hashtags"], name: "index_timeline_notes_on_hashtags", using: :gin
     t.index ["repost_of_id", "user_id"], name: "index_timeline_notes_on_repost_of_id_and_user_id", unique: true, where: "(repost_of_id IS NOT NULL)"
+    t.index ["user_id", "chip_id"], name: "index_timeline_notes_on_user_id_and_chip_id", where: "(chip_id IS NOT NULL)"
     t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_timeline_notes_on_user_id"
+  end
+
+  create_table "today_dismissals", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "key", null: false
+    t.string "title", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "key"], name: "index_today_dismissals_on_user_id_and_key", unique: true
+    t.index ["user_id"], name: "index_today_dismissals_on_user_id"
   end
 
   create_table "topic_categories", force: :cascade do |t|
@@ -1290,9 +1389,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_193000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "visibility", default: "private", null: false
+    t.datetime "shared_at"
     t.index ["chapter_id"], name: "index_user_highlights_on_chapter_id"
     t.index ["user_id", "chapter_id"], name: "index_user_highlights_on_user_id_and_chapter_id"
     t.index ["user_id", "created_at"], name: "index_user_highlights_on_user_id_and_created_at"
+    t.index ["user_id", "shared_at"], name: "index_user_highlights_on_user_id_and_shared_at"
     t.index ["user_id"], name: "index_user_highlights_on_user_id"
   end
 
@@ -1344,9 +1445,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_193000) do
   add_foreign_key "business_meetings", "meetings", on_delete: :nullify
   add_foreign_key "business_meetings", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chapters", "books"
+  add_foreign_key "chip_awards", "chip_editions", on_delete: :nullify
   add_foreign_key "chip_awards", "groups", on_delete: :cascade
   add_foreign_key "chip_awards", "users", column: "given_by_id", on_delete: :nullify
   add_foreign_key "chip_awards", "users", on_delete: :cascade
+  add_foreign_key "chip_edition_chips", "chip_awards", on_delete: :cascade
+  add_foreign_key "chip_edition_chips", "chip_editions", on_delete: :cascade
+  add_foreign_key "chip_edition_chips", "users", on_delete: :cascade
+  add_foreign_key "chip_editions", "groups", on_delete: :cascade
+  add_foreign_key "chip_editions", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "chip_template_versions", "chip_templates", on_delete: :cascade
+  add_foreign_key "chip_templates", "groups", on_delete: :cascade
+  add_foreign_key "chip_templates", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "contact_requests", "users", column: "handled_by_id", on_delete: :nullify
   add_foreign_key "contact_requests", "users", on_delete: :nullify
   add_foreign_key "court_verifications", "groups"
@@ -1459,6 +1569,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_193000) do
   add_foreign_key "timeline_note_shares", "timeline_notes"
   add_foreign_key "timeline_notes", "timeline_notes", column: "repost_of_id", on_delete: :cascade
   add_foreign_key "timeline_notes", "users"
+  add_foreign_key "today_dismissals", "users", on_delete: :cascade
   add_foreign_key "topic_sharing_prompts", "sharing_modes"
   add_foreign_key "topic_sharing_prompts", "topics"
   add_foreign_key "topic_tags", "tags"

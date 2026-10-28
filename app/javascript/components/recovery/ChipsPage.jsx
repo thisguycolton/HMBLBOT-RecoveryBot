@@ -1,16 +1,19 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Flame, Gift, HandHeart, Layers, Lock, MoonStar, Star, Users } from "lucide-react";
+import { Flame, Gift, HandHeart, Layers, Lock, MoonStar, Sparkles, Star, Users } from "lucide-react";
 import { api } from "../groups/lib";
 import { Card, ErrorNote, Loading, Pill, linkButton, primaryButton, quietButton } from "../groups/ui";
 import Toggle from "../ui/Toggle";
 import ChipModal, { FlatChip } from "./ChipModal";
+import ChipShare from "./ChipShare";
 import { dayLabel, localDate } from "./lib";
 
 const short = (iso) => dayLabel(iso, { month: "short", day: "numeric", year: "numeric" });
 
 // What a chip's modal says about it
 function story(chip) {
+  if (chip.source === "edition" && chip.kind === "meeting") return `${chip.group.title}'s ${chip.edition.name}: ${chip.label}, reached ${dayLabel(chip.on)}.`;
+  if (chip.source === "edition") return `${chip.group.title}'s ${chip.edition.name}, for ${chip.label} on ${dayLabel(chip.on)}.`;
   if (chip.source === "given") return `From ${chip.group.title}${chip.given_by ? `, given by ${chip.given_by}` : ""}, ${dayLabel(chip.on)}.`;
   if (chip.kind === "round") return `You reached ${chip.label} on ${dayLabel(chip.on)}.`;
   if (chip.kind === "meeting") return `${chip.label} at ${chip.meeting.name} (${chip.meeting.group_title}), reached ${dayLabel(chip.on)}.`;
@@ -26,6 +29,7 @@ export default function ChipsPage() {
   const [error, setError] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [celebrate, setCelebrate] = useState(false);
+  const [sharing, setSharing] = useState(false); // ?share=1 opens Share to timeline (the day count's Share it)
   const [params, setParams] = useSearchParams();
   const load = useCallback(() => api(`/recovery?today=${localDate()}`).then(setData).catch((e) => setError(e.message)), []);
   useEffect(() => { document.title = "Chips | RecoveryBot"; load(); }, [load]);
@@ -33,7 +37,7 @@ export default function ChipsPage() {
   useEffect(() => {
     const id = params.get("chip");
     if (!id || !data) return;
-    if (data.chips.some((c) => c.id === id)) { setOpenId(id); setCelebrate(true); }
+    if (data.chips.some((c) => c.id === id)) { setOpenId(id); setCelebrate(true); setSharing(params.get("share") === "1"); }
     setParams({}, { replace: true });
   }, [params, data]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -50,13 +54,24 @@ export default function ChipsPage() {
     chips: tops.filter((c) => kinds.includes(c.kind)).sort((a, b) => (a.on < b.on ? 1 : -1)),
     next: upcoming.filter((c) => kinds.includes(c.kind)),
   });
-  const meetings = Object.values(tops.concat(upcoming).filter((c) => c.kind === "meeting").reduce((by, c) => {
+  const editions = chips.filter((c) => c.edition).sort((a, b) => (a.on < b.on ? 1 : -1));
+  const meetings = Object.values(tops.concat(upcoming).filter((c) => c.kind === "meeting" && c.source !== "edition").reduce((by, c) => {
     (by[c.series] ||= { meeting: c.meeting, chips: [], next: [] })[c.upcoming ? "next" : "chips"].push(c);
     return by;
   }, {}));
   const favorite = (id) => data.favorites.includes(id);
   const toggleFavorite = (id) => save({ favorites: favorite(id) ? data.favorites.filter((f) => f !== id) : [...data.favorites, id] });
-  const openChip = (c) => { setCelebrate(false); setOpenId(c.id); };
+  const openChip = (c) => { setCelebrate(false); setSharing(false); setOpenId(c.id); };
+  const claim = async (a) => {
+    setError(null);
+    try {
+      const { chip } = await api("/recovery/claim", { method: "POST", body: { edition_id: a.edition_id, slot: a.slot, today: localDate() } });
+      await load();
+      setSharing(false);
+      setCelebrate(true);
+      setOpenId(chip.id);
+    } catch (e) { setError(e.message); }
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
@@ -68,6 +83,8 @@ export default function ChipsPage() {
         {data.can_give && <Link to="/give" className={quietButton}><Gift className="size-4" /> Give a chip</Link>}
       </header>
       <ErrorNote error={error} />
+
+      {data.available?.length > 0 && <Claims list={data.available} onClaim={claim} />}
 
       <Section title="Sobriety">
         {!data.sobriety_date ? (
@@ -104,6 +121,12 @@ export default function ChipsPage() {
         ))}
       </Section>
 
+      {editions.length > 0 && (
+        <Section title="Special Editions" icon={Sparkles}>
+          <Grid chips={editions} design={design} favorite={favorite} onOpen={openChip} />
+        </Section>
+      )}
+
       <Card className="space-y-3 p-4 sm:p-5">
         <h2 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white"><Star className="size-4" /> Favorites on your profile</h2>
         <Toggle checked={data.show_on_profile} onChange={(v) => save({ show_on_profile: v })} label="Show my favorite chips on my profile"
@@ -128,6 +151,7 @@ export default function ChipsPage() {
               <Star className={`size-4 ${favorite(open.id) ? "fill-current" : ""}`} /> {favorite(open.id) ? "A favorite" : "Favorite"}
             </button>
           </div>
+          <ChipShare key={open.id} chip={open} options={data} startOpen={sharing} />
           <Duplicates chip={open} chips={chips} design={design} onPick={(c) => { save({ top: { slot: c.slot, id: c.id } }); setOpenId(c.id); }} />
         </ChipModal>
       )}
@@ -176,7 +200,8 @@ function Grid({ chips, next = [], design, favorite, onOpen, empty }) {
               <span className="text-sm font-semibold text-slate-900 dark:text-white">{c.label}</span>
               <span className="-mt-2 flex flex-wrap items-center justify-center gap-1 text-xs text-slate-500 dark:text-neutral-400">
                 {short(c.on)}
-                {c.source === "given" && <Pill tone="accent">{c.group.title}</Pill>}
+                {c.edition ? <Pill tone="accent">{c.edition.name}{c.edition.serial ? ` · No. ${c.edition.serial}` : ""}</Pill>
+                  : c.source === "given" && <Pill tone="accent">{c.group.title}</Pill>}
                 {c.others > 0 && <Pill><Layers className="size-3" /> +{c.others}</Pill>}
               </span>
             </button>
@@ -209,11 +234,38 @@ function Duplicates({ chip, chips, design, onPick }) {
           <button key={c.id} type="button" onClick={() => onPick(c)} aria-pressed={c.top}
             className={`flex flex-col items-center gap-1 rounded-xl !bg-transparent p-2 text-xs ${c.top ? "ring-2 ring-accent" : "ring-1 ring-neutral-200 dark:ring-neutral-700"}`}>
             <FlatChip chip={c} design={design} size={64} />
-            {c.source === "given" ? c.group.title : "RecoveryBot"}
+            {c.edition ? c.edition.name : c.source === "given" ? c.group.title : "RecoveryBot"}
             {c.top && <span className="font-semibold text-accent">On top</span>}
           </button>
         ))}
       </div>
     </div>
+  );
+}
+
+// Special Editions waiting for them: a milestone they reached while one of their groups' was
+// running. Theirs to claim with a tap, any time.
+function Claims({ list, onClaim }) {
+  const [busy, setBusy] = useState(null);
+  const go = async (a) => { setBusy(`${a.edition_id}-${a.slot}`); await onClaim(a); setBusy(null); };
+  return (
+    <Section title="Ready to claim" icon={Sparkles}>
+      <Card className="p-4 sm:p-6">
+        <ul className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4">
+          {list.map((a) => (
+            <li key={`${a.edition_id}-${a.slot}`} className="flex flex-col items-center gap-2 text-center">
+              <FlatChip chip={a} />
+              <span className="text-sm font-semibold text-slate-900 dark:text-white">{a.edition.name}</span>
+              <span className="-mt-2 text-xs text-slate-500 dark:text-neutral-400">
+                {a.label} · {a.group.title}{a.edition.left != null && <><br />{a.edition.left.toLocaleString()} left</>}
+              </span>
+              <button type="button" className={primaryButton} disabled={!!busy} onClick={() => go(a)}>
+                <Sparkles className="size-4" /> {busy === `${a.edition_id}-${a.slot}` ? "Claiming…" : "Claim it"}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </Section>
   );
 }

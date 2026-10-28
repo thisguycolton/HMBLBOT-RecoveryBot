@@ -1,6 +1,7 @@
 class ApplicationController < ActionController::Base
 	 #before_action :authenticate_user!
 	  after_action :track_action
+    before_action :read_notifications_here
 
     protect_from_forgery with: :exception
 
@@ -37,6 +38,16 @@ class ApplicationController < ActionController::Base
     return "/people" if resource.is_a?(User) && User.profiles_open_to?(resource)
 
     super
+  end
+
+  # Opening a page marks the bell's notifications that lead to it as read: the same path, with
+  # or without its ?query or #anchor (pages are full loads, so this runs before the bell asks)
+  def read_notifications_here
+    return unless request.get? && request.format.html? && !request.xhr? && user_signed_in?
+
+    current_user.notifications.unread
+                .where("split_part(split_part(url, '#', 1), '?', 1) = :path", path: request.path)
+                .update_all(read_at: Time.current)
   end
 
   def track_action

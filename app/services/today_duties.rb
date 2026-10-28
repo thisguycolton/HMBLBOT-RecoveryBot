@@ -4,6 +4,7 @@
 # viewer in each role they hold, in all their groups ("Needs your attention"): their coming host
 # dates and the subs they could take, the places a coordinator has to fill, a record keeper's
 # drafts and suggestions, a treasurer's reports, join requests for an admin, and terms nearly up.
+# Items they cleared (TodayDismissal) come back separately, as `cleared`, to restore.
 class TodayDuties
   DAYS = 7          # how far ahead fills-ins and host dates are shown
   HOST_DATES_MAX = 4
@@ -16,7 +17,10 @@ class TodayDuties
     @by_group = @memberships.index_by(&:group_id)
   end
 
-  def json = { covers: covers, attention: attention, any_roles: any_roles? }
+  def json
+    cleared, open = attention.partition { |item| cleared?(item) }
+    { covers: covers, attention: open, cleared: cleared, any_roles: any_roles? }
+  end
 
   # The coming dates someone fills in at, that this viewer is part of (or, given a group, every
   # one in the meetings they coordinate there: the group Dashboard)
@@ -55,6 +59,10 @@ class TodayDuties
   end
 
   private
+
+  def dismissals = @dismissals ||= @viewer.today_dismissals.pluck(:key, :title).to_h
+
+  def cleared?(item) = dismissals[item[:key]] == item[:title].to_s.truncate(255)
 
   def admin?(m) = m.admin?
   def keeper?(m) = m.admin? || m.can_keep_records

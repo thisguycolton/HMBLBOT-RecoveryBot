@@ -48,6 +48,7 @@ class User < ApplicationRecord
   has_many :user_highlights, dependent: :destroy
   has_many :text_reports, dependent: :destroy
   has_many :notifications, dependent: :destroy
+  has_many :today_dismissals, dependent: :delete_all
   has_many :push_subscriptions, dependent: :delete_all
   has_many :text_report_comments, dependent: :destroy
   has_many :resolved_text_reports, class_name: "TextReport", foreign_key: :resolved_by_id, dependent: :nullify
@@ -74,6 +75,8 @@ class User < ApplicationRecord
   # Set default values for new users
   after_initialize :set_defaults, unless: :persisted?
   before_save :sync_confirmed
+  # Sobriety chips they shared show only while they have them
+  after_update_commit -> { TimelineNote.sync_chips(self) }, if: :saved_change_to_sobriety_date?
 
   def set_defaults
     self.admin ||= false

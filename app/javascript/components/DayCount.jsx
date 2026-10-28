@@ -93,6 +93,7 @@ export default function DayCount({ since, signedIn }) {
         </div>
         <div className="hb-daycount__foot">
           {today ? <a className="hb-daycount__link" href="/recovery">See all my chips</a> : <a className="hb-daycount__link" href="/users/edit">Change my sobriety date</a>}
+          {today && chip && <a className="hb-daycount__link" href={`/recovery?chip=${encodeURIComponent(chip.chip.id)}&share=1`}>Share it</a>}
           {today && <button type="button" className="hb-daycount__button" onClick={() => confetti()}>Celebrate again</button>}
           <button ref={closeRef} type="button" className="hb-daycount__button hb-daycount__button--primary" onClick={close}>Thanks</button>
         </div>

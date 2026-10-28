@@ -64,7 +64,9 @@ Rails.application.routes.draw do
   end
   resource :hosting, controller: "hosting", only: :show
   # A member's own recovery tools (/recovery): chips, 10th step inventories, gratitude lists
-  resource :recovery, controller: "recovery", only: %i[show update]
+  resource :recovery, controller: "recovery", only: %i[show update] do
+    post :claim
+  end
   resources :chip_awards, only: %i[index create destroy] do
     get :lookup, on: :collection
   end
@@ -73,6 +75,8 @@ Rails.application.routes.draw do
   resources :gratitude_lists, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   # The shell: your groups and roles, the Hosting badge, Today; and the search box
   resource :nav, controller: "nav", only: :show
+  # Clearing "Needs your attention" items from Today, and restoring them
+  resource :today_dismissals, only: %i[create destroy]
   get "search", to: "search#index"
   get "oiaa/search", to: "oiaa#search"
   get "oiaa/matches", to: "oiaa#matches"
@@ -96,6 +100,15 @@ Rails.application.routes.draw do
     resource :chips, controller: "group_chips", only: %i[show update] do
       put "meetings/:meeting_id", action: :meeting
       post :relief
+      post :templates, action: :create_template
+      delete "templates/:id", action: :destroy_template
+    end
+    # Special Editions (ChipEdition), in Group dashboard > Chips
+    resources :chip_editions, controller: "group_chip_editions", only: %i[index create update destroy] do
+      member do
+        post :publish
+        post :duplicate
+      end
     end
     resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy] do
       post :link, on: :collection
@@ -407,6 +420,9 @@ end
         post :comment, on: :member
       end
       resources :contact_requests, only: %i[index update destroy]
+      resources :chip_templates, only: %i[index show create update destroy] do
+        post :publish, on: :member
+      end
     end
   end
   resources :readings do
