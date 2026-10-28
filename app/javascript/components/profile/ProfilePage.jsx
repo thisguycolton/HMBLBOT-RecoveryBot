@@ -120,7 +120,8 @@ export default function ProfilePage() {
     }
   };
 
-  // Who sees new highlights and notes on your profile; saved as soon as it's picked
+  // Who sees new notes on your profile; saved as soon as it's picked. Highlights have no
+  // default: they stay with you until you share one to your timeline.
   const saveDefault = async (key, value) => {
     setError(null);
     try {
@@ -210,9 +211,10 @@ export default function ProfilePage() {
         <Tray label="Privacy">
           <Card className="space-y-5 p-4">
             <p className="text-sm text-slate-600 dark:text-neutral-400">
-              Who sees new things on your profile. You can still change each note or highlight on its own, and share notes to your groups.
+              Who sees new notes on your profile. You can still change each note on its own, and share notes to your groups.
+              Highlights stay with you unless you open one and pick <em>Share to timeline</em>.
             </p>
-            {[["default_highlight_visibility", "New highlights"], ["default_note_visibility", "New notes"]].map(([key, label]) => (
+            {[["default_note_visibility", "New notes"]].map(([key, label]) => (
               <fieldset key={key}>
                 <legend className={`${labelClass} flex items-center gap-2`}>
                   {label}

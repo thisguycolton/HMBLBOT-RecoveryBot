@@ -13,7 +13,7 @@ import NoteActions from "./NoteActions";
 import NoteComments from "./NoteComments";
 import NoteEditor from "./NoteEditor";
 import VisibilityPicker from "./VisibilityPicker";
-import { saveNote } from "./lib";
+import { HIGHLIGHT_VISIBILITY, saveNote } from "./lib";
 
 // One thing on a timeline: a note (Markdown and pictures), a repost of someone's note, or a
 // highlight (its quote, its note and where it's from). Its owner edits it right there and
@@ -26,7 +26,7 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
   if (item.kind === "repost") return <Repost item={item} readOnly={readOnly} compact={compact} onChange={onChange} onRemove={onRemove} />;
   return (
     <article className={`wb-feed-item ${compact ? "wb-feed-item--compact" : ""}`}>
-      <ItemHead item={item} showAuthor={showAuthor} compact={compact} extraAction={extraAction} onChange={onChange} editing={editing} />
+      <ItemHead item={item} showAuthor={showAuthor} compact={compact} extraAction={extraAction} onChange={onChange} onRemove={onRemove} editing={editing} />
       {item.kind === "highlight"
         ? <HighlightBody item={item} onChange={onChange} />
         : <NoteBody item={item} editing={editing} setEditing={setEditing} groups={groups} max={max} imagesMax={imagesMax} compact={compact} onChange={onChange} onRemove={onRemove} />}
@@ -96,13 +96,16 @@ function Repost({ item, readOnly, compact, onChange, onRemove }) {
   );
 }
 
-function ItemHead({ item, showAuthor, compact, extraAction, onChange, editing }) {
+function ItemHead({ item, showAuthor, compact, extraAction, onChange, onRemove, editing }) {
   const changeVisibility = async (visibility) => {
     const previous = item;
     onChange?.({ ...item, visibility });
     try {
-      if (item.kind === "highlight") await api(`/highlights/${item.id}`, { method: "PATCH", body: { highlight: { visibility } } });
-      else onChange?.(await saveNote(item.id, { visibility }));
+      if (item.kind === "highlight") {
+        await api(`/highlights/${item.id}`, { method: "PATCH", body: { highlight: { visibility } } });
+        // "private" takes a highlight off every timeline, this one too
+        if (visibility === "private") onRemove?.(item.id);
+      } else onChange?.(await saveNote(item.id, { visibility }));
     } catch {
       onChange?.(previous);
       showToast("Couldn't change who sees it.", { tone: "error" });
@@ -121,7 +124,10 @@ function ItemHead({ item, showAuthor, compact, extraAction, onChange, editing })
       </span>
       <span className="flex-1" />
       {extraAction}
-      {item.mine && item.visibility && !editing && <VisibilityPicker value={item.visibility} onChange={changeVisibility} align="right" />}
+      {item.mine && item.visibility && !editing && (
+        <VisibilityPicker value={item.visibility} onChange={changeVisibility} align="right"
+          {...(item.kind === "highlight" ? { options: HIGHLIGHT_VISIBILITY, title: "Who sees this on your timeline" } : {})} />
+      )}
     </header>
   );
 }
