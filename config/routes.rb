@@ -403,6 +403,9 @@ end
         post :comment, on: :member
       end
       resources :contact_requests, only: %i[index update destroy]
+      resources :chip_templates, only: %i[index show create update destroy] do
+        post :publish, on: :member
+      end
     end
   end
   resources :readings do

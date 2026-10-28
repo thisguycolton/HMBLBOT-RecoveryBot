@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" viewBox="0 0 200 200">
+  <g inkscape:label="Sky">
+<rect width="200" height="200" fill="#f7c58f"/><rect y="0" width="200" height="40" fill="#e98f6f"/><rect y="40" width="200" height="30" fill="#f2a77c"/>
+  </g>
+  <g inkscape:label="Sun">
+<circle cx="100" cy="96" r="20" fill="#fde68a" stroke="#c9a24a" stroke-width="1" stroke-linejoin="round"/>
+  </g>
+  <g inkscape:label="Far hills">
+<path d="M0,98 Q40,80 80,96 Q120,78 160,94 Q182,86 200,92 L200,120 L0,120 Z" fill="#8e6f9e" stroke="#c9a24a" stroke-width="1.1" stroke-linejoin="round"/>
+  </g>
+  <g inkscape:label="Fields">
+<path d="M0,104 L200,104 L200,200 L0,200 Z" fill="#6f9a4f" stroke="#c9a24a" stroke-width="1.1" stroke-linejoin="round"/><path d="M0,134 L84,108 L60,200 L0,200 Z" fill="#88b05c" stroke="#c9a24a" stroke-width="1.1" stroke-linejoin="round"/><path d="M200,140 L116,108 L146,200 L200,200 Z" fill="#88b05c" stroke="#c9a24a" stroke-width="1.1" stroke-linejoin="round"/>
+  </g>
+  <g inkscape:label="Road">
+<path d="M96,104 L104,104 L150,200 L50,200 Z" fill="#5d5650" stroke="#c9a24a" stroke-width="1.1" stroke-linejoin="round"/>
+  </g>
+  <g inkscape:label="Road line">
+<path d="M99.5,110 L100.5,110 L101,120 L99,120 Z M99,128 L101,128 L102,142 L98,142 Z M98,152 L102,152 L103.5,172 L96.5,172 Z M96,182 L104,182 L105,200 L95,200 Z" fill="#f5e6b0"/>
+  </g>
+  <g inkscape:label="Posts">
+<rect x="62" y="150" width="3" height="16" fill="#f5f2ea" stroke="#c9a24a" stroke-width="0.6" stroke-linejoin="round"/><rect x="135" y="150" width="3" height="16" fill="#f5f2ea" stroke="#c9a24a" stroke-width="0.6" stroke-linejoin="round"/><rect x="78" y="128" width="2" height="10" fill="#f5f2ea" stroke="#c9a24a" stroke-width="0.5" stroke-linejoin="round"/><rect x="120" y="128" width="2" height="10" fill="#f5f2ea" stroke="#c9a24a" stroke-width="0.5" stroke-linejoin="round"/>
+  </g>
+</svg>

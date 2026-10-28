@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_28_180000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_28_181500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -201,11 +201,51 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_180000) do
     t.datetime "claimed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "design"
     t.index ["claim_token"], name: "index_chip_awards_on_claim_token", unique: true
     t.index ["email"], name: "index_chip_awards_on_email"
     t.index ["given_by_id"], name: "index_chip_awards_on_given_by_id"
     t.index ["group_id"], name: "index_chip_awards_on_group_id"
     t.index ["user_id"], name: "index_chip_awards_on_user_id"
+  end
+
+  create_table "chip_design_versions", force: :cascade do |t|
+    t.string "owner_type", null: false
+    t.bigint "owner_id", null: false
+    t.jsonb "design", null: false
+    t.datetime "created_at", null: false
+    t.index ["owner_type", "owner_id", "created_at"], name: "idx_on_owner_type_owner_id_created_at_7d14f4e150"
+  end
+
+  create_table "chip_template_versions", force: :cascade do |t|
+    t.bigint "chip_template_id", null: false
+    t.integer "number", null: false
+    t.jsonb "art", default: {}, null: false
+    t.jsonb "palettes", default: {}, null: false
+    t.jsonb "defaults", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chip_template_id", "number"], name: "index_chip_template_versions_on_chip_template_id_and_number", unique: true
+    t.index ["chip_template_id"], name: "index_chip_template_versions_on_chip_template_id"
+  end
+
+  create_table "chip_templates", force: :cascade do |t|
+    t.bigint "group_id"
+    t.bigint "created_by_id"
+    t.string "title", null: false
+    t.string "fits", default: "round", null: false
+    t.string "status", default: "draft", null: false
+    t.string "source", default: "", null: false
+    t.string "license", default: "", null: false
+    t.boolean "hidden", default: false, null: false
+    t.jsonb "art", default: {}, null: false
+    t.jsonb "palettes", default: {}, null: false
+    t.jsonb "defaults", default: {}, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_chip_templates_on_created_by_id"
+    t.index ["group_id"], name: "index_chip_templates_on_group_id"
   end
 
   create_table "contact_requests", force: :cascade do |t|
@@ -1350,6 +1390,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_180000) do
   add_foreign_key "chip_awards", "groups", on_delete: :cascade
   add_foreign_key "chip_awards", "users", column: "given_by_id", on_delete: :nullify
   add_foreign_key "chip_awards", "users", on_delete: :cascade
+  add_foreign_key "chip_template_versions", "chip_templates", on_delete: :cascade
+  add_foreign_key "chip_templates", "groups", on_delete: :cascade
+  add_foreign_key "chip_templates", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "contact_requests", "users", column: "handled_by_id", on_delete: :nullify
   add_foreign_key "contact_requests", "users", on_delete: :nullify
   add_foreign_key "court_verifications", "groups"
