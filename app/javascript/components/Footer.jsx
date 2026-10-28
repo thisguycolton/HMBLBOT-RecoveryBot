@@ -7,27 +7,28 @@ import { NAV_CATEGORIES, showItem } from "./nav/siteMenu";
 const REPO = "https://github.com/thisguycolton/HMBLBOT-RecoveryBot";
 
 // The site footer: the brand and donate button, then the same tool groups as the nav
-// (components/nav/siteMenu.js) so a new tool shows up here without another edit.
+// (components/nav/siteMenu.js) so a new tool shows up here without another edit. Light gray in
+// light mode (the shell's own color), near-black in dark mode.
 export default function Footer() {
   const [donating, setDonating] = useState(false);
   const signedIn = document.body.dataset.currentUser === "true";
   const visible = (items) => items.filter((item) => showItem(item, signedIn));
 
   return (
-    <footer className="mt-auto border-t border-white/10 bg-neutral-950 text-white !font-sans">
+    <footer className="mt-auto bg-[#ececec] text-slate-900 !font-sans dark:bg-neutral-950 dark:text-white">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
-            <a href="/" className="inline-block !text-white !no-underline" aria-label="RecoveryBot home">
-              <RecoveryBotLogo markClassName="h-8 w-auto" textClassName="text-xl" botClassName="text-brand-light" />
+            <a href="/" className="inline-block !text-slate-900 !no-underline dark:!text-white" aria-label="RecoveryBot home">
+              <RecoveryBotLogo markClassName="h-8 w-auto" textClassName="text-xl" botClassName="text-brand dark:text-brand-light" />
             </a>
-            <div className="mt-3 max-w-xs text-sm leading-relaxed text-neutral-400">
+            <div className="mt-3 max-w-xs text-sm leading-relaxed text-slate-600 dark:text-neutral-400">
               Free tools for people in recovery, built to make meetings, readings and service a little easier.
             </div>
             <button
               type="button"
               onClick={() => setDonating(true)}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold !bg-rose-500/15 !text-rose-300 ring-1 ring-rose-400/30 hover:!bg-rose-500/25"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold !bg-rose-500/10 !text-rose-700 ring-1 ring-rose-400/40 hover:!bg-rose-500/20 dark:!bg-rose-500/15 dark:!text-rose-300 dark:ring-rose-400/30 dark:hover:!bg-rose-500/25"
             >
               <Heart size={15} className="fill-current" /> Help keep it running
             </button>
@@ -35,11 +36,11 @@ export default function Footer() {
 
           {NAV_CATEGORIES.map((category) => (
             <nav key={category.key} aria-label={category.label}>
-              <h3 className="!mb-3 !text-sm font-semibold !text-white !font-sans">{category.label}</h3>
+              <h3 className="!mb-3 !text-sm font-semibold !text-slate-900 !font-sans dark:!text-white">{category.label}</h3>
               <ul className="!m-0 !p-0 list-none space-y-2 text-sm">
                 {visible(category.items).map((item) => (
                   <li key={item.href}>
-                    <a href={item.href} className="!text-neutral-400 !no-underline hover:!text-white">
+                    <a href={item.href} className="!text-slate-600 !no-underline hover:!text-slate-900 dark:!text-neutral-400 dark:hover:!text-white">
                       {item.label}
                     </a>
                   </li>
@@ -49,17 +50,17 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-3 border-t border-neutral-300/70 pt-6 text-xs text-slate-500 dark:border-white/10 dark:text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
           <div>© {new Date().getFullYear()} RecoveryBot by HMBLBOT</div>
           <div className="flex flex-wrap gap-4">
-            <a href="/install" className="!text-neutral-500 !no-underline hover:!text-white">Get the app</a>
-            <a href="/privacy" className="!text-neutral-500 !no-underline hover:!text-white">Privacy</a>
-            <a href="/terms" className="!text-neutral-500 !no-underline hover:!text-white">Terms</a>
-            <a href="/contact" className="!text-neutral-500 !no-underline hover:!text-white">Contact</a>
-            <a href={`${REPO}/issues/new`} target="_blank" rel="noreferrer" className="!text-neutral-500 !no-underline hover:!text-white">
+            <a href="/install" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">Get the app</a>
+            <a href="/privacy" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">Privacy</a>
+            <a href="/terms" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">Terms</a>
+            <a href="/contact" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">Contact</a>
+            <a href={`${REPO}/issues/new`} target="_blank" rel="noreferrer" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">
               Report a problem
             </a>
-            <a href={REPO} target="_blank" rel="noreferrer" className="!text-neutral-500 !no-underline hover:!text-white">
+            <a href={REPO} target="_blank" rel="noreferrer" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">
               GitHub
             </a>
           </div>

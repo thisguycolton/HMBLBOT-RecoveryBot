@@ -74,6 +74,11 @@ class ProfilePage
     merge(TimelineNote.visible_to(@viewer, owner: person), UserHighlight.visible_to(@viewer, owner: person), before: before)
   end
 
+  # Followers or following, newest first
+  def people(scope, limit: PEOPLE_MAX)
+    scope.includes(avatar_attachment: :blob).order("follows.created_at DESC").limit(limit).map(&:as_person_json)
+  end
+
   private
 
   def merge(notes, highlights, before: nil)
@@ -96,10 +101,6 @@ class ProfilePage
     list.map do |g|
       { slug: g.slug, title: g.title, description: g.description, logo_url: image_path(g.logo), members_count: counts[g.id] || 0 }
     end
-  end
-
-  def people(scope)
-    scope.includes(avatar_attachment: :blob).order("follows.created_at DESC").limit(PEOPLE_MAX).map(&:as_person_json)
   end
 
   def image_path(attachment)

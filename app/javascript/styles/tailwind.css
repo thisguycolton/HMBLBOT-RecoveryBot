@@ -52,6 +52,17 @@
   }
 
   /* dark */
+
+  /* Inside the shell (Layout.jsx) the page behind everything is the top bar's own color, so on
+     phones the strip under the clock and the bounce past the top match the bar */
+  html:has(> body .shell),
+  body:has(.shell) {
+    background: #ececec;
+  }
+  html.dark:has(> body .shell),
+  html.dark body:has(.shell) {
+    background: var(--color-neutral-950) !important;
+  }
 }
 
 

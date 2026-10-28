@@ -33,7 +33,7 @@ export default function GroupBlockView({ block, compact, editing, context, fill 
 }
 
 // A block's card in its palette color, with its title; profile blocks use it too
-// A `bleed` card (a profile's timeline) runs edge to edge on phones, so what's in it has room
+// A `bleed` card (a profile's or group's timeline) runs edge to edge on phones, so what's in it has room
 export function Card({ block, compact, title, icon: Icon, action, bleed = false, children }) {
   const t = tone(block);
   return (
@@ -169,7 +169,7 @@ function TimelineBlock({ block, compact, editing, context, title }) {
   };
 
   return (
-    <Card block={block} compact={compact} title={title} icon={MessagesSquare}
+    <Card block={block} compact={compact} title={title} icon={MessagesSquare} bleed={!compact && !editing}
       action={context.viewer?.is_member && !editing && <a href="/people/me" className="shrink-0 text-xs font-medium text-accent hover:underline">Your timeline</a>}>
       <div className="wb">
         {canPost && (

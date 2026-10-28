@@ -3,6 +3,8 @@
 class Api::PeopleController < ApplicationController
   include GroupScoped
 
+  FOLLOW_LIST_MAX = 1000
+
   before_action :require_profiles
   before_action :set_person, except: :index
 
@@ -35,6 +37,16 @@ class Api::PeopleController < ApplicationController
   # GET /api/people/:username/feed?before=ISO8601 -> older notes and highlights
   def feed
     render json: { feed: ProfilePage.new(current_user).feed(@person, before: before_param) }
+  end
+
+  # GET /api/people/:username/followers and /following -> everyone on that list, newest first
+  # (the profile's follower counts open these)
+  def followers
+    render json: { people: ProfilePage.new(current_user).people(@person.followers, limit: FOLLOW_LIST_MAX) }
+  end
+
+  def following
+    render json: { people: ProfilePage.new(current_user).people(@person.following, limit: FOLLOW_LIST_MAX) }
   end
 
   # POST /api/people/:username/follow
