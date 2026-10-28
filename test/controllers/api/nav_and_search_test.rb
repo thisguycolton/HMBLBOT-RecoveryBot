@@ -30,6 +30,7 @@ class Api::NavAndSearchTest < ActionDispatch::IntegrationTest
     acid, step = body["groups"].sort_by { |g| g["title"] }.then { |a| [a.second, a.first] }
     assert_equal({ "admin" => false, "record_keeper" => true, "host_coordinator" => false, "treasurer" => true, "host" => true }, acid["roles"])
     assert_equal 0, acid["requests"]
+    assert acid["can_give"], "a host gives the group's chips from its folder"
     assert step.dig("roles", "admin")
     assert_equal 1, step["requests"]
 

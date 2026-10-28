@@ -70,7 +70,7 @@ class Api::GroupMeetingHostsController < ApplicationController
     end
     if user && changed.positive? && user != current_user
       Notification.deliver(user, kind: "meeting_host.linked", title: "You're on #{@group.title}'s host schedule",
-                                 body: "Your account is connected to \"#{name}\" on the schedule. Turn on reminders in your account settings.", url: "/groups/#{@group.slug}/hosts")
+                                 body: "Your account is connected to \"#{name}\" on the schedule. Turn on reminders in your account settings.", url: "/groups/#{@group.slug}/meetings")
     end
     render json: schedule
   end
@@ -108,13 +108,13 @@ class Api::GroupMeetingHostsController < ApplicationController
   # A change to a meeting's schedule, for the coordinators of its time slot (not whoever made it)
   def tell_slot_coordinators(meeting, what)
     Notification.deliver(@group.slot_coordinators(meeting).where.not(id: current_user.id), kind: "meeting_host.slot_changed",
-                         title: "#{meeting.name}: #{what}", body: meeting.schedule_label, url: "/groups/#{@group.slug}/hosts")
+                         title: "#{meeting.name}: #{what}", body: meeting.schedule_label, url: "/groups/#{@group.slug}/meetings")
   end
 
   def tell(host, meeting)
     return if host.user_id == current_user.id
 
     Notification.deliver(host.user, kind: "meeting_host.assigned", title: "You're now the #{MeetingHost::ROLE_LABELS[host.role].downcase} of #{meeting.name}",
-                                    body: meeting.schedule_label, url: "/groups/#{@group.slug}/hosts")
+                                    body: meeting.schedule_label, url: "/groups/#{@group.slug}/meetings")
   end
 end

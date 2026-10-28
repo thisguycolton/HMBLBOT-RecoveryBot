@@ -87,7 +87,7 @@ class Api::GroupMeetingHostsTest < ActionDispatch::IntegrationTest
     assert_response :created
     assert_equal ["Mo"], @days.map { |m| slot(m.id)["host"]["name"] }.uniq
     note = Notification.last
-    assert_equal [@member, "meeting_host.assigned", "/groups/sunrise-crew/hosts"], [note.user, note.kind, note.url]
+    assert_equal [@member, "meeting_host.assigned", "/groups/sunrise-crew/meetings"], [note.user, note.kind, note.url]
     assert_match "You're now the host of Sunrise", note.title
   end
 
@@ -175,5 +175,23 @@ class Api::GroupMeetingHostsTest < ActionDispatch::IntegrationTest
     sign_in @coordinator
     get "/api/groups/#{@group.slug}/conscience", as: :json
     assert_equal({ "places" => 14, "open_hosts" => 7, "open_co_hosts" => 7 }, body["hosts_open"])
+  end
+
+  test "the Dashboard shows a coordinator the subs nobody has taken, and a treasurer the draft reports" do
+    @monday.host_sub_requests.create!(role: "host", on: @today + ((1 - @today.wday) % 7) + 7, requested_by: @member)
+    sign_in @member
+    get "/api/groups/#{@group.slug}/conscience", as: :json
+    assert_nil body["sub_requests"]
+    assert_nil body["waiting"]
+    sign_in @coordinator
+    get "/api/groups/#{@group.slug}/conscience", as: :json
+    assert_equal [["Sunrise", "host", "Mo"]], body["sub_requests"].map { |r| [r["meeting_name"], r["role"], r["requested_by"]] }
+
+    treasurer = User.create!(email: "treasurer@example.com", name: "Tess", password: "password123", confirmed: true)
+    @group.memberships.create!(user: treasurer, role: "member", can_keep_treasury: true)
+    sign_in treasurer
+    get "/api/groups/#{@group.slug}/conscience", as: :json
+    assert_equal [], body.dig("waiting", "draft_minutes")
+    assert_equal [], body.dig("waiting", "draft_reports")
   end
 end

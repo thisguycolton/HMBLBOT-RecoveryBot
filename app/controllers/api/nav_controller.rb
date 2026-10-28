@@ -13,8 +13,6 @@ class Api::NavController < ApplicationController
       me: { name: current_user.display_name, username: current_user.username, avatar_url: current_user.avatar_url },
       groups: memberships.map { |m| group_json(m) },
       hosting: { open_requests: HostCommitments.new(current_user).open_sub_requests.size, host: current_user.host? },
-      # Give a chip (/recovery/give) is for the groups they host for
-      can_give_chips: memberships.any? { |m| m.group.can_host?(current_user) },
       today: PeopleHome.new(current_user).json,
     }
   end
@@ -35,6 +33,8 @@ class Api::NavController < ApplicationController
         host: membership.can_host,
       },
       requests: admin ? group.memberships.requested.count : 0,
+      # Give a chip (/recovery/give?group=) is in the folder of each group they host for
+      can_give: group.can_host?(current_user),
     }
   end
 end

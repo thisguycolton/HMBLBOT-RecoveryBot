@@ -19,7 +19,7 @@ module HostReminders
       rescue ActiveRecord::RecordNotUnique
         next
       end
-      Notification.deliver(user, kind: "meeting_host.reminder", title: title(c, now), body: body(c), url: "/groups/#{c.meeting.group.slug}/hosts")
+      Notification.deliver(user, kind: "meeting_host.reminder", title: title(c, now), body: body(c), url: "/groups/#{c.meeting.group.slug}/meetings")
       HostMailer.with(user: user, title: title(c, now), body: body(c), group: c.meeting.group).reminder.deliver_now if user.host_reminder_email
     rescue StandardError => e
       Rails.logger.warn("[host reminders] #{user.id} #{c.meeting.id}: #{e.message}")

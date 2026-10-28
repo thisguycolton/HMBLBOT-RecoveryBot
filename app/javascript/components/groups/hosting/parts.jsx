@@ -302,7 +302,7 @@ export function QuickActions({ center, settings = null, size = "side" }) {
     zoom && on("zoom_open") && { key: "zoom_open", icon: Video, text: "Open the Zoom meeting", href: zoom },
     zoom && on("zoom_copy") && { key: "zoom_copy", icon: Clipboard, text: "Copy the Zoom link", copy: zoom },
     zoom && passcode && on("passcode") && { key: "passcode", icon: KeyRound, text: `Copy the passcode (${passcodeLabel(passcode)})`, copy: passcodeValue(passcode), wrap: true },
-    on("host_schedule") && { key: "host_schedule", icon: UserCheck, text: "Host schedule", href: `/groups/${slug}/hosts`, ours: true },
+    on("host_schedule") && { key: "host_schedule", icon: UserCheck, text: "Host schedule", href: `/groups/${slug}/meetings`, ours: true },
     on("time_capsule") && { key: "time_capsule", icon: History, text: "Time Capsule", href: `/groups/${slug}/host/capsule?meeting=${center.meeting.id}`, ours: true },
     ...(settings?.links || []).map((l, i) => ({ key: `link-${i}`, icon: Link2, text: l.title || l.url.replace(/^https?:\/\//, ""), href: l.url, ours: true, outside: true })),
   ].filter(Boolean);

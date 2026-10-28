@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Gift, Mail, Trash2, UserCheck } from "lucide-react";
 import { api } from "../groups/lib";
 import { Card, ErrorNote, Loading, Pill, dangerButton, primaryButton } from "../groups/ui";
@@ -19,15 +19,18 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Give a chip (/recovery/give): for the hosts, host coordinators, record keepers and admins of a
 // group (Api::ChipAwardsController). A round chip in the group's design, to a member or to an
 // email address: someone with an account gets it at once with a notification, anyone else an
-// email with a link to claim it. Below, the chips given so far, which can be taken back.
+// email with a link to claim it. Below, the chips given so far, which can be taken back. Each
+// group's folder in the sidebar links here with ?group=, the group it gives for.
 export default function GivePage() {
   const [data, setData] = useState(null);
-  const [slug, setSlug] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const slug = searchParams.get("group");
+  const setSlug = (value) => setSearchParams({ group: value }, { replace: true });
   const [form, setForm] = useState(blank);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
-  const load = useCallback(() => api("/chip_awards").then((d) => { setData(d); setSlug((s) => s || d.groups[0]?.slug); }).catch((e) => setError(e.message)), []);
+  const load = useCallback(() => api("/chip_awards").then(setData).catch((e) => setError(e.message)), []);
   useEffect(() => { document.title = "Give a chip | RecoveryBot"; load(); }, [load]);
 
   if (!data) return error ? <ErrorNote error={error} /> : <Loading />;

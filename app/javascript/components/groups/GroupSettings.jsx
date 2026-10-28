@@ -109,7 +109,7 @@ export default function GroupSettings({ group, setGroup }) {
       <Card className="space-y-3 p-4 sm:p-5">
         <h2 className="font-semibold text-slate-900 dark:text-white">Meeting schedule</h2>
         <Toggle checked={form.show_hosts_publicly} onChange={(v) => set({ show_hosts_publicly: v })} label="Show who hosts each meeting"
-          description="The meetings on the group's page say who hosts and co-hosts the next one, from the Hosts tab. Anyone can see the group's page, so turn this off if your hosts would rather not be named there. Meetings with nobody on the schedule look the same either way." />
+          description="The meetings on the group's page say who hosts and co-hosts the next one, from the host schedule on Meetings. Anyone can see the group's page, so turn this off if your hosts would rather not be named there. Meetings with nobody on the schedule look the same either way." />
       </Card>
 
       <Card className="space-y-3 p-4 sm:p-5">

@@ -50,12 +50,12 @@ export function scheduleLabel(series) {
 
 // A group's meetings: weekly by weekday, then one-time ones. Group admins add them by
 // hand (with AA Intergroup matches offered as they type), import them from AA Intergroup, and refresh.
-export default function MeetingsTab({ group, setGroup, reload, isNew, focusId }) {
+export default function MeetingsTab({ group, setGroup, reload, isNew, focusId, readOnly = false }) {
   const [editing, setEditing] = useState(null); // "new" | [meetings of one series]
   const [importing, setImporting] = useState(isNew && group.meetings.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const manage = group.can_manage;
+  const manage = group.can_manage && !readOnly; // read-only on the Meetings page; Meeting settings changes them
   const linkedCount = group.meetings.filter((m) => m.oiaa_slug).length;
 
   const replaceMeetings = (meetings) => setGroup((g) => ({ ...g, meetings }));

@@ -24,11 +24,11 @@ class Api::GroupMeetingHostCoversController < ApplicationController
 
     if cover.user && cover.user_id != current_user.id
       Notification.deliver(cover.user, kind: "meeting_host.covering", title: "You're covering as #{MeetingHost::ROLE_LABELS[cover.role].downcase} for #{meeting.name} on #{cover.on.strftime("%b %-d")}",
-                                       body: meeting.schedule_label, url: "/groups/#{@group.slug}/hosts")
+                                       body: meeting.schedule_label, url: "/groups/#{@group.slug}/meetings")
     end
     Notification.deliver(@group.slot_coordinators(meeting).where.not(id: [current_user.id, cover.user_id].compact), kind: "meeting_host.slot_changed",
                          title: "#{meeting.name}: #{cover.name} covers the #{MeetingHost::ROLE_LABELS[cover.role].downcase} on #{cover.on.strftime("%b %-d")}",
-                         body: meeting.schedule_label, url: "/groups/#{@group.slug}/hosts")
+                         body: meeting.schedule_label, url: "/groups/#{@group.slug}/meetings")
     render json: HostSchedule.new(@group, current_user).as_json, status: :created
   end
 

@@ -91,7 +91,7 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
   // A deck of its own goes back to the group's HostDecks (a business meeting's to the group's
   // business meetings, where every member finds it); a meeting's to its hosts
   const guest = deck.readOnly;
-  const back = guest ? "/" : center?.deck ? (center.deck.purpose === "business_meeting" ? meetingsPath(slug) : `/${slug}/decks`) : `/${slug}/hosts`;
+  const back = guest ? "/" : center?.deck ? (center.deck.purpose === "business_meeting" ? meetingsPath(slug) : `/${slug}/decks`) : `/${slug}/meetings`;
   if (error) {
     return (
       <div className="min-h-screen bg-neutral-50 px-4 dark:bg-neutral-950">
