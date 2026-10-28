@@ -116,6 +116,24 @@ class User < ApplicationRecord
   def following?(other) = !!other && follows_given.exists?(followed_id: other.id)
   def custom_page? = !page_blocks.nil?
 
+  # Their favorite chips show on their profile when it has a Chips block (EventBlocks); the
+  # switch on the Chips page adds one under About (making the default page theirs) or takes it off
+  def show_chips_on_profile = !!page_blocks&.any? { |b| b["type"] == "chips" }
+
+  def show_chips_on_profile=(on)
+    on = ActiveModel::Type::Boolean.new.cast(on)
+    return if on == show_chips_on_profile
+
+    blocks = (page_blocks || ProfilePage.default_blocks).map(&:dup)
+    if on
+      about = blocks.index { |b| b["type"] == "about" }
+      blocks.insert(about ? about + 1 : blocks.size, { "type" => "chips", "region" => about ? blocks[about]["region"] : "side" })
+    else
+      blocks.reject! { |b| b["type"] == "chips" }
+    end
+    self.page_blocks = blocks
+  end
+
   # Their hosting: the groups they can host for, their meetings and coming dates
   def host_commitments = @host_commitments ||= HostCommitments.new(self)
   def host? = host_commitments.host?

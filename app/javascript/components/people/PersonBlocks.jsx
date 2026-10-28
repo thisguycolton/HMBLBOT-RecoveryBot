@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { CalendarHeart, Lock, MessagesSquare, UserRound, Users, UsersRound } from "lucide-react";
+import { Award, CalendarHeart, Lock, MessagesSquare, UserRound, Users, UsersRound } from "lucide-react";
 import Avatar from "../groups/Avatar";
 import GroupLogo from "../groups/GroupLogo";
 import { api } from "../groups/lib";
 import { Card, Empty } from "../groups/page/GroupBlocks";
 import FeedItem from "../notes/FeedItem";
 import NoteEditor from "../notes/NoteEditor";
+import ProfileChips from "./ProfileChips";
 import { soberFor } from "./lib";
 
 // How a profile's own blocks look (EventBlocks::PROFILE_TYPES), filled in from `context`
@@ -17,6 +18,7 @@ export default function PersonBlockView({ block, compact, editing, context }) {
     case "feed": return <FeedBlock {...props} />;
     case "groups": return <GroupsBlock {...props} />;
     case "people": return <PeopleBlock {...props} />;
+    case "chips": return <ChipsBlock {...props} />;
     default: return null;
   }
 }
@@ -106,6 +108,20 @@ function FeedBlock({ block, compact, editing, context, title }) {
           </p>
         )}
       </div>
+    </Card>
+  );
+}
+
+// Their favorite chips (Chips.favorites), picked with the stars on their Chips page
+function ChipsBlock({ block, compact, editing, context, title }) {
+  const chips = context.chips || [];
+  return (
+    <Card block={block} compact={compact} title={title} icon={Award}>
+      {chips.length === 0 ? (
+        <Empty>{context.viewer?.is_me ? <>Star up to five chips on <a href={context.chips_path || "/recovery"} className="text-accent hover:underline">your Chips page</a> and they show here.</> : "No chips yet."}</Empty>
+      ) : (
+        <ProfileChips chips={chips} design={context.chip_design} person={context.person} isMe={context.viewer?.is_me} size={compact ? 64 : 84} disabled={editing} />
+      )}
     </Card>
   );
 }

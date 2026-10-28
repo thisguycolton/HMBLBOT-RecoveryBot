@@ -1326,7 +1326,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_050000) do
     t.string "push_off", default: [], null: false, array: true
     t.jsonb "chip_tops", default: {}, null: false
     t.string "chip_favorites", default: [], null: false, array: true
-    t.boolean "show_chips_on_profile", default: false, null: false
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true

@@ -107,7 +107,7 @@ export default function ChipsPage() {
       <Card className="space-y-3 p-4 sm:p-5">
         <h2 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white"><Star className="size-4" /> Favorites on your profile</h2>
         <Toggle checked={data.show_on_profile} onChange={(v) => save({ show_on_profile: v })} label="Show my favorite chips on my profile"
-          description={`Up to ${data.favorites_max}. Star a chip to pick it; signed-in members who visit your profile see them. A sobriety chip says how long you've been sober, so pick the ones you're happy to share.`} />
+          description={`Up to ${data.favorites_max}. Star a chip to pick it; signed-in members who visit your profile see them. This adds a Chips block to your page, which you can move in Edit your page. A sobriety chip says how long you've been sober, so pick the ones you're happy to share.`} />
         <p className="text-sm text-slate-500 dark:text-neutral-400">
           {data.favorites.length} of {data.favorites_max} picked.
           {data.show_on_profile && data.profile_path && <> <a href={data.profile_path} className={linkButton}>See your profile</a></>}

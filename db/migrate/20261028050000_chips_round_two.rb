@@ -32,7 +32,6 @@ class ChipsRoundTwo < ActiveRecord::Migration[8.0]
     add_column :meetings, :chip_design, :jsonb
     add_column :users, :chip_tops, :jsonb, null: false, default: {}
     add_column :users, :chip_favorites, :string, array: true, null: false, default: []
-    add_column :users, :show_chips_on_profile, :boolean, null: false, default: false
     remove_reference :users, :chip_group, foreign_key: { to_table: :groups, on_delete: :nullify }
   end
 end

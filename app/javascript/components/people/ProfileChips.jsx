@@ -9,20 +9,20 @@ function story(chip, name) {
   return `${name} reached ${chip.label} on ${dayLabel(chip.on)}.`;
 }
 
-// The up to five favorite chips someone shows on their profile (users.show_chips_on_profile,
-// chosen on their Chips page). Tap one to spin it.
-export default function ProfileChips({ chips, design, person, isMe }) {
+// The up to five favorite chips in a profile's Chips block (PersonBlocks), chosen on their
+// Chips page. Tap one to spin it.
+export default function ProfileChips({ chips, design, person, isMe, size = 72, disabled = false }) {
   const [open, setOpen] = useState(null);
   if (!chips?.length) return null;
   return (
-    <section aria-label="Chips" className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
+    <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
       {chips.map((chip) => (
-        <button key={chip.id} type="button" title={chip.label} aria-label={`${chip.label} chip`} onClick={() => setOpen(chip)}
+        <button key={chip.id} type="button" title={chip.label} aria-label={`${chip.label} chip`} onClick={() => !disabled && setOpen(chip)}
           className="rounded-full !bg-transparent p-1 transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-accent">
-          <FlatChip chip={chip} design={design} size={72} />
+          <FlatChip chip={chip} design={design} size={size} />
         </button>
       ))}
       {open && <ChipModal chip={open} design={design} text={story(open, isMe ? "You" : person.name)} onClose={() => setOpen(null)} />}
-    </section>
+    </div>
   );
 }

@@ -120,13 +120,54 @@ function ArcText({ id, top, bottom, ink }) {
   );
 }
 
+// A group's logo pressed into the chip (ChipDesign emblem "relief", ChipRelief on the server):
+// its shapes drawn as a heightmap, gray for how high each stands, then lit like a raised metal or
+// clay stamping in the chip's own color, with a soft shadow under the edges. In the box x, y, w.
+function Relief({ id, relief, look, x, y, w }) {
+  const { color, metal } = look;
+  const [bx, by, bw, bh] = relief.view_box;
+  const light = <feDistantLight azimuth="225" elevation="55" />;
+  return (
+    <>
+      <defs>
+        <filter id={`${id}-relief`} filterUnits="userSpaceOnUse" x="0" y="0" width="200" height="200" colorInterpolationFilters="sRGB">
+          <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="height" />
+          <feComponentTransfer in="height" result="mask"><feFuncA type="linear" slope="40" /></feComponentTransfer>
+          <feGaussianBlur in="height" stdDeviation="1.3" result="soft" />
+          <feDiffuseLighting in="soft" surfaceScale="5" diffuseConstant="1" lightingColor="#ffffff" result="lit">{light}</feDiffuseLighting>
+          <feSpecularLighting in="soft" surfaceScale="5" specularConstant={metal ? 1 : 0.5} specularExponent="60" lightingColor="#ffffff" result="shine">{light}</feSpecularLighting>
+          <feFlood floodColor={shade(color, metal ? 0.04 : 0.02)} result="paint" />
+          <feComposite in="paint" in2="lit" operator="arithmetic" k1="0.85" k2="0.35" result="shaded" />
+          <feComposite in="shine" in2="shaded" operator="arithmetic" k2="1" k3="1" result="bright" />
+          <feComposite in="bright" in2="mask" operator="in" result="raised" />
+          <feGaussianBlur in="mask" stdDeviation="1.1" result="blur" />
+          <feOffset in="blur" dx="0.5" dy="0.8" result="drop" />
+          <feFlood floodColor="#000000" floodOpacity={metal ? 0.3 : 0.25} />
+          <feComposite in2="drop" operator="in" result="shadow" />
+          <feMerge><feMergeNode in="shadow" /><feMergeNode in="raised" /></feMerge>
+        </filter>
+      </defs>
+      <g filter={`url(#${id}-relief)`}>
+        <rect x={x} y={y} width={w} height={w} fill="#000000" />
+        <svg x={x} y={y} width={w} height={w} viewBox={`${bx} ${by} ${bw} ${bh}`} preserveAspectRatio="xMidYMid meet">
+          {relief.shapes.map((sh, i) => {
+            const g = Math.round(sh.h * 255);
+            return <path key={i} d={sh.d} transform={sh.t} fill={`rgb(${g},${g},${g})`} />;
+          })}
+        </svg>
+      </g>
+    </>
+  );
+}
+
 export function RoundChip({ design, milestone, logoUrl, size = 160, faded = false, bare = false, className = "", title }) {
   const id = useId().replace(/:/g, "");
   const d = design.round;
   const look = roundLook(design, milestone);
   const { ink } = look;
   const [big, small] = roundFace(milestone, d.numerals);
-  const emblem = d.emblem === "logo" && !logoUrl ? "triangle" : d.emblem;
+  const emblem = (d.emblem === "logo" && !logoUrl) || (d.emblem === "relief" && !d.relief?.shapes?.length) ? "triangle" : d.emblem;
+  const stamped = emblem === "logo" || emblem === "relief";
   const bigSize = big.length > 4 ? 26 : big.length > 2 ? 32 : 40;
 
   return (
@@ -141,6 +182,7 @@ export function RoundChip({ design, milestone, logoUrl, size = 160, faded = fals
           <path d="M 100,46 L 146.8,127 L 53.2,127 Z" />
         </g>
       )}
+      {emblem === "relief" && <Relief id={id} relief={d.relief} look={look} x={64} y={52} w={72} />}
       {emblem === "logo" && (
         <>
           <image href={logoUrl} x="73" y="61" width="54" height="54" clipPath={`url(#${id}-logo)`} preserveAspectRatio="xMidYMid slice" />
@@ -149,7 +191,7 @@ export function RoundChip({ design, milestone, logoUrl, size = 160, faded = fals
       )}
 
       <g fill={ink} fontFamily={FONT} textAnchor="middle">
-        {emblem === "logo" ? (
+        {stamped ? (
           <text x="100" y="140" fontSize="18" fontWeight="800">{big} <tspan fontSize="10" fontWeight="700" letterSpacing="1.5">{small}</tspan></text>
         ) : (
           <>

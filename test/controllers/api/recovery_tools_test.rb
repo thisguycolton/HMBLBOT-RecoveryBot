@@ -267,6 +267,34 @@ class Api::RecoveryToolsTest < ActionDispatch::IntegrationTest
     assert_equal %w[Meeting Maker Sunrise], ChipDesign.for_meeting(meeting.reload)["triangle"]["sides"]
   end
 
+  test "a group's SVG logo becomes outlines for a raised relief, and nothing else of the file is kept" do
+    @group.memberships.create!(user: @kim, role: "admin")
+    sign_in @kim
+    svg = <<~SVG
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">
+        <style>.dark{fill:#000}</style>
+        <script>alert(1)</script>
+        <rect width="100" height="50" fill="#ffffff"/>
+        <g transform="translate(5 5)"><path class="dark" d="M0 0 L10 0 L10 10 Z" onclick="alert(1)"/></g>
+        <circle cx="50" cy="25" r="10" style="fill: #808080"/>
+        <path d="M1 1 L2 2" fill="none"/>
+      </svg>
+    SVG
+    post "/api/groups/#{@group.slug}/chips/relief", params: { svg: svg }, as: :json
+    relief = response.parsed_body["relief"]
+    assert_equal [0.0, 0.0, 100.0, 50.0], relief["view_box"]
+    assert_equal [0.0, 1.0, 0.5], relief["shapes"].map { |sh| sh["h"] }
+    assert_equal "translate(5 5)", relief["shapes"][1]["t"]
+    assert_not_includes relief.to_json, "alert"
+
+    put "/api/groups/#{@group.slug}/chips", params: { design: { round: { emblem: "relief", relief: relief.merge("shapes" => relief["shapes"] + [{ "d" => "M0 0\"/><script>" }]) } } }, as: :json
+    assert_equal 3, @group.reload.chip_design.dig("round", "relief", "shapes").size
+
+    post "/api/groups/#{@group.slug}/chips/relief", params: { svg: "<svg><text>Hi</text></svg>" }, as: :json
+    assert_response :unprocessable_entity
+    assert_match "Outline any text", response.parsed_body["error"]
+  end
+
   test "up to five favorite chips show on the profile, only if they turn it on" do
     ENV["GROUPS_FOR_EVERYONE"] = "1"
     @kim.update!(sobriety_date: Date.current - 800)
@@ -278,9 +306,16 @@ class Api::RecoveryToolsTest < ActionDispatch::IntegrationTest
     get "/api/people/#{@kim.username}", as: :json
     assert_equal [], response.parsed_body.dig("context", "chips")
 
+    # Turning it on adds a Chips block under About, which they can move like any other
     @kim.update!(show_chips_on_profile: true)
+    assert_equal %w[about chips], @kim.page_blocks.select { |b| b["region"] == "side" }.first(2).map { |b| b["type"] }
     get "/api/people/#{@kim.username}", as: :json
     assert_equal %w[round:year-2 round:30d round:24h round:60d round:90d], response.parsed_body.dig("context", "chips").map { |c| c["id"] }
+    assert response.parsed_body["blocks"].any? { |b| b["type"] == "chips" }
+
+    @kim.update!(page_blocks: @kim.page_blocks.reject { |b| b["type"] == "chips" })
+    get "/api/people/#{@kim.username}", as: :json
+    assert_equal [], response.parsed_body.dig("context", "chips")
   ensure
     ENV.delete("GROUPS_FOR_EVERYONE")
   end

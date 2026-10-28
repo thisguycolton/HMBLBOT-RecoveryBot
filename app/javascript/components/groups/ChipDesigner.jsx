@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Upload } from "lucide-react";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass, labelClass } from "../ui/styles";
 import { RoundChip, TriangleChip } from "../recovery/Chip";
@@ -84,9 +84,10 @@ export default function ChipDesigner({ group }) {
             <div className={labelClass}>In the middle</div>
             <div className={segment}>
               <SegmentedControl value={design.round.emblem} onChange={(v) => round({ emblem: v })}
-                options={[{ value: "triangle", label: "Circle and triangle" }, { value: "logo", label: "Group logo" }, { value: "none", label: "Just the number" }]} />
+                options={[{ value: "triangle", label: "Circle and triangle" }, { value: "logo", label: "Group logo" }, { value: "relief", label: "Raised logo" }, { value: "none", label: "Just the number" }]} />
             </div>
             {design.round.emblem === "logo" && !logoUrl && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">The group has no logo yet, so chips show the circle and triangle. Add one in Group settings.</p>}
+            {design.round.emblem === "relief" && <ReliefUpload slug={group.slug} relief={design.round.relief} onChange={(relief) => round({ relief })} />}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -236,5 +237,36 @@ function ColorField({ label, value, fallback, onChange }) {
           className="!bg-transparent p-0 text-slate-400 hover:text-slate-700"><RotateCcw className="size-3.5" /></button>
       )}
     </label>
+  );
+}
+
+// The raised logo: an SVG the group uploads, turned into outlines on the server (ChipRelief) and
+// pressed into the chip in its own color. Dark parts stand highest, lighter ones lower, white
+// none. Saved with the rest of the design.
+function ReliefUpload({ slug, relief, onChange }) {
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const upload = async (file) => {
+    if (!file) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const d = await api(`/groups/${slug}/chips/relief`, { method: "POST", body: { svg: await file.text() } });
+      onChange(d.relief);
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+  return (
+    <div className="mt-2 space-y-2">
+      <label className={`${quietButton} cursor-pointer`}>
+        <Upload className="size-4" /> {busy ? "Reading…" : relief ? "Upload a different SVG" : "Upload an SVG"}
+        <input type="file" accept=".svg,image/svg+xml" className="sr-only" onChange={(e) => { upload(e.target.files[0]); e.target.value = ""; }} />
+      </label>
+      <p className="text-xs text-slate-500 dark:text-neutral-400">
+        Your logo, pressed into the chip like a stamped coin. The darker a part of the SVG, the higher it stands; white parts stay flat.
+        Turn any text into outlines first. {!relief && "Until there's one, chips show the circle and triangle."}
+      </p>
+      <ErrorNote error={error} />
+    </div>
   );
 }

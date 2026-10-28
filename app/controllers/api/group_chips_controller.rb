@@ -15,6 +15,14 @@ class Api::GroupChipsController < ApplicationController
     render json: design_json
   end
 
+  # POST /api/groups/:slug/chips/relief { svg } -> { relief }: an uploaded SVG turned into the
+  # outlines for a raised logo (ChipRelief). Nothing is saved until the design is.
+  def relief
+    render json: { relief: ChipRelief.from_svg(params[:svg].to_s) }
+  rescue ChipRelief::Invalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   # PUT /api/groups/:slug/chips/meetings/:meeting_id { design: { triangle } } (or { reset: true })
   def meeting
     meeting = @group.meetings.find(params[:meeting_id])

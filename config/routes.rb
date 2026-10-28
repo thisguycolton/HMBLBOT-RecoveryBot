@@ -93,6 +93,7 @@ Rails.application.routes.draw do
     resource :conscience, controller: "group_conscience", only: :show
     resource :chips, controller: "group_chips", only: %i[show update] do
       put "meetings/:meeting_id", action: :meeting
+      post :relief
     end
     resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy] do
       post :link, on: :collection

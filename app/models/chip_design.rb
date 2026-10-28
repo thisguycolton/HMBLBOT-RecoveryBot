@@ -4,7 +4,7 @@
 # part only). Only what differs from the default is stored, so the rest follows it.
 module ChipDesign
   ROUND_KEYS = %w[24h 30d 60d 90d 6m 9m 18m year].freeze
-  EMBLEMS = %w[triangle logo none].freeze
+  EMBLEMS = %w[triangle logo relief none].freeze
   FINISHES = %w[classic metal plastic].freeze
   NUMERALS = %w[roman number].freeze
   TRIANGLE_FINISHES = %w[metal plastic].freeze
@@ -67,6 +67,8 @@ module ChipDesign
         "bottom_text" => text(round["bottom_text"]),
         "back_text" => (round["back_text"].to_s.gsub(/\r\n?/, "\n").gsub(/[ \t]+/, " ").strip.first(240) unless round["back_text"].nil?),
         "emblem" => (round["emblem"] if EMBLEMS.include?(round["emblem"])),
+        # The group's logo as a raised relief (ChipRelief), for the "relief" emblem
+        "relief" => ChipRelief.clean(round["relief"]),
         "numerals" => (round["numerals"] if NUMERALS.include?(round["numerals"])),
         "finish" => (round["finish"] if FINISHES.include?(round["finish"])),
         "colors" => colors(round["colors"], ROUND_KEYS),

@@ -5,7 +5,6 @@ import { PageBlocks } from "../events/EventLayout";
 import { api } from "../groups/lib";
 import { heroQuietButton } from "../groups/page/GroupHero";
 import { ErrorNote, Loading } from "../groups/ui";
-import ProfileChips from "./ProfileChips";
 import ProfileHero from "./ProfileHero";
 import { hiddenFor } from "./lib";
 
@@ -39,7 +38,6 @@ export default function ProfilePage() {
             <a href="/users/edit" className={heroQuietButton}><Settings className="size-4" /> Settings</a>
           </>
         )} />
-      <ProfileChips chips={page.context.chips} design={page.context.chip_design} person={person} isMe={viewer.is_me} />
       <PageBlocks info layout={page.layout} blocks={page.blocks} context={context} hidden={(b) => hiddenFor(b, context)} />
     </div>
   );
