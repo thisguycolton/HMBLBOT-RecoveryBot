@@ -175,7 +175,7 @@ class Group < ApplicationRecord
 
   # Notes members shared to the group, newest first; a note stops showing when its author
   # leaves
-  def shared_notes = timeline_notes.where(user_id: members.select(:id)).includes(user: { avatar_attachment: :blob }).newest_first
+  def shared_notes = timeline_notes.shown.where(user_id: members.select(:id)).includes(user: { avatar_attachment: :blob }).newest_first
 
   # Readings members tagged to this group; drafts and scheduled ones stay with their author
   def shared_readings = readings.published.includes(:user).order(published_at: :desc)

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { BookOpen, Pencil, Repeat2, Trash2 } from "lucide-react";
+import { BookOpen, EyeOff, Pencil, Repeat2, Trash2 } from "lucide-react";
 import Markdown from "../book/Markdown";
 import HighlightNote from "../book/HighlightNote";
 import { highlightCss } from "../book/HighlightCard";
@@ -13,6 +13,8 @@ import NoteActions from "./NoteActions";
 import NoteComments from "./NoteComments";
 import NoteEditor from "./NoteEditor";
 import VisibilityPicker from "./VisibilityPicker";
+import ChipModal, { FlatChip } from "../recovery/ChipModal";
+import { dayLabel } from "../recovery/lib";
 import { saveNote } from "./lib";
 
 // One thing on a timeline: a note (Markdown and pictures), a repost of someone's note, or a
@@ -117,7 +119,7 @@ function ItemHead({ item, showAuthor, compact, extraAction, onChange, editing })
         </a>
       )}
       <span className="wb-feed-item__meta">
-        {item.kind === "highlight" ? "Highlighted" : "Note"} · {timeAgo(item.created_at)}{item.edited ? " · edited" : ""}
+        {item.kind === "highlight" ? "Highlighted" : item.chip ? "Chip" : "Note"} · {timeAgo(item.created_at)}{item.edited ? " · edited" : ""}
       </span>
       <span className="flex-1" />
       {extraAction}
@@ -162,6 +164,7 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
   const images = item.images || [];
   return (
     <>
+      {item.chip && <SharedChip chip={item.chip} hidden={item.chip_hidden} />}
       {item.body?.trim() && <Markdown source={item.body} hashtags className={`wb-feed-item__body ${compact ? "wb-feed-item__body--compact" : ""}`} />}
       {images.length > 0 && (
         <div className={`wb-feed-item__images wb-feed-item__images--${Math.min(images.length, 4)}`}>
@@ -183,6 +186,39 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
           <button type="button" className="wb-hl-note__edit wb-hl-note__delete" onClick={destroy}><Trash2 size={13} aria-hidden="true" /> Delete</button>
         </div>
       )}
+    </>
+  );
+}
+
+// What a shared chip says about itself, under its name
+export function chipLine(chip) {
+  const on = chip.on ? dayLabel(chip.on, { month: "long", day: "numeric", year: "numeric" }) : "";
+  if (chip.source === "given") return `From ${chip.group?.title}${chip.given_by ? `, given by ${chip.given_by}` : ""} · ${on}`;
+  if (chip.kind === "meeting") return `Meeting Maker at ${chip.meeting?.name} · ${on}`;
+  if (chip.kind === "round") return `Sobriety · ${on}`;
+  return on;
+}
+
+// A chip on a note, as it looked when it was shared (it never changes). Opens big, to spin.
+function SharedChip({ chip, hidden }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} aria-label={`See the ${chip.label} chip`}
+        className="wb-feed-item__chip flex w-full items-center gap-3 rounded-2xl !bg-transparent p-1 text-left">
+        <FlatChip chip={chip} design={chip.design} size={84} />
+        <span className="min-w-0">
+          <span className="block text-lg font-semibold text-slate-900 dark:text-white">{chip.label}</span>
+          <span className="block text-sm text-slate-500 dark:text-neutral-400">{chipLine(chip)}</span>
+          {chip.edition && <span className="block text-xs font-semibold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-400">{chip.edition.name}{chip.edition.serial ? ` · No. ${chip.edition.serial}` : ""}</span>}
+        </span>
+      </button>
+      {hidden && (
+        <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400">
+          <EyeOff className="size-3.5" /> Only you see this now: your sobriety date changed, so this chip isn't yours at the moment.
+        </p>
+      )}
+      {open && <ChipModal chip={chip} design={chip.design} text={chipLine(chip)} onClose={() => setOpen(false)} />}
     </>
   );
 }

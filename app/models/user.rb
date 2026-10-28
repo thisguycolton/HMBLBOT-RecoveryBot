@@ -74,6 +74,8 @@ class User < ApplicationRecord
   # Set default values for new users
   after_initialize :set_defaults, unless: :persisted?
   before_save :sync_confirmed
+  # Sobriety chips they shared show only while they have them
+  after_update_commit -> { TimelineNote.sync_chips(self) }, if: :saved_change_to_sobriety_date?
 
   def set_defaults
     self.admin ||= false

@@ -13,6 +13,11 @@
 #
 # The #hashtags in its words (Hashtags) are kept in `hashtags`: each tag has a page listing
 # the notes the viewer can see that have it (/people/tags/:tag, Api::HashtagsController).
+#
+# A note can carry one of its author's chips (Share to timeline on a chip): `chip_id` names it
+# as Chips.catalog does and `chip` is how it looked then, kept as it was. While its author no
+# longer has a sobriety chip they shared (they changed their sobriety date), `chip_hidden`
+# keeps it, and reposts of it, off everyone else's feeds (sync_chips).
 class TimelineNote < ApplicationRecord
   include Visibility
   include Reactable
@@ -39,6 +44,13 @@ class TimelineNote < ApplicationRecord
   after_update_commit :drop_reposts, if: -> { saved_change_to_visibility? && visibility != "public" }
 
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
+  # Not a sobriety chip its author no longer has, nor a repost of one: what others may see
+  scope :shown, lambda {
+    where(chip_hidden: false).where(<<~SQL.squish)
+      timeline_notes.repost_of_id IS NULL OR NOT EXISTS (SELECT 1 FROM timeline_notes o
+        WHERE o.id = timeline_notes.repost_of_id AND o.chip_hidden)
+    SQL
+  }
   # What a feed needs to show notes (and the originals of reposts) without a query each
   scope :for_feed, lambda {
     people = { user: { avatar_attachment: :blob } }
@@ -66,7 +78,25 @@ class TimelineNote < ApplicationRecord
       followed = Follow.where(follower_id: viewer.id).select(:followed_id)
       seen = seen.or(where(visibility: "public")).or(where(visibility: "followers", user_id: followed))
     end
-    seen.where(repost_of_id: nil)
+    seen.where(repost_of_id: nil).merge(where(user_id: viewer.id).or(shown))
+  end
+
+  # The chip they're sharing, as their Chips page shows it (Chips.catalog), with the design it
+  # has now so it stays that way; nil when it isn't one of theirs. A given chip's note to them
+  # stays private.
+  def self.chip_for(user, chip_id, today = Date.current)
+    chip = Chips.catalog(user, today)[:chips].find { |c| c[:id] == chip_id.to_s }
+    chip && chip.except(:note, :top, :others).merge(design: chip[:design] || ChipDesign::DEFAULT).deep_stringify_keys
+  end
+
+  # Hides their shared sobriety chips they no longer have, and shows again the ones they do
+  def self.sync_chips(user)
+    notes = user.timeline_notes.where("chip_id LIKE 'round:%'")
+    return if notes.none?
+
+    held = user.sobriety_date ? Chips.round_milestones(user.sobriety_date, Date.current)[:earned].map { |m| Chips.round_slot(m[:key], m[:years]) } : []
+    notes.where(chip_id: held).update_all(chip_hidden: false)
+    notes.where.not(chip_id: held).update_all(chip_hidden: true)
   end
 
   # The tags on notes `viewer` can see that start with `prefix`, most used first, as
@@ -85,6 +115,7 @@ class TimelineNote < ApplicationRecord
   # A repost also needs its original to still be shared with Members.
   def visible_to?(viewer)
     return false unless viewer
+    return false if viewer.id != user_id && (chip_hidden || repost_of&.chip_hidden)
     return repost_of&.visibility == "public" && seen_on_profile_by?(viewer) if repost?
 
     seen_on_profile_by?(viewer) || groups.any? { |g| g.member?(viewer) && g.member?(user) }
@@ -132,6 +163,8 @@ class TimelineNote < ApplicationRecord
     mine = viewer&.id == user_id
     json = { kind: "note", id: id, body: body, images: image_urls, created_at: created_at.iso8601, edited: edited?,
              author: user.as_person_json, mine: mine, **social_json(viewer) }
+    json[:chip] = chip if chip_id
+    json[:chip_hidden] = true if mine && chip_hidden
     if group
       json[:can_remove] = mine || group.manageable_by?(viewer)
     elsif mine
@@ -197,7 +230,7 @@ class TimelineNote < ApplicationRecord
   def drop_reposts = reposts.destroy_all
 
   def has_something
-    errors.add(:base, "Write something or add a picture") if body.to_s.strip.empty? && !images.attached?
+    errors.add(:base, "Write something or add a picture") if body.to_s.strip.empty? && !images.attached? && !chip_id
   end
 
   def images_are_pictures

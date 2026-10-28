@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_28_050000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_28_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1190,8 +1190,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_050000) do
     t.bigint "repost_of_id"
     t.jsonb "link_preview"
     t.string "hashtags", default: [], null: false, array: true
+    t.string "chip_id"
+    t.jsonb "chip"
+    t.boolean "chip_hidden", default: false, null: false
     t.index ["hashtags"], name: "index_timeline_notes_on_hashtags", using: :gin
     t.index ["repost_of_id", "user_id"], name: "index_timeline_notes_on_repost_of_id_and_user_id", unique: true, where: "(repost_of_id IS NOT NULL)"
+    t.index ["user_id", "chip_id"], name: "index_timeline_notes_on_user_id_and_chip_id", where: "(chip_id IS NOT NULL)"
     t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_timeline_notes_on_user_id"
   end

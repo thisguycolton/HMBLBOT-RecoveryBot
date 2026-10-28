@@ -5,6 +5,7 @@ import { api } from "../groups/lib";
 import { Card, ErrorNote, Loading, Pill, linkButton, primaryButton, quietButton } from "../groups/ui";
 import Toggle from "../ui/Toggle";
 import ChipModal, { FlatChip } from "./ChipModal";
+import ChipShare from "./ChipShare";
 import { dayLabel, localDate } from "./lib";
 
 const short = (iso) => dayLabel(iso, { month: "short", day: "numeric", year: "numeric" });
@@ -26,6 +27,7 @@ export default function ChipsPage() {
   const [error, setError] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [celebrate, setCelebrate] = useState(false);
+  const [sharing, setSharing] = useState(false); // ?share=1 opens Share to timeline (the day count's Share it)
   const [params, setParams] = useSearchParams();
   const load = useCallback(() => api(`/recovery?today=${localDate()}`).then(setData).catch((e) => setError(e.message)), []);
   useEffect(() => { document.title = "Chips | RecoveryBot"; load(); }, [load]);
@@ -33,7 +35,7 @@ export default function ChipsPage() {
   useEffect(() => {
     const id = params.get("chip");
     if (!id || !data) return;
-    if (data.chips.some((c) => c.id === id)) { setOpenId(id); setCelebrate(true); }
+    if (data.chips.some((c) => c.id === id)) { setOpenId(id); setCelebrate(true); setSharing(params.get("share") === "1"); }
     setParams({}, { replace: true });
   }, [params, data]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -56,7 +58,7 @@ export default function ChipsPage() {
   }, {}));
   const favorite = (id) => data.favorites.includes(id);
   const toggleFavorite = (id) => save({ favorites: favorite(id) ? data.favorites.filter((f) => f !== id) : [...data.favorites, id] });
-  const openChip = (c) => { setCelebrate(false); setOpenId(c.id); };
+  const openChip = (c) => { setCelebrate(false); setSharing(false); setOpenId(c.id); };
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
@@ -128,6 +130,7 @@ export default function ChipsPage() {
               <Star className={`size-4 ${favorite(open.id) ? "fill-current" : ""}`} /> {favorite(open.id) ? "A favorite" : "Favorite"}
             </button>
           </div>
+          <ChipShare key={open.id} chip={open} options={data} startOpen={sharing} />
           <Duplicates chip={open} chips={chips} design={design} onPick={(c) => { save({ top: { slot: c.slot, id: c.id } }); setOpenId(c.id); }} />
         </ChipModal>
       )}

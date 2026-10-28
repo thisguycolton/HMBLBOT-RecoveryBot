@@ -18,6 +18,9 @@ class Api::RecoveryController < ApplicationController
       favorites_max: Chips::FAVORITES,
       show_on_profile: current_user.show_chips_on_profile,
       profile_path: (current_user.profile_path if User.profiles_open_to?(current_user)),
+      # Sharing a chip to their timeline: the groups they can share it to too, and the chips they already shared
+      share_groups: current_user.groups.order(:title).map { |g| { slug: g.slug, title: g.title } },
+      shared: current_user.timeline_notes.where.not(chip_id: nil).pluck(:chip_id).uniq,
       can_give: current_user.groups.any? { |g| g.can_host?(current_user) },
       today: {
         inventory: current_user.step_inventories.exists?(on: today),
