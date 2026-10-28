@@ -422,13 +422,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_210100) do
     t.datetime "updated_at", null: false
     t.bigint "approved_by_motion_id"
     t.string "body_format", default: "html", null: false
+    t.string "comment_mode", default: "off", null: false
     t.binary "live_state"
     t.bigint "live_state_seq", default: 0, null: false
     t.bigint "live_seq", default: 0, null: false
     t.integer "live_epoch", default: 0, null: false
     t.boolean "live_unversioned", default: false, null: false
     t.bigint "live_contributor_ids", default: [], null: false, array: true
-    t.string "comment_mode", default: "off", null: false
     t.index ["approved_by_motion_id"], name: "index_group_documents_on_approved_by_motion_id"
     t.index ["created_by_id"], name: "index_group_documents_on_created_by_id"
     t.index ["group_id", "kind", "position"], name: "index_group_documents_on_group_id_and_kind_and_position"

@@ -226,7 +226,7 @@ export default function HomePage() {
                 New: the library, highlights and the Acid Quest
               </p>
               <h1 className="!text-4xl md:!text-5xl font-semibold tracking-tight !leading-tight !font-sans !text-white">
-                Everything for the meeting, and the literature in your pocket.
+                Meeting in a box? Meet Meeting in your Pocket.
               </h1>
               <p className="sans !text-left !hyphens-none mt-4 text-lg text-sky-100">
                 Draw a topic, read the service readings aloud, and dig into the Big Book and the Twelve and Twelve with
