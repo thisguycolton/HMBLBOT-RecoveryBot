@@ -1,5 +1,5 @@
 import React, { useId } from "react";
-import SceneArt, { BLACK, Edge, metalOf } from "./ChipArt";
+import SceneArt, { BLACK, Edge, FRAMES, layoutOf, metalOf, placeTransform } from "./ChipArt";
 
 // Virtual chips, drawn as SVG in a group's design (ChipDesign on the server, set in Group
 // dashboard > Chips). Round chips mark sobriety milestones (lib/milestones.js), triangle chips
@@ -379,6 +379,7 @@ function SceneRound({ id, round, milestone, size, faded, bare, className, title 
   const dark = round.scene.metal === "black_gold" ? BLACK : shade(color, -0.72);
   const metalFill = `url(#${id}-rim)`;
   const bottom = at === "rim" ? `${big} ${small}` : round.bottom_text;
+  const place = layoutOf(round.scene).round?.milestone;
   return (
     <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label={title || `${milestone.label} chip`} className={svgClass(faded, bare, className)}>
       <SceneRim id={id} color={color} edge={round.edge} />
@@ -386,7 +387,7 @@ function SceneRound({ id, round, milestone, size, faded, bare, className, title 
       <circle cx="100" cy="100" r="88" fill="none" stroke={shade(color, -0.35)} strokeWidth="1.6" />
       <SceneBand id={id} top={round.top_text} bottom={bottom} color={color} />
       {at === "badge" && (
-        <g>
+        <g transform={placeTransform(place, ...FRAMES.round.badge)} data-milestone="">
           <circle cx="100.8" cy="147.2" r="23" fill="#000000" opacity="0.25" />
           <circle cx="100" cy="146" r="22.5" fill={dark} stroke={metalFill} strokeWidth="2.6" />
           <g fill={metalFill} fontFamily={FONT} textAnchor="middle">
@@ -396,7 +397,7 @@ function SceneRound({ id, round, milestone, size, faded, bare, className, title 
         </g>
       )}
       {at === "cartouche" && (
-        <g>
+        <g transform={placeTransform(place, ...FRAMES.round.cartouche)} data-milestone="">
           <path d="M 56,180 A 44,40 0 0 1 144,180 Z" fill={dark} stroke={metalFill} strokeWidth="2.2" />
           <g fill={metalFill} fontFamily={FONT} textAnchor="middle" fontWeight="800">
             <text x="100" y="161" fontSize={big.length > 3 ? 13 : 17}>{big}</text>
@@ -567,13 +568,15 @@ function SceneTriangle({ id, tri, num, words, size, faded, bare, className, titl
         <clipPath id={`${id}-art`}><path d={roundedTriangle(24, 10)} /></clipPath>
         <linearGradient id={`${id}-metal`} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor={shade(color, 0.45)} /><stop offset="100%" stopColor={shade(color, -0.3)} /></linearGradient>
       </defs>
-      <SceneArt id={`${id}-s`} scene={tri.scene} x={48} y={52} w={104} h={92} clip={`${id}-art`} />
+      <SceneArt id={`${id}-s`} scene={tri.scene} x={48} y={52} w={104} h={92} clip={`${id}-art`} frame="triangle" />
       <path d={roundedTriangle(24, 10)} fill="none" stroke={shade(color, -0.35)} strokeWidth="1.6" />
+      <g transform={placeTransform(layoutOf(tri.scene).triangle?.milestone, ...FRAMES.triangle.badge)} data-milestone="">
       <circle cx="100.6" cy="123.6" r="16" fill="#000000" opacity="0.25" />
       <circle cx="100" cy="122.5" r="15.5" fill={dark} stroke={`url(#${id}-metal)`} strokeWidth="2.2" />
       <g fill={`url(#${id}-metal)`} fontFamily={FONT} textAnchor="middle">
         <text x="100" y="126" fontSize={num.length > 2 ? 10 : 13} fontWeight="800">{num}</text>
         <text x="100" y="133.5" fontSize="3.8" fontWeight="700" letterSpacing="0.5">{words[0]}</text>
+      </g>
       </g>
     </svg>
   );
