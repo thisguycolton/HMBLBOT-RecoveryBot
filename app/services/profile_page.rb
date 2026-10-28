@@ -65,13 +65,15 @@ class ProfilePage
   def following_feed(before: nil)
     ids = @viewer.follows_given.select(:followed_id)
     shared = %w[followers public]
-    notes = TimelineNote.where(user_id: ids, visibility: shared).or(TimelineNote.where(user_id: @viewer.id))
+    notes = TimelineNote.where(user_id: ids, visibility: shared).shown.or(TimelineNote.where(user_id: @viewer.id))
     highlights = UserHighlight.on_timeline.where(user_id: ids, visibility: shared).or(UserHighlight.on_timeline.where(user_id: @viewer.id))
     merge(notes, highlights, before: before)
   end
 
   def feed(person, before: nil)
-    merge(TimelineNote.visible_to(@viewer, owner: person), UserHighlight.visible_to(@viewer, owner: person).on_timeline, before: before)
+    notes = TimelineNote.visible_to(@viewer, owner: person)
+    notes = notes.shown unless @viewer&.id == person.id
+    merge(notes, UserHighlight.visible_to(@viewer, owner: person).on_timeline, before: before)
   end
 
   # Followers or following, newest first

@@ -13,7 +13,7 @@ const MILESTONES = [
   ["24h", "24 hours"], ["30d", "30 days"], ["60d", "60 days"], ["90d", "90 days"],
   ["6m", "6 months"], ["9m", "9 months"], ["year", "Years"], ["18m", "18 months"],
 ];
-const blank = { to: "", user_id: "", milestone_key: "30d", years: 1, on: localDate(), note: "" };
+const blank = { to: "", user_id: "", milestone_key: "30d", years: 1, on: localDate(), note: "", edition_id: "" };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Give a chip (/recovery/give): for the hosts, host coordinators, record keepers and admins of a
@@ -40,7 +40,15 @@ export default function GivePage() {
   const group = data.groups.find((g) => g.slug === slug) || data.groups[0];
   const set = (patch) => { setForm((f) => ({ ...f, ...patch })); setDone(null); };
   const label = form.milestone_key === "year" ? `${form.years} year${Number(form.years) === 1 ? "" : "s"}` : MILESTONES.find(([k]) => k === form.milestone_key)[1];
-  const preview = { id: "preview", shape: "round", kind: "round", label, on: form.on, design: group.design, group: { title: group.title, logo_url: group.logo_url },
+  const editions = group.editions || [];
+  const edition = editions.find((x) => String(x.id) === String(form.edition_id));
+  const milestones = edition?.milestones?.length ? MILESTONES.filter(([k]) => edition.milestones.includes(k)) : MILESTONES;
+  const pickEdition = (id) => {
+    const e = editions.find((x) => String(x.id) === id);
+    set({ edition_id: id, ...(e?.milestones?.length && !e.milestones.includes(form.milestone_key) ? { milestone_key: e.milestones[0] } : {}) });
+  };
+  const preview = { id: "preview", shape: "round", kind: "round", label, on: form.on, design: edition ? edition.design : group.design,
+    edition: edition && { name: edition.name, mark: edition.name.toUpperCase() }, group: { title: group.title, logo_url: group.logo_url },
     milestone: { key: form.milestone_key, years: Number(form.years) || 1, label } };
 
   const give = async (e) => {
@@ -49,10 +57,11 @@ export default function GivePage() {
     setError(null);
     try {
       if (!form.user_id && !EMAIL.test(form.to.trim())) throw new Error("Pick someone from the list, or type their whole email address.");
-      const body = { group_slug: group.slug, milestone_key: form.milestone_key, years: form.years, on: form.on, note: form.note,
+      const body = { group_slug: group.slug, milestone_key: form.milestone_key, years: form.years, on: form.on, note: form.note, chip_edition_id: form.edition_id || undefined,
         ...(form.user_id ? { user_id: form.user_id } : { email: form.to.trim() }) };
       const d = await api("/chip_awards", { method: "POST", body });
-      setDone(d.emailed ? `We emailed ${d.award.to} a link to claim their ${d.award.label} chip.` : `${d.award.to} has their ${d.award.label} chip. We let them know.`);
+      const what = `${d.award.edition ? `${d.award.edition.name} ` : ""}${d.award.label} chip${d.award.edition?.serial ? ` (No. ${d.award.edition.serial})` : ""}`;
+      setDone(d.emailed ? `We emailed ${d.award.to} a link to claim their ${what}.` : `${d.award.to} has their ${what}. We let them know.`);
       setForm(blank);
       load();
     } catch (err) { setError(err.message); }
@@ -84,11 +93,21 @@ export default function GivePage() {
               </div>
             )}
             <ToField group={group} form={form} set={set} />
+            {editions.length > 0 && (
+              <div>
+                <label htmlFor="g-edition" className={labelClass}>Edition</label>
+                <select id="g-edition" className={selectClass} value={form.edition_id} onChange={(e) => pickEdition(e.target.value)}>
+                  <option value="">{group.title}'s chip</option>
+                  {editions.map((x) => <option key={x.id} value={x.id}>{x.name} (Special Edition{x.left != null ? `, ${x.left} left` : ""})</option>)}
+                </select>
+                {edition && <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Running {edition.window_label}.{edition.numbered && " Each one is numbered in the order it's given or claimed."}</p>}
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-[1fr_7rem_1fr]">
               <div>
                 <label htmlFor="g-milestone" className={labelClass}>Chip</label>
                 <select id="g-milestone" className={selectClass} value={form.milestone_key} onChange={(e) => set({ milestone_key: e.target.value })}>
-                  {MILESTONES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                  {milestones.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
                 </select>
               </div>
               <div>
@@ -113,7 +132,7 @@ export default function GivePage() {
         </form>
 
         <aside className="rounded-2xl bg-gradient-to-b from-stone-800 to-stone-950 py-6 text-center text-white lg:self-start">
-          <SpinningChip key={`${group.slug}-${form.milestone_key}-${form.years}`} chip={preview} size={190} />
+          <SpinningChip key={`${group.slug}-${form.milestone_key}-${form.years}-${form.edition_id}`} chip={preview} size={190} />
           <div className="mt-1 text-xs opacity-60">How it'll look. Drag to spin it.</div>
         </aside>
       </div>
@@ -127,7 +146,7 @@ export default function GivePage() {
             {data.given.map((a) => (
               <div key={a.id} className="flex flex-wrap items-center gap-3 p-4">
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-slate-900 dark:text-white">{a.label} for {a.to} {!a.claimed && <Pill tone="amber">Not claimed yet</Pill>}</div>
+                  <div className="font-semibold text-slate-900 dark:text-white">{a.edition && `${a.edition.name} `}{a.label} for {a.to} {!a.claimed && <Pill tone="amber">Not claimed yet</Pill>}</div>
                   <div className="text-sm text-slate-500 dark:text-neutral-400">{dayLabel(a.on, { month: "short", day: "numeric", year: "numeric" })} · {a.group_title}{a.given_by && ` · given by ${a.given_by}`}</div>
                 </div>
                 <button type="button" className={dangerButton} onClick={() => takeBack(a)}><Trash2 className="size-4" /> Take back</button>

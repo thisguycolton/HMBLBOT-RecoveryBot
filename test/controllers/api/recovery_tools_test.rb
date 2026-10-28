@@ -263,7 +263,7 @@ class Api::RecoveryToolsTest < ActionDispatch::IntegrationTest
     travel_to Time.zone.local(2026, 10, 28, 7, 1)
     get "/api/recovery"
     chip = response.parsed_body["chips"].find { |c| c["kind"] == "meeting" }
-    assert_equal ["meeting-#{meeting.id}:1", %w[Meeting Maker Sunrise]], [chip["id"], chip.dig("design", "triangle", "sides")]
+    assert_equal ["meeting-#{meeting.id}:1", %w[Meeting Maker Sunrise]], [chip["id"], chip.dig("design", "meeting", "sides")]
     assert_equal 5, response.parsed_body["upcoming"].find { |c| c["kind"] == "meeting" }["count"]
 
     travel_to Time.zone.local(2026, 10, 28, 7, 10)
@@ -275,11 +275,12 @@ class Api::RecoveryToolsTest < ActionDispatch::IntegrationTest
     meeting = @group.meetings.create!(name: "Sunrise", recurrence: "weekly", day_of_week: 1, start_minute: 420)
     @group.memberships.create!(user: @kim, role: "admin")
     sign_in @kim
-    put "/api/groups/#{@group.slug}/chips/meetings/#{meeting.id}", params: { design: { triangle: { sides: %w[Rise And Shine], colors: { meeting: "#123456" } } } }, as: :json
+    put "/api/groups/#{@group.slug}/chips/meetings/#{meeting.id}", params: { design: { meeting: { sides: %w[Rise And Shine], color: "#123456", shape: "round" } } }, as: :json
     assert_response :success
-    assert_equal %w[Rise And Shine], ChipDesign.for_meeting(meeting.reload)["triangle"]["sides"]
+    assert_equal [%w[Rise And Shine], "round"], ChipDesign.for_meeting(meeting.reload)["meeting"].values_at("sides", "shape")
+    assert response.parsed_body["meetings"].find { |m| m["id"] == meeting.id }["customized"]
     put "/api/groups/#{@group.slug}/chips/meetings/#{meeting.id}", params: { reset: true }, as: :json
-    assert_equal %w[Meeting Maker Sunrise], ChipDesign.for_meeting(meeting.reload)["triangle"]["sides"]
+    assert_equal %w[Meeting Maker Sunrise], ChipDesign.for_meeting(meeting.reload)["meeting"]["sides"]
   end
 
   test "a group's SVG logo becomes outlines for a raised relief, and nothing else of the file is kept" do

@@ -1,4 +1,5 @@
 import React, { useId } from "react";
+import SceneArt, { BLACK, Edge, metalOf } from "./ChipArt";
 
 // Virtual chips, drawn as SVG in a group's design (ChipDesign on the server, set in Group
 // dashboard > Chips). Round chips mark sobriety milestones (lib/milestones.js), triangle chips
@@ -28,6 +29,7 @@ export function roman(n) {
 
 // What the middle of a round chip says: ["30", "DAYS"], ["IX", "YEARS"] ...
 function roundFace(milestone, numerals) {
+  if (milestone.key === "count") return [String(milestone.count), milestone.count === 1 ? "MEETING" : "MEETINGS"];
   if (milestone.key === "year") {
     const n = milestone.years || 1;
     return [numerals === "number" ? String(n) : roman(n), n === 1 ? "YEAR" : "YEARS"];
@@ -44,6 +46,7 @@ const FONT = "'Public Sans', system-ui, sans-serif";
 
 // A chip's colors: its own, whether it's metal, and the color of its lettering
 export function roundLook(design, milestone) {
+  if (isScene(design.round)) return { color: metalOf(design.round.scene), metal: true, ink: shade(metalOf(design.round.scene), -0.55) };
   const color = design.round.colors[milestone.key] || design.round.colors.year;
   const metal = isMetal(design.round.finish, milestone);
   return { color, metal, ink: inkFor(color, metal) };
@@ -55,6 +58,27 @@ export function triangleLook(design, kind) {
   const color = colors[kind] || colors[base] || colors.meeting || "#3451b2";
   const metal = design.triangle.finish === "metal" || kind.endsWith("-streak");
   return { color, metal, ink: inkFor(color, metal) };
+}
+// A chip with a template's art on it (ChipArt.jsx)
+export const isScene = (part) => part?.emblem === "scene" && !!part.scene?.art;
+
+// Meeting Maker chips are designed in their own part (ChipDesign "meeting": shape, a color or a
+// template's art, the sides, the back's words); this lays it over the round and triangle parts
+// the chips are drawn from. Round ones show the count where a milestone would be.
+export function meetingLook(design) {
+  const m = design?.meeting;
+  if (!m) return design;
+  const scene = m.emblem === "scene" && m.scene?.art ? m.scene : null;
+  const sides = m.sides || ["", "", ""];
+  return {
+    ...design,
+    triangle: { ...design.triangle, sides, finish: m.finish, colors: { ...design.triangle?.colors, meeting: m.color }, emblem: scene ? "scene" : "number", scene, back_text: m.back_text },
+    round: {
+      ...design.round, top_text: [sides[0], sides[1]].filter(Boolean).join(" "), bottom_text: sides[2] || "", back_text: m.back_text,
+      emblem: scene ? "scene" : "none", scene, finish: m.finish === "metal" ? "metal" : "plastic", numerals: "number",
+      colors: { ...design.round?.colors, count: m.color, year: m.color }, milestone_at: m.milestone_at, edge: m.edge, back_ring_top: "", back_ring_bottom: "",
+    },
+  };
 }
 const inkFor = (color, metal) => (metal ? shade(color, -0.55) : light(color) ? shade(color, -0.7) : "#ffffff");
 
@@ -73,7 +97,7 @@ function wrap(text, width) {
 }
 
 // The round chip's rim and face, both sides
-function RoundBase({ id, look }) {
+function RoundBase({ id, look, edge }) {
   const { color, metal, ink } = look;
   return (
     <>
@@ -91,6 +115,7 @@ function RoundBase({ id, look }) {
         <path id={`${id}-bottom`} d="M 20,100 A 80,80 0 0 0 180,100" />
       </defs>
       <circle cx="100" cy="100" r="97" fill={`url(#${id}-rim)`} />
+      <Edge edge={edge} color={color} />
       <circle cx="100" cy="100" r="90" fill={`url(#${id}-face)`} />
       {metal ? (
         <>
@@ -134,54 +159,11 @@ function Relief({ id, round, look, cy = 86 }) {
   const x = 100 - w / 2;
   const y = cy - w / 2;
   const [bx, by, bw, bh] = relief.view_box;
-  const height = round.relief_height || 4;
-  const sharp = round.relief_sharpness || 7;
-  const soft = 0.12 + (10 - sharp) * 0.2; // how far the slope from the face to the top runs
-  const inset = round.relief_depth === "inset";
-  const lift = (inset ? -1 : 1) * height * 1.4;
-  const light = <feDistantLight azimuth="225" elevation="55" />;
   return (
     <>
       <defs>
-        <filter id={`${id}-relief`} filterUnits="userSpaceOnUse" x="0" y="0" width="200" height="200" colorInterpolationFilters="sRGB">
-          <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="height" />
-          <feComponentTransfer in="height" result="mask"><feFuncA type="linear" slope="40" /></feComponentTransfer>
-          {metal ? (
-            <>
-              <feGaussianBlur in="height" stdDeviation={soft} result="slope" />
-              <feDiffuseLighting in="slope" surfaceScale={lift} diffuseConstant="1" lightingColor="#ffffff" result="lit">{light}</feDiffuseLighting>
-              <feSpecularLighting in="slope" surfaceScale={lift} specularConstant="0.8" specularExponent="40" lightingColor="#ffffff" result="shine">{light}</feSpecularLighting>
-              <feFlood floodColor={shade(color, inset ? -0.08 : 0.04)} result="paint" />
-              <feComposite in="paint" in2="lit" operator="arithmetic" k1="0.85" k2="0.35" result="shaded" />
-              <feComposite in="shine" in2="shaded" operator="arithmetic" k2="0.7" k3="1" result="bright" />
-              <feComposite in="bright" in2="mask" operator="in" result="raised" />
-              <feGaussianBlur in="mask" stdDeviation={0.3 + soft * 0.4} result="blur" />
-              <feOffset in="blur" dx={height * 0.06} dy={height * 0.1} result="drop" />
-              <feFlood floodColor="#000000" floodOpacity={Math.min(0.4, 0.06 + height * 0.035)} result="dark" />
-            </>
-          ) : (
-            <>
-              <feFlood floodColor={ink} floodOpacity="0.92" />
-              <feComposite in2="mask" operator="in" result="raised" />
-              <feGaussianBlur in="mask" stdDeviation="0.2" result="blur" />
-              <feOffset in="blur" dx="0.35" dy="0.5" result="drop" />
-              <feFlood floodColor="#000000" floodOpacity={inset ? 0.35 : 0.22} result="dark" />
-            </>
-          )}
-          {inset ? (
-            <>
-              {/* inside the cut, along its top and left edges */}
-              <feComposite in="mask" in2="drop" operator="out" result="edge" />
-              <feComposite in="dark" in2="edge" operator="in" result="shadow" />
-              <feMerge><feMergeNode in="raised" /><feMergeNode in="shadow" /></feMerge>
-            </>
-          ) : (
-            <>
-              <feComposite in="dark" in2="drop" operator="in" result="shadow" />
-              <feMerge><feMergeNode in="shadow" /><feMergeNode in="raised" /></feMerge>
-            </>
-          )}
-        </filter>
+        <LiftFilter id={`${id}-relief`} metal={metal} color={color} ink={ink} height={round.relief_height || 4}
+          sharpness={round.relief_sharpness || 7} inset={round.relief_depth === "inset"} />
       </defs>
       <g filter={`url(#${id}-relief)`}>
         <rect x={x} y={y} width={w} height={w} fill="#000000" />
@@ -193,6 +175,57 @@ function Relief({ id, round, look, cy = 86 }) {
         </svg>
       </g>
     </>
+  );
+}
+
+// Lights shapes drawn as a heightmap (gray for how high each stands, black is the face) as
+// metal struck `height` high, rising from the coin as steeply as `sharpness` (1 to 10) says;
+// not metal, a slight raised print in `ink`. `inset` cuts it into the coin instead. The raised
+// logo and struck chip art (ChipArt.jsx) both use it, over the whole 200 × 200 chip.
+export function LiftFilter({ id, metal, color, ink, height = 4, sharpness = 7, inset = false }) {
+  const soft = 0.12 + (10 - sharpness) * 0.2; // how far the slope from the face to the top runs
+  const lift = (inset ? -1 : 1) * height * 1.4;
+  const light = <feDistantLight azimuth="225" elevation="55" />;
+  return (
+    <filter id={id} filterUnits="userSpaceOnUse" x="0" y="0" width="200" height="200" colorInterpolationFilters="sRGB">
+      <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="height" />
+      <feComponentTransfer in="height" result="mask"><feFuncA type="linear" slope="40" /></feComponentTransfer>
+      {metal ? (
+        <>
+          <feGaussianBlur in="height" stdDeviation={soft} result="slope" />
+          <feDiffuseLighting in="slope" surfaceScale={lift} diffuseConstant="1" lightingColor="#ffffff" result="lit">{light}</feDiffuseLighting>
+          <feSpecularLighting in="slope" surfaceScale={lift} specularConstant="0.8" specularExponent="40" lightingColor="#ffffff" result="shine">{light}</feSpecularLighting>
+          <feFlood floodColor={shade(color, inset ? -0.08 : 0.04)} result="paint" />
+          <feComposite in="paint" in2="lit" operator="arithmetic" k1="0.85" k2="0.35" result="shaded" />
+          <feComposite in="shine" in2="shaded" operator="arithmetic" k2="0.7" k3="1" result="bright" />
+          <feComposite in="bright" in2="mask" operator="in" result="raised" />
+          <feGaussianBlur in="mask" stdDeviation={0.3 + soft * 0.4} result="blur" />
+          <feOffset in="blur" dx={height * 0.06} dy={height * 0.1} result="drop" />
+          <feFlood floodColor="#000000" floodOpacity={Math.min(0.4, 0.06 + height * 0.035)} result="dark" />
+        </>
+      ) : (
+        <>
+          <feFlood floodColor={ink} floodOpacity="0.92" />
+          <feComposite in2="mask" operator="in" result="raised" />
+          <feGaussianBlur in="mask" stdDeviation="0.2" result="blur" />
+          <feOffset in="blur" dx="0.35" dy="0.5" result="drop" />
+          <feFlood floodColor="#000000" floodOpacity={inset ? 0.35 : 0.22} result="dark" />
+        </>
+      )}
+      {inset ? (
+        <>
+          {/* inside the cut, along its top and left edges */}
+          <feComposite in="mask" in2="drop" operator="out" result="edge" />
+          <feComposite in="dark" in2="edge" operator="in" result="shadow" />
+          <feMerge><feMergeNode in="raised" /><feMergeNode in="shadow" /></feMerge>
+        </>
+      ) : (
+        <>
+          <feComposite in="dark" in2="drop" operator="in" result="shadow" />
+          <feMerge><feMergeNode in="shadow" /><feMergeNode in="raised" /></feMerge>
+        </>
+      )}
+    </filter>
   );
 }
 
@@ -219,6 +252,7 @@ export function fitBack(text, r = 54) {
 export function RoundChip({ design, milestone, logoUrl, size = 160, faded = false, bare = false, className = "", title }) {
   const id = useId().replace(/:/g, "");
   const d = design.round;
+  if (isScene(d)) return <SceneRound id={id} round={d} milestone={milestone} size={size} faded={faded} bare={bare} className={className} title={title} />;
   const look = roundLook(design, milestone);
   const { ink } = look;
   const [big, small] = roundFace(milestone, d.numerals);
@@ -230,7 +264,7 @@ export function RoundChip({ design, milestone, logoUrl, size = 160, faded = fals
 
   return (
     <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label={title || `${milestone.label} chip`} className={svgClass(faded, bare, className)}>
-      <RoundBase id={id} look={look} />
+      <RoundBase id={id} look={look} edge={d.edge} />
       <defs><clipPath id={`${id}-logo`}><circle cx="100" cy="88" r="27" /></clipPath></defs>
       <ArcText id={id} top={d.top_text} bottom={d.bottom_text} ink={ink} />
 
@@ -274,19 +308,131 @@ export function RoundChip({ design, milestone, logoUrl, size = 160, faded = fals
 }
 
 // The back of a round chip: the group's words (the Serenity Prayer unless it changed them),
-// the group's name around the top and the day it was earned around the bottom
-export function RoundChipBack({ design, milestone, groupTitle, earnedOn, size = 160 }) {
+// around the top its back ring words or the group's name, and around the bottom a Special
+// Edition's mark ("ACID TEST · 2027 EDITION · NO. 014"), its back ring words, or the day it was
+// earned
+export function RoundChipBack({ design, milestone, groupTitle, earnedOn, mark, size = 160 }) {
   const id = useId().replace(/:/g, "");
-  const look = roundLook(design, milestone);
-  const { lines, fs } = fitBack(design.round.back_text);
-  const gap = fs * 1.3;
+  const d = design.round;
   const date = earnedOn ? new Date(`${earnedOn}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : "";
+  const top = d.back_ring_top || groupTitle || "";
+  const bottom = mark || d.back_ring_bottom || date;
+  if (isScene(d)) return <SceneRoundBack id={id} round={d} top={top} bottom={bottom} date={bottom === date ? "" : date} size={size} />;
+  const look = roundLook(design, milestone);
+  const { lines, fs } = fitBack(d.back_text);
+  const gap = fs * 1.3;
   return (
     <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label="The back of the chip">
-      <RoundBase id={id} look={look} />
-      <ArcText id={id} top={groupTitle || ""} bottom={date} ink={look.ink} />
+      <RoundBase id={id} look={look} edge={d.edge} />
+      <ArcText id={id} top={top} bottom={bottom} ink={look.ink} />
       <g fill={look.ink} fontFamily={FONT} fontWeight="700" textAnchor="middle" letterSpacing={fs * 0.06}>
         {lines.map((l, i) => <text key={i} x="100" y={100 - ((lines.length - 1) * gap) / 2 + i * gap + fs * 0.35} fontSize={fs}>{l.toUpperCase()}</text>)}
+      </g>
+    </svg>
+  );
+}
+
+// A metal coin's rim and edge, with the face clipped for art
+function SceneRim({ id, color, edge }) {
+  return (
+    <>
+      <defs>
+        <linearGradient id={`${id}-rim`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={shade(color, 0.45)} />
+          <stop offset="50%" stopColor={color} />
+          <stop offset="100%" stopColor={shade(color, -0.4)} />
+        </linearGradient>
+        <clipPath id={`${id}-face`}><circle cx="100" cy="100" r="88" /></clipPath>
+        <path id={`${id}-top`} d="M 22,100 A 78,78 0 0 1 178,100" />
+        <path id={`${id}-bottom`} d="M 15,100 A 85,85 0 0 0 185,100" />
+      </defs>
+      <circle cx="100" cy="100" r="97" fill={`url(#${id}-rim)`} />
+      <circle cx="100" cy="100" r="95" fill="none" stroke={shade(color, -0.35)} strokeWidth="0.8" />
+      <Edge edge={edge} color={color} />
+    </>
+  );
+}
+
+// Words around the rim of an illustrated coin, raised on a darker band so they read over the art
+function SceneBand({ id, top, bottom, color, ink, band = true }) {
+  if (!top && !bottom) return null;
+  const light = ink || shade(color, 0.35);
+  return (
+    <>
+      {band && <circle cx="100" cy="100" r="80.5" fill="none" stroke={BLACK} strokeOpacity="0.62" strokeWidth="15" />}
+      <g fill={light} fontFamily={FONT} fontWeight="700">
+        {[["top", top || "", 205], ["bottom", bottom || "", 235]].map(([edge, text, room]) => {
+          const fs = fit(text, room, 10.5);
+          return <text key={edge} fontSize={fs} letterSpacing={fs * 0.18}><textPath href={`#${id}-${edge}`} startOffset="50%" textAnchor="middle">{text.toUpperCase()}</textPath></text>;
+        })}
+      </g>
+    </>
+  );
+}
+
+// The front of an illustrated chip: the template's art across the face, the rim words on a band,
+// and the milestone in a badge, a cartouche at the bottom, on the rim, or not at all
+function SceneRound({ id, round, milestone, size, faded, bare, className, title }) {
+  const color = metalOf(round.scene);
+  const [big, small] = roundFace(milestone, round.numerals);
+  const at = round.milestone_at || "badge";
+  const dark = round.scene.metal === "black_gold" ? BLACK : shade(color, -0.72);
+  const metalFill = `url(#${id}-rim)`;
+  const bottom = at === "rim" ? `${big} ${small}` : round.bottom_text;
+  return (
+    <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label={title || `${milestone.label} chip`} className={svgClass(faded, bare, className)}>
+      <SceneRim id={id} color={color} edge={round.edge} />
+      <SceneArt id={id} scene={round.scene} clip={`${id}-face`} />
+      <circle cx="100" cy="100" r="88" fill="none" stroke={shade(color, -0.35)} strokeWidth="1.6" />
+      <SceneBand id={id} top={round.top_text} bottom={bottom} color={color} />
+      {at === "badge" && (
+        <g>
+          <circle cx="100.8" cy="147.2" r="23" fill="#000000" opacity="0.25" />
+          <circle cx="100" cy="146" r="22.5" fill={dark} stroke={metalFill} strokeWidth="2.6" />
+          <g fill={metalFill} fontFamily={FONT} textAnchor="middle">
+            <text x="100" y={small ? 150 : 153} fontSize={big.length > 3 ? 11 : big.length > 2 ? 14 : 17} fontWeight="800">{big}</text>
+            {small && <text x="100" y="160" fontSize="5.4" fontWeight="700" letterSpacing="0.9">{small}</text>}
+          </g>
+        </g>
+      )}
+      {at === "cartouche" && (
+        <g>
+          <path d="M 56,180 A 44,40 0 0 1 144,180 Z" fill={dark} stroke={metalFill} strokeWidth="2.2" />
+          <g fill={metalFill} fontFamily={FONT} textAnchor="middle" fontWeight="800">
+            <text x="100" y="161" fontSize={big.length > 3 ? 13 : 17}>{big}</text>
+            <text x="100" y="175" fontSize="9.5" letterSpacing="1.6">{small}</text>
+          </g>
+        </g>
+      )}
+    </svg>
+  );
+}
+
+// The back of an illustrated chip: the metal (black for black and gold), its words in the middle
+// and its ring words around them, and the day it was earned under the words when the ring has
+// something else
+function SceneRoundBack({ id, round, top, bottom, date, size }) {
+  const color = metalOf(round.scene);
+  const blackGold = round.scene.metal === "black_gold";
+  const ink = blackGold ? color : shade(color, -0.6);
+  const { lines, fs } = fitBack(round.back_text, 50);
+  const gap = fs * 1.3;
+  const y0 = 100 - ((lines.length - 1) * gap) / 2 + fs * 0.35 - (date ? 4 : 0);
+  return (
+    <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label="The back of the chip">
+      <SceneRim id={id} color={color} edge={round.edge} />
+      <defs>
+        <radialGradient id={`${id}-back`} cx="35%" cy="30%" r="80%">
+          <stop offset="0%" stopColor={blackGold ? "#2a2418" : shade(color, 0.3)} />
+          <stop offset="100%" stopColor={blackGold ? BLACK : shade(color, -0.25)} />
+        </radialGradient>
+      </defs>
+      <circle cx="100" cy="100" r="88" fill={`url(#${id}-back)`} stroke={shade(color, -0.35)} strokeWidth="1.6" />
+      <circle cx="100" cy="100" r="70" fill="none" stroke={blackGold ? color : shade(color, -0.4)} strokeOpacity="0.8" strokeWidth="1.2" />
+      <SceneBand id={id} top={top} bottom={bottom} color={color} ink={ink} band={false} />
+      <g fill={ink} fontFamily={FONT} fontWeight="700" textAnchor="middle" letterSpacing={fs * 0.06}>
+        {lines.map((l, i) => <text key={i} x="100" y={y0 + i * gap} fontSize={fs}>{l.toUpperCase()}</text>)}
+        {date && <text x="100" y={y0 + lines.length * gap + 4} fontSize="6" opacity="0.8">{date.toUpperCase()}</text>}
       </g>
     </svg>
   );
@@ -371,6 +517,10 @@ export function TriangleChip({ design, kind, count, size = 160, faded = false, b
   const [one, many] = TRIANGLE_WORDS[kind] || ["", ""];
   const num = String(count);
   const words = (count === 1 ? one : many).split("\n");
+  if (isScene(design.triangle)) {
+    return <SceneTriangle id={id} tri={design.triangle} num={num} words={words} size={size} faded={faded} bare={bare} className={className}
+      title={title || `${count} ${(count === 1 ? one : many).replace("\n", " ").toLowerCase()} chip`} />;
+  }
 
   return (
     <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title || `${count} ${(count === 1 ? one : many).replace("\n", " ").toLowerCase()} chip`} className={svgClass(faded, bare, className)}>
@@ -383,18 +533,47 @@ export function TriangleChip({ design, kind, count, size = 160, faded = false, b
   );
 }
 
-// The back of a triangle chip: "One day at a time" and the day it was earned
-export function TriangleChipBack({ design, kind, earnedOn, size = 160 }) {
+// The back of a triangle chip: its words ("One day at a time" unless a Meeting Maker design
+// says otherwise), the day it was earned, and a Special Edition's mark
+export function TriangleChipBack({ design, kind, earnedOn, mark, size = 160 }) {
   const id = useId().replace(/:/g, "");
-  const look = triangleLook(design, kind);
+  const scene = isScene(design.triangle);
+  const look = scene ? { color: metalOf(design.triangle.scene), metal: true, ink: shade(metalOf(design.triangle.scene), -0.6) } : triangleLook(design, kind);
   const date = earnedOn ? new Date(`${earnedOn}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : "";
+  const lines = wrap(design.triangle.back_text || "One day at a time", 12).slice(0, 4);
+  const y0 = 110 - (lines.length - 1) * 5 - (mark ? 4 : 0);
   return (
     <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label="The back of the chip">
       <TriangleBase id={id} look={look} sides={design.triangle.sides} />
       <g fill={look.ink} fontFamily={FONT} fontWeight="700" textAnchor="middle" letterSpacing="0.8">
-        <text x="100" y="104" fontSize="7.5">ONE DAY</text>
-        <text x="100" y="114" fontSize="7.5">AT A TIME</text>
-        {date && <text x="100" y="128" fontSize="6.5" opacity="0.85">{date.toUpperCase()}</text>}
+        {lines.map((l, i) => <text key={i} x="100" y={y0 + i * 10} fontSize="7.5">{l.toUpperCase()}</text>)}
+        {date && <text x="100" y={y0 + lines.length * 10 + 4} fontSize="6.5" opacity="0.85">{date.toUpperCase()}</text>}
+        {mark && <text x="100" y={y0 + lines.length * 10 + 13} fontSize="4.6" opacity="0.9">{mark.toUpperCase()}</text>}
+      </g>
+    </svg>
+  );
+}
+
+// A Meeting Maker chip with a template's art inside the triangle: a metal border with the
+// sides' words, and the count in a badge
+function SceneTriangle({ id, tri, num, words, size, faded, bare, className, title }) {
+  const color = metalOf(tri.scene);
+  const look = { color, metal: true, ink: shade(color, -0.6) };
+  const dark = tri.scene.metal === "black_gold" ? BLACK : shade(color, -0.72);
+  return (
+    <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title} className={svgClass(faded, bare, className)}>
+      <TriangleBase id={id} look={look} sides={tri.sides} />
+      <defs>
+        <clipPath id={`${id}-art`}><path d={roundedTriangle(24, 10)} /></clipPath>
+        <linearGradient id={`${id}-metal`} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor={shade(color, 0.45)} /><stop offset="100%" stopColor={shade(color, -0.3)} /></linearGradient>
+      </defs>
+      <SceneArt id={`${id}-s`} scene={tri.scene} x={48} y={52} w={104} h={92} clip={`${id}-art`} />
+      <path d={roundedTriangle(24, 10)} fill="none" stroke={shade(color, -0.35)} strokeWidth="1.6" />
+      <circle cx="100.6" cy="123.6" r="16" fill="#000000" opacity="0.25" />
+      <circle cx="100" cy="122.5" r="15.5" fill={dark} stroke={`url(#${id}-metal)`} strokeWidth="2.2" />
+      <g fill={`url(#${id}-metal)`} fontFamily={FONT} textAnchor="middle">
+        <text x="100" y="126" fontSize={num.length > 2 ? 10 : 13} fontWeight="800">{num}</text>
+        <text x="100" y="133.5" fontSize="3.8" fontWeight="700" letterSpacing="0.5">{words[0]}</text>
       </g>
     </svg>
   );

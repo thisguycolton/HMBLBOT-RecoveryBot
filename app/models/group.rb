@@ -41,6 +41,8 @@ class Group < ApplicationRecord
   has_many :deck_templates, dependent: :delete_all
   # Chips its hosts gave (ChipAward)
   has_many :chip_awards, dependent: :delete_all
+  has_many :chip_templates, dependent: :destroy
+  has_many :chip_editions, dependent: :destroy
   LOGO_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
   validate { errors.add(:logo, "has to be a PNG, JPEG, WebP or GIF image") if logo.attached? && !LOGO_TYPES.include?(logo.blob.content_type) }
   validate { errors.add(:logo, "has to be under 5 MB") if logo.attached? && logo.blob.byte_size > 5.megabytes }
@@ -175,7 +177,7 @@ class Group < ApplicationRecord
 
   # Notes members shared to the group, newest first; a note stops showing when its author
   # leaves
-  def shared_notes = timeline_notes.where(user_id: members.select(:id)).includes(user: { avatar_attachment: :blob }).newest_first
+  def shared_notes = timeline_notes.shown.where(user_id: members.select(:id)).includes(user: { avatar_attachment: :blob }).newest_first
 
   # Readings members tagged to this group; drafts and scheduled ones stay with their author
   def shared_readings = readings.published.includes(:user).order(published_at: :desc)

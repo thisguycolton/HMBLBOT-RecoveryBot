@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { RotateCcw, Upload } from "lucide-react";
+import { Paintbrush, RotateCcw, Upload } from "lucide-react";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass, labelClass } from "../ui/styles";
-import { RoundChip, TriangleChip } from "../recovery/Chip";
-import { SpinningChip } from "../recovery/ChipModal";
+import { RoundChip } from "../recovery/Chip";
+import { FlatChip, SpinningChip } from "../recovery/ChipModal";
+import SceneControls from "../chips/SceneControls";
+import MeetingPartForm, { ColorField } from "../chips/MeetingPartForm";
+import ChipEditions from "./ChipEditions";
+import { storedDesign as stored } from "../chips/lib";
 import { api } from "./lib";
 import { Card, ErrorNote, Loading, primaryButton, quietButton } from "./ui";
 
@@ -31,9 +35,10 @@ export default function ChipDesigner({ group }) {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [templates, setTemplates] = useState([]);
   const [pick, setPick] = useState({ kind: "round", milestone: { key: "year", years: 1, label: "1 year" } }); // the chip shown in 3D
   useEffect(() => {
-    api(`/groups/${group.slug}/chips`).then((d) => { setData(d); setDesign(d.design); }).catch((e) => setError(e.message));
+    api(`/groups/${group.slug}/chips`).then((d) => { setData(d); setDesign(d.design); setTemplates(d.templates || []); }).catch((e) => setError(e.message));
   }, [group.slug]);
 
   if (!design) return error ? <ErrorNote error={error} /> : <Loading />;
@@ -46,7 +51,7 @@ export default function ChipDesigner({ group }) {
     try {
       const d = await api(`/groups/${group.slug}/chips`, { method: "PUT", body });
       setData(d);
-      setDesign(d.design);
+      setDesign((x) => ({ ...d.design, meeting: body.reset ? d.design.meeting : x.meeting }));
       setSaved(true);
     } catch (e) { setError(e.message); }
     setSaving(false);
@@ -56,7 +61,7 @@ export default function ChipDesigner({ group }) {
   return (
     <div className="space-y-8">
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <form onSubmit={(e) => { e.preventDefault(); put({ design }); }} className="min-w-0 space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); put({ design: stored({ ...design, meeting: data.design.meeting }) }); }} className="min-w-0 space-y-4">
         <p className="text-sm text-slate-600 dark:text-neutral-400">
           The chips {group.title}'s hosts give come in this design. Chips members earn on their own stay RecoveryBot's plain ones.
           Nobody else sees a member's chips, and you don't either.
@@ -78,27 +83,42 @@ export default function ChipDesigner({ group }) {
           <div>
             <label htmlFor="c-back" className={labelClass}>On the back</label>
             <textarea id="c-back" rows={5} maxLength={240} className={inputClass} value={design.round.back_text} onChange={(e) => round({ back_text: e.target.value })} />
-            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Each line here is a line on the chip. Around it go the group's name and the day the chip was earned.</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Each line here is a line on the chip. Around it go the words below, or the group's name and the day the chip was earned.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="c-ring-top" className={labelClass}>Around the back, top</label>
+              <input id="c-ring-top" maxLength={40} className={inputClass} placeholder={group.title} value={design.round.back_ring_top || ""} onChange={(e) => round({ back_ring_top: e.target.value })} />
+            </div>
+            <div>
+              <label htmlFor="c-ring-bottom" className={labelClass}>Around the back, bottom</label>
+              <input id="c-ring-bottom" maxLength={40} className={inputClass} placeholder="The day it was earned" value={design.round.back_ring_bottom || ""} onChange={(e) => round({ back_ring_bottom: e.target.value })} />
+            </div>
           </div>
           <div>
             <div className={labelClass}>In the middle</div>
             <div className={segment}>
               <SegmentedControl value={design.round.emblem} onChange={(v) => round({ emblem: v })}
-                options={[{ value: "triangle", label: "Circle and triangle" }, { value: "logo", label: "Group logo" }, { value: "relief", label: "Raised logo" }, { value: "none", label: "Just the number" }]} />
+                options={[{ value: "triangle", label: "Circle and triangle" }, { value: "scene", label: "Illustration" }, { value: "logo", label: "Group logo" }, { value: "relief", label: "Raised logo" }, { value: "none", label: "Just the number" }]} />
             </div>
             {design.round.emblem === "logo" && !logoUrl && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">The group has no logo yet, so chips show the circle and triangle. Add one in Group settings.</p>}
             {design.round.emblem === "relief" && <ReliefUpload slug={group.slug} relief={design.round.relief} onChange={(relief) => round({ relief })} />}
             {design.round.emblem === "relief" && design.round.relief && <ReliefControls r={design.round} set={round} />}
+            {design.round.emblem === "scene" && (
+              <div className="mt-3">
+                <SceneControls slug={group.slug} base={data.default} templates={templates} onTemplates={setTemplates} fits="round" part={design.round} onChange={round} />
+              </div>
+            )}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
+            {design.round.emblem !== "scene" && <div>
               <div className={labelClass}>Finish</div>
               <div className={segment}>
                 <SegmentedControl value={design.round.finish} onChange={(v) => round({ finish: v })}
                   options={[{ value: "classic", label: "Classic" }, { value: "plastic", label: "Colored" }, { value: "metal", label: "Metal" }]} />
               </div>
               <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Classic: colored chips for the months, metal medallions for the years.</p>
-            </div>
+            </div>}
             <div>
               <div className={labelClass}>Years</div>
               <div className={segment}>
@@ -107,7 +127,7 @@ export default function ChipDesigner({ group }) {
               </div>
             </div>
           </div>
-          <div>
+          {design.round.emblem !== "scene" && <div>
             <div className={labelClass}>Colors</div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {ROUND.map((m) => (
@@ -115,7 +135,7 @@ export default function ChipDesigner({ group }) {
                   onChange={(v) => round({ colors: { ...design.round.colors, [m.key]: v } })} />
               ))}
             </div>
-          </div>
+          </div>}
         </Card>
 
         <ErrorNote error={error} />
@@ -147,99 +167,122 @@ export default function ChipDesigner({ group }) {
         </Card>
       </aside>
     </div>
-    <MeetingChips group={group} meetings={data.meetings} defaults={data.default.triangle} onSaved={setData} />
+    <MeetingChips group={group} data={data} design={design} setDesign={setDesign} templates={templates} onTemplates={setTemplates} onSaved={setData} />
+    <ChipEditions group={group} data={data} templates={templates} onTemplates={setTemplates} />
     </div>
   );
 }
 
-// Meeting Maker: each meeting's own triangle chips, for members who click its Join button in
-// the half hour before it starts
-function MeetingChips({ group, meetings, defaults, onSaved }) {
+// Meeting Maker chips, for members who click a meeting's Join button in the half hour before
+// it starts: the group's default (design.meeting, saved with the group's design), and each
+// meeting's own when it wants one (meetings.chip_design; "Back to the group's default" clears it)
+function MeetingChips({ group, data, design, setDesign, templates, onTemplates, onSaved }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const part = design.meeting;
+  const set = (patch) => { setDesign((d) => ({ ...d, meeting: { ...d.meeting, ...patch } })); setSaved(false); };
+  // Saves only the Meeting Maker default, over the group's saved design
+  const save = async (body) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const d = await api(`/groups/${group.slug}/chips`, { method: "PUT", body: { design: stored({ ...data.design, ...body }) } });
+      onSaved(d);
+      setDesign((x) => ({ ...x, meeting: d.design.meeting }));
+      setSaved(true);
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
   return (
     <section className="space-y-3">
       <div>
         <h2 className="font-semibold text-slate-900 dark:text-white">Meeting Maker chips</h2>
         <p className="text-sm text-slate-500 dark:text-neutral-400">
-          Members earn these by clicking a meeting's Join button in the half hour before it starts, at 1, 5, 10, 25, 50 and 100 meetings, then every 100. Each meeting has its own.
+          Members earn these by clicking a meeting's Join button in the half hour before it starts, at 1, 5, 10, 25, 50 and 100 meetings, then every 100.
+          Every meeting uses the group's default unless you give it its own. Chips already earned keep the look they were earned in.
         </p>
       </div>
-      {meetings.length === 0 && <Card className="p-5 text-sm text-slate-500">The group has no meetings listed yet.</Card>}
-      {meetings.map((m) => <MeetingChip key={m.id} group={group} meeting={m} defaults={defaults} onSaved={onSaved} />)}
+      <Card className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_10rem] sm:p-5">
+        <div className="min-w-0 space-y-3">
+          <h3 className="font-semibold text-slate-900 dark:text-white">The group's default</h3>
+          <MeetingPartForm id="default" slug={group.slug} base={data.default} templates={templates} onTemplates={onTemplates} part={part} set={set} />
+          <ErrorNote error={error} />
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {saved && <span role="status" className="text-sm text-emerald-700 dark:text-emerald-300">Saved.</span>}
+            {data.meeting_customized && (
+              <button type="button" className={quietButton} disabled={busy} onClick={() => save({ meeting: data.default.meeting })}><RotateCcw className="size-4" /> RecoveryBot's look</button>
+            )}
+            <button type="button" className={primaryButton} disabled={busy} onClick={() => save({ meeting: part })}>{busy ? "Saving…" : "Save the default"}</button>
+          </div>
+        </div>
+        <MeetingPreview design={design} part={{ ...part, sides: [part.sides[0], part.sides[1], part.sides[2] || "Your meeting"] }} />
+      </Card>
+      {data.meetings.length === 0 && <Card className="p-5 text-sm text-slate-500">The group has no meetings listed yet.</Card>}
+      {data.meetings.map((m) => (
+        <MeetingChip key={m.id} group={group} data={data} meeting={m} templates={templates} onTemplates={onTemplates} onSaved={onSaved} />
+      ))}
     </section>
   );
 }
 
-function MeetingChip({ group, meeting, defaults, onSaved }) {
-  const [t, setT] = useState(meeting.design.triangle);
+function MeetingChip({ group, data, meeting, templates, onTemplates, onSaved }) {
+  const [part, setPart] = useState(meeting.design.meeting);
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const [saved, setSaved] = useState(false);
-  const set = (patch) => { setT((x) => ({ ...x, ...patch })); setSaved(false); };
+  const set = (patch) => setPart((x) => ({ ...x, ...patch }));
   const put = async (body) => {
     setBusy(true);
     setError(null);
     try {
       const d = await api(`/groups/${group.slug}/chips/meetings/${meeting.id}`, { method: "PUT", body });
       onSaved(d);
-      setT(d.meetings.find((x) => x.id === meeting.id).design.triangle);
-      setSaved(true);
+      setPart(d.meetings.find((x) => x.id === meeting.id).design.meeting);
+      setOpen(false);
     } catch (e) { setError(e.message); }
     setBusy(false);
   };
-  const design = { ...meeting.design, triangle: t };
+  const cancel = () => { setPart(meeting.design.meeting); setOpen(false); };
   return (
-    <Card className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_9rem] sm:p-5">
+    <Card className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_10rem] sm:p-5">
       <div className="min-w-0 space-y-3">
         <div>
           <h3 className="font-semibold text-slate-900 dark:text-white">{meeting.name}</h3>
-          <p className="text-sm text-slate-500 dark:text-neutral-400">{meeting.schedule_label}</p>
+          <p className="text-sm text-slate-500 dark:text-neutral-400">
+            {meeting.schedule_label}{meeting.schedule_label && " · "}{meeting.customized ? "Its own chips" : "Uses the group's default"}
+          </p>
         </div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {["Left side", "Right side", "Bottom"].map((label, i) => (
-            <div key={label}>
-              <label htmlFor={`m-${meeting.id}-${i}`} className={labelClass}>{label}</label>
-              <input id={`m-${meeting.id}-${i}`} maxLength={24} className={inputClass} value={t.sides[i] || ""}
-                onChange={(e) => set({ sides: t.sides.map((x, j) => (j === i ? e.target.value : x)) })} />
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="w-56">
-            <div className={labelClass}>Finish</div>
-            <div className={segment}>
-              <SegmentedControl value={t.finish} onChange={(v) => set({ finish: v })} options={[{ value: "plastic", label: "Colored" }, { value: "metal", label: "Metal" }]} />
-            </div>
-          </div>
-          <div className="w-44">
-            <ColorField label="Color" value={t.colors.meeting} fallback={defaults.colors.meeting} onChange={(v) => set({ colors: { ...t.colors, meeting: v } })} />
-          </div>
-        </div>
+        {open && <MeetingPartForm id={meeting.id} slug={group.slug} base={data.default} templates={templates} onTemplates={onTemplates} part={part} set={set} />}
         <ErrorNote error={error} />
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {saved && <span role="status" className="text-sm text-emerald-700 dark:text-emerald-300">Saved.</span>}
-          {meeting.customized && <button type="button" className={quietButton} disabled={busy} onClick={() => put({ reset: true })}><RotateCcw className="size-4" /> Usual look</button>}
-          <button type="button" className={primaryButton} disabled={busy} onClick={() => put({ design: { triangle: t } })}>{busy ? "Saving…" : "Save"}</button>
+          {meeting.customized && !open && (
+            <button type="button" className={quietButton} disabled={busy} onClick={() => put({ reset: true })}><RotateCcw className="size-4" /> Back to the group's default</button>
+          )}
+          {open ? (
+            <>
+              <button type="button" className={quietButton} disabled={busy} onClick={cancel}>Cancel</button>
+              <button type="button" className={primaryButton} disabled={busy} onClick={() => put({ design: stored({ meeting: part }) })}>{busy ? "Saving…" : "Save"}</button>
+            </>
+          ) : (
+            <button type="button" className={quietButton} onClick={() => setOpen(true)}><Paintbrush className="size-4" /> {meeting.customized ? "Change" : "Customize"}</button>
+          )}
         </div>
       </div>
-      <div className="flex items-center justify-center">
-        <TriangleChip design={design} kind="meeting" count={10} size={140} />
-      </div>
+      <MeetingPreview design={meeting.design} part={part} />
     </Card>
   );
 }
 
-function ColorField({ label, value, fallback, onChange }) {
+function MeetingPreview({ design, part }) {
+  const chip = { id: "preview", shape: part.shape, kind: "meeting", count: 10, label: "10 meetings" };
   return (
-    <label className="flex items-center gap-2 rounded-xl px-2 py-1.5 ring-1 ring-neutral-200 dark:ring-neutral-700">
-      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="size-7 shrink-0 cursor-pointer rounded-md border-0 !bg-transparent p-0" />
-      <span className="min-w-0 flex-1 truncate text-sm text-slate-700 dark:text-neutral-200">{label}</span>
-      {value !== fallback && (
-        <button type="button" title="Back to the usual color" aria-label={`${label}: back to the usual color`} onClick={() => onChange(fallback)}
-          className="!bg-transparent p-0 text-slate-400 hover:text-slate-700"><RotateCcw className="size-3.5" /></button>
-      )}
-    </label>
+    <div className="flex items-center justify-center">
+      <FlatChip chip={chip} design={{ ...design, meeting: part }} size={140} />
+    </div>
   );
 }
+
 
 // The raised logo: an SVG the group uploads, turned into outlines on the server (ChipRelief) and
 // pressed into the chip in its own color. Dark parts stand highest, lighter ones lower, white
