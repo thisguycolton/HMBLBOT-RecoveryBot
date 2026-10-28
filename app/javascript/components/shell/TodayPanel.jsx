@@ -1,10 +1,10 @@
-import React from "react";
-import { BellRing, CalendarClock, CalendarDays, ChevronRight, Repeat, Sparkles, Video } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { BellRing, CalendarClock, CalendarDays, ChevronRight, Repeat, RotateCcw, Sparkles, Video, X } from "lucide-react";
 import { milestoneStatus } from "../../lib/milestones";
 import Avatar from "../groups/Avatar";
 import { soberFor } from "../groups/lib";
 import MeetingPasscode from "../groups/MeetingPasscode";
-import { isOnNow } from "./useShell";
+import { isOnNow, refreshNav } from "./useShell";
 
 const sideTitle = "mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-neutral-400";
 const row = "border-b border-neutral-200/80 py-3 first:pt-0 last:border-0 dark:border-neutral-800";
@@ -52,31 +52,85 @@ function Greeting({ me }) {
   );
 }
 
+const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content || "";
+const send = (method, body) =>
+  fetch("/api/today_dismissals", {
+    method, credentials: "same-origin",
+    headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": csrf() },
+    body: JSON.stringify(body),
+  }).then(() => refreshNav()).catch(() => {});
+
+function AttentionItem({ item, faded, action }) {
+  return (
+    <li className={`${row} flex items-start gap-2`}>
+      <a href={item.href} className={`flex min-w-0 flex-1 items-start gap-3 ${faded ? "opacity-60" : ""}`}>
+        <span className={`mt-2 size-2 shrink-0 rounded-full ${item.urgent && !faded ? "bg-amber-500" : "bg-accent/60"}`} aria-hidden="true" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold leading-snug text-slate-900 dark:text-white">{item.title}</span>
+          <span className="block text-sm text-slate-500 dark:text-neutral-400">{[item.on && dayLabel(item.on), item.note].filter(Boolean).join(" · ")}</span>
+          <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">{item.role}</span>
+            <span className="truncate">{item.group.title}</span>
+          </span>
+        </span>
+      </a>
+      {action}
+    </li>
+  );
+}
+
 // What needs them in each role they hold, across their groups (TodayDuties): soonest and
-// most pressing first
-function Attention({ items, anyRoles }) {
-  if (!items?.length && !anyRoles) return null;
+// most pressing first. Each can be cleared (×); "Cleared" below lists those to restore. An
+// item comes back by itself when it changes.
+function Attention({ items, cleared, anyRoles }) {
+  const [open, setOpen] = useState(items || []);
+  const [done, setDone] = useState(cleared || []);
+  const [showCleared, setShowCleared] = useState(false);
+  useEffect(() => { setOpen(items || []); setDone(cleared || []); }, [items, cleared]);
+  if (!open.length && !done.length && !anyRoles) return null;
+
+  const clear = (item) => {
+    setOpen((list) => list.filter((i) => i.key !== item.key));
+    setDone((list) => [item, ...list]);
+    send("POST", { key: item.key, title: item.title });
+  };
+  const restore = (item) => {
+    setDone((list) => list.filter((i) => i.key !== item.key));
+    setOpen((list) => [...list, item]);
+    send("DELETE", { key: item.key });
+  };
+  const iconButton = "mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200";
+
   return (
     <section>
       <h2 className={sideTitle}><BellRing className="size-4" /> Needs your attention</h2>
-      {!items?.length && <p className="text-sm text-slate-500">Nothing needs you right now.</p>}
+      {!open.length && <p className="text-sm text-slate-500">{done.length ? "All clear." : "Nothing needs you right now."}</p>}
       <ul>
-        {(items || []).map((item) => (
-          <li key={item.key} className={row}>
-            <a href={item.href} className="flex items-start gap-3">
-              <span className={`mt-2 size-2 shrink-0 rounded-full ${item.urgent ? "bg-amber-500" : "bg-accent/60"}`} aria-hidden="true" />
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold leading-snug text-slate-900 dark:text-white">{item.title}</span>
-                <span className="block text-sm text-slate-500 dark:text-neutral-400">{[item.on && dayLabel(item.on), item.note].filter(Boolean).join(" · ")}</span>
-                <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">{item.role}</span>
-                  <span className="truncate">{item.group.title}</span>
-                </span>
-              </span>
-            </a>
-          </li>
+        {open.map((item) => (
+          <AttentionItem key={item.key} item={item}
+            action={<button type="button" onClick={() => clear(item)} className={iconButton} aria-label={`Clear: ${item.title}`} title="Clear"><X className="size-4" /></button>} />
         ))}
       </ul>
+      {done.length > 0 && (
+        <div className="mt-2">
+          <button type="button" onClick={() => setShowCleared((v) => !v)} aria-expanded={showCleared}
+            className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-accent dark:text-neutral-400">
+            <ChevronRight className={`size-4 transition-transform ${showCleared ? "rotate-90" : ""}`} />
+            {showCleared ? "Hide cleared" : `Show cleared (${done.length})`}
+          </button>
+          {showCleared && (
+            <ul className="mt-2">
+              {done.map((item) => (
+                <AttentionItem key={item.key} item={item} faded
+                  action={<button type="button" onClick={() => restore(item)} title="Restore"
+                    className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/10">
+                    <RotateCcw className="size-3.5" /> Restore
+                  </button>} />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -123,7 +177,7 @@ export default function TodayPanel({ today }) {
   return (
     <div className="space-y-8 !font-sans">
       <Greeting me={today.me} />
-      <Attention items={today.attention} anyRoles={today.any_roles} />
+      <Attention items={today.attention} cleared={today.cleared} anyRoles={today.any_roles} />
       <Covers covers={today.covers} />
       <section>
         <h2 className={sideTitle}><CalendarClock className="size-4" /> Next meetings</h2>

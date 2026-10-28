@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_28_170000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_28_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1196,6 +1196,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_170000) do
     t.index ["user_id"], name: "index_timeline_notes_on_user_id"
   end
 
+  create_table "today_dismissals", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "key", null: false
+    t.string "title", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "key"], name: "index_today_dismissals_on_user_id_and_key", unique: true
+    t.index ["user_id"], name: "index_today_dismissals_on_user_id"
+  end
+
   create_table "topic_categories", force: :cascade do |t|
     t.string "title"
     t.string "icon"
@@ -1460,6 +1470,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_170000) do
   add_foreign_key "timeline_note_shares", "timeline_notes"
   add_foreign_key "timeline_notes", "timeline_notes", column: "repost_of_id", on_delete: :cascade
   add_foreign_key "timeline_notes", "users"
+  add_foreign_key "today_dismissals", "users", on_delete: :cascade
   add_foreign_key "topic_sharing_prompts", "sharing_modes"
   add_foreign_key "topic_sharing_prompts", "topics"
   add_foreign_key "topic_tags", "tags"
