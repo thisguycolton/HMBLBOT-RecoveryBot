@@ -344,7 +344,7 @@ function HostingSettings({ hosting, save, saved }) {
               <ul className="space-y-1.5">
                 {hosting.upcoming.map((c) => (
                   <li key={`${c.slug}-${c.meeting}-${c.on}-${c.role}`}>
-                    <a href={`/groups/${c.slug}/hosts`} className="flex items-center gap-2 text-sm hover:text-accent">
+                    <a href={`/groups/${c.slug}/meetings`} className="flex items-center gap-2 text-sm hover:text-accent">
                       <Mic className="h-4 w-4 shrink-0 text-slate-400" />
                       <span className="w-28 shrink-0 text-slate-500 dark:text-neutral-400">{dateLabel(c.on)}</span>
                       <span className="min-w-0 flex-1 truncate text-slate-900 dark:text-white">{c.time} · {c.meeting}</span>

@@ -123,7 +123,7 @@ export default function CommandCenterClassic() {
     return (
       <div className="min-h-screen bg-neutral-50 px-4 dark:bg-neutral-950">
         <Message title={error.status === 403 ? "This is for the group's hosts" : "That meeting isn't here"} text={error.message}>
-          <Link to={`/${slug}/hosts`} className="mt-4 inline-block text-sm text-accent hover:underline">Back to the group</Link>
+          <Link to={`/${slug}/meetings`} className="mt-4 inline-block text-sm text-accent hover:underline">Back to the group</Link>
         </Message>
       </div>
     );
@@ -163,7 +163,7 @@ export default function CommandCenterClassic() {
   return (
     <div className={`hc-root flex h-dvh flex-col bg-neutral-50 !font-sans text-slate-900 dark:bg-neutral-950 dark:text-white ${dark ? "doc-dark" : ""}`}>
       <header className="flex shrink-0 items-center gap-2 border-b border-neutral-200 bg-white px-3 py-2 sm:gap-3 sm:px-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <Link to={`/${slug}/hosts`} className={iconButton} aria-label="Back to the group's hosts" title="Back to the group"><ArrowLeft className="size-5" /></Link>
+        <Link to={`/${slug}/meetings`} className={iconButton} aria-label="Back to the group's hosts" title="Back to the group"><ArrowLeft className="size-5" /></Link>
         <GroupLogo group={center.group} className="hidden size-8 text-xs sm:grid" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold sm:text-base">Hosting Command Center</p>

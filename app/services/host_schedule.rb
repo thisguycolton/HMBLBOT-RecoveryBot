@@ -1,4 +1,4 @@
-# The host and co-host of every weekly meeting a group has, for the Hosts tab: who is in each
+# The host and co-host of every weekly meeting a group has, for the Meetings page: who is in each
 # place now, who is lined up next, who is covering coming dates, and which places are open.
 class HostSchedule
   COVER_DAYS = 70

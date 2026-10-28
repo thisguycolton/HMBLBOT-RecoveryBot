@@ -102,7 +102,7 @@ class Group < ApplicationRecord
   # Who schedules the hosts of its meetings: group admins, and members an admin marked in the
   # Members tab (the person doing that needn't keep the records). A coordinator an admin limited
   # to some time slots (GroupMembership#host_slots_only) schedules only those meetings, so given
-  # a meeting this asks about that one; without one, about the Hosts tab as a whole.
+  # a meeting this asks about that one; without one, about the host schedule as a whole.
   def hosts_editable_by?(user, meeting = nil)
     return true if manageable_by?(user)
 

@@ -7,7 +7,7 @@ import { AgendaList, SuggestForm } from "./AgendaParts";
 import { KIND_INFO, MOTION_STATUS_LABELS, countLabel, dateLabel, decisionsPath, documentsPath, longDate, meetingsPath, officialsPath, treasuryPath } from "./lib";
 
 // A number across the top of the group dashboard, like the site admin's StatTile
-const Stat = ({ to, icon: Icon, label, value, detail }) => (
+export const Stat = ({ to, icon: Icon, label, value, detail }) => (
   <Link to={to} className="block min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 hover:border-accent/50 dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
     <span className="mb-4 hidden size-11 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-neutral-800 dark:text-neutral-200 sm:grid"><Icon className="size-5" /></span>
     <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400 sm:text-sm"><Icon className="size-3.5 shrink-0 sm:hidden" />{label}</span>
@@ -16,7 +16,7 @@ const Stat = ({ to, icon: Icon, label, value, detail }) => (
   </Link>
 );
 
-const Row = ({ to, icon: Icon, title, note, right }) => (
+export const Row = ({ to, icon: Icon, title, note, right }) => (
   <Link to={to} className="flex items-start gap-3 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900">
     {Icon && <Icon className="mt-0.5 size-4 shrink-0 text-accent" />}
     <span className="min-w-0 flex-1">
@@ -47,7 +47,7 @@ export default function OverviewView({ group }) {
     <div className="space-y-5">
       {st && (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-          <Stat to={group.can_manage ? `/${slug}/conscience/members` : `/${slug}/members`} icon={Users} label="Members" value={st.members} detail={st.requests ? `${st.requests} asking to join` : "No one waiting to join"} />
+          <Stat to={`/${slug}/members`} icon={Users} label="Members" value={st.members} detail={st.requests ? `${st.requests} asking to join` : "No one waiting to join"} />
           <Stat to={decisionsPath(slug)} icon={Gavel} label="Standing decisions" value={st.standing_decisions} detail={st.decisions_to_check ? `${st.decisions_to_check} imported, waiting to be checked` : "Everything checked"} />
           <Stat to={meetingsPath(slug)} icon={CalendarDays} label="Business meetings held" value={st.business_meetings} detail={next ? `Next: ${longDate(next.held_on)}` : "None scheduled"} />
           <Stat to={treasuryPath(slug)} icon={Landmark} label="Last treasurer's report" value={st.last_report_on ? new Date(`${st.last_report_on}T00:00:00`).toLocaleDateString([], { month: "short", year: "numeric" }) : "None"} detail={waiting?.draft_reports?.length ? `${waiting.draft_reports.length} in draft` : "Posted reports"} />
@@ -84,8 +84,8 @@ export default function OverviewView({ group }) {
 
       {data.hosts_open && data.hosts_open.open_hosts + data.hosts_open.open_co_hosts > 0 && (
         <Tray label="Hosts">
-          <Row to={`/${slug}/hosts`} icon={UserCheck} title={`${data.hosts_open.open_hosts + data.hosts_open.open_co_hosts} host places are open`}
-            note={`${data.hosts_open.open_hosts} hosts and ${data.hosts_open.open_co_hosts} co-hosts needed across the week`} />
+          <Row to={`/${slug}/meetings`} icon={UserCheck} title={`${data.hosts_open.open_hosts + data.hosts_open.open_co_hosts} host places are open`}
+            note={`${data.hosts_open.open_hosts} ${data.hosts_open.open_hosts === 1 ? "host" : "hosts"} and ${data.hosts_open.open_co_hosts} ${data.hosts_open.open_co_hosts === 1 ? "co-host" : "co-hosts"} needed across the week`} />
         </Tray>
       )}
 

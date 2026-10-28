@@ -5,7 +5,7 @@ class HostMailer < ApplicationMailer
   def reminder
     @title = params[:title]
     @body = params[:body]
-    @url = "#{root_url.chomp('/')}/groups/#{params[:group].slug}/hosts"
+    @url = "#{root_url.chomp('/')}/groups/#{params[:group].slug}/meetings"
     @settings_url = "#{root_url.chomp('/')}/users/edit#hosting"
     mail(to: params[:user].email, subject: @title)
   end

@@ -70,7 +70,7 @@ function TermForm({ slug, position, members, onSaved, onCancel }) {
 
 // The group's elected officials (/conscience/officials; chair, secretary, treasurer, GSR...): what each
 // office involves, who holds it and until when, with a heads-up as a term ends. Record keepers
-// change it; members read it. (Meeting hosts are a separate schedule: the Hosts tab.)
+// change it; members read it. (Meeting hosts are a separate schedule: on the Meetings page.)
 export default function ServiceView({ group }) {
   const slug = group.slug;
   const [data, setData] = useState(null);
@@ -136,7 +136,7 @@ export default function ServiceView({ group }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300">The group's elected officials and how long each serves. Record keepers and the person serving hear when a term is nearly up. Meeting hosts are on the Hosts tab.</p>
+        <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300">The group's elected officials and how long each serves. Record keepers and the person serving hear when a term is nearly up. Meeting hosts are on the Meetings page.</p>
         {data.can_edit && editing !== "new" && <button type="button" onClick={() => setEditing("new")} className={primaryButton}><Plus className="size-4" /> Add an office</button>}
       </div>
       <ErrorNote error={error} />

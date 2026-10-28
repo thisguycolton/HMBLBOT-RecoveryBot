@@ -19,7 +19,7 @@ class Api::GroupHostSubRequestsController < ApplicationController
     return render_errors(request) unless request.save
 
     Notification.deliver(sub_askees(meeting), kind: "meeting_host.sub_needed",
-                         title: request.headline, body: request.note || "Can you fill in? Open the Hosts tab to take it.", url: hosts_url)
+                         title: request.headline, body: request.note || "Can you fill in? Open Meetings to take it.", url: hosts_url)
     render json: schedule, status: :created
   end
 
@@ -79,5 +79,5 @@ class Api::GroupHostSubRequestsController < ApplicationController
   end
 
   def schedule = HostSchedule.new(@group, current_user).as_json
-  def hosts_url = "/groups/#{@group.slug}/hosts"
+  def hosts_url = "/groups/#{@group.slug}/meetings"
 end

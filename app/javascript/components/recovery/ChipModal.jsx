@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { confetti } from "../../lib/confetti";
 import { RoundChip, RoundChipBack, TriangleChip, TriangleChipBack, roundLook, triangleLook } from "./Chip";
 import Chip3D from "./Chip3D";
@@ -46,7 +47,7 @@ export default function ChipModal({ chip, design, title, text, celebrate = false
     return () => { clearTimeout(timer); window.removeEventListener("keydown", onKey); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return (
+  return createPortal(
     <div className="hb-daycount" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-labelledby="hb-chip-title" className="hb-daycount__panel hb-daycount__panel--milestone hb-daycount__panel--chip">
         <button type="button" aria-label="Close" className="hb-daycount__close" onClick={onClose}>
@@ -68,6 +69,7 @@ export default function ChipModal({ chip, design, title, text, celebrate = false
           <button ref={closeRef} type="button" className="hb-daycount__button hb-daycount__button--primary" onClick={onClose}>Thanks</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,41 +1,43 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutDashboard, LayoutTemplate, NotebookPen, Pencil, Scale, UserCheck, Users } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarRange, House, LayoutDashboard, LayoutTemplate, NotebookPen, Settings, Scale, Users } from "lucide-react";
 import { hasGroupRole } from "./GroupDashboard";
 import { api } from "./lib";
 import { ErrorNote, Loading, Message, Pill } from "./ui";
 import GroupHero, { heroButton, heroQuietButton } from "./page/GroupHero";
 import NextMeeting from "./NextMeeting";
 import GroupHome from "./page/GroupHome";
-import MeetingsTab from "./MeetingsTab";
+import MeetingsPage from "./MeetingsPage";
 import MembersTab from "./MembersTab";
 import LiteratureTab from "./LiteratureTab";
 import ReadingsTab from "./ReadingsTab";
-import CourtTab from "./CourtTab";
 import EventsTab from "./EventsTab";
 import ConscienceTab from "./conscience/ConscienceTab";
-import HostsTab from "./HostsTab";
 import ShareButton from "../share/ShareButton";
 import { refreshNav } from "../shell/useShell";
 
 const TABS = [
   { key: "home", label: "Home", icon: House },
   { key: "meetings", label: "Meetings", icon: CalendarClock },
-  { key: "hosts", label: "Hosts", icon: UserCheck, members: true },
   { key: "events", label: "Events", icon: CalendarRange },
   { key: "readings", label: "Readings", icon: NotebookPen, members: true },
   { key: "literature", label: "Literature", icon: BookOpen, members: true },
   { key: "conscience", label: "Group conscience", icon: Scale, members: true },
   { key: "members", label: "Members", icon: Users, members: true },
-  { key: "court", label: "Court verifications", icon: Gavel, managers: true },
 ];
 
+// Old addresses of pages that moved: Hosts joined Meetings, court verifications went to Settings
+const MOVED = { hosts: "meetings", court: "settings/court" };
+
 // /groups/:slug(/:tab): the group's own page (Home, made in the HMBLBOT Editor) and its
-// other sections. A new group (?new=1) opens on its meetings, to bring them in. Group
-// conscience (/:slug/conscience/*) is members' tab, but a Public document opens for anyone.
+// other sections, the same for everyone in the group, a role deciding what they can change.
+// A new group (?new=1) opens on Meeting settings, to bring its meetings in. Group conscience
+// (/:slug/conscience/*) is members' tab, but a Public document opens for anyone; people with a
+// role get it on the stage (GroupDashboard.jsx ConscienceRoute). Settings and the Dashboard
+// are pages of their own there too.
 export default function GroupPage({ tab: fixedTab }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { slug, meetingId, tab: routeTab = meetingId ? "meetings" : searchParams.get("new") === "1" ? "meetings" : "home" } = useParams();
+  const { slug, meetingId, tab: routeTab = meetingId ? "meetings" : "home" } = useParams();
   const tab = fixedTab || routeTab;
   const navigate = useNavigate();
   const [group, setGroup] = useState(null);
@@ -68,11 +70,10 @@ export default function GroupPage({ tab: fixedTab }) {
   if (!group) return <Loading />;
 
   const isMember = group.is_member || group.is_site_admin;
-  // People with a role run the group's business from its dashboard (GroupDashboard.jsx), not a tab
   const dashboard = hasGroupRole(group);
-  // The tabs that moved into the dashboard: their old addresses open it there
-  if (dashboard && tab === "court") return <Navigate to={`/${slug}/conscience/court`} replace />;
-  const tabs = TABS.filter((t) => (!t.members || isMember) && (!t.managers || group.can_manage) && !(dashboard && ["conscience", "court"].includes(t.key)));
+  if (MOVED[tab]) return <Navigate to={`/${slug}/${MOVED[tab]}`} replace />;
+  if (searchParams.get("new") === "1" && group.can_manage) return <Navigate to={`/${slug}/settings/meetings?new=1`} replace />;
+  const tabs = TABS.filter((t) => !t.members || isMember);
   const current = tabs.find((t) => t.key === tab) || (tab === "conscience" && { key: "conscience" }) || tabs[0];
 
   const act = async (path, confirmText) => {
@@ -122,11 +123,11 @@ export default function GroupPage({ tab: fixedTab }) {
             {group.membership_status === "active" && (
               <span className={heroQuietButton}>You're {group.role === "admin" ? "a group admin" : "a member"}</span>
             )}
-            {dashboard && <Link to={`/${slug}/conscience`} className={heroButton}><LayoutDashboard className="h-4 w-4" /> Dashboard</Link>}
+            {dashboard && <Link to={`/${slug}/dashboard`} className={heroButton}><LayoutDashboard className="h-4 w-4" /> Dashboard</Link>}
             {group.can_manage && (
               <>
                 <Link to={`/${slug}/page/edit`} className={heroButton}><LayoutTemplate className="h-4 w-4" /> Edit page</Link>
-                <Link to={`/${slug}/conscience/settings`} className={heroQuietButton}><Pencil className="h-4 w-4" /> Settings</Link>
+                <Link to={`/${slug}/settings`} className={heroQuietButton}><Settings className="h-4 w-4" /> Settings</Link>
               </>
             )}
             {group.membership_status === "active" && (
@@ -166,14 +167,12 @@ export default function GroupPage({ tab: fixedTab }) {
       )}
 
       {current.key === "home" && <GroupHome slug={slug} onJoin={() => act("join")} />}
-      {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={load} isNew={searchParams.get("new") === "1"} focusId={Number(meetingId) || null} />}
-      {current.key === "hosts" && <HostsTab group={group} />}
+      {current.key === "meetings" && <MeetingsPage group={group} setGroup={setGroup} reload={load} focusId={Number(meetingId) || null} />}
       {current.key === "events" && <EventsTab group={group} />}
       {current.key === "readings" && <ReadingsTab group={group} />}
       {current.key === "literature" && <LiteratureTab group={group} reload={load} />}
       {current.key === "conscience" && <ConscienceTab group={group} />}
       {current.key === "members" && <MembersTab group={group} reload={load} setGroup={setGroup} />}
-      {current.key === "court" && <CourtTab group={group} setGroup={setGroup} />}
     </div>
   );
 }

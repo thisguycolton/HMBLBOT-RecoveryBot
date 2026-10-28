@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { ChevronLeft, Gift, Trash2 } from "lucide-react";
+import React, { useCallback, useEffect, useId, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ChevronLeft, Gift, Mail, Trash2, UserCheck } from "lucide-react";
 import { api } from "../groups/lib";
 import { Card, ErrorNote, Loading, Pill, dangerButton, primaryButton } from "../groups/ui";
-import SegmentedControl from "../ui/SegmentedControl";
+import Avatar from "../groups/Avatar";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { SpinningChip } from "./ChipModal";
 import { dayLabel, localDate } from "./lib";
@@ -13,20 +13,24 @@ const MILESTONES = [
   ["24h", "24 hours"], ["30d", "30 days"], ["60d", "60 days"], ["90d", "90 days"],
   ["6m", "6 months"], ["9m", "9 months"], ["year", "Years"], ["18m", "18 months"],
 ];
-const blank = { to: "member", user_id: "", email: "", milestone_key: "30d", years: 1, on: localDate(), note: "" };
+const blank = { to: "", user_id: "", milestone_key: "30d", years: 1, on: localDate(), note: "" };
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Give a chip (/recovery/give): for the hosts, host coordinators, record keepers and admins of a
 // group (Api::ChipAwardsController). A round chip in the group's design, to a member or to an
 // email address: someone with an account gets it at once with a notification, anyone else an
-// email with a link to claim it. Below, the chips given so far, which can be taken back.
+// email with a link to claim it. Below, the chips given so far, which can be taken back. Each
+// group's folder in the sidebar links here with ?group=, the group it gives for.
 export default function GivePage() {
   const [data, setData] = useState(null);
-  const [slug, setSlug] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const slug = searchParams.get("group");
+  const setSlug = (value) => setSearchParams({ group: value }, { replace: true });
   const [form, setForm] = useState(blank);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
-  const load = useCallback(() => api("/chip_awards").then((d) => { setData(d); setSlug((s) => s || d.groups[0]?.slug); }).catch((e) => setError(e.message)), []);
+  const load = useCallback(() => api("/chip_awards").then(setData).catch((e) => setError(e.message)), []);
   useEffect(() => { document.title = "Give a chip | RecoveryBot"; load(); }, [load]);
 
   if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
@@ -44,11 +48,12 @@ export default function GivePage() {
     setBusy(true);
     setError(null);
     try {
+      if (!form.user_id && !EMAIL.test(form.to.trim())) throw new Error("Pick someone from the list, or type their whole email address.");
       const body = { group_slug: group.slug, milestone_key: form.milestone_key, years: form.years, on: form.on, note: form.note,
-        ...(form.to === "member" ? { user_id: form.user_id } : { email: form.email }) };
+        ...(form.user_id ? { user_id: form.user_id } : { email: form.to.trim() }) };
       const d = await api("/chip_awards", { method: "POST", body });
       setDone(d.emailed ? `We emailed ${d.award.to} a link to claim their ${d.award.label} chip.` : `${d.award.to} has their ${d.award.label} chip. We let them know.`);
-      setForm({ ...blank, to: form.to });
+      setForm(blank);
       load();
     } catch (err) { setError(err.message); }
     setBusy(false);
@@ -73,28 +78,12 @@ export default function GivePage() {
             {data.groups.length > 1 && (
               <div>
                 <label htmlFor="g-group" className={labelClass}>From</label>
-                <select id="g-group" className={selectClass} value={group.slug} onChange={(e) => { setSlug(e.target.value); set({ user_id: "" }); }}>
+                <select id="g-group" className={selectClass} value={group.slug} onChange={(e) => { setSlug(e.target.value); set({ user_id: "", to: "" }); }}>
                   {data.groups.map((g) => <option key={g.slug} value={g.slug}>{g.title}</option>)}
                 </select>
               </div>
             )}
-            <div>
-              <div className={labelClass}>To</div>
-              <div className="overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700">
-                <SegmentedControl value={form.to} onChange={(v) => set({ to: v })} options={[{ value: "member", label: `Someone in ${group.title}` }, { value: "email", label: "An email address" }]} />
-              </div>
-            </div>
-            {form.to === "member" ? (
-              <select aria-label="Who" required className={selectClass} value={form.user_id} onChange={(e) => set({ user_id: e.target.value })}>
-                <option value="">Pick someone…</option>
-                {group.members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-            ) : (
-              <div>
-                <input type="email" required aria-label="Email address" className={inputClass} placeholder="name@example.com" value={form.email} onChange={(e) => set({ email: e.target.value })} />
-                <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">If they have an account with this address, the chip is theirs right away. If not, we email them a link to make one and claim it.</p>
-              </div>
-            )}
+            <ToField group={group} form={form} set={set} />
             <div className="grid gap-3 sm:grid-cols-[1fr_7rem_1fr]">
               <div>
                 <label htmlFor="g-milestone" className={labelClass}>Chip</label>
@@ -147,6 +136,62 @@ export default function GivePage() {
           </Card>
         )}
       </section>
+    </div>
+  );
+}
+
+// To: type a name or an email address. People in the group show as you type (Api::ChipAwards
+// Controller#lookup); pick one, or finish an email address: with an account it goes straight to
+// them, without one we email them a link to claim it.
+function ToField({ group, form, set }) {
+  const [found, setFound] = useState({ members: [], account: null });
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const listId = useId();
+  const q = form.to.trim();
+  useEffect(() => {
+    if (form.user_id || q.length < 2) { setFound({ members: [], account: null }); return undefined; }
+    const timer = setTimeout(() => {
+      api(`/chip_awards/lookup?group_slug=${encodeURIComponent(group.slug)}&q=${encodeURIComponent(q)}`).then(setFound).catch(() => {});
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [q, group.slug, form.user_id]);
+
+  const choose = (m) => { set({ user_id: m.id, to: m.name }); setOpen(false); };
+  const list = open && !form.user_id ? found.members : [];
+  const email = EMAIL.test(q);
+  return (
+    <div>
+      <label htmlFor="g-to" className={labelClass}>To</label>
+      <div className="relative">
+        <input id="g-to" required autoComplete="off" role="combobox" aria-expanded={list.length > 0} aria-controls={listId} aria-autocomplete="list"
+          className={inputClass} placeholder={`A name in ${group.title}, or an email address`} value={form.to}
+          onChange={(e) => { set({ to: e.target.value, user_id: "" }); setOpen(true); setActive(0); }}
+          onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={(e) => {
+            if (!list.length) return;
+            if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, list.length - 1)); }
+            if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
+            if (e.key === "Enter") { e.preventDefault(); choose(list[active]); }
+            if (e.key === "Escape") setOpen(false);
+          }} />
+        {list.length > 0 && (
+          <ul id={listId} role="listbox" className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
+            {list.map((m, i) => (
+              <li key={m.id} role="option" aria-selected={i === active} onMouseDown={(e) => { e.preventDefault(); choose(m); }} onMouseEnter={() => setActive(i)}
+                className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${i === active ? "bg-neutral-100 dark:bg-neutral-800" : ""}`}>
+                <Avatar person={m} size={24} /> {m.name}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400">
+        {form.user_id ? <><UserCheck className="size-3.5 text-emerald-600" /> In {group.title}. It goes straight to them, with a notification.</>
+          : email && found.account ? <><UserCheck className="size-3.5 text-emerald-600" /> {found.account.name} has an account with this address. It goes straight to them, with a notification.</>
+            : email ? <><Mail className="size-3.5" /> No account with this address yet. We'll email them a link to make one and claim it.</>
+              : "Start typing a name to find someone in the group, or enter an email address."}
+      </p>
     </div>
   );
 }

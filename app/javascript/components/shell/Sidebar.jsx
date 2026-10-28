@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, LogIn, MapPinned, UserPlus } from "lucide-react";
 import GroupLogo from "../groups/GroupLogo";
 import { followLink } from "./useShell";
-import { EXPLORE_ITEMS, EXTRA_ITEMS, YOU_ITEMS, activeHref, groupItems, roleHref, roleSections } from "./navItems";
+import { EXPLORE_ITEMS, EXTRA_ITEMS, YOU_ITEMS, activeHref, groupItems } from "./navItems";
 
 const OPEN_KEY = "hb-nav-open-groups";
 const hasGroups = () => document.body.dataset.groups === "true";
@@ -12,19 +12,18 @@ function remembered() {
 }
 
 // The shell's navigation, in the left column on wide screens and the menu sheet on phones:
-// You (your own pages), Your groups (each one folds open to its pages, with a section for
-// every role you hold there) and Explore (the site's tools).
+// You (your own pages), Your groups (each one folds open to its pages, the ones a role adds
+// among them) and Explore (the site's tools).
 export default function Sidebar({ nav, isAuthenticated, onNavigate, path = window.location.pathname }) {
   const groups = nav?.groups || [];
-  const groupHrefs = groups.flatMap((g) => [
-    ...groupItems(g.slug).map((i) => ({ href: i.href, exact: i.exact })),
-    ...roleSections(g.roles).flatMap((s) => s.items.map((i) => ({ href: roleHref(g.slug, i) }))),
-  ]);
-  const you = YOU_ITEMS.filter((i) => (!i.groups || hasGroups()) && (!i.host || nav?.hosting?.host || nav?.hosting?.open_requests > 0) && (!i.giver || nav?.can_give_chips));
+  const groupHrefs = groups.flatMap((g) => groupItems(g.slug, g).map((i) => ({ href: i.href, exact: i.exact })));
+  const you = YOU_ITEMS.filter((i) => (!i.groups || hasGroups()) && (!i.host || nav?.hosting?.host || nav?.hosting?.open_requests > 0));
   const all = [...you, ...EXPLORE_ITEMS, ...EXTRA_ITEMS].map((i) => ({ href: i.href, exact: i.exact })).concat(groupHrefs);
   const here = activeHref(all, path);
   // The group this page belongs to starts open, and any the member opened stay open
-  const current = groups.find((g) => path === `/groups/${g.slug}` || path.startsWith(`/groups/${g.slug}/`))?.slug;
+  // (Give a chip names its group in the address)
+  const giving = path === "/recovery/give" && new URLSearchParams(window.location.search).get("group");
+  const current = groups.find((g) => path === `/groups/${g.slug}` || path.startsWith(`/groups/${g.slug}/`) || g.slug === giving)?.slug;
   const [open, setOpen] = useState(() => new Set([...remembered(), current].filter(Boolean)));
   useEffect(() => { if (current) setOpen((was) => (was.has(current) ? was : new Set([...was, current]))); }, [current]);
   const toggle = (slug) => setOpen((was) => {
@@ -101,7 +100,6 @@ function Item({ item, active, badge = 0, href = item.href, nested = false }) {
 
 // One of your groups: its logo and name, folding open to its pages
 function GroupFolder({ group, open, onToggle, here, current }) {
-  const sections = roleSections(group.roles);
   return (
     <div>
       <button type="button" onClick={onToggle} aria-expanded={open}
@@ -114,16 +112,7 @@ function GroupFolder({ group, open, onToggle, here, current }) {
       </button>
       {open && (
         <div className="mb-2 ml-5 mt-1 space-y-0.5 border-l border-neutral-300 pl-2 dark:border-neutral-700">
-          {groupItems(group.slug).map((item) => <Item key={item.key} item={item} active={item.href === here} nested />)}
-          {sections.map((s) => (
-            <div key={s.key} className="pt-2">
-              <div className="px-3 pb-1 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-slate-500 dark:text-neutral-500">{s.title}</div>
-              {s.items.map((item) => {
-                const href = roleHref(group.slug, item);
-                return <Item key={item.key} item={item} href={href} active={href === here} nested badge={item.count ? group[item.count] : 0} />;
-              })}
-            </div>
-          ))}
+          {groupItems(group.slug, group).map((item) => <Item key={item.key} item={item} active={item.href === here} nested badge={item.count ? group[item.count] : 0} />)}
         </div>
       )}
     </div>
