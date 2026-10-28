@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { shade } from "./Chip";
+import { roundedTriangle, shade } from "./Chip";
 import "../../styles/chip3d.css";
 
 // A chip you can pick up: the front and back faces (SVG, from Chip.jsx) with a thick edge
@@ -8,9 +8,6 @@ import "../../styles/chip3d.css";
 // people who ask their system for less motion), and a sheen slides across as it turns.
 // Plain CSS (styles/chip3d.css), since the day count modal shows it on Bootstrap pages too.
 
-// The outline as a CSS clip-path, matching the SVGs' shapes (Chip.jsx: TRIANGLE_CORNERS on a
-// 200 x 176 box, with the rounded edge a little outside them)
-const TRIANGLE_CLIP = "polygon(50% 0.5%, 98.5% 97%, 1.5% 97%)";
 
 const SPIN_IN = 1700; // ms
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -103,7 +100,8 @@ export default function Chip3D({ front, back, shape = "round", color, metal, siz
     st.wake();
   };
 
-  const clip = shape === "triangle" ? { clipPath: TRIANGLE_CLIP } : { borderRadius: "50%" };
+  // The triangle's layers are cut to the SVG's own rounded outline (Chip.jsx), in pixels
+  const clip = shape === "triangle" ? { clipPath: `path("${roundedTriangle(-5, undefined, size / 200)}")`, inset: 0 } : { borderRadius: "50%" };
   const edge = (i) => {
     // the middle of the edge catches the light, like a rounded rim
     const z = -thick / 2 + (thick * (i + 0.5)) / layers;

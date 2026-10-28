@@ -187,7 +187,26 @@ function inset(t) {
   const k = (INRADIUS - t) / INRADIUS;
   return TRIANGLE_CORNERS.map(([x, y]) => [CENTER[0] + (x - CENTER[0]) * k, CENTER[1] + (y - CENTER[1]) * k]);
 }
-const pts = (list) => list.map((p) => p.join(",")).join(" ");
+// The triangle `t` in from the edge with its corners rounded to radius `radius`, as a path, its
+// numbers times `scale` (Chip3D cuts its edge layers to the same outline, in pixels)
+const ROUNDING = 24;
+export function roundedTriangle(t = 0, radius = ROUNDING - t, scale = 1) {
+  const r = Math.max(radius, 1.5);
+  const v = inset(t);
+  const cut = r * Math.sqrt(3); // from a corner to where its curve meets the sides
+  const toward = ([x1, y1], [x2, y2]) => {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    return [x1 + ((x2 - x1) * cut) / len, y1 + ((y2 - y1) * cut) / len];
+  };
+  const n = (p) => p.map((c) => +(c * scale).toFixed(2)).join(",");
+  let d = "";
+  v.forEach((corner, i) => {
+    const from = toward(corner, v[(i + 2) % 3]);
+    const to = toward(corner, v[(i + 1) % 3]);
+    d += `${i ? "L" : "M"} ${n(from)} A ${+(r * scale).toFixed(2)},${+(r * scale).toFixed(2)} 0 0 1 ${n(to)} `;
+  });
+  return `${d}Z`;
+}
 const line = ([x1, y1], [x2, y2]) => `M ${x1},${y1} L ${x2},${y2}`;
 
 export const TRIANGLE_WORDS = { inventory: ["10TH STEP", "10TH STEPS"], gratitude: ["GRATITUDE", "GRATITUDE"] };
@@ -210,12 +229,12 @@ function TriangleBase({ id, look, sides }) {
         <path id={`${id}-r`} d={line(sideLine[0], sideLine[1])} />
         <path id={`${id}-b`} d={line(bottomLine[2], bottomLine[1])} />
       </defs>
-      <polygon points={pts(TRIANGLE_CORNERS)} fill={shade(color, -0.35)} stroke={shade(color, -0.35)} strokeWidth="12" strokeLinejoin="round" />
-      <polygon points={pts(inset(3))} fill={`url(#${id}-face)`} stroke={`url(#${id}-face)`} strokeWidth="8" strokeLinejoin="round" />
+      <path d={roundedTriangle(-5)} fill={shade(color, -0.35)} />
+      <path d={roundedTriangle(1)} fill={`url(#${id}-face)`} />
       {metal
-        ? <polygon points={pts(inset(9))} fill="none" stroke={shade(color, 0.3)} strokeWidth="1" strokeLinejoin="round" />
-        : <polygon points={pts(inset(1))} fill="none" stroke="#ffffff" strokeOpacity="0.85" strokeWidth="5" strokeDasharray="12 18" strokeLinejoin="round" />}
-      <polygon points={pts(inset(24))} fill="none" stroke={ink} strokeOpacity="0.55" strokeWidth="1.5" strokeLinejoin="round" />
+        ? <path d={roundedTriangle(7)} fill="none" stroke={shade(color, 0.3)} strokeWidth="1" />
+        : <path d={roundedTriangle(-2)} fill="none" stroke="#ffffff" strokeOpacity="0.85" strokeWidth="5" strokeDasharray="12 18" />}
+      <path d={roundedTriangle(24, 10)} fill="none" stroke={ink} strokeOpacity="0.55" strokeWidth="1.5" />
       <g fill={ink} fontFamily={FONT} fontWeight="700">
         {[["l", sides[0]], ["r", sides[1]], ["b", sides[2]]].map(([edge, text = ""]) => {
           const fs = fit(text, 100, 10);
