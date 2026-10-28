@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, FileCheck2, Heart, LogIn, LogOut, Menu, Moon, PanelRight, Plus, Search, Settings, Smartphone, Sun, UserPlus, UserRound } from "lucide-react";
+import { ChevronDown, FileCheck2, Heart, LogIn, LogOut, Info, Menu, Moon, Plus, Search, Settings, Smartphone, Sun, UserPlus, UserRound } from "lucide-react";
 import NotificationBell from "../NotificationBell";
 import Avatar from "../groups/Avatar";
 import { RecoveryBotLogo } from "../brand/Logo";
@@ -27,7 +27,7 @@ export default function TopBar({ nav, isAuthenticated, theme, onMenu, onDonate, 
         <button type="button" onClick={onSearch} className={`${iconButton} inline-grid lg:hidden`} aria-label="Search"><Search className="size-5" /></button>
         {onAside && (
           <button type="button" onClick={onAside} className={`${iconButton} hidden lg:inline-grid xl:hidden`} aria-label={asideLabel || "Side panel"} title={asideLabel}>
-            <PanelRight className="size-5" />
+            <Info className="size-5" />
           </button>
         )}
         <button type="button" onClick={onDonate}

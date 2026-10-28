@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ClipboardCheck, History, PartyPopper, UserCheck, Users } from "lucide-react";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, quietButton } from "../ui";
@@ -33,7 +33,6 @@ export default function TimeCapsule() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 !font-sans [&_*]:!font-sans">
-      <Link to={`/${slug}/host`} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← HostDeck</Link>
       <div>
         <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><History className="size-6 text-accent" /> Time Capsule</h1>
         <p className="mt-1 !text-left text-sm text-slate-600 dark:text-neutral-300">The meetings hosts ran from HostDeck: what was read, the topics, who did service and who celebrated. Only the group's hosts see this.</p>

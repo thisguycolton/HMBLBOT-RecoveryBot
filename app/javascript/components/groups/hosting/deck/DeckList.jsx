@@ -83,7 +83,6 @@ export default function DeckListPage() {
   const { slug } = useParams();
   return (
     <div className="mx-auto max-w-3xl space-y-6 !font-sans [&_*]:!font-sans">
-      <Link to={`/${slug}`} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Group</Link>
       <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> HostDecks</h1>
       <DeckList slug={slug} />
     </div>

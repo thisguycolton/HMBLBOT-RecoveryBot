@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { CalendarClock, House, Menu, PanelRight, Video } from "lucide-react";
+import { CalendarClock, House, Info, Menu, Video } from "lucide-react";
 import { RecoveryBotMark } from "../brand/Logo";
 import { isOnNow } from "./useShell";
 
@@ -42,9 +42,9 @@ export default function BottomBar({ nav, isAuthenticated, onMenu, onActions, onT
           {onNow && <span className="absolute right-3 top-3 size-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900" />}
         </button>
         {onAside ? (
-          <button type="button" className={slot} onClick={onAside} aria-label={asideLabel || "Side panel"}><PanelRight className="size-6" /></button>
+          <button type="button" className={slot} onClick={onAside} aria-label={asideLabel || "Info"}><Info className="size-6" /></button>
         ) : (
-          <span className={`${slot} opacity-30`} aria-hidden="true"><PanelRight className="size-6" /></span>
+          <span className={`${slot} opacity-30`} aria-hidden="true"><Info className="size-6" /></span>
         )}
       </nav>
     </div>

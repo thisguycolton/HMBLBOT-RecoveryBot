@@ -74,7 +74,8 @@ class Api::PeopleTest < ActionDispatch::IntegrationTest
 
     sign_in @mo
     get "/api/people/lee-r", as: :json
-    assert_equal ["Sunrise Crew"], response.parsed_body.dig("context", "groups").map { |g| g["title"] }
+    group = response.parsed_body.dig("context", "groups").sole
+    assert_equal ["Sunrise Crew", 2, nil], group.values_at("title", "members_count", "logo_url")
   end
 
   test "profiles are closed while Groups is" do

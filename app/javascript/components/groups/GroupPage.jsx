@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, Navigate, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutDashboard, LayoutTemplate, NotebookPen, Pencil, Scale, UserCheck, Users } from "lucide-react";
 import { hasGroupRole } from "./GroupDashboard";
 import { api } from "./lib";
@@ -38,10 +38,6 @@ export default function GroupPage({ tab: fixedTab }) {
   const { slug, meetingId, tab: routeTab = meetingId ? "meetings" : searchParams.get("new") === "1" ? "meetings" : "home" } = useParams();
   const tab = fixedTab || routeTab;
   const navigate = useNavigate();
-  // Opened from Find a meeting: back goes to those results
-  const back = useLocation().state?.back;
-  // Groups itself is admin-only for now; everyone else came from Find a meeting
-  const hasGroups = document.body.dataset.groups === "true";
   const [group, setGroup] = useState(null);
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
@@ -103,10 +99,8 @@ export default function GroupPage({ tab: fixedTab }) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <Link to={back || (hasGroups ? "/" : "/meetings")} className="group-chrome text-sm text-slate-500 hover:text-accent dark:text-neutral-400">
-        {back || !hasGroups ? "← Find a meeting" : "← Groups"}
-      </Link>
       <GroupHero
+        bleed
         group={group}
         coverUrl={group.cover_url}
         badge={group.status === "pending" && <Pill tone="amber">Waiting for approval</Pill>}

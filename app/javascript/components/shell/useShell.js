@@ -73,6 +73,18 @@ export function useTheme() {
   return { isDark, toggle: () => setTheme(isDark ? "light" : "dark") };
 }
 
+// Whether a media query matches, kept current
+export function useMedia(query) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const list = window.matchMedia(query);
+    const onChange = () => setMatches(list.matches);
+    list.addEventListener("change", onChange);
+    return () => list.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}
+
 // The page's side panel (PageAside.jsx) goes into the shell through this: the right column on
 // wide screens, a sheet from the bottom bar on phones
 export const ShellContext = createContext({ asideTarget: null, setAside: () => {} });

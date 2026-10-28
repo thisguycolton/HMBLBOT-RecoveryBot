@@ -31,14 +31,14 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <ProfileHero person={person} viewer={viewer} coverUrl={page.cover_url} onFollowChange={onFollowChange}
+      <ProfileHero bleed person={person} viewer={viewer} coverUrl={page.cover_url} onFollowChange={onFollowChange}
         actions={viewer.is_me && (
           <>
             <Link to="/me/edit" className={heroQuietButton}><Pencil className="size-4" /> Edit your page</Link>
             <a href="/users/edit" className={heroQuietButton}><Settings className="size-4" /> Settings</a>
           </>
         )} />
-      <PageBlocks layout={page.layout} blocks={page.blocks} context={context} hidden={(b) => hiddenFor(b, context)} />
+      <PageBlocks info layout={page.layout} blocks={page.blocks} context={context} hidden={(b) => hiddenFor(b, context)} />
     </div>
   );
 }

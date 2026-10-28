@@ -1,4 +1,6 @@
 import React from "react";
+import PageAside from "../shell/PageAside";
+import { useMedia } from "../shell/useShell";
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import BlockView, { isCompact } from "./BlockView";
 import { SPAN_CLASS } from "./lib";
@@ -70,7 +72,10 @@ export default function EventBlocks({ event }) {
 
 // Blocks in a layout, read-only: an event's, or a group page's (with its `context`).
 // `hidden(block)` leaves out blocks with nothing to show this viewer.
-export function PageBlocks({ layout, blocks, polls, context, hidden = () => false }) {
+// With `info`, below lg (where the columns stack) the side column goes in the Info bar, the
+// shell's side panel (PageAside), instead of under the main column.
+export function PageBlocks({ layout, blocks, polls, context, hidden = () => false, info = false }) {
+  const stacked = !useMedia("(min-width: 1024px)");
   const renderRegion = (region) => {
     const list = blocks.filter((b) => (b.region || "main") === region && !hidden(b));
     if (!list.length) return null;
@@ -84,5 +89,14 @@ export function PageBlocks({ layout, blocks, polls, context, hidden = () => fals
       </div>
     );
   };
+  if (info && stacked && layout !== "centered") {
+    const side = renderRegion("side");
+    return (
+      <>
+        {renderRegion("main")}
+        {side && <PageAside title="Info" plain><div className="space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">{side}</div></PageAside>}
+      </>
+    );
+  }
   return <LayoutColumns layout={layout} renderRegion={renderRegion} />;
 }

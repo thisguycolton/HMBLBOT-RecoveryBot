@@ -5,9 +5,10 @@ import { RecoveryBotLogo } from "./brand/Logo";
 import BottomBar from "./shell/BottomBar";
 import { ChromeSheets, useChrome } from "./shell/Chrome";
 import { PUSH_WIDTH } from "./shell/Sheet";
+import { pageInfo } from "./shell/pageInfo";
 import Sidebar from "./shell/Sidebar";
 import TopBar from "./shell/TopBar";
-import { ShellContext, usePath, useNav, useTheme } from "./shell/useShell";
+import { ShellContext, useMedia, usePath, useNav, useTheme } from "./shell/useShell";
 import { forgetPushIfSignedOut, registerServiceWorker } from "../lib/push";
 
 // The site's shell, around every page: the sidebar on the left (You, Your groups, Explore),
@@ -61,7 +62,7 @@ export default function Layout({ children, isAuthenticated, showFooter = true })
         <div className={`fixed inset-x-0 top-0 z-50 h-[var(--nav-h)] bg-[#ececec]/90 backdrop-blur lg:left-72 lg:bg-[#ececec] dark:bg-neutral-950/90 lg:dark:bg-neutral-950 print:!hidden ${chrome.open ? "z-[2100]" : ""}`}>
           <TopBar nav={nav} isAuthenticated={isAuthenticated} theme={theme}
             onMenu={() => chrome.show("menu")} onSearch={() => chrome.show("search")} onDonate={() => chrome.show("donate")} onCourt={() => chrome.show("court")}
-            onAside={aside ? openAside : null} asideLabel={aside?.title} />
+            onAside={openAside} asideLabel={aside?.title || "Info"} />
         </div>
 
         {/* The window scrolls, so the stage's rounded corner would scroll away under the top bar:
@@ -85,17 +86,20 @@ export default function Layout({ children, isAuthenticated, showFooter = true })
 
         <BottomBar nav={nav} isAuthenticated={isAuthenticated} homeActive={homeActive}
           onMenu={() => chrome.show("menu")} onActions={() => chrome.show("actions")} onToday={() => chrome.show("today")}
-          onAside={aside ? openAside : null} asideLabel={aside?.title} />
+          onAside={openAside} asideLabel={aside?.title || "Info"} />
         </div>
 
         {/* The page's side panel below that: under the page layer, shown as it slides aside */}
-        <aside aria-label={aside?.title || "Side panel"} style={{ width: PUSH_WIDTH.right }}
+        <aside aria-label={aside?.title || "Info"} style={{ width: PUSH_WIDTH.right }}
           className={`${push?.which === "aside" ? "flex" : "hidden"} fixed inset-y-0 right-0 z-[2100] flex-col bg-[#ececec] dark:bg-neutral-950 xl:hidden print:!hidden`}>
           <div className="flex items-center justify-between px-5 pb-2 pt-[max(1.25rem,env(safe-area-inset-top))]">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{aside?.title}</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{aside?.title || "Info"}</h2>
             <button type="button" onClick={() => setAsideOpen(false)} aria-label="Close" className="inline-grid size-9 place-items-center rounded-full !bg-white/80 dark:!bg-neutral-800"><X className="size-4" /></button>
           </div>
-          <div ref={setPhoneAside} className="m-3 mt-2 flex-1 overflow-y-auto rounded-3xl bg-white p-5 dark:bg-neutral-900" />
+          <div ref={setPhoneAside} className={`m-3 mt-2 overflow-y-auto ${aside ? "flex-1" : ""} ${aside?.plain ? "pb-6" : "rounded-3xl bg-white p-5 dark:bg-neutral-900"}`}>
+            {/* A page with nothing of its own here: what the page is for */}
+            {!aside && push?.which === "aside" && <PageInfo path={path} />}
+          </div>
         </aside>
 
         <ChromeSheets chrome={chrome} nav={nav} isAuthenticated={isAuthenticated} theme={theme} path={path} pushed={push?.which ?? null} />
@@ -104,15 +108,17 @@ export default function Layout({ children, isAuthenticated, showFooter = true })
   );
 }
 
-function useMedia(query) {
-  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
-  useEffect(() => {
-    const list = window.matchMedia(query);
-    const onChange = () => setMatches(list.matches);
-    list.addEventListener("change", onChange);
-    return () => list.removeEventListener("change", onChange);
-  }, [query]);
-  return matches;
+function PageInfo({ path }) {
+  const { title, icon: Icon, about } = pageInfo(path);
+  return (
+    <div className="!font-sans">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="grid size-8 place-items-center rounded-lg bg-accent/10 text-accent"><Icon className="size-4" /></span>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
+      </div>
+      <p className="!text-left !font-sans text-slate-600 dark:text-neutral-300">{about}</p>
+    </div>
+  );
 }
 
 const SLIDE_MS = 420;

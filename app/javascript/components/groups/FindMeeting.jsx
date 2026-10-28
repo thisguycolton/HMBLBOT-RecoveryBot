@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { CalendarClock, ChevronLeft, ChevronRight, LayoutGrid, List, MapPin, Radio, Search, SlidersHorizontal, Users, Video, X } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
@@ -41,7 +41,6 @@ const loadView = () => {
 
 export default function FindMeeting() {
   const [params, setParams] = useSearchParams();
-  const location = useLocation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -113,7 +112,6 @@ export default function FindMeeting() {
   const live = get("live") === "1";
   const dayKey = live ? "live" : !date ? "week" : date === todayValue() ? "today" : date === tomorrowValue() ? "tomorrow" : "date";
   const filtersOn = ["q", "date", "live", "time", "attendance", "place", "type"].filter((k) => get(k)).length;
-  const back = `${location.pathname}${location.search}`;
 
   const dayChip = (key, label, changes) => (
     <button key={key} type="button" aria-pressed={dayKey === key} onClick={() => update(changes)}
@@ -130,12 +128,7 @@ export default function FindMeeting() {
     <div ref={top} className="mx-auto max-w-6xl scroll-mt-24 space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          {document.body.dataset.groups === "true" ? (
-            <Link to="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Groups</Link>
-          ) : (
-            <a href="/" className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">← Home</a>
-          )}
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Find a meeting</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Find a meeting</h1>
           <p className="text-sm text-slate-600 dark:text-neutral-400">
             AA Intergroup's meetings and our groups' own. Times are in your time zone ({viewerZoneName()}).
           </p>
@@ -244,11 +237,11 @@ export default function FindMeeting() {
             </div>
           ) : view === "grid" ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {data.meetings.map((m) => <MeetingCard key={m.key} meeting={m} now={now} back={back} />)}
+              {data.meetings.map((m) => <MeetingCard key={m.key} meeting={m} now={now} />)}
             </div>
           ) : (
             <div className="space-y-1.5 rounded-2xl bg-neutral-100 p-1.5 dark:bg-neutral-800/70">
-              {data.meetings.map((m) => <MeetingRow key={m.key} meeting={m} now={now} back={back} />)}
+              {data.meetings.map((m) => <MeetingRow key={m.key} meeting={m} now={now} />)}
             </div>
           )}
 
@@ -297,12 +290,12 @@ function Types({ types, max }) {
 }
 
 // A small group page: its cover and name, then the meeting
-function MeetingCard({ meeting: m, now, back }) {
+function MeetingCard({ meeting: m, now }) {
   const { group } = m;
   const sameName = m.name.trim().toLowerCase() === group.title.trim().toLowerCase();
   return (
     <div className="relative flex flex-col">
-    <Link to={group.href} state={{ back }}
+    <Link to={group.href}
       className="group flex flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-panel ring-1 ring-neutral-200 transition hover:-translate-y-0.5 hover:ring-accent/60 dark:bg-neutral-900 dark:ring-neutral-800">
       <Cover group={group} className="h-32">
         <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/25 to-transparent p-4">
@@ -342,12 +335,12 @@ function MeetingShare({ meeting: m, className }) {
   );
 }
 
-function MeetingRow({ meeting: m, now, back }) {
+function MeetingRow({ meeting: m, now }) {
   const { group } = m;
   const at = new Date(m.starts_at);
   return (
     <div className="flex items-center gap-1 rounded-xl bg-white pr-1.5 shadow-panel hover:ring-1 hover:ring-accent/50 dark:bg-neutral-900">
-    <Link to={group.href} state={{ back }}
+    <Link to={group.href}
       className="group flex min-w-0 flex-1 items-center gap-3 p-2.5">
       <div className="w-20 shrink-0 text-center">
         <p className="!text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">

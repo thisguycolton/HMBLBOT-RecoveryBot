@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { CalendarDays, Check, UserPlus } from "lucide-react";
 import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
-import { heroButton, heroQuietButton } from "../groups/page/GroupHero";
+import { heroBleed, heroButton, heroQuietButton } from "../groups/page/GroupHero";
 import { showToast } from "../../lib/toast";
 
 // The top of a profile: their cover (or the site's blue), picture, name, @username and
 // counts, with Follow (or `actions` on your own) under them.
-export default function ProfileHero({ person, viewer, coverUrl, actions, onFollowChange }) {
+export default function ProfileHero({ person, viewer, coverUrl, actions, onFollowChange, bleed = false }) {
   const [busy, setBusy] = useState(false);
   const chip = "inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur";
   const toggleFollow = async () => {
@@ -24,7 +24,7 @@ export default function ProfileHero({ person, viewer, coverUrl, actions, onFollo
   const joined = person.joined && new Date(`${person.joined}T00:00:00`).toLocaleDateString([], { month: "long", year: "numeric" });
 
   return (
-    <header className={`relative overflow-hidden rounded-3xl ${coverUrl ? "bg-neutral-900" : "bg-gradient-to-br from-accent via-sky-600 to-indigo-700"}`}>
+    <header className={`relative overflow-hidden rounded-3xl ${bleed ? heroBleed : ""} ${coverUrl ? "bg-neutral-900" : "bg-gradient-to-br from-accent via-sky-600 to-indigo-700"}`}>
       {coverUrl && <img src={coverUrl} alt="" className="absolute inset-0 size-full object-cover" />}
       <div className={`relative flex min-h-[13rem] flex-col justify-end gap-4 p-6 sm:min-h-[15rem] sm:p-10 ${coverUrl ? "bg-gradient-to-t from-black/80 via-black/35 to-transparent" : ""}`}>
         <div className="flex flex-wrap items-end gap-4 sm:gap-5">
