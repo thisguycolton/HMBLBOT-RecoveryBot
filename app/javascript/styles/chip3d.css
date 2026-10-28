@@ -1,0 +1,35 @@
+/* A chip in 3D (components/recovery/Chip3D.jsx). Plain CSS: the day count modal shows one on
+   the older Bootstrap pages too. */
+.hb-chip3d {
+  align-items: center;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+  outline: none;
+  perspective: 900px;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.hb-chip3d:active { cursor: grabbing; }
+.hb-chip3d:focus-visible { outline: 2px solid rgb(255 255 255 / 0.8); outline-offset: 6px; border-radius: 1rem; }
+.hb-chip3d__stage { position: relative; transform-style: preserve-3d; }
+.hb-chip3d__coin { height: 100%; position: relative; transform-style: preserve-3d; width: 100%; will-change: transform; }
+.hb-chip3d__layer { inset: 0; position: absolute; }
+.hb-chip3d__face { backface-visibility: hidden; -webkit-backface-visibility: hidden; inset: 0; position: absolute; }
+.hb-chip3d__face svg { display: block; height: 100%; pointer-events: none; width: 100%; }
+.hb-chip3d__sheen {
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.5) 45%, rgb(255 255 255 / 0.08) 55%, transparent 70%);
+  background-size: 250% 100%;
+  inset: 1.5%;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  position: absolute;
+}
+.hb-chip3d__shadow {
+  background: radial-gradient(closest-side, rgb(0 0 0 / 0.35), transparent);
+  border-radius: 50%;
+  margin-top: 0.6rem;
+  pointer-events: none;
+}

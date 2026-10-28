@@ -1,7 +1,7 @@
 import {
   BookHeart, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, FileText, Gamepad2, Gavel,
   Highlighter, House, Landmark, LayoutTemplate, Library, MapPinned, MonitorPlay, NotebookPen, Pickaxe, Scale, ScrollText,
-  Settings, Sparkles, Stamp, UserCheck, UserRound, Users, Bookmark, Presentation,
+  Settings, Sparkles, Stamp, UserCheck, UserRound, Users, Bookmark, Presentation, Medal, MoonStar, HandHeart,
 } from "lucide-react";
 
 // What the shell's sidebar (Sidebar.jsx) lists. "You" and "Explore" are fixed; "Your groups"
@@ -15,6 +15,10 @@ export const YOU_ITEMS = [
   { key: "highlights", label: "Highlights", href: "/library/highlights", icon: Highlighter },
   { key: "readings", label: "My readings", href: "/readings/mine", icon: NotebookPen },
   { key: "hosting", label: "Hosting", href: "/people/me/hosting", icon: Presentation, host: true },
+  // Recovery tools (entrypoints/recovery.jsx), private to the member
+  { key: "chips", label: "Chips", href: "/recovery", icon: Medal, exact: true },
+  { key: "inventory", label: "10th step", href: "/recovery/inventory", icon: MoonStar },
+  { key: "gratitude", label: "Gratitude", href: "/recovery/gratitude", icon: HandHeart },
 ];
 
 export const EXPLORE_ITEMS = [
@@ -75,6 +79,7 @@ export const ROLE_SECTIONS = [
       { key: "literature", path: "/literature", label: "Approved literature", icon: BookOpen },
       { key: "court", path: "/court", label: "Court verifications", icon: ClipboardCheck },
       { key: "settings", path: "/settings", label: "Group settings", icon: Settings },
+      { key: "chips", path: "/chips", label: "Chips", icon: Medal },
       { key: "page", href: (slug) => `/groups/${slug}/page/edit`, label: "Edit the group page", icon: LayoutTemplate },
     ],
   },

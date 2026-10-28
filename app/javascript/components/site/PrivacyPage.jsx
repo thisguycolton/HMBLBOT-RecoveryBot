@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "October 21, 2026";
+const UPDATED = "October 28, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -37,6 +37,7 @@ const STORAGE = [
   ["hosting-share-size", "Text size of a service reading opened to share on screen"],
   ["questScreenName, questChime", "Your screen name and sound setting in The Acid Quest"],
   ["installNudge.dismissed", "That you closed the “Add RecoveryBot to your home screen” card"],
+  ["hb-day-count-seen", "The day your day count last popped up, so a milestone celebration shows once that day"],
 ];
 
 function H2({ id, children }) {
@@ -108,6 +109,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <ul>
             <li>You can use the Topicificator, the readings and Find a meeting without an account. We don't need your real name.</li>
             <li>Profiles, notes, highlights and member lists are only ever shown to signed-in members, never to the public web or search engines.</li>
+            <li>Your 10th step inventories, gratitude lists and chips are only ever shown to you.</li>
             <li>We don't sell or rent anything about you, show ads, or use advertising trackers.</li>
             <li>We don't use cookies to track you. The few cookies we set keep you signed in and make forms work, so there's no cookie banner.</li>
             <li>You can delete your account yourself from your profile page.</li>
@@ -134,6 +136,8 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Your account:</strong> name, email address and password. The password is stored only as a one-way hash; nobody can read it. We email you a link to confirm the address before you can sign in.</li>
             <li><strong>Your profile:</strong> username, picture, a short bio, an optional sobriety date, and how you lay out your profile page.</li>
             <li><strong>Notes and highlights:</strong> passages you highlight in the library, notes you write on them, and notes on your timeline (with up to six pictures). Each one has its own visibility (see below).</li>
+            <li><strong>10th step inventories and gratitude lists:</strong> what you write in the 10th step (your yes or no to each question and your notes) and your gratitude lists, one of each a day, with the day they're for. Only you can read them on the site: not your groups, not the people you follow. No admin page shows them; the few people who run RecoveryBot could reach them in the database, like anything stored, but we don't look.</li>
+            <li><strong>Chips:</strong> your chips are worked out from your sobriety date and how many inventories and gratitude lists you've written, so nothing extra is kept for them, except which of your groups you picked as your home group for chips. A group's admins choose how that group's chips look; they never see who has which chip.</li>
             <li><strong>Follows:</strong> who you follow and who follows you.</li>
             <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. Turning them off, removing the device in your settings, or signing out on that device deletes it.</li>
             <li><strong>Reactions, comments and reposts:</strong> the Like, Love or Hugs you give a note or comment, comments you write on notes, and notes you repost to your timeline.</li>
@@ -175,6 +179,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <ul>
             <li><strong>The public web:</strong> the home page, the tools, Find a meeting, published events, and the parts of a group's home page that its admins choose to show visitors. Profiles are never public.</li>
             <li><strong>Signed-in members:</strong> profiles, and notes or highlights set to <em>Members</em>. Notes set to <em>Followers</em> are only seen by people who follow you; <em>Private</em> ones (the default) only by you. Highlights you share by link can be opened by anyone with that link. Anyone who can see a note sees its comments, and who reacted to it and how. Only notes set to <em>Members</em> can be reposted, and when you narrow or delete one, its reposts go too.</li>
+            <li><strong>Only you:</strong> your 10th step inventories, gratitude lists and chips, and notes set to <em>Private</em>.</li>
             <li><strong>Your groups:</strong> members of a group see its member list, its members-only pages and records, and notes you share to it. Record keepers and admins of the group see drafts and everything else the group keeps.</li>
             <li><strong>Site admins:</strong> the few people who run RecoveryBot can see what's stored, to fix problems and answer requests. We don't browse your things without a reason.</li>
           </ul>
@@ -229,7 +234,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <ul>
             <li>Sell, rent or trade information about you.</li>
             <li>Show ads, or use advertising or social media tracking pixels.</li>
-            <li>Let anyone use your notes, highlights or group records to train AI models.</li>
+            <li>Let anyone use your notes, highlights, inventories, gratitude lists or group records to train AI models.</li>
             <li>Share anything with your court, employer or anyone else unless you or your group asks us to, or the law makes us.</li>
           </ul>
 
@@ -241,6 +246,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <ul>
             <li>your account, profile, picture and settings;</li>
             <li>your highlights, notes, timeline notes and their pictures;</li>
+            <li>your 10th step inventories and gratitude lists;</li>
             <li>your follows, reactions, comments, reposts, notifications (and the devices you get them on), RSVPs, group memberships and schedule polls you made.</li>
           </ul>
           <p>
@@ -260,6 +266,7 @@ export default function PrivacyPage({ turnstile = false }) {
             <li>Choose who sees each note and highlight, and set the default for new ones in your settings.</li>
             <li>Turn notifications on or off for each device, or remove a device, under <em>Notifications on this device</em> in <a href="/users/edit#notifications">your settings</a>, or block them in your browser.</li>
             <li>Leave a group at any time from the group's page.</li>
+            <li>Clear a day's 10th step or gratitude list by emptying it and saving.</li>
             <li>Ask us, through {contact}, for a copy of what we have about you, to correct it, or to delete something. We'll answer whatever country you live in.</li>
           </ul>
 

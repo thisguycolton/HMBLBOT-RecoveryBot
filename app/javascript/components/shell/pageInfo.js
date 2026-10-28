@@ -9,6 +9,9 @@ const ABOUT = {
   highlights: "Everything you've highlighted in the library, with your notes. Tap one to go back to that spot in the book.",
   readings: "The readings you've written. Finish your drafts and publish them when they're ready.",
   hosting: "The meetings you're down to host, and the subs your groups are asking for. Take one here.",
+  chips: "Your chips: one for each sobriety milestone, and triangles for your 10th steps and gratitude lists. Only you see them.",
+  inventory: "Your nightly 10th step. Answer each question, save it, and look back at the nights before. Only you see it.",
+  gratitude: "Today's gratitude list, one thing on each line, and the days before. Only you see it.",
   find: "Look up AA Intergroup's meetings and our groups' own, by name, day or Zoom link. Times show in your time zone.",
   library: "The literature, ready to read. Open a book, search it, or go to a printed page. Select words to highlight them or add a note.",
   archive: "Readings people have shared. Search or browse them, and open one to read or share it.",
@@ -45,6 +48,7 @@ const ROLE_ABOUT = {
     literature: "The literature the group approves to read in its meetings.",
     court: "Court verification forms members have asked to have signed.",
     settings: "The group's name, logo, time zone and how it runs.",
+    chips: "How the group's chips look to the members who call it their home group: colors, the words around the edge, and what's in the middle.",
     page: "Lay out the group's page in the HMBLBOT Editor.",
   },
 };
