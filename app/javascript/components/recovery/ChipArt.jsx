@@ -23,6 +23,32 @@ export const shown = (scene) => {
   return (scene?.art?.layers || []).filter((l) => !hidden.has(l.id));
 };
 
+// Where the parts sit (scene.layout, else its template's): the whole picture and the milestone
+// on each chip shape ({ round: { art, milestone }, triangle: { ... } }, in chip units, around
+// their usual centers), and each layer of the art ({ layers: { id: { x, y, s, cx, cy } } }, in
+// the art's own units, scaled around cx, cy). s is the size: 1 as drawn.
+export const layoutOf = (scene) => scene?.layout || scene?.template_layout || {};
+export const FRAMES = { round: { box: [10, 10, 180, 180], badge: [100, 146], cartouche: [100, 162] }, triangle: { box: [48, 52, 104, 92], badge: [100, 122.5] } };
+// The SVG transform for a placement around a center
+export function placeTransform(place, cx, cy) {
+  if (!place) return undefined;
+  const { x = 0, y = 0, s = 1 } = place;
+  if (!x && !y && s === 1) return undefined;
+  return `translate(${x} ${y}) translate(${cx} ${cy}) scale(${s}) translate(${-cx} ${-cy})`;
+}
+const layerTransform = (scene, layer) => {
+  const place = layoutOf(scene).layers?.[layer.id];
+  return place && placeTransform(place, place.cx || 0, place.cy || 0);
+};
+// How the art's units map onto a box: its scale and where its corner lands (preserveAspectRatio slice)
+export function artScale(scene, [x, y, w, h]) {
+  const [bx, by, bw, bh] = scene.art.view_box;
+  const k = Math.max(w / bw, h / bh);
+  return { k, ox: x + (w - bw * k) / 2 - bx * k, oy: y + (h - bh * k) / 2 - by * k };
+}
+// A closed outline (its interior can be filled even when it isn't)
+export const closed = (shape) => /z\s*$/i.test(shape.d.trim());
+
 // The metal's shine, for lines and bare metal
 export function MetalGradient({ id, color }) {
   return (
@@ -35,77 +61,98 @@ export function MetalGradient({ id, color }) {
 }
 
 // The art across a box (the coin's face: x, y, w, h), clipped by `clip` (a clipPath id).
-// `onShape(shape, layer, event)` makes shapes clickable (the editor's bucket and eyedropper).
-export default function SceneArt({ id, scene, x = 10, y = 10, w = 180, h = 180, clip, onShape, cursor }) {
+// `frame` (round or triangle) says which placement of the picture to use (layoutOf).
+// `onShape(shape, layer, event)` makes shapes clickable (the editor's tools), and
+// `onBackground(event)` the face around them.
+export default function SceneArt({ id, scene, x = 10, y = 10, w = 180, h = 180, clip, frame = "round", onShape, onBackground, cursor }) {
   if (!scene?.art) return null;
-  return scene.finish === "struck"
-    ? <Struck id={id} scene={scene} box={[x, y, w, h]} clip={clip} onShape={onShape} cursor={cursor} />
-    : <Enamel id={id} scene={scene} box={[x, y, w, h]} clip={clip} onShape={onShape} cursor={cursor} />;
+  const props = { id, scene, box: [x, y, w, h], clip, frame, onShape, onBackground, cursor };
+  return scene.finish === "struck" ? <Struck {...props} /> : <Enamel {...props} />;
 }
 
-function ArtBox({ scene, box: [x, y, w, h], children }) {
+// The art in its box, where the layout puts it. Each layer's group has data-layer (the editor
+// measures them).
+function ArtBox({ scene, box: [x, y, w, h], frame, children }) {
   const [bx, by, bw, bh] = scene.art.view_box;
-  return <svg x={x} y={y} width={w} height={h} viewBox={`${bx} ${by} ${bw} ${bh}`} preserveAspectRatio="xMidYMid slice">{children}</svg>;
+  return (
+    <g transform={placeTransform(layoutOf(scene)[frame]?.art, x + w / 2, y + h / 2)} data-art="">
+      <svg x={x} y={y} width={w} height={h} viewBox={`${bx} ${by} ${bw} ${bh}`} preserveAspectRatio="xMidYMid slice" overflow="visible">{children}</svg>
+    </g>
+  );
 }
 
-function Enamel({ id, scene, box, clip, onShape, cursor }) {
+function Layer({ scene, layer, children }) {
+  return <g transform={layerTransform(scene, layer)}><g data-layer={layer.id}>{children}</g></g>;
+}
+
+function Enamel({ id, scene, box, clip, frame, onShape, onBackground, cursor }) {
   const metal = `url(#${id}-metal)`;
   return (
     <g clipPath={clip ? `url(#${clip})` : undefined}>
       <defs><MetalGradient id={`${id}-metal`} color={metalOf(scene)} /></defs>
-      <rect x={box[0]} y={box[1]} width={box[2]} height={box[3]} fill={scene.metal === "black_gold" ? BLACK : shade(metalOf(scene), -0.1)} />
-      <ArtBox scene={scene} box={box}>
+      <rect x={box[0] - 60} y={box[1] - 60} width={box[2] + 120} height={box[3] + 120} fill={scene.metal === "black_gold" ? BLACK : shade(metalOf(scene), -0.1)}
+        style={onBackground ? { cursor } : undefined} onClick={onBackground} data-face="" />
+      <ArtBox scene={scene} box={box} frame={frame}>
         {shown(scene).filter((l) => l.role !== "cutout").map((layer) => (
-          <g key={layer.id}>
+          <Layer key={layer.id} scene={scene} layer={layer}>
             {layer.shapes.map((sh) => {
               const enamel = layer.role === "enamel";
+              const painted = enamel && scene.fills?.[sh.id]; // a group's bucket, even on an outline
               return (
                 <path key={sh.id} d={sh.d} transform={sh.t} strokeLinecap="round" strokeLinejoin="round"
-                  fill={sh.fill ? (enamel ? paintOf(sh, scene) : metal) : "none"}
+                  fill={sh.fill || painted ? (enamel ? paintOf(sh, scene) : metal) : "none"}
                   stroke={sh.stroke ? metal : "none"} strokeWidth={sh.sw}
-                  style={onShape ? { cursor } : undefined}
+                  // An unfilled outline is clickable inside, so the bucket can fill it
+                  style={onShape ? { cursor, pointerEvents: !sh.fill && closed(sh) ? "visible" : undefined } : undefined} data-shape={sh.id}
                   onClick={onShape ? (e) => onShape(sh, layer, e) : undefined} />
               );
             })}
-          </g>
+          </Layer>
         ))}
       </ArtBox>
     </g>
   );
 }
 
-function Struck({ id, scene, box, clip, onShape, cursor }) {
+function Struck({ id, scene, box, clip, frame, onShape, onBackground, cursor }) {
   const color = metalOf(scene);
   const blackGold = scene.metal === "black_gold";
   return (
     <g clipPath={clip ? `url(#${clip})` : undefined}>
       <defs><LiftFilter id={`${id}-struck`} metal color={color} height={5} sharpness={8} /></defs>
-      <rect x={box[0]} y={box[1]} width={box[2]} height={box[3]} fill={blackGold ? BLACK : shade(color, -0.12)} />
-      <g filter={`url(#${id}-struck)`}>
-        <rect x={box[0]} y={box[1]} width={box[2]} height={box[3]} fill="#000000" />
-        <ArtBox scene={scene} box={box}>
+      <rect x={box[0] - 60} y={box[1] - 60} width={box[2] + 120} height={box[3] + 120} fill={blackGold ? BLACK : shade(color, -0.12)}
+        style={onBackground ? { cursor } : undefined} onClick={onBackground} />
+      <g filter={`url(#${id}-struck)`} pointerEvents="none">
+        <rect x={box[0] - 60} y={box[1] - 60} width={box[2] + 120} height={box[3] + 120} fill="#000000" />
+        <ArtBox scene={scene} box={box} frame={frame}>
           {shown(scene).filter((l) => l.role !== "cutout").map((layer) => {
             const g = Math.round(heightOf(layer, scene) * 255);
             const gray = `rgb(${g},${g},${g})`;
             return (
-              <g key={layer.id}>
+              <Layer key={layer.id} scene={scene} layer={layer}>
                 {layer.shapes.map((sh) => (
                   <path key={sh.id} d={sh.d} transform={sh.t} fill={sh.fill ? gray : "none"} stroke={sh.stroke ? gray : "none"} strokeWidth={sh.sw}
                     strokeLinecap="round" strokeLinejoin="round" />
                 ))}
-              </g>
+              </Layer>
             );
           })}
         </ArtBox>
       </g>
       {/* The filter can't be clicked through, so the editor gets the shapes again, unseen */}
       {onShape && (
-        <ArtBox scene={scene} box={box}>
-          {shown(scene).filter((l) => l.role !== "cutout").map((layer) => layer.shapes.map((sh) => (
-            <path key={sh.id} d={sh.d} transform={sh.t} fill={sh.fill ? "#000" : "none"} stroke={sh.stroke ? "#000" : "none"} strokeWidth={sh.sw}
-              opacity="0" style={{ cursor }} onClick={(e) => onShape(sh, layer, e)} />
-          )))}
-        </ArtBox>
+        <g opacity="0">
+          <ArtBox scene={scene} box={box} frame={frame}>
+            {shown(scene).filter((l) => l.role !== "cutout").map((layer) => (
+              <Layer key={layer.id} scene={scene} layer={layer}>
+                {layer.shapes.map((sh) => (
+                  <path key={sh.id} d={sh.d} transform={sh.t} fill={sh.fill ? "#000" : "none"} stroke={sh.stroke ? "#000" : "none"} strokeWidth={sh.sw}
+                    style={{ cursor }} onClick={(e) => onShape(sh, layer, e)} />
+                ))}
+              </Layer>
+            ))}
+          </ArtBox>
+        </g>
       )}
     </g>
   );

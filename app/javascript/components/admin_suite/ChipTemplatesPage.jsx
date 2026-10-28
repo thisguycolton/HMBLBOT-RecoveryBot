@@ -9,7 +9,7 @@ import { RoundChip } from "../recovery/Chip";
 import { SpinningChip } from "../recovery/ChipModal";
 import { METAL_LABELS } from "../recovery/ChipArt";
 import ArtEditor from "../chips/ArtEditor";
-import { readText, templateDesign } from "../chips/lib";
+import { applyDefaults, readText, templateDesign } from "../chips/lib";
 import { Card } from "./App";
 
 const PREVIEW = { key: "year", years: 1, label: "1 year" };
@@ -139,8 +139,15 @@ function TemplateEditor({ id, notify }) {
   const setDraft = (patch) => { setT({ ...t, draft: { ...draft, ...patch } }); setDirty(true); };
   const setDefault = (patch) => setDraft({ defaults: { ...defaults, ...patch } });
   const setField = (patch) => { setT({ ...t, ...patch }); setDirty(true); };
-  const scene = { finish: defaults.finish || "enamel", metal: defaults.metal || "brass", colors: draft.palettes[palette] || {}, palette, hidden };
-  const design = templateDesign(base, { ...t, draft }, { draft: true, scene: { palette, hidden } });
+  const scene = { finish: defaults.finish || "enamel", metal: defaults.metal || "brass", colors: draft.palettes[palette] || {}, palette, hidden, layout: defaults.layout };
+  const round = templateDesign(base, { ...t, draft }, { draft: true, scene: { palette, hidden } });
+  // The same art on a Meeting Maker chip
+  const design = { ...round, meeting: { ...base.meeting, emblem: "scene", scene: round.round.scene, milestone_at: defaults.milestone_at || "badge", edge: defaults.edge || "plain", sides: ["Meeting", "Maker", "Your meeting"] } };
+  const today = new Date().toISOString().slice(0, 10);
+  const previews = [
+    ...(t.fits !== "triangle" ? [{ id: "preview-round", shape: "round", kind: "round", milestone: PREVIEW, label: "1 year", on: today }] : []),
+    ...(t.fits !== "round" ? [{ id: "preview-meeting", shape: "triangle", kind: "meeting", count: 10, label: "10 meetings", on: today }] : []),
+  ];
   const baseColors = [...new Set(draft.art.layers.filter((l) => l.role === "enamel").flatMap((l) => l.shapes.map((s) => s.fill).filter(Boolean)))];
 
   const save = async () => {
@@ -196,13 +203,23 @@ function TemplateEditor({ id, notify }) {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <Card title="Art" subtitle="Paint shapes with the bucket. Lock a layer to keep groups from repainting it.">
-          <ArtEditor mode="template" value={{ art: draft.art, scene }}
-            onChange={(next) => { if (next.art !== draft.art) setDraft({ art: next.art }); setHidden(next.scene.hidden || []); }} />
+          <ArtEditor mode="template" value={{ art: draft.art, scene }} base={base} look={applyDefaults({}, defaults)} fits={t.fits}
+            onChange={(next) => {
+              const patch = {};
+              if (next.art !== draft.art) patch.art = next.art;
+              if (next.scene.layout !== defaults.layout) patch.defaults = { ...defaults, layout: next.scene.layout };
+              if (Object.keys(patch).length) setDraft(patch);
+              setHidden(next.scene.hidden || []);
+            }} />
         </Card>
 
         <div className="space-y-6">
           <Card title="Preview">
-            <div className="flex justify-center"><SpinningChip key={`${palette}-${defaults.finish}-${defaults.metal}`} chip={{ id: "preview", shape: "round", kind: "round", milestone: PREVIEW, label: "1 year", on: new Date().toISOString().slice(0, 10) }} design={design} size={220} /></div>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              {previews.map((chip) => (
+                <SpinningChip key={`${chip.id}-${palette}-${defaults.finish}-${defaults.metal}`} chip={chip} design={design} size={previews.length > 1 ? 150 : 220} />
+              ))}
+            </div>
           </Card>
           <Card title="About it">
             <div className="space-y-3">

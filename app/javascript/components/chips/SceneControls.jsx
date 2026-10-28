@@ -14,6 +14,11 @@ const THUMB = { key: "year", years: 1, label: "1 year" };
 export const MILESTONE_AT = [{ value: "badge", label: "Badge" }, { value: "cartouche", label: "Cartouche" }, { value: "rim", label: "On the rim" }, { value: "none", label: "None" }];
 export const EDGES = [{ value: "plain", label: "Plain" }, { value: "reeded", label: "Reeded" }, { value: "rope", label: "Rope" }, { value: "beads", label: "Beads" }];
 
+// What the art editor shows around the art: a Meeting Maker part's words go around a round chip
+const editorLook = (part, fits) => (part.sides && fits === "round"
+  ? { top_text: [part.sides[0], part.sides[1]].filter(Boolean).join(" "), bottom_text: part.sides[2] || "Your meeting", milestone_at: part.milestone_at, edge: part.edge, numerals: "number" }
+  : part);
+
 // Picking and setting up a chip template's art on a design part (round chips, or Meeting
 // Maker chips: `fits` "round" or "triangle"): the templates as chips to pick from (the site's
 // and the group's own, which it can import here), then the palette, enamel or struck, the metal,
@@ -139,7 +144,7 @@ export default function SceneControls({ slug, base, templates, fits, part, onCha
             </button>
             {editing && (
               <div className="mt-3 rounded-2xl bg-white p-3 ring-1 ring-neutral-200 dark:bg-neutral-950 dark:ring-neutral-800">
-                <ArtEditor mode="design" value={{ art: scene.art, scene }} onChange={(next) => onChange({ scene: next.scene })} />
+                <ArtEditor mode="design" value={{ art: scene.art, scene }} base={base} look={editorLook(part, fits)} fits={fits} onChange={(next) => onChange({ scene: next.scene })} />
               </div>
             )}
           </div>

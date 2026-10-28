@@ -11,7 +11,7 @@ class ChipTemplate < ApplicationRecord
   FITS = %w[round triangle both].freeze
   STATUSES = %w[draft published retired].freeze
   # What a template sets for the chips that use it (ChipDesign's round keys)
-  DEFAULT_KEYS = %w[finish metal milestone_at edge top_text bottom_text back_text back_ring_top back_ring_bottom palette].freeze
+  DEFAULT_KEYS = %w[finish metal milestone_at edge top_text bottom_text back_text back_ring_top back_ring_bottom palette layout].freeze
 
   belongs_to :group, optional: true
   belongs_to :created_by, class_name: "User", optional: true
@@ -76,9 +76,10 @@ class ChipTemplate < ApplicationRecord
     return {} unless raw.is_a?(Hash)
 
     raw = raw.stringify_keys
-    words = ChipDesign.normalize("round" => raw.slice(*(DEFAULT_KEYS - %w[finish metal palette])))["round"] || {}
+    words = ChipDesign.normalize("round" => raw.slice(*(DEFAULT_KEYS - %w[finish metal palette layout])))["round"] || {}
     words.merge({ "finish" => (raw["finish"] if ChipDesign::SCENE_FINISHES.include?(raw["finish"])),
                   "metal" => (raw["metal"] if ChipDesign::METALS.key?(raw["metal"])),
-                  "palette" => raw["palette"].to_s.squish.first(30).presence }.compact)
+                  "palette" => raw["palette"].to_s.squish.first(30).presence,
+                  "layout" => ChipDesign.layout(raw["layout"]) }.compact)
   end
 end

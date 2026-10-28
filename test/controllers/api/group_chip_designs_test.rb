@@ -39,6 +39,22 @@ class Api::GroupChipDesignsTest < ActionDispatch::IntegrationTest
     assert_equal "triangle", ChipDesign.for_group(@group)["round"]["emblem"], "hidden art falls back to the circle and triangle"
   end
 
+  test "where the parts sit: a template's layout comes with its art, and a group can move them its own way" do
+    @site.update!(defaults: { "layout" => { "round" => { "milestone" => { "x" => 0, "y" => "-30", "s" => 0.8 }, "art" => { "s" => 99 } },
+                                            "layers" => { "l1" => { "x" => 4, "cx" => 50, "cy" => 50, "bad" => 1 }, "<script>" => { "x" => 1 } } } })
+    assert_equal({ "round" => { "milestone" => { "x" => 0.0, "y" => -30.0, "s" => 0.8 }, "art" => { "s" => 5.0 } }, "layers" => { "l1" => { "x" => 4.0, "cx" => 50.0, "cy" => 50.0 } } },
+                 @site.reload.defaults["layout"], "only numbers, sizes kept sensible")
+    @site.publish!
+
+    put "/api/groups/#{@group.slug}/chips", params: { design: { round: { emblem: "scene", scene: { template_id: @site.id } } } }, as: :json
+    scene = response.parsed_body.dig("design", "round", "scene")
+    assert_equal(-30.0, scene.dig("template_layout", "round", "milestone", "y"))
+    assert_nil scene["layout"]
+
+    put "/api/groups/#{@group.slug}/chips", params: { design: { round: { emblem: "scene", scene: { template_id: @site.id, layout: { triangle: { milestone: { x: 12 } } } } } } }, as: :json
+    assert_equal({ "triangle" => { "milestone" => { "x" => 12.0 } } }, @group.reload.chip_design.dig("round", "scene", "layout"))
+  end
+
   test "a group imports its own art, which only it can use, and can take it off its list" do
     post "/api/groups/#{@group.slug}/chips/templates", params: { svg: SVG, title: "Our hills" }, as: :json
     assert_response :created

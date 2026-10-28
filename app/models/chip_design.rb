@@ -109,7 +109,8 @@ module ChipDesign
       if version
         palette = scene["palette"].presence || version.defaults["palette"]
         part["scene"] = scene.merge("version" => version.number, "title" => template.title, "art" => version.art,
-                                    "colors" => version.palettes[palette] || {}, "latest" => template.latest.number)
+                                    "colors" => version.palettes[palette] || {}, "latest" => template.latest.number,
+                                    "template_layout" => version.defaults["layout"]).compact
       else
         part["emblem"] = part.key?("shape") ? "number" : "triangle"
       end
@@ -222,7 +223,31 @@ module ChipDesign
       "palette" => text(raw["palette"], 30).presence,
       "finish" => (raw["finish"] if SCENE_FINISHES.include?(raw["finish"])),
       "metal" => (raw["metal"] if METALS.key?(raw["metal"])),
-      "fills" => fills.presence, "hidden" => hidden.presence, "heights" => heights.presence }.compact
+      "fills" => fills.presence, "hidden" => hidden.presence, "heights" => heights.presence, "layout" => layout(raw["layout"]) }.compact
+  end
+
+  # Where an illustrated chip's parts sit (ChipArt.jsx layoutOf): the picture and the milestone
+  # on round and triangle chips, and each layer of the art
+  def layout(raw)
+    raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+    return nil unless raw.is_a?(Hash)
+
+    raw = raw.deep_stringify_keys
+    layers = raw["layers"].is_a?(Hash) ? raw["layers"].first(40).to_h { |k, v| [k.to_s[/\A[\w-]{1,24}\z/], place(v)] }.select { |k, v| k && v } : {}
+    frames = %w[round triangle].to_h do |frame|
+      parts = raw[frame].is_a?(Hash) ? %w[art milestone].to_h { |part| [part, place(raw[frame][part])] }.compact : {}
+      [frame, parts.presence]
+    end
+    { "layers" => layers.presence, **frames }.compact.presence
+  end
+
+  def place(raw)
+    return nil unless raw.is_a?(Hash)
+
+    out = %w[x y s cx cy].to_h { |k| [k, Float(raw[k].to_s, exception: false)] }.compact.select { |_, v| v.finite? }
+    out["s"] = out["s"].clamp(0.1, 5.0).round(3) if out["s"]
+    %w[x y cx cy].each { |k| out[k] = out[k].clamp(-100_000.0, 100_000.0).round(2) if out[k] }
+    out.presence
   end
 
   def whole(value, range)
