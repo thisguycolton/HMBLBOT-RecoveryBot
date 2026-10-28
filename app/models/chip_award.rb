@@ -16,6 +16,8 @@ class ChipAward < ApplicationRecord
   before_validation { self.email = email.to_s.strip.downcase }
   before_validation { self.claim_token ||= SecureRandom.urlsafe_base64(24) }
   before_validation { self.years = nil unless milestone_key == "year" }
+  # Minted in the group's design as it is when given, and never changes after
+  before_create { self.design ||= ChipDesign.for_group(group) }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP, message: "doesn't look like an email address" }
   validates :milestone_key, inclusion: { in: ROUND_KEYS }
   validates :years, numericality: { only_integer: true, in: 1..99 }, if: -> { milestone_key == "year" }
@@ -42,7 +44,7 @@ class ChipAward < ApplicationRecord
 
   def as_chip_json
     { id: "award:#{id}", slot: slot, shape: "round", kind: "round", label: label, on: on.iso8601, source: "given",
-      milestone: { key: milestone_key, years: years, label: label }.compact, design: ChipDesign.for_group(group),
+      milestone: { key: milestone_key, years: years, label: label }.compact, design: design || ChipDesign.for_group(group),
       group: { title: group.title, logo_url: logo_url }, given_by: given_by&.display_name, note: note.presence }
   end
 

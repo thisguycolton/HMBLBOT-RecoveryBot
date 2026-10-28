@@ -96,6 +96,8 @@ Rails.application.routes.draw do
     resource :chips, controller: "group_chips", only: %i[show update] do
       put "meetings/:meeting_id", action: :meeting
       post :relief
+      post :templates, action: :create_template
+      delete "templates/:id", action: :destroy_template
     end
     resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy] do
       post :link, on: :collection

@@ -29,6 +29,7 @@ export function roman(n) {
 
 // What the middle of a round chip says: ["30", "DAYS"], ["IX", "YEARS"] ...
 function roundFace(milestone, numerals) {
+  if (milestone.key === "count") return [String(milestone.count), milestone.count === 1 ? "MEETING" : "MEETINGS"];
   if (milestone.key === "year") {
     const n = milestone.years || 1;
     return [numerals === "number" ? String(n) : roman(n), n === 1 ? "YEAR" : "YEARS"];
@@ -60,6 +61,25 @@ export function triangleLook(design, kind) {
 }
 // A chip with a template's art on it (ChipArt.jsx)
 export const isScene = (part) => part?.emblem === "scene" && !!part.scene?.art;
+
+// Meeting Maker chips are designed in their own part (ChipDesign "meeting": shape, a color or a
+// template's art, the sides, the back's words); this lays it over the round and triangle parts
+// the chips are drawn from. Round ones show the count where a milestone would be.
+export function meetingLook(design) {
+  const m = design?.meeting;
+  if (!m) return design;
+  const scene = m.emblem === "scene" && m.scene?.art ? m.scene : null;
+  const sides = m.sides || ["", "", ""];
+  return {
+    ...design,
+    triangle: { ...design.triangle, sides, finish: m.finish, colors: { ...design.triangle?.colors, meeting: m.color }, emblem: scene ? "scene" : "number", scene, back_text: m.back_text },
+    round: {
+      ...design.round, top_text: [sides[0], sides[1]].filter(Boolean).join(" "), bottom_text: sides[2] || "", back_text: m.back_text,
+      emblem: scene ? "scene" : "none", scene, finish: m.finish === "metal" ? "metal" : "plastic", numerals: "number",
+      colors: { ...design.round?.colors, count: m.color, year: m.color }, milestone_at: m.milestone_at, edge: m.edge, back_ring_top: "", back_ring_bottom: "",
+    },
+  };
+}
 const inkFor = (color, metal) => (metal ? shade(color, -0.55) : light(color) ? shade(color, -0.7) : "#ffffff");
 
 const svgClass = (faded, bare, className) => `${faded ? "opacity-35 grayscale" : bare ? "" : "drop-shadow-md"} ${className}`;
@@ -497,6 +517,10 @@ export function TriangleChip({ design, kind, count, size = 160, faded = false, b
   const [one, many] = TRIANGLE_WORDS[kind] || ["", ""];
   const num = String(count);
   const words = (count === 1 ? one : many).split("\n");
+  if (isScene(design.triangle)) {
+    return <SceneTriangle id={id} tri={design.triangle} num={num} words={words} size={size} faded={faded} bare={bare} className={className}
+      title={title || `${count} ${(count === 1 ? one : many).replace("\n", " ").toLowerCase()} chip`} />;
+  }
 
   return (
     <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title || `${count} ${(count === 1 ? one : many).replace("\n", " ").toLowerCase()} chip`} className={svgClass(faded, bare, className)}>
@@ -509,18 +533,47 @@ export function TriangleChip({ design, kind, count, size = 160, faded = false, b
   );
 }
 
-// The back of a triangle chip: "One day at a time" and the day it was earned
-export function TriangleChipBack({ design, kind, earnedOn, size = 160 }) {
+// The back of a triangle chip: its words ("One day at a time" unless a Meeting Maker design
+// says otherwise), the day it was earned, and a Special Edition's mark
+export function TriangleChipBack({ design, kind, earnedOn, mark, size = 160 }) {
   const id = useId().replace(/:/g, "");
-  const look = triangleLook(design, kind);
+  const scene = isScene(design.triangle);
+  const look = scene ? { color: metalOf(design.triangle.scene), metal: true, ink: shade(metalOf(design.triangle.scene), -0.6) } : triangleLook(design, kind);
   const date = earnedOn ? new Date(`${earnedOn}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : "";
+  const lines = wrap(design.triangle.back_text || "One day at a time", 12).slice(0, 4);
+  const y0 = 110 - (lines.length - 1) * 5 - (mark ? 4 : 0);
   return (
     <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label="The back of the chip">
       <TriangleBase id={id} look={look} sides={design.triangle.sides} />
       <g fill={look.ink} fontFamily={FONT} fontWeight="700" textAnchor="middle" letterSpacing="0.8">
-        <text x="100" y="104" fontSize="7.5">ONE DAY</text>
-        <text x="100" y="114" fontSize="7.5">AT A TIME</text>
-        {date && <text x="100" y="128" fontSize="6.5" opacity="0.85">{date.toUpperCase()}</text>}
+        {lines.map((l, i) => <text key={i} x="100" y={y0 + i * 10} fontSize="7.5">{l.toUpperCase()}</text>)}
+        {date && <text x="100" y={y0 + lines.length * 10 + 4} fontSize="6.5" opacity="0.85">{date.toUpperCase()}</text>}
+        {mark && <text x="100" y={y0 + lines.length * 10 + 13} fontSize="4.6" opacity="0.9">{mark.toUpperCase()}</text>}
+      </g>
+    </svg>
+  );
+}
+
+// A Meeting Maker chip with a template's art inside the triangle: a metal border with the
+// sides' words, and the count in a badge
+function SceneTriangle({ id, tri, num, words, size, faded, bare, className, title }) {
+  const color = metalOf(tri.scene);
+  const look = { color, metal: true, ink: shade(color, -0.6) };
+  const dark = tri.scene.metal === "black_gold" ? BLACK : shade(color, -0.72);
+  return (
+    <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title} className={svgClass(faded, bare, className)}>
+      <TriangleBase id={id} look={look} sides={tri.sides} />
+      <defs>
+        <clipPath id={`${id}-art`}><path d={roundedTriangle(24, 10)} /></clipPath>
+        <linearGradient id={`${id}-metal`} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor={shade(color, 0.45)} /><stop offset="100%" stopColor={shade(color, -0.3)} /></linearGradient>
+      </defs>
+      <SceneArt id={`${id}-s`} scene={tri.scene} x={48} y={52} w={104} h={92} clip={`${id}-art`} />
+      <path d={roundedTriangle(24, 10)} fill="none" stroke={shade(color, -0.35)} strokeWidth="1.6" />
+      <circle cx="100.6" cy="123.6" r="16" fill="#000000" opacity="0.25" />
+      <circle cx="100" cy="122.5" r="15.5" fill={dark} stroke={`url(#${id}-metal)`} strokeWidth="2.2" />
+      <g fill={`url(#${id}-metal)`} fontFamily={FONT} textAnchor="middle">
+        <text x="100" y="126" fontSize={num.length > 2 ? 10 : 13} fontWeight="800">{num}</text>
+        <text x="100" y="133.5" fontSize="3.8" fontWeight="700" letterSpacing="0.5">{words[0]}</text>
       </g>
     </svg>
   );

@@ -86,18 +86,23 @@ module Chips
     { id: "#{kind}:#{count}", slot: "#{kind}:#{count}", shape: "triangle", kind: kind, count: count, label: label, on: on&.iso8601, source: "earned" }.merge(extra)
   end
 
-  # Meeting Maker: each meeting they joined, its chips (a join counts once the meeting started)
+  # Meeting Maker: each meeting they joined, its chips (a join counts once the meeting started),
+  # each drawn as the meeting's chips looked on the day it was earned (minted chips never change)
   def meeting_chips(user, now = Time.current)
     joins = MeetingJoin.where(user: user).where(starts_at: ..now).includes(meeting: :group).order(:starts_at).group_by(&:meeting)
+    versions = ChipDesignVersion.where(owner_type: "Meeting", owner_id: joins.keys.map(&:id)).order(:created_at, :id).group_by(&:owner_id)
     joins.flat_map do |meeting, list|
-      design = ChipDesign.for_meeting(meeting)
-      extra = { meeting: { id: meeting.id, name: meeting.name, group_title: meeting.group.title }, design: design }
+      info = { id: meeting.id, name: meeting.name, group_title: meeting.group.title }
+      chip = lambda do |n, on, design, label|
+        triangle("meeting-#{meeting.id}", n, on, label, meeting: info, design: design)
+          .merge(kind: "meeting", series: "meeting-#{meeting.id}", shape: design.dig("meeting", "shape") || "triangle")
+      end
       earned = counts(MEETING_COUNTS, list.size, 100).select { |n| n <= list.size }.map do |n|
-        triangle("meeting-#{meeting.id}", n, list[n - 1].starts_at.in_time_zone(meeting.zone).to_date, "#{n} #{n == 1 ? 'meeting' : 'meetings'}", extra)
+        on = list[n - 1].starts_at.in_time_zone(meeting.zone).to_date
+        chip.call(n, on, ChipDesign.for_meeting_on(meeting, on, versions[meeting.id] || []), "#{n} #{n == 1 ? 'meeting' : 'meetings'}")
       end
       upcoming = counts(MEETING_COUNTS, list.size, 100).find { |n| n > list.size }
-      earned.map { |c| c.merge(kind: "meeting", series: "meeting-#{meeting.id}") } +
-        [triangle("meeting-#{meeting.id}", upcoming, nil, "#{upcoming} meetings", extra).merge(kind: "meeting", series: "meeting-#{meeting.id}", upcoming: true, to_go: upcoming - list.size)]
+      earned + [chip.call(upcoming, nil, ChipDesign.for_meeting(meeting), "#{upcoming} meetings").merge(upcoming: true, to_go: upcoming - list.size)]
     end
   end
 

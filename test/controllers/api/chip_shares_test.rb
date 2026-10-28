@@ -42,8 +42,8 @@ class Api::ChipSharesTest < ActionDispatch::IntegrationTest
   end
 
   test "a given chip's private note stays out, and the chip keeps its look when the group redesigns" do
-    award = @group.chip_awards.create!(email: @kim.email, user: @kim, milestone_key: "30d", on: Date.current, note: "Just for you", claimed_at: Time.current)
     @group.update!(chip_design: { "round" => { "top_text" => "Acid Test" } })
+    award = @group.chip_awards.create!(email: @kim.email, user: @kim, milestone_key: "30d", on: Date.current, note: "Just for you", claimed_at: Time.current)
     sign_in @kim
     share("award:#{award.id}")
     assert_response :created

@@ -1,6 +1,7 @@
 # How chips look. DEFAULT is RecoveryBot's own, plain design, for every chip a member earns. A
 # group can design its own (groups.chip_design, Group dashboard > Chips) for the chips its hosts
-# give (ChipAward), and each meeting its Meeting Maker chips (meetings.chip_design, the triangle
+# give (ChipAward), and Meeting Maker chips: the "meeting" part of the group's design is the
+# default for all its meetings, and a meeting can change it (meetings.chip_design, the meeting
 # part only). Only what differs from the default is stored, so the rest follows it.
 #
 # The "scene" emblem puts a chip template's art (ChipTemplate, made in the chip art editor) on
@@ -19,6 +20,8 @@ module ChipDesign
   FINISHES = %w[classic metal plastic].freeze
   NUMERALS = %w[roman number].freeze
   TRIANGLE_FINISHES = %w[metal plastic].freeze
+  SHAPES = %w[triangle round].freeze
+  MEETING_EMBLEMS = %w[number scene].freeze
 
   DEFAULT = {
     "round" => {
@@ -54,6 +57,19 @@ module ChipDesign
       "finish" => "plastic",
       "colors" => { "inventory" => "#3451b2", "gratitude" => "#d9480f", "meeting" => "#0f766e" },
     },
+    # Meeting Maker chips: a triangle (or round) chip with the count, "Meeting Maker" and the
+    # meeting's name around it (a blank third side is the meeting's name), in a color or with a
+    # template's art (emblem "scene")
+    "meeting" => {
+      "shape" => "triangle",
+      "emblem" => "number",
+      "sides" => ["Meeting", "Maker", ""],
+      "back_text" => "One day at a time",
+      "finish" => "plastic",
+      "color" => "#0f766e",
+      "milestone_at" => "badge",
+      "edge" => "plain",
+    },
   }.freeze
   TRIANGLE_KINDS = DEFAULT["triangle"]["colors"].keys.freeze
 
@@ -61,12 +77,24 @@ module ChipDesign
 
   def for_group(group) = resolve(merge(group&.chip_design))
 
-  # A meeting's Meeting Maker chips: "Meeting Maker" and the meeting's name along the sides
-  # unless it changed them
+  # A meeting's Meeting Maker chips: its group's default with the meeting's own changes, and
+  # the meeting's name along the third side unless that was given
   def for_meeting(meeting)
-    design = merge(meeting.chip_design)
-    design["triangle"]["sides"] = normalize(meeting.chip_design).dig("triangle", "sides") || meeting_sides(meeting)
+    design = merge("meeting" => meeting_part(meeting))
+    sides = design["meeting"]["sides"]
+    design["meeting"]["sides"] = [sides[0], sides[1], sides[2].presence || meeting.name.to_s.first(24)]
     resolve(design)
+  end
+
+  # What a meeting's chips change from RecoveryBot's: the group's default, then the meeting's own
+  def meeting_part(meeting)
+    (normalize(meeting.group&.chip_design)["meeting"] || {}).merge(normalize(meeting.chip_design)["meeting"] || {})
+  end
+
+  # How a meeting's chips looked on `date` (minted chips never change), or now
+  def for_meeting_on(meeting, date, versions = nil)
+    versions ||= ChipDesignVersion.where(owner_type: "Meeting", owner_id: meeting.id).order(:created_at, :id).to_a
+    versions.reverse.find { |v| v.created_at <= date.end_of_day }&.design || for_meeting(meeting)
   end
 
   # The design with its scene's art and palette colors put in, ready to draw; a scene whose
@@ -83,7 +111,7 @@ module ChipDesign
         part["scene"] = scene.merge("version" => version.number, "title" => template.title, "art" => version.art,
                                     "colors" => version.palettes[palette] || {}, "latest" => template.latest.number)
       else
-        part["emblem"] = "triangle"
+        part["emblem"] = part.key?("shape") ? "number" : "triangle"
       end
     end
     design
@@ -92,8 +120,10 @@ module ChipDesign
   # A scene with no version picked gets its template's latest, so it stays as it was chosen
   def pin(stored)
     stored = normalize(stored)
-    scene = stored.dig("round", "scene")
-    if scene && !scene["version"]
+    %w[round meeting].each do |part|
+      scene = stored.dig(part, "scene")
+      next unless scene && !scene["version"]
+
       scene["version"] = ChipTemplate.find_by(id: scene["template_id"])&.latest&.number
       scene.compact!
     end
@@ -102,26 +132,37 @@ module ChipDesign
 
   def meeting_sides(meeting) = ["Meeting", "Maker", meeting.name.to_s.first(24)]
 
+  # Meeting designs saved before the meeting part: their triangle's sides, finish and color
+  def legacy(raw)
+    return raw unless raw.is_a?(Hash) && raw["triangle"].is_a?(Hash) && !raw.key?("meeting")
+
+    t = raw["triangle"]
+    raw.merge("meeting" => { "sides" => t["sides"], "finish" => t["finish"], "color" => t.dig("colors", "meeting") }.compact)
+  end
+
   # The stored design laid over the default
   def merge(stored)
     stored = normalize(stored)
     DEFAULT.to_h do |part, defaults|
       given = stored[part] || {}
-      [part, defaults.merge(given.except("colors")).merge("colors" => defaults["colors"].merge(given["colors"] || {}))]
+      merged = defaults.merge(given.except("colors"))
+      merged["colors"] = defaults["colors"].merge(given["colors"] || {}) if defaults["colors"]
+      [part, merged]
     end
   end
 
   # Only known keys and good values, and only where they differ from the default
   def normalize(raw)
     raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
-    raw = raw.is_a?(Hash) ? raw.deep_stringify_keys : {}
+    raw = legacy(raw.is_a?(Hash) ? raw.deep_stringify_keys : {})
     round = raw["round"].is_a?(Hash) ? raw["round"] : {}
     triangle = raw["triangle"].is_a?(Hash) ? raw["triangle"] : {}
+    meeting = raw["meeting"].is_a?(Hash) ? raw["meeting"] : {}
     out = {
       "round" => {
         "top_text" => text(round["top_text"]),
         "bottom_text" => text(round["bottom_text"]),
-        "back_text" => (round["back_text"].to_s.gsub(/\r\n?/, "\n").gsub(/[ \t]+/, " ").strip.first(240) unless round["back_text"].nil?),
+        "back_text" => back(round["back_text"]),
         "emblem" => (round["emblem"] if EMBLEMS.include?(round["emblem"])),
         # The group's logo as a raised relief (ChipRelief), for the "relief" emblem
         "relief" => ChipRelief.clean(round["relief"]),
@@ -143,6 +184,17 @@ module ChipDesign
         "sides" => (Array(triangle["sides"]).first(3).map { |s| text(s, 24) || "" } if triangle.key?("sides")),
         "finish" => (triangle["finish"] if TRIANGLE_FINISHES.include?(triangle["finish"])),
         "colors" => colors(triangle["colors"], TRIANGLE_KINDS),
+      },
+      "meeting" => {
+        "shape" => (meeting["shape"] if SHAPES.include?(meeting["shape"])),
+        "emblem" => (meeting["emblem"] if MEETING_EMBLEMS.include?(meeting["emblem"])),
+        "scene" => scene(meeting["scene"]),
+        "sides" => (Array(meeting["sides"]).first(3).map { |s| text(s, 24) || "" } if meeting.key?("sides")),
+        "back_text" => back(meeting["back_text"]),
+        "finish" => (meeting["finish"] if TRIANGLE_FINISHES.include?(meeting["finish"])),
+        "color" => (meeting["color"].to_s.downcase if meeting["color"].to_s.match?(/\A#\h{6}\z/)),
+        "milestone_at" => (meeting["milestone_at"] if MILESTONE_SPOTS.include?(meeting["milestone_at"])),
+        "edge" => (meeting["edge"] if EDGES.include?(meeting["edge"])),
       },
     }
     out.to_h do |part, values|
@@ -177,6 +229,8 @@ module ChipDesign
     n = Integer(value.to_s, exception: false) || Float(value.to_s, exception: false)&.round
     n if n && range.cover?(n)
   end
+
+  def back(value) = (value.to_s.gsub(/\r\n?/, "\n").gsub(/[ \t]+/, " ").strip.first(240) unless value.nil?)
 
   def text(value, max = 40)
     value.to_s.squish.first(max) unless value.nil?
