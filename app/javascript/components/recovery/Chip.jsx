@@ -120,12 +120,25 @@ function ArcText({ id, top, bottom, ink }) {
   );
 }
 
-// A group's logo pressed into the chip (ChipDesign emblem "relief", ChipRelief on the server):
-// its shapes drawn as a heightmap, gray for how high each stands, then lit like a raised metal or
-// clay stamping in the chip's own color, with a soft shadow under the edges. In the box x, y, w.
-function Relief({ id, relief, look, x, y, w }) {
-  const { color, metal } = look;
+// A group's logo raised on the chip (ChipDesign emblem "relief", ChipRelief on the server). Its
+// shapes are drawn as a heightmap, gray for how high each stands (white cuts back to the face).
+// On a metal chip it's struck into the metal: lit from the top left, standing relief_height high
+// and rising from the coin as steeply as relief_sharpness says. On a colored chip it's a slight
+// raised print in the chip's ink. relief_size is how wide it is, of the 200 across the chip.
+// relief_depth "inset" cuts it into the coin instead: the same, upside down, with the shadow
+// inside its top and left edges.
+function Relief({ id, round, look, cy = 86 }) {
+  const { relief } = round;
+  const { color, metal, ink } = look;
+  const w = round.relief_size || 64;
+  const x = 100 - w / 2;
+  const y = cy - w / 2;
   const [bx, by, bw, bh] = relief.view_box;
+  const height = round.relief_height || 4;
+  const sharp = round.relief_sharpness || 7;
+  const soft = 0.12 + (10 - sharp) * 0.2; // how far the slope from the face to the top runs
+  const inset = round.relief_depth === "inset";
+  const lift = (inset ? -1 : 1) * height * 1.4;
   const light = <feDistantLight azimuth="225" elevation="55" />;
   return (
     <>
@@ -133,18 +146,41 @@ function Relief({ id, relief, look, x, y, w }) {
         <filter id={`${id}-relief`} filterUnits="userSpaceOnUse" x="0" y="0" width="200" height="200" colorInterpolationFilters="sRGB">
           <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="height" />
           <feComponentTransfer in="height" result="mask"><feFuncA type="linear" slope="40" /></feComponentTransfer>
-          <feGaussianBlur in="height" stdDeviation="1.3" result="soft" />
-          <feDiffuseLighting in="soft" surfaceScale="5" diffuseConstant="1" lightingColor="#ffffff" result="lit">{light}</feDiffuseLighting>
-          <feSpecularLighting in="soft" surfaceScale="5" specularConstant={metal ? 1 : 0.5} specularExponent="60" lightingColor="#ffffff" result="shine">{light}</feSpecularLighting>
-          <feFlood floodColor={shade(color, metal ? 0.04 : 0.02)} result="paint" />
-          <feComposite in="paint" in2="lit" operator="arithmetic" k1="0.85" k2="0.35" result="shaded" />
-          <feComposite in="shine" in2="shaded" operator="arithmetic" k2="1" k3="1" result="bright" />
-          <feComposite in="bright" in2="mask" operator="in" result="raised" />
-          <feGaussianBlur in="mask" stdDeviation="1.1" result="blur" />
-          <feOffset in="blur" dx="0.5" dy="0.8" result="drop" />
-          <feFlood floodColor="#000000" floodOpacity={metal ? 0.3 : 0.25} />
-          <feComposite in2="drop" operator="in" result="shadow" />
-          <feMerge><feMergeNode in="shadow" /><feMergeNode in="raised" /></feMerge>
+          {metal ? (
+            <>
+              <feGaussianBlur in="height" stdDeviation={soft} result="slope" />
+              <feDiffuseLighting in="slope" surfaceScale={lift} diffuseConstant="1" lightingColor="#ffffff" result="lit">{light}</feDiffuseLighting>
+              <feSpecularLighting in="slope" surfaceScale={lift} specularConstant="0.8" specularExponent="40" lightingColor="#ffffff" result="shine">{light}</feSpecularLighting>
+              <feFlood floodColor={shade(color, inset ? -0.08 : 0.04)} result="paint" />
+              <feComposite in="paint" in2="lit" operator="arithmetic" k1="0.85" k2="0.35" result="shaded" />
+              <feComposite in="shine" in2="shaded" operator="arithmetic" k2="0.7" k3="1" result="bright" />
+              <feComposite in="bright" in2="mask" operator="in" result="raised" />
+              <feGaussianBlur in="mask" stdDeviation={0.3 + soft * 0.4} result="blur" />
+              <feOffset in="blur" dx={height * 0.06} dy={height * 0.1} result="drop" />
+              <feFlood floodColor="#000000" floodOpacity={Math.min(0.4, 0.06 + height * 0.035)} result="dark" />
+            </>
+          ) : (
+            <>
+              <feFlood floodColor={ink} floodOpacity="0.92" />
+              <feComposite in2="mask" operator="in" result="raised" />
+              <feGaussianBlur in="mask" stdDeviation="0.2" result="blur" />
+              <feOffset in="blur" dx="0.35" dy="0.5" result="drop" />
+              <feFlood floodColor="#000000" floodOpacity={inset ? 0.35 : 0.22} result="dark" />
+            </>
+          )}
+          {inset ? (
+            <>
+              {/* inside the cut, along its top and left edges */}
+              <feComposite in="mask" in2="drop" operator="out" result="edge" />
+              <feComposite in="dark" in2="edge" operator="in" result="shadow" />
+              <feMerge><feMergeNode in="raised" /><feMergeNode in="shadow" /></feMerge>
+            </>
+          ) : (
+            <>
+              <feComposite in="dark" in2="drop" operator="in" result="shadow" />
+              <feMerge><feMergeNode in="shadow" /><feMergeNode in="raised" /></feMerge>
+            </>
+          )}
         </filter>
       </defs>
       <g filter={`url(#${id}-relief)`}>
@@ -160,6 +196,26 @@ function Relief({ id, relief, look, x, y, w }) {
   );
 }
 
+// The back's words in lines that fit inside the ring (radius `r`): every line width from 12 to
+// 30 letters is tried, and the one that lets the letters be biggest wins
+const CHAR = 0.7; // a bold capital's width, letter spacing included, in font sizes
+export function fitBack(text, r = 54) {
+  let best = { lines: [], fs: 10 };
+  for (let width = 10; width <= 30; width += 1) {
+    const lines = wrap(text || "", width).slice(0, 12);
+    if (!lines.length) return best;
+    for (let fs = 11; fs >= 4.5; fs -= 0.25) {
+      const gap = fs * 1.3;
+      const fits = lines.every((l, i) => {
+        const dy = Math.abs((i - (lines.length - 1) / 2) * gap) + fs * 0.45;
+        return dy < r && (l.length * fs * CHAR) / 2 <= Math.sqrt(r * r - dy * dy);
+      });
+      if (fits) { if (fs > best.fs || !best.lines.length) best = { lines, fs }; break; }
+    }
+  }
+  return best;
+}
+
 export function RoundChip({ design, milestone, logoUrl, size = 160, faded = false, bare = false, className = "", title }) {
   const id = useId().replace(/:/g, "");
   const d = design.round;
@@ -167,7 +223,9 @@ export function RoundChip({ design, milestone, logoUrl, size = 160, faded = fals
   const { ink } = look;
   const [big, small] = roundFace(milestone, d.numerals);
   const emblem = (d.emblem === "logo" && !logoUrl) || (d.emblem === "relief" && !d.relief?.shapes?.length) ? "triangle" : d.emblem;
-  const stamped = emblem === "logo" || emblem === "relief";
+  // relief_badge: a circle over the middle of the raised logo with the milestone in it
+  const badge = emblem === "relief" && d.relief_badge;
+  const stamped = emblem === "logo" || (emblem === "relief" && !badge);
   const bigSize = big.length > 4 ? 26 : big.length > 2 ? 32 : 40;
 
   return (
@@ -182,7 +240,18 @@ export function RoundChip({ design, milestone, logoUrl, size = 160, faded = fals
           <path d="M 100,46 L 146.8,127 L 53.2,127 Z" />
         </g>
       )}
-      {emblem === "relief" && <Relief id={id} relief={d.relief} look={look} x={64} y={52} w={72} />}
+      {emblem === "relief" && <Relief id={id} round={d} look={look} cy={badge ? 100 : 86} />}
+      {badge && (
+        <g>
+          <circle cx="100.6" cy="101" r="23" fill="#000000" opacity="0.18" />
+          <circle cx="100" cy="100" r="22.5" fill={`url(#${id}-face)`} stroke={ink} strokeOpacity="0.55" strokeWidth="1.2" />
+          <circle cx="100" cy="100" r="19.5" fill="none" stroke={ink} strokeOpacity="0.3" strokeWidth="0.6" />
+          <g fill={ink} fontFamily={FONT} textAnchor="middle">
+            <text x="100" y="103" fontSize={big.length > 3 ? 11 : big.length > 2 ? 13 : 16} fontWeight="800">{big}</text>
+            <text x="100" y="113" fontSize="5.2" fontWeight="700" letterSpacing="0.8">{small}</text>
+          </g>
+        </g>
+      )}
       {emblem === "logo" && (
         <>
           <image href={logoUrl} x="73" y="61" width="54" height="54" clipPath={`url(#${id}-logo)`} preserveAspectRatio="xMidYMid slice" />
@@ -190,7 +259,7 @@ export function RoundChip({ design, milestone, logoUrl, size = 160, faded = fals
         </>
       )}
 
-      <g fill={ink} fontFamily={FONT} textAnchor="middle">
+      {!badge && <g fill={ink} fontFamily={FONT} textAnchor="middle">
         {stamped ? (
           <text x="100" y="140" fontSize="18" fontWeight="800">{big} <tspan fontSize="10" fontWeight="700" letterSpacing="1.5">{small}</tspan></text>
         ) : (
@@ -199,7 +268,7 @@ export function RoundChip({ design, milestone, logoUrl, size = 160, faded = fals
             <text x="100" y={emblem === "triangle" ? 120 : 128} fontSize={emblem === "triangle" ? 8.5 : 11} fontWeight="700" letterSpacing="1.5">{small}</text>
           </>
         )}
-      </g>
+      </g>}
     </svg>
   );
 }
@@ -209,15 +278,14 @@ export function RoundChip({ design, milestone, logoUrl, size = 160, faded = fals
 export function RoundChipBack({ design, milestone, groupTitle, earnedOn, size = 160 }) {
   const id = useId().replace(/:/g, "");
   const look = roundLook(design, milestone);
-  const lines = wrap(design.round.back_text || "", 20).slice(0, 9);
-  const fs = lines.length > 6 ? 7.1 : lines.length > 4 ? 8.4 : 10;
-  const gap = fs * 1.35;
+  const { lines, fs } = fitBack(design.round.back_text);
+  const gap = fs * 1.3;
   const date = earnedOn ? new Date(`${earnedOn}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : "";
   return (
     <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label="The back of the chip">
       <RoundBase id={id} look={look} />
       <ArcText id={id} top={groupTitle || ""} bottom={date} ink={look.ink} />
-      <g fill={look.ink} fontFamily={FONT} fontWeight="700" textAnchor="middle" letterSpacing={fs * 0.08}>
+      <g fill={look.ink} fontFamily={FONT} fontWeight="700" textAnchor="middle" letterSpacing={fs * 0.06}>
         {lines.map((l, i) => <text key={i} x="100" y={100 - ((lines.length - 1) * gap) / 2 + i * gap + fs * 0.35} fontSize={fs}>{l.toUpperCase()}</text>)}
       </g>
     </svg>

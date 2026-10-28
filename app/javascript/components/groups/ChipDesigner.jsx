@@ -88,6 +88,7 @@ export default function ChipDesigner({ group }) {
             </div>
             {design.round.emblem === "logo" && !logoUrl && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">The group has no logo yet, so chips show the circle and triangle. Add one in Group settings.</p>}
             {design.round.emblem === "relief" && <ReliefUpload slug={group.slug} relief={design.round.relief} onChange={(relief) => round({ relief })} />}
+            {design.round.emblem === "relief" && design.round.relief && <ReliefControls r={design.round} set={round} />}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -267,6 +268,39 @@ function ReliefUpload({ slug, relief, onChange }) {
         Turn any text into outlines first. {!relief && "Until there's one, chips show the circle and triangle."}
       </p>
       <ErrorNote error={error} />
+    </div>
+  );
+}
+
+// How the raised logo sits: raised or cut in, how big, and on metal chips how high (or deep)
+// and how sharply it rises from the coin (ChipDesign relief_* settings)
+function ReliefControls({ r, set }) {
+  const slider = (key, label, min, max, low, high) => (
+    <label className="block">
+      <span className="flex items-baseline justify-between text-xs font-medium text-slate-600 dark:text-neutral-300">
+        {label} <span className="tabular-nums text-slate-400">{r[key]}</span>
+      </span>
+      <input type="range" min={min} max={max} value={r[key]} onChange={(e) => set({ [key]: Number(e.target.value) })} className="w-full accent-[var(--color-accent)]" />
+      <span className="flex justify-between text-[11px] text-slate-400"><span>{low}</span><span>{high}</span></span>
+    </label>
+  );
+  return (
+    <div className="mt-3 space-y-3 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900/60">
+      <div className={segment}>
+        <SegmentedControl value={r.relief_depth} onChange={(v) => set({ relief_depth: v })} options={[{ value: "raised", label: "Raised" }, { value: "inset", label: "Cut in" }]} />
+      </div>
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-200">
+        <input type="checkbox" checked={!!r.relief_badge} onChange={(e) => set({ relief_badge: e.target.checked, ...(e.target.checked && r.relief_size < 72 ? { relief_size: 84 } : {}) })} className="size-4 accent-[var(--color-accent)]" />
+        A circle over the middle of the logo with the time in it
+      </label>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {slider("relief_size", "Size", 40, r.relief_badge ? 96 : 84, "Small", "Large")}
+        {slider("relief_height", r.relief_depth === "inset" ? "Depth" : "Height", 1, 10, "Shallow", "Deep")}
+        {slider("relief_sharpness", "Sharpness", 1, 10, "Soft slope", "Sharp edge")}
+      </div>
+      <p className="text-xs text-slate-500 dark:text-neutral-400">
+        Height and sharpness shape metal chips, where the logo is struck into the coin. Colored chips get a slight print of it in one color.
+      </p>
     </div>
   );
 }

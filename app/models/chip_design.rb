@@ -17,6 +17,13 @@ module ChipDesign
       "back_text" => "God grant me\nthe serenity\nto accept the things\nI cannot change,\ncourage to change\nthe things I can,\nand wisdom to know\nthe difference.",
       "emblem" => "triangle",
       "numerals" => "roman",
+      # The raised logo ("relief" emblem): how wide it is (of the 200 across the chip) and, on
+      # metal chips, how high it stands and how sharply it rises from the coin, 1 to 10
+      "relief_depth" => "raised", # or "inset", cut into the coin
+      "relief_size" => 64,
+      "relief_badge" => false, # a circle over its middle with the milestone in it
+      "relief_height" => 4,
+      "relief_sharpness" => 7,
       # classic: colored chips for the months, metal medallions for the years
       "finish" => "classic",
       "colors" => {
@@ -71,6 +78,11 @@ module ChipDesign
         "relief" => ChipRelief.clean(round["relief"]),
         "numerals" => (round["numerals"] if NUMERALS.include?(round["numerals"])),
         "finish" => (round["finish"] if FINISHES.include?(round["finish"])),
+        "relief_depth" => (round["relief_depth"] if %w[raised inset].include?(round["relief_depth"])),
+        "relief_size" => whole(round["relief_size"], 40..96),
+        "relief_badge" => (ActiveModel::Type::Boolean.new.cast(round["relief_badge"]) unless round["relief_badge"].nil?),
+        "relief_height" => whole(round["relief_height"], 1..10),
+        "relief_sharpness" => whole(round["relief_sharpness"], 1..10),
         "colors" => colors(round["colors"], ROUND_KEYS),
       },
       "triangle" => {
@@ -86,6 +98,11 @@ module ChipDesign
       values.delete("sides") if values["sides"] && values["sides"].size != 3
       [part, values]
     end.compact_blank
+  end
+
+  def whole(value, range)
+    n = Integer(value.to_s, exception: false) || Float(value.to_s, exception: false)&.round
+    n if n && range.cover?(n)
   end
 
   def text(value, max = 40)

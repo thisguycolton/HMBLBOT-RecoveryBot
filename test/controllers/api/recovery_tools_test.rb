@@ -333,4 +333,10 @@ class ChipsTest < ActiveSupport::TestCase
     assert_equal 0, Chips.streaks([today - 2], today)[:current]
     assert_equal [1, 5, 10, 25, 50, 100, 200], Chips.counts(Chips::MEETING_COUNTS, 120, 100)
   end
+
+  test "a raised logo's settings keep to their ranges, and only what differs from the default is kept" do
+    d = ChipDesign.normalize("round" => { "relief_depth" => "inset", "relief_size" => "90", "relief_height" => 11, "relief_sharpness" => "7", "relief_badge" => "1" })
+    assert_equal({ "relief_depth" => "inset", "relief_size" => 90, "relief_badge" => true }, d["round"])
+    assert_equal [4, 7, "raised"], ChipDesign.merge(nil)["round"].values_at("relief_height", "relief_sharpness", "relief_depth")
+  end
 end
