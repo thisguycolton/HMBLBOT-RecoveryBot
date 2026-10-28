@@ -179,7 +179,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <H2 id="who-sees-what">Who sees what</H2>
           <ul>
             <li><strong>The public web:</strong> the home page, the tools, Find a meeting, published events, and the parts of a group's home page that its admins choose to show visitors. Profiles are never public.</li>
-            <li><strong>Signed-in members:</strong> profiles, and notes or highlights set to <em>Members</em>. Notes set to <em>Followers</em> are only seen by people who follow you; <em>Private</em> ones (the default) only by you. Highlights you share by link can be opened by anyone with that link. Anyone who can see a note sees its comments, and who reacted to it and how. Only notes set to <em>Members</em> can be reposted, and when you narrow or delete one, its reposts go too.</li>
+            <li><strong>Signed-in members:</strong> profiles, and notes or highlights set to <em>Members</em>. Notes set to <em>Followers</em> are only seen by people who follow you; <em>Private</em> ones (the default) only by you. Highlights are private until you share one to your timeline. Highlights you share by link can be opened by anyone with that link. Anyone who can see a note sees its comments, and who reacted to it and how. Only notes set to <em>Members</em> can be reposted, and when you narrow or delete one, its reposts go too.</li>
             <li><strong>Only you:</strong> your 10th step inventories, gratitude lists and chips (except the favorite chips you choose to show on your profile, which members who can see your profile see), and notes set to <em>Private</em>.</li>
             <li><strong>Your groups:</strong> members of a group see its member list, its members-only pages and records, and notes you share to it. Record keepers and admins of the group see drafts and everything else the group keeps.</li>
             <li><strong>Site admins:</strong> the few people who run RecoveryBot can see what's stored, to fix problems and answer requests. We don't browse your things without a reason.</li>
@@ -264,7 +264,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <H2 id="your-choices">Your choices</H2>
           <ul>
             <li>Change your name, picture, bio, sobriety date and email from <a href="/users/edit">your profile</a>.</li>
-            <li>Choose who sees each note and highlight, and set the default for new ones in your settings.</li>
+            <li>Choose who sees each note and highlight, and set the default for new notes in your settings. Highlights stay private until you share one to your timeline.</li>
             <li>Turn notifications on or off for each device, or remove a device, under <em>Notifications on this device</em> in <a href="/users/edit#notifications">your settings</a>, or block them in your browser.</li>
             <li>Leave a group at any time from the group's page.</li>
             <li>Clear a day's 10th step or gratitude list by emptying it and saving.</li>

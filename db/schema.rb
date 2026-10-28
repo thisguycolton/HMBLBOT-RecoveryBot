@@ -1299,9 +1299,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_190000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "visibility", default: "private", null: false
+    t.datetime "shared_at"
     t.index ["chapter_id"], name: "index_user_highlights_on_chapter_id"
     t.index ["user_id", "chapter_id"], name: "index_user_highlights_on_user_id_and_chapter_id"
     t.index ["user_id", "created_at"], name: "index_user_highlights_on_user_id_and_created_at"
+    t.index ["user_id", "shared_at"], name: "index_user_highlights_on_user_id_and_shared_at"
     t.index ["user_id"], name: "index_user_highlights_on_user_id"
   end
 

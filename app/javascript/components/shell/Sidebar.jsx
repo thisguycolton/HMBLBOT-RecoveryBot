@@ -21,8 +21,8 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
   const all = [...you, ...EXPLORE_ITEMS, ...EXTRA_ITEMS].map((i) => ({ href: i.href, exact: i.exact })).concat(groupHrefs);
   const here = activeHref(all, path);
   // The group this page belongs to starts open, and any the member opened stay open
-  // (Give a chip names its group in the address)
-  const giving = path === "/recovery/give" && new URLSearchParams(window.location.search).get("group");
+  // (Give a chip and Court verification name their group in the address)
+  const giving = ["/recovery/give", "/court_verifications/new"].includes(path) && new URLSearchParams(window.location.search).get("group");
   const current = groups.find((g) => path === `/groups/${g.slug}` || path.startsWith(`/groups/${g.slug}/`) || g.slug === giving)?.slug;
   const [open, setOpen] = useState(() => new Set([...remembered(), current].filter(Boolean)));
   useEffect(() => { if (current) setOpen((was) => (was.has(current) ? was : new Set([...was, current]))); }, [current]);

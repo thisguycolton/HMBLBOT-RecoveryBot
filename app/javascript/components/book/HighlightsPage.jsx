@@ -4,6 +4,7 @@ import axios from "axios";
 import { Link2, Trash2 } from "lucide-react";
 import HighlightNote from "./HighlightNote";
 import { highlightCss } from "./HighlightCard";
+import ShareToTimeline from "./ShareToTimeline";
 import { allHighlightsUrl, highlightUrl, shareLink, useToast } from "./highlightSharing";
 
 // /library/highlights         every highlight you've made, across books (notes editable)
@@ -154,7 +155,8 @@ export default function HighlightsPage() {
                     </div>
                     {mine && (
                       <div className="wb-hl-actions">
-                        <button type="button" className="wb-btn wb-btn--icon" onClick={() => shareOne(h)} aria-label="Share this highlight" title="Share">
+                        <ShareToTimeline highlight={h} onChange={update} toast={toast} iconOnly />
+                        <button type="button" className="wb-btn wb-btn--icon" onClick={() => shareOne(h)} aria-label="Copy a link to this highlight" title="Copy link">
                           <Link2 size={15} />
                         </button>
                         <button type="button" className="wb-btn wb-btn--icon" onClick={() => remove(h)} aria-label="Delete this highlight" title="Delete">

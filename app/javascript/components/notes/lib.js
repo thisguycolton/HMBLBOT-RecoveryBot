@@ -10,6 +10,14 @@ export const VISIBILITY = [
 ];
 export const visibilityOf = (value) => VISIBILITY.find((v) => v.value === value) || VISIBILITY[0];
 
+// Highlights stay with their reader until they share one to their timeline (Share to
+// timeline); then it's Followers or Members, and "private" takes it back off.
+export const TIMELINE_AUDIENCES = VISIBILITY.filter((v) => v.value !== "private");
+export const HIGHLIGHT_VISIBILITY = [
+  ...TIMELINE_AUDIENCES,
+  { value: "private", label: "Take off my timeline", note: "Only you see it again", icon: Lock },
+];
+
 // Saves a note, as multipart when pictures come along. fields: body, visibility,
 // group_slugs, images (Files), remove_image_ids
 export function saveNote(id, fields) {

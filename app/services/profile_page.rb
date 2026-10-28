@@ -60,18 +60,18 @@ class ProfilePage
     }
   end
 
-  # The viewer's own notes and highlights and what people they follow shared with
+  # The viewer's own notes and shared highlights and what people they follow shared with
   # followers or members, newest first (the home page, /people)
   def following_feed(before: nil)
     ids = @viewer.follows_given.select(:followed_id)
     shared = %w[followers public]
     notes = TimelineNote.where(user_id: ids, visibility: shared).or(TimelineNote.where(user_id: @viewer.id))
-    highlights = UserHighlight.where(user_id: ids, visibility: shared).or(UserHighlight.where(user_id: @viewer.id))
+    highlights = UserHighlight.on_timeline.where(user_id: ids, visibility: shared).or(UserHighlight.on_timeline.where(user_id: @viewer.id))
     merge(notes, highlights, before: before)
   end
 
   def feed(person, before: nil)
-    merge(TimelineNote.visible_to(@viewer, owner: person), UserHighlight.visible_to(@viewer, owner: person), before: before)
+    merge(TimelineNote.visible_to(@viewer, owner: person), UserHighlight.visible_to(@viewer, owner: person).on_timeline, before: before)
   end
 
   # Followers or following, newest first
@@ -84,10 +84,10 @@ class ProfilePage
   def merge(notes, highlights, before: nil)
     if before
       notes = notes.where(created_at: ...before)
-      highlights = highlights.where(created_at: ...before)
+      highlights = highlights.where(shared_at: ...before)
     end
     notes = notes.for_feed.newest_first.limit(FEED_MAX)
-    highlights = highlights.includes(chapter: :book, user: { avatar_attachment: :blob }).order(created_at: :desc, id: :desc).limit(FEED_MAX)
+    highlights = highlights.includes(chapter: :book, user: { avatar_attachment: :blob }).order(shared_at: :desc, id: :desc).limit(FEED_MAX)
     (notes.map { |n| n.as_api_json(viewer: @viewer) } + highlights.map { |h| h.as_feed_json(viewer: @viewer) })
       .sort_by { |item| item[:created_at] }.reverse.first(FEED_MAX)
   end
