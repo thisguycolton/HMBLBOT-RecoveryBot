@@ -48,9 +48,12 @@ export function roundLook(design, milestone) {
   const metal = isMetal(design.round.finish, milestone);
   return { color, metal, ink: inkFor(color, metal) };
 }
+// Streak chips are the color of what they count, always in metal
 export function triangleLook(design, kind) {
-  const color = design.triangle.colors[kind] || "#3451b2";
-  const metal = design.triangle.finish === "metal";
+  const base = kind.replace(/-streak$/, "");
+  const colors = design.triangle.colors;
+  const color = colors[kind] || colors[base] || colors.meeting || "#3451b2";
+  const metal = design.triangle.finish === "metal" || kind.endsWith("-streak");
   return { color, metal, ink: inkFor(color, metal) };
 }
 const inkFor = (color, metal) => (metal ? shade(color, -0.55) : light(color) ? shade(color, -0.7) : "#ffffff");
@@ -171,7 +174,7 @@ export function RoundChipBack({ design, milestone, groupTitle, earnedOn, size = 
   return (
     <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label="The back of the chip">
       <RoundBase id={id} look={look} />
-      <ArcText id={id} top={groupTitle || "RecoveryBot"} bottom={date} ink={look.ink} />
+      <ArcText id={id} top={groupTitle || ""} bottom={date} ink={look.ink} />
       <g fill={look.ink} fontFamily={FONT} fontWeight="700" textAnchor="middle" letterSpacing={fs * 0.08}>
         {lines.map((l, i) => <text key={i} x="100" y={100 - ((lines.length - 1) * gap) / 2 + i * gap + fs * 0.35} fontSize={fs}>{l.toUpperCase()}</text>)}
       </g>
@@ -209,7 +212,14 @@ export function roundedTriangle(t = 0, radius = ROUNDING - t, scale = 1) {
 }
 const line = ([x1, y1], [x2, y2]) => `M ${x1},${y1} L ${x2},${y2}`;
 
-export const TRIANGLE_WORDS = { inventory: ["10TH STEP", "10TH STEPS"], gratitude: ["GRATITUDE", "GRATITUDE"] };
+// What a triangle chip says under its number, for one and for more ("\n" starts a second line)
+export const TRIANGLE_WORDS = {
+  inventory: ["10TH STEP", "10TH STEPS"],
+  gratitude: ["GRATITUDE", "GRATITUDE"],
+  "inventory-streak": ["NIGHTS\nIN A ROW", "NIGHTS\nIN A ROW"],
+  "gratitude-streak": ["DAYS\nIN A ROW", "DAYS\nIN A ROW"],
+  meeting: ["MEETING", "MEETINGS"],
+};
 
 // The triangle chip's edge, face and the words along its sides, both sides
 function TriangleBase({ id, look, sides }) {
@@ -250,13 +260,14 @@ export function TriangleChip({ design, kind, count, size = 160, faded = false, b
   const look = triangleLook(design, kind);
   const [one, many] = TRIANGLE_WORDS[kind] || ["", ""];
   const num = String(count);
+  const words = (count === 1 ? one : many).split("\n");
 
   return (
-    <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title || `${count} ${count === 1 ? one : many} chip`} className={svgClass(faded, bare, className)}>
+    <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title || `${count} ${(count === 1 ? one : many).replace("\n", " ").toLowerCase()} chip`} className={svgClass(faded, bare, className)}>
       <TriangleBase id={id} look={look} sides={design.triangle.sides} />
       <g fill={look.ink} fontFamily={FONT} textAnchor="middle">
-        <text x="100" y="121" fontSize={num.length > 3 ? 19 : num.length > 2 ? 23 : 28} fontWeight="800">{num}</text>
-        <text x="100" y="133" fontSize="7" fontWeight="700" letterSpacing="1">{count === 1 ? one : many}</text>
+        <text x="100" y={words.length > 1 ? 116 : 121} fontSize={num.length > 3 ? 19 : num.length > 2 ? 23 : 28} fontWeight="800">{num}</text>
+        {words.map((w, i) => <text key={w} x="100" y={(words.length > 1 ? 126 : 133) + i * 7.5} fontSize={words.length > 1 ? 6.2 : 7} fontWeight="700" letterSpacing="1">{w}</text>)}
       </g>
     </svg>
   );

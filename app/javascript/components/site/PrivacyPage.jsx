@@ -109,7 +109,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <ul>
             <li>You can use the Topicificator, the readings and Find a meeting without an account. We don't need your real name.</li>
             <li>Profiles, notes, highlights and member lists are only ever shown to signed-in members, never to the public web or search engines.</li>
-            <li>Your 10th step inventories, gratitude lists and chips are only ever shown to you.</li>
+            <li>Your 10th step inventories, gratitude lists and chips are only ever shown to you, unless you choose up to five favorite chips to show on your profile.</li>
             <li>We don't sell or rent anything about you, show ads, or use advertising trackers.</li>
             <li>We don't use cookies to track you. The few cookies we set keep you signed in and make forms work, so there's no cookie banner.</li>
             <li>You can delete your account yourself from your profile page.</li>
@@ -137,7 +137,8 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Your profile:</strong> username, picture, a short bio, an optional sobriety date, and how you lay out your profile page.</li>
             <li><strong>Notes and highlights:</strong> passages you highlight in the library, notes you write on them, and notes on your timeline (with up to six pictures). Each one has its own visibility (see below).</li>
             <li><strong>10th step inventories and gratitude lists:</strong> what you write in the 10th step (your yes or no to each question and your notes) and your gratitude lists, one of each a day, with the day they're for. Only you can read them on the site: not your groups, not the people you follow. No admin page shows them; the few people who run RecoveryBot could reach them in the database, like anything stored, but we don't look.</li>
-            <li><strong>Chips:</strong> your chips are worked out from your sobriety date and how many inventories and gratitude lists you've written, so nothing extra is kept for them, except which of your groups you picked as your home group for chips. A group's admins choose how that group's chips look; they never see who has which chip.</li>
+            <li><strong>Chips:</strong> the chips you earn are worked out from your sobriety date, the inventories and gratitude lists you've written (how many, and how many days in a row), and the meetings you joined. To count a meeting, we note when you click a meeting's Join button in the half hour before it starts: the meeting and its start time, nothing about the call itself. We also keep which chip you put on top when two mark the same milestone, and the favorites you picked and whether they show on your profile (off unless you turn it on).</li>
+            <li><strong>Chips a group gives:</strong> a group's hosts, host coordinators and admins can give someone a chip. We keep who gave it, from which group, to whom, the milestone, the date and any note. If it's sent to an email address with no account yet, we keep that address and email it one link to claim the chip; the chip is added to the account made with that address. The group's hosts and admins can see the chips the group has given and whether they've been claimed, and can take one back.</li>
             <li><strong>Follows:</strong> who you follow and who follows you.</li>
             <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. Turning them off, removing the device in your settings, or signing out on that device deletes it.</li>
             <li><strong>Reactions, comments and reposts:</strong> the Like, Love or Hugs you give a note or comment, comments you write on notes, and notes you repost to your timeline.</li>
@@ -179,7 +180,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <ul>
             <li><strong>The public web:</strong> the home page, the tools, Find a meeting, published events, and the parts of a group's home page that its admins choose to show visitors. Profiles are never public.</li>
             <li><strong>Signed-in members:</strong> profiles, and notes or highlights set to <em>Members</em>. Notes set to <em>Followers</em> are only seen by people who follow you; <em>Private</em> ones (the default) only by you. Highlights you share by link can be opened by anyone with that link. Anyone who can see a note sees its comments, and who reacted to it and how. Only notes set to <em>Members</em> can be reposted, and when you narrow or delete one, its reposts go too.</li>
-            <li><strong>Only you:</strong> your 10th step inventories, gratitude lists and chips, and notes set to <em>Private</em>.</li>
+            <li><strong>Only you:</strong> your 10th step inventories, gratitude lists and chips (except the favorite chips you choose to show on your profile, which members who can see your profile see), and notes set to <em>Private</em>.</li>
             <li><strong>Your groups:</strong> members of a group see its member list, its members-only pages and records, and notes you share to it. Record keepers and admins of the group see drafts and everything else the group keeps.</li>
             <li><strong>Site admins:</strong> the few people who run RecoveryBot can see what's stored, to fix problems and answer requests. We don't browse your things without a reason.</li>
           </ul>
@@ -225,7 +226,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <p>
             We email you only when you need it or asked for it: a link to confirm your email address, a password reset, when someone adds
             you to a schedule poll, when an event you RSVP'd to posts an update (each has a link to stop them), and a copy of a court
-            attendance verification made for you. If you host or co-host and turn on reminders in your account settings, we also email you
+            attendance verification made for you. If a group gives a chip to an email address that has no account, that address gets one email with a link to claim it. If you host or co-host and turn on reminders in your account settings, we also email you
             before each meeting you're on, unless you choose notifications only. Other group news, like a scheduled business meeting or a host assignment, shows up in
             the notification bell on the site instead, and on your phone or computer if you turned on notifications there. We don't send newsletters or marketing.
           </p>
@@ -246,7 +247,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <ul>
             <li>your account, profile, picture and settings;</li>
             <li>your highlights, notes, timeline notes and their pictures;</li>
-            <li>your 10th step inventories and gratitude lists;</li>
+            <li>your 10th step inventories, gratitude lists, chip choices, meetings you joined, and chips given to you;</li>
             <li>your follows, reactions, comments, reposts, notifications (and the devices you get them on), RSVPs, group memberships and schedule polls you made.</li>
           </ul>
           <p>

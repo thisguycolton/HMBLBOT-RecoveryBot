@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_28_030000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_28_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -186,6 +186,26 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_030000) do
     t.index ["book_id", "index"], name: "index_chapters_on_book_id_and_index", unique: true
     t.index ["book_id", "slug"], name: "index_chapters_on_book_id_and_slug", unique: true
     t.index ["book_id"], name: "index_chapters_on_book_id"
+  end
+
+  create_table "chip_awards", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "given_by_id"
+    t.bigint "user_id"
+    t.string "email", null: false
+    t.string "milestone_key", null: false
+    t.integer "years"
+    t.date "on", null: false
+    t.text "note", default: "", null: false
+    t.string "claim_token", null: false
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["claim_token"], name: "index_chip_awards_on_claim_token", unique: true
+    t.index ["email"], name: "index_chip_awards_on_email"
+    t.index ["given_by_id"], name: "index_chip_awards_on_given_by_id"
+    t.index ["group_id"], name: "index_chip_awards_on_group_id"
+    t.index ["user_id"], name: "index_chip_awards_on_user_id"
   end
 
   create_table "contact_requests", force: :cascade do |t|
@@ -432,13 +452,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_030000) do
     t.datetime "updated_at", null: false
     t.bigint "approved_by_motion_id"
     t.string "body_format", default: "html", null: false
-    t.string "comment_mode", default: "off", null: false
     t.binary "live_state"
     t.bigint "live_state_seq", default: 0, null: false
     t.bigint "live_seq", default: 0, null: false
     t.integer "live_epoch", default: 0, null: false
     t.boolean "live_unversioned", default: false, null: false
     t.bigint "live_contributor_ids", default: [], null: false, array: true
+    t.string "comment_mode", default: "off", null: false
     t.index ["approved_by_motion_id"], name: "index_group_documents_on_approved_by_motion_id"
     t.index ["created_by_id"], name: "index_group_documents_on_created_by_id"
     t.index ["group_id", "kind", "position"], name: "index_group_documents_on_group_id_and_kind_and_position"
@@ -689,6 +709,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_030000) do
     t.index ["user_id"], name: "index_meeting_hosts_on_user_id"
   end
 
+  create_table "meeting_joins", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "meeting_id", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_id"], name: "index_meeting_joins_on_meeting_id"
+    t.index ["user_id", "meeting_id", "starts_at"], name: "index_meeting_joins_on_user_id_and_meeting_id_and_starts_at", unique: true
+    t.index ["user_id"], name: "index_meeting_joins_on_user_id"
+  end
+
   create_table "meetings", force: :cascade do |t|
     t.timestamptz "datetime"
     t.string "host"
@@ -717,6 +748,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_030000) do
     t.string "oiaa_url"
     t.datetime "oiaa_synced_at"
     t.boolean "oiaa_missing", default: false, null: false
+    t.jsonb "chip_design"
     t.index ["group_id"], name: "index_meetings_on_group_id"
     t.index ["oiaa_slug"], name: "index_meetings_on_oiaa_slug"
   end
@@ -1292,8 +1324,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_030000) do
     t.integer "host_reminder_hours", default: 24, null: false
     t.boolean "host_reminder_email", default: true, null: false
     t.string "push_off", default: [], null: false, array: true
-    t.bigint "chip_group_id"
-    t.index ["chip_group_id"], name: "index_users_on_chip_group_id"
+    t.jsonb "chip_tops", default: {}, null: false
+    t.string "chip_favorites", default: [], null: false, array: true
+    t.boolean "show_chips_on_profile", default: false, null: false
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
@@ -1311,6 +1344,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_030000) do
   add_foreign_key "business_meetings", "meetings", on_delete: :nullify
   add_foreign_key "business_meetings", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chapters", "books"
+  add_foreign_key "chip_awards", "groups", on_delete: :cascade
+  add_foreign_key "chip_awards", "users", column: "given_by_id", on_delete: :nullify
+  add_foreign_key "chip_awards", "users", on_delete: :cascade
   add_foreign_key "contact_requests", "users", column: "handled_by_id", on_delete: :nullify
   add_foreign_key "contact_requests", "users", on_delete: :nullify
   add_foreign_key "court_verifications", "groups"
@@ -1377,6 +1413,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_030000) do
   add_foreign_key "meeting_host_reminders", "users", on_delete: :cascade
   add_foreign_key "meeting_hosts", "meetings", on_delete: :cascade
   add_foreign_key "meeting_hosts", "users", on_delete: :nullify
+  add_foreign_key "meeting_joins", "meetings", on_delete: :cascade
+  add_foreign_key "meeting_joins", "users", on_delete: :cascade
   add_foreign_key "meetings", "groups"
   add_foreign_key "motions", "agenda_items", on_delete: :nullify
   add_foreign_key "motions", "business_meetings", on_delete: :nullify
@@ -1433,5 +1471,4 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_030000) do
   add_foreign_key "user_active_groups", "users"
   add_foreign_key "user_highlights", "chapters"
   add_foreign_key "user_highlights", "users"
-  add_foreign_key "users", "groups", column: "chip_group_id", on_delete: :nullify
 end

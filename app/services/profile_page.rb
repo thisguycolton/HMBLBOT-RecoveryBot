@@ -52,6 +52,9 @@ class ProfilePage
         groups: groups(person, me),
         following: people(person.following),
         followers: people(person.followers),
+        # Their favorite chips, if they chose to show them (Chips.favorites)
+        chips: person.show_chips_on_profile ? Chips.favorites(person) : [],
+        chip_design: ChipDesign::DEFAULT,
       },
     }
   end

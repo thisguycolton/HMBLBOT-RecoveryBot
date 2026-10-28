@@ -48,7 +48,7 @@ export default function TodayPanel({ today }) {
                   {m.conference_url_notes && <MeetingPasscode notes={m.conference_url_notes} copy className="mt-1 !text-xs text-slate-500 dark:text-neutral-400" />}
                 </div>
                 {m.conference_url && (
-                  <a href={m.conference_url} target="_blank" rel="noreferrer"
+                  <a href={m.conference_url} data-meeting-join={m.id} target="_blank" rel="noreferrer"
                     className="inline-flex shrink-0 items-center gap-1.5 rounded-xl !bg-accent px-3 py-2 text-sm font-semibold !text-white shadow-sm hover:opacity-90">
                     <Video className="size-4" /> Join
                   </a>

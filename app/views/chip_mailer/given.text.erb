@@ -1,0 +1,9 @@
+<%= @award.group.title %> sent you a <%= @award.label %> chip<% if @from %>, from <%= @from %><% end %>.
+<% if @award.note.present? %>
+
+"<%= @award.note %>"
+<% end %>
+
+Congratulations. Claim your chip here: <%= @url %>
+
+It's a virtual chip on RecoveryBot. If you don't have an account yet, you can make one (free) and the chip is yours as soon as you confirm your email. Only you see your chips unless you choose to show them on your profile.

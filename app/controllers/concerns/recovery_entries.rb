@@ -1,6 +1,7 @@
 # What the 10th step inventories and gratitude lists APIs share. Each is the member's own,
 # one a day, found by its date: GET index (newest first, a page at a time with ?before=),
-# GET/PUT/DELETE /:on. Saving answers which triangle chip it just earned, if any (Chips).
+# GET/PUT/DELETE /:on. The list brings the streak along, and saving answers which triangle
+# chip it just earned, if any (Chips).
 module RecoveryEntries
   extend ActiveSupport::Concern
   PAGE = 30
@@ -15,7 +16,8 @@ module RecoveryEntries
     before = entry_class.parse_day(params[:before])
     scope = scope.where(on: ...before) if before
     page = scope.limit(PAGE + 1).to_a
-    render json: { entries: page.first(PAGE).map(&:as_api_json), more: page.size > PAGE, total: entries.count }
+    render json: { entries: page.first(PAGE).map(&:as_api_json), more: page.size > PAGE, total: entries.count,
+                   streak: Chips.streaks(entries.pluck(:on), today).slice(:current, :best) }
   end
 
   def show
@@ -23,20 +25,21 @@ module RecoveryEntries
     render json: { entry: entry&.as_api_json }
   end
 
-  # PUT /:on -> saved (or, left empty, taken away), with the chip it earned
+  # PUT /:on -> saved (or, left empty, taken away), with the chip it earned (a total or a streak)
   def update
-    before = entries.count
+    before = earned_ids
     entry = entries.find_or_initialize_by(on: @day)
     entry.assign_attributes(entry_params)
     entry.validate
     if entry.errors.empty? && entry.blank_entry?
       entry.destroy if entry.persisted?
-      return render(json: { entry: nil, total: entries.count })
+      return render(json: { entry: nil, total: entries.count, streak: Chips.streaks(entries.pluck(:on), today).slice(:current, :best) })
     end
     return render(json: { error: entry.errors.full_messages.to_sentence }, status: :unprocessable_entity) unless entry.save
 
-    after = entries.count
-    render json: { entry: entry.as_api_json, total: after, new_chip: Chips.just_earned(before, after)&.then { |n| { kind: chip_kind, count: n } } }
+    after = Chips.entry_chips(current_user, chip_kind, today)
+    render json: { entry: entry.as_api_json, total: after[:total], streak: after[:streak],
+                   new_chip: after[:chips].reject { |c| before.include?(c[:id]) }.last }
   end
 
   def destroy
@@ -45,6 +48,11 @@ module RecoveryEntries
   end
 
   private
+
+  def earned_ids = Chips.entry_chips(current_user, chip_kind, today)[:chips].map { |c| c[:id] }
+
+  # The member's own today, which their browser sends (?today=), for whether a streak is alive
+  def today = entry_class.parse_day(params[:today]) || Date.current
 
   def set_day
     @day = entry_class.parse_day(params[:on])

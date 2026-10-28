@@ -17,6 +17,14 @@ class ApplicationController < ActionController::Base
       group = JoinsGroupFromInvite.call(resource, token)
       return "/groups/#{group.slug}" if group
     end
+    # A chip's claim link opened while signed out (ChipsController#claim)
+    claim = cookies.signed[:chip_claim]
+    if claim.present? && resource.is_a?(User)
+      cookies.delete(:chip_claim)
+      award = ChipAward.find_by(claim_token: claim)
+      path = award && ClaimsChip.call(resource, award)
+      return path if path
+    end
     # "Ask to join" while signed out (GroupsController#ask): back to that group to send it
     slug = cookies.signed[:group_ask]
     if slug.present? && resource.is_a?(User)

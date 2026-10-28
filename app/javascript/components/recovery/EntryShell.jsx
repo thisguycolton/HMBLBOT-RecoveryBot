@@ -3,13 +3,16 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { api } from "../groups/lib";
 import { Card, ErrorNote, Loading, linkButton } from "../groups/ui";
+import { showToast } from "../../lib/toast";
 import ChipModal from "./ChipModal";
+import { Streak } from "./ChipsPage";
 import { dayLabel, localDate, nightLabel, shiftDay } from "./lib";
 
 // What the 10th step and gratitude pages share: the day they're writing for (/recovery/<base>
 // for today, /recovery/<base>/YYYY-MM-DD for another), loading and saving that day's entry at
-// /api/<endpoint>/:on, the list of past days below, and the chip a save just earned.
-export function useEntry(endpoint) {
+// /api/<endpoint>/:on, the list of past days below, the streak (days in a row, sent with the
+// list), and the chip a save just earned. `unit` names a day: ["night", "nights"].
+export function useEntry(endpoint, unit) {
   const params = useParams();
   const today = localDate();
   const on = params.on && /^\d{4}-\d{2}-\d{2}$/.test(params.on) && params.on <= today ? params.on : today;
@@ -18,7 +21,7 @@ export function useEntry(endpoint) {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [earned, setEarned] = useState(null); // { chip, design, logoUrl, title, text }
+  const [earned, setEarned] = useState(null); // { chip, design, title, text }
 
   useEffect(() => {
     setEntry(undefined);
@@ -26,22 +29,25 @@ export function useEntry(endpoint) {
     api(`/${endpoint}/${on}`).then((d) => setEntry(d.entry)).catch((e) => setError(e.message));
   }, [endpoint, on]);
 
-  const loadList = useCallback((before) => api(`/${endpoint}${before ? `?before=${before}` : ""}`)
+  const loadList = useCallback((before) => api(`/${endpoint}?today=${today}${before ? `&before=${before}` : ""}`)
     .then((d) => setList((was) => (before && was ? { ...d, entries: [...was.entries, ...d.entries] } : d)))
-    .catch((e) => setError(e.message)), [endpoint]);
+    .catch((e) => setError(e.message)), [endpoint, today]);
   useEffect(() => { loadList(); }, [loadList]);
 
   const save = async (body, chipText) => {
     setSaving(true);
     setError(null);
     try {
-      const d = await api(`/${endpoint}/${on}`, { method: "PUT", body });
+      const before = list?.streak?.current || 0;
+      const d = await api(`/${endpoint}/${on}?today=${today}`, { method: "PUT", body });
       setEntry(d.entry);
       setSaved(true);
       loadList();
       if (d.new_chip) {
         const r = await api(`/recovery?today=${today}`);
-        setEarned({ chip: { ...d.new_chip, on }, design: r.design, logoUrl: r.home_group?.logo_url, groupTitle: r.home_group?.title, celebrate: true, ...chipText(d.new_chip.count) });
+        setEarned({ chip: d.new_chip, design: r.design, celebrate: true, ...chipText(d.new_chip) });
+      } else if (d.entry && d.streak.current > before && d.streak.current > 1) {
+        showToast(`${d.streak.current} ${unit[1]} in a row. Keep it going!`, { tone: "success" });
       }
     } catch (e) {
       setError(e.message);
@@ -49,14 +55,14 @@ export function useEntry(endpoint) {
     setSaving(false);
   };
 
-  return { on, today, entry, list, error, saving, saved, setSaved, save, loadList, earned, closeEarned: () => setEarned(null) };
+  return { on, today, entry, list, error, saving, saved, setSaved, save, loadList, earned, unit, closeEarned: () => setEarned(null) };
 }
 
 // The page around the form: title, the day with arrows to the days before and after, and
 // the past days below
 export function EntryShell({ base, title, intro, state, summary, children }) {
   const navigate = useNavigate();
-  const { on, today, entry, list, error, earned, closeEarned, loadList } = state;
+  const { on, today, entry, list, error, earned, closeEarned, loadList, unit } = state;
   const go = (day) => navigate(day === today ? `/${base}` : `/${base}/${day}`);
   useEffect(() => { document.title = `${title} | RecoveryBot`; }, [title]);
 
@@ -67,6 +73,8 @@ export function EntryShell({ base, title, intro, state, summary, children }) {
         <p className="mt-1 text-slate-600 dark:text-neutral-400">{intro}</p>
         <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500 dark:text-neutral-400"><Lock className="size-4" /> Private. Only you can ever read this, and it goes when you delete your account.</p>
       </header>
+
+      {list?.streak && <Streak streak={list.streak} total={list.total} unit={unit} done={list.entries[0]?.on === today} />}
 
       <div className="flex items-center gap-2">
         <button type="button" aria-label="The day before" onClick={() => go(shiftDay(on, -1))}

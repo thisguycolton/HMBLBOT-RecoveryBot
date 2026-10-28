@@ -1,0 +1,7 @@
+<p><strong><%= @award.group.title %></strong> sent you a <strong><%= @award.label %></strong> chip<% if @from %>, from <%= @from %><% end %>.</p>
+<% if @award.note.present? %>
+  <blockquote style="margin: 1em 0; padding-left: 1em; border-left: 3px solid #d6d3d1; color: #44403c;"><%= simple_format(@award.note) %></blockquote>
+<% end %>
+<p>Congratulations.</p>
+<p><a href="<%= @url %>" style="display: inline-block; padding: 10px 18px; border-radius: 10px; background: #0b6ede; color: #fff; font-weight: 600; text-decoration: none;">Claim your chip</a></p>
+<p style="color: #57534e; font-size: 14px;">It's a virtual chip on RecoveryBot. If you don't have an account yet, you can make one (free) and the chip is yours as soon as you confirm your email. Only you see your chips unless you choose to show them on your profile.</p>

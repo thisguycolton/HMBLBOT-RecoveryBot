@@ -109,7 +109,7 @@ export default function NextMeeting({ meetings, buttonClass, quietClass }) {
         <span className="hidden truncate font-normal text-white/80 sm:inline">· {live ? title : `${whenLabel(start, now)} ${viewerZoneName()}`}</span>
       </span>
       {meeting.conference_url ? (
-        <a href={meeting.conference_url} target="_blank" rel="noreferrer" className={live ? buttonClass : quietClass}>
+        <a href={meeting.conference_url} data-meeting-join={meeting.id} target="_blank" rel="noreferrer" className={live ? buttonClass : quietClass}>
           <Video className="h-4 w-4" /> Join{live ? " now" : ""}
         </a>
       ) : meeting.place || meeting.location ? (

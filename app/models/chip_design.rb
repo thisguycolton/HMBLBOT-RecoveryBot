@@ -1,6 +1,7 @@
-# How a group's chips look (groups.chip_design, set in Group dashboard > Chips): the round
-# sobriety chips and the triangle chips for 10th steps and gratitude lists. A group that never
-# set one gets DEFAULT, and only what a group changed is stored, so the rest follows the default.
+# How chips look. DEFAULT is RecoveryBot's own, plain design, for every chip a member earns. A
+# group can design its own (groups.chip_design, Group dashboard > Chips) for the chips its hosts
+# give (ChipAward), and each meeting its Meeting Maker chips (meetings.chip_design, the triangle
+# part only). Only what differs from the default is stored, so the rest follows it.
 module ChipDesign
   ROUND_KEYS = %w[24h 30d 60d 90d 6m 9m 18m year].freeze
   EMBLEMS = %w[triangle logo none].freeze
@@ -26,13 +27,24 @@ module ChipDesign
     "triangle" => {
       "sides" => ["Unity", "Service", "Recovery"],
       "finish" => "plastic",
-      "colors" => { "inventory" => "#3451b2", "gratitude" => "#d9480f" },
+      "colors" => { "inventory" => "#3451b2", "gratitude" => "#d9480f", "meeting" => "#0f766e" },
     },
   }.freeze
+  TRIANGLE_KINDS = DEFAULT["triangle"]["colors"].keys.freeze
 
   module_function
 
   def for_group(group) = merge(group&.chip_design)
+
+  # A meeting's Meeting Maker chips: "Meeting Maker" and the meeting's name along the sides
+  # unless it changed them
+  def for_meeting(meeting)
+    design = merge(meeting.chip_design)
+    design["triangle"]["sides"] = normalize(meeting.chip_design).dig("triangle", "sides") || meeting_sides(meeting)
+    design
+  end
+
+  def meeting_sides(meeting) = ["Meeting", "Maker", meeting.name.to_s.first(24)]
 
   # The stored design laid over the default
   def merge(stored)
@@ -62,7 +74,7 @@ module ChipDesign
       "triangle" => {
         "sides" => (Array(triangle["sides"]).first(3).map { |s| text(s, 24) || "" } if triangle.key?("sides")),
         "finish" => (triangle["finish"] if TRIANGLE_FINISHES.include?(triangle["finish"])),
-        "colors" => colors(triangle["colors"], Chips::TRIANGLE_KINDS.keys),
+        "colors" => colors(triangle["colors"], TRIANGLE_KINDS),
       },
     }
     out.to_h do |part, values|

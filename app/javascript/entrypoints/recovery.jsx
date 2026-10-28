@@ -1,5 +1,6 @@
 // A member's own recovery tools at /recovery (app/controllers/recovery_controller.rb): their
-// chips, the nightly 10th step and gratitude lists. Only ever their own.
+// chips, the nightly 10th step and gratitude lists (only ever their own), and giving chips
+// for a group they host for.
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
@@ -12,6 +13,7 @@ import { registerRouter } from "../components/shell/useShell";
 import ChipsPage from "../components/recovery/ChipsPage";
 import InventoryPage from "../components/recovery/InventoryPage";
 import GratitudePage from "../components/recovery/GratitudePage";
+import GivePage from "../components/recovery/GivePage";
 
 function Shell() {
   return (
@@ -34,6 +36,7 @@ const router = createBrowserRouter(
         { path: "inventory/:on", element: <InventoryPage /> },
         { path: "gratitude", element: <GratitudePage /> },
         { path: "gratitude/:on", element: <GratitudePage /> },
+        { path: "give", element: <GivePage /> },
       ],
     },
   ],

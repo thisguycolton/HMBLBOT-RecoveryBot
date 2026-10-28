@@ -10,8 +10,11 @@ class User < ApplicationRecord
   # The member's own recovery tools, only ever seen by them (Api::RecoveryController)
   has_many :step_inventories, dependent: :delete_all
   has_many :gratitude_lists, dependent: :delete_all
-  # The home group whose chip design their chips are drawn in (#chip_home_group)
-  belongs_to :chip_group, class_name: "Group", optional: true
+  # Chips their groups' hosts gave them (and ones they gave), and the meetings they clicked
+  # Join on, for Meeting Maker chips (Chips)
+  has_many :chip_awards, dependent: :delete_all
+  has_many :chip_awards_given, class_name: "ChipAward", foreign_key: :given_by_id, dependent: :nullify, inverse_of: :given_by
+  has_many :meeting_joins, dependent: :delete_all
   has_many :created_groups, class_name: "Group", foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
   has_many :groups, -> { merge(GroupMembership.active) }, through: :group_memberships
   has_one_attached :avatar
@@ -104,12 +107,12 @@ class User < ApplicationRecord
 
   def profile_path = "/people/#{username}"
 
-  # The group whose chips they get: the one they picked while they're still in it, otherwise
-  # the first group they joined, or none (the RecoveryBot design)
-  def chip_home_group
-    groups = self.groups.order("group_memberships.created_at").to_a
-    groups.find { |g| g.id == chip_group_id } || groups.first
+  # Devise, once the email address is confirmed: chips sent to it are theirs
+  def after_confirmation
+    super if defined?(super)
+    ChipAward.claim_for(self)
   end
+
   def following?(other) = !!other && follows_given.exists?(followed_id: other.id)
   def custom_page? = !page_blocks.nil?
 

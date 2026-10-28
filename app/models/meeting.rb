@@ -18,6 +18,8 @@ class Meeting < ApplicationRecord
   has_many :hosts, class_name: "MeetingHost", dependent: :destroy
   has_many :host_covers, class_name: "MeetingHostCover", dependent: :destroy
   has_many :host_sub_requests, dependent: :destroy
+  # Join clicks before it started, for its Meeting Maker chips (MeetingJoin)
+  has_many :meeting_joins, dependent: :delete_all
 
   before_validation :tidy
   after_create :join_coordinators_slots, if: :weekly?

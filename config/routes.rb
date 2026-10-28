@@ -65,6 +65,8 @@ Rails.application.routes.draw do
   resource :hosting, controller: "hosting", only: :show
   # A member's own recovery tools (/recovery): chips, 10th step inventories, gratitude lists
   resource :recovery, controller: "recovery", only: %i[show update]
+  resources :chip_awards, only: %i[index create destroy]
+  resources :meeting_joins, only: :create
   resources :step_inventories, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   resources :gratitude_lists, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   # The shell: your groups and roles, the Hosting badge, Today; and the search box
@@ -89,7 +91,9 @@ Rails.application.routes.draw do
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
     resource :conscience, controller: "group_conscience", only: :show
-    resource :chips, controller: "group_chips", only: %i[show update]
+    resource :chips, controller: "group_chips", only: %i[show update] do
+      put "meetings/:meeting_id", action: :meeting
+    end
     resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy] do
       post :link, on: :collection
     end
@@ -327,6 +331,7 @@ end
   get "/people/*path", to: "people#app", format: false
   # A member's own chips, 10th step and gratitude lists: a React app (entrypoints/recovery.jsx)
   get "/recovery", to: "recovery#app", as: :recovery
+  get "/chips/claim/:token", to: "chips#claim", as: :claim_chip
   get "/recovery/*path", to: "recovery#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb

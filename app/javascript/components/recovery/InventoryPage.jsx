@@ -28,7 +28,7 @@ function summary(entry) {
 // The 10th step (/recovery/inventory): the nightly review from the Big Book (page 86), one a
 // day. Each question takes a yes or no and a note; the last two are written out.
 export default function InventoryPage() {
-  const state = useEntry("step_inventories");
+  const state = useEntry("step_inventories", ["night", "nights"]);
   const { entry, on, saving, saved, setSaved, save } = state;
   const [answers, setAnswers] = useState({});
   const [notes, setNotes] = useState("");
@@ -41,7 +41,9 @@ export default function InventoryPage() {
   const set = (key, patch) => { setAnswers((a) => ({ ...a, [key]: { ...a[key], ...patch } })); setSaved(false); };
   const submit = (e) => {
     e.preventDefault();
-    save({ answers, notes }, (n) => ({ title: n === 1 ? "Your first 10th step" : `${n.toLocaleString()} 10th steps`, text: `That's ${n === 1 ? "your first nightly inventory" : `${n.toLocaleString()} nightly inventories`}. Continue to take personal inventory, and when we're wrong, promptly admit it.` }));
+    save({ answers, notes }, ({ kind, count: n }) => (kind.endsWith("-streak")
+      ? { title: `${n} nights in a row`, text: `${n} nights of honest inventory in a row. Keep it going.` }
+      : { title: n === 1 ? "Your first 10th step" : `${n.toLocaleString()} 10th steps`, text: `That's ${n === 1 ? "your first nightly inventory" : `${n.toLocaleString()} nightly inventories`}. Continue to take personal inventory, and when we're wrong, promptly admit it.` }));
   };
 
   return (
