@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, useNavigate, useParams } from "react-router-dom";
 import {
   BellRing, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, ClipboardCheck, FileText, Gavel, Landmark,
-  LayoutTemplate, Medal, Scale, Settings, Stamp, UserCheck, UserPlus, Users,
+  LayoutTemplate, Medal, Repeat, Scale, Settings, Stamp, UserCheck, UserPlus, Users,
 } from "lucide-react";
 import Layout from "../Layout";
 import { api } from "./lib";
@@ -200,6 +200,7 @@ function DashboardBody({ group }) {
             {group.can_schedule_hosts && (
               <RolePart title="Host coordinator" empty="Every host place is filled and nobody needs a sub."
                 items={[
+                  ...(data.covers || []).map((c) => <Row key={`c${c.id}`} to={`/${slug}/meetings`} icon={Repeat} title={c.text} note={dateLabel(c.on)} />),
                   ...(data.sub_requests || []).map((r) => <Row key={`s${r.id}`} to={`/${slug}/meetings`} icon={BellRing} title={`${r.meeting_name}, ${dateLabel(r.on)}: needs a ${r.role === "co_host" ? "co-host" : "host"}`} note={r.requested_by ? `Asked by ${r.requested_by}` : "Nobody has taken it yet"} />),
                   ...(data.hosts_open && data.hosts_open.open_hosts + data.hosts_open.open_co_hosts > 0
                     ? [<Row key="open" to={`/${slug}/meetings`} icon={UserCheck} title={`${data.hosts_open.open_hosts + data.hosts_open.open_co_hosts} host places are open`} note={`${data.hosts_open.open_hosts} ${data.hosts_open.open_hosts === 1 ? "host" : "hosts"} and ${data.hosts_open.open_co_hosts} ${data.hosts_open.open_co_hosts === 1 ? "co-host" : "co-hosts"} needed across the week`} />] : []),

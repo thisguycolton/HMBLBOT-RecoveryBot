@@ -25,6 +25,7 @@ class Api::GroupConscienceController < ApplicationController
     if @group.hosts_editable_by?(current_user)
       json[:hosts_open] = HostSchedule.new(@group, current_user).summary
       json[:sub_requests] = open_sub_requests(today)
+      json[:covers] = TodayDuties.new(current_user).covers(group: @group)
     end
     json[:stats] = stats if keeper? || @group.hosts_editable_by?(current_user) || @group.treasury_editable_by?(current_user)
     render json: json
