@@ -253,6 +253,10 @@ Rails.application.routes.draw do
     post :read, on: :member
     post :read_all, on: :collection
   end
+  # Chips given to them that the "you got a chip" popup hasn't shown yet
+  resources :chip_arrivals, only: :index do
+    post :seen, on: :member
+  end
   resources :highlights, only: [:index, :create, :update, :destroy] do
     collection do
       post :share

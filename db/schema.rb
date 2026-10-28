@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_28_190000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_28_193000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -203,6 +203,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_190000) do
     t.datetime "updated_at", null: false
     t.jsonb "design"
     t.bigint "chip_edition_id"
+    t.datetime "celebrated_at"
     t.index ["chip_edition_id"], name: "index_chip_awards_on_chip_edition_id"
     t.index ["claim_token"], name: "index_chip_awards_on_claim_token", unique: true
     t.index ["email"], name: "index_chip_awards_on_email"
