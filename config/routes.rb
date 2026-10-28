@@ -204,6 +204,8 @@ Rails.application.routes.draw do
   resources :people, param: :username, only: :show, constraints: { username: %r{[^/]+} } do
     member do
       get :feed
+      get :followers
+      get :following
       post :follow
       delete :follow, action: :unfollow
     end

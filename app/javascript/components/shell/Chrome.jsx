@@ -4,8 +4,8 @@ import DonationModal from "../DonationModal";
 import HostCourtModal from "../nav/HostCourtModal";
 import NotificationBell from "../NotificationBell";
 import Avatar from "../groups/Avatar";
-import SearchBox from "./SearchBox";
 import Sheet, { SheetClose } from "./Sheet";
+import SearchBox from "./SearchBox";
 import Sidebar from "./Sidebar";
 import TodayPanel from "./TodayPanel";
 import { AccountLinks } from "./TopBar";
@@ -74,10 +74,10 @@ export function ChromeSheets({ chrome, nav, isAuthenticated, theme, path, pushed
         </div>
       </Sheet>
 
+      {/* Search on phones is the top bar itself (TopBar's `searching`); this dims the page under it */}
       {open === "search" && (
-        <div className="fixed inset-0 z-[2200] bg-black/30 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden" onClick={(e) => e.target === e.currentTarget && close()}>
-          <SearchBox autoFocus onDone={close} />
-        </div>
+        <button type="button" aria-label="Close search" onClick={close}
+          className="fixed inset-x-0 bottom-0 top-[var(--nav-h)] z-[2050] cursor-default !bg-black/30 lg:hidden" />
       )}
 
       <DonationModal isOpen={open === "donate"} onClose={close} />

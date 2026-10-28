@@ -15,8 +15,8 @@ const getJson = (url) => fetch(url, { headers: { Accept: "application/json" }, c
 // The search box at the top of every page. As you type it shows hashtags on notes you can see
 // (from the hashtags endpoint, /api/hashtags), the site's own pages, groups, people, readings
 // and the library's chapters and books (/api/search). ↑↓ move, Enter opens, Esc closes, and
-// "/" anywhere on the page jumps here.
-export default function SearchBox({ autoFocus = false, onDone, className = "" }) {
+// "/" anywhere on the page jumps here. `compact` is the slimmer box that fits the phone's top bar.
+export default function SearchBox({ autoFocus = false, onDone, className = "", compact = false }) {
   const [q, setQ] = useState("");
   const [focused, setFocused] = useState(autoFocus);
   const [results, setResults] = useState(null);
@@ -92,7 +92,7 @@ export default function SearchBox({ autoFocus = false, onDone, className = "" })
 
   return (
     <div ref={box} className={`relative !font-sans ${className}`}>
-      <label className={`flex items-center gap-3 rounded-2xl border bg-white px-4 py-2.5 dark:bg-neutral-900 ${showPanel ? "border-accent ring-2 ring-accent/15" : "border-neutral-300/80 dark:border-neutral-700"}`}>
+      <label className={`flex items-center gap-3 rounded-2xl border bg-white px-4 ${compact ? "py-2" : "py-2.5"} dark:bg-neutral-900 ${showPanel ? "border-accent ring-2 ring-accent/15" : "border-neutral-300/80 dark:border-neutral-700"}`}>
         <Search className="size-5 shrink-0 text-slate-500" />
         <input ref={input} value={q} autoFocus={autoFocus} onChange={(e) => setQ(e.target.value)} onFocus={() => setFocused(true)} onKeyDown={onKeyDown}
           placeholder="Search readings, notes, groups, books..." aria-label="Search" role="combobox" aria-expanded={showPanel} aria-controls="site-search-results"

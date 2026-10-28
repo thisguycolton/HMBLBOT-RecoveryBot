@@ -4,11 +4,13 @@ import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
 import { heroBleed, heroButton, heroQuietButton } from "../groups/page/GroupHero";
 import { showToast } from "../../lib/toast";
+import FollowListModal from "./FollowListModal";
 
 // The top of a profile: their cover (or the site's blue), picture, name, @username and
-// counts, with Follow (or `actions` on your own) under them.
+// counts, with Follow (or `actions` on your own) under them. The counts open who's on them.
 export default function ProfileHero({ person, viewer, coverUrl, actions, onFollowChange, bleed = false }) {
   const [busy, setBusy] = useState(false);
+  const [list, setList] = useState(null); // "followers" | "following" while the list is open
   const chip = "inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur";
   const toggleFollow = async () => {
     setBusy(true);
@@ -33,8 +35,12 @@ export default function ProfileHero({ person, viewer, coverUrl, actions, onFollo
             <h1 className="ev-heading !text-2xl !leading-tight font-extrabold tracking-tight text-white sm:!text-4xl [overflow-wrap:break-word] [word-break:normal]">{person.name}</h1>
             <p className="text-sm font-medium text-white/80">@{person.username}{viewer.follows_you ? " · follows you" : ""}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className={chip}><strong>{person.followers_count}</strong> {person.followers_count === 1 ? "follower" : "followers"}</span>
-              <span className={chip}><strong>{person.following_count}</strong> following</span>
+              <button type="button" onClick={() => setList("followers")} className={`${chip} !bg-white/15 hover:!bg-white/25`}>
+                <strong>{person.followers_count}</strong> {person.followers_count === 1 ? "follower" : "followers"}
+              </button>
+              <button type="button" onClick={() => setList("following")} className={`${chip} !bg-white/15 hover:!bg-white/25`}>
+                <strong>{person.following_count}</strong> following
+              </button>
               {joined && <span className={chip}><CalendarDays className="size-3.5" /> Joined {joined}</span>}
             </div>
           </div>
@@ -48,6 +54,7 @@ export default function ProfileHero({ person, viewer, coverUrl, actions, onFollo
           )}
         </div>
       </div>
+      <FollowListModal key={`${person.username}-${person.followers_count}`} person={person} which={list} onWhich={setList} onClose={() => setList(null)} />
     </header>
   );
 }
