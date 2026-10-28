@@ -52,6 +52,10 @@ class ProfilePage
         groups: groups(person, me),
         following: people(person.following),
         followers: people(person.followers),
+        # Their favorite chips, when their page has a Chips block (Chips.favorites)
+        chips: person.show_chips_on_profile ? Chips.favorites(person) : [],
+        chips_path: ("/recovery" if me),
+        chip_design: ChipDesign::DEFAULT,
       },
     }
   end

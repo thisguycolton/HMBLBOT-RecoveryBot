@@ -10,7 +10,8 @@ import "../styles/day-count.css";
 // with their sobriety date). On a milestone day it also opens on their first page of the day
 // if they stayed signed in, with confetti. Plain CSS (day-count.css), since this mounts with
 // the toasts on the older Bootstrap pages too. On a milestone day the new chip shows at the
-// top, in their home group's design (/api/recovery), and it links to all their chips.
+// top (/api/recovery: the one they put on top, if a group gave them one too), and it links to all
+// their chips.
 const SEEN_KEY = "hb-day-count-seen"; // the local date it last opened, "YYYY-MM-DD"
 
 const localDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -27,12 +28,19 @@ export default function DayCount({ since, signedIn }) {
   const [status] = useState(() => milestoneStatus(since));
   const [open, setOpen] = useState(() => Boolean(status && (signedIn || (status.today && !seenToday()))));
   const closeRef = useRef(null);
-  const [chip, setChip] = useState(null); // { design, logoUrl } on a milestone day
+  const [chip, setChip] = useState(null); // { chip, design } on a milestone day
 
   useEffect(() => {
     if (!open) return undefined;
     markSeen();
-    if (status.today) api("/recovery").then((r) => setChip({ design: r.design, logoUrl: r.home_group?.logo_url, groupTitle: r.home_group?.title })).catch(() => {});
+    if (status.today) {
+      const m = status.today;
+      const slot = m.key === "year" ? `round:year-${m.years}` : `round:${m.key}`;
+      api(`/recovery?today=${localDate()}`).then((r) => {
+        const own = r.chips.find((c) => c.slot === slot && c.top);
+        setChip({ design: r.design, chip: own || { id: slot, shape: "round", kind: "round", milestone: m, label: m.label, on: localDate() } });
+      }).catch(() => {});
+    }
     closeRef.current?.focus();
     const timer = status.today ? setTimeout(() => confetti(), 250) : null;
     const onKey = (e) => e.key === "Escape" && setOpen(false);
@@ -58,7 +66,7 @@ export default function DayCount({ since, signedIn }) {
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
         <div className="hb-daycount__head">
-          {today && chip && <div className="hb-daycount__chip"><SpinningChip chip={{ kind: "round", milestone: today, on: localDate() }} {...chip} size={180} /></div>}
+          {today && chip && <div className="hb-daycount__chip"><SpinningChip chip={chip.chip} design={chip.design} size={180} /></div>}
           <div className="hb-daycount__meta">{today ? "Milestone" : "Your day count"}</div>
           {today && <h2 id="hb-daycount-title" className="hb-daycount__title">Happy {today.label}!</h2>}
           <div className="hb-daycount__number" {...(today ? {} : { id: "hb-daycount-title" })}>

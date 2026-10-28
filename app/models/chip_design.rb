@@ -1,9 +1,10 @@
-# How a group's chips look (groups.chip_design, set in Group dashboard > Chips): the round
-# sobriety chips and the triangle chips for 10th steps and gratitude lists. A group that never
-# set one gets DEFAULT, and only what a group changed is stored, so the rest follows the default.
+# How chips look. DEFAULT is RecoveryBot's own, plain design, for every chip a member earns. A
+# group can design its own (groups.chip_design, Group dashboard > Chips) for the chips its hosts
+# give (ChipAward), and each meeting its Meeting Maker chips (meetings.chip_design, the triangle
+# part only). Only what differs from the default is stored, so the rest follows it.
 module ChipDesign
   ROUND_KEYS = %w[24h 30d 60d 90d 6m 9m 18m year].freeze
-  EMBLEMS = %w[triangle logo none].freeze
+  EMBLEMS = %w[triangle logo relief none].freeze
   FINISHES = %w[classic metal plastic].freeze
   NUMERALS = %w[roman number].freeze
   TRIANGLE_FINISHES = %w[metal plastic].freeze
@@ -16,6 +17,13 @@ module ChipDesign
       "back_text" => "God grant me\nthe serenity\nto accept the things\nI cannot change,\ncourage to change\nthe things I can,\nand wisdom to know\nthe difference.",
       "emblem" => "triangle",
       "numerals" => "roman",
+      # The raised logo ("relief" emblem): how wide it is (of the 200 across the chip) and, on
+      # metal chips, how high it stands and how sharply it rises from the coin, 1 to 10
+      "relief_depth" => "raised", # or "inset", cut into the coin
+      "relief_size" => 64,
+      "relief_badge" => false, # a circle over its middle with the milestone in it
+      "relief_height" => 4,
+      "relief_sharpness" => 7,
       # classic: colored chips for the months, metal medallions for the years
       "finish" => "classic",
       "colors" => {
@@ -26,13 +34,24 @@ module ChipDesign
     "triangle" => {
       "sides" => ["Unity", "Service", "Recovery"],
       "finish" => "plastic",
-      "colors" => { "inventory" => "#3451b2", "gratitude" => "#d9480f" },
+      "colors" => { "inventory" => "#3451b2", "gratitude" => "#d9480f", "meeting" => "#0f766e" },
     },
   }.freeze
+  TRIANGLE_KINDS = DEFAULT["triangle"]["colors"].keys.freeze
 
   module_function
 
   def for_group(group) = merge(group&.chip_design)
+
+  # A meeting's Meeting Maker chips: "Meeting Maker" and the meeting's name along the sides
+  # unless it changed them
+  def for_meeting(meeting)
+    design = merge(meeting.chip_design)
+    design["triangle"]["sides"] = normalize(meeting.chip_design).dig("triangle", "sides") || meeting_sides(meeting)
+    design
+  end
+
+  def meeting_sides(meeting) = ["Meeting", "Maker", meeting.name.to_s.first(24)]
 
   # The stored design laid over the default
   def merge(stored)
@@ -55,14 +74,21 @@ module ChipDesign
         "bottom_text" => text(round["bottom_text"]),
         "back_text" => (round["back_text"].to_s.gsub(/\r\n?/, "\n").gsub(/[ \t]+/, " ").strip.first(240) unless round["back_text"].nil?),
         "emblem" => (round["emblem"] if EMBLEMS.include?(round["emblem"])),
+        # The group's logo as a raised relief (ChipRelief), for the "relief" emblem
+        "relief" => ChipRelief.clean(round["relief"]),
         "numerals" => (round["numerals"] if NUMERALS.include?(round["numerals"])),
         "finish" => (round["finish"] if FINISHES.include?(round["finish"])),
+        "relief_depth" => (round["relief_depth"] if %w[raised inset].include?(round["relief_depth"])),
+        "relief_size" => whole(round["relief_size"], 40..96),
+        "relief_badge" => (ActiveModel::Type::Boolean.new.cast(round["relief_badge"]) unless round["relief_badge"].nil?),
+        "relief_height" => whole(round["relief_height"], 1..10),
+        "relief_sharpness" => whole(round["relief_sharpness"], 1..10),
         "colors" => colors(round["colors"], ROUND_KEYS),
       },
       "triangle" => {
         "sides" => (Array(triangle["sides"]).first(3).map { |s| text(s, 24) || "" } if triangle.key?("sides")),
         "finish" => (triangle["finish"] if TRIANGLE_FINISHES.include?(triangle["finish"])),
-        "colors" => colors(triangle["colors"], Chips::TRIANGLE_KINDS.keys),
+        "colors" => colors(triangle["colors"], TRIANGLE_KINDS),
       },
     }
     out.to_h do |part, values|
@@ -72,6 +98,11 @@ module ChipDesign
       values.delete("sides") if values["sides"] && values["sides"].size != 3
       [part, values]
     end.compact_blank
+  end
+
+  def whole(value, range)
+    n = Integer(value.to_s, exception: false) || Float(value.to_s, exception: false)&.round
+    n if n && range.cover?(n)
   end
 
   def text(value, max = 40)

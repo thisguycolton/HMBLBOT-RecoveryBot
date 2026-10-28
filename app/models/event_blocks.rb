@@ -38,13 +38,14 @@
 #              far as the viewer may see them (Visibility); they post notes from it
 #   groups     title: their groups that the viewer is in too (they see all of theirs)
 #   people     title, which (following/followers)
+#   chips      title: up to five favorite chips they picked on their Chips page (Chips.favorites)
 #
 # Each block has a smaller view for the side column and a larger one for the main column;
 # size "auto" follows the column it's in, "compact" or "full" picks one.
 module EventBlocks
   TYPES = %w[heading notes agenda guidelines photo gallery poll conscience_agenda].freeze
   GROUP_TYPES = %w[heading notes agenda guidelines photo gallery meetings events timeline literature readings members join documents decisions business_meeting].freeze
-  PROFILE_TYPES = %w[heading notes photo gallery about feed groups people].freeze
+  PROFILE_TYPES = %w[heading notes photo gallery about feed groups people chips].freeze
   COLORS = %w[default accent brand sky indigo emerald amber rose slate].freeze
   SIZES = %w[auto compact full].freeze
   REGIONS = %w[main side].freeze
@@ -162,6 +163,7 @@ module EventBlocks
   end
 
   def groups_fields(b) = { "title" => text(b.fetch("title", "Groups"), 120) }
+  def chips_fields(b) = { "title" => text(b.fetch("title", "Chips"), 120) }
 
   def people_fields(b)
     which = b["which"] == "followers" ? "followers" : "following"

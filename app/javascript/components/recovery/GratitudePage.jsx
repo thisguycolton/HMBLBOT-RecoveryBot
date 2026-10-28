@@ -13,7 +13,7 @@ const summary = (entry) => {
 
 // Gratitude (/recovery/gratitude): today's list, one line for each thing, and the days before
 export default function GratitudePage() {
-  const state = useEntry("gratitude_lists");
+  const state = useEntry("gratitude_lists", ["day", "days"]);
   const { entry, on, saving, saved, setSaved, save } = state;
   const [items, setItems] = useState([""]);
   const refs = useRef([]);
@@ -37,10 +37,12 @@ export default function GratitudePage() {
   const remove = (i) => change(items.length > 1 ? items.filter((_, j) => j !== i) : [""]);
   const submit = (e) => {
     e?.preventDefault();
-    save({ items: items.map((i) => i.trim()).filter(Boolean) }, (n) => ({
-      title: n === 1 ? "Your first gratitude list" : `${n.toLocaleString()} gratitude lists`,
-      text: n === 1 ? "The first of many. A grateful heart doesn't drink." : `That's ${n.toLocaleString()} days you stopped to count what's good.`,
-    }));
+    save({ items: items.map((i) => i.trim()).filter(Boolean) }, ({ kind, count: n }) => (kind.endsWith("-streak")
+      ? { title: `${n} days in a row`, text: `${n} days of gratitude in a row. Keep it going.` }
+      : {
+        title: n === 1 ? "Your first gratitude list" : `${n.toLocaleString()} gratitude lists`,
+        text: n === 1 ? "The first of many. A grateful heart doesn't drink." : `That's ${n.toLocaleString()} days you stopped to count what's good.`,
+      }));
   };
 
   return (

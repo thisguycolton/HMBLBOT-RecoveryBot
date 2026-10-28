@@ -209,7 +209,7 @@ function MeetingCard({ series, group, manage, focus = false, onEdit, onChanged }
 
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
         {meeting.conference_url && (
-          <a href={meeting.conference_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-accent hover:underline">
+          <a href={meeting.conference_url} data-meeting-join={meeting.id} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-accent hover:underline">
             <Video className="h-4 w-4" /> Join online
           </a>
         )}

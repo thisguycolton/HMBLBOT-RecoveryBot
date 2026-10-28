@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Upload } from "lucide-react";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass, labelClass } from "../ui/styles";
 import { RoundChip, TriangleChip } from "../recovery/Chip";
@@ -18,13 +18,13 @@ const ROUND = [
   { key: "year", years: 1, label: "Years" },
   { key: "18m", label: "18 months" },
 ];
-const TRIANGLES = [["inventory", "10th steps", 30], ["gratitude", "Gratitude lists", 90]];
 
 const segment = "overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700";
 
-// Group dashboard > Chips (group admins): how the chips look for every member who calls this
-// their home group, with the chips drawn as they'll get them. Saved to groups.chip_design
-// (Api::GroupChipsController); only what differs from RecoveryBot's design is kept.
+// Group dashboard > Chips (group admins): how the round chips the group's hosts give look
+// (Give a chip, /recovery/give), drawn as they'll get them, and each meeting's Meeting Maker
+// chips. Saved to groups.chip_design and meetings.chip_design (Api::GroupChipsController); only
+// what differs from RecoveryBot's design is kept. Chips members earn themselves stay plain.
 export default function ChipDesigner({ group }) {
   const [data, setData] = useState(null);
   const [design, setDesign] = useState(null);
@@ -38,7 +38,6 @@ export default function ChipDesigner({ group }) {
 
   if (!design) return error ? <ErrorNote error={error} /> : <Loading />;
   const round = (patch) => { setDesign((d) => ({ ...d, round: { ...d.round, ...patch } })); setSaved(false); };
-  const triangle = (patch) => { setDesign((d) => ({ ...d, triangle: { ...d.triangle, ...patch } })); setSaved(false); };
   const logoUrl = group.logo_url || data.logo_url;
 
   const put = async (body) => {
@@ -55,10 +54,11 @@ export default function ChipDesigner({ group }) {
   const reset = () => window.confirm("Go back to RecoveryBot's chips? Your colors and words here are cleared.") && put({ reset: true });
 
   return (
+    <div className="space-y-8">
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <form onSubmit={(e) => { e.preventDefault(); put({ design }); }} className="min-w-0 space-y-4">
         <p className="text-sm text-slate-600 dark:text-neutral-400">
-          Members who call {group.title} their home group get their chips in this design, on their Chips page and on the day they reach a milestone.
+          The chips {group.title}'s hosts give come in this design. Chips members earn on their own stay RecoveryBot's plain ones.
           Nobody else sees a member's chips, and you don't either.
         </p>
 
@@ -84,9 +84,11 @@ export default function ChipDesigner({ group }) {
             <div className={labelClass}>In the middle</div>
             <div className={segment}>
               <SegmentedControl value={design.round.emblem} onChange={(v) => round({ emblem: v })}
-                options={[{ value: "triangle", label: "Circle and triangle" }, { value: "logo", label: "Group logo" }, { value: "none", label: "Just the number" }]} />
+                options={[{ value: "triangle", label: "Circle and triangle" }, { value: "logo", label: "Group logo" }, { value: "relief", label: "Raised logo" }, { value: "none", label: "Just the number" }]} />
             </div>
             {design.round.emblem === "logo" && !logoUrl && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">The group has no logo yet, so chips show the circle and triangle. Add one in Group settings.</p>}
+            {design.round.emblem === "relief" && <ReliefUpload slug={group.slug} relief={design.round.relief} onChange={(relief) => round({ relief })} />}
+            {design.round.emblem === "relief" && design.round.relief && <ReliefControls r={design.round} set={round} />}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -116,38 +118,6 @@ export default function ChipDesigner({ group }) {
           </div>
         </Card>
 
-        <Card className="space-y-4 p-4 sm:p-5">
-          <h2 className="font-semibold text-slate-900 dark:text-white">Triangle chips</h2>
-          <p className="-mt-2 text-sm text-slate-500 dark:text-neutral-400">For writing 10th steps and gratitude lists: the 1st, 7th, 30th, 90th, 180th and 365th, then every 365 more.</p>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {["Left side", "Right side", "Bottom"].map((label, i) => (
-              <div key={label}>
-                <label htmlFor={`c-side-${i}`} className={labelClass}>{label}</label>
-                <input id={`c-side-${i}`} maxLength={24} className={inputClass} value={design.triangle.sides[i] || ""}
-                  onChange={(e) => triangle({ sides: design.triangle.sides.map((s, j) => (j === i ? e.target.value : s)) })} />
-              </div>
-            ))}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <div className={labelClass}>Finish</div>
-              <div className={segment}>
-                <SegmentedControl value={design.triangle.finish} onChange={(v) => triangle({ finish: v })}
-                  options={[{ value: "plastic", label: "Colored" }, { value: "metal", label: "Metal" }]} />
-              </div>
-            </div>
-            <div>
-              <div className={labelClass}>Colors</div>
-              <div className="grid grid-cols-2 gap-2">
-                {TRIANGLES.map(([kind, label]) => (
-                  <ColorField key={kind} label={label} value={design.triangle.colors[kind]} fallback={data.default.triangle.colors[kind]}
-                    onChange={(v) => triangle({ colors: { ...design.triangle.colors, [kind]: v } })} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </Card>
-
         <ErrorNote error={error} />
         <div className="flex flex-wrap items-center justify-between gap-2">
           {data.customized ? <button type="button" className={quietButton} onClick={reset} disabled={saving}><RotateCcw className="size-4" /> Use RecoveryBot's chips</button> : <span />}
@@ -162,8 +132,8 @@ export default function ChipDesigner({ group }) {
         <Card className="space-y-4 p-4">
           <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">How they'll look</h2>
           <div className="rounded-xl bg-gradient-to-b from-stone-800 to-stone-950 py-5 text-center text-white">
-            <SpinningChip key={pick.kind + (pick.milestone?.key || "") + (pick.milestone?.years || "")} chip={{ ...pick, on: new Date().toISOString().slice(0, 10) }}
-              design={design} logoUrl={logoUrl} groupTitle={group.title} size={170} />
+            <SpinningChip key={`${pick.milestone.key}-${pick.milestone.years || 0}`} size={170}
+              chip={{ id: "preview", shape: "round", kind: "round", milestone: pick.milestone, label: pick.milestone.label, on: new Date().toISOString().slice(0, 10), design, group: { title: group.title, logo_url: logoUrl } }} />
             <div className="mt-1 text-xs opacity-60">Drag to spin it. Tap a chip below to pick it up.</div>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -174,17 +144,87 @@ export default function ChipDesigner({ group }) {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
-            {TRIANGLES.map(([kind, label, count]) => (
-              <button type="button" key={kind} onClick={() => setPick({ kind, count })} className="flex flex-col items-center gap-1 !bg-transparent">
-                <TriangleChip design={design} kind={kind} count={count} size={130} />
-                <span className="text-[0.7rem] text-slate-500 dark:text-neutral-400">{count} {label.toLowerCase()}</span>
-              </button>
-            ))}
-          </div>
         </Card>
       </aside>
     </div>
+    <MeetingChips group={group} meetings={data.meetings} defaults={data.default.triangle} onSaved={setData} />
+    </div>
+  );
+}
+
+// Meeting Maker: each meeting's own triangle chips, for members who click its Join button in
+// the half hour before it starts
+function MeetingChips({ group, meetings, defaults, onSaved }) {
+  return (
+    <section className="space-y-3">
+      <div>
+        <h2 className="font-semibold text-slate-900 dark:text-white">Meeting Maker chips</h2>
+        <p className="text-sm text-slate-500 dark:text-neutral-400">
+          Members earn these by clicking a meeting's Join button in the half hour before it starts, at 1, 5, 10, 25, 50 and 100 meetings, then every 100. Each meeting has its own.
+        </p>
+      </div>
+      {meetings.length === 0 && <Card className="p-5 text-sm text-slate-500">The group has no meetings listed yet.</Card>}
+      {meetings.map((m) => <MeetingChip key={m.id} group={group} meeting={m} defaults={defaults} onSaved={onSaved} />)}
+    </section>
+  );
+}
+
+function MeetingChip({ group, meeting, defaults, onSaved }) {
+  const [t, setT] = useState(meeting.design.triangle);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const set = (patch) => { setT((x) => ({ ...x, ...patch })); setSaved(false); };
+  const put = async (body) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const d = await api(`/groups/${group.slug}/chips/meetings/${meeting.id}`, { method: "PUT", body });
+      onSaved(d);
+      setT(d.meetings.find((x) => x.id === meeting.id).design.triangle);
+      setSaved(true);
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+  const design = { ...meeting.design, triangle: t };
+  return (
+    <Card className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_9rem] sm:p-5">
+      <div className="min-w-0 space-y-3">
+        <div>
+          <h3 className="font-semibold text-slate-900 dark:text-white">{meeting.name}</h3>
+          <p className="text-sm text-slate-500 dark:text-neutral-400">{meeting.schedule_label}</p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {["Left side", "Right side", "Bottom"].map((label, i) => (
+            <div key={label}>
+              <label htmlFor={`m-${meeting.id}-${i}`} className={labelClass}>{label}</label>
+              <input id={`m-${meeting.id}-${i}`} maxLength={24} className={inputClass} value={t.sides[i] || ""}
+                onChange={(e) => set({ sides: t.sides.map((x, j) => (j === i ? e.target.value : x)) })} />
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-56">
+            <div className={labelClass}>Finish</div>
+            <div className={segment}>
+              <SegmentedControl value={t.finish} onChange={(v) => set({ finish: v })} options={[{ value: "plastic", label: "Colored" }, { value: "metal", label: "Metal" }]} />
+            </div>
+          </div>
+          <div className="w-44">
+            <ColorField label="Color" value={t.colors.meeting} fallback={defaults.colors.meeting} onChange={(v) => set({ colors: { ...t.colors, meeting: v } })} />
+          </div>
+        </div>
+        <ErrorNote error={error} />
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {saved && <span role="status" className="text-sm text-emerald-700 dark:text-emerald-300">Saved.</span>}
+          {meeting.customized && <button type="button" className={quietButton} disabled={busy} onClick={() => put({ reset: true })}><RotateCcw className="size-4" /> Usual look</button>}
+          <button type="button" className={primaryButton} disabled={busy} onClick={() => put({ design: { triangle: t } })}>{busy ? "Saving…" : "Save"}</button>
+        </div>
+      </div>
+      <div className="flex items-center justify-center">
+        <TriangleChip design={design} kind="meeting" count={10} size={140} />
+      </div>
+    </Card>
   );
 }
 
@@ -198,5 +238,69 @@ function ColorField({ label, value, fallback, onChange }) {
           className="!bg-transparent p-0 text-slate-400 hover:text-slate-700"><RotateCcw className="size-3.5" /></button>
       )}
     </label>
+  );
+}
+
+// The raised logo: an SVG the group uploads, turned into outlines on the server (ChipRelief) and
+// pressed into the chip in its own color. Dark parts stand highest, lighter ones lower, white
+// none. Saved with the rest of the design.
+function ReliefUpload({ slug, relief, onChange }) {
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const upload = async (file) => {
+    if (!file) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const d = await api(`/groups/${slug}/chips/relief`, { method: "POST", body: { svg: await file.text() } });
+      onChange(d.relief);
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+  return (
+    <div className="mt-2 space-y-2">
+      <label className={`${quietButton} cursor-pointer`}>
+        <Upload className="size-4" /> {busy ? "Reading…" : relief ? "Upload a different SVG" : "Upload an SVG"}
+        <input type="file" accept=".svg,image/svg+xml" className="sr-only" onChange={(e) => { upload(e.target.files[0]); e.target.value = ""; }} />
+      </label>
+      <p className="text-xs text-slate-500 dark:text-neutral-400">
+        Your logo, pressed into the chip like a stamped coin. The darker a part of the SVG, the higher it stands; white parts stay flat.
+        Turn any text into outlines first. {!relief && "Until there's one, chips show the circle and triangle."}
+      </p>
+      <ErrorNote error={error} />
+    </div>
+  );
+}
+
+// How the raised logo sits: raised or cut in, how big, and on metal chips how high (or deep)
+// and how sharply it rises from the coin (ChipDesign relief_* settings)
+function ReliefControls({ r, set }) {
+  const slider = (key, label, min, max, low, high) => (
+    <label className="block">
+      <span className="flex items-baseline justify-between text-xs font-medium text-slate-600 dark:text-neutral-300">
+        {label} <span className="tabular-nums text-slate-400">{r[key]}</span>
+      </span>
+      <input type="range" min={min} max={max} value={r[key]} onChange={(e) => set({ [key]: Number(e.target.value) })} className="w-full accent-[var(--color-accent)]" />
+      <span className="flex justify-between text-[11px] text-slate-400"><span>{low}</span><span>{high}</span></span>
+    </label>
+  );
+  return (
+    <div className="mt-3 space-y-3 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900/60">
+      <div className={segment}>
+        <SegmentedControl value={r.relief_depth} onChange={(v) => set({ relief_depth: v })} options={[{ value: "raised", label: "Raised" }, { value: "inset", label: "Cut in" }]} />
+      </div>
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-200">
+        <input type="checkbox" checked={!!r.relief_badge} onChange={(e) => set({ relief_badge: e.target.checked, ...(e.target.checked && r.relief_size < 72 ? { relief_size: 84 } : {}) })} className="size-4 accent-[var(--color-accent)]" />
+        A circle over the middle of the logo with the time in it
+      </label>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {slider("relief_size", "Size", 40, r.relief_badge ? 96 : 84, "Small", "Large")}
+        {slider("relief_height", r.relief_depth === "inset" ? "Depth" : "Height", 1, 10, "Shallow", "Deep")}
+        {slider("relief_sharpness", "Sharpness", 1, 10, "Soft slope", "Sharp edge")}
+      </div>
+      <p className="text-xs text-slate-500 dark:text-neutral-400">
+        Height and sharpness shape metal chips, where the logo is struck into the coin. Colored chips get a slight print of it in one color.
+      </p>
+    </div>
   );
 }

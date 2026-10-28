@@ -114,7 +114,7 @@ function MeetingsBlock({ block, compact, editing, context, title }) {
             </div>
             {m.conference_url && (
               <div className={`flex flex-col gap-1 ${compact ? "mt-2 items-start" : "items-end"}`}>
-                <a href={m.conference_url} target="_blank" rel="noreferrer" onClick={(e) => editing && e.preventDefault()}
+                <a href={m.conference_url} data-meeting-join={editing ? undefined : m.id} target="_blank" rel="noreferrer" onClick={(e) => editing && e.preventDefault()}
                   className={`inline-flex items-center gap-1.5 rounded-xl font-semibold shadow-sm hover:opacity-90 ${t.button} ${compact ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm"}`}>
                   <Video className="size-4" /> Join online
                 </a>

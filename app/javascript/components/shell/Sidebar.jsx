@@ -20,7 +20,7 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
     ...groupItems(g.slug).map((i) => ({ href: i.href, exact: i.exact })),
     ...roleSections(g.roles).flatMap((s) => s.items.map((i) => ({ href: roleHref(g.slug, i) }))),
   ]);
-  const you = YOU_ITEMS.filter((i) => (!i.groups || hasGroups()) && (!i.host || nav?.hosting?.host || nav?.hosting?.open_requests > 0));
+  const you = YOU_ITEMS.filter((i) => (!i.groups || hasGroups()) && (!i.host || nav?.hosting?.host || nav?.hosting?.open_requests > 0) && (!i.giver || nav?.can_give_chips));
   const all = [...you, ...EXPLORE_ITEMS, ...EXTRA_ITEMS].map((i) => ({ href: i.href, exact: i.exact })).concat(groupHrefs);
   const here = activeHref(all, path);
   // The group this page belongs to starts open, and any the member opened stay open

@@ -25,7 +25,7 @@ export default function BottomBar({ nav, isAuthenticated, onMenu, onActions, onT
         <div className="pointer-events-auto mx-auto mb-3 flex max-w-md items-center gap-3 rounded-full bg-neutral-900 py-2 pl-5 pr-2 text-white shadow-xl dark:bg-neutral-800">
           <span className="size-2.5 shrink-0 rounded-full bg-emerald-400" aria-hidden="true" />
           <span className="min-w-0 flex-1 truncate font-medium">On now · {onNow.group.title}</span>
-          <a href={onNow.conference_url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1.5 rounded-full !bg-accent px-4 py-2 font-semibold !text-white">
+          <a href={onNow.conference_url} data-meeting-join={onNow.id} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1.5 rounded-full !bg-accent px-4 py-2 font-semibold !text-white">
             <Video className="size-4" /> Join
           </a>
         </div>
