@@ -28,15 +28,31 @@ export function dayCount(iso, now) {
   return days < 0 ? null : days;
 }
 
-// Every milestone through `years` years, in order: { label, at (ms, UTC midnight) }
+// Every milestone through `years` years, in order: { key, label, at (ms, UTC midnight) }.
+// The key picks the chip's color in a group's design (ChipDesign::ROUND_KEYS); every year is
+// "year", with `years` saying which.
 function milestoneList(start, years) {
   const list = [
-    { label: "24 hours", at: stamp(start) + DAY },
-    ...[30, 60, 90].map((n) => ({ label: `${n} days`, at: stamp(start) + n * DAY })),
-    ...[6, 9, 18].map((n) => ({ label: `${n} months`, at: stamp(addMonths(start, n)) })),
+    { key: "24h", label: "24 hours", at: stamp(start) + DAY },
+    ...[30, 60, 90].map((n) => ({ key: `${n}d`, label: `${n} days`, at: stamp(start) + n * DAY })),
+    ...[6, 9, 18].map((n) => ({ key: `${n}m`, label: `${n} months`, at: stamp(addMonths(start, n)) })),
   ];
-  for (let y = 1; y <= years; y += 1) list.push({ label: `${y} year${y === 1 ? "" : "s"}`, at: stamp(addMonths(start, y * 12)) });
+  for (let y = 1; y <= years; y += 1) list.push({ key: "year", years: y, label: `${y} year${y === 1 ? "" : "s"}`, at: stamp(addMonths(start, y * 12)) });
   return list.sort((a, b) => a.at - b.at);
+}
+
+const isoOf = (at) => new Date(at).toISOString().slice(0, 10);
+
+// The round chips: every milestone reached so far (oldest first) and the next one, each with
+// the day it falls on ("YYYY-MM-DD")
+export function chipMilestones(iso, now) {
+  const start = parse(iso);
+  const days = dayCount(iso, now);
+  if (days === null) return null;
+  const t = stamp(today(now));
+  const list = milestoneList(start, Math.floor(days / 365) + 2).map((m) => ({ ...m, on: isoOf(m.at) }));
+  const next = list.find((m) => m.at > t);
+  return { earned: list.filter((m) => m.at <= t), next: next && { ...next, inDays: Math.round((next.at - t) / DAY) } };
 }
 
 // Where they are: { days, today: milestone reached today or null, next: { ...milestone, inDays } }

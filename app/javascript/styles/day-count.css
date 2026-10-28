@@ -68,6 +68,11 @@ html.dark .hb-daycount__panel {
   margin-top: 0.4rem;
 }
 .hb-daycount__unit { font-size: 1.25rem; font-weight: 600; letter-spacing: 0; opacity: 0.9; }
+/* A chip in the head (DayCount on a milestone day, recovery/ChipModal) */
+.hb-daycount__chip { display: flex; justify-content: center; margin-bottom: 0.75rem; }
+/* A chip shows on a dark stage, like an award */
+.hb-daycount__panel--chip { --hb-daycount-edge: #1c1917; }
+.hb-daycount__hint { font-size: 0.75rem; margin-top: 0.35rem; opacity: 0.6; }
 .hb-daycount__since { font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9; }
 
 .hb-daycount__close {

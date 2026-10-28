@@ -1,0 +1,46 @@
+// A member's own recovery tools at /recovery (app/controllers/recovery_controller.rb): their
+// chips, the nightly 10th step and gratitude lists. Only ever their own.
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
+
+import "../styles/tailwind.css";
+import "../styles/reader.css";
+
+import Layout from "../components/Layout";
+import { registerRouter } from "../components/shell/useShell";
+import ChipsPage from "../components/recovery/ChipsPage";
+import InventoryPage from "../components/recovery/InventoryPage";
+import GratitudePage from "../components/recovery/GratitudePage";
+
+function Shell() {
+  return (
+    <Layout isAuthenticated>
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        <Outlet />
+      </div>
+    </Layout>
+  );
+}
+
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <Shell />,
+      children: [
+        { index: true, element: <ChipsPage /> },
+        { path: "inventory", element: <InventoryPage /> },
+        { path: "inventory/:on", element: <InventoryPage /> },
+        { path: "gratitude", element: <GratitudePage /> },
+        { path: "gratitude/:on", element: <GratitudePage /> },
+      ],
+    },
+  ],
+  { basename: "/recovery" }
+);
+// The sidebar's links into this app move without a load
+registerRouter(router, "/recovery");
+
+const mount = document.getElementById("recovery-root");
+if (mount) createRoot(mount).render(<RouterProvider router={router} />);

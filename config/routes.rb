@@ -63,6 +63,10 @@ Rails.application.routes.draw do
     end
   end
   resource :hosting, controller: "hosting", only: :show
+  # A member's own recovery tools (/recovery): chips, 10th step inventories, gratitude lists
+  resource :recovery, controller: "recovery", only: %i[show update]
+  resources :step_inventories, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
+  resources :gratitude_lists, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   # The shell: your groups and roles, the Hosting badge, Today; and the search box
   resource :nav, controller: "nav", only: :show
   get "search", to: "search#index"
@@ -85,6 +89,7 @@ Rails.application.routes.draw do
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
     resource :conscience, controller: "group_conscience", only: :show
+    resource :chips, controller: "group_chips", only: %i[show update]
     resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy] do
       post :link, on: :collection
     end
@@ -320,6 +325,9 @@ end
   # Profiles: a React app (app/javascript/entrypoints/people.jsx)
   get "/people", to: "people#app", as: :people
   get "/people/*path", to: "people#app", format: false
+  # A member's own chips, 10th step and gratitude lists: a React app (entrypoints/recovery.jsx)
+  get "/recovery", to: "recovery#app", as: :recovery
+  get "/recovery/*path", to: "recovery#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb
   get "/books/:book_slug/chapters/:chapter_slug", to: "pages#reader"

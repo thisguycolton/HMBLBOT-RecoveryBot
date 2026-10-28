@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_25_210100) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_28_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -331,6 +331,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_210100) do
     t.index ["follower_id"], name: "index_follows_on_follower_id"
   end
 
+  create_table "gratitude_lists", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.date "on", null: false
+    t.string "items", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "on"], name: "index_gratitude_lists_on_user_id_and_on", unique: true
+    t.index ["user_id"], name: "index_gratitude_lists_on_user_id"
+  end
+
   create_table "group_books", force: :cascade do |t|
     t.bigint "group_id", null: false
     t.bigint "book_id", null: false
@@ -489,6 +499,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_210100) do
     t.boolean "follows_roberts_rules", default: true, null: false
     t.boolean "show_hosts_publicly", default: true, null: false
     t.string "deck_editors", default: ["host_coordinators", "record_keepers"], null: false, array: true
+    t.jsonb "chip_design"
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -1080,6 +1091,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_210100) do
     t.index ["user_id"], name: "index_site_notices_on_user_id"
   end
 
+  create_table "step_inventories", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.date "on", null: false
+    t.jsonb "answers", default: {}, null: false
+    t.text "notes", default: "", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "on"], name: "index_step_inventories_on_user_id_and_on", unique: true
+    t.index ["user_id"], name: "index_step_inventories_on_user_id"
+  end
+
   create_table "tags", force: :cascade do |t|
     t.string "title"
     t.text "description"
@@ -1270,6 +1292,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_210100) do
     t.integer "host_reminder_hours", default: 24, null: false
     t.boolean "host_reminder_email", default: true, null: false
     t.string "push_off", default: [], null: false, array: true
+    t.bigint "chip_group_id"
+    t.index ["chip_group_id"], name: "index_users_on_chip_group_id"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
@@ -1308,6 +1332,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_210100) do
   add_foreign_key "events", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "follows", "users", column: "followed_id"
   add_foreign_key "follows", "users", column: "follower_id"
+  add_foreign_key "gratitude_lists", "users", on_delete: :cascade
   add_foreign_key "group_books", "books"
   add_foreign_key "group_books", "groups"
   add_foreign_key "group_document_comments", "group_document_comments", column: "parent_id", on_delete: :cascade
@@ -1386,6 +1411,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_210100) do
   add_foreign_key "service_terms", "service_positions", on_delete: :cascade
   add_foreign_key "service_terms", "users", on_delete: :nullify
   add_foreign_key "site_notices", "users", on_delete: :nullify
+  add_foreign_key "step_inventories", "users", on_delete: :cascade
   add_foreign_key "text_report_comments", "text_reports"
   add_foreign_key "text_report_comments", "users"
   add_foreign_key "text_reports", "chapters"
@@ -1407,4 +1433,5 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_210100) do
   add_foreign_key "user_active_groups", "users"
   add_foreign_key "user_highlights", "chapters"
   add_foreign_key "user_highlights", "users"
+  add_foreign_key "users", "groups", column: "chip_group_id", on_delete: :nullify
 end

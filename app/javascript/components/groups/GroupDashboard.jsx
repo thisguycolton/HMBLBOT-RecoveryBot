@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   BookOpen, BookOpenCheck, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, FileText, Gavel, LayoutDashboard,
-  Landmark, MonitorPlay, Settings, Stamp, UserCheck, Users,
+  Landmark, Medal, MonitorPlay, Settings, Stamp, UserCheck, Users,
 } from "lucide-react";
 import Layout from "../Layout";
 import { api } from "./lib";
@@ -16,6 +16,7 @@ import LiteratureTab from "./LiteratureTab";
 import CourtTab from "./CourtTab";
 import GroupSettings, { GroupLogo } from "./GroupSettings";
 import DocumentTemplates from "./conscience/DocumentTemplates";
+import ChipDesigner from "./ChipDesigner";
 
 // Who gets the dashboard: anyone in the group with a role beyond plain member
 export const hasGroupRole = (group) =>
@@ -52,6 +53,7 @@ const SECTIONS = [
       { key: "literature", path: "/literature", label: "Approved literature", icon: BookOpen, show: (g) => g.can_manage },
       { key: "court", path: "/court", label: "Court verifications", icon: ClipboardCheck, show: (g) => g.can_manage },
       { key: "settings", path: "/settings", label: "Group settings", icon: Settings, show: (g) => g.can_manage },
+      { key: "chips", path: "/chips", label: "Chips", icon: Medal, show: (g) => g.can_manage },
     ],
   },
 ];
@@ -83,6 +85,7 @@ export default function GroupDashboard({ group: initial }) {
   else if (current.key === "court") body = <CourtTab group={group} setGroup={setGroup} />;
   else if (current.key === "settings") body = <GroupSettings group={group} setGroup={setGroup} />;
   else if (current.key === "templates") body = <DocumentTemplates group={group} />;
+  else if (current.key === "chips") body = <ChipDesigner group={group} />;
   else body = <ConscienceBody group={group} view={current.key} id={id} embedded />;
 
   return (
