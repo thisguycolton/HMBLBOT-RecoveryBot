@@ -7,18 +7,33 @@ class Api::ChipAwardsController < ApplicationController
   # Emails to addresses without an account, per giver per day, so this can't be used to spam
   EMAILS_PER_DAY = 25
 
-  # GET /api/chip_awards -> the groups they can give for, with their members, and chips given
+  # GET /api/chip_awards -> the groups they can give for, and chips given
   # there (by them, or by anyone for a group they run)
   def index
     groups = giving_groups
     render json: {
       groups: groups.map do |g|
         { slug: g.slug, title: g.title, logo_url: g.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(g.logo, only_path: true) : nil,
-          design: ChipDesign.for_group(g),
-          members: g.active_memberships.includes(:user).map(&:user).sort_by { |u| u.display_name.downcase }.map { |u| { id: u.id, name: u.display_name } } }
+          design: ChipDesign.for_group(g) }
       end,
       given: given_scope(groups).includes(:group, :user, :given_by).order(created_at: :desc).limit(100).map(&:as_api_json),
     }
+  end
+
+  # GET /api/chip_awards/lookup?group_slug=&q= -> { members, account }: as a giver types in the
+  # To field, people in the group whose name or email matches (names only, never the addresses),
+  # and, once it's a whole email address, whether someone has an account with it. Accounts outside
+  # the group are only found by the exact address, so nobody can fish for who's signed up.
+  def lookup
+    group = giving_groups.find { |g| g.slug == params[:group_slug].to_s }
+    return render(json: { error: "You can only give chips for a group you host for." }, status: :forbidden) unless group
+
+    q = params[:q].to_s.strip.downcase.first(120)
+    members = q.length < 2 ? [] : group.members.includes(avatar_attachment: :blob)
+      .where("lower(users.name) LIKE :q OR lower(users.email) LIKE :q", q: "%#{User.sanitize_sql_like(q)}%")
+      .order("lower(users.name)").limit(8).map { |u| { id: u.id, name: u.display_name, avatar_url: u.avatar_url } }
+    account = (User.where.not(confirmed_at: nil).find_by("lower(email) = ?", q) if q.match?(URI::MailTo::EMAIL_REGEXP))
+    render json: { members: members, account: account && { name: account.display_name, avatar_url: account.avatar_url, member: group.members.exists?(account.id) } }
   end
 
   # POST /api/chip_awards { group_slug, user_id | email, milestone_key, years, on, note }

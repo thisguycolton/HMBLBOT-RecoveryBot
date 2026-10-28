@@ -165,6 +165,21 @@ class Api::RecoveryToolsTest < ActionDispatch::IntegrationTest
     sign_in @lee
     get "/api/chip_awards"
     assert_equal [@group.slug], response.parsed_body["groups"].map { |g| g["slug"] }
+
+    # Typing in To finds people in the group by name or email (names only), and accounts
+    # outside it only by their whole address
+    stranger = User.create!(email: "stranger@example.com", password: "password123", confirmed: true, name: "Sam Stranger")
+    get "/api/chip_awards/lookup", params: { group_slug: @group.slug, q: "ki" }
+    assert_equal [["Kim", @kim.id]], response.parsed_body["members"].map { |m| m.values_at("name", "id") }
+    assert_not_includes response.body, "kim@example.com"
+    get "/api/chip_awards/lookup", params: { group_slug: @group.slug, q: "stranger" }
+    assert_equal [], response.parsed_body["members"]
+    assert_nil response.parsed_body["account"]
+    get "/api/chip_awards/lookup", params: { group_slug: @group.slug, q: "Stranger@example.com" }
+    assert_equal ["Sam Stranger", false], response.parsed_body["account"].values_at("name", "member")
+    get "/api/chip_awards/lookup", params: { group_slug: @other.slug, q: "ki" }
+    assert_response :forbidden
+    stranger.destroy!
     assert_difference -> { Notification.where(user: @kim, kind: "chip.given").count } do
       post "/api/chip_awards", params: { group_slug: @group.slug, user_id: @kim.id, milestone_key: "90d", on: day, note: "Keep coming back" }, as: :json
     end

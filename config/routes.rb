@@ -65,7 +65,9 @@ Rails.application.routes.draw do
   resource :hosting, controller: "hosting", only: :show
   # A member's own recovery tools (/recovery): chips, 10th step inventories, gratitude lists
   resource :recovery, controller: "recovery", only: %i[show update]
-  resources :chip_awards, only: %i[index create destroy]
+  resources :chip_awards, only: %i[index create destroy] do
+    get :lookup, on: :collection
+  end
   resources :meeting_joins, only: :create
   resources :step_inventories, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   resources :gratitude_lists, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
