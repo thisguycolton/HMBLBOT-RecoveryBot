@@ -62,4 +62,19 @@ class TodayDutiesTest < ActiveSupport::TestCase
     assert_includes titles, "1 person is asking to join"
     assert_includes titles, "Treasurer's report for #{@today.prev_month.strftime("%B %Y")}"
   end
+
+  test "a cleared item moves to cleared until it changes or is restored" do
+    other = @group.meetings.create!(name: "Noon", recurrence: "weekly", day_of_week: (@today + 1).wday, start_minute: 720)
+    HostSubRequest.create!(meeting: other, role: "co_host", on: @today + 1, requested_by: @host)
+    item = TodayDuties.new(@coordinator).json[:attention].find { |i| i[:key].start_with?("open-") }
+    assert item, "the coordinator has open places to fill"
+
+    TodayDismissal.clear!(@coordinator, key: item[:key], title: item[:title])
+    json = TodayDuties.new(@coordinator).json
+    refute_includes json[:attention].map { |i| i[:key] }, item[:key]
+    assert_equal [item[:key]], json[:cleared].map { |i| i[:key] }
+
+    TodayDismissal.where(user: @coordinator).update_all(title: "2 host places are open")
+    assert_includes TodayDuties.new(@coordinator).json[:attention].map { |i| i[:key] }, item[:key], "a changed item comes back"
+  end
 end

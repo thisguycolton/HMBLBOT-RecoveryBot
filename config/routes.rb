@@ -73,6 +73,8 @@ Rails.application.routes.draw do
   resources :gratitude_lists, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   # The shell: your groups and roles, the Hosting badge, Today; and the search box
   resource :nav, controller: "nav", only: :show
+  # Clearing "Needs your attention" items from Today, and restoring them
+  resource :today_dismissals, only: %i[create destroy]
   get "search", to: "search#index"
   get "oiaa/search", to: "oiaa#search"
   get "oiaa/matches", to: "oiaa#matches"

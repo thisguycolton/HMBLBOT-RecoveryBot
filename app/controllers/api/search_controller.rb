@@ -1,6 +1,7 @@
 # The search box at the top of every page (components/shell/SearchBox.jsx): a few of each kind
-# of thing whose name holds what was typed. Groups, readings from the archive, and the library's
-# chapters and books; people too, for members. (Hashtags come from their own endpoint.)
+# of thing whose name holds what was typed. Groups, the service readings (How It Works, the
+# Preamble: their words too), readings from the archive, and the library's chapters (the first
+# match in each book) and books; people too, for members. (Hashtags come from their own endpoint.)
 class Api::SearchController < ApplicationController
   EACH = 5
 
@@ -13,6 +14,7 @@ class Api::SearchController < ApplicationController
     sections = []
     sections << { key: "groups", items: groups(like) }
     sections << { key: "people", items: people(like) } if User.profiles_open_to?(current_user)
+    sections << { key: "service_readings", items: service_readings(like) }
     sections << { key: "readings", items: readings(like) }
     sections << { key: "literature", items: chapters(like) + books(like) }
     render json: { query: q, sections: sections.select { |s| s[:items].any? } }
@@ -33,16 +35,29 @@ class Api::SearchController < ApplicationController
         .order(:name).limit(EACH).map { |u| { title: u.display_name, subtitle: "@#{u.username}", url: u.profile_path, avatar_url: u.avatar_url } }
   end
 
+  # Their words too, without the markup ("di" shouldn't find every <div>)
+  def service_readings(like)
+    words = "regexp_replace(action_text_rich_texts.body, '<[^>]*>', ' ', 'g')"
+    ServiceReading.left_joins(:rich_text_body)
+                  .where("service_readings.title ILIKE :q OR service_readings.short_title ILIKE :q OR service_readings.source ILIKE :q OR #{words} ILIKE :q", q: like)
+                  .order(:title).limit(EACH)
+                  .map { |r| { title: r.title.presence || r.short_title.presence || "Service reading", subtitle: r.source.presence || "Service reading", url: "/service_readings/#{r.id}" } }
+  end
+
   def readings(like)
     Reading.published.where("readings.title ILIKE :q OR readings.source ILIKE :q", q: like).order(published_at: :desc).limit(EACH)
            .map { |r| { title: r.title.presence || "Untitled reading", subtitle: [r.source, r.host].compact_blank.join(" | "), url: "/readings/#{r.id}" } }
   end
 
+  # One per book: the first chapter that matches, and how many more there are in that book
   def chapters(like)
-    Chapter.joins(:book).merge(Book.visible_to(current_user)).where("chapters.title ILIKE :q OR chapters.label ILIKE :q", q: like)
-           .includes(:book).order("books.title", :index).limit(EACH)
+    matching = Chapter.joins(:book).merge(Book.visible_to(current_user)).where("chapters.title ILIKE :q OR chapters.label ILIKE :q", q: like)
+    counts = matching.group(:book_id).count
+    firsts = matching.select("DISTINCT ON (chapters.book_id) chapters.*").reorder("chapters.book_id", "chapters.index")
+    Chapter.from(firsts, :chapters).joins(:book).includes(:book).order("books.title").limit(EACH)
            .map do |c|
-             { title: c.title, subtitle: [c.book.title, ("p. #{c.first_page}" if c.first_page)].compact.join(" · "),
+             more = counts[c.book_id].to_i - 1
+             { title: c.title, subtitle: [c.book.title, ("p. #{c.first_page}" if c.first_page), ("#{more} more #{"match".pluralize(more)}" if more.positive?)].compact.join(" · "),
                url: "/books/#{c.book.slug}/chapters/#{c.slug}", kind: "Chapter" }
            end
   end

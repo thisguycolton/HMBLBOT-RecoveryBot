@@ -71,6 +71,31 @@ class Api::NavAndSearchTest < ActionDispatch::IntegrationTest
     assert_empty response.parsed_body["sections"]
   end
 
+  test "the search box finds service readings by name or words, and one chapter per book" do
+    ServiceReading.create!(title: "How It Works", short_title: "HIW", source: "Alcoholics Anonymous, p. 58", body: "<div>Rarely have we seen a person fail</div>")
+    ServiceReading.create!(title: "The Preamble", body: "<div>Alcoholics Anonymous is a fellowship</div>")
+    book = Book.create!(title: "Daily Reflections", slug: "dr", work_key: "dr", edition: "1e", language: "en")
+    book.chapters.create!(title: "Gratitude in March", slug: "march-1", index: 5)
+    book.chapters.create!(title: "Gratitude in January", slug: "jan-1", index: 1)
+    book.chapters.create!(title: "Gratitude in June", slug: "june-1", index: 9)
+    other = Book.create!(title: "As Bill Sees It", slug: "absi", work_key: "absi", edition: "1e", language: "en")
+    other.chapters.create!(title: "Gratitude", slug: "gratitude", index: 3)
+
+    get "/api/search", params: { q: "rarely have" }, as: :json
+    reading = response.parsed_body["sections"].find { |s| s["key"] == "service_readings" }["items"].sole
+    assert_equal ["How It Works", "Alcoholics Anonymous, p. 58", "/service_readings/#{ServiceReading.find_by(short_title: "HIW").id}"], reading.values_at("title", "subtitle", "url")
+
+    get "/api/search", params: { q: "preamb" }, as: :json
+    assert_equal ["The Preamble"], response.parsed_body["sections"].find { |s| s["key"] == "service_readings" }["items"].map { |i| i["title"] }
+
+    get "/api/search", params: { q: "div" }, as: :json
+    assert_nil response.parsed_body["sections"].find { |s| s["key"] == "service_readings" }, "markup isn't searched"
+
+    get "/api/search", params: { q: "gratitude" }, as: :json
+    chapters = response.parsed_body["sections"].find { |s| s["key"] == "literature" }["items"].select { |i| i["kind"] == "Chapter" }
+    assert_equal [["Gratitude", "As Bill Sees It"], ["Gratitude in January", "Daily Reflections · 2 more matches"]], chapters.map { |c| c.values_at("title", "subtitle") }
+  end
+
   test "the Hosting page lists the subs you could take" do
     sign_in @me
     get "/api/hosting", as: :json

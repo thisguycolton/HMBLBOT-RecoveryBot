@@ -53,4 +53,22 @@ class Api::NotificationsTest < ActionDispatch::IntegrationTest
     post "/api/notifications/read_all", as: :json
     assert_equal 0, @reader.notifications.unread.count
   end
+
+  test "opening the page a notification leads to marks it read, with or without its query or anchor" do
+    sign_in @reader
+    Notification.deliver(@reader, kind: "test", title: "Exact", url: "/service_readings")
+    Notification.deliver(@reader, kind: "test", title: "Anchored", url: "/service_readings#how-it-works")
+    Notification.deliver(@reader, kind: "test", title: "Query", url: "/service_readings?comment=4")
+    Notification.deliver(@reader, kind: "test", title: "Elsewhere", url: "/service_readings/new")
+    Notification.deliver(@reader, kind: "test", title: "Nowhere")
+    Notification.deliver(@admin, kind: "test", title: "Not yours", url: "/service_readings")
+
+    get "/api/notifications", as: :json
+    assert_equal 5, response.parsed_body["unread"], "an API call isn't a visit"
+
+    get "/service_readings"
+    assert_response :success
+    assert_equal %w[Elsewhere Nowhere], @reader.notifications.unread.order(:id).pluck(:title)
+    assert_equal 1, @admin.notifications.unread.count
+  end
 end
