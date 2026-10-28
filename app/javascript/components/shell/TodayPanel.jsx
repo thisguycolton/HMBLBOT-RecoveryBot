@@ -1,6 +1,8 @@
 import React from "react";
-import { CalendarClock, CalendarDays, Sparkles, Video } from "lucide-react";
+import { BellRing, CalendarClock, CalendarDays, ChevronRight, Repeat, Sparkles, Video } from "lucide-react";
+import { milestoneStatus } from "../../lib/milestones";
 import Avatar from "../groups/Avatar";
+import { soberFor } from "../groups/lib";
 import MeetingPasscode from "../groups/MeetingPasscode";
 import { isOnNow } from "./useShell";
 
@@ -16,21 +18,113 @@ const dayLabel = (iso) => {
   return date.toLocaleDateString([], { weekday: days < 7 ? "long" : undefined, month: "short", day: "numeric" });
 };
 
-// What's coming up in your groups (PeopleHome, by way of /api/nav): the next meetings with
-// their Join buttons, members' sobriety birthdays and events. The home feed's side panel, and
-// the Today sheet from the calendar in the phone bar.
+const partOfDay = (hour = new Date().getHours()) => {
+  if (hour >= 4 && hour < 12) return "morning";
+  if (hour >= 12 && hour < 17) return "afternoon";
+  return "evening";
+};
+
+// "Good afternoon, Colton", and under it their day count with the next milestone (or a nudge
+// to add a sobriety date), which opens their chips
+function Greeting({ me }) {
+  if (!me) return null;
+  const status = milestoneStatus(me.sobriety_date);
+  return (
+    <section>
+      <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Good {partOfDay()}{me.first_name ? `, ${me.first_name}` : ""}</h2>
+      {status ? (
+        <a href="/recovery" className="mt-3 flex items-center gap-3 rounded-2xl bg-accent/10 px-4 py-3 !text-slate-900 hover:bg-accent/15 dark:bg-accent/20 dark:!text-white">
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-semibold uppercase tracking-[0.08em] text-accent">Your day count</span>
+            <span className="block text-2xl font-bold tabular-nums">
+              {status.days === 0 ? "Day one" : <>{status.days.toLocaleString()}<span className="text-base font-semibold"> {status.days === 1 ? "day" : "days"}</span></>}
+            </span>
+            <span className="block text-sm text-slate-600 dark:text-neutral-300">
+              {status.today ? `Happy ${status.today.label}! 🎉` : [status.days >= 90 && soberFor(me.sobriety_date), status.next && `${status.next.inDays} ${status.next.inDays === 1 ? "day" : "days"} to ${status.next.label}`].filter(Boolean).join(" · ")}
+            </span>
+          </span>
+          <ChevronRight className="size-5 shrink-0 text-slate-400" />
+        </a>
+      ) : (
+        <a href="/users/edit" className="mt-2 block text-sm text-slate-500 hover:text-accent dark:text-neutral-400">Add your sobriety date to see your day count here.</a>
+      )}
+    </section>
+  );
+}
+
+// What needs them in each role they hold, across their groups (TodayDuties): soonest and
+// most pressing first
+function Attention({ items, anyRoles }) {
+  if (!items?.length && !anyRoles) return null;
+  return (
+    <section>
+      <h2 className={sideTitle}><BellRing className="size-4" /> Needs your attention</h2>
+      {!items?.length && <p className="text-sm text-slate-500">Nothing needs you right now.</p>}
+      <ul>
+        {(items || []).map((item) => (
+          <li key={item.key} className={row}>
+            <a href={item.href} className="flex items-start gap-3">
+              <span className={`mt-2 size-2 shrink-0 rounded-full ${item.urgent ? "bg-amber-500" : "bg-accent/60"}`} aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold leading-snug text-slate-900 dark:text-white">{item.title}</span>
+                <span className="block text-sm text-slate-500 dark:text-neutral-400">{[item.on && dayLabel(item.on), item.note].filter(Boolean).join(" · ")}</span>
+                <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">{item.role}</span>
+                  <span className="truncate">{item.group.title}</span>
+                </span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// Who is filling in at the coming meetings they host, fill in at, or coordinate
+function Covers({ covers }) {
+  if (!covers?.length) return null;
+  return (
+    <section>
+      <h2 className={sideTitle}><Repeat className="size-4" /> Filling in</h2>
+      <ul>
+        {covers.map((c) => (
+          <li key={c.id} className={row}>
+            <a href={c.href} className="block">
+              <span className="block font-semibold leading-snug text-slate-900 dark:text-white">{c.text}</span>
+              <span className="block truncate text-sm text-slate-500 dark:text-neutral-400">
+                {dayLabel(c.on)} · {new Date(c.starts_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · {c.group.title}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// What's coming up for them and in their groups (PeopleHome, by way of /api/nav): a greeting
+// with their day count, what needs them in their roles, who is filling in for whom, the next
+// meetings with their Join buttons, members' sobriety birthdays and events. The home feed's
+// side panel, and the Today sheet from the calendar in the phone bar.
 export default function TodayPanel({ today }) {
   if (!today) return <p className="text-sm text-slate-500 dark:text-neutral-400">Loading…</p>;
   if (!today.has_groups) {
     return (
-      <div className="text-sm text-slate-600 dark:text-neutral-300">
-        Join a group to see its next meetings, members' birthdays and events here.
-        <a href="/groups/find" className="mt-2 block font-semibold text-accent hover:underline">Find your group</a>
+      <div className="space-y-8 !font-sans">
+        <Greeting me={today.me} />
+        <div className="text-sm text-slate-600 dark:text-neutral-300">
+          Join a group to see its next meetings, members' birthdays and events here.
+          <a href="/groups/find" className="mt-2 block font-semibold text-accent hover:underline">Find your group</a>
+        </div>
       </div>
     );
   }
   return (
     <div className="space-y-8 !font-sans">
+      <Greeting me={today.me} />
+      <Attention items={today.attention} anyRoles={today.any_roles} />
+      <Covers covers={today.covers} />
       <section>
         <h2 className={sideTitle}><CalendarClock className="size-4" /> Next meetings</h2>
         {today.meetings.length === 0 && <p className="text-sm text-slate-500">Your groups haven't listed meetings yet.</p>}

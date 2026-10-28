@@ -1,6 +1,8 @@
 # The home page people land on after signing in (/people, Api::PeopleController#index):
 # notes and highlights from them and the people they follow, and beside them what's coming
-# up in their groups: the next meetings, members' sobriety birthdays and upcoming events.
+# up in their groups: a greeting with their day count, who is filling in at the meetings they're
+# part of and what needs them in their roles (TodayDuties), the next meetings, members' sobriety
+# birthdays and upcoming events.
 class PeopleHome
   MEETINGS_MAX = 3
   BIRTHDAYS_DAYS = 30
@@ -12,10 +14,17 @@ class PeopleHome
   end
 
   def json
-    { meetings: meetings, birthdays: birthdays, events: events, has_groups: @groups.any? }
+    { me: me, meetings: meetings, birthdays: birthdays, events: events, has_groups: @groups.any? }
+      .merge(TodayDuties.new(@viewer).json)
   end
 
   private
+
+  # The greeting at the top ("Good morning, Colton") and their own day count, whether or not
+  # they show their sobriety date to others
+  def me
+    { first_name: @viewer.display_name.split.first, sobriety_date: @viewer.sobriety_date&.iso8601 }
+  end
 
   # A meeting that started in the last half hour still counts: it's on now
   def meetings
