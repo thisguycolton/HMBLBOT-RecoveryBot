@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import axios from "axios";
 import { Link2, Trash2, X } from "lucide-react";
 import HighlightNote from "./HighlightNote";
-import VisibilityPicker from "../notes/VisibilityPicker";
+import ShareToTimeline from "./ShareToTimeline";
 import { highlightUrl, shareLink } from "./highlightSharing";
 
 export const HIGHLIGHT_PALETTE = {
@@ -16,7 +16,8 @@ export const HIGHLIGHT_PALETTE = {
 export const highlightCss = (stored) => HIGHLIGHT_PALETTE[stored] || stored || HIGHLIGHT_PALETTE.yellow;
 
 // One highlight, opened by tapping it in the text: the quote, its note, and
-// (for the reader who made it) color, share and delete.
+// (for the reader who made it) color, share to timeline, share link and delete.
+// Highlights stay with their reader until they pick Share to timeline.
 export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlug, onChange, onDelete, toast, startEditing = false }) {
   useEffect(() => {
     if (!highlight) return;
@@ -38,18 +39,6 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
     } catch {
       onChange?.(previous);
       toast?.("Couldn't change the color", { tone: "error" });
-    }
-  }
-
-  // Who sees it on their profile (only once profiles are open to them)
-  async function changeVisibility(visibility) {
-    const previous = highlight;
-    onChange?.({ ...highlight, visibility });
-    try {
-      await axios.patch(`/api/highlights/${highlight.id}`, { highlight: { visibility } });
-    } catch {
-      onChange?.(previous);
-      toast?.("Couldn't change who sees it", { tone: "error" });
     }
   }
 
@@ -96,9 +85,9 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
               ))}
             </div>
             <span className="flex-1" />
-            {highlight.profiles && highlight.visibility && <VisibilityPicker value={highlight.visibility} onChange={changeVisibility} align="right" up />}
+            <ShareToTimeline highlight={highlight} onChange={onChange} toast={toast} up />
             <button type="button" className="wb-btn" onClick={share}>
-              <Link2 size={15} aria-hidden="true" /> Share
+              <Link2 size={15} aria-hidden="true" /> Copy link
             </button>
             <button
               type="button"

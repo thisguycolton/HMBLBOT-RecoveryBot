@@ -75,8 +75,8 @@ class Api::HighlightsController < ApplicationController
       style:    highlight_params[:style],
       selector: highlight_params[:selector],
       note:     highlight_params[:note],
-      # Who sees it on their profile: what they picked, or their default (settings)
-      visibility: Visibility::LEVELS.include?(highlight_params[:visibility]) ? highlight_params[:visibility] : current_user.default_highlight_visibility
+      # Kept to themselves until they share it to their timeline (UserHighlight)
+      visibility: Visibility::LEVELS.include?(highlight_params[:visibility]) ? highlight_params[:visibility] : "private"
     )
     h.save!
     render json: highlight_json(h), status: :created
@@ -87,7 +87,8 @@ class Api::HighlightsController < ApplicationController
   end
 
   # PATCH /api/highlights/:id  { highlight: { note: "markdown", style: { color }, visibility } }
-  # Only the reader who made the highlight can change its note, color or who sees it on their profile.
+  # Only the reader who made the highlight can change its note, color or who sees it on their
+  # timeline: "followers" or "public" shares it there (Share to timeline), "private" takes it off.
   # Everyone a highlight is shared with sees the note read-only.
   def update
     h = current_user.user_highlights.find(params[:id])
@@ -124,6 +125,7 @@ class Api::HighlightsController < ApplicationController
       # Only the owner gets the per-highlight share id.
       json["share_id"] = h.signed_id(purpose: :share)
       json["visibility"] = h.visibility
+      json["shared_at"] = h.shared_at&.iso8601
       json["profiles"] = User.profiles_open_to?(current_user)
     else
       # First name only: enough to say whose highlight this is.

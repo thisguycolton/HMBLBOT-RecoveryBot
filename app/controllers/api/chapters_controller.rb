@@ -650,7 +650,10 @@ end
         user_id: highlight.user_id,
         selector: selector,
         style: highlight.style,
-        note: highlight.note
+        note: highlight.note,
+        visibility: highlight.visibility,
+        shared_at: highlight.shared_at,
+        created_at: highlight.created_at
       )
 
       highlight.destroy!
