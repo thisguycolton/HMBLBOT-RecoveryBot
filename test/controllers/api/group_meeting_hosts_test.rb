@@ -194,4 +194,31 @@ class Api::GroupMeetingHostsTest < ActionDispatch::IntegrationTest
     assert_equal [], body.dig("waiting", "draft_minutes")
     assert_equal [], body.dig("waiting", "draft_reports")
   end
+
+  test "the week view lists each date's places with covers and subs, and the dates you're down for" do
+    sunday = @today.beginning_of_week(:sunday) + 7
+    monday = sunday + 1
+    @monday.hosts.create!(role: "host", name: "Mo", user: @member, starts_on: @today - 30)
+    @monday.host_covers.create!(role: "co_host", on: monday, name: "Kay", user: @keeper)
+    @monday.host_sub_requests.create!(role: "host", on: monday, requested_by: @member, note: "Away")
+
+    sign_in @member
+    get "#{path('week')}?start=#{monday + 2}", as: :json
+    assert_response :success
+    assert_equal sunday.iso8601, body["start"]
+    day = body["days"].find { |d| d["on"] == monday.iso8601 }
+    item = day["items"].first
+    assert_equal ["Mo", true, true], [item.dig("host", "name"), item.dig("host", "mine"), item.dig("host", "request", "asked_by_me")]
+    assert_equal ["Kay", true], [item.dig("co_host", "name"), item.dig("co_host", "cover")]
+    assert_not item["can_edit"]
+    assert_nil body["members"]
+    assert body["my_dates"].all? { |d| d["role"] == "host" && Date.parse(d["on"]).monday? }
+    assert_equal "Away", body["my_dates"].find { |d| d["on"] == monday.iso8601 }.dig("request", "note")
+
+    sign_in @coordinator
+    get "#{path('week')}?start=#{monday}", as: :json
+    assert body["days"].find { |d| d["on"] == monday.iso8601 }["items"].first["can_edit"]
+    assert body["members"].any?
+    assert_empty body["my_dates"]
+  end
 end

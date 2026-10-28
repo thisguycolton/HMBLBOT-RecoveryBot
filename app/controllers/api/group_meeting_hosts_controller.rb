@@ -8,13 +8,19 @@ class Api::GroupMeetingHostsController < ApplicationController
 
   before_action :set_group
   before_action :require_member
-  before_action :require_scheduler, except: :index
+  before_action :require_scheduler, except: %i[index week]
   before_action :set_host, only: %i[update destroy]
   before_action -> { require_scheduler(@host.meeting) }, only: %i[update destroy]
 
   # GET /api/groups/:group_slug/meeting_hosts
   def index
     render json: schedule
+  end
+
+  # GET /api/groups/:group_slug/meeting_hosts/week?start=YYYY-MM-DD -> that week by date, and
+  # the dates you're down for (the Meetings page's week view)
+  def week
+    render json: HostSchedule.new(@group, current_user).week(params[:start])
   end
 
   # POST /api/groups/:group_slug/meeting_hosts
