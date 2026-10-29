@@ -55,6 +55,30 @@ class Api::GroupChipDesignsTest < ActionDispatch::IntegrationTest
     assert_equal({ "triangle" => { "milestone" => { "x" => 12.0 } } }, @group.reload.chip_design.dig("round", "scene", "layout"))
   end
 
+  test "each milestone can have its own look, from the template and the group, and Meeting Maker counts too" do
+    @site.update!(defaults: { "milestones" => { "5y" => { "metal" => "silver", "color" => "#ff0000" }, "n10" => { "art_finish" => "struck" }, "n0" => { "metal" => "silver" }, "bogus" => { "metal" => "silver" } } })
+    assert_equal({ "5y" => { "metal" => "silver" }, "n10" => { "art_finish" => "struck" } }, @site.reload.defaults["milestones"], "a template sets only the art's, for real milestones")
+    @site.publish!
+
+    put "/api/groups/#{@group.slug}/chips", params: { design: {
+      round: { emblem: "scene", scene: { template_id: @site.id },
+               milestones: { "30d" => { palette: "Night", art_finish: "struck", metal: "gold", fills: { "s1" => "#ABCDEF", "x y" => "#000000" } }, "year" => { finish: "plastic" }, "100y" => { metal: "silver" } } },
+      meeting: { milestones: { "n25" => { color: "#123456", finish: "metal" }, "n+" => { finish: "wood" }, "30d" => { color: "#111111" } } },
+    } }, as: :json
+    assert_response :success
+    stored = @group.reload.chip_design
+    assert_equal({ "30d" => { "palette" => "Night", "art_finish" => "struck", "fills" => { "s1" => "#abcdef" } }, "year" => { "finish" => "plastic" } },
+                 stored.dig("round", "milestones"), "only good values, for milestones a round chip has")
+    assert_equal({ "n25" => { "color" => "#123456", "finish" => "metal" } }, stored.dig("meeting", "milestones"))
+
+    scene = response.parsed_body.dig("design", "round", "scene")
+    assert_equal({ "5y" => { "metal" => "silver" }, "n10" => { "art_finish" => "struck" } }, scene["template_milestones"])
+    assert scene["palettes"].is_a?(Hash), "every palette comes along, for milestones with their own"
+
+    meeting = Struct.new(:group, :chip_design, :name).new(@group, { "meeting" => { "milestones" => { "n5" => { "color" => "#654321" } } } }, "Noon")
+    assert_equal({ "n5" => { "color" => "#654321" } }, ChipDesign.for_meeting(meeting)["meeting"]["milestones"], "a meeting's own replace the group's")
+  end
+
   test "a group imports its own art, which only it can use, and can take it off its list" do
     post "/api/groups/#{@group.slug}/chips/templates", params: { svg: SVG, title: "Our hills" }, as: :json
     assert_response :created

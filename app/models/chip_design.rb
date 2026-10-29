@@ -9,6 +9,13 @@
 # finish (enamel: painted; struck: one metal, lit from its layers' heights), the metal, and the
 # group's own changes (bucket fills by shape, hidden layers, layer heights). Designs sent out
 # are resolved (resolve): the version's art and the palette's colors come along.
+#
+# Round and Meeting Maker chips can look different at each milestone (`milestones`, by
+# milestone key: "30d", "year" for every year, "5y" for one year, "n10" for 10 meetings, "n+"
+# for every hundred after 100): their color and finish, and with a scene its palette, enamel or
+# struck, metal and bucket fills. A template can set the scene's per milestone too (its
+# defaults' `milestones`, sent with the art as `template_milestones`); the group's win.
+# Chip.jsx atMilestone draws them.
 module ChipDesign
   ROUND_KEYS = %w[24h 30d 60d 90d 6m 9m 18m year].freeze
   EMBLEMS = %w[triangle logo relief none scene].freeze
@@ -22,6 +29,13 @@ module ChipDesign
   TRIANGLE_FINISHES = %w[metal plastic].freeze
   SHAPES = %w[triangle round].freeze
   MEETING_EMBLEMS = %w[number scene].freeze
+  # A milestone's own look: which keys a part takes (round: ROUND_KEYS or "Ny" years; meeting:
+  # "nN" counts or "n+"), and what can change
+  MILESTONE_KEYS = {
+    "round" => ->(k) { ROUND_KEYS.include?(k) || k.match?(/\A[1-9]\d?y\z/) },
+    "meeting" => ->(k) { k == "n+" || k.match?(/\An[1-9]\d{0,4}\z/) },
+  }.freeze
+  SCENE_LOOK_KEYS = %w[palette art_finish metal fills].freeze
 
   DEFAULT = {
     "round" => {
@@ -109,8 +123,9 @@ module ChipDesign
       if version
         palette = scene["palette"].presence || version.defaults["palette"]
         part["scene"] = scene.merge("version" => version.number, "title" => template.title, "art" => version.art,
-                                    "colors" => version.palettes[palette] || {}, "latest" => template.latest.number,
-                                    "template_layout" => version.defaults["layout"]).compact
+                                    "colors" => version.palettes[palette] || {}, "palettes" => version.palettes, "latest" => template.latest.number,
+                                    "template_layout" => version.defaults["layout"],
+                                    "template_milestones" => version.defaults["milestones"]).compact
       else
         part["emblem"] = part.key?("shape") ? "number" : "triangle"
       end
@@ -180,6 +195,7 @@ module ChipDesign
         "back_ring_top" => text(round["back_ring_top"]),
         "back_ring_bottom" => text(round["back_ring_bottom"]),
         "colors" => colors(round["colors"], ROUND_KEYS),
+        "milestones" => milestone_looks(round["milestones"], "round"),
       },
       "triangle" => {
         "sides" => (Array(triangle["sides"]).first(3).map { |s| text(s, 24) || "" } if triangle.key?("sides")),
@@ -196,6 +212,7 @@ module ChipDesign
         "color" => (meeting["color"].to_s.downcase if meeting["color"].to_s.match?(/\A#\h{6}\z/)),
         "milestone_at" => (meeting["milestone_at"] if MILESTONE_SPOTS.include?(meeting["milestone_at"])),
         "edge" => (meeting["edge"] if EDGES.include?(meeting["edge"])),
+        "milestones" => milestone_looks(meeting["milestones"], "meeting"),
       },
     }
     out.to_h do |part, values|
@@ -203,6 +220,7 @@ module ChipDesign
       values["colors"] = values["colors"]&.reject { |k, v| DEFAULT[part]["colors"][k] == v }
       values.delete("colors") if values["colors"].blank?
       values.delete("sides") if values["sides"] && values["sides"].size != 3
+      values.delete("milestones") if values["milestones"].blank?
       [part, values]
     end.compact_blank
   end
@@ -216,7 +234,7 @@ module ChipDesign
     id = whole(raw["template_id"], 1..)
     return nil unless id
 
-    fills = raw["fills"].is_a?(Hash) ? raw["fills"].to_h.first(3000).to_h { |k, v| [k.to_s[/\A[\w-]{1,24}\z/], v.to_s.downcase] }.select { |k, v| k && v.match?(/\A#\h{6}\z/) } : {}
+    fills = fills(raw["fills"])
     heights = raw["heights"].is_a?(Hash) ? raw["heights"].to_h.first(40).to_h { |k, v| [k.to_s[/\A[\w-]{1,24}\z/], Float(v.to_s, exception: false)&.clamp(0.0, 1.0)&.round(2)] }.select { |k, v| k && v } : {}
     hidden = Array(raw["hidden"]).first(40).map { |l| l.to_s[/\A[\w-]{1,24}\z/] }.compact.uniq
     { "template_id" => id, "version" => whole(raw["version"], 1..),
@@ -224,6 +242,38 @@ module ChipDesign
       "finish" => (raw["finish"] if SCENE_FINISHES.include?(raw["finish"])),
       "metal" => (raw["metal"] if METALS.key?(raw["metal"])),
       "fills" => fills.presence, "hidden" => hidden.presence, "heights" => heights.presence, "layout" => layout(raw["layout"]) }.compact
+  end
+
+  # Each milestone's own look, for a part ("round" or "meeting"): only known milestones and good
+  # values. `only` limits what can change (a template sets just the scene's).
+  def milestone_looks(raw, part, only: nil)
+    raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+    return nil unless raw.is_a?(Hash)
+
+    finishes = part == "meeting" ? TRIANGLE_FINISHES : FINISHES
+    raw.first(80).to_h do |key, look|
+      key = key.to_s
+      look = look.to_unsafe_h if look.respond_to?(:to_unsafe_h)
+      next [nil, nil] unless MILESTONE_KEYS.fetch(part).call(key) && look.is_a?(Hash)
+
+      look = look.stringify_keys
+      out = { "finish" => (look["finish"] if finishes.include?(look["finish"])),
+              "color" => (look["color"].to_s.downcase if look["color"].to_s.match?(/\A#\h{6}\z/)),
+              "palette" => text(look["palette"], 30).presence,
+              "art_finish" => (look["art_finish"] if SCENE_FINISHES.include?(look["art_finish"])),
+              "metal" => (look["metal"] if METALS.key?(look["metal"])),
+              "fills" => fills(look["fills"]).presence }.compact
+      out = out.slice(*only) if only
+      [key, out.presence]
+    end.compact.presence
+  end
+
+  # Bucket fills: a color for each shape
+  def fills(raw)
+    raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+    return {} unless raw.is_a?(Hash)
+
+    raw.to_h.first(3000).to_h { |k, v| [k.to_s[/\A[\w-]{1,24}\z/], v.to_s.downcase] }.select { |k, v| k && v.match?(/\A#\h{6}\z/) }
   end
 
   # Where an illustrated chip's parts sit (ChipArt.jsx layoutOf): the picture and the milestone

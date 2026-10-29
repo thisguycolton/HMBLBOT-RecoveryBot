@@ -15,7 +15,7 @@ export const MILESTONE_AT = [{ value: "badge", label: "Badge" }, { value: "carto
 export const EDGES = [{ value: "plain", label: "Plain" }, { value: "reeded", label: "Reeded" }, { value: "rope", label: "Rope" }, { value: "beads", label: "Beads" }];
 
 // What the art editor shows around the art: a Meeting Maker part's words go around a round chip
-const editorLook = (part, fits) => (part.sides && fits === "round"
+export const editorLook = (part, fits) => (part.sides && fits === "round"
   ? { top_text: [part.sides[0], part.sides[1]].filter(Boolean).join(" "), bottom_text: part.sides[2] || "Your meeting", milestone_at: part.milestone_at, edge: part.edge, numerals: "number" }
   : part);
 

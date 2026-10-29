@@ -44,15 +44,66 @@ const fit = (text, room, max) => Math.min(max, room / (Math.max(text.length, 1) 
 const isMetal = (finish, milestone) => finish === "metal" || (finish === "classic" && milestone.key === "year");
 const FONT = "'Public Sans', system-ui, sans-serif";
 
+// Which of a part's per-milestone looks (ChipDesign `milestones`) a chip uses, least particular
+// first: every year, then this year; a Meeting Maker count, or every hundred after 100
+export function milestoneKeys(milestone, count) {
+  const n = count ?? (milestone?.key === "count" ? milestone.count : null);
+  if (n != null) return [n > 100 && n % 100 === 0 ? "n+" : null, `n${n}`].filter(Boolean);
+  if (!milestone) return [];
+  if (milestone.key === "year") return ["year", `${milestone.years || 1}y`];
+  return [milestone.key];
+}
+
+// What a milestone's look changes in a scene: its palette, enamel or struck, metal and fills
+function sceneAt(scene, look) {
+  if (!scene) return scene;
+  const out = { ...scene };
+  if (look.palette && scene.palettes?.[look.palette]) { out.palette = look.palette; out.colors = scene.palettes[look.palette]; }
+  if (look.art_finish) out.finish = look.art_finish;
+  if (look.metal) out.metal = look.metal;
+  if (look.fills) out.fills = { ...scene.fills, ...look.fills };
+  return out;
+}
+
+// One part's look at the milestone with `keys`: the template's per-milestone scene, then the
+// part's own; its color goes in `colorKey`
+export function partAt(part, keys, colorKey) {
+  if (!part || (!part.milestones && !part.scene?.template_milestones)) return part;
+  const look = {};
+  [part.scene?.template_milestones, part.milestones].forEach((from) => keys.forEach((k) => Object.assign(look, from?.[k])));
+  const { milestones: _m, ...out } = part;
+  if (look.color && colorKey) out.colors = { ...part.colors, [colorKey]: look.color };
+  if (look.finish) out.finish = look.finish;
+  if (part.scene) out.scene = { ...sceneAt(part.scene, look), template_milestones: undefined };
+  return out;
+}
+
+// A design as one chip is drawn: its round part at `milestone`, or its triangle at `count` of
+// `kind` (only Meeting Maker chips change by count). Drawn once, a design stays as it is.
+export function atMilestone(design, { milestone, kind, count } = {}) {
+  if (!design) return design;
+  if (milestone) {
+    const round = partAt(design.round, milestoneKeys(milestone), milestone.key);
+    return round === design.round ? design : { ...design, round };
+  }
+  if (kind === "meeting" && count != null) {
+    const triangle = partAt(design.triangle, milestoneKeys(null, count), "meeting");
+    return triangle === design.triangle ? design : { ...design, triangle };
+  }
+  return design;
+}
+
 // A chip's colors: its own, whether it's metal, and the color of its lettering
 export function roundLook(design, milestone) {
+  design = atMilestone(design, { milestone });
   if (isScene(design.round)) return { color: metalOf(design.round.scene), metal: true, ink: shade(metalOf(design.round.scene), -0.55) };
   const color = design.round.colors[milestone.key] || design.round.colors.year;
   const metal = isMetal(design.round.finish, milestone);
   return { color, metal, ink: inkFor(color, metal) };
 }
 // Streak chips are the color of what they count, always in metal
-export function triangleLook(design, kind) {
+export function triangleLook(design, kind, count) {
+  design = atMilestone(design, { kind, count });
   const base = kind.replace(/-streak$/, "");
   const colors = design.triangle.colors;
   const color = colors[kind] || colors[base] || colors.meeting || "#3451b2";
@@ -72,11 +123,12 @@ export function meetingLook(design) {
   const sides = m.sides || ["", "", ""];
   return {
     ...design,
-    triangle: { ...design.triangle, sides, finish: m.finish, colors: { ...design.triangle?.colors, meeting: m.color }, emblem: scene ? "scene" : "number", scene, back_text: m.back_text },
+    triangle: { ...design.triangle, sides, finish: m.finish, colors: { ...design.triangle?.colors, meeting: m.color }, emblem: scene ? "scene" : "number", scene, back_text: m.back_text, milestones: m.milestones },
     round: {
       ...design.round, top_text: [sides[0], sides[1]].filter(Boolean).join(" "), bottom_text: sides[2] || "", back_text: m.back_text,
       emblem: scene ? "scene" : "none", scene, finish: m.finish === "metal" ? "metal" : "plastic", numerals: "number",
       colors: { ...design.round?.colors, count: m.color, year: m.color }, milestone_at: m.milestone_at, edge: m.edge, back_ring_top: "", back_ring_bottom: "",
+      milestones: m.milestones,
     },
   };
 }
@@ -249,8 +301,9 @@ export function fitBack(text, r = 54) {
   return best;
 }
 
-export function RoundChip({ design, milestone, logoUrl, size = 160, faded = false, bare = false, className = "", title }) {
+export function RoundChip({ design: given, milestone, logoUrl, size = 160, faded = false, bare = false, className = "", title }) {
   const id = useId().replace(/:/g, "");
+  const design = atMilestone(given, { milestone });
   const d = design.round;
   if (isScene(d)) return <SceneRound id={id} round={d} milestone={milestone} size={size} faded={faded} bare={bare} className={className} title={title} />;
   const look = roundLook(design, milestone);
@@ -311,8 +364,9 @@ export function RoundChip({ design, milestone, logoUrl, size = 160, faded = fals
 // around the top its back ring words or the group's name, and around the bottom a Special
 // Edition's mark ("ACID TEST · 2027 EDITION · NO. 014"), its back ring words, or the day it was
 // earned
-export function RoundChipBack({ design, milestone, groupTitle, earnedOn, mark, size = 160 }) {
+export function RoundChipBack({ design: given, milestone, groupTitle, earnedOn, mark, size = 160 }) {
   const id = useId().replace(/:/g, "");
+  const design = atMilestone(given, { milestone });
   const d = design.round;
   const date = earnedOn ? new Date(`${earnedOn}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : "";
   const top = d.back_ring_top || groupTitle || "";
@@ -512,8 +566,9 @@ function TriangleBase({ id, look, sides }) {
   );
 }
 
-export function TriangleChip({ design, kind, count, size = 160, faded = false, bare = false, className = "", title }) {
+export function TriangleChip({ design: given, kind, count, size = 160, faded = false, bare = false, className = "", title }) {
   const id = useId().replace(/:/g, "");
+  const design = atMilestone(given, { kind, count });
   const look = triangleLook(design, kind);
   const [one, many] = TRIANGLE_WORDS[kind] || ["", ""];
   const num = String(count);
@@ -534,22 +589,47 @@ export function TriangleChip({ design, kind, count, size = 160, faded = false, b
   );
 }
 
+// The words on a triangle chip's back, fit inside its inner triangle (roundedTriangle(24, 10):
+// its point at y 56, its base at 140, 97 across): stacked up from the base, as large as they
+// fit, wrapped where that fits best, then the date and a Special Edition's mark under them.
+// Its font sizes and each line's baseline.
+function fitTriangleBack(text, date, mark) {
+  const halfWidth = (y) => Math.max(0, ((y - 60) / 80) * 44);
+  let best = null;
+  for (let fs = 8; fs >= 3.5 && !best; fs -= 0.25) {
+    for (let width = 6; width <= 24 && !best; width += 1) {
+      const lines = wrap(text, width);
+      if (lines.length > 7) continue;
+      const rows = [...lines.map((l) => [l, fs]), ...(date ? [[date, fs * 0.85]] : []), ...(mark ? [[mark, Math.min(4.6, fs * 0.62)]] : [])];
+      const ys = [];
+      let y = 133;
+      for (let i = rows.length - 1; i >= 0; i -= 1) {
+        ys[i] = y;
+        y -= rows[i][1] * 1.3 + (i === lines.length ? 1.5 : 0);
+      }
+      const fits = rows.every(([l, size], i) => (l.length * size * (CHAR + 0.12)) / 2 + 2 <= halfWidth(ys[i] - size * 0.75));
+      if (fits) best = { lines, fs, date: fs * 0.85, mark: Math.min(4.6, fs * 0.62), ys };
+    }
+  }
+  return best || { lines: wrap(text, 16).slice(0, 4), fs: 3.5, date: 3, mark: 2.5, ys: [110, 115, 120, 125, 129, 133] };
+}
+
 // The back of a triangle chip: its words ("One day at a time" unless a Meeting Maker design
 // says otherwise), the day it was earned, and a Special Edition's mark
-export function TriangleChipBack({ design, kind, earnedOn, mark, size = 160 }) {
+export function TriangleChipBack({ design: given, kind, count, earnedOn, mark, size = 160 }) {
   const id = useId().replace(/:/g, "");
+  const design = atMilestone(given, { kind, count });
   const scene = isScene(design.triangle);
   const look = scene ? { color: metalOf(design.triangle.scene), metal: true, ink: shade(metalOf(design.triangle.scene), -0.6) } : triangleLook(design, kind);
   const date = earnedOn ? new Date(`${earnedOn}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : "";
-  const lines = wrap(design.triangle.back_text || "One day at a time", 12).slice(0, 4);
-  const y0 = 110 - (lines.length - 1) * 5 - (mark ? 4 : 0);
+  const { lines, fs, date: dateFs, mark: markFs, ys } = fitTriangleBack(design.triangle.back_text || "One day at a time", date, mark);
   return (
     <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label="The back of the chip">
       <TriangleBase id={id} look={look} sides={design.triangle.sides} />
       <g fill={look.ink} fontFamily={FONT} fontWeight="700" textAnchor="middle" letterSpacing="0.8">
-        {lines.map((l, i) => <text key={i} x="100" y={y0 + i * 10} fontSize="7.5">{l.toUpperCase()}</text>)}
-        {date && <text x="100" y={y0 + lines.length * 10 + 4} fontSize="6.5" opacity="0.85">{date.toUpperCase()}</text>}
-        {mark && <text x="100" y={y0 + lines.length * 10 + 13} fontSize="4.6" opacity="0.9">{mark.toUpperCase()}</text>}
+        {lines.map((l, i) => <text key={i} x="100" y={ys[i]} fontSize={fs}>{l.toUpperCase()}</text>)}
+        {date && <text x="100" y={ys[lines.length]} fontSize={dateFs} opacity="0.85">{date.toUpperCase()}</text>}
+        {mark && <text x="100" y={ys[lines.length + (date ? 1 : 0)]} fontSize={markFs} opacity="0.9">{mark.toUpperCase()}</text>}
       </g>
     </svg>
   );
