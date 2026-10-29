@@ -302,6 +302,6 @@ button:focus-visible {
   }
 }
 
-/* Sideways-scrolling rows (tab bars) scroll by touch without drawing a scroll bar over their labels. */
+/* Scroll areas like tab bars and the sidebar nav still scroll (wheel, trackpad, touch) without drawing a scroll bar. */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }

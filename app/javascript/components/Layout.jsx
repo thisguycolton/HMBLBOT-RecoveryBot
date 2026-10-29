@@ -54,7 +54,7 @@ export default function Layout({ children, isAuthenticated, showFooter = true })
           <a href={isAuthenticated ? "/people" : "/"} className="flex h-16 shrink-0 items-center px-7 !text-slate-900 dark:!text-white" aria-label="RecoveryBot home">
             <RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-xl" />
           </a>
-          <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">
+          <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-8 pt-2">
             <Sidebar nav={nav} isAuthenticated={isAuthenticated} path={path} />
           </div>
         </aside>
