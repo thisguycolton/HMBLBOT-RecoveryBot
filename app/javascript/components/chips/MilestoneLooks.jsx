@@ -93,7 +93,7 @@ export default function MilestoneLooks({ kind, part, base, design, onChange, chi
         <div className={labelClass}>By milestone</div>
         <p className="text-xs text-slate-500 dark:text-neutral-400">
           {scene
-            ? "Give any milestone its own palette, finish or metal, or paint it differently. Left as Palette, Finish or Metal, it stays as set above."
+            ? "Give any milestone a metal or colored chip, its own palette, finish or metal, or paint it differently. Left as Chip, Palette, Finish or Metal, it stays as set above."
             : `Give any milestone its own color, and make it colored or metal. The rest are ${usualFinish?.toLowerCase()}.`}
         </p>
       </div>}
@@ -111,6 +111,17 @@ export default function MilestoneLooks({ kind, part, base, design, onChange, chi
                 </div>
                 {scene ? (
                   <>
+                    {!template && (
+                      <select aria-label={`${m.label}: chip`} className={`${small} !w-28`} value={look.body || SAME} onChange={(e) => setLook(key, { body: e.target.value })}>
+                        <option value={SAME}>Chip</option>
+                        <option value="metal">Metal chip</option>
+                        <option value="colored">Colored chip</option>
+                      </select>
+                    )}
+                    {!template && (look.body || scene.body) === "colored" && (
+                      <input type="color" aria-label={`${m.label}: color`} value={colorOf(m)} onChange={(e) => setColor(m, e.target.value)}
+                        className="size-8 shrink-0 cursor-pointer rounded-md border-0 !bg-transparent p-0" />
+                    )}
                     {palettes.length > 1 && (
                       <select aria-label={`${m.label}: palette`} className={`${small} !w-28`} value={look.palette || SAME} onChange={(e) => setLook(key, { palette: e.target.value })}>
                         <option value={SAME}>Palette</option>

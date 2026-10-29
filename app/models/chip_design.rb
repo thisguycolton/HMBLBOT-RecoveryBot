@@ -13,7 +13,7 @@
 # Round and Meeting Maker chips can look different at each milestone (`milestones`, by
 # milestone key: "30d", "year" for every year, "5y" for one year, "n10" for 10 meetings, "n+"
 # for every hundred after 100): their color and finish, and with a scene its palette, enamel or
-# struck, metal and bucket fills. A template can set the scene's per milestone too (its
+# struck, metal, body (metal or colored plastic) and bucket fills. A template can set the scene's per milestone too (its
 # defaults' `milestones`, sent with the art as `template_milestones`); the group's win.
 # Chip.jsx atMilestone draws them.
 module ChipDesign
@@ -35,7 +35,8 @@ module ChipDesign
     "round" => ->(k) { ROUND_KEYS.include?(k) || k.match?(/\A[1-9]\d?y\z/) },
     "meeting" => ->(k) { k == "n+" || k.match?(/\An[1-9]\d{0,4}\z/) },
   }.freeze
-  SCENE_LOOK_KEYS = %w[palette art_finish metal fills].freeze
+  SCENE_LOOK_KEYS = %w[palette art_finish metal body fills].freeze
+  BODIES = %w[metal colored].freeze
 
   DEFAULT = {
     "round" => {
@@ -241,6 +242,8 @@ module ChipDesign
       "palette" => text(raw["palette"], 30).presence,
       "finish" => (raw["finish"] if SCENE_FINISHES.include?(raw["finish"])),
       "metal" => (raw["metal"] if METALS.key?(raw["metal"])),
+      # The chip around the art: metal, or colored plastic in the part's color
+      "body" => ("colored" if raw["body"] == "colored"),
       "fills" => fills.presence, "hidden" => hidden.presence, "heights" => heights.presence, "layout" => layout(raw["layout"]) }.compact
   end
 
@@ -262,6 +265,7 @@ module ChipDesign
               "palette" => text(look["palette"], 30).presence,
               "art_finish" => (look["art_finish"] if SCENE_FINISHES.include?(look["art_finish"])),
               "metal" => (look["metal"] if METALS.key?(look["metal"])),
+              "body" => (look["body"] if BODIES.include?(look["body"])),
               "fills" => fills(look["fills"]).presence }.compact
       out = out.slice(*only) if only
       [key, out.presence]

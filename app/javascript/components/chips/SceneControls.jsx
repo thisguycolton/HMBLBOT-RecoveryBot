@@ -7,6 +7,7 @@ import { METAL_LABELS } from "../recovery/ChipArt";
 import { api } from "../groups/lib";
 import { quietButton } from "../groups/ui";
 import ArtEditor from "./ArtEditor";
+import { ColorField } from "./MeetingPartForm";
 import { applyDefaults, readText, sceneFrom, storedScene, templateDesign } from "./lib";
 
 const segment = "overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700";
@@ -120,6 +121,15 @@ export default function SceneControls({ slug, base, templates, fits, part, onCha
                 <SegmentedControl value={scene.finish || "enamel"} onChange={(v) => setScene({ finish: v })} options={[{ value: "enamel", label: "Enamel" }, { value: "struck", label: "Struck" }]} />
               </div>
               <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">{scene.finish === "struck" ? "One metal, raised by layer." : "Colors with metal lines between them."}</p>
+            </div>
+            <div>
+              <div className={labelClass}>Chip</div>
+              <div className={segment}>
+                <SegmentedControl value={scene.body || "metal"} onChange={(v) => setScene({ body: v === "colored" ? "colored" : undefined })} options={[{ value: "metal", label: "Metal" }, { value: "colored", label: "Colored (plastic)" }]} />
+              </div>
+              {scene.body === "colored" && (part.sides
+                ? <div className="mt-2 w-44"><ColorField label="Color" value={part.color} fallback={base.meeting.color} onChange={(v) => onChange({ color: v })} /></div>
+                : <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Each milestone's color is set below.</p>)}
             </div>
             <div>
               <div className={labelClass}>Metal</div>

@@ -61,6 +61,7 @@ function sceneAt(scene, look) {
   if (look.palette && scene.palettes?.[look.palette]) { out.palette = look.palette; out.colors = scene.palettes[look.palette]; }
   if (look.art_finish) out.finish = look.art_finish;
   if (look.metal) out.metal = look.metal;
+  if (look.body) out.body = look.body;
   if (look.fills) out.fills = { ...scene.fills, ...look.fills };
   return out;
 }
@@ -96,7 +97,7 @@ export function atMilestone(design, { milestone, kind, count } = {}) {
 // A chip's colors: its own, whether it's metal, and the color of its lettering
 export function roundLook(design, milestone) {
   design = atMilestone(design, { milestone });
-  if (isScene(design.round)) return { color: metalOf(design.round.scene), metal: true, ink: shade(metalOf(design.round.scene), -0.55) };
+  if (isScene(design.round)) return sceneBody(design.round, milestone.key);
   const color = design.round.colors[milestone.key] || design.round.colors.year;
   const metal = isMetal(design.round.finish, milestone);
   return { color, metal, ink: inkFor(color, metal) };
@@ -109,6 +110,17 @@ export function triangleLook(design, kind, count) {
   const color = colors[kind] || colors[base] || colors.meeting || "#3451b2";
   const metal = design.triangle.finish === "metal" || kind.endsWith("-streak");
   return { color, metal, ink: inkFor(color, metal) };
+}
+// An illustrated chip's body: its scene's metal, or colored plastic (scene.body "colored") in
+// the part's color for `colorKey`. `dark` is its badge's.
+export function sceneBody(part, colorKey) {
+  const scene = part.scene;
+  if (scene?.body !== "colored") {
+    const color = metalOf(scene);
+    return { color, metal: true, ink: shade(color, -0.55), dark: scene?.metal === "black_gold" ? BLACK : shade(color, -0.72) };
+  }
+  const color = part.colors?.[colorKey] || part.colors?.year || "#0f766e";
+  return { color, metal: false, ink: inkFor(color, false), dark: shade(color, -0.5) };
 }
 // A chip with a template's art on it (ChipArt.jsx)
 export const isScene = (part) => part?.emblem === "scene" && !!part.scene?.art;
@@ -371,7 +383,7 @@ export function RoundChipBack({ design: given, milestone, groupTitle, earnedOn, 
   const date = earnedOn ? new Date(`${earnedOn}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : "";
   const top = d.back_ring_top || groupTitle || "";
   const bottom = mark || d.back_ring_bottom || date;
-  if (isScene(d)) return <SceneRoundBack id={id} round={d} top={top} bottom={bottom} date={bottom === date ? "" : date} size={size} />;
+  if (isScene(d)) return <SceneRoundBack id={id} round={d} colorKey={milestone.key} top={top} bottom={bottom} date={bottom === date ? "" : date} size={size} />;
   const look = roundLook(design, milestone);
   const { lines, fs } = fitBack(d.back_text);
   const gap = fs * 1.3;
@@ -387,14 +399,14 @@ export function RoundChipBack({ design: given, milestone, groupTitle, earnedOn, 
 }
 
 // A metal coin's rim and edge, with the face clipped for art
-function SceneRim({ id, color, edge }) {
+function SceneRim({ id, color, edge, plastic = false }) {
   return (
     <>
       <defs>
         <linearGradient id={`${id}-rim`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={shade(color, 0.45)} />
+          <stop offset="0%" stopColor={shade(color, plastic ? 0.18 : 0.45)} />
           <stop offset="50%" stopColor={color} />
-          <stop offset="100%" stopColor={shade(color, -0.4)} />
+          <stop offset="100%" stopColor={shade(color, plastic ? -0.18 : -0.4)} />
         </linearGradient>
         <clipPath id={`${id}-face`}><circle cx="100" cy="100" r="88" /></clipPath>
         <path id={`${id}-top`} d="M 22,100 A 78,78 0 0 1 178,100" />
@@ -402,6 +414,7 @@ function SceneRim({ id, color, edge }) {
       </defs>
       <circle cx="100" cy="100" r="97" fill={`url(#${id}-rim)`} />
       <circle cx="100" cy="100" r="95" fill="none" stroke={shade(color, -0.35)} strokeWidth="0.8" />
+      {plastic && <circle cx="100" cy="100" r="93" fill="none" stroke="#ffffff" strokeOpacity="0.85" strokeWidth="5" strokeDasharray="11 13" />}
       <Edge edge={edge} color={color} />
     </>
   );
@@ -427,19 +440,19 @@ function SceneBand({ id, top, bottom, color, ink, band = true }) {
 // The front of an illustrated chip: the template's art across the face, the rim words on a band,
 // and the milestone in a badge, a cartouche at the bottom, on the rim, or not at all
 function SceneRound({ id, round, milestone, size, faded, bare, className, title }) {
-  const color = metalOf(round.scene);
+  const { color, metal, dark } = sceneBody(round, milestone.key);
   const [big, small] = roundFace(milestone, round.numerals);
   const at = round.milestone_at || "badge";
-  const dark = round.scene.metal === "black_gold" ? BLACK : shade(color, -0.72);
-  const metalFill = `url(#${id}-rim)`;
+  // Metal letters on a metal chip, white on a colored one
+  const metalFill = metal ? `url(#${id}-rim)` : "#ffffff";
   const bottom = at === "rim" ? `${big} ${small}` : round.bottom_text;
   const place = layoutOf(round.scene).round?.milestone;
   return (
     <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label={title || `${milestone.label} chip`} className={svgClass(faded, bare, className)}>
-      <SceneRim id={id} color={color} edge={round.edge} />
+      <SceneRim id={id} color={color} edge={round.edge} plastic={!metal} />
       <SceneArt id={id} scene={round.scene} clip={`${id}-face`} />
       <circle cx="100" cy="100" r="88" fill="none" stroke={shade(color, -0.35)} strokeWidth="1.6" />
-      <SceneBand id={id} top={round.top_text} bottom={bottom} color={color} />
+      <SceneBand id={id} top={round.top_text} bottom={bottom} color={color} ink={metal ? undefined : "#ffffff"} />
       {at === "badge" && (
         <g transform={placeTransform(place, ...FRAMES.round.badge)} data-milestone="">
           <circle cx="100.8" cy="147.2" r="23" fill="#000000" opacity="0.25" />
@@ -466,16 +479,17 @@ function SceneRound({ id, round, milestone, size, faded, bare, className, title 
 // The back of an illustrated chip: the metal (black for black and gold), its words in the middle
 // and its ring words around them, and the day it was earned under the words when the ring has
 // something else
-function SceneRoundBack({ id, round, top, bottom, date, size }) {
-  const color = metalOf(round.scene);
-  const blackGold = round.scene.metal === "black_gold";
-  const ink = blackGold ? color : shade(color, -0.6);
+function SceneRoundBack({ id, round, colorKey, top, bottom, date, size }) {
+  const body = sceneBody(round, colorKey);
+  const color = body.color;
+  const blackGold = body.metal && round.scene.metal === "black_gold";
+  const ink = blackGold ? color : body.metal ? shade(color, -0.6) : body.ink;
   const { lines, fs } = fitBack(round.back_text, 50);
   const gap = fs * 1.3;
   const y0 = 100 - ((lines.length - 1) * gap) / 2 + fs * 0.35 - (date ? 4 : 0);
   return (
     <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label="The back of the chip">
-      <SceneRim id={id} color={color} edge={round.edge} />
+      <SceneRim id={id} color={color} edge={round.edge} plastic={!body.metal} />
       <defs>
         <radialGradient id={`${id}-back`} cx="35%" cy="30%" r="80%">
           <stop offset="0%" stopColor={blackGold ? "#2a2418" : shade(color, 0.3)} />
@@ -620,7 +634,7 @@ export function TriangleChipBack({ design: given, kind, count, earnedOn, mark, s
   const id = useId().replace(/:/g, "");
   const design = atMilestone(given, { kind, count });
   const scene = isScene(design.triangle);
-  const look = scene ? { color: metalOf(design.triangle.scene), metal: true, ink: shade(metalOf(design.triangle.scene), -0.6) } : triangleLook(design, kind);
+  const look = scene ? sceneBody(design.triangle, kind) : triangleLook(design, kind);
   const date = earnedOn ? new Date(`${earnedOn}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : "";
   const { lines, fs, date: dateFs, mark: markFs, ys } = fitTriangleBack(design.triangle.back_text || "One day at a time", date, mark);
   return (
@@ -638,9 +652,10 @@ export function TriangleChipBack({ design: given, kind, count, earnedOn, mark, s
 // A Meeting Maker chip with a template's art inside the triangle: a metal border with the
 // sides' words, and the count in a badge
 function SceneTriangle({ id, tri, num, words, size, faded, bare, className, title }) {
-  const color = metalOf(tri.scene);
-  const look = { color, metal: true, ink: shade(color, -0.6) };
-  const dark = tri.scene.metal === "black_gold" ? BLACK : shade(color, -0.72);
+  const body = sceneBody(tri, "meeting");
+  const { color, dark } = body;
+  const look = { color, metal: body.metal, ink: body.metal ? shade(color, -0.6) : body.ink };
+  const letters = body.metal ? `url(#${id}-metal)` : "#ffffff";
   return (
     <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title} className={svgClass(faded, bare, className)}>
       <TriangleBase id={id} look={look} sides={tri.sides} />
@@ -652,8 +667,8 @@ function SceneTriangle({ id, tri, num, words, size, faded, bare, className, titl
       <path d={roundedTriangle(24, 10)} fill="none" stroke={shade(color, -0.35)} strokeWidth="1.6" />
       <g transform={placeTransform(layoutOf(tri.scene).triangle?.milestone, ...FRAMES.triangle.badge)} data-milestone="">
       <circle cx="100.6" cy="123.6" r="16" fill="#000000" opacity="0.25" />
-      <circle cx="100" cy="122.5" r="15.5" fill={dark} stroke={`url(#${id}-metal)`} strokeWidth="2.2" />
-      <g fill={`url(#${id}-metal)`} fontFamily={FONT} textAnchor="middle">
+      <circle cx="100" cy="122.5" r="15.5" fill={dark} stroke={letters} strokeWidth="2.2" />
+      <g fill={letters} fontFamily={FONT} textAnchor="middle">
         <text x="100" y="126" fontSize={num.length > 2 ? 10 : 13} fontWeight="800">{num}</text>
         <text x="100" y="133.5" fontSize="3.8" fontWeight="700" letterSpacing="0.5">{words[0]}</text>
       </g>

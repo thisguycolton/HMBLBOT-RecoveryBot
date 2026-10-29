@@ -79,6 +79,18 @@ class Api::GroupChipDesignsTest < ActionDispatch::IntegrationTest
     assert_equal({ "n5" => { "color" => "#654321" } }, ChipDesign.for_meeting(meeting)["meeting"]["milestones"], "a meeting's own replace the group's")
   end
 
+  test "illustrated chips can be colored plastic instead of metal, and per milestone" do
+    put "/api/groups/#{@group.slug}/chips", params: { design: {
+      meeting: { emblem: "scene", scene: { template_id: @site.id, body: "colored" }, color: "#aa2233", milestones: { "n10" => { body: "metal" }, "n5" => { body: "wood" } } },
+      round: { emblem: "scene", scene: { template_id: @site.id, body: "gold" } },
+    } }, as: :json
+    assert_response :success
+    stored = @group.reload.chip_design
+    assert_equal "colored", stored.dig("meeting", "scene", "body")
+    assert_equal({ "n10" => { "body" => "metal" } }, stored.dig("meeting", "milestones"))
+    assert_nil stored.dig("round", "scene", "body"), "metal is the usual body"
+  end
+
   test "a group imports its own art, which only it can use, and can take it off its list" do
     post "/api/groups/#{@group.slug}/chips/templates", params: { svg: SVG, title: "Our hills" }, as: :json
     assert_response :created
