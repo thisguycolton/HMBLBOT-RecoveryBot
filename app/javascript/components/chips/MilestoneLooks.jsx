@@ -25,6 +25,8 @@ const yearMilestone = (n) => ({ key: "year", years: n, look: `${n}y`, label: `${
 const lookKey = (m) => m.look || m.key;
 const oneYear = (key) => /^\d+y$/.test(key);
 const FINISHES = [{ value: "plastic", label: "Colored" }, { value: "metal", label: "Metal" }];
+// Chips without art come in these metals (black and gold is for art's struck face)
+const PLAIN_METALS = ["brass", "silver", "bronze"];
 
 const small = `${selectClass} !py-1.5 !pl-2.5 !text-xs`;
 const SAME = "";
@@ -95,7 +97,7 @@ export default function MilestoneLooks({ kind, part, base, design, onChange, chi
         <p className="text-xs text-slate-500 !font-sans dark:text-neutral-400">
           {scene
             ? "Give any milestone a metal or colored chip, its own palette, finish or metal, or paint it differently. Left as Chip, Palette, Finish or Metal, it stays as set above."
-            : `Give any milestone its own color, and make it colored or metal. The rest are ${usualFinish?.toLowerCase()}.`}
+            : `Give any milestone its own color, make it colored or metal, or pick its metal: brass, silver or bronze. The rest are ${usualFinish?.toLowerCase()}.`}
         </p>
       </div>}
       <ul className="divide-y divide-neutral-200 overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:divide-neutral-800 dark:ring-neutral-800">
@@ -146,11 +148,19 @@ export default function MilestoneLooks({ kind, part, base, design, onChange, chi
                   </>
                 ) : (
                   <>
-                    <input type="color" aria-label={`${m.label}: color`} value={colorOf(m)} onChange={(e) => setColor(m, e.target.value)}
-                      className="size-8 shrink-0 cursor-pointer rounded-md border-0 !bg-transparent p-0" />
-                    <select aria-label={`${m.label}: finish`} className={`${small} !w-36`} value={look.finish || SAME} onChange={(e) => setLook(key, { finish: e.target.value })}>
+                    {!look.metal && (
+                      <input type="color" aria-label={`${m.label}: color`} value={colorOf(m)} onChange={(e) => setColor(m, e.target.value)}
+                        className="size-8 shrink-0 cursor-pointer rounded-md border-0 !bg-transparent p-0" />
+                    )}
+                    <select aria-label={`${m.label}: finish`} className={`${small} !w-36`} value={look.metal ? "metal" : look.finish || SAME}
+                      onChange={(e) => setLook(key, { finish: e.target.value, metal: e.target.value === "metal" ? look.metal : undefined })}>
                       <option value={SAME}>Same ({usualFinish})</option>
                       {FINISHES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                    <select aria-label={`${m.label}: metal`} className={`${small} !w-36`} value={look.metal || SAME}
+                      onChange={(e) => setLook(key, { metal: e.target.value || undefined, finish: e.target.value ? "metal" : look.finish })}>
+                      <option value={SAME}>Its color</option>
+                      {PLAIN_METALS.map((v) => <option key={v} value={v}>{METAL_LABELS[v]}</option>)}
                     </select>
                   </>
                 )}

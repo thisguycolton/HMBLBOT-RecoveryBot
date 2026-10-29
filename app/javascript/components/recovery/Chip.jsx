@@ -1,5 +1,5 @@
 import React, { useId } from "react";
-import SceneArt, { BLACK, Edge, FRAMES, layoutOf, metalOf, placeTransform } from "./ChipArt";
+import SceneArt, { BLACK, Edge, FRAMES, METALS, layoutOf, metalOf, placeTransform } from "./ChipArt";
 
 // Virtual chips, drawn as SVG in a group's design (ChipDesign on the server, set in Group
 // dashboard > Chips). Round chips mark sobriety milestones (lib/milestones.js), triangle chips
@@ -75,6 +75,11 @@ export function partAt(part, keys, colorKey) {
   const { milestones: _m, ...out } = part;
   if (look.color && colorKey) out.colors = { ...part.colors, [colorKey]: look.color };
   if (look.finish) out.finish = look.finish;
+  // Without art, a milestone's own metal makes it a metal chip of that metal
+  if (look.metal && part.emblem !== "scene") {
+    out.finish = "metal";
+    if (colorKey) out.colors = { ...(out.colors || part.colors), [colorKey]: METALS[look.metal] };
+  }
   if (part.scene) out.scene = { ...sceneAt(part.scene, look), template_milestones: undefined };
   return out;
 }
