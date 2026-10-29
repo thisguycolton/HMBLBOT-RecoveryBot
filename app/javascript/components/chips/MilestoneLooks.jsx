@@ -91,7 +91,7 @@ export default function MilestoneLooks({ kind, part, base, design, onChange, chi
     <div className="space-y-2">
       {!template && <div>
         <div className={labelClass}>By milestone</div>
-        <p className="text-xs text-slate-500 dark:text-neutral-400">
+        <p className="text-xs text-slate-500 !font-sans dark:text-neutral-400">
           {scene
             ? "Give any milestone a metal or colored chip, its own palette, finish or metal, or paint it differently. Left as Chip, Palette, Finish or Metal, it stays as set above."
             : `Give any milestone its own color, and make it colored or metal. The rest are ${usualFinish?.toLowerCase()}.`}
@@ -111,11 +111,11 @@ export default function MilestoneLooks({ kind, part, base, design, onChange, chi
                 </div>
                 {scene ? (
                   <>
-                    {!template && (
+                    {(
                       <select aria-label={`${m.label}: chip`} className={`${small} !w-28`} value={look.body || SAME} onChange={(e) => setLook(key, { body: e.target.value })}>
                         <option value={SAME}>Chip</option>
-                        <option value="metal">Metal chip</option>
-                        <option value="colored">Colored chip</option>
+                        <option value="metal">Metal</option>
+                        <option value="colored">Colored</option>
                       </select>
                     )}
                     {!template && (look.body || scene.body) === "colored" && (

@@ -3,7 +3,7 @@ import { Copy, Plus, Send, Sparkles, Trash2 } from "lucide-react";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { FlatChip, SpinningChip } from "../recovery/ChipModal";
-import SceneControls from "../chips/SceneControls";
+import RoundPartForm from "../chips/RoundPartForm";
 import MeetingPartForm from "../chips/MeetingPartForm";
 import { storedDesign } from "../chips/lib";
 import { api } from "./lib";
@@ -267,27 +267,9 @@ function EditionForm({ group, data, meetings, templates, onTemplates, edition, o
           <legend className="sr-only">Its look</legend>
           <div className="font-semibold text-slate-900 dark:text-white">Its look</div>
           {milestone ? (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div><label htmlFor="ed-top" className={labelClass}>Around the top</label>
-                  <input id="ed-top" maxLength={40} className={inputClass} value={e.design.round.top_text} onChange={(x) => setRound({ top_text: x.target.value })} /></div>
-                <div><label htmlFor="ed-bottom" className={labelClass}>Around the bottom</label>
-                  <input id="ed-bottom" maxLength={40} className={inputClass} value={e.design.round.bottom_text} onChange={(x) => setRound({ bottom_text: x.target.value })} /></div>
-              </div>
-              <div><label htmlFor="ed-back" className={labelClass}>On the back</label>
-                <textarea id="ed-back" rows={3} maxLength={240} className={inputClass} value={e.design.round.back_text} onChange={(x) => setRound({ back_text: x.target.value })} /></div>
-              <div>
-                <div className={labelClass}>In the middle</div>
-                <div className={segment}>
-                  <SegmentedControl value={e.design.round.emblem === "scene" ? "scene" : "group"}
-                    onChange={(v) => setRound(v === "scene" ? { emblem: "scene" } : { emblem: data.design.round.emblem === "scene" ? "triangle" : data.design.round.emblem, scene: undefined })}
-                    options={[{ value: "group", label: "Like the group's chips" }, { value: "scene", label: "Illustration" }]} />
-                </div>
-              </div>
-              {e.design.round.emblem === "scene" && !locked && (
-                <SceneControls slug={group.slug} base={data.default} templates={templates} onTemplates={onTemplates} fits="round" part={e.design.round} onChange={setRound} />
-              )}
-            </>
+            <RoundPartForm id="ed" design={e.design} set={setRound} base={data.default} templates={templates} onTemplates={onTemplates} slug={group.slug}
+              logo logoUrl={group.logo_url || data.logo_url} ringTop={group.title} backNote="Around it go the words below, or the group's name and the day the chip was earned."
+              uploadRelief={(svg) => api(`/groups/${group.slug}/chips/relief`, { method: "POST", body: { svg } })} />
           ) : (
             <MeetingPartForm id="edition" slug={group.slug} base={data.default} templates={templates} onTemplates={onTemplates} part={e.design.meeting} set={setMeeting} />
           )}

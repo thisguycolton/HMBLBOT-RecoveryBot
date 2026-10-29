@@ -92,6 +92,28 @@ module ChipDesign
 
   def for_group(group) = resolve(merge(group&.chip_design))
 
+  # RecoveryBot's own sobriety chips, the ones members earn: DEFAULT until a site admin designs
+  # them (Site Admin > Chip design, round chips only). Each change is kept (ChipDesignVersion
+  # "Site"), so an earned chip looks as they did on the day it was earned (for_site_on).
+  def for_site = ChipDesignVersion.site.order(:created_at, :id).last&.design || DEFAULT
+
+  def site_versions = ChipDesignVersion.site.order(:created_at, :id).to_a
+
+  # How earned chips looked at the end of `date` (`versions` from site_versions), or nil while
+  # they've never been changed
+  def for_site_on(date, versions)
+    versions.reverse.find { |v| v.created_at <= date.end_of_day }&.design
+  end
+
+  # Saves a new look for them from now on: only the round part, the rest stays RecoveryBot's
+  def save_site!(stored)
+    round = pin(stored)["round"]
+    design = resolve(merge(round.present? ? { "round" => round } : nil))
+    before = for_site
+    ChipDesignVersion.record(:site, design, before: before) if design != before
+    design
+  end
+
   # A meeting's Meeting Maker chips: its group's default with the meeting's own changes, and
   # the meeting's name along the third side unless that was given
   def for_meeting(meeting)

@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Paintbrush, RotateCcw, Upload } from "lucide-react";
-import SegmentedControl from "../ui/SegmentedControl";
-import { inputClass, labelClass } from "../ui/styles";
+import { Paintbrush, RotateCcw } from "lucide-react";
 import { RoundChip } from "../recovery/Chip";
 import { FlatChip, SpinningChip } from "../recovery/ChipModal";
-import SceneControls from "../chips/SceneControls";
 import MeetingPartForm from "../chips/MeetingPartForm";
-import MilestoneLooks from "../chips/MilestoneLooks";
+import RoundPartForm from "../chips/RoundPartForm";
 import ChipEditions from "./ChipEditions";
 import { storedDesign as stored } from "../chips/lib";
 import { api } from "./lib";
@@ -24,7 +21,6 @@ const ROUND = [
   { key: "18m", label: "18 months" },
 ];
 
-const segment = "overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700";
 
 // Group dashboard > Chips (group admins): how the round chips the group's hosts give look
 // (Give a chip, /recovery/give), drawn as they'll get them, and each meeting's Meeting Maker
@@ -71,65 +67,9 @@ export default function ChipDesigner({ group }) {
         <Card className="space-y-4 p-4 sm:p-5">
           <h2 className="font-semibold text-slate-900 dark:text-white">Round chips</h2>
           <p className="-mt-2 text-sm text-slate-500 dark:text-neutral-400">For sobriety milestones: 24 hours, 30, 60 and 90 days, 6, 9 and 18 months, and every year.</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor="c-top" className={labelClass}>Around the top</label>
-              <input id="c-top" maxLength={40} className={inputClass} value={design.round.top_text} onChange={(e) => round({ top_text: e.target.value })} />
-            </div>
-            <div>
-              <label htmlFor="c-bottom" className={labelClass}>Around the bottom</label>
-              <input id="c-bottom" maxLength={40} className={inputClass} value={design.round.bottom_text} onChange={(e) => round({ bottom_text: e.target.value })} />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="c-back" className={labelClass}>On the back</label>
-            <textarea id="c-back" rows={5} maxLength={240} className={inputClass} value={design.round.back_text} onChange={(e) => round({ back_text: e.target.value })} />
-            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Each line here is a line on the chip. Around it go the words below, or the group's name and the day the chip was earned.</p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor="c-ring-top" className={labelClass}>Around the back, top</label>
-              <input id="c-ring-top" maxLength={40} className={inputClass} placeholder={group.title} value={design.round.back_ring_top || ""} onChange={(e) => round({ back_ring_top: e.target.value })} />
-            </div>
-            <div>
-              <label htmlFor="c-ring-bottom" className={labelClass}>Around the back, bottom</label>
-              <input id="c-ring-bottom" maxLength={40} className={inputClass} placeholder="The day it was earned" value={design.round.back_ring_bottom || ""} onChange={(e) => round({ back_ring_bottom: e.target.value })} />
-            </div>
-          </div>
-          <div>
-            <div className={labelClass}>In the middle</div>
-            <div className={segment}>
-              <SegmentedControl value={design.round.emblem} onChange={(v) => round({ emblem: v })}
-                options={[{ value: "triangle", label: "Circle and triangle" }, { value: "scene", label: "Illustration" }, { value: "logo", label: "Group logo" }, { value: "relief", label: "Raised logo" }, { value: "none", label: "Just the number" }]} />
-            </div>
-            {design.round.emblem === "logo" && !logoUrl && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">The group has no logo yet, so chips show the circle and triangle. Add one in Group settings.</p>}
-            {design.round.emblem === "relief" && <ReliefUpload slug={group.slug} relief={design.round.relief} onChange={(relief) => round({ relief })} />}
-            {design.round.emblem === "relief" && design.round.relief && <ReliefControls r={design.round} set={round} />}
-            {design.round.emblem === "scene" && (
-              <div className="mt-3">
-                <SceneControls slug={group.slug} base={data.default} templates={templates} onTemplates={setTemplates} fits="round" part={design.round} onChange={round} />
-              </div>
-            )}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {design.round.emblem !== "scene" && <div>
-              <div className={labelClass}>Finish</div>
-              <div className={segment}>
-                <SegmentedControl value={design.round.finish} onChange={(v) => round({ finish: v })}
-                  options={[{ value: "classic", label: "Classic" }, { value: "plastic", label: "Colored" }, { value: "metal", label: "Metal" }]} />
-              </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Classic: colored chips for the months, metal medallions for the years.</p>
-            </div>}
-            <div>
-              <div className={labelClass}>Years</div>
-              <div className={segment}>
-                <SegmentedControl value={design.round.numerals} onChange={(v) => round({ numerals: v })}
-                  options={[{ value: "roman", label: "Roman (IV)" }, { value: "number", label: "Number (4)" }]} />
-              </div>
-            </div>
-          </div>
-          <MilestoneLooks kind="round" part={design.round} base={data.default.round} design={data.default} onChange={round}
-            chip={(m) => <RoundChip design={design} milestone={m.look === "year" ? { ...m, label: "1 year" } : m} logoUrl={logoUrl} size={40} />} />
+          <RoundPartForm design={design} set={round} base={data.default} templates={templates} onTemplates={setTemplates} slug={group.slug} logo logoUrl={logoUrl}
+            ringTop={group.title} backNote="Around it go the words below, or the group's name and the day the chip was earned."
+            uploadRelief={(svg) => api(`/groups/${group.slug}/chips/relief`, { method: "POST", body: { svg } })} />
         </Card>
 
         <ErrorNote error={error} />
@@ -273,71 +213,6 @@ function MeetingPreview({ design, part }) {
   return (
     <div className="flex items-center justify-center">
       <FlatChip chip={chip} design={{ ...design, meeting: part }} size={140} />
-    </div>
-  );
-}
-
-
-// The raised logo: an SVG the group uploads, turned into outlines on the server (ChipRelief) and
-// pressed into the chip in its own color. Dark parts stand highest, lighter ones lower, white
-// none. Saved with the rest of the design.
-function ReliefUpload({ slug, relief, onChange }) {
-  const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const upload = async (file) => {
-    if (!file) return;
-    setError(null);
-    setBusy(true);
-    try {
-      const d = await api(`/groups/${slug}/chips/relief`, { method: "POST", body: { svg: await file.text() } });
-      onChange(d.relief);
-    } catch (e) { setError(e.message); }
-    setBusy(false);
-  };
-  return (
-    <div className="mt-2 space-y-2">
-      <label className={`${quietButton} cursor-pointer`}>
-        <Upload className="size-4" /> {busy ? "Reading…" : relief ? "Upload a different SVG" : "Upload an SVG"}
-        <input type="file" accept=".svg,image/svg+xml" className="sr-only" onChange={(e) => { upload(e.target.files[0]); e.target.value = ""; }} />
-      </label>
-      <p className="text-xs text-slate-500 dark:text-neutral-400">
-        Your logo, pressed into the chip like a stamped coin. The darker a part of the SVG, the higher it stands; white parts stay flat.
-        Turn any text into outlines first. {!relief && "Until there's one, chips show the circle and triangle."}
-      </p>
-      <ErrorNote error={error} />
-    </div>
-  );
-}
-
-// How the raised logo sits: raised or cut in, how big, and on metal chips how high (or deep)
-// and how sharply it rises from the coin (ChipDesign relief_* settings)
-function ReliefControls({ r, set }) {
-  const slider = (key, label, min, max, low, high) => (
-    <label className="block">
-      <span className="flex items-baseline justify-between text-xs font-medium text-slate-600 dark:text-neutral-300">
-        {label} <span className="tabular-nums text-slate-400">{r[key]}</span>
-      </span>
-      <input type="range" min={min} max={max} value={r[key]} onChange={(e) => set({ [key]: Number(e.target.value) })} className="w-full accent-[var(--color-accent)]" />
-      <span className="flex justify-between text-[11px] text-slate-400"><span>{low}</span><span>{high}</span></span>
-    </label>
-  );
-  return (
-    <div className="mt-3 space-y-3 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900/60">
-      <div className={segment}>
-        <SegmentedControl value={r.relief_depth} onChange={(v) => set({ relief_depth: v })} options={[{ value: "raised", label: "Raised" }, { value: "inset", label: "Cut in" }]} />
-      </div>
-      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-200">
-        <input type="checkbox" checked={!!r.relief_badge} onChange={(e) => set({ relief_badge: e.target.checked, ...(e.target.checked && r.relief_size < 72 ? { relief_size: 84 } : {}) })} className="size-4 accent-[var(--color-accent)]" />
-        A circle over the middle of the logo with the time in it
-      </label>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {slider("relief_size", "Size", 40, r.relief_badge ? 96 : 84, "Small", "Large")}
-        {slider("relief_height", r.relief_depth === "inset" ? "Depth" : "Height", 1, 10, "Shallow", "Deep")}
-        {slider("relief_sharpness", "Sharpness", 1, 10, "Soft slope", "Sharp edge")}
-      </div>
-      <p className="text-xs text-slate-500 dark:text-neutral-400">
-        Height and sharpness shape metal chips, where the logo is struck into the coin. Colored chips get a slight print of it in one color.
-      </p>
     </div>
   );
 }
