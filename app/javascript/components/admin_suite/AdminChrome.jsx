@@ -51,6 +51,7 @@ export const SECTIONS = [
       { to: "/notices", label: "Site notices", icon: Megaphone, count: "notices", countTone: "info" },
       { to: "/readings", label: "Readings", icon: NotebookPen },
       { to: "/tags", label: "Tags", icon: Tags },
+      { to: "/chip_design", label: "Sobriety chips", icon: Medal },
       { to: "/chip_templates", label: "Chip templates", icon: Medal },
     ],
   },

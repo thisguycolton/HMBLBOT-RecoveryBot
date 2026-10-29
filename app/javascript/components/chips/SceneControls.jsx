@@ -7,6 +7,7 @@ import { METAL_LABELS } from "../recovery/ChipArt";
 import { api } from "../groups/lib";
 import { quietButton } from "../groups/ui";
 import ArtEditor from "./ArtEditor";
+import { ColorField } from "./MeetingPartForm";
 import { applyDefaults, readText, sceneFrom, storedScene, templateDesign } from "./lib";
 
 const segment = "overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700";
@@ -21,7 +22,7 @@ export const editorLook = (part, fits) => (part.sides && fits === "round"
 
 // Picking and setting up a chip template's art on a design part (round chips, or Meeting
 // Maker chips: `fits` "round" or "triangle"): the templates as chips to pick from (the site's
-// and the group's own, which it can import here), then the palette, enamel or struck, the metal,
+// and the group's own, which it can import here; without a group `slug`, the site's only), then the palette, enamel or struck, the metal,
 // where the milestone sits, the edge, and the art editor for the group's own touches.
 // `part` is the design part; onChange gets what to change in it.
 export default function SceneControls({ slug, base, templates, fits, part, onChange, onTemplates, words = true }) {
@@ -77,20 +78,22 @@ export default function SceneControls({ slug, base, templates, fits, part, onCha
                 <RoundChip design={templateDesign(base, t)} milestone={THUMB} size={64} />
                 <span className="line-clamp-2 text-center text-[0.7rem] leading-tight text-slate-600 dark:text-neutral-300">{t.title}</span>
               </button>
-              {t.own && (
+              {t.own && slug && (
                 <button type="button" onClick={() => removeOwn(t)} aria-label={`Remove ${t.title}`}
                   className="absolute -right-1 -top-1 rounded-full !bg-white p-1 text-slate-500 shadow ring-1 ring-neutral-200 hover:text-red-600 dark:!bg-neutral-800 dark:ring-neutral-700"><Trash2 className="size-3" /></button>
               )}
             </div>
           ))}
+          {slug && (<>
           <input ref={fileRef} id={`scene-import-${fits}`} type="file" accept=".svg,image/svg+xml" className="hidden" onChange={(e) => importSvg(e.target.files[0])} />
           <button type="button" disabled={busy} onClick={() => fileRef.current.click()}
             className="flex w-[5.5rem] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-neutral-300 !bg-transparent p-1 text-slate-500 hover:border-accent hover:text-accent dark:border-neutral-700">
             <Upload className="size-5" />
             <span className="text-center text-[0.7rem] leading-tight">{busy ? "Importing…" : "Import your own SVG"}</span>
           </button>
+          </>)}
         </div>
-        <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Your own art is only for your group's chips. Import only art you made or have the rights to.</p>
+        {slug && <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Your own art is only for your group's chips. Import only art you made or have the rights to.</p>}
         {error && <p className="mt-1 text-sm text-red-700 dark:text-red-300">{error}</p>}
       </div>
 
@@ -120,6 +123,15 @@ export default function SceneControls({ slug, base, templates, fits, part, onCha
                 <SegmentedControl value={scene.finish || "enamel"} onChange={(v) => setScene({ finish: v })} options={[{ value: "enamel", label: "Enamel" }, { value: "struck", label: "Struck" }]} />
               </div>
               <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">{scene.finish === "struck" ? "One metal, raised by layer." : "Colors with metal lines between them."}</p>
+            </div>
+            <div>
+              <div className={labelClass}>Chip</div>
+              <div className={segment}>
+                <SegmentedControl value={scene.body || "metal"} onChange={(v) => setScene({ body: v === "colored" ? "colored" : undefined })} options={[{ value: "metal", label: "Metal" }, { value: "colored", label: "Colored (plastic)" }]} />
+              </div>
+              {scene.body === "colored" && (part.sides
+                ? <div className="mt-2 w-44"><ColorField label="Color" value={part.color} fallback={base.meeting.color} onChange={(v) => onChange({ color: v })} /></div>
+                : <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Each milestone's color is set below.</p>)}
             </div>
             <div>
               <div className={labelClass}>Metal</div>

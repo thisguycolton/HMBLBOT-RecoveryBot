@@ -423,6 +423,9 @@ end
       resources :chip_templates, only: %i[index show create update destroy] do
         post :publish, on: :member
       end
+      resource :chip_design, only: %i[show update] do
+        post :relief
+      end
     end
   end
   resources :readings do

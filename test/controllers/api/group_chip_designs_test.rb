@@ -56,8 +56,8 @@ class Api::GroupChipDesignsTest < ActionDispatch::IntegrationTest
   end
 
   test "each milestone can have its own look, from the template and the group, and Meeting Maker counts too" do
-    @site.update!(defaults: { "milestones" => { "5y" => { "metal" => "silver", "color" => "#ff0000" }, "n10" => { "art_finish" => "struck" }, "n0" => { "metal" => "silver" }, "bogus" => { "metal" => "silver" } } })
-    assert_equal({ "5y" => { "metal" => "silver" }, "n10" => { "art_finish" => "struck" } }, @site.reload.defaults["milestones"], "a template sets only the art's, for real milestones")
+    @site.update!(defaults: { "milestones" => { "5y" => { "metal" => "silver", "color" => "#ff0000" }, "n10" => { "art_finish" => "struck", "body" => "colored" }, "n0" => { "metal" => "silver" }, "bogus" => { "metal" => "silver" } } })
+    assert_equal({ "5y" => { "metal" => "silver" }, "n10" => { "art_finish" => "struck", "body" => "colored" } }, @site.reload.defaults["milestones"], "a template sets only the art's, for real milestones")
     @site.publish!
 
     put "/api/groups/#{@group.slug}/chips", params: { design: {
@@ -72,11 +72,23 @@ class Api::GroupChipDesignsTest < ActionDispatch::IntegrationTest
     assert_equal({ "n25" => { "color" => "#123456", "finish" => "metal" } }, stored.dig("meeting", "milestones"))
 
     scene = response.parsed_body.dig("design", "round", "scene")
-    assert_equal({ "5y" => { "metal" => "silver" }, "n10" => { "art_finish" => "struck" } }, scene["template_milestones"])
+    assert_equal({ "5y" => { "metal" => "silver" }, "n10" => { "art_finish" => "struck", "body" => "colored" } }, scene["template_milestones"])
     assert scene["palettes"].is_a?(Hash), "every palette comes along, for milestones with their own"
 
     meeting = Struct.new(:group, :chip_design, :name).new(@group, { "meeting" => { "milestones" => { "n5" => { "color" => "#654321" } } } }, "Noon")
     assert_equal({ "n5" => { "color" => "#654321" } }, ChipDesign.for_meeting(meeting)["meeting"]["milestones"], "a meeting's own replace the group's")
+  end
+
+  test "illustrated chips can be colored plastic instead of metal, and per milestone" do
+    put "/api/groups/#{@group.slug}/chips", params: { design: {
+      meeting: { emblem: "scene", scene: { template_id: @site.id, body: "colored" }, color: "#aa2233", milestones: { "n10" => { body: "metal" }, "n5" => { body: "wood" } } },
+      round: { emblem: "scene", scene: { template_id: @site.id, body: "gold" } },
+    } }, as: :json
+    assert_response :success
+    stored = @group.reload.chip_design
+    assert_equal "colored", stored.dig("meeting", "scene", "body")
+    assert_equal({ "n10" => { "body" => "metal" } }, stored.dig("meeting", "milestones"))
+    assert_nil stored.dig("round", "scene", "body"), "metal is the usual body"
   end
 
   test "a group imports its own art, which only it can use, and can take it off its list" do

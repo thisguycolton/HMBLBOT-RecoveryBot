@@ -11,8 +11,9 @@
 #   claimed (or a host gave, on the ChipAward), Meeting Maker ones they earned; and the ones
 #   they can claim (ChipEdition.available_for).
 #
-# Earned chips are RecoveryBot's own design (ChipDesign::DEFAULT). Round chips a group's hosts
-# give (ChipAward) are drawn in that group's design, and a Meeting Maker series in its meeting's.
+# Earned chips are RecoveryBot's own design (ChipDesign.for_site, as it was when earned). Round
+# chips a group's hosts give (ChipAward) are drawn in that group's design, and a Meeting Maker
+# series in its meeting's.
 # Each chip has an id, and a slot: the milestone it marks. When two chips mark the same one (the
 # 1 year they earned and the 1 year their group gave them), the member picks which goes on top
 # (users.chip_tops), and up to five favorites can go on their profile (users.chip_favorites).
@@ -117,8 +118,10 @@ module Chips
     upcoming = []
     if user.sobriety_date
       round = round_milestones(user.sobriety_date, today)
-      round[:earned].each { |m| chips << round_chip(m) }
-      upcoming << round_chip(round[:next]).merge(upcoming: true, to_go: (round[:next][:on] - today).to_i) if round[:next]
+      # Each in RecoveryBot's design from the day it was earned (none: the plain default)
+      versions = ChipDesign.site_versions
+      round[:earned].each { |m| chips << round_chip(m, ChipDesign.for_site_on(m[:on], versions)) }
+      upcoming << round_chip(round[:next], versions.last&.design).merge(upcoming: true, to_go: (round[:next][:on] - today).to_i) if round[:next]
     end
     user.chip_awards.claimed.includes(:given_by, :edition_chip, :chip_edition, group: { logo_attachment: :blob }).find_each { |a| chips << a.as_chip_json }
     ChipEdition.award_meeting_makers(user)
@@ -140,9 +143,9 @@ module Chips
     { chips: chips, upcoming: upcoming, streaks: streaks, totals: totals }
   end
 
-  def round_chip(m)
+  def round_chip(m, design = nil)
     { id: round_slot(m[:key], m[:years]), slot: round_slot(m[:key], m[:years]), shape: "round", kind: "round",
-      milestone: m.slice(:key, :years, :label), label: m[:label], on: m[:on].iso8601, source: "earned" }
+      milestone: m.slice(:key, :years, :label), label: m[:label], on: m[:on].iso8601, source: "earned", design: design }.compact
   end
 
   # The chips in the order a member wants them: their pick on top of each slot

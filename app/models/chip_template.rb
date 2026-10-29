@@ -89,7 +89,7 @@ class ChipTemplate < ApplicationRecord
     raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
     return nil unless raw.is_a?(Hash)
 
-    only = %w[palette art_finish metal]
+    only = %w[palette art_finish metal body]
     round = ChipDesign.milestone_looks(raw.reject { |k, _| k.to_s.start_with?("n") }, "round", only: only) || {}
     meeting = ChipDesign.milestone_looks(raw.select { |k, _| k.to_s.start_with?("n") }, "meeting", only: only) || {}
     round.merge(meeting).presence
