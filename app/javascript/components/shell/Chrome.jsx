@@ -26,7 +26,7 @@ export function ChromeSheets({ chrome, nav, isAuthenticated, theme, path, pushed
   return (
     <>
       <Sheet open={showing("menu")} onClose={close} side="left" label="Menu" push={push} className="shell-side">
-        <div className="flex-1 overflow-y-auto px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
           {isAuthenticated && <AccountRow nav={nav} />}
           <SearchBox className="my-4" onDone={close} />
           <Sidebar nav={nav} isAuthenticated={isAuthenticated} onNavigate={close} path={path} />
