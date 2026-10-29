@@ -5,10 +5,11 @@ import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { inputClass, labelClass } from "../ui/styles";
 import SegmentedControl from "../ui/SegmentedControl";
-import { RoundChip } from "../recovery/Chip";
+import { RoundChip, TriangleChip, meetingLook } from "../recovery/Chip";
 import { SpinningChip } from "../recovery/ChipModal";
 import { METAL_LABELS } from "../recovery/ChipArt";
 import ArtEditor from "../chips/ArtEditor";
+import MilestoneLooks from "../chips/MilestoneLooks";
 import { applyDefaults, readText, templateDesign } from "../chips/lib";
 import { Card } from "./App";
 
@@ -286,6 +287,26 @@ function TemplateEditor({ id, notify }) {
               <label className="block"><span className={labelClass}>Back ring, bottom</span><input id="tpl-ring-bottom" className={inputClass} value={defaults.back_ring_bottom ?? ""} onChange={(e) => setDefault({ back_ring_bottom: e.target.value })} /></label>
             </div>
             <label className="block"><span className={labelClass}>On the back</span><textarea id="tpl-back" rows={3} className={inputClass} value={defaults.back_text ?? ""} onChange={(e) => setDefault({ back_text: e.target.value })} placeholder="Our own words or public domain, never quotes from copyrighted literature" /></label>
+          </div>
+        </Card>
+
+        <Card className="xl:col-span-2" title="By milestone" subtitle="A palette, finish or metal of its own for any milestone, like silver at 5 years. Groups start with these and can change them.">
+          <div className="space-y-5">
+            {[["round", t.fits !== "triangle"], ["meeting", t.fits !== "round"]].filter(([, on]) => on).map(([kind]) => {
+              const mine = Object.fromEntries(Object.entries(defaults.milestones || {}).filter(([k]) => (kind === "meeting") === k.startsWith("n")));
+              const others = Object.fromEntries(Object.entries(defaults.milestones || {}).filter(([k]) => (kind === "meeting") !== k.startsWith("n")));
+              const scene = { ...round.round.scene, palette: defaults.palette || palette, template_milestones: undefined };
+              return (
+                <div key={kind}>
+                  {t.fits === "both" && <h3 className="mb-2 text-sm font-semibold !font-sans text-slate-700 dark:text-neutral-200">{kind === "round" ? "Round chips" : "Meeting Maker chips"}</h3>}
+                  <MilestoneLooks kind={kind} template part={{ emblem: "scene", scene, milestones: mine }} base={base[kind]} design={base}
+                    onChange={({ milestones }) => setDefault({ milestones: { ...others, ...milestones } })}
+                    chip={(m) => (kind === "round"
+                      ? <RoundChip design={round} milestone={m.look === "year" ? { ...m, label: "1 year" } : m} size={40} />
+                      : <TriangleChip design={meetingLook(design)} kind="meeting" count={m.count} size={44} />)} />
+                </div>
+              );
+            })}
           </div>
         </Card>
       </div>

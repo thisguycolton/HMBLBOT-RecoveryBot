@@ -5,7 +5,8 @@ import { inputClass, labelClass } from "../ui/styles";
 import { RoundChip } from "../recovery/Chip";
 import { FlatChip, SpinningChip } from "../recovery/ChipModal";
 import SceneControls from "../chips/SceneControls";
-import MeetingPartForm, { ColorField } from "../chips/MeetingPartForm";
+import MeetingPartForm from "../chips/MeetingPartForm";
+import MilestoneLooks from "../chips/MilestoneLooks";
 import ChipEditions from "./ChipEditions";
 import { storedDesign as stored } from "../chips/lib";
 import { api } from "./lib";
@@ -127,15 +128,8 @@ export default function ChipDesigner({ group }) {
               </div>
             </div>
           </div>
-          {design.round.emblem !== "scene" && <div>
-            <div className={labelClass}>Colors</div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {ROUND.map((m) => (
-                <ColorField key={m.key} label={m.label} value={design.round.colors[m.key]} fallback={data.default.round.colors[m.key]}
-                  onChange={(v) => round({ colors: { ...design.round.colors, [m.key]: v } })} />
-              ))}
-            </div>
-          </div>}
+          <MilestoneLooks kind="round" part={design.round} base={data.default.round} design={data.default} onChange={round}
+            chip={(m) => <RoundChip design={design} milestone={m.look === "year" ? { ...m, label: "1 year" } : m} logoUrl={logoUrl} size={40} />} />
         </Card>
 
         <ErrorNote error={error} />

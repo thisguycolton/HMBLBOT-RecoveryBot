@@ -18,8 +18,8 @@ export function sceneFrom(template, scene = {}, { draft = false } = {}) {
     template_id: template.id, version: scene.version || template.version, title: template.title, latest: template.version,
     finish: defaults.finish || "enamel", metal: defaults.metal || "brass",
     ...scene,
-    template_layout: defaults.layout,
-    palette, art: src.art, colors: (src.palettes || {})[palette] || {},
+    template_layout: defaults.layout, template_milestones: defaults.milestones,
+    palette, art: src.art, colors: (src.palettes || {})[palette] || {}, palettes: src.palettes || {},
   };
 }
 
@@ -35,7 +35,7 @@ export function templateDesign(base, template, opts = {}) {
 // The scene as it's saved: no art or colors (the server puts them back in)
 export function storedScene(scene) {
   if (!scene) return scene;
-  const { art, colors, title, latest, template_layout: _layout, ...rest } = scene;
+  const { art, colors, palettes, title, latest, template_layout: _layout, template_milestones: _milestones, ...rest } = scene;
   return rest;
 }
 

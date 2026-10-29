@@ -11,7 +11,7 @@ class ChipTemplate < ApplicationRecord
   FITS = %w[round triangle both].freeze
   STATUSES = %w[draft published retired].freeze
   # What a template sets for the chips that use it (ChipDesign's round keys)
-  DEFAULT_KEYS = %w[finish metal milestone_at edge top_text bottom_text back_text back_ring_top back_ring_bottom palette layout].freeze
+  DEFAULT_KEYS = %w[finish metal milestone_at edge top_text bottom_text back_text back_ring_top back_ring_bottom palette layout milestones].freeze
 
   belongs_to :group, optional: true
   belongs_to :created_by, class_name: "User", optional: true
@@ -76,10 +76,22 @@ class ChipTemplate < ApplicationRecord
     return {} unless raw.is_a?(Hash)
 
     raw = raw.stringify_keys
-    words = ChipDesign.normalize("round" => raw.slice(*(DEFAULT_KEYS - %w[finish metal palette layout])))["round"] || {}
+    words = ChipDesign.normalize("round" => raw.slice(*(DEFAULT_KEYS - %w[finish metal palette layout milestones])))["round"] || {}
     words.merge({ "finish" => (raw["finish"] if ChipDesign::SCENE_FINISHES.include?(raw["finish"])),
                   "metal" => (raw["metal"] if ChipDesign::METALS.key?(raw["metal"])),
                   "palette" => raw["palette"].to_s.squish.first(30).presence,
-                  "layout" => ChipDesign.layout(raw["layout"]) }.compact)
+                  "layout" => ChipDesign.layout(raw["layout"]),
+                  # The scene's look at each milestone, round and Meeting Maker
+                  "milestones" => template_milestones(raw["milestones"]) }.compact)
+  end
+
+  def template_milestones(raw)
+    raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+    return nil unless raw.is_a?(Hash)
+
+    only = %w[palette art_finish metal]
+    round = ChipDesign.milestone_looks(raw.reject { |k, _| k.to_s.start_with?("n") }, "round", only: only) || {}
+    meeting = ChipDesign.milestone_looks(raw.select { |k, _| k.to_s.start_with?("n") }, "meeting", only: only) || {}
+    round.merge(meeting).presence
   end
 end

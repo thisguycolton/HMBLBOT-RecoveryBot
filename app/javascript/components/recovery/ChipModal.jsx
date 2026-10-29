@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { confetti } from "../../lib/confetti";
-import { RoundChip, RoundChipBack, TriangleChip, TriangleChipBack, isScene, meetingLook, roundLook, triangleLook } from "./Chip";
+import { RoundChip, RoundChipBack, TriangleChip, TriangleChipBack, atMilestone, isScene, meetingLook, roundLook, triangleLook } from "./Chip";
 import { metalOf } from "./ChipArt";
 import Chip3D from "./Chip3D";
 import "../../styles/day-count.css";
@@ -20,11 +20,12 @@ export function SpinningChip({ chip, design, size = 220, spinIn = true }) {
         back={<RoundChipBack design={d} milestone={milestone} groupTitle={chip.group?.title || chip.meeting?.group_title} earnedOn={chip.on} mark={mark} />} />
     );
   }
-  const { color, metal } = isScene(d.triangle) ? { color: metalOf(d.triangle.scene), metal: true } : triangleLook(d, chip.kind);
+  const at = atMilestone(d, { kind: chip.kind, count: chip.count });
+  const { color, metal } = isScene(at.triangle) ? { color: metalOf(at.triangle.scene), metal: true } : triangleLook(at, chip.kind);
   return (
     <Chip3D shape="triangle" color={color} metal={metal} size={size} spinIn={spinIn} label={`${chip.label} chip`}
       front={<TriangleChip design={d} kind={chip.kind} count={chip.count} bare />}
-      back={<TriangleChipBack design={d} kind={chip.kind} earnedOn={chip.on} mark={mark} />} />
+      back={<TriangleChipBack design={d} kind={chip.kind} count={chip.count} earnedOn={chip.on} mark={mark} />} />
   );
 }
 

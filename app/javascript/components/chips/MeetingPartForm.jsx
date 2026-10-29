@@ -2,14 +2,17 @@ import React from "react";
 import { RotateCcw } from "lucide-react";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass, labelClass } from "../ui/styles";
-import SceneControls from "./SceneControls";
+import { RoundChip, TriangleChip, meetingLook } from "../recovery/Chip";
+import SceneControls, { editorLook } from "./SceneControls";
+import MilestoneLooks from "./MilestoneLooks";
 
 const segment = "overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700";
 
 // The Meeting Maker chip's look: shape, the count or a template's art in the middle, the words,
-// and its color
+// and its color, and each count's own look
 export default function MeetingPartForm({ id, slug, base, templates, onTemplates, part, set }) {
   const scene = part.emblem === "scene";
+  const fits = part.shape === "round" ? "round" : "triangle";
   const sideLabels = part.shape === "round" ? ["Around the top", "Then", "Around the bottom"] : ["Left side", "Right side", "Bottom"];
   return (
     <div className="space-y-3">
@@ -29,7 +32,7 @@ export default function MeetingPartForm({ id, slug, base, templates, onTemplates
       </div>
       {scene && (
         <SceneControls slug={slug} base={base} templates={templates} onTemplates={onTemplates} words={false}
-          fits={part.shape === "round" ? "round" : "triangle"} part={part} onChange={set} />
+          fits={fits} part={part} onChange={set} />
       )}
       <div className="grid gap-2 sm:grid-cols-3">
         {sideLabels.map((label, i) => (
@@ -58,6 +61,13 @@ export default function MeetingPartForm({ id, slug, base, templates, onTemplates
           </div>
         </div>
       )}
+      <MilestoneLooks kind="meeting" part={part} base={base.meeting} design={base} onChange={set} paintFits={fits} look={editorLook(part, fits)}
+        chip={(m) => {
+          const design = meetingLook({ ...base, meeting: { ...part, sides: [part.sides[0], part.sides[1], part.sides[2] || "Your meeting"] } });
+          return part.shape === "round"
+            ? <RoundChip design={design} milestone={{ key: "count", count: m.count, label: m.label }} size={40} />
+            : <TriangleChip design={design} kind="meeting" count={m.count} size={44} />;
+        }} />
     </div>
   );
 }

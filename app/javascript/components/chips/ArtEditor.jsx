@@ -36,7 +36,7 @@ const ROLES = [
 const PREVIEW = { key: "year", years: 1, label: "1 year" };
 const SIZE = { round: [200, 200], triangle: [200, 176] };
 
-export default function ArtEditor({ value, onChange, mode = "design", base, look, fits = "round" }) {
+export default function ArtEditor({ value, onChange, mode = "design", base, look, fits = "round", milestone = PREVIEW, count = 10 }) {
   const id = useId().replace(/:/g, "");
   const { art, scene } = value;
   const struck = scene.finish === "struck";
@@ -395,8 +395,8 @@ export default function ArtEditor({ value, onChange, mode = "design", base, look
             </defs>
             {design ? (
               frame === "round"
-                ? <RoundChip design={design} milestone={PREVIEW} size={200} bare />
-                : <TriangleChip design={design} kind="meeting" count={10} size={200} bare />
+                ? <RoundChip design={design} milestone={milestone} size={200} bare />
+                : <TriangleChip design={design} kind="meeting" count={count} size={200} bare />
             ) : <circle cx="100" cy="100" r="99" fill="#a8873d" />}
             {/* The art again, unseen, to click on (and to draw for the area fill) */}
             <g ref={hitRef} opacity="0">
