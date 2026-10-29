@@ -39,6 +39,20 @@ class User < ApplicationRecord
   # How long before a meeting they host a reminder goes out (HostReminders), when they turn it on
   HOST_REMINDER_HOURS = [2, 6, 12, 24, 48].freeze
   validates :host_reminder_hours, inclusion: { in: HOST_REMINDER_HOURS }
+  # The daily gratitude and 10th step reminders (RecoveryReminders): a time of day, "HH:MM",
+  # in their own time zone (an IANA name their browser sends when they turn one on)
+  validates :gratitude_reminder_at, :step_reminder_at, format: { with: /\A([01]\d|2[0-3]):[0-5]\d\z/, message: "should be a time like 18:00" }
+  validate { errors.add(:time_zone, "isn't one we know") if time_zone.present? && ActiveSupport::TimeZone[time_zone].nil? }
+  # Turning one on, or moving it, after today's time has passed starts it tomorrow rather than
+  # sending it right away
+  before_save do
+    %w[gratitude step].each do |which|
+      next unless public_send("#{which}_reminder") && (will_save_change_to_attribute?("#{which}_reminder") || will_save_change_to_attribute?("#{which}_reminder_at"))
+
+      now = Time.current.in_time_zone(zone)
+      public_send("#{which}_reminded_on=", now.to_date) if now.hour * 60 + now.min >= RecoveryReminders.minutes(public_send("#{which}_reminder_at"))
+    end
+  end
 
   AVATAR_TYPES = %w[image/jpeg image/png image/webp].freeze
   validates :bio, length: { maximum: 280 }
@@ -143,6 +157,9 @@ class User < ApplicationRecord
 
   # Whether a notification of this kind goes to their devices too (account settings >
   # Notifications on this device). Kinds outside Notification::PUSH_CATEGORIES always do.
+  # Their own time zone, or the site's (Arizona) until their browser has told us
+  def zone = (time_zone.presence && ActiveSupport::TimeZone[time_zone]) || Time.zone
+
   def wants_push?(kind)
     category = Notification.push_category(kind)
     category.nil? || !push_off.include?(category)

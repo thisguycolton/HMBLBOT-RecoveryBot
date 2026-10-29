@@ -56,3 +56,10 @@ on_booted do
 rescue StandardError => e
   warn "[host reminders] couldn't start: #{e.message}"
 end
+
+# The daily gratitude and 10th step reminders members turned on (see RecoveryReminders)
+on_booted do
+  RecoveryReminders.start_loop if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[recovery reminders] couldn't start: #{e.message}"
+end

@@ -30,6 +30,20 @@ class Api::ProfilesTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the gratitude and 10th step reminders save with the browser's time zone" do
+    get "/api/profile", as: :json
+    assert_equal({ "gratitude" => { "on" => false, "at" => "12:00" }, "step" => { "on" => false, "at" => "18:00" }, "time_zone" => nil },
+                 response.parsed_body["reminders"])
+
+    patch "/api/profile", params: { profile: { step_reminder: true, step_reminder_at: "21:15", time_zone: "America/Chicago" } }, as: :json
+    assert_response :success
+    assert_equal({ "on" => true, "at" => "21:15" }, response.parsed_body.dig("reminders", "step"))
+    assert_equal "America/Chicago", @user.reload.time_zone
+
+    patch "/api/profile", params: { profile: { gratitude_reminder_at: "noon" } }, as: :json
+    assert_response :unprocessable_entity
+  end
+
   test "changing email or password needs the current password" do
     patch "/api/profile", params: { profile: { email: "new@example.com" } }, as: :json
     assert_response :unprocessable_entity

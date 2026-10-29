@@ -47,7 +47,7 @@ export default function InventoryPage() {
   };
 
   return (
-    <EntryShell base="inventory" title="10th step" state={state} summary={summary}
+    <EntryShell base="inventory" title="10th step" state={state} summary={summary} reminder="step"
       intro="When we retire at night, we constructively review our day. A few honest minutes, then rest.">
       <form onSubmit={submit} className="space-y-4">
         <Card className="divide-y divide-neutral-200/70 dark:divide-neutral-800">

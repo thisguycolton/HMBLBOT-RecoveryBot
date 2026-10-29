@@ -6,6 +6,7 @@ import { Card, ErrorNote, Loading, linkButton } from "../groups/ui";
 import { showToast } from "../../lib/toast";
 import ChipModal from "./ChipModal";
 import ChipShare from "./ChipShare";
+import { DailyReminder } from "./ReminderSetting";
 import { Streak } from "./ChipsPage";
 import { dayLabel, localDate, nightLabel, shiftDay } from "./lib";
 
@@ -60,8 +61,8 @@ export function useEntry(endpoint, unit) {
 }
 
 // The page around the form: title, the day with arrows to the days before and after, and
-// the past days below
-export function EntryShell({ base, title, intro, state, summary, children }) {
+// the past days below. `reminder` names its daily reminder (ReminderSetting).
+export function EntryShell({ base, title, intro, state, summary, reminder, children }) {
   const navigate = useNavigate();
   const { on, today, entry, list, error, earned, closeEarned, loadList, unit } = state;
   const go = (day) => navigate(day === today ? `/${base}` : `/${base}/${day}`);
@@ -73,6 +74,7 @@ export function EntryShell({ base, title, intro, state, summary, children }) {
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h1>
         <p className="mt-1 text-slate-600 dark:text-neutral-400">{intro}</p>
         <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500 dark:text-neutral-400"><Lock className="size-4" /> Private. Only you can ever read this, and it goes when you delete your account.</p>
+        {reminder && <div className="mt-4"><DailyReminder which={reminder} /></div>}
       </header>
 
       {list?.streak && <Streak streak={list.streak} total={list.total} unit={unit} done={list.entries[0]?.on === today} />}

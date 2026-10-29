@@ -5,6 +5,7 @@ import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { DateField, todayValue } from "../ui/DateFields";
 import Toggle from "../ui/Toggle";
 import PushSettings from "./PushSettings";
+import { ReminderSetting } from "../recovery/ReminderSetting";
 import { api } from "../groups/lib";
 import Avatar from "../groups/Avatar";
 import { soberFor } from "../groups/lib";
@@ -58,7 +59,7 @@ export default function ProfilePage() {
   // /users/edit#hosting (from a reminder email) or #notifications once the page is there
   const loaded = Boolean(profile);
   useEffect(() => {
-    if (!loaded || !["#hosting", "#notifications"].includes(location.hash)) return;
+    if (!loaded || !["#hosting", "#notifications", "#reminders"].includes(location.hash)) return;
     const to = location.hash.slice(1);
     setTimeout(() => document.getElementById(to)?.scrollIntoView(), 300); // the notifications card loads on its own
   }, [loaded]);
@@ -241,6 +242,21 @@ export default function ProfilePage() {
           </Card>
         </Tray>
       )}
+
+      <section id="reminders" className="scroll-mt-20">
+        <Tray label="Reminders">
+          <Card className="space-y-4 p-4">
+            <p className="text-sm text-slate-600 dark:text-neutral-400">
+              A daily nudge in your notifications, and on your devices with notifications on. Nothing is sent until you turn one on,
+              and a reminder is skipped on days you've already written.
+            </p>
+            {["gratitude", "step"].map((which) => (
+              <ReminderSetting key={which} which={which} value={profile.reminders[which]}
+                onSaved={(reminders) => setProfile((p) => ({ ...p, reminders }))} />
+            ))}
+          </Card>
+        </Tray>
+      </section>
 
       <PushSettings />
 

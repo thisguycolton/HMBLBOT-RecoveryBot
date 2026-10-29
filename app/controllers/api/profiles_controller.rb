@@ -10,15 +10,18 @@ class Api::ProfilesController < ApplicationController
   # PATCH /api/profile (multipart when a picture is uploaded)
   # name, bio, avatar, remove_avatar=1, sobriety_date, show_sobriety_date, username,
   # default_highlight_visibility, default_note_visibility; email or password also need current_password.
+  # gratitude_reminder, gratitude_reminder_at, step_reminder, step_reminder_at ("HH:MM"), time_zone.
   # Hosts (User#host?) also: host_reminders, host_reminder_hours, host_reminder_email
   def update
     user = current_user
     attrs = params.require(:profile).permit(:name, :bio, :avatar, :sobriety_date, :show_sobriety_date, :username, :default_highlight_visibility, :default_note_visibility, :email, :password, :password_confirmation, :current_password,
-                                            :host_reminders, :host_reminder_hours, :host_reminder_email)
+                                            :host_reminders, :host_reminder_hours, :host_reminder_email,
+                                            :gratitude_reminder, :gratitude_reminder_at, :step_reminder, :step_reminder_at, :time_zone)
     user.avatar.purge_later if ActiveModel::Type::Boolean.new.cast(params.dig(:profile, :remove_avatar)) && attrs[:avatar].blank?
 
     attrs[:username] = attrs[:username].to_s.strip.downcase if attrs.key?(:username)
-    profile = %i[name bio avatar sobriety_date show_sobriety_date username default_highlight_visibility default_note_visibility]
+    profile = %i[name bio avatar sobriety_date show_sobriety_date username default_highlight_visibility default_note_visibility
+                 gratitude_reminder gratitude_reminder_at step_reminder step_reminder_at time_zone]
     profile += %i[host_reminders host_reminder_hours host_reminder_email] if user.host?
     account_change = attrs[:email].present? && attrs[:email].strip.casecmp?(user.email) == false || attrs[:password].present?
     saved = if account_change
@@ -68,6 +71,11 @@ class Api::ProfilesController < ApplicationController
       username: u.username, profile_path: u.profile_path, profiles_open: User.profiles_open_to?(u),
       default_highlight_visibility: u.default_highlight_visibility, default_note_visibility: u.default_note_visibility,
       hosting: hosting_json(u),
+      reminders: {
+        gratitude: { on: u.gratitude_reminder, at: u.gratitude_reminder_at },
+        step: { on: u.step_reminder, at: u.step_reminder_at },
+        time_zone: u.time_zone,
+      },
     }
   end
 

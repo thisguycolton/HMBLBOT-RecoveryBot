@@ -46,7 +46,7 @@ export default function GratitudePage() {
   };
 
   return (
-    <EntryShell base="gratitude" title="Gratitude" state={state} summary={summary}
+    <EntryShell base="gratitude" title="Gratitude" state={state} summary={summary} reminder="gratitude"
       intro="What you're grateful for today, big or small. One thing on each line.">
       <form onSubmit={submit} className="space-y-4">
         <Card className="space-y-2 p-4">
