@@ -669,8 +669,9 @@ function SceneTriangle({ id, tri, num, words, size, faded, bare, className, titl
       <circle cx="100.6" cy="123.6" r="16" fill="#000000" opacity="0.25" />
       <circle cx="100" cy="122.5" r="15.5" fill={dark} stroke={letters} strokeWidth="2.2" />
       <g fill={letters} fontFamily={FONT} textAnchor="middle">
-        <text x="100" y="126" fontSize={num.length > 2 ? 10 : 13} fontWeight="800">{num}</text>
-        <text x="100" y="133.5" fontSize="3.8" fontWeight="700" letterSpacing="0.5">{words[0]}</text>
+        <text x="100" y="125" fontSize={num.length > 2 ? 10 : 13} fontWeight="800">{num}</text>
+        {/* Sized to fit across the badge where it narrows */}
+        <text x="100" y="131.2" fontSize={Math.min(3.8, 20 / (words[0].length * 0.78))} fontWeight="700" letterSpacing="0.3">{words[0]}</text>
       </g>
       </g>
     </svg>
