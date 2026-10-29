@@ -91,6 +91,12 @@ class Api::GroupChipDesignsTest < ActionDispatch::IntegrationTest
     assert_nil stored.dig("round", "scene", "body"), "metal is the usual body"
   end
 
+  test "a chip without art can give a milestone its own metal" do
+    put "/api/groups/#{@group.slug}/chips", params: { design: { round: { emblem: "relief", milestones: { "30d" => { metal: "silver", finish: "metal" }, "5y" => { metal: "bronze" }, "60d" => { metal: "tin" } } } } }, as: :json
+    assert_response :success
+    assert_equal({ "30d" => { "metal" => "silver", "finish" => "metal" }, "5y" => { "metal" => "bronze" } }, @group.reload.chip_design.dig("round", "milestones"))
+  end
+
   test "a group imports its own art, which only it can use, and can take it off its list" do
     post "/api/groups/#{@group.slug}/chips/templates", params: { svg: SVG, title: "Our hills" }, as: :json
     assert_response :created

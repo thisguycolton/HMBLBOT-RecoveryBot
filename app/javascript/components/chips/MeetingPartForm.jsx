@@ -61,7 +61,7 @@ export default function MeetingPartForm({ id, slug, base, templates, onTemplates
           </div>
         </div>
       )}
-      <MilestoneLooks kind="meeting" part={part} base={base.meeting} design={base} onChange={set} paintFits={fits} look={editorLook(part, fits)}
+      <MilestoneLooks kind="meeting" part={part} base={base.meeting} design={base} onChange={set} paintFits={fits} look={(color) => editorLook({ ...part, color }, fits)}
         chip={(m) => {
           const design = meetingLook({ ...base, meeting: { ...part, sides: [part.sides[0], part.sides[1], part.sides[2] || "Your meeting"] } });
           return part.shape === "round"
