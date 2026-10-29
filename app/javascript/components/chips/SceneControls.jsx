@@ -15,10 +15,14 @@ const THUMB = { key: "year", years: 1, label: "1 year" };
 export const MILESTONE_AT = [{ value: "badge", label: "Badge" }, { value: "cartouche", label: "Cartouche" }, { value: "rim", label: "On the rim" }, { value: "none", label: "None" }];
 export const EDGES = [{ value: "plain", label: "Plain" }, { value: "reeded", label: "Reeded" }, { value: "rope", label: "Rope" }, { value: "beads", label: "Beads" }];
 
-// What the art editor shows around the art: a Meeting Maker part's words go around a round chip
-export const editorLook = (part, fits) => (part.sides && fits === "round"
-  ? { top_text: [part.sides[0], part.sides[1]].filter(Boolean).join(" "), bottom_text: part.sides[2] || "Your meeting", milestone_at: part.milestone_at, edge: part.edge, numerals: "number" }
-  : part);
+// What the art editor shows around the art: a Meeting Maker part's words go around a round chip,
+// and its color is the chip's when it's colored
+export const editorLook = (part, fits) => {
+  if (!part.sides) return part;
+  if (fits !== "round") return { ...part, colors: { meeting: part.color } };
+  return { top_text: [part.sides[0], part.sides[1]].filter(Boolean).join(" "), bottom_text: part.sides[2] || "Your meeting", milestone_at: part.milestone_at, edge: part.edge, numerals: "number",
+    colors: { count: part.color, year: part.color } };
+};
 
 // Picking and setting up a chip template's art on a design part (round chips, or Meeting
 // Maker chips: `fits` "round" or "triangle"): the templates as chips to pick from (the site's

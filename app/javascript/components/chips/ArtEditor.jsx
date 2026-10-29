@@ -302,7 +302,7 @@ export default function ArtEditor({ value, onChange, mode = "design", base, look
   const design = useMemo(() => base && {
     ...base,
     round: { ...base.round, ...(look || {}), emblem: "scene", scene: effective },
-    triangle: { ...base.triangle, sides: look?.sides || ["Meeting", "Maker", "Your meeting"], emblem: "scene", scene: effective },
+    triangle: { ...base.triangle, colors: { ...base.triangle?.colors, ...look?.colors }, sides: look?.sides || ["Meeting", "Maker", "Your meeting"], emblem: "scene", scene: effective },
   }, [base, look, value]); // eslint-disable-line react-hooks/exhaustive-deps
   const [vw, vh] = SIZE[frame];
   const pickLabel = !pick ? null : pick.kind === "art" ? "The whole picture" : pick.kind === "milestone" ? (frame === "triangle" ? "The count" : "The milestone") : art.layers.find((l) => l.id === pick.id)?.name;

@@ -34,7 +34,8 @@ const SAME = "";
 // palette, enamel or struck, metal, and the group's own painting. `kind` is "round" or
 // "meeting"; `chip(milestone, design part)` draws one for the row; `base` is RecoveryBot's part,
 // for the usual colors. `template` sets only the art's (a chip template's defaults). Painting
-// opens the art editor (fits `paintFits`, around `look`, on RecoveryBot's whole design `design`).
+// opens the art editor (fits `paintFits`, around `look`, on RecoveryBot's whole design `design`;
+// `look` can be a function of the milestone's color, for a part with one color).
 export default function MilestoneLooks({ kind, part, base, design, onChange, chip, template = false, paintFits = "round", look: editorLook = part }) {
   const [painting, setPainting] = useState(null);
   const [newYear, setNewYear] = useState("");
@@ -161,7 +162,7 @@ export default function MilestoneLooks({ kind, part, base, design, onChange, chi
               {open && (
                 <div className="rounded-xl bg-neutral-50 p-2 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
                   <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">Painting {m.label.toLowerCase()} only. Layers and arranging change every milestone.</p>
-                  <ArtEditor key={key} mode="design" value={{ art: scene.art, scene: sceneAt(m) }} base={design} look={editorLook} fits={paintFits}
+                  <ArtEditor key={key} mode="design" value={{ art: scene.art, scene: sceneAt(m) }} base={design} look={typeof editorLook === "function" ? editorLook(colorOf(m)) : editorLook} fits={paintFits}
                     milestone={kind === "meeting" ? undefined : m} count={kind === "meeting" ? m.count : undefined} onChange={paint(m)} />
                 </div>
               )}
