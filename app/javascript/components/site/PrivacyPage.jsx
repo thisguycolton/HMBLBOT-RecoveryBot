@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "October 28, 2026";
+const UPDATED = "October 29, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -140,6 +140,7 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Chips:</strong> the chips you earn are worked out from your sobriety date, the inventories and gratitude lists you've written (how many, and how many days in a row), and the meetings you joined. To count a meeting, we note when you click a meeting's Join button in the half hour before it starts: the meeting and its start time, nothing about the call itself. We also keep which chip you put on top when two mark the same milestone, and the favorites you picked and whether they show on your profile (off unless you turn it on).</li>
             <li><strong>Chips a group gives:</strong> a group's hosts, host coordinators and admins can give someone a chip. We keep who gave it, from which group, to whom, the milestone, the date and any note. If it's sent to an email address with no account yet, we keep that address and email it one link to claim the chip; the chip is added to the account made with that address. When giving one, they can find people in the group by name or email (they see names, not addresses); someone outside the group is only found if they type that person's whole email address. The group's hosts and admins can see the chips the group has given and whether they've been claimed, and can take one back.</li>
             <li><strong>Follows:</strong> who you follow and who follows you.</li>
+            <li><strong>Reminders:</strong> if you turn on the daily gratitude or 10th step reminder, we keep whether each is on, the time you picked, the day it last went out, and your time zone as your browser reports it (like “America/Phoenix”), so the reminder comes at your time. Turning a reminder off stops it.</li>
             <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. Turning them off, removing the device in your settings, or signing out on that device deletes it.</li>
             <li><strong>Reactions, comments and reposts:</strong> the Like, Love or Hugs you give a note or comment, comments you write on notes, and notes you repost to your timeline.</li>
             <li><strong>Link previews:</strong> when a note has a link, our server visits that page to read its title, description and picture, and keeps them (with a copy of the picture) with your note. The other site sees a visit from RecoveryBot, not from you or the people reading your note.</li>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_28_193000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1428,6 +1428,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_193000) do
     t.string "push_off", default: [], null: false, array: true
     t.jsonb "chip_tops", default: {}, null: false
     t.string "chip_favorites", default: [], null: false, array: true
+    t.boolean "gratitude_reminder", default: false, null: false
+    t.string "gratitude_reminder_at", default: "12:00", null: false
+    t.date "gratitude_reminded_on"
+    t.boolean "step_reminder", default: false, null: false
+    t.string "step_reminder_at", default: "18:00", null: false
+    t.date "step_reminded_on"
+    t.string "time_zone"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
