@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { CalendarClock, House, Info, Menu, Video } from "lucide-react";
+import { CalendarClock, House, Info, Menu, Settings, Video } from "lucide-react";
 import { RecoveryBotMark } from "../brand/Logo";
 import { isOnNow } from "./useShell";
 
@@ -7,7 +7,8 @@ const slot = "relative inline-grid size-14 place-items-center rounded-full !bg-t
 
 // The floating bar along the bottom on phones: the menu, Home, the robot (quick actions),
 // Today (a green dot when one of your meetings is on) and, on pages that have one, the page's
-// side panel. Above it, while a meeting of yours is on, a bar to join it.
+// side panel. On the home feed (whose side panel is Today again) that last one is a gear to your
+// settings instead. Above it, while a meeting of yours is on, a bar to join it.
 export default function BottomBar({ nav, isAuthenticated, onMenu, onActions, onToday, onAside, asideLabel, homeActive }) {
   const onNow = nav?.today?.meetings?.find((m) => isOnNow(m) && m.conference_url);
   // How much of the bottom it covers (--shell-bottom), so a page's own floating buttons sit above it
@@ -41,7 +42,9 @@ export default function BottomBar({ nav, isAuthenticated, onMenu, onActions, onT
           <CalendarClock className="size-6" />
           {onNow && <span className="absolute right-3 top-3 size-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900" />}
         </button>
-        {onAside ? (
+        {homeActive && isAuthenticated ? (
+          <a href="/users/edit" className={slot} aria-label="Settings"><Settings className="size-6" /></a>
+        ) : onAside ? (
           <button type="button" className={slot} onClick={onAside} aria-label={asideLabel || "Info"}><Info className="size-6" /></button>
         ) : (
           <span className={`${slot} opacity-30`} aria-hidden="true"><Info className="size-6" /></span>
