@@ -6,7 +6,7 @@ import { Card, ErrorNote, Loading, Pill, linkButton, primaryButton, quietButton 
 import Toggle from "../ui/Toggle";
 import ChipModal, { FlatChip } from "./ChipModal";
 import ChipShare from "./ChipShare";
-import { dayLabel, localDate } from "./lib";
+import { dayLabel, localDate, meetingPlace } from "./lib";
 
 const short = (iso) => dayLabel(iso, { month: "short", day: "numeric", year: "numeric" });
 
@@ -16,7 +16,7 @@ function story(chip) {
   if (chip.source === "edition") return `${chip.group.title}'s ${chip.edition.name}, for ${chip.label} on ${dayLabel(chip.on)}.`;
   if (chip.source === "given") return `From ${chip.group.title}${chip.given_by ? `, given by ${chip.given_by}` : ""}, ${dayLabel(chip.on)}.`;
   if (chip.kind === "round") return `You reached ${chip.label} on ${dayLabel(chip.on)}.`;
-  if (chip.kind === "meeting") return `${chip.label} at ${chip.meeting.name} (${chip.meeting.group_title}), reached ${dayLabel(chip.on)}.`;
+  if (chip.kind === "meeting") return `${chip.label}${meetingPlace(chip.meeting, " at ")}, reached ${dayLabel(chip.on)}.`;
   return `${chip.label}, reached ${dayLabel(chip.on)}.`;
 }
 
@@ -111,11 +111,13 @@ export default function ChipsPage() {
       <Section title="Meeting Maker" icon={Users}>
         {meetings.length === 0 ? (
           <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">
-            Click a meeting's Join button in the half hour before it starts, and once it starts you're a Meeting Maker there. Each meeting has its own chips, and you unlock more the more often you come.
+            Click a meeting's Join button in the half hour before it starts, and once it starts you're a Meeting Maker there. Each meeting has its own chips, and so do all of a group's meetings together and every meeting you go to, and you unlock more the more often you come.
           </Card>
         ) : meetings.map((m) => (
           <div key={m.meeting.id} className="space-y-2">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-neutral-200">{m.meeting.name} <span className="font-normal text-slate-500">· {m.meeting.group_title}</span></h3>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-neutral-200">
+              {m.meeting.name}{m.meeting.group_title && m.meeting.group_title !== m.meeting.name && <span className="font-normal text-slate-500"> · {m.meeting.group_title}</span>}
+            </h3>
             <Grid chips={m.chips.sort((a, b) => b.count - a.count)} next={m.next} design={design} favorite={favorite} onOpen={openChip} />
           </div>
         ))}

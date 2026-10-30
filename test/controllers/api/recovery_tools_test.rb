@@ -271,6 +271,29 @@ class Api::RecoveryToolsTest < ActionDispatch::IntegrationTest
     assert_not response.parsed_body["counted"], "once it's started, the next one is a week away"
   end
 
+  test "Meeting Maker: counts for each meeting (a daily one is one), each group's, and all of them" do
+    monday, tuesday, wednesday = (1..3).map { |d| @group.meetings.create!(name: "Sunrise ", recurrence: "weekly", day_of_week: d, start_minute: 420) }
+    study = @group.meetings.create!(name: "Big Book Study", recurrence: "weekly", day_of_week: 1, start_minute: 1140)
+    tuesday.update!(chip_design: { meeting: { sides: %w[Rise And Shine] } })
+    [[tuesday, 27], [wednesday, 28]].each { |m, day| MeetingJoin.create!(user: @kim, meeting: m, starts_at: Time.zone.local(2026, 10, day, 7)) }
+    sign_in @kim
+
+    get "/api/recovery"
+    chips = response.parsed_body["chips"].select { |c| c["kind"] == "meeting" }
+    assert_equal ["meeting-#{monday.id}:1"], chips.map { |c| c["id"] }, "Tuesday's and Wednesday's are one meeting, and nothing repeats"
+    assert_equal ["2026-10-27", %w[Rise And Shine]], [chips[0]["on"], chips[0].dig("design", "meeting", "sides")], "drawn as Tuesday's looked"
+    assert_equal [[5, 3]], response.parsed_body["upcoming"].select { |c| c["kind"] == "meeting" }.map { |c| [c["count"], c["to_go"]] }
+
+    MeetingJoin.create!(user: @kim, meeting: study, starts_at: Time.zone.local(2026, 10, 26, 19))
+    get "/api/recovery"
+    chips = response.parsed_body["chips"].select { |c| c["kind"] == "meeting" }
+    assert_equal ["meeting-#{monday.id}:1", "meeting-#{study.id}:1", "meetings-all:1", "meetings-group-#{@group.id}:1"], chips.map { |c| c["id"] }.sort
+    group = chips.find { |c| c["series"] == "meetings-group-#{@group.id}" }
+    assert_equal ["2026-10-26", "group", ["Meeting", "Maker", @group.title.first(24)]], [group["on"], group.dig("meeting", "scope"), group.dig("design", "meeting", "sides")]
+    upcoming = response.parsed_body["upcoming"].select { |c| c["kind"] == "meeting" }.to_h { |c| [c["series"], c["to_go"]] }
+    assert_equal({ "meetings-all" => 2, "meetings-group-#{@group.id}" => 2, "meeting-#{monday.id}" => 3, "meeting-#{study.id}" => 4 }, upcoming)
+  end
+
   test "group admins give each meeting's Meeting Maker chips their own look" do
     meeting = @group.meetings.create!(name: "Sunrise", recurrence: "weekly", day_of_week: 1, start_minute: 420)
     @group.memberships.create!(user: @kim, role: "admin")
