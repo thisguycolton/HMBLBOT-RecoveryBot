@@ -21,7 +21,7 @@ class NoteComment < ApplicationRecord
     note = timeline_note
     people = take_mentions(body, author: author, groups: note.groups.to_a, everyone: false, can_see: ->(u) { note.visible_to?(u) })
     save! if mentions_changed?
-    tell_mentioned(people, kind: "mention.note", body: body.truncate(200), url: note.page_path,
+    tell_mentioned(people, kind: "mention.note", body: body.truncate(200), url: note.page_path, from: author,
                            title: ->(handle) { "#{author.display_name} mentioned #{handle ? "@#{handle}" : 'you'} in a comment" })
   end
   def edited? = updated_at - created_at > 1.minute

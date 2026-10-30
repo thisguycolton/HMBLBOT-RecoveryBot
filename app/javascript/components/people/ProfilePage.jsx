@@ -31,7 +31,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <ProfileHero bleed person={person} viewer={viewer} coverUrl={page.cover_url} onFollowChange={onFollowChange}
+      <ProfileHero bleed person={person} viewer={viewer} coverUrl={page.cover_url} onFollowChange={onFollowChange} onBlockChange={load}
         actions={viewer.is_me && (
           <>
             <Link to="/me/edit" className={heroQuietButton}><Pencil className="size-4" /> Edit your page</Link>

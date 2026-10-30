@@ -23,10 +23,12 @@ class Notification < ApplicationRecord
                   kinds: %w[event.update event.collaborator] },
     "schedule_polls" => { label: "Scheduling polls", description: "Being asked to vote or help run a poll, and new votes in polls you run.",
                           kinds: %w[schedule_poll.invitee schedule_poll.collaborator schedule_poll.vote] },
-    "mentions" => { label: "Mentions and notes to you", description: "When someone @ mentions you or a role you hold in chat or a note, or writes a note on your page.",
-                    kinds: %w[mention.chat mention.note note.profile] },
+    "mentions" => { label: "Mentions", description: "When someone @ mentions you, or a role you hold, in chat, a note or a comment.",
+                    kinds: %w[mention.chat mention.note] },
     "comments" => { label: "Comments on your notes", description: "When someone comments on one of your notes.",
                     kinds: %w[note.comment] },
+    "profile_notes" => { label: "Notes on your page", description: "When someone writes a note on your profile.",
+                         kinds: %w[note.on_profile] },
     "document_comments" => { label: "Comments on group documents", description: "New comments on documents you saved, and replies in comment threads you're in.",
                              kinds: %w[document.comment] },
     "reactions" => { label: "Reactions and reposts", description: "When someone reacts to your notes or comments, or reposts a note.",
@@ -48,8 +50,12 @@ class Notification < ApplicationRecord
   scope :recent, -> { order(created_at: :desc, id: :desc) }
 
   # Notification.deliver(users, kind: "text_report.created", title: "...", body: "...", url: "/...")
-  def self.deliver(users, kind:, title:, body: nil, url: nil)
-    Array(users).uniq.each { |user| create!(user: user, kind: kind, title: title, body: body&.truncate(300), url: url) }
+  # `from` is who did it, when it's something a person did to them (a comment, a mention, a
+  # follow): people who blocked them (UserBlock) aren't told.
+  def self.deliver(users, kind:, title:, body: nil, url: nil, from: nil)
+    users = Array(users).uniq
+    users -= User.where(id: UserBlock.where(blocked_id: from.id).select(:blocker_id)).to_a if from && users.any?
+    users.each { |user| create!(user: user, kind: kind, title: title, body: body&.truncate(300), url: url) }
   end
 
   def read? = read_at.present?

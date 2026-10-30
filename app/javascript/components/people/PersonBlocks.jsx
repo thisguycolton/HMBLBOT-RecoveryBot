@@ -45,9 +45,9 @@ function AboutBlock({ block, compact, editing, context, title }) {
 
 const SHOW = { all: null, notes: "note", highlights: "highlight" };
 
-// Their notes and highlights, newest first, as far as the viewer may see them, with the notes
-// others wrote on their page. On your own profile you write notes right here; on the page of
-// someone you follow (or who follows you), you write one on their page.
+// Their notes and highlights, and notes written on their page, newest first, as far as the
+// viewer may see them. On your own profile you write notes right here; on the page of
+// someone you follow or who follows you, you write a note on their page.
 function FeedBlock({ block, compact, editing, context, title }) {
   const [items, setItems] = useState(context.feed || []);
   const [more, setMore] = useState((context.feed || []).length >= 40);
@@ -90,10 +90,10 @@ function FeedBlock({ block, compact, editing, context, title }) {
               onSaved={(note) => setItems((list) => [note, ...list])} />
           </div>
         )}
-        {!me && !editing && kind !== "highlight" && context.viewer?.can_write_note && (
+        {context.viewer?.can_write && !editing && kind !== "highlight" && (
           <div className="mb-4">
-            <NoteEditor profile={context.person} defaultVisibility="followers" max={context.note_max} imagesMax={context.images_max}
-              placeholder={`Write something on ${context.person.name.split(" ")[0]}'s page…`}
+            <NoteEditor to={context.person} defaultVisibility={context.viewer.default_note_visibility} max={context.note_max} imagesMax={context.images_max}
+              placeholder={`Write something to ${context.person.name.split(" ")[0]}. They'll get a notification.`}
               onSaved={(note) => setItems((list) => [note, ...list])} />
           </div>
         )}
@@ -102,7 +102,7 @@ function FeedBlock({ block, compact, editing, context, title }) {
         ) : (
           <div className="wb-feed">
             {shown.slice(0, limit).map((item) => (
-              <FeedItem key={`${item.kind}-${item.id}`} item={item} readOnly={editing} compact={compact} groups={me ? context.viewer.groups : null} showAuthor={!!item.on_page} onPageOf={context.person.username}
+              <FeedItem key={`${item.kind}-${item.id}`} item={item} readOnly={editing} compact={compact} groups={me ? context.viewer.groups : null}
                 max={context.note_max} imagesMax={context.images_max} onChange={replace} onRemove={remove(item.kind)} />
             ))}
           </div>

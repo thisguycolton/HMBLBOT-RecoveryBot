@@ -13,7 +13,7 @@ class Api::MentionsController < ApplicationController
     people, groups = params[:channel].present? ? channel_scope : note_scope
     people = people.where("LOWER(users.username) LIKE :q OR LOWER(users.name) LIKE :q OR LOWER(users.name) LIKE :w",
                           q: "#{User.sanitize_sql_like(q)}%", w: "% #{User.sanitize_sql_like(q)}%") if q.present?
-    people = people.where.not(id: current_user.id).includes(avatar_attachment: :blob).order(:name).limit(LIMIT)
+    people = people.where.not(id: [current_user.id, *current_user.blocked_ids]).includes(avatar_attachment: :blob).order(:name).limit(LIMIT)
     render json: { people: people.map(&:as_person_json), roles: roles(groups, q) }
   end
 

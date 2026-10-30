@@ -10,12 +10,16 @@ export const VISIBILITY = [
 ];
 export const visibilityOf = (value) => VISIBILITY.find((v) => v.value === value) || VISIBILITY[0];
 
-// A note written on someone else's page: who sees it there, as if it were theirs
-export const profileVisibility = (name) => [
-  { value: "private", label: "Just you two", note: `Only you and ${name} see it`, icon: Lock },
-  { value: "followers", label: "Their followers", note: `People who follow ${name}`, icon: Users },
-  { value: "public", label: "Members", note: "Everyone signed in to RecoveryBot", icon: Globe },
-];
+// Who sees a note written on someone else's page (TimelineNote#recipient): they always do,
+// and the rest is counted from you, its author
+export const recipientVisibility = (recipient) => {
+  const first = recipient?.name?.split(" ")[0] || "them";
+  return [
+    { value: "private", label: `Just you and ${first}`, note: `Only the two of you see it`, icon: Lock },
+    { value: "followers", label: "Your followers", note: `${first}, and people who follow you`, icon: Users },
+    { value: "public", label: "Members", note: "Everyone signed in to RecoveryBot", icon: Globe },
+  ];
+};
 
 // Highlights stay with their reader until they share one to their timeline (Share to
 // timeline); then it's Followers or Members, and "private" takes it back off.

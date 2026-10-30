@@ -1334,11 +1334,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_210200) do
     t.string "chip_id"
     t.jsonb "chip"
     t.boolean "chip_hidden", default: false, null: false
-    t.bigint "profile_id"
+    t.bigint "recipient_id"
+    t.boolean "comments_off", default: false, null: false
     t.jsonb "mentions", default: {}, null: false
     t.bigint "mentioned_user_ids", default: [], null: false, array: true
     t.index ["hashtags"], name: "index_timeline_notes_on_hashtags", using: :gin
-    t.index ["profile_id"], name: "index_timeline_notes_on_profile_id"
+    t.index ["recipient_id"], name: "index_timeline_notes_on_recipient_id"
     t.index ["repost_of_id", "user_id"], name: "index_timeline_notes_on_repost_of_id_and_user_id", unique: true, where: "(repost_of_id IS NOT NULL)"
     t.index ["user_id", "chip_id"], name: "index_timeline_notes_on_user_id_and_chip_id", where: "(chip_id IS NOT NULL)"
     t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
@@ -1437,6 +1438,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_210200) do
     t.datetime "updated_at", null: false
     t.index ["group_id"], name: "index_user_active_groups_on_group_id"
     t.index ["user_id"], name: "index_user_active_groups_on_user_id"
+  end
+
+  create_table "user_blocks", force: :cascade do |t|
+    t.bigint "blocker_id", null: false
+    t.bigint "blocked_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["blocked_id"], name: "index_user_blocks_on_blocked_id"
+    t.index ["blocker_id", "blocked_id"], name: "index_user_blocks_on_blocker_id_and_blocked_id", unique: true
   end
 
   create_table "user_highlights", force: :cascade do |t|
@@ -1665,7 +1675,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_210200) do
   add_foreign_key "timeline_note_shares", "timeline_notes"
   add_foreign_key "timeline_notes", "timeline_notes", column: "repost_of_id", on_delete: :cascade
   add_foreign_key "timeline_notes", "users"
-  add_foreign_key "timeline_notes", "users", column: "profile_id", on_delete: :cascade
+  add_foreign_key "timeline_notes", "users", column: "recipient_id", on_delete: :cascade
   add_foreign_key "today_dismissals", "users", on_delete: :cascade
   add_foreign_key "topic_sharing_prompts", "sharing_modes"
   add_foreign_key "topic_sharing_prompts", "topics"
@@ -1677,6 +1687,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_210200) do
   add_foreign_key "treasurer_reports", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "user_active_groups", "groups"
   add_foreign_key "user_active_groups", "users"
+  add_foreign_key "user_blocks", "users", column: "blocked_id", on_delete: :cascade
+  add_foreign_key "user_blocks", "users", column: "blocker_id", on_delete: :cascade
   add_foreign_key "user_highlights", "chapters"
   add_foreign_key "user_highlights", "users"
   add_foreign_key "user_reports", "groups", on_delete: :nullify

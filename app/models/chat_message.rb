@@ -26,7 +26,7 @@ class ChatMessage < ApplicationRecord
                                  everyone: group.manageable_by?(author) && channel.readers,
                                  can_see: ->(u) { channel.readable_by?(u) })
     save!
-    tell_mentioned(people, kind: "mention.chat", body: body.truncate(200), url: path,
+    tell_mentioned(people, kind: "mention.chat", body: body.truncate(200), url: path, from: author,
                            title: ->(handle) { "#{author.display_name} mentioned #{handle ? "@#{handle}" : 'you'} in ##{channel.name}" })
   end
 
@@ -37,6 +37,8 @@ class ChatMessage < ApplicationRecord
       id: id, channel_id: chat_channel_id, body: body, mentions: mentions,
       author: user.as_person_json, created_at: created_at.iso8601, edited: edited_at.present?,
       mine: user_id == viewer&.id, mentions_me: mentions?(viewer), can_remove: removable_by?(viewer),
+      # From someone the viewer blocked: shown folded up, opened only if they ask
+      blocked: !!viewer&.blocked?(user),
     }
   end
 

@@ -71,11 +71,14 @@ class User < ApplicationRecord
   has_many :schedule_poll_ballots, dependent: :nullify
   has_many :event_collaborators, dependent: :destroy
   has_many :timeline_notes, dependent: :destroy
+  has_many :notes_received, class_name: "TimelineNote", foreign_key: :recipient_id, dependent: :destroy, inverse_of: :recipient
   has_many :note_reactions, dependent: :delete_all
   has_many :note_comments, dependent: :destroy
   has_many :chat_messages, dependent: :delete_all
   has_many :chat_reads, dependent: :delete_all
   has_many :group_blocks, dependent: :delete_all
+  has_many :blocks_given, class_name: "UserBlock", foreign_key: :blocker_id, dependent: :delete_all, inverse_of: :blocker
+  has_many :blocks_received, class_name: "UserBlock", foreign_key: :blocked_id, dependent: :delete_all, inverse_of: :blocked
   has_many :event_rsvps, dependent: :destroy
   has_many :intergroup_follows, dependent: :destroy
   has_many :host_sub_requests_made, class_name: "HostSubRequest", foreign_key: :requested_by_id, dependent: :nullify, inverse_of: :requested_by
@@ -134,6 +137,10 @@ class User < ApplicationRecord
   end
 
   def following?(other) = !!other && follows_given.exists?(followed_id: other.id)
+
+  # The ids of the people they blocked (UserBlock), whose things are hidden from them
+  def blocked_ids = @blocked_ids ||= blocks_given.pluck(:blocked_id)
+  def blocked?(other) = !!other && blocked_ids.include?(other.id)
   def custom_page? = !page_blocks.nil?
 
   # Their favorite chips show on their profile when it has a Chips block (EventBlocks); the

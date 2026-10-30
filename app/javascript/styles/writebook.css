@@ -1905,7 +1905,47 @@ body:has(.wb) {
   .wb-note-editor__label { display: none; }
 }
 
+/* The new-note card: the writing on white inside a rounded gray card, the buttons under it */
+.wb-note-editor--card {
+  background: oklch(98.5% 0 0);
+  border-radius: 1.75rem;
+  box-shadow: 0 0 0 1px oklch(92% 0 0);
+  padding: 0.5rem 0.5rem 0.6rem;
+}
+.wb .wb-note-editor--card .wb-hl-note__input {
+  background: #fff;
+  border: 0;
+  border-radius: 1.35rem;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  padding: 0.85rem 1rem;
+}
+.wb-note-editor--card .wb-hl-note__actions { margin-top: 0.55rem; padding-inline: 0.25rem; }
+.wb-note-editor--card .wb-hl-note__error { padding-inline: 0.5rem; }
+.wb .wb-note-editor--card .wb-hl-note__actions .wb-btn { border-radius: 999px; }
+.wb .wb-note-editor--card .wb-btn--reversed { padding-inline: 1.15em; }
+.wb .wb-note-editor--card .wb-btn--reversed:disabled { background-color: oklch(90% 0 0) !important; border-color: transparent; color: oklch(55% 0 0) !important; opacity: 1; }
+.wb-note-editor__share { align-items: center; color: var(--wb-ink-soft); display: inline-flex; font-size: 0.85rem; gap: 0.4rem; }
+.wb .wb-note-editor__pill {
+  align-items: center;
+  background: #fff;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px oklch(88% 0 0);
+  color: var(--wb-ink);
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  padding: 0.35em 0.8em;
+}
+.wb .wb-note-editor__pill[data-on] { box-shadow: 0 0 0 1.5px var(--color-accent, #1570ef); }
+.dark .wb-note-editor--card { background: oklch(24% 0 0); box-shadow: 0 0 0 1px oklch(32% 0 0); }
+.dark .wb .wb-note-editor--card .wb-hl-note__input,
+.dark .wb .wb-note-editor__pill { background: oklch(19% 0 0); }
+
+
 .wb-feed { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.wb-feed-item__comments-off { align-items: center; color: var(--wb-ink-soft); display: flex; font-size: 0.8rem; gap: 0.35rem; margin: 0.4rem 0 0; }
 
 .wb-feed-item {
   background: var(--wb-bg);

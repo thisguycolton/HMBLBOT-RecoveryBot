@@ -1,7 +1,8 @@
 # What a profile page (/people/:username) shows, for the page and its HMBLBOT Editor
 # (/people/me/edit): its owner's layout and blocks (theirs, or DEFAULT_BLOCKS until they
 # save their own) and, as `context`, what its own blocks list (EventBlocks::PROFILE_TYPES):
-# their notes and highlights as far as the viewer may see them (Visibility), the groups
+# their notes (and those written on their page) and highlights as far as the viewer may see
+# them (Visibility, TimelineNote.on_profile_of), the groups
 # they share with the viewer, and who they follow and who follows them.
 #
 # Profiles are only for signed-in people who can use Groups (User.profiles_open_to?);
@@ -44,9 +45,11 @@ class ProfilePage
         viewer: {
           signed_in: @viewer.present?, is_me: me, following: !me && !!@viewer&.following?(person),
           follows_you: !me && !!person.following?(@viewer),
-          # Writing a note on their page (TimelineNote#profile)
-          can_write_note: !me && TimelineNote.writable_on_profile?(@viewer, person),
-          default_note_visibility: (@viewer.default_note_visibility if me),
+          # Whether they blocked this person (UserBlock): their notes are hidden from them
+          blocked: !me && !!@viewer&.blocked?(person),
+          # Whether they can write a note on this page (TimelineNote.writable_by?)
+          can_write: !me && TimelineNote.writable_by?(@viewer, person),
+          default_note_visibility: @viewer&.default_note_visibility,
           # Groups their notes can go to, for the note composer
           groups: (me ? @viewer.groups.order(:title).map { |g| { slug: g.slug, title: g.title } } : nil),
         },
@@ -62,23 +65,22 @@ class ProfilePage
     }
   end
 
-  # The viewer's own notes and shared highlights and what people they follow shared with
-  # followers or members, newest first (the home page, /people)
+  # The viewer's own notes and shared highlights, notes written on their page, and what
+  # people they follow shared with followers or members, newest first (the home page, /people)
   def following_feed(before: nil)
     ids = @viewer.follows_given.select(:followed_id)
     shared = %w[followers public]
-    notes = TimelineNote.where(user_id: ids, visibility: shared, profile_id: nil).shown
-                        .or(TimelineNote.where(profile_id: ids, visibility: shared).shown)
-                        .or(TimelineNote.where(user_id: @viewer.id)).or(TimelineNote.where(profile_id: @viewer.id))
+    notes = TimelineNote.where(user_id: ids, visibility: shared).shown.or(TimelineNote.where(user_id: @viewer.id))
+                        .or(TimelineNote.where(recipient_id: @viewer.id))
+    notes = notes.not_blocked_by(@viewer)
     highlights = UserHighlight.on_timeline.where(user_id: ids, visibility: shared).or(UserHighlight.on_timeline.where(user_id: @viewer.id))
+    highlights = highlights.where.not(user_id: @viewer.blocked_ids) if @viewer.blocked_ids.any?
     merge(notes, highlights, before: before)
   end
 
   def feed(person, before: nil)
-    own = TimelineNote.visible_to(@viewer, owner: person).where(profile_id: nil)
-    own = own.shown unless @viewer&.id == person.id
-    # with the notes others wrote on their page
-    notes = TimelineNote.where(id: own.select(:id)).or(TimelineNote.where(id: TimelineNote.on_profile_seen_by(@viewer, person).select(:id)))
+    notes = TimelineNote.on_profile_of(person, @viewer)
+    notes = notes.shown unless @viewer&.id == person.id
     merge(notes, UserHighlight.visible_to(@viewer, owner: person).on_timeline, before: before)
   end
 

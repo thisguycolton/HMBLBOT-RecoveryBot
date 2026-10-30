@@ -16,11 +16,11 @@ module Mentionable
   end
 
   # Sends each of them a bell notification (and push) and remembers they were told.
-  # `title` is given the handle (nil for "you").
-  def tell_mentioned(people, kind:, title:, body:, url:)
+  # `title` is given the handle (nil for "you"); people who blocked `from` aren't told.
+  def tell_mentioned(people, kind:, title:, body:, url:, from: nil)
     return if people.empty?
 
-    people.each { |user, handle| Notification.deliver(user, kind: kind, title: title.call(handle), body: body, url: url) }
+    people.each { |user, handle| Notification.deliver(user, kind: kind, title: title.call(handle), body: body, url: url, from: from) }
     update_column(:mentioned_user_ids, (Array(mentioned_user_ids) | people.keys.map(&:id)))
   end
 

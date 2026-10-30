@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { BookOpen, ChevronRight, EyeOff, Flag, Pencil, Repeat2, Trash2 } from "lucide-react";
+import { Ban, BookOpen, EyeOff, Flag, MessageSquareOff, MessageSquareText, Pencil, Repeat2, Trash2 } from "lucide-react";
 import ReportDialog from "../groups/chat/ReportDialog";
 import Markdown from "../book/Markdown";
 import HighlightNote from "../book/HighlightNote";
@@ -13,30 +13,83 @@ import LinkCard from "./LinkCard";
 import NoteActions from "./NoteActions";
 import NoteComments from "./NoteComments";
 import NoteEditor from "./NoteEditor";
+import PostMenu, { blockPerson, useBlocked } from "./PostMenu";
 import VisibilityPicker from "./VisibilityPicker";
 import ChipModal, { FlatChip } from "../recovery/ChipModal";
 import { dayLabel } from "../recovery/lib";
-import { HIGHLIGHT_VISIBILITY, saveNote } from "./lib";
+import { HIGHLIGHT_VISIBILITY, recipientVisibility, saveNote } from "./lib";
 
 // One thing on a timeline: a note (Markdown and pictures), a repost of someone's note, or a
 // highlight (its quote, its note and where it's from). Its owner edits it right there and
 // picks who sees it; others react to notes and repost them (NoteActions).
 // `showAuthor` puts their name on it (a feed of several people); `readOnly` (the editor's
-// canvas) leaves off the owner's buttons. Needs a `.wb` around it.
-// A note written on someone's page says whose (`onPageOf`: the profile it's shown on, which needn't).
-export default function FeedItem({ item: given, readOnly = false, showAuthor = false, compact = false, groups = null, max, imagesMax, onChange, onRemove, extraAction, onPageOf = null }) {
+// canvas) leaves off the owner's buttons. A note written on someone's page always names who
+// wrote it and whose page it's on, and that person can take it off. Needs a `.wb` around it.
+//
+// What else you can do with it is in the ••• at its top right (PostMenu): on yours, Edit,
+// Turn comments off and Delete; on someone else's, Report and Block them (and Take off my
+// page, when it's on yours). Blocking someone hides what's theirs here right away.
+export default function FeedItem({ item: given, readOnly = false, showAuthor = false, compact = false, groups = null, max, imagesMax, onChange, onRemove, extraAction }) {
   const item = readOnly ? { ...given, mine: false, by: null } : given;
   const [editing, setEditing] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const authorId = item.kind === "repost" ? item.note?.author?.id : item.author?.id;
+  useBlocked((id, blocked) => { if (blocked && (id === authorId || id === item.author?.id)) setHidden(true); });
+  if (hidden) return null;
   if (item.kind === "repost") return <Repost item={item} readOnly={readOnly} compact={compact} onChange={onChange} onRemove={onRemove} />;
+
+  const destroy = async () => {
+    const ask = !item.mine ? `Take ${item.author.name.split(" ")[0]}'s note off your page? It's deleted for both of you.`
+      : item.groups?.length ? "Delete this note? It comes off every group it's shared to." : "Delete this note?";
+    if (!window.confirm(ask)) return;
+    try {
+      await api(`/timeline_notes/${item.id}`, { method: "DELETE" });
+      onRemove?.(item.id);
+    } catch (e) {
+      showToast(e.message, { tone: "error" });
+    }
+  };
+  const toggleComments = async () => {
+    const previous = item;
+    onChange?.({ ...item, comments_off: !item.comments_off });
+    try {
+      onChange?.(await saveNote(item.id, { comments_off: !item.comments_off }));
+    } catch {
+      onChange?.(previous);
+      showToast("Couldn't change that.", { tone: "error" });
+    }
+  };
+  const note = item.kind === "note";
+  const menu = readOnly || editing ? [] : item.mine ? [
+    note && { label: "Edit", icon: Pencil, onClick: () => setEditing(true) },
+    note && { label: item.comments_off ? "Turn comments on" : "Turn comments off", icon: item.comments_off ? MessageSquareText : MessageSquareOff, onClick: toggleComments },
+    note && { label: "Delete", icon: Trash2, danger: true, onClick: destroy },
+  ] : othersMenu(item.author, {
+    takeOff: note && item.recipient && item.can_remove && destroy,
+    report: note && (() => setReporting(true)),
+  });
+
   return (
     <article className={`wb-feed-item ${compact ? "wb-feed-item--compact" : ""}`}>
-      <ItemHead item={item} showAuthor={showAuthor} compact={compact} extraAction={extraAction} onChange={onChange} onRemove={onRemove} editing={editing} onPageOf={onPageOf} />
+      <ItemHead item={item} showAuthor={showAuthor} compact={compact} extraAction={extraAction} onChange={onChange} onRemove={onRemove} editing={editing} menu={menu} />
       {item.kind === "highlight"
         ? <HighlightBody item={item} onChange={onChange} />
-        : <NoteBody item={item} editing={editing} setEditing={setEditing} groups={groups} max={max} imagesMax={imagesMax} compact={compact} onChange={onChange} onRemove={onRemove} />}
-      {item.kind === "note" && !readOnly && !editing && <Social note={item} onChange={onChange} />}
+        : <NoteBody item={item} editing={editing} setEditing={setEditing} groups={groups} max={max} imagesMax={imagesMax} compact={compact} onChange={onChange} onDelete={destroy} />}
+      {note && !readOnly && !editing && <Social note={item} onChange={onChange} />}
+      {reporting && <ReportDialog subject={{ type: "timeline_note", id: item.id }} person={item.author} onClose={() => setReporting(false)} />}
     </article>
   );
+}
+
+// The ••• on someone else's post: Take off my page (when it's on yours), Report, Block them
+function othersMenu(person, { takeOff, report }) {
+  if (!person) return [];
+  return [
+    takeOff && { label: "Take off my page", icon: Trash2, onClick: takeOff },
+    report && { label: "Report", icon: Flag, onClick: report },
+    { label: `Block ${person.name.split(" ")[0]}`, icon: Ban, danger: true, onClick: () => blockPerson(person) },
+  ];
 }
 
 // Reactions, Comment and Repost under a note, then its comments
@@ -46,6 +99,7 @@ function Social({ note, onChange }) {
     <>
       <NoteActions note={note} onChange={onChange} onComment={note.can_comment ? () => comments.current?.focus() : undefined} />
       <NoteComments ref={comments} note={note} onChange={onChange} />
+      {note.comments_off && <p className="wb-feed-item__comments-off"><MessageSquareOff size={13} aria-hidden="true" /> {note.mine ? "You turned comments off." : "Comments are off."}</p>}
     </>
   );
 }
@@ -55,6 +109,7 @@ function Social({ note, onChange }) {
 function Repost({ item, readOnly, compact, onChange, onRemove }) {
   const mine = item.mine && !readOnly;
   const note = { ...item.note, mine: false };
+  const [reporting, setReporting] = useState(false);
 
   const changeVisibility = async (visibility) => {
     const previous = item;
@@ -84,23 +139,19 @@ function Repost({ item, readOnly, compact, onChange, onRemove }) {
         </span>
         <span className="flex-1" />
         {mine && <VisibilityPicker value={item.visibility} onChange={changeVisibility} align="right" />}
+        {!readOnly && <PostMenu items={mine ? [{ label: "Take off my timeline", icon: Trash2, danger: true, onClick: undo }] : othersMenu(item.author, {})} />}
       </header>
       <div className="wb-feed-item__repost">
-        <ItemHead item={note} showAuthor compact />
+        <ItemHead item={note} showAuthor compact menu={readOnly || item.note.mine ? [] : othersMenu(item.note.author, { report: () => setReporting(true) })} />
         <NoteBody item={note} compact={compact} />
       </div>
       {!readOnly && <Social note={item.note} onChange={(n) => onChange?.({ ...item, note: n })} />}
-      {mine && (
-        <div className="wb-feed-item__foot">
-          <span className="flex-1" />
-          <button type="button" className="wb-hl-note__edit wb-hl-note__delete" onClick={undo}><Trash2 size={13} aria-hidden="true" /> Take off my timeline</button>
-        </div>
-      )}
+      {reporting && <ReportDialog subject={{ type: "timeline_note", id: item.note.id }} person={item.note.author} onClose={() => setReporting(false)} />}
     </article>
   );
 }
 
-function ItemHead({ item, showAuthor, compact, extraAction, onChange, onRemove, editing, onPageOf = null }) {
+function ItemHead({ item, showAuthor, compact, extraAction, onChange, onRemove, editing, menu = [] }) {
   const changeVisibility = async (visibility) => {
     const previous = item;
     onChange?.({ ...item, visibility });
@@ -115,28 +166,27 @@ function ItemHead({ item, showAuthor, compact, extraAction, onChange, onRemove, 
       showToast("Couldn't change who sees it.", { tone: "error" });
     }
   };
+  const to = item.kind === "note" && item.recipient;
+  const visibilityOptions = item.kind === "highlight" ? { options: HIGHLIGHT_VISIBILITY, title: "Who sees this on your timeline" }
+    : to ? { options: recipientVisibility(to), title: "Who sees this note" } : {};
   return (
     <header className="wb-feed-item__head">
-      {showAuthor && (
+      {(showAuthor || to) && (
         <a href={`/people/${item.author.username}`} className="wb-feed-item__author">
           <Avatar person={item.author} size={compact ? 26 : 32} />
           <span>{item.author.name}</span>
         </a>
       )}
-      {showAuthor && item.on_page && item.on_page.username !== onPageOf && (
-        <a href={`/people/${item.on_page.username}`} className="wb-feed-item__meta inline-flex shrink-0 items-center whitespace-nowrap" title={`Written on ${item.on_page.name}'s page`}>
-          <ChevronRight size={13} aria-hidden="true" /> {item.on_page.name}
-        </a>
-      )}
       <span className="wb-feed-item__meta">
-        {item.kind === "highlight" ? "Highlighted" : item.chip ? "Chip" : "Note"} · {timeAgo(item.created_at)}{item.edited ? " · edited" : ""}
+        {to ? <>To <a href={`/people/${to.username}`} className="font-semibold hover:underline">{to.name}</a></>
+          : item.kind === "highlight" ? "Highlighted" : item.chip ? "Chip" : "Note"} · {timeAgo(item.created_at)}{item.edited ? " · edited" : ""}
       </span>
       <span className="flex-1" />
       {extraAction}
       {item.mine && item.visibility && !editing && (
-        <VisibilityPicker value={item.visibility} onChange={changeVisibility} align="right"
-          {...(item.kind === "highlight" ? { options: HIGHLIGHT_VISIBILITY, title: "Who sees this on your timeline" } : {})} />
+        <VisibilityPicker value={item.visibility} onChange={changeVisibility} align="right" {...visibilityOptions} />
       )}
+      <PostMenu items={menu} className="-my-1 -mr-1.5" />
     </header>
   );
 }
@@ -154,23 +204,12 @@ function HighlightBody({ item, onChange }) {
   );
 }
 
-function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, onChange, onRemove }) {
+function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, onChange, onDelete }) {
   const [open, setOpen] = useState(null);
-  const [reporting, setReporting] = useState(false);
-
-  const destroy = async () => {
-    if (!window.confirm(item.groups?.length ? "Delete this note? It comes off every group it's shared to." : "Delete this note?")) return;
-    try {
-      await api(`/timeline_notes/${item.id}`, { method: "DELETE" });
-      onRemove?.(item.id);
-    } catch (e) {
-      showToast(e.message, { tone: "error" });
-    }
-  };
 
   if (editing) {
     return (
-      <NoteEditor note={item} groups={groups} max={max} imagesMax={imagesMax} autoFocus onDelete={destroy}
+      <NoteEditor note={item} groups={groups} max={max} imagesMax={imagesMax} autoFocus onDelete={onDelete}
         onCancel={() => setEditing(false)} onSaved={(saved) => { onChange?.(saved); setEditing(false); }} />
     );
   }
@@ -192,23 +231,11 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
       )}
       {item.link && <LinkCard link={item.link} />}
       {open != null && <Lightbox photos={images.map((p) => ({ url: p.url }))} index={open} onClose={() => setOpen(null)} />}
-      {item.mine ? (
+      {item.mine && item.groups?.length > 0 && (
         <div className="wb-feed-item__foot">
-          {item.groups?.length > 0 && <span className="wb-feed-item__shared">Shared to {item.groups.map((g) => g.title).join(", ")}</span>}
-          <span className="flex-1" />
-          <button type="button" className="wb-hl-note__edit" onClick={() => setEditing(true)}><Pencil size={13} aria-hidden="true" /> Edit</button>
-          <button type="button" className="wb-hl-note__edit wb-hl-note__delete" onClick={destroy}><Trash2 size={13} aria-hidden="true" /> Delete</button>
-        </div>
-      ) : item.kind === "note" && onChange && (
-        <div className="wb-feed-item__foot">
-          <span className="flex-1" />
-          {item.can_delete && (
-            <button type="button" className="wb-hl-note__edit wb-hl-note__delete" onClick={destroy}><Trash2 size={13} aria-hidden="true" /> Take off my page</button>
-          )}
-          <button type="button" className="wb-hl-note__edit" onClick={() => setReporting(true)}><Flag size={13} aria-hidden="true" /> Report</button>
+          <span className="wb-feed-item__shared">Shared to {item.groups.map((g) => g.title).join(", ")}</span>
         </div>
       )}
-      {reporting && <ReportDialog subject={{ type: "timeline_note", id: item.id }} person={item.author} onClose={() => setReporting(false)} />}
     </>
   );
 }

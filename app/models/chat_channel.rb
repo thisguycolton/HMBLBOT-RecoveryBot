@@ -63,7 +63,7 @@ class ChatChannel < ApplicationRecord
     ids = channels.map(&:id)
     return {} if ids.empty?
 
-    ChatMessage.where(chat_channel_id: ids).where.not(user_id: user.id)
+    ChatMessage.where(chat_channel_id: ids).where.not(user_id: [user.id, *user.blocked_ids])
                .joins("LEFT JOIN chat_reads r ON r.chat_channel_id = chat_messages.chat_channel_id AND r.user_id = #{user.id.to_i}")
                .where("chat_messages.id > COALESCE(r.last_read_message_id, 0)")
                .group(:chat_channel_id).count

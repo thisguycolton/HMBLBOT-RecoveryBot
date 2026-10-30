@@ -15,7 +15,7 @@ module Reacting
     reaction.update!(kind: kind)
     if first && @reactable.user_id != current_user.id
       Notification.deliver(@reactable.user, kind: "#{what}.reaction", title: "#{current_user.display_name} #{NoteReaction.phrase(kind)} your #{what}",
-                                            body: @reactable.body.to_s.truncate(120), url: url)
+                                            body: @reactable.body.to_s.truncate(120), url: url, from: current_user)
     end
     yield
   rescue ActiveRecord::RecordNotUnique

@@ -1,5 +1,6 @@
-# Group admins blocking someone from their group (GroupBlock), and members reporting a chat
-# message, note or comment to the site admins (UserReport)
+# Group admins blocking someone from their group (GroupBlock), anyone blocking someone for
+# themselves (UserBlock: their posts are hidden from the blocker), and members reporting a
+# chat message, note or comment to the site admins (UserReport)
 class CreateGroupBlocksAndUserReports < ActiveRecord::Migration[8.0]
   def change
     create_table :group_blocks do |t|
@@ -9,6 +10,13 @@ class CreateGroupBlocksAndUserReports < ActiveRecord::Migration[8.0]
       t.timestamps
     end
     add_index :group_blocks, %i[group_id user_id], unique: true
+
+    create_table :user_blocks do |t|
+      t.references :blocker, null: false, foreign_key: { to_table: :users, on_delete: :cascade }, index: false
+      t.references :blocked, null: false, foreign_key: { to_table: :users, on_delete: :cascade }
+      t.timestamps
+    end
+    add_index :user_blocks, %i[blocker_id blocked_id], unique: true
 
     create_table :user_reports do |t|
       t.references :reporter, null: false, foreign_key: { to_table: :users, on_delete: :cascade }

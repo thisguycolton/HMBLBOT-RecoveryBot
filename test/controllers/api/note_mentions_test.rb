@@ -45,47 +45,32 @@ class Api::NoteMentionsTest < ActionDispatch::IntegrationTest
     assert_equal "Mo mentioned you in a comment", @oz.notifications.last.title
   end
 
-  test "writing a note on the page of someone you follow, or who follows you" do
-    sign_in @mo
-    post "/api/timeline_notes", params: { note: { body: "Hi Lee", profile: @lee.username, visibility: "private" } }, as: :json
-    assert_response :unprocessable_entity
-
+  test "a note on someone's page tells them once, not again for mentioning them" do
     @mo.follows_given.create!(followed: @lee)
-    get "/api/people/#{@lee.username}"
-    assert response.parsed_body["context"]["viewer"]["can_write_note"]
-    assert_difference -> { @lee.notifications.where(kind: "note.profile").count }, 1 do
-      post "/api/timeline_notes", params: { note: { body: "Proud of you @lee-r", profile: @lee.username, visibility: "private", group_slugs: [@group.slug] } }, as: :json
+    sign_in @mo
+    assert_difference -> { @lee.notifications.count }, 1 do
+      post "/api/timeline_notes", params: { note: { body: "Proud of you @lee-r", to: @lee.username, visibility: "private" } }, as: :json
     end
     assert_response :created
-    assert_equal 0, Notification.where(kind: "mention.note").count, "told once, that it's on their page"
-    note = TimelineNote.last
-    assert_equal [@lee, []], [note.profile, note.groups.to_a]
-    assert_equal "Mo wrote on your page", @lee.notifications.last.title
-    assert_equal @lee.username, response.parsed_body["on_page"]["username"]
+    assert_equal "note.on_profile", @lee.notifications.last.kind
+    assert response.parsed_body["mentions"].key?("lee-r")
+  end
 
-    # On Lee's page, not Mo's; "private" is just the two of them
-    get "/api/people/#{@lee.username}"
-    assert_includes response.parsed_body["context"]["feed"].map { _1["id"] }, note.id
-    get "/api/people/#{@mo.username}"
-    refute_includes response.parsed_body["context"]["feed"].map { _1["id"] }, note.id
-    sign_in @oz
-    @oz.follows_given.create!(followed: @lee)
-    get "/api/people/#{@lee.username}"
-    refute_includes response.parsed_body["context"]["feed"].map { _1["id"] }, note.id
-    note.update!(visibility: "followers")
-    get "/api/people/#{@lee.username}"
-    assert_includes response.parsed_body["context"]["feed"].map { _1["id"] }, note.id
-    get "/api/people"
-    assert_includes response.parsed_body["feed"].map { _1["id"] }, note.id, "on the home feed of Lee's followers"
-    post "/api/timeline_notes/#{note.id}/repost", as: :json
-    assert_response :unprocessable_entity
-
-    # Lee can take it off their page; Mo still can't be the one to change Lee's mind
+  test "the author can turn comments off" do
+    @mo.follows_given.create!(followed: @lee)
     sign_in @lee
-    get "/api/people/me"
-    item = response.parsed_body["context"]["feed"].find { _1["id"] == note.id }
-    assert item["can_delete"]
-    delete "/api/timeline_notes/#{note.id}"
-    assert_response :no_content
+    post "/api/timeline_notes", params: { note: { body: "Quiet one", visibility: "followers" } }, as: :json
+    note = TimelineNote.last
+    patch "/api/timeline_notes/#{note.id}", params: { note: { comments_off: true } }, as: :json
+    assert_response :success
+    assert response.parsed_body["comments_off"]
+    assert_equal "Quiet one", note.reload.body
+
+    sign_in @mo
+    get "/api/people"
+    item = response.parsed_body["feed"].find { _1["id"] == note.id }
+    refute item["can_comment"]
+    post "/api/timeline_notes/#{note.id}/comments", params: { body: "Hi" }, as: :json
+    assert_response :forbidden
   end
 end

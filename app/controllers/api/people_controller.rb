@@ -56,7 +56,7 @@ class Api::PeopleController < ApplicationController
     follow = current_user.follows_given.find_or_create_by!(followed: @person)
     if follow.previously_new_record?
       Notification.deliver(@person, kind: "follow.created", title: "#{current_user.display_name} followed you",
-                                    body: "They'll see what you share with followers.", url: current_user.profile_path)
+                                    body: "They'll see what you share with followers.", url: current_user.profile_path, from: current_user)
     end
     render json: follow_json
   rescue ActiveRecord::RecordNotUnique
@@ -67,6 +67,23 @@ class Api::PeopleController < ApplicationController
   def unfollow
     current_user.follows_given.where(followed: @person).destroy_all
     render json: follow_json
+  end
+
+  # POST /api/people/:username/block -> their notes, comments and chat messages are hidden
+  # from you and you aren't told what they do (UserBlock). They aren't told.
+  def block
+    return render(json: { error: "You can't block yourself." }, status: :unprocessable_entity) if @person == current_user
+
+    current_user.blocks_given.find_or_create_by!(blocked: @person)
+    render json: { blocked: true }
+  rescue ActiveRecord::RecordNotUnique
+    render json: { blocked: true }
+  end
+
+  # DELETE /api/people/:username/block
+  def unblock
+    current_user.blocks_given.where(blocked: @person).delete_all
+    render json: { blocked: false }
   end
 
   private

@@ -235,6 +235,8 @@ Rails.application.routes.draw do
       get :following
       post :follow
       delete :follow, action: :unfollow
+      post :block
+      delete :block, action: :unblock
     end
   end
   resource :profile_page, only: :update do

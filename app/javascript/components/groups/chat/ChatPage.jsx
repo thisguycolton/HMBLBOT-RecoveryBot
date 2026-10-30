@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Archive, ArrowLeft, Ban, Flag, Hash, Loader2, Lock, MoreHorizontal, Pencil, Plus, SendHorizontal, Settings, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, Ban, EyeOff, Flag, Hash, Loader2, Lock, MoreHorizontal, Pencil, Plus, SendHorizontal, Settings, Trash2, UserX } from "lucide-react";
+import { blockPerson, useBlocked } from "../../notes/PostMenu";
 import Layout from "../../Layout";
 import Markdown from "../../book/Markdown";
 import Avatar from "../Avatar";
@@ -313,6 +314,9 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
     }
   };
 
+  // Blocking someone for yourself folds up their messages here
+  useBlocked((id, blocked) => setMessages((list) => list?.map((m) => (m.author.id === id ? { ...m, blocked } : m))));
+
   const block = async (person) => {
     if (!window.confirm(`Block ${person.name} from ${chat.group.title}? They're taken out of the group and can't ask to join again until an admin unblocks them (in Members).`)) return;
     try {
@@ -384,7 +388,7 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
                       active={active === m.id} onTap={() => setActive((a) => (a === m.id ? null : m.id))}
                       canBlock={chat.can_manage && !m.mine}
                       onEdit={() => { setActive(null); setEditing(m.id); }} onDelete={() => remove(m)}
-                      onReport={() => setReporting(m)} onBlock={() => block(m.author)} />
+                      onReport={() => setReporting(m)} onBlock={() => block(m.author)} onBlockForMe={() => blockPerson(m.author)} />
                   )}
                 </React.Fragment>
               );
@@ -430,8 +434,17 @@ function TypingLine({ names }) {
   return <span className="inline-flex items-center gap-1.5"><span className="chat-typing" aria-hidden="true"><i /><i /><i /></span> {who} {names.length === 1 ? "is" : "are"} typing…</span>;
 }
 
-function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, onEdit, onDelete, onReport, onBlock }) {
+function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, onEdit, onDelete, onReport, onBlock, onBlockForMe }) {
   const [menu, setMenu] = useState(false);
+  const [shown, setShown] = useState(false);
+  if (m.blocked && !shown) {
+    return (
+      <p data-message={m.id} className="mt-1 flex items-center gap-2 px-3 py-1 pl-[3.75rem] text-xs text-slate-400 dark:text-neutral-500">
+        <EyeOff className="size-3.5" aria-hidden="true" /> A message from someone you blocked
+        <button type="button" className="font-semibold !bg-transparent text-slate-500 hover:underline dark:text-neutral-400" onClick={() => setShown(true)}>Show</button>
+      </p>
+    );
+  }
   const tap = (e) => { if (!e.target.closest("a, button")) onTap(); };
   const hl = m.mentions_me ? "bg-amber-50 dark:bg-amber-950/30 shadow-[inset_3px_0_0_theme(colors.amber.400)]" : "";
   return (
@@ -463,6 +476,7 @@ function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, on
             {menu && (
               <div className="absolute right-0 top-full z-10 mt-1 w-56 overflow-hidden rounded-xl bg-white py-1 text-sm shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700" onMouseLeave={() => setMenu(false)}>
                 <MenuItem icon={Flag} onClick={() => { setMenu(false); onReport(); }}>Report to site admins</MenuItem>
+                {!m.blocked && <MenuItem icon={UserX} danger onClick={() => { setMenu(false); onBlockForMe(); }}>Block {m.author.name.split(" ")[0]}</MenuItem>}
                 {canBlock && <MenuItem icon={Ban} danger onClick={() => { setMenu(false); onBlock(); }}>Block from the group</MenuItem>}
               </div>
             )}

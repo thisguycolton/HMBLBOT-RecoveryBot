@@ -62,7 +62,7 @@ export default function Layout({ children, isAuthenticated, showFooter: footer =
         </aside>
 
         <div className={`fixed inset-x-0 top-0 z-50 h-[var(--nav-h)] bg-[#ececec] lg:left-72 dark:bg-neutral-950 print:!hidden ${chrome.open ? "z-[2100]" : ""}`}>
-          <TopBar nav={nav} isAuthenticated={isAuthenticated} theme={theme}
+          <TopBar nav={nav} isAuthenticated={isAuthenticated} theme={theme} bottomMenu
             onMenu={() => chrome.show("menu")} onSearch={() => chrome.show("search")} searching={chrome.open === "search"} onSearchDone={chrome.close} onDonate={() => chrome.show("donate")} onCourt={() => chrome.show("court")}
             onAside={openAside} asideLabel={aside?.title || "Info"} />
         </div>
