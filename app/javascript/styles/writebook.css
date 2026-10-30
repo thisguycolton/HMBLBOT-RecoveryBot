@@ -1907,6 +1907,7 @@ body:has(.wb) {
 
 /* The new-note card: the writing on white inside a rounded gray card, the buttons under it */
 .wb-note-editor--card {
+  container-type: inline-size;
   background: oklch(98.5% 0 0);
   border-radius: 1.75rem;
   box-shadow: 0 0 0 1px oklch(92% 0 0);
@@ -1924,6 +1925,10 @@ body:has(.wb) {
 .wb .wb-note-editor--card .wb-hl-note__actions .wb-btn { border-radius: 999px; }
 .wb .wb-note-editor--card .wb-btn--reversed { padding-inline: 1.15em; }
 .wb .wb-note-editor--card .wb-btn--reversed:disabled { background-color: oklch(90% 0 0) !important; border-color: transparent; color: oklch(55% 0 0) !important; opacity: 1; }
+@container (max-width: 36rem) {
+  .wb-note-editor__share > .wb-note-editor__label { display: none; }
+}
+.wb-note-editor__end { align-items: center; display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; margin-inline-start: auto; }
 .wb-note-editor__share { align-items: center; color: var(--wb-ink-soft); display: inline-flex; font-size: 0.85rem; gap: 0.4rem; }
 .wb .wb-note-editor__pill {
   align-items: center;
@@ -1948,6 +1953,7 @@ body:has(.wb) {
 .wb-feed-item__comments-off { align-items: center; color: var(--wb-ink-soft); display: flex; font-size: 0.8rem; gap: 0.35rem; margin: 0.4rem 0 0; }
 
 .wb-feed-item {
+  position: relative;
   background: var(--wb-bg);
   border: 1px solid var(--wb-subtle);
   border-radius: 1rem;
@@ -1964,6 +1970,10 @@ body:has(.wb) {
   margin-bottom: 0.5rem;
   min-width: 0;
 }
+
+/* The ••• sits in the item's top right corner, whatever the head wraps to */
+.wb-feed-item__head:has(> .wb-feed-item__menu) { padding-inline-end: 2rem; }
+.wb-feed-item__menu { position: absolute; right: 0.5rem; top: 0.55rem; }
 
 .wb .wb-feed-item__author {
   align-items: center;
@@ -2191,6 +2201,7 @@ body:has(.wb) {
 .wb .wb-feed-item__reposted a { color: var(--wb-ink); font-weight: 600; text-decoration: none; }
 .wb .wb-feed-item__reposted a:hover { text-decoration: underline; }
 .wb-feed-item__repost {
+  position: relative;
   border: 1px solid var(--wb-subtle);
   border-radius: 0.75rem;
   padding: 0.7rem 0.8rem;

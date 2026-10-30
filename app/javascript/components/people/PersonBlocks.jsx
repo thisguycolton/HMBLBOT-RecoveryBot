@@ -86,7 +86,6 @@ function FeedBlock({ block, compact, editing, context, title }) {
         {me && !editing && kind !== "highlight" && (
           <div className="mb-4">
             <NoteEditor groups={context.viewer.groups} defaultVisibility={context.viewer.default_note_visibility} max={context.note_max} imagesMax={context.images_max}
-              placeholder="What's on your mind today? Select words to format them, and add photos if you like."
               onSaved={(note) => setItems((list) => [note, ...list])} />
           </div>
         )}

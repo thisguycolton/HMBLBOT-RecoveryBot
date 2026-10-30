@@ -76,9 +76,12 @@ export default function ProfileHero({ person, viewer, coverUrl, actions, onFollo
           )}
         </div>
         {viewer.blocked && (
-          <p className="flex flex-wrap items-center gap-2 self-start rounded-2xl bg-black/40 px-4 py-2 text-sm text-white backdrop-blur">
-            <EyeOff className="size-4" aria-hidden="true" /> You blocked {first}. Their notes and comments are hidden from you.
-            <button type="button" onClick={unblock} className="font-semibold !bg-transparent text-white underline">Unblock</button>
+          <p className="flex items-start gap-2 self-start rounded-2xl bg-black/40 px-4 py-2 text-sm text-white backdrop-blur">
+            <EyeOff className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <span>
+              You blocked {first}. Their notes and comments are hidden from you.{" "}
+              <button type="button" onClick={unblock} className="inline font-semibold !bg-transparent p-0 text-white underline">Unblock</button>
+            </span>
           </p>
         )}
       </div>

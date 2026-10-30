@@ -155,19 +155,20 @@ export default function NoteEditor({
             <Trash2 size={14} aria-hidden="true" /> <span className="wb-note-editor__label">Delete note</span>
           </button>
         )}
-        <span className="flex-1" />
-        {groups?.length > 0 && (
-          <span className="wb-note-editor__share">
-            <span className="wb-note-editor__label">Also share to</span>
-            <GroupsPicker groups={groups} picked={picked} onToggle={toggle} disabled={saving} />
-          </span>
-        )}
-        {(note || onCancel) && (
-          <button type="button" className="wb-btn" onClick={cancel} disabled={saving}>Cancel</button>
-        )}
-        <button type="submit" className="wb-btn wb-btn--reversed" disabled={saving || empty}>
-          {saving ? "Saving…" : note ? "Save note" : "Post note"}
-        </button>
+        <span className="wb-note-editor__end">
+          {groups?.length > 0 && (
+            <span className="wb-note-editor__share">
+              <span className="wb-note-editor__label">Also share to</span>
+              <GroupsPicker groups={groups} picked={picked} onToggle={toggle} disabled={saving} />
+            </span>
+          )}
+          {(note || onCancel) && (
+            <button type="button" className="wb-btn" onClick={cancel} disabled={saving}>Cancel</button>
+          )}
+          <button type="submit" className="wb-btn wb-btn--reversed" disabled={saving || empty}>
+            {saving ? "Saving…" : note ? "Save note" : "Post note"}
+          </button>
+        </span>
       </div>
     </form>
   );

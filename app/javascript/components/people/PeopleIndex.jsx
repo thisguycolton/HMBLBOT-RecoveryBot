@@ -79,11 +79,10 @@ export default function PeopleIndex() {
           )
         ) : (
           <div className="wb space-y-4">
-            <Card className="p-4" id="write">
+            <div id="write">
               <NoteEditor groups={data.groups} defaultVisibility={data.default_note_visibility} max={data.note_max} imagesMax={data.images_max}
-                placeholder="What's on your mind today? Select words to format them, and add photos if you like."
                 onSaved={(note) => setData((d) => ({ ...d, feed: [note, ...d.feed] }))} />
-            </Card>
+            </div>
             {data.feed.length === 0 ? (
               <Card className="p-6 text-center text-sm text-slate-500 dark:text-neutral-400">
                 {data.following_count === 0

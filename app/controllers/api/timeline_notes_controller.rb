@@ -68,6 +68,7 @@ class Api::TimelineNotesController < ApplicationController
   # comments_off (nobody can comment while it's on) -> any of them
   def update
     return update_repost if @note.repost?
+    return turn_comments(note_params[:comments_off]) if note_params.keys == ["comments_off"]
 
     removing = @note.images.attachments.where(id: Array(note_params[:remove_image_ids]).map(&:to_i)).to_a
     body = note_params.key?(:body) ? note_params[:body].to_s.strip : @note.body
@@ -80,7 +81,6 @@ class Api::TimelineNotesController < ApplicationController
       @note.body = body
       @note.visibility = visibility_param if visibility_param
       @note.link_url = note_params[:link_url] if note_params.key?(:link_url)
-      @note.comments_off = ActiveModel::Type::Boolean.new.cast(note_params[:comments_off]) if note_params.key?(:comments_off)
       @note.save!
       @note.share_to!(share_groups) if note_params.key?(:group_slugs)
     end
@@ -135,6 +135,12 @@ class Api::TimelineNotesController < ApplicationController
   end
 
   private
+
+  # Turning comments off or on isn't an edit, so the note doesn't say "edited"
+  def turn_comments(off)
+    @note.update_columns(comments_off: ActiveModel::Type::Boolean.new.cast(off))
+    render json: TimelineNote.for_feed.find(@note.id).as_api_json(viewer: current_user)
+  end
 
   # Reposts keep the original's words; only who sees them changes
   def update_repost

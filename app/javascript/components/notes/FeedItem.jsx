@@ -139,7 +139,7 @@ function Repost({ item, readOnly, compact, onChange, onRemove }) {
         </span>
         <span className="flex-1" />
         {mine && <VisibilityPicker value={item.visibility} onChange={changeVisibility} align="right" />}
-        {!readOnly && <PostMenu items={mine ? [{ label: "Take off my timeline", icon: Trash2, danger: true, onClick: undo }] : othersMenu(item.author, {})} />}
+        {!readOnly && <PostMenu className="wb-feed-item__menu" items={mine ? [{ label: "Take off my timeline", icon: Trash2, danger: true, onClick: undo }] : othersMenu(item.author, {})} />}
       </header>
       <div className="wb-feed-item__repost">
         <ItemHead item={note} showAuthor compact menu={readOnly || item.note.mine ? [] : othersMenu(item.note.author, { report: () => setReporting(true) })} />
@@ -186,7 +186,7 @@ function ItemHead({ item, showAuthor, compact, extraAction, onChange, onRemove, 
       {item.mine && item.visibility && !editing && (
         <VisibilityPicker value={item.visibility} onChange={changeVisibility} align="right" {...visibilityOptions} />
       )}
-      <PostMenu items={menu} className="-my-1 -mr-1.5" />
+      <PostMenu items={menu} className="wb-feed-item__menu" />
     </header>
   );
 }

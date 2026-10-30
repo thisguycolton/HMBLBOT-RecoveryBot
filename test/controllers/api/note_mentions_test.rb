@@ -65,6 +65,7 @@ class Api::NoteMentionsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert response.parsed_body["comments_off"]
     assert_equal "Quiet one", note.reload.body
+    refute response.parsed_body["edited"]
 
     sign_in @mo
     get "/api/people"
