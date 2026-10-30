@@ -10,6 +10,9 @@ import NoteActions from "./NoteActions";
 
 const SHOWN = 2;
 
+// @ in a comment offers people (role handles need a group, which comments don't have)
+const NO_GROUPS = { groups: [] };
+
 // The comments under a note, each like a small note (Markdown, reactions, edited or
 // deleted by its writer; the note's author can delete any), with a box to add one. The
 // last two show until "View all". `open` shows the box even before there are comments;
@@ -77,7 +80,7 @@ function Comment({ comment, onChange, onRemove }) {
                 <button type="button" className="wb-comment__tool wb-comment__tool--delete" onClick={destroy} aria-label="Delete the comment" title="Delete"><Trash2 size={13} /></button>
               )}
             </div>
-            <Markdown source={comment.body} className="wb-comment__body" />
+            <Markdown source={comment.body} mentions={comment.mentions} className="wb-comment__body" />
           </div>
         )}
         {!editing && <NoteActions note={comment} path={`/note_comments/${comment.id}`} onChange={onChange} small />}
@@ -110,7 +113,7 @@ const CommentBox = forwardRef(function CommentBox({ noteId, comment = null, onPo
 
   return (
     <form className="wb-comment-box" onSubmit={(e) => { e.preventDefault(); post(); }}>
-      <MarkdownEditor ref={ref} value={body} onChange={setBody} minRows={1} maxLength={2000} autoFocus={!!comment}
+      <MarkdownEditor ref={ref} value={body} onChange={setBody} minRows={1} maxLength={2000} autoFocus={!!comment} mentions={NO_GROUPS}
         placeholder={comment ? "" : "Write a comment…"} aria-label={comment ? "Your comment" : "Write a comment"}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); post(); }

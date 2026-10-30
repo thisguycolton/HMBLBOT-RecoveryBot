@@ -6,13 +6,15 @@
 # Anyone who can see a note (TimelineNote#visible_to?) reacts to it, comments on it
 # (Api::NoteCommentsController), and reposts it to their own timeline when its author
 # shares it with Members. A repost only changes who sees it. `link_url` is the link whose
-# preview (LinkPreview) the note shows, or blank for none.
+# preview (LinkPreview) the note shows, or blank for none. `profile` (a username) writes it on
+# that person's page instead (TimelineNote#profile). @ mentions tell people (Mentionable).
 class Api::TimelineNotesController < ApplicationController
   include GroupScoped
   include Reacting
 
   before_action :require_profiles
-  before_action :set_note, only: %i[update destroy]
+  before_action :set_note, only: :update
+  before_action :set_removable_note, only: :destroy
   before_action :set_visible_note, only: %i[react unreact repost unrepost]
 
   # GET /api/timeline_notes -> your notes, newest first, and the groups you can share to
@@ -27,7 +29,7 @@ class Api::TimelineNotesController < ApplicationController
 
   # POST /api/timeline_notes (multipart when pictures come along)
   # note: body, visibility, group_slugs[], images[], link_url, chip_id (one of your chips, with
-  # today: YYYY-MM-DD, your date, for which chips you have)
+  # today: YYYY-MM-DD, your date, for which chips you have), profile (a username: on their page)
   def create
     problem = TimelineNote.upload_problem(uploads)
     return render(json: { error: problem }, status: :unprocessable_entity) if problem
@@ -40,12 +42,18 @@ class Api::TimelineNotesController < ApplicationController
 
       note.chip_id = note.chip["id"]
     end
+    if note_params[:profile].present?
+      note.profile = User.find_by(username: note_params[:profile].to_s.downcase)
+      return render(json: { error: "That person isn't here." }, status: :not_found) unless note.profile
+    end
     note.images.attach(uploads) if uploads.any?
     note.link_url = note_params[:link_url] if note_params.key?(:link_url)
     TimelineNote.transaction do
       note.save!
       note.share_to!(share_groups) if note_params.key?(:group_slugs)
     end
+    note.tell_profile!
+    note.mention!(current_user)
     render json: note.as_api_json(viewer: current_user), status: :created
   rescue ActiveRecord::RecordInvalid
     render_errors(note)
@@ -73,12 +81,14 @@ class Api::TimelineNotesController < ApplicationController
     # On a saved note, attach saves right away (and the pictures were checked above)
     @note.images.attach(uploads) if uploads.any?
     removing.each(&:purge_later)
+    @note.mention!(current_user)
     render json: TimelineNote.for_feed.find(@note.id).as_api_json(viewer: current_user)
   rescue ActiveRecord::RecordInvalid
     render_errors(@note)
   end
 
-  # DELETE /api/timeline_notes/:id -> gone from your timeline and every group's
+  # DELETE /api/timeline_notes/:id -> gone from your timeline and every group's (whoever's page
+  # it was written on can take it off too)
   def destroy
     @note.destroy!
     head :no_content
@@ -155,8 +165,12 @@ class Api::TimelineNotesController < ApplicationController
     @note = current_user.timeline_notes.find(params[:id])
   end
 
+  def set_removable_note
+    @note = TimelineNote.where(user_id: current_user.id).or(TimelineNote.where(profile_id: current_user.id)).find(params[:id])
+  end
+
   def note_params
-    params.require(:note).permit(:body, :visibility, :link_url, :chip_id, :today, group_slugs: [], images: [], remove_image_ids: [])
+    params.require(:note).permit(:body, :visibility, :link_url, :chip_id, :today, :profile, group_slugs: [], images: [], remove_image_ids: [])
   end
 
   def visibility_param

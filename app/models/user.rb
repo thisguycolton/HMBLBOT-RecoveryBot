@@ -73,6 +73,9 @@ class User < ApplicationRecord
   has_many :timeline_notes, dependent: :destroy
   has_many :note_reactions, dependent: :delete_all
   has_many :note_comments, dependent: :destroy
+  has_many :chat_messages, dependent: :delete_all
+  has_many :chat_reads, dependent: :delete_all
+  has_many :group_blocks, dependent: :delete_all
   has_many :event_rsvps, dependent: :destroy
   has_many :intergroup_follows, dependent: :destroy
   has_many :host_sub_requests_made, class_name: "HostSubRequest", foreign_key: :requested_by_id, dependent: :nullify, inverse_of: :requested_by

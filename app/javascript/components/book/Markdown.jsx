@@ -1,4 +1,5 @@
 import React from "react";
+import { myUsername } from "../shell/useShell";
 
 // A small Markdown renderer for highlight notes. It builds React elements
 // directly (no HTML strings), so a note can never inject markup or scripts.
@@ -12,10 +13,19 @@ const INLINE = String.raw`(\x60[^\x60\n]+\x60)|(\*\*(?:[^*\n]|\*[^*\n]+\*)+?\*\*
 // A #hashtag, found as app/models/hashtags.rb finds them
 const HASHTAG = String.raw`((?<![\p{L}\p{N}_&#/])#\p{L}[\p{L}\p{N}_]{0,49}(?![\p{L}\p{N}_]))`;
 
-// `opts.hashtags`: #tags link to their page (/people/tags/:tag), as in timeline notes
+// An @mention, found as app/models/mentions.rb finds them
+const MENTION = String.raw`((?<![\p{L}\p{N}_@./&-])@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,48}[a-zA-Z0-9])?(?![\p{L}\p{N}_]))`;
+const NEVER = "((?!))";
+
+// `opts.hashtags`: #tags link to their page (/people/tags/:tag), as in timeline notes.
+// `opts.mentions`: what each @handle meant when it was written ({ handle: { type, username } },
+// from the server): people link to their profile, roles are a chip, and `opts.me` (a username,
+// and `opts.mine`, a role mention that included them) lights up.
 function inline(text, keyBase = "i", opts = {}) {
   const out = [];
-  const re = opts.hashtags ? new RegExp(`${INLINE}|${HASHTAG}`, "gu") : new RegExp(INLINE, "g");
+  const re = opts.hashtags || opts.mentions
+    ? new RegExp(`${INLINE}|${opts.hashtags ? HASHTAG : NEVER}|${opts.mentions ? MENTION : NEVER}`, "gu")
+    : new RegExp(INLINE, "g");
   let last = 0, m, n = 0;
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index));
@@ -33,10 +43,21 @@ function inline(text, keyBase = "i", opts = {}) {
     } else if (m[6]) out.push(<a key={k} href={t} target="_blank" rel="noopener noreferrer nofollow">{t}</a>);
     else if (m[7]) out.push(<u key={k}>{inline(t.slice(2, -2), k, opts)}</u>);
     else if (m[8]) out.push(<a key={k} className="wb-hashtag" href={`/people/tags/${encodeURIComponent(t.slice(1).toLowerCase())}`}>{t}</a>);
+    else if (m[9]) out.push(mention(t, k, opts));
     last = m.index + t.length;
   }
   if (last < text.length) out.push(text.slice(last));
   return out;
+}
+
+function mention(t, k, opts) {
+  const info = opts.mentions[t.slice(1).toLowerCase()];
+  if (!info) return t;
+  if (info.type === "person") {
+    const me = opts.me && info.username === opts.me;
+    return <a key={k} className={`wb-mention ${me ? "wb-mention--me" : ""}`} href={`/people/${info.username}`} title={info.name}>@{info.username}</a>;
+  }
+  return <span key={k} className={`wb-mention wb-mention--role ${opts.mine ? "wb-mention--me" : ""}`} title={info.label}>{t}</span>;
 }
 
 function withBreaks(lines, key, opts) {
@@ -125,10 +146,13 @@ function blocks(src, keyBase = "b", base = 2, opts = {}) {
   return out;
 }
 
-// `hashtags`: #tags are links to their page
-export default function Markdown({ source, className = "", hashtags = false }) {
+// `hashtags`: #tags are links to their page. `mentions`: the @ mentions in it, as the server
+// resolved them (`me`: the viewer's username; `mine`: whether a role it mentions includes them)
+export default function Markdown({ source, className = "", hashtags = false, mentions = null, me = null, mine = false }) {
   if (!source?.trim()) return null;
-  return <div className={`wb-md ${className}`}>{blocks(source, "b", 2, { hashtags })}</div>;
+  const has = mentions && Object.keys(mentions).length > 0;
+  const opts = { hashtags, mentions: has ? mentions : null, me: has ? me || myUsername() : null, mine };
+  return <div className={`wb-md ${className}`}>{blocks(source, "b", 2, opts)}</div>;
 }
 
 // The same Markdown as an HTML string, with # as h1, for opening an older document in the

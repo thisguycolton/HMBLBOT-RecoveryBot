@@ -19,8 +19,7 @@ import {
   Sun,
   Tags,
   Users,
-  X,
-} from "lucide-react";
+  X, ShieldAlert } from "lucide-react";
 import { api } from "../topicificator_admin/api";
 import NotificationBell from "../NotificationBell";
 import Avatar from "../groups/Avatar";
@@ -42,6 +41,7 @@ export const SECTIONS = [
       { to: "/users", label: "Members", icon: Users },
       { to: "/contact_requests", label: "Contact requests", icon: Inbox, count: "contact_requests" },
       { to: "/text_reports", label: "Text reports", icon: Flag, count: "text_reports" },
+      { to: "/reports", label: "Reports about people", icon: ShieldAlert, count: "user_reports" },
       { to: "/court_verifications", label: "Court verifications", icon: ClipboardCheck },
     ],
   },
@@ -72,6 +72,7 @@ export const OTHER_TOOLS = [
 const inboxCounts = (overview) => ({
   text_reports: overview?.text_reports?.open ?? 0,
   contact_requests: overview?.contact_requests?.open ?? 0,
+  user_reports: overview?.user_reports?.open ?? 0,
   notices: overview?.notices?.live ?? 0,
 });
 

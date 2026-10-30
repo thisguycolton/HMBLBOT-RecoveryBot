@@ -18,14 +18,24 @@
 # as Chips.catalog does and `chip` is how it looked then, kept as it was. While its author no
 # longer has a sobriety chip they shared (they changed their sobriety date), `chip_hidden`
 # keeps it, and reposts of it, off everyone else's feeds (sync_chips).
+#
+# A note can be written on someone else's profile (`profile`), by someone they follow or who
+# follows them. It shows on their page, not its writer's, and `visibility` then says who sees
+# it as if it were theirs: just the two of them ("private"), their followers, or Members.
+# They're told, and can take it off their page. It can't be shared to groups or reposted.
+#
+# @ mentions in it (Mentionable) tell the people named, and the role holders in the groups
+# it's shared to, when they can see it.
 class TimelineNote < ApplicationRecord
   include Visibility
   include Reactable
+  include Mentionable
 
   BODY_MAX = 10_000
   IMAGES_MAX = 6
 
   belongs_to :user
+  belongs_to :profile, class_name: "User", optional: true
   has_many :shares, class_name: "TimelineNoteShare", dependent: :destroy
   has_many :groups, through: :shares
   has_many_attached :images
@@ -38,6 +48,7 @@ class TimelineNote < ApplicationRecord
   validate :has_something, unless: :repost?
   validate :images_are_pictures
   validate :can_be_reposted, if: :repost?
+  validate :can_write_on_profile, on: :create, if: :profile_id?
   validates :repost_of_id, uniqueness: { scope: :user_id, message: "is already on your timeline" }, if: :repost?
 
   before_save { self.hashtags = Hashtags.in(body) if body_changed? || new_record? }
@@ -54,7 +65,7 @@ class TimelineNote < ApplicationRecord
   # What a feed needs to show notes (and the originals of reposts) without a query each
   scope :for_feed, lambda {
     people = { user: { avatar_attachment: :blob } }
-    shown = [:groups, :reposts, { images_attachments: :blob, link_image_attachment: :blob, **people, reactions: people,
+    shown = [:groups, :reposts, { profile: { avatar_attachment: :blob } }, { images_attachments: :blob, link_image_attachment: :blob, **people, reactions: people,
                                   comments: [people, { reactions: people, timeline_note: :groups }] }]
     includes(*shown, repost_of: shown)
   }
@@ -78,7 +89,26 @@ class TimelineNote < ApplicationRecord
       followed = Follow.where(follower_id: viewer.id).select(:followed_id)
       seen = seen.or(where(visibility: "public")).or(where(visibility: "followers", user_id: followed))
     end
-    seen.where(repost_of_id: nil).merge(where(user_id: viewer.id).or(shown))
+    on_pages = "timeline_notes.profile_id IS NULL OR timeline_notes.user_id = :v OR timeline_notes.profile_id = :v"
+    seen.where(repost_of_id: nil).merge(where(user_id: viewer.id).or(shown)).where(on_pages, v: viewer.id)
+  end
+
+  # The notes others wrote on `owner`'s profile that `viewer` may see: as `visibility` says,
+  # judged as if they were `owner`'s own (and always by the two of them)
+  def self.on_profile_seen_by(viewer, owner)
+    notes = where(profile_id: owner.id)
+    return notes if viewer&.id == owner.id
+    return none unless viewer && User.profiles_open_to?(viewer)
+
+    levels = Follow.exists?(follower_id: viewer.id, followed_id: owner.id) ? %w[followers public] : %w[public]
+    notes.where(visibility: levels).or(notes.where(user_id: viewer.id))
+  end
+
+  # Whether `author` may write on `owner`'s profile: one of them follows the other
+  def self.writable_on_profile?(author, owner)
+    return false unless author && owner && author.id != owner.id && User.profiles_open_to?(author)
+
+    Follow.where(follower_id: author.id, followed_id: owner.id).or(Follow.where(follower_id: owner.id, followed_id: author.id)).exists?
   end
 
   # The chip they're sharing, as their Chips page shows it (Chips.catalog), with the design it
@@ -117,16 +147,18 @@ class TimelineNote < ApplicationRecord
     return false unless viewer
     return false if viewer.id != user_id && (chip_hidden || repost_of&.chip_hidden)
     return repost_of&.visibility == "public" && seen_on_profile_by?(viewer) if repost?
+    return on_profile_visible_to?(viewer) if profile_id
 
     seen_on_profile_by?(viewer) || groups.any? { |g| g.member?(viewer) && g.member?(user) }
   end
 
   # Others may repost it when it's shared with Members, unless it's a repost itself
-  def repostable_by?(viewer) = !!viewer && viewer.id != user_id && !repost? && visibility == "public"
+  def repostable_by?(viewer) = !!viewer && viewer.id != user_id && !repost? && !profile_id && visibility == "public"
 
   # Why someone else can't repost it (their Repost button says so), or nil when they can
   def repost_blocked_reason(viewer)
     return if !viewer || viewer.id == user_id || repost? || repostable_by?(viewer)
+    return "Notes written on someone's page can't be reposted." if profile_id
 
     shared = visibility == "followers" ? "with their followers" : "with their group"
     "#{user.display_name.split.first} shared this only #{shared}, so it can't be reposted. Only notes shared with Members can be."
@@ -134,7 +166,7 @@ class TimelineNote < ApplicationRecord
 
   # Shares it to these groups, only the ones its author is in, and stops sharing it to the rest
   def share_to!(groups)
-    allowed = groups.select { |g| g.member?(user) }
+    allowed = profile_id ? [] : groups.select { |g| g.member?(user) }
     shares.where.not(group_id: allowed.map(&:id)).destroy_all
     allowed.each { |g| shares.find_or_create_by!(group: g) }
   rescue ActiveRecord::RecordNotUnique
@@ -150,6 +182,29 @@ class TimelineNote < ApplicationRecord
 
   def edited? = updated_at - created_at > 1.minute
 
+  # Where it shows: the page it was written on, or its writer's
+  def page_path = (profile || user).profile_path
+
+  # Tells who it newly @ mentions, if they can see it; role handles come from the groups it's
+  # shared to. Call after saving and sharing.
+  def mention!(author)
+    people = take_mentions(body, author: author, groups: groups.to_a, everyone: false, can_see: ->(u) { visible_to?(u) })
+    save! if mentions_changed?
+    tell_mentioned(people, kind: "mention.note", body: body.truncate(200), url: page_path,
+                           title: ->(handle) { "#{author.display_name} mentioned #{handle ? "@#{handle}" : 'you'} in a note" })
+  end
+
+  # Tells whoever's page it was written on
+  def tell_profile!
+    return unless profile_id && profile_id != user_id
+
+    Notification.deliver(profile, kind: "note.profile", title: "#{user.display_name} wrote on your page", body: body.truncate(200), url: page_path)
+    update_column(:mentioned_user_ids, mentioned_user_ids | [profile_id])
+  end
+
+  # Its writer, and whoever's page it's on, can delete it
+  def removable_by?(viewer) = !!viewer && (viewer.id == user_id || viewer.id == profile_id)
+
   def image_urls
     images.map { |i| { id: i.id, url: Rails.application.routes.url_helpers.rails_storage_proxy_path(i, only_path: true) } }
   end
@@ -162,7 +217,11 @@ class TimelineNote < ApplicationRecord
 
     mine = viewer&.id == user_id
     json = { kind: "note", id: id, body: body, images: image_urls, created_at: created_at.iso8601, edited: edited?,
-             author: user.as_person_json, mine: mine, **social_json(viewer) }
+             author: user.as_person_json, mine: mine, mentions: mentions, mentions_me: mentions?(viewer), **social_json(viewer) }
+    if profile_id
+      json[:on_page] = profile.as_person_json
+      json[:can_delete] = removable_by?(viewer)
+    end
     json[:chip] = chip if chip_id
     json[:chip_hidden] = true if mine && chip_hidden
     if group
@@ -228,6 +287,21 @@ class TimelineNote < ApplicationRecord
   end
 
   def drop_reposts = reposts.destroy_all
+
+  def on_profile_visible_to?(viewer)
+    return true if [user_id, profile_id].include?(viewer.id)
+    return false unless User.profiles_open_to?(viewer)
+
+    visibility == "public" || (visibility == "followers" && Follow.exists?(follower_id: viewer.id, followed_id: profile_id))
+  end
+
+  def can_write_on_profile
+    if repost? || chip_id
+      errors.add(:base, "Only a note can go on someone's page.")
+    elsif !self.class.writable_on_profile?(user, profile)
+      errors.add(:base, "You can write on someone's page when one of you follows the other.")
+    end
+  end
 
   def has_something
     errors.add(:base, "Write something or add a picture") if body.to_s.strip.empty? && !images.attached? && !chip_id

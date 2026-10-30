@@ -4,7 +4,7 @@ import LinkCard, { firstLink } from "./LinkCard";
 import MarkdownEditor from "./MarkdownEditor";
 import VisibilityPicker from "./VisibilityPicker";
 import { api } from "../groups/lib";
-import { saveNote } from "./lib";
+import { profileVisibility, saveNote } from "./lib";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 
@@ -13,10 +13,11 @@ const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 // pictures (pick, drop or paste them) and say who sees them on your profile. `groups` are
 // the groups you can share it to; `shareTo` is the one group it goes to (a group page's
 // Timeline block). It's written formatted, not as Markdown symbols, and selecting text
-// offers Bold, Italic, Underline, Strikethrough and Link (MarkdownEditor). Typing # suggests hashtags. The first link gets a preview card, which the X takes off. Needs a
-// `.wb` around it for the highlight-note look.
+// offers Bold, Italic, Underline, Strikethrough and Link (MarkdownEditor). Typing # suggests hashtags, and @
+// people and the role handles of the groups it goes to. The first link gets a preview card, which the X takes off.
+// `profile` ({ username, name }) writes it on that person's page instead. Needs a `.wb` around it for the highlight-note look.
 export default function NoteEditor({
-  note = null, groups = null, shareTo = null, defaultVisibility = "private", max = 10000, imagesMax = 6,
+  note = null, groups = null, shareTo = null, profile = null, defaultVisibility = "private", max = 10000, imagesMax = 6,
   onSaved, onCancel, onDelete, autoFocus = false, placeholder = "Write a note… Select words to make them bold, italic or a link",
 }) {
   const [body, setBody] = useState(note?.body || "");
@@ -78,7 +79,8 @@ export default function NoteEditor({
     try {
       const fields = { body, visibility, images: files, link_url: (url && link?.url === url ? url : "") };
       if (removed.length) fields.remove_image_ids = removed;
-      if (groups || shareTo) fields.group_slugs = picked;
+      if ((groups || shareTo) && !profile) fields.group_slugs = picked;
+      if (profile && !note) fields.profile = profile.username;
       const saved = await saveNote(note?.id, fields);
       if (!note) reset();
       onSaved?.(saved);
@@ -106,6 +108,7 @@ export default function NoteEditor({
         maxLength={max}
         placeholder={placeholder}
         hashtags
+        mentions={{ groups: picked }}
         onChange={setBody}
         onPaste={(e) => { if (e.clipboardData?.files?.length) { e.preventDefault(); addFiles(e.clipboardData.files); } }}
         onKeyDown={(e) => {
@@ -133,7 +136,7 @@ export default function NoteEditor({
         </ul>
       )}
 
-      {groups?.length > 0 && (
+      {groups?.length > 0 && !profile && !note?.on_page && (
         <div className="wb-note-editor__groups">
           <span>Also share to</span>
           {groups.map((g) => (
@@ -149,7 +152,9 @@ export default function NoteEditor({
           <ImagePlus size={15} aria-hidden="true" /> <span className="wb-note-editor__label">Photo</span>
         </button>
         <input ref={fileRef} type="file" accept={ACCEPT} multiple hidden onChange={(e) => { addFiles(e.target.files || []); e.target.value = ""; }} />
-        <VisibilityPicker value={visibility} onChange={setVisibility} disabled={saving} />
+        {profile || note?.on_page
+          ? <VisibilityPicker value={visibility} onChange={setVisibility} disabled={saving} options={profileVisibility((profile || note.on_page).name.split(" ")[0])} title={`Who sees this on ${(profile || note.on_page).name}'s page`} />
+          : <VisibilityPicker value={visibility} onChange={setVisibility} disabled={saving} />}
         {note && onDelete && (
           <button type="button" className="wb-btn wb-hl-note__delete" onClick={onDelete} disabled={saving}>
             <Trash2 size={14} aria-hidden="true" /> <span className="wb-note-editor__label">Delete note</span>

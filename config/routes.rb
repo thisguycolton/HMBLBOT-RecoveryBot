@@ -94,6 +94,17 @@ Rails.application.routes.draw do
       get :court_verifications
     end
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
+    # Its chat (ChatChannel): channels, messages, who may add channels; and who its admins blocked
+    resource :chat, controller: "group_chat", only: %i[show update]
+    resources :chat_channels, controller: "group_chat_channels", only: %i[create update destroy] do
+      member do
+        get :messages
+        post :messages, action: :post_message
+        post :read
+      end
+    end
+    resources :chat_messages, controller: "group_chat_messages", only: %i[show update destroy]
+    resources :blocks, controller: "group_blocks", only: %i[index create destroy]
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
     resource :conscience, controller: "group_conscience", only: :show
@@ -211,6 +222,9 @@ Rails.application.routes.draw do
     end
   end
   resources :hashtags, only: %i[index show], param: :tag
+  # What typing @ offers (Mentions), and reporting someone to the site admins
+  get "mentions", to: "mentions#index"
+  resources :user_reports, only: :create
   get "link_preview", to: "link_previews#show"
   get "link_preview/image", to: "link_previews#image", as: :link_preview_image
   get "people", to: "people#index"
@@ -420,6 +434,7 @@ end
         post :comment, on: :member
       end
       resources :contact_requests, only: %i[index update destroy]
+      resources :user_reports, only: %i[index update destroy]
       resources :chip_templates, only: %i[index show create update destroy] do
         post :publish, on: :member
       end

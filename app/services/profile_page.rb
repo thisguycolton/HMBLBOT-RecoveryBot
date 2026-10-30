@@ -44,6 +44,8 @@ class ProfilePage
         viewer: {
           signed_in: @viewer.present?, is_me: me, following: !me && !!@viewer&.following?(person),
           follows_you: !me && !!person.following?(@viewer),
+          # Writing a note on their page (TimelineNote#profile)
+          can_write_note: !me && TimelineNote.writable_on_profile?(@viewer, person),
           default_note_visibility: (@viewer.default_note_visibility if me),
           # Groups their notes can go to, for the note composer
           groups: (me ? @viewer.groups.order(:title).map { |g| { slug: g.slug, title: g.title } } : nil),
@@ -65,14 +67,18 @@ class ProfilePage
   def following_feed(before: nil)
     ids = @viewer.follows_given.select(:followed_id)
     shared = %w[followers public]
-    notes = TimelineNote.where(user_id: ids, visibility: shared).shown.or(TimelineNote.where(user_id: @viewer.id))
+    notes = TimelineNote.where(user_id: ids, visibility: shared, profile_id: nil).shown
+                        .or(TimelineNote.where(profile_id: ids, visibility: shared).shown)
+                        .or(TimelineNote.where(user_id: @viewer.id)).or(TimelineNote.where(profile_id: @viewer.id))
     highlights = UserHighlight.on_timeline.where(user_id: ids, visibility: shared).or(UserHighlight.on_timeline.where(user_id: @viewer.id))
     merge(notes, highlights, before: before)
   end
 
   def feed(person, before: nil)
-    notes = TimelineNote.visible_to(@viewer, owner: person)
-    notes = notes.shown unless @viewer&.id == person.id
+    own = TimelineNote.visible_to(@viewer, owner: person).where(profile_id: nil)
+    own = own.shown unless @viewer&.id == person.id
+    # with the notes others wrote on their page
+    notes = TimelineNote.where(id: own.select(:id)).or(TimelineNote.where(id: TimelineNote.on_profile_seen_by(@viewer, person).select(:id)))
     merge(notes, UserHighlight.visible_to(@viewer, owner: person).on_timeline, before: before)
   end
 

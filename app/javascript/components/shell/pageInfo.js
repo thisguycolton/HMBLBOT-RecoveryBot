@@ -25,6 +25,7 @@ const ABOUT = {
 const GROUP_ABOUT = {
   home: "This group's page: its meetings, events and what members share. Not a member yet? Ask to join from the top.",
   meetings: "Today's meetings with who's hosting and a way in, then the week's hosts and every meeting. Sign up for a slot, ask for a sub, or take one.",
+  chat: "The group's chat, in channels. Type @ to mention someone or a role like @hosts; only mentions send a notification.",
   court: "Send a court verification letter for someone who came to one of this group's meetings. Pick the meeting and day, then sign.",
   events: "The group's events. RSVP, see who's going, and look back at past ones. Admins start new ones here.",
   conscience: "Group conscience: business meetings, decisions, documents, the group's elected officials and the treasury. Record keepers and treasurers edit right here.",

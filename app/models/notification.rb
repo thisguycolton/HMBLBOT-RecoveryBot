@@ -23,6 +23,8 @@ class Notification < ApplicationRecord
                   kinds: %w[event.update event.collaborator] },
     "schedule_polls" => { label: "Scheduling polls", description: "Being asked to vote or help run a poll, and new votes in polls you run.",
                           kinds: %w[schedule_poll.invitee schedule_poll.collaborator schedule_poll.vote] },
+    "mentions" => { label: "Mentions and notes to you", description: "When someone @ mentions you or a role you hold in chat or a note, or writes a note on your page.",
+                    kinds: %w[mention.chat mention.note note.profile] },
     "comments" => { label: "Comments on your notes", description: "When someone comments on one of your notes.",
                     kinds: %w[note.comment] },
     "document_comments" => { label: "Comments on group documents", description: "New comments on documents you saved, and replies in comment threads you're in.",
@@ -34,8 +36,8 @@ class Notification < ApplicationRecord
                  kinds: %w[chip.given chip.edition chip.edition_new] },
     "recovery_reminders" => { label: "Gratitude and 10th step reminders", description: "The daily reminders you turned on under Reminders.",
                               kinds: %w[recovery.gratitude_reminder recovery.step_reminder] },
-    "site_admin" => { label: "Site admin", description: "New groups waiting for approval and text reports.",
-                      kinds: %w[group.pending text_report.created], admin_only: true },
+    "site_admin" => { label: "Site admin", description: "New groups waiting for approval, text reports and reports about people.",
+                      kinds: %w[group.pending text_report.created user_report.created], admin_only: true },
   }.freeze
   PUSH_CATEGORY_BY_KIND = PUSH_CATEGORIES.flat_map { |key, c| c[:kinds].map { |k| [k, key] } }.to_h.freeze
 

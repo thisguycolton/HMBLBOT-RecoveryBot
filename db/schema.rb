@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_30_210200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -186,6 +186,46 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
     t.index ["book_id", "index"], name: "index_chapters_on_book_id_and_index", unique: true
     t.index ["book_id", "slug"], name: "index_chapters_on_book_id_and_slug", unique: true
     t.index ["book_id"], name: "index_chapters_on_book_id"
+  end
+
+  create_table "chat_channels", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.string "name", null: false
+    t.string "topic", default: "", null: false
+    t.string "access_roles", default: ["members"], null: false, array: true
+    t.bigint "access_user_ids", default: [], null: false, array: true
+    t.boolean "archived", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.bigint "created_by_id"
+    t.datetime "last_message_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "group_id, lower((name)::text)", name: "index_chat_channels_on_group_and_name", unique: true
+    t.index ["created_by_id"], name: "index_chat_channels_on_created_by_id"
+    t.index ["group_id"], name: "index_chat_channels_on_group_id"
+  end
+
+  create_table "chat_messages", force: :cascade do |t|
+    t.bigint "chat_channel_id", null: false
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.datetime "edited_at"
+    t.jsonb "mentions", default: {}, null: false
+    t.bigint "mentioned_user_ids", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chat_channel_id", "id"], name: "index_chat_messages_on_chat_channel_id_and_id"
+    t.index ["user_id"], name: "index_chat_messages_on_user_id"
+  end
+
+  create_table "chat_reads", force: :cascade do |t|
+    t.bigint "chat_channel_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "last_read_message_id", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chat_channel_id", "user_id"], name: "index_chat_reads_on_chat_channel_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_chat_reads_on_user_id"
   end
 
   create_table "chip_awards", force: :cascade do |t|
@@ -447,6 +487,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
     t.index ["user_id"], name: "index_gratitude_lists_on_user_id"
   end
 
+  create_table "group_blocks", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "blocked_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["blocked_by_id"], name: "index_group_blocks_on_blocked_by_id"
+    t.index ["group_id", "user_id"], name: "index_group_blocks_on_group_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_group_blocks_on_user_id"
+  end
+
   create_table "group_books", force: :cascade do |t|
     t.bigint "group_id", null: false
     t.bigint "book_id", null: false
@@ -606,6 +657,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
     t.boolean "show_hosts_publicly", default: true, null: false
     t.string "deck_editors", default: ["host_coordinators", "record_keepers"], null: false, array: true
     t.jsonb "chip_design"
+    t.string "chat_creator_roles", default: [], null: false, array: true
+    t.bigint "chat_creator_user_ids", default: [], null: false, array: true
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -887,6 +940,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
     t.text "body", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "mentions", default: {}, null: false
+    t.bigint "mentioned_user_ids", default: [], null: false, array: true
     t.index ["timeline_note_id", "created_at"], name: "index_note_comments_on_timeline_note_id_and_created_at"
     t.index ["user_id"], name: "index_note_comments_on_user_id"
   end
@@ -1279,7 +1334,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
     t.string "chip_id"
     t.jsonb "chip"
     t.boolean "chip_hidden", default: false, null: false
+    t.bigint "profile_id"
+    t.jsonb "mentions", default: {}, null: false
+    t.bigint "mentioned_user_ids", default: [], null: false, array: true
     t.index ["hashtags"], name: "index_timeline_notes_on_hashtags", using: :gin
+    t.index ["profile_id"], name: "index_timeline_notes_on_profile_id"
     t.index ["repost_of_id", "user_id"], name: "index_timeline_notes_on_repost_of_id_and_user_id", unique: true, where: "(repost_of_id IS NOT NULL)"
     t.index ["user_id", "chip_id"], name: "index_timeline_notes_on_user_id_and_chip_id", where: "(chip_id IS NOT NULL)"
     t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
@@ -1397,6 +1456,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
     t.index ["user_id"], name: "index_user_highlights_on_user_id"
   end
 
+  create_table "user_reports", force: :cascade do |t|
+    t.bigint "reporter_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "group_id"
+    t.string "subject_type"
+    t.bigint "subject_id"
+    t.text "quote", default: "", null: false
+    t.string "where_label", default: "", null: false
+    t.text "reason", null: false
+    t.string "status", default: "open", null: false
+    t.bigint "resolved_by_id"
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id"], name: "index_user_reports_on_group_id"
+    t.index ["reporter_id"], name: "index_user_reports_on_reporter_id"
+    t.index ["resolved_by_id"], name: "index_user_reports_on_resolved_by_id"
+    t.index ["status"], name: "index_user_reports_on_status"
+    t.index ["user_id"], name: "index_user_reports_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -1452,6 +1532,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
   add_foreign_key "business_meetings", "meetings", on_delete: :nullify
   add_foreign_key "business_meetings", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chapters", "books"
+  add_foreign_key "chat_channels", "groups"
+  add_foreign_key "chat_channels", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "chat_messages", "chat_channels"
+  add_foreign_key "chat_messages", "users"
+  add_foreign_key "chat_reads", "chat_channels"
+  add_foreign_key "chat_reads", "users"
   add_foreign_key "chip_awards", "chip_editions", on_delete: :nullify
   add_foreign_key "chip_awards", "groups", on_delete: :cascade
   add_foreign_key "chip_awards", "users", column: "given_by_id", on_delete: :nullify
@@ -1486,6 +1572,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
   add_foreign_key "follows", "users", column: "followed_id"
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "gratitude_lists", "users", on_delete: :cascade
+  add_foreign_key "group_blocks", "groups"
+  add_foreign_key "group_blocks", "users"
+  add_foreign_key "group_blocks", "users", column: "blocked_by_id", on_delete: :nullify
   add_foreign_key "group_books", "books"
   add_foreign_key "group_books", "groups"
   add_foreign_key "group_document_comments", "group_document_comments", column: "parent_id", on_delete: :cascade
@@ -1576,6 +1665,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
   add_foreign_key "timeline_note_shares", "timeline_notes"
   add_foreign_key "timeline_notes", "timeline_notes", column: "repost_of_id", on_delete: :cascade
   add_foreign_key "timeline_notes", "users"
+  add_foreign_key "timeline_notes", "users", column: "profile_id", on_delete: :cascade
   add_foreign_key "today_dismissals", "users", on_delete: :cascade
   add_foreign_key "topic_sharing_prompts", "sharing_modes"
   add_foreign_key "topic_sharing_prompts", "topics"
@@ -1589,4 +1679,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_29_020000) do
   add_foreign_key "user_active_groups", "users"
   add_foreign_key "user_highlights", "chapters"
   add_foreign_key "user_highlights", "users"
+  add_foreign_key "user_reports", "groups", on_delete: :nullify
+  add_foreign_key "user_reports", "users", column: "reporter_id", on_delete: :cascade
+  add_foreign_key "user_reports", "users", column: "resolved_by_id", on_delete: :nullify
+  add_foreign_key "user_reports", "users", on_delete: :cascade
 end

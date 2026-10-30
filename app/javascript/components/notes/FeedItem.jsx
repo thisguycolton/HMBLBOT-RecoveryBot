@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
-import { BookOpen, EyeOff, Pencil, Repeat2, Trash2 } from "lucide-react";
+import { BookOpen, ChevronRight, EyeOff, Flag, Pencil, Repeat2, Trash2 } from "lucide-react";
+import ReportDialog from "../groups/chat/ReportDialog";
 import Markdown from "../book/Markdown";
 import HighlightNote from "../book/HighlightNote";
 import { highlightCss } from "../book/HighlightCard";
@@ -22,13 +23,14 @@ import { HIGHLIGHT_VISIBILITY, saveNote } from "./lib";
 // picks who sees it; others react to notes and repost them (NoteActions).
 // `showAuthor` puts their name on it (a feed of several people); `readOnly` (the editor's
 // canvas) leaves off the owner's buttons. Needs a `.wb` around it.
-export default function FeedItem({ item: given, readOnly = false, showAuthor = false, compact = false, groups = null, max, imagesMax, onChange, onRemove, extraAction }) {
+// A note written on someone's page says whose (`onPageOf`: the profile it's shown on, which needn't).
+export default function FeedItem({ item: given, readOnly = false, showAuthor = false, compact = false, groups = null, max, imagesMax, onChange, onRemove, extraAction, onPageOf = null }) {
   const item = readOnly ? { ...given, mine: false, by: null } : given;
   const [editing, setEditing] = useState(false);
   if (item.kind === "repost") return <Repost item={item} readOnly={readOnly} compact={compact} onChange={onChange} onRemove={onRemove} />;
   return (
     <article className={`wb-feed-item ${compact ? "wb-feed-item--compact" : ""}`}>
-      <ItemHead item={item} showAuthor={showAuthor} compact={compact} extraAction={extraAction} onChange={onChange} onRemove={onRemove} editing={editing} />
+      <ItemHead item={item} showAuthor={showAuthor} compact={compact} extraAction={extraAction} onChange={onChange} onRemove={onRemove} editing={editing} onPageOf={onPageOf} />
       {item.kind === "highlight"
         ? <HighlightBody item={item} onChange={onChange} />
         : <NoteBody item={item} editing={editing} setEditing={setEditing} groups={groups} max={max} imagesMax={imagesMax} compact={compact} onChange={onChange} onRemove={onRemove} />}
@@ -98,7 +100,7 @@ function Repost({ item, readOnly, compact, onChange, onRemove }) {
   );
 }
 
-function ItemHead({ item, showAuthor, compact, extraAction, onChange, onRemove, editing }) {
+function ItemHead({ item, showAuthor, compact, extraAction, onChange, onRemove, editing, onPageOf = null }) {
   const changeVisibility = async (visibility) => {
     const previous = item;
     onChange?.({ ...item, visibility });
@@ -119,6 +121,11 @@ function ItemHead({ item, showAuthor, compact, extraAction, onChange, onRemove, 
         <a href={`/people/${item.author.username}`} className="wb-feed-item__author">
           <Avatar person={item.author} size={compact ? 26 : 32} />
           <span>{item.author.name}</span>
+        </a>
+      )}
+      {showAuthor && item.on_page && item.on_page.username !== onPageOf && (
+        <a href={`/people/${item.on_page.username}`} className="wb-feed-item__meta inline-flex shrink-0 items-center whitespace-nowrap" title={`Written on ${item.on_page.name}'s page`}>
+          <ChevronRight size={13} aria-hidden="true" /> {item.on_page.name}
         </a>
       )}
       <span className="wb-feed-item__meta">
@@ -149,6 +156,7 @@ function HighlightBody({ item, onChange }) {
 
 function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, onChange, onRemove }) {
   const [open, setOpen] = useState(null);
+  const [reporting, setReporting] = useState(false);
 
   const destroy = async () => {
     if (!window.confirm(item.groups?.length ? "Delete this note? It comes off every group it's shared to." : "Delete this note?")) return;
@@ -171,7 +179,7 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
   return (
     <>
       {item.chip && <SharedChip chip={item.chip} hidden={item.chip_hidden} />}
-      {item.body?.trim() && <Markdown source={item.body} hashtags className={`wb-feed-item__body ${compact ? "wb-feed-item__body--compact" : ""}`} />}
+      {item.body?.trim() && <Markdown source={item.body} hashtags mentions={item.mentions} mine={item.mentions_me} className={`wb-feed-item__body ${compact ? "wb-feed-item__body--compact" : ""}`} />}
       {images.length > 0 && (
         <div className={`wb-feed-item__images wb-feed-item__images--${Math.min(images.length, 4)}`}>
           {images.slice(0, 4).map((image, i) => (
@@ -184,14 +192,23 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
       )}
       {item.link && <LinkCard link={item.link} />}
       {open != null && <Lightbox photos={images.map((p) => ({ url: p.url }))} index={open} onClose={() => setOpen(null)} />}
-      {item.mine && (
+      {item.mine ? (
         <div className="wb-feed-item__foot">
           {item.groups?.length > 0 && <span className="wb-feed-item__shared">Shared to {item.groups.map((g) => g.title).join(", ")}</span>}
           <span className="flex-1" />
           <button type="button" className="wb-hl-note__edit" onClick={() => setEditing(true)}><Pencil size={13} aria-hidden="true" /> Edit</button>
           <button type="button" className="wb-hl-note__edit wb-hl-note__delete" onClick={destroy}><Trash2 size={13} aria-hidden="true" /> Delete</button>
         </div>
+      ) : item.kind === "note" && onChange && (
+        <div className="wb-feed-item__foot">
+          <span className="flex-1" />
+          {item.can_delete && (
+            <button type="button" className="wb-hl-note__edit wb-hl-note__delete" onClick={destroy}><Trash2 size={13} aria-hidden="true" /> Take off my page</button>
+          )}
+          <button type="button" className="wb-hl-note__edit" onClick={() => setReporting(true)}><Flag size={13} aria-hidden="true" /> Report</button>
+        </div>
       )}
+      {reporting && <ReportDialog subject={{ type: "timeline_note", id: item.id }} person={item.author} onClose={() => setReporting(false)} />}
     </>
   );
 }

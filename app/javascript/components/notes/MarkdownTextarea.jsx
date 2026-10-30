@@ -12,7 +12,7 @@ const MARKS = [
 
 // Where `position` in a textarea's text sits on screen, relative to the textarea: a hidden
 // copy with the same type styles, measured up to that character
-function caretCoords(textarea, position) {
+export function caretCoords(textarea, position) {
   const style = window.getComputedStyle(textarea);
   const mirror = document.createElement("div");
   ["boxSizing", "width", "fontFamily", "fontSize", "fontWeight", "fontStyle", "letterSpacing", "lineHeight", "paddingTop",

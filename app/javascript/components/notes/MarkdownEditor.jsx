@@ -10,6 +10,7 @@ import MarkdownTextarea from "./MarkdownTextarea";
 import { editorCanHold, markdownToNoteHtml, noteJsonToMarkdown } from "./noteMarkdown";
 import { looksLikeMarkdown } from "../../lib/markdownHtml";
 import { api } from "../groups/lib";
+import Avatar from "../groups/Avatar";
 
 // Each pill button, and the mark it turns on or off. Any of them go together: bold and italic,
 // bold underlined, and so on.
@@ -33,8 +34,9 @@ const StrikeKey = Extension.create({
 // typing Markdown (**bold**, *italic*, - lists, > quotes) still works. ⌘/Ctrl+B, I, U,
 // Shift+X and K format the selection. A note with a table stays in the plain text box.
 // `onKeyDown` and `onPaste` see the keys and pastes first (preventDefault to keep them).
-// With `hashtags`, typing # offers the tags already on notes you can see, most used first
-// (↑↓ to move, Enter or Tab to pick, Esc to close).
+// With `hashtags`, typing # offers the tags already on notes you can see, most used first;
+// with `mentions` (what to ask /api/mentions: { groups: [slugs] }), typing @ offers people and
+// role handles (↑↓ to move, Enter or Tab to pick, Esc to close).
 const MarkdownEditor = forwardRef(function MarkdownEditor(props, ref) {
   const [plain] = useState(() => !editorCanHold(props.value));
   if (plain) {
@@ -48,6 +50,9 @@ const MarkdownEditor = forwardRef(function MarkdownEditor(props, ref) {
 // way app/models/hashtags.rb finds them
 const TAG_BEFORE_CURSOR = /(?:^|[^\p{L}\p{N}_&#/])#(\p{L}[\p{L}\p{N}_]{0,49}|)$/u;
 
+// An @ after a space (or at the start), then the handle so far (app/models/mentions.rb)
+const MENTION_BEFORE_CURSOR = /(?:^|[^\p{L}\p{N}_@./&-])@([a-zA-Z0-9-]{0,50})$/u;
+
 // The tags starting with `query` on notes you can see, kept for a while so typing back
 // and forth doesn't ask again
 const tagCache = new Map();
@@ -55,13 +60,17 @@ function suggestTags(query) {
   const hit = tagCache.get(query);
   if (hit && Date.now() - hit.at < 60_000) return Promise.resolve(hit.items);
   return api(`/hashtags?q=${encodeURIComponent(query)}`)
-    .then((d) => { tagCache.set(query, { at: Date.now(), items: d.hashtags }); return d.hashtags; })
+    .then((d) => {
+      const items = d.hashtags.map((t) => ({ key: t.name, label: `#${t.name}`, hint: `· ${t.count.toLocaleString()}`, insert: `#${t.name}` }));
+      tagCache.set(query, { at: Date.now(), items });
+      return items;
+    })
     .catch(() => []);
 }
 
 const RichEditor = forwardRef(function RichEditor({
   value, onChange, onKeyDown, onPaste, minRows = 3, placeholder = "", autoFocus = false, className = "",
-  "aria-label": ariaLabel, hashtags = false,
+  "aria-label": ariaLabel, hashtags = false, mentions = null,
 }, ref) {
   const wrapRef = useRef(null);
   const sent = useRef(value || ""); // the Markdown last given to onChange
@@ -69,9 +78,11 @@ const RichEditor = forwardRef(function RichEditor({
   handlers.current = { onChange, onKeyDown, onPaste };
   const [bar, setBar] = useState(null); // { top, left } while text is selected
   const [linking, setLinking] = useState(null); // { from, to, url } while asking for a link
-  const [tags, setTags] = useState(null); // { from, to, query, items, index, top, left } while typing a #tag
+  const [tags, setTags] = useState(null); // { from, to, query, items, index, top, left } while typing a #tag or @mention
   const tagsRef = useRef(null);
   tagsRef.current = tags;
+  const mentionsRef = useRef(mentions);
+  mentionsRef.current = mentions;
 
   const editor = useEditor({
     extensions: [
@@ -152,26 +163,28 @@ const RichEditor = forwardRef(function RichEditor({
     return () => { editor.off("selectionUpdate", place); editor.off("focus", place); editor.off("blur", hide); };
   }, [editor, place]);
 
-  // The #tag being typed just before the cursor, if any, and the tags it could be
+  // The #tag or @mention being typed just before the cursor, if any, and what it could be
   useEffect(() => {
-    if (!editor || !hashtags) return undefined;
+    if (!editor || (!hashtags && !mentions)) return undefined;
     let timer;
     let current = 0;
     const look = () => {
       clearTimeout(timer);
       const { $from, empty } = editor.state.selection;
       const before = empty && !editor.isActive("code") && $from.parent.textBetween(0, $from.parentOffset, undefined, "\ufffc");
-      const typed = before && before.match(TAG_BEFORE_CURSOR);
+      const tag = hashtags && before && before.match(TAG_BEFORE_CURSOR);
+      const at = !tag && mentionsRef.current && before && before.match(MENTION_BEFORE_CURSOR);
+      const typed = tag || at;
       if (!typed || !editor.isFocused) { setTags(null); return; }
-      const query = typed[1].toLowerCase();
+      const query = `${tag ? "#" : "@"}${typed[1].toLowerCase()}`;
       const from = $from.pos - typed[1].length - 1;
       const box = wrapRef.current?.getBoundingClientRect();
-      const at = editor.view.coordsAtPos(from);
-      const spot = box ? { top: at.bottom - box.top, left: Math.max(Math.min(at.left - box.left, (wrapRef.current.clientWidth || 0) - 240), 0) } : { top: 0, left: 0 };
+      const spotAt = editor.view.coordsAtPos(from);
+      const spot = box ? { top: spotAt.bottom - box.top, left: Math.max(Math.min(spotAt.left - box.left, (wrapRef.current.clientWidth || 0) - 240), 0) } : { top: 0, left: 0 };
       setTags((t) => ({ items: t?.query === query ? t.items : t?.items || [], index: t?.query === query ? t.index : 0, ...spot, from, to: $from.pos, query }));
       const asked = ++current;
       timer = setTimeout(() => {
-        suggestTags(query).then((items) => {
+        (tag ? suggestTags(typed[1].toLowerCase()) : suggestMentions(typed[1], mentionsRef.current)).then((items) => {
           if (asked === current) setTags((t) => (t && t.query === query ? { ...t, items, index: Math.min(t.index, Math.max(items.length - 1, 0)) } : t));
         });
       }, 120);
@@ -181,13 +194,13 @@ const RichEditor = forwardRef(function RichEditor({
     editor.on("update", look);
     editor.on("blur", close);
     return () => { clearTimeout(timer); editor.off("selectionUpdate", look); editor.off("update", look); editor.off("blur", close); };
-  }, [editor, hashtags]);
+  }, [editor, hashtags, !!mentions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pickTag = (name) => {
+  const pickTag = (item) => {
     const t = tagsRef.current;
     if (!t || !editor) return;
     setTags(null);
-    editor.chain().focus().insertContentAt({ from: t.from, to: t.to }, `#${name} `).run();
+    editor.chain().focus().insertContentAt({ from: t.from, to: t.to }, `${item.insert} `).run();
   };
 
   // ↑↓ move through the suggestions, Enter or Tab picks one, Esc closes them
@@ -198,7 +211,7 @@ const RichEditor = forwardRef(function RichEditor({
       setTags({ ...t, index: (t.index + step + t.items.length) % t.items.length });
     } else if (event.key === "Enter" || event.key === "Tab") {
       if (event.metaKey || event.ctrlKey) return false;
-      pickTag(t.items[t.index].name);
+      pickTag(t.items[t.index]);
     } else if (event.key === "Escape") {
       setTags(null);
     } else return false;
@@ -230,17 +243,9 @@ const RichEditor = forwardRef(function RichEditor({
     <div ref={wrapRef} className="wb-md-input">
       <EditorContent editor={editor} />
       {tags?.items.length > 0 && (
-        <ul className="wb-tag-suggest" style={{ top: tags.top, left: tags.left }} role="listbox" aria-label="Hashtags"
-          onMouseDown={(e) => e.preventDefault()}>
-          {tags.items.map((item, i) => (
-            <li key={item.name} role="option" aria-selected={i === tags.index}>
-              <button type="button" onClick={() => pickTag(item.name)} onMouseEnter={() => setTags((t) => t && { ...t, index: i })}>
-                <span className="wb-tag-suggest__name">#{item.name}</span>
-                <span className="wb-tag-suggest__count">· {item.count.toLocaleString()}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <SuggestList items={tags.items} index={tags.index} style={{ top: tags.top, left: tags.left }}
+          label={tags.query.startsWith("@") ? "People and roles" : "Hashtags"}
+          onPick={pickTag} onHover={(i) => setTags((t) => t && { ...t, index: i })} />
       )}
       {(bar || linking) && (
         <div className="wb-md-input__bar" style={{ top: bar?.top ?? 0, left: bar?.left ?? 0 }} role="toolbar" aria-label="Format the selected text"
@@ -275,5 +280,45 @@ const RichEditor = forwardRef(function RichEditor({
     </div>
   );
 });
+
+// People and role handles for an @ starting with `query` (/api/mentions), as suggestions.
+// `where` is { groups: [slugs] } for a note, or { group, channel } for a chat channel.
+const mentionCache = new Map();
+export function suggestMentions(query, where) {
+  const params = new URLSearchParams({ q: query });
+  if (where?.group) params.set("group", where.group);
+  if (where?.channel) params.set("channel", where.channel);
+  (where?.groups || []).forEach((g) => params.append("groups[]", g));
+  const key = params.toString();
+  const hit = mentionCache.get(key);
+  if (hit && Date.now() - hit.at < 30_000) return Promise.resolve(hit.items);
+  return api(`/mentions?${key}`)
+    .then((d) => {
+      const items = [
+        ...d.people.map((p) => ({ key: `p${p.id}`, label: p.name, hint: `@${p.username}`, insert: `@${p.username}`, person: p })),
+        ...d.roles.map((r) => ({ key: `r${r.handle}`, label: `@${r.handle}`, hint: r.group ? `${r.label} · ${r.group}` : r.label, insert: `@${r.handle}` })),
+      ];
+      mentionCache.set(key, { at: Date.now(), items });
+      return items;
+    })
+    .catch(() => []);
+}
+
+// The suggestions under a # or @ being typed
+export function SuggestList({ items, index, style, label, onPick, onHover, className = "" }) {
+  return (
+    <ul className={`wb-tag-suggest ${className}`} style={style} role="listbox" aria-label={label} onMouseDown={(e) => e.preventDefault()}>
+      {items.map((item, i) => (
+        <li key={item.key} role="option" aria-selected={i === index}>
+          <button type="button" onClick={() => onPick(item)} onMouseEnter={() => onHover(i)}>
+            {item.person && <Avatar person={item.person} size={20} className="wb-tag-suggest__avatar self-center" />}
+            <span className="wb-tag-suggest__name">{item.label}</span>
+            <span className="wb-tag-suggest__count">{item.hint}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default MarkdownEditor;
