@@ -6,6 +6,7 @@ import { Card, Pill, Tray, quietButton } from "./ui";
 import { LiveBadge, useNow, whenLabel, viewerZoneName } from "./NextMeeting";
 import MeetingPasscode from "./MeetingPasscode";
 import HostsTab from "./HostsTab";
+import WeekView from "./WeekView";
 import MeetingsTab from "./MeetingsTab";
 
 const WEEK = 7 * 24 * 3600 * 1000;
@@ -88,17 +89,19 @@ function TodayCard({ occurrence, hosts, needsSub, now, canHost, slug }) {
 }
 
 // A group's Meetings page (/groups/:slug/meetings), for everyone: today's meetings first with who
-// hosts them and a way in, then (for members) the week's host schedule, which host coordinators
-// fill in right there, then every meeting's details. Adding and changing the meetings themselves
+// hosts them and a way in, then (for members) the schedule week by week, by date (WeekView: your
+// dates, "I can't make it", coordinators filling gaps), the regular hosts of each weekly meeting
+// (HostsTab), then every meeting's details. Adding and changing the meetings themselves
 // is Meeting settings (/groups/:slug/settings/meetings), for group admins.
 export default function MeetingsPage({ group, setGroup, reload, focusId }) {
   const slug = group.slug;
   const isMember = group.is_member || group.is_site_admin;
   const now = useNow(30000);
   const [schedule, setSchedule] = useState(null);
+  const [version, setVersion] = useState(0); // the week view changed someone's place: show it everywhere
   useEffect(() => {
     if (isMember) api(`/groups/${slug}/meeting_hosts`).then(setSchedule).catch(() => {});
-  }, [slug, isMember]);
+  }, [slug, isMember, version]);
 
   const all = occurrences(group.meetings, now);
   const today = all.filter((o) => sameDay(o.start, now) || o.start <= now);
@@ -125,10 +128,16 @@ export default function MeetingsPage({ group, setGroup, reload, focusId }) {
       </Tray>
 
       {isMember && (
-        <section className="space-y-3">
-          <Heading>Hosts this week</Heading>
-          <HostsTab group={group} />
-        </section>
+        <>
+          <section className="space-y-3">
+            <Heading>Week by week</Heading>
+            <WeekView group={group} onChanged={() => setVersion((v) => v + 1)} />
+          </section>
+          <section className="space-y-3">
+            <Heading>Regular hosts</Heading>
+            <HostsTab key={version} group={group} />
+          </section>
+        </>
       )}
 
       <section className="space-y-3">

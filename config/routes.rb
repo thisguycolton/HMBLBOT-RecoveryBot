@@ -123,6 +123,7 @@ Rails.application.routes.draw do
     end
     resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy] do
       post :link, on: :collection
+      get :week, on: :collection
     end
     resources :meeting_host_covers, controller: "group_meeting_host_covers", only: %i[create destroy]
     # The Hosting Command Center (/groups/:slug/host/:meeting_id)
