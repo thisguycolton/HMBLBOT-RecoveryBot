@@ -26,7 +26,7 @@ export default function VisibilityPicker({ value, onChange, disabled = false, al
       <button type="button" disabled={disabled} onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}
         title={title}
         className={className || "inline-flex items-center gap-1.5 rounded-full !bg-transparent px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-neutral-300 hover:!bg-neutral-100 disabled:opacity-50 dark:text-neutral-300 dark:ring-neutral-700 dark:hover:!bg-neutral-800"}>
-        {children || <><Icon className="size-3.5" /> {current.label} <ChevronDown className="size-3" /></>}
+        {children || <><Icon className="size-3.5" /> <span className="wb-vis-label">{current.label}</span> <ChevronDown className="size-3" /></>}
       </button>
       {open && (
         <ul role="listbox" className={`absolute z-30 w-60 ${up ? "bottom-full mb-1" : "mt-1"} overflow-hidden rounded-xl bg-white p-1 shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700 ${align === "right" ? "right-0" : "left-0"}`}>

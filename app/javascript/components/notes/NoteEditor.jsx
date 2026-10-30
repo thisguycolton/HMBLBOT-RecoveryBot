@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ImagePlus, Trash2, Users, X } from "lucide-react";
+import { Check, ChevronDown, ImagePlus, SendHorizontal, Trash2, Users, X } from "lucide-react";
 import LinkCard, { firstLink } from "./LinkCard";
 import MarkdownEditor from "./MarkdownEditor";
 import VisibilityPicker from "./VisibilityPicker";
@@ -165,8 +165,9 @@ export default function NoteEditor({
           {(note || onCancel) && (
             <button type="button" className="wb-btn" onClick={cancel} disabled={saving}>Cancel</button>
           )}
-          <button type="submit" className="wb-btn wb-btn--reversed" disabled={saving || empty}>
-            {saving ? "Saving…" : note ? "Save note" : "Post note"}
+          <button type="submit" className="wb-btn wb-btn--reversed wb-note-editor__post" disabled={saving || empty} aria-label={note ? "Save note" : "Post note"}>
+            <SendHorizontal size={15} aria-hidden="true" className="wb-note-editor__post-icon" />
+            <span className="wb-note-editor__post-label">{saving ? "Saving…" : note ? "Save note" : "Post note"}</span>
           </button>
         </span>
       </div>
@@ -191,9 +192,9 @@ function GroupsPicker({ groups, picked, onToggle, disabled }) {
   const label = chosen.length === 0 ? "Your Groups" : chosen.length === 1 ? chosen[0].title : `${chosen.length} groups`;
   return (
     <span ref={ref} className="relative inline-block">
-      <button type="button" className="wb-note-editor__pill" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((o) => !o)}
+      <button type="button" className="wb-note-editor__pill" disabled={disabled} title={label} aria-label={`Also share to: ${label}`} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((o) => !o)}
         data-on={chosen.length > 0 || undefined}>
-        <Users size={14} aria-hidden="true" /> <span className="max-w-[9rem] truncate">{label}</span> <ChevronDown size={13} aria-hidden="true" />
+        <Users size={14} aria-hidden="true" /> <span className="wb-note-editor__pill-label max-w-[9rem] truncate">{label}</span> <ChevronDown size={13} aria-hidden="true" />
       </button>
       {open && (
         <ul role="listbox" aria-multiselectable="true" aria-label="Also share to"

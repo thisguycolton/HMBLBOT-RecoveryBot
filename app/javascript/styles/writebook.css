@@ -1928,6 +1928,18 @@ body:has(.wb) {
 @container (max-width: 36rem) {
   .wb-note-editor__share > .wb-note-editor__label { display: none; }
 }
+/* On a phone the buttons under the writing are just icons, all on one row */
+.wb-note-editor__post-icon { display: none; }
+.wb-note-editor__post { align-items: center; display: inline-flex; gap: 0.35rem; }
+@container (max-width: 28rem) {
+  .wb-note-editor--card .wb-note-editor__label,
+  .wb-note-editor--card .wb-vis-label,
+  .wb-note-editor--card .wb-note-editor__pill-label,
+  .wb-note-editor--card .wb-note-editor__post-label { display: none; }
+  .wb-note-editor--card .wb-note-editor__post-icon { display: block; }
+  .wb .wb-note-editor--card .wb-hl-note__actions { flex-wrap: nowrap; }
+  .wb .wb-note-editor--card .wb-note-editor__post { padding-inline: 0.9em; }
+}
 .wb-note-editor__end { align-items: center; display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; margin-inline-start: auto; }
 .wb-note-editor__share { align-items: center; color: var(--wb-ink-soft); display: inline-flex; font-size: 0.85rem; gap: 0.4rem; }
 .wb .wb-note-editor__pill {
