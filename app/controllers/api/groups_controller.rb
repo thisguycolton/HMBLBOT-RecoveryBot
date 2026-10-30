@@ -129,6 +129,8 @@ class Api::GroupsController < ApplicationController
 
   # POST /api/groups/:slug/join -> ask to join (a group admin approves)
   def join
+    return blocked if @group.blocked?(current_user)
+
     membership = @group.memberships.find_or_initialize_by(user: current_user)
     if membership.new_record?
       membership.update!(role: "member", status: "requested")
@@ -140,6 +142,8 @@ class Api::GroupsController < ApplicationController
   # POST /api/groups/join_with_token { token } -> the invite link
   def join_with_token
     @group = Group.find_by!(join_token: params[:token].to_s)
+    return blocked if @group.blocked?(current_user)
+
     membership = @group.memberships.find_or_initialize_by(user: current_user)
     membership.update!(status: "active", role: membership.role.presence || "member")
     render json: group_json
@@ -186,6 +190,10 @@ class Api::GroupsController < ApplicationController
   end
 
   private
+
+  def blocked
+    render json: { error: "You can't join this group." }, status: :forbidden
+  end
 
   def require_feature
     render json: { error: "Groups isn't open yet." }, status: :forbidden unless Group.feature_open_to?(current_user)
@@ -234,6 +242,7 @@ class Api::GroupsController < ApplicationController
     end
     if manager
       json[:requests] = @group.memberships.requested.includes(user: { avatar_attachment: :blob }).map { |m| m.user.as_member_json(email: true).merge(membership_id: m.id) }
+      json[:blocked] = @group.blocks.includes(user: { avatar_attachment: :blob }).order(created_at: :desc).map { |b| b.user.as_person_json.merge(blocked_at: b.created_at.iso8601) }
       json[:invite_url] = "#{request.base_url}/groups/join/#{@group.join_token}"
       json[:court_form_url] = "#{request.base_url}/court_verifications/new?group=#{@group.slug}"
       json[:court_email] = @group.court_email_json

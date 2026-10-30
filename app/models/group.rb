@@ -27,6 +27,9 @@ class Group < ApplicationRecord
   has_many :treasurer_reports, dependent: :destroy
   has_many :timeline_note_shares, dependent: :destroy
   has_many :timeline_notes, through: :timeline_note_shares
+  # Its chat (ChatChannel) and the people its admins blocked (GroupBlock)
+  has_many :chat_channels, dependent: :destroy
+  has_many :blocks, class_name: "GroupBlock", dependent: :delete_all
 
   # The group's page (Api::GroupPagesController): page_blocks stays nil until the group
   # saves its own, and until then it shows the default page (GroupPageTemplate)
@@ -161,6 +164,7 @@ class Group < ApplicationRecord
   # suggest agenda items, or a term is up)
   # Who writes the treasurer's reports: record keepers, and members an admin marked as treasurer
   def treasury_editable_by?(user) = records_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_keep_treasury }
+  def treasurers = User.where(id: active_memberships.where(can_keep_treasury: true).select(:user_id))
   def record_keepers = User.where(id: active_memberships.where("group_memberships.role = 'admin' OR group_memberships.can_keep_records").select(:user_id))
   # How many people make a quorum, from the bylaws: a number, or a share of the members
   def quorum_needed
@@ -192,6 +196,39 @@ class Group < ApplicationRecord
       default_body: CourtLetter.default_body(self),
       fields: CourtLetter::FIELDS,
     }
+  end
+
+  def blocked?(user) = !!user && blocks.exists?(user_id: user.id)
+
+  # Whether `user` holds a role a chat channel can be open to (ChatChannel::ROLES)
+  def holds_chat_role?(user, role, membership = membership_for(user))
+    return false unless membership&.active?
+
+    case role
+    when "members" then true
+    when "hosts" then can_host?(user)
+    when "record_keepers" then records_editable_by?(user)
+    when "host_coordinators" then hosts_editable_by?(user)
+    when "treasurers" then treasury_editable_by?(user)
+    else false
+    end
+  end
+
+  # Who may add chat channels: its admins, and the roles and people they picked
+  def chat_creatable_by?(user)
+    return true if manageable_by?(user)
+
+    membership = membership_for(user)
+    return false unless membership&.active?
+
+    chat_creator_user_ids.include?(user.id) || chat_creator_roles.any? { |r| holds_chat_role?(user, r, membership) }
+  end
+
+  # #general, made the first time anyone opens the chat
+  def general_channel
+    chat_channels.find_by(name: "general") || chat_channels.create!(name: "general", access_roles: ["members"], topic: "Everyone in #{title}")
+  rescue ActiveRecord::RecordNotUnique
+    chat_channels.find_by!(name: "general")
   end
 
   def notify_admins(kind:, title:, body: nil, url: "/groups/#{slug}")

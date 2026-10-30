@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from "react";
-import { Check, Copy, RefreshCw, Search, UserPlus, X } from "lucide-react";
+import { Ban, Check, Copy, RefreshCw, Search, UserPlus, X } from "lucide-react";
 import { iconInputClass, inputClass } from "../ui/styles";
 import { api, ROLE_LABELS, soberFor } from "./lib";
 import Avatar from "./Avatar";
 import { Card, ErrorNote, Pill, Tray, copy, dangerButton, primaryButton, quietButton } from "./ui";
 
 // Members with their pictures and blurbs. Group admins also see join requests, add people
-// by email, share the invite link, change roles and remove people.
+// by email, share the invite link, change roles and remove people, or block them (they can't
+// ask to join again or use the invite link until they're unblocked).
 
 // Everything the member search looks at: name, username, email and the roles shown as pills.
 const searchText = (person) => [
@@ -47,6 +48,9 @@ export default function MembersTab({ group, reload, setGroup }) {
     }
   };
 
+  const block = (person) => window.confirm(`Block ${person.name} from ${group.title}? They're taken out of the group and can't ask to join again or use the invite link until you unblock them.`)
+    && call("/blocks", { method: "POST", body: { user_id: person.id } });
+
   const add = async (e) => {
     e.preventDefault();
     await call("/memberships", { method: "POST", body: { email } });
@@ -83,6 +87,9 @@ export default function MembersTab({ group, reload, setGroup }) {
                 </button>
                 <button type="button" onClick={() => call(`/memberships/${person.membership_id}`, { method: "DELETE" })} className={quietButton}>
                   <X className="h-4 w-4" /> Turn down
+                </button>
+                <button type="button" onClick={() => block(person)} className={dangerButton} title="Turn down, and don't let them ask again">
+                  <Ban className="h-4 w-4" /> Block
                 </button>
                 </div>
               </Card>
@@ -181,6 +188,10 @@ export default function MembersTab({ group, reload, setGroup }) {
                       onClick={() => window.confirm(`Remove ${person.name} from ${group.title}?`) && call(`/memberships/${person.membership_id}`, { method: "DELETE" })}>
                       Remove
                     </button>
+                    <button type="button" className={`${dangerButton} !px-2 !py-1 !text-xs`} title="Remove them, and don't let them ask to join again or use the invite link"
+                      onClick={() => block(person)}>
+                      Block
+                    </button>
                   </div>
                 )}
               </div>
@@ -188,6 +199,20 @@ export default function MembersTab({ group, reload, setGroup }) {
           ))}
         </div>
       </Tray>
+
+      {manage && group.blocked?.length > 0 && (
+        <Tray label={`Blocked (${group.blocked.length})`}>
+          <div className="space-y-1.5">
+            {group.blocked.map((person) => (
+              <Card key={person.id} className="flex flex-wrap items-center gap-3 p-3">
+                <Avatar person={person} size={32} />
+                <p className="min-w-[10rem] flex-1 font-medium text-slate-900 dark:text-white">{person.name}</p>
+                <button type="button" className={quietButton} onClick={() => call(`/blocks/${person.id}`, { method: "DELETE" })}>Unblock</button>
+              </Card>
+            ))}
+          </div>
+        </Tray>
+      )}
     </div>
   );
 }

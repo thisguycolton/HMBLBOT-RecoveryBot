@@ -23,6 +23,9 @@ function fetchNav() {
   return pending;
 }
 
+// The signed-in member's username, as the shell last heard it (for lighting up @mentions of them)
+export const myUsername = () => cached()?.me?.username || null;
+
 // Something on the page changed what the sidebar shows (joined a group, got a role)
 export function refreshNav() {
   pending = null;

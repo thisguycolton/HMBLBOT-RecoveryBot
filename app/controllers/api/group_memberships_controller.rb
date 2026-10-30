@@ -12,6 +12,10 @@ class Api::GroupMembershipsController < ApplicationController
     user = User.find_by("LOWER(email) = ?", params[:email].to_s.strip.downcase)
     return render(json: { error: "No account uses that email. Send them the invite link instead." }, status: :unprocessable_entity) unless user
 
+    if @group.blocked?(user)
+      return render(json: { error: "That person is blocked from this group. Unblock them under Members first." }, status: :unprocessable_entity)
+    end
+
     membership = @group.memberships.find_or_initialize_by(user: user)
     membership.assign_attributes(status: "active", role: params[:role].presence_in(GroupMembership::ROLES) || membership.role || "member")
     return render_errors(membership) unless membership.save

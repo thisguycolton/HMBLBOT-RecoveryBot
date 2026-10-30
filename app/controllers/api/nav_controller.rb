@@ -33,6 +33,8 @@ class Api::NavController < ApplicationController
         host: membership.can_host,
       },
       requests: admin ? group.memberships.requested.count : 0,
+      # Messages they haven't read in the group's chat channels they're in
+      chat_unread: ChatChannel.unread_counts(group.chat_channels.open.select { |c| c.readable_by?(current_user, membership) }, current_user).values.sum,
       # Give a chip (/recovery/give?group=) is in the folder of each group they host for
       can_give: group.can_host?(current_user),
     }

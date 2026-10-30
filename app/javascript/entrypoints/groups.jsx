@@ -32,6 +32,7 @@ import HostingIndex from "../components/groups/hosting/HostingIndex";
 import ServiceReadingShare from "../components/groups/hosting/ServiceReadingShare";
 import TimeCapsule from "../components/groups/hosting/TimeCapsule";
 import DeckListPage from "../components/groups/hosting/deck/DeckList";
+import ChatPage from "../components/groups/chat/ChatPage";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
@@ -62,6 +63,9 @@ const router = createBrowserRouter(
     { path: "/:slug/chat/:code", element: <GuestPostings /> },
     // Group conscience: on the stage for people with a role, the group page's tab for members
     { path: "/:slug/conscience/*", element: <ConscienceRoute fallback={<Shell><GroupPage tab="conscience" /></Shell>} /> },
+    // The group's chat: its channels, and one open (/chat/:code is a hosting short link's postings)
+    { path: "/:slug/messages", element: <ChatPage /> },
+    { path: "/:slug/messages/:channelId", element: <ChatPage /> },
     // What needs you, a part for each role you hold in the group
     { path: "/:slug/dashboard", element: <GroupDashboard /> },
     // Group admins' settings: the group, its meetings, chips, literature, court verifications

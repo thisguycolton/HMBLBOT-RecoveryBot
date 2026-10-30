@@ -11,11 +11,14 @@ class Api::NoteCommentsController < ApplicationController
 
   # POST /api/timeline_notes/:timeline_note_id/comments  body -> the comment
   def create
+    return render(json: { error: "Comments are off for this note." }, status: :forbidden) if @note.comments_off
+
     comment = @note.comments.create!(user: current_user, body: params[:body].to_s.strip)
     if @note.user_id != current_user.id
       Notification.deliver(@note.user, kind: "note.comment", title: "#{current_user.display_name} commented on your note",
-                                       body: comment.body, url: @note.user.profile_path)
+                                       body: comment.body, url: @note.page_path, from: current_user)
     end
+    comment.mention!(current_user)
     render json: comment.as_api_json(viewer: current_user), status: :created
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
@@ -26,6 +29,7 @@ class Api::NoteCommentsController < ApplicationController
     return render(json: { error: "Only its writer can change it." }, status: :forbidden) unless @comment.user_id == current_user.id
 
     @comment.update!(body: params[:body].to_s.strip)
+    @comment.mention!(current_user)
     render json: comment_json
   rescue ActiveRecord::RecordInvalid
     render json: { error: @comment.errors.full_messages.to_sentence }, status: :unprocessable_entity

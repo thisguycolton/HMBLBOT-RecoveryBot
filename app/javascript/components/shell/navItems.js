@@ -1,7 +1,7 @@
 import {
   BookHeart, CalendarClock, CalendarRange, Gamepad2, Highlighter, House, LayoutDashboard, Library, MapPinned, MonitorPlay,
   NotebookPen, Pickaxe, Scale, ScrollText, Settings, Sparkles, UserRound, Users, Bookmark, Presentation, Medal, MoonStar,
-  HandHeart, Gift, FileCheck2,
+  HandHeart, Gift, FileCheck2, MessagesSquare,
 } from "lucide-react";
 
 // What the shell's sidebar (Sidebar.jsx) lists. "You" and "Explore" are fixed; "Your groups"
@@ -45,6 +45,7 @@ export function groupItems(slug, group = null) {
   return [
     { key: "home", label: "Home", href: `/groups/${slug}`, icon: House, exact: true },
     { key: "meetings", label: "Meetings", href: `/groups/${slug}/meetings`, icon: CalendarClock },
+    { key: "chat", label: "Chat", href: `/groups/${slug}/messages`, icon: MessagesSquare, count: "chat_unread" },
     (all || group.can_give) && { key: "court", label: "Court verification", href: `/court_verifications/new?group=${slug}`, icon: FileCheck2 },
     { key: "events", label: "Events", href: `/groups/${slug}/events`, icon: CalendarRange },
     { key: "conscience", label: "Conscience", href: `/groups/${slug}/conscience`, icon: Scale },

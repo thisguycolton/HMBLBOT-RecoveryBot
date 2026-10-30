@@ -11,9 +11,10 @@ export const iconButton = "relative size-10 place-items-center rounded-full !bg-
 // The bar along the top: on wide screens the search box, Donate, the theme, the bell and the
 // account menu (the logo sits above the sidebar); on phones the menu button, the logo, a
 // search button and the bell. `alwaysMenu` keeps the menu button on wide screens too, for the
-// full-window tools that have no sidebar. On phones the search button turns the bar itself
+// full-window tools that have no sidebar, and `bottomMenu` leaves it off where the bottom bar
+// already has one (Layout: phones get it there, wide screens have the sidebar). On phones the search button turns the bar itself
 // into the search box (`searching`), the same height as the bar, so nothing jumps.
-export default function TopBar({ nav, isAuthenticated, theme, onMenu, onDonate, onCourt, onSearch, searching = false, onSearchDone, onAside, asideLabel, alwaysMenu = false, withLogo = false }) {
+export default function TopBar({ nav, isAuthenticated, theme, onMenu, onDonate, onCourt, onSearch, searching = false, onSearchDone, onAside, asideLabel, alwaysMenu = false, bottomMenu = false, withLogo = false }) {
   return (
     <>
     {searching && (
@@ -24,7 +25,7 @@ export default function TopBar({ nav, isAuthenticated, theme, onMenu, onDonate, 
     )}
     <header id="site-nav" role="navigation" aria-label="Main"
       className={`shell-top h-full items-center gap-2 px-3 !font-sans sm:px-4 lg:gap-3 lg:px-6 ${searching ? "hidden lg:flex" : "flex"}`}>
-      <button type="button" onClick={onMenu} className={`${iconButton} inline-grid ${alwaysMenu ? "" : "lg:hidden"}`} aria-label="Open the menu"><Menu className="size-5" /></button>
+      {!bottomMenu && <button type="button" onClick={onMenu} className={`${iconButton} inline-grid ${alwaysMenu ? "" : "lg:hidden"}`} aria-label="Open the menu"><Menu className="size-5" /></button>}
       <a href="/" className={`${withLogo ? "" : "lg:hidden"} inline-flex items-center !text-slate-900 dark:!text-white`} aria-label="RecoveryBot home">
         <RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-xl" />
       </a>

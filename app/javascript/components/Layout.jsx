@@ -15,7 +15,9 @@ import { forgetPushIfSignedOut, registerServiceWorker } from "../lib/push";
 // the bar along the top (search, Donate, theme, notifications, account), and the stage, the
 // rounded panel the page itself sits in. A page can hand the shell a side panel (PageAside):
 // the column beside the stage on wide screens, a sheet from the bottom bar on phones.
-export default function Layout({ children, isAuthenticated, showFooter = true }) {
+// `fill`: the page takes the stage as it is, with no footer or padding under it (the chat).
+export default function Layout({ children, isAuthenticated, showFooter: footer = true, fill = false }) {
+  const showFooter = footer && !fill;
   const nav = useNav();
   const theme = useTheme();
   const path = usePath();
@@ -60,7 +62,7 @@ export default function Layout({ children, isAuthenticated, showFooter = true })
         </aside>
 
         <div className={`fixed inset-x-0 top-0 z-50 h-[var(--nav-h)] bg-[#ececec] lg:left-72 dark:bg-neutral-950 print:!hidden ${chrome.open ? "z-[2100]" : ""}`}>
-          <TopBar nav={nav} isAuthenticated={isAuthenticated} theme={theme}
+          <TopBar nav={nav} isAuthenticated={isAuthenticated} theme={theme} bottomMenu
             onMenu={() => chrome.show("menu")} onSearch={() => chrome.show("search")} searching={chrome.open === "search"} onSearchDone={chrome.close} onDonate={() => chrome.show("donate")} onCourt={() => chrome.show("court")}
             onAside={openAside} asideLabel={aside?.title || "Info"} />
         </div>
@@ -72,7 +74,7 @@ export default function Layout({ children, isAuthenticated, showFooter = true })
 
         <div className="pt-[var(--nav-h)] lg:pl-72 print:!p-0" style={push ? { marginTop: -push.y } : undefined}>
           <div className="stage flex min-h-[calc(100dvh-var(--nav-h))] overflow-clip bg-white dark:bg-neutral-900 max-lg:rounded-b-[28px] lg:rounded-l-[32px] print:!rounded-none">
-            <main className={`flex min-w-0 flex-1 flex-col ${showFooter ? "pb-10" : "pb-32 lg:pb-0"}`}>
+            <main className={`flex min-w-0 flex-1 flex-col ${fill ? "" : showFooter ? "pb-10" : "pb-32 lg:pb-0"}`}>
               <div className="flex-1">{children}</div>
             </main>
 

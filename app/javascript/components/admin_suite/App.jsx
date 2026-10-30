@@ -12,6 +12,7 @@ import TagsPage from "./TagsPage";
 import CourtVerificationsPage from "./CourtVerificationsPage";
 import TextReportsPage from "./TextReportsPage";
 import ContactRequestsPage from "./ContactRequestsPage";
+import UserReportsPage from "./UserReportsPage";
 import NoticesPage from "./NoticesPage";
 import ChipTemplatesPage from "./ChipTemplatesPage";
 import ChipDesignPage from "./ChipDesignPage";
@@ -58,6 +59,7 @@ function SuiteShell() {
           <Route path="/chip_templates" element={<ChipTemplatesPage notify={notify} />} />
           <Route path="/chip_templates/:id" element={<ChipTemplatesPage notify={notify} />} />
           <Route path="/contact_requests" element={<ContactRequestsPage notify={notify} />} />
+          <Route path="/reports" element={<UserReportsPage notify={notify} />} />
           <Route path="/text_reports" element={<TextReportsPage notify={notify} />} />
           <Route path="/court_verifications" element={<CourtVerificationsPage notify={notify} />} />
           <Route path="*" element={<p className="py-16 text-center text-slate-500 !font-sans">No admin page here.</p>} />

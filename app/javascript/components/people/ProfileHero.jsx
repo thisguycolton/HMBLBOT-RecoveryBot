@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import { CalendarDays, Check, UserPlus } from "lucide-react";
+import { Ban, CalendarDays, Check, EyeOff, Flag, UserPlus } from "lucide-react";
+import ReportDialog from "../groups/chat/ReportDialog";
+import PostMenu, { blockPerson, unblockPerson } from "../notes/PostMenu";
 import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
 import { heroBleed, heroButton, heroQuietButton } from "../groups/page/GroupHero";
@@ -8,8 +10,21 @@ import FollowListModal from "./FollowListModal";
 
 // The top of a profile: their cover (or the site's blue), picture, name, @username and
 // counts, with Follow (or `actions` on your own) under them. The counts open who's on them.
-export default function ProfileHero({ person, viewer, coverUrl, actions, onFollowChange, bleed = false }) {
+// On someone else's, a ••• offers Report and Block; once you've blocked them it says so, with
+// Unblock (`onBlockChange` hears either).
+export default function ProfileHero({ person, viewer, coverUrl, actions, onFollowChange, onBlockChange, bleed = false }) {
   const [busy, setBusy] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const first = person.name.split(" ")[0];
+  const unblock = async () => {
+    try {
+      await unblockPerson(person);
+      showToast(`You unblocked ${first}.`);
+      onBlockChange?.(false);
+    } catch (e) {
+      showToast(e.message, { tone: "error" });
+    }
+  };
   const [list, setList] = useState(null); // "followers" | "following" while the list is open
   const chip = "inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur";
   const toggleFollow = async () => {
@@ -52,8 +67,25 @@ export default function ProfileHero({ person, viewer, coverUrl, actions, onFollo
               {viewer.following ? <><Check className="size-4" /> Following</> : <><UserPlus className="size-4" /> Follow</>}
             </button>
           )}
+          {!viewer.is_me && viewer.signed_in && (
+            <PostMenu label={`More about ${first}`} className="text-white [&>button]:!text-white [&>button]:hover:!bg-white/20"
+              items={[
+                { label: `Report ${first}`, icon: Flag, onClick: () => setReporting(true) },
+                !viewer.blocked && { label: `Block ${first}`, icon: Ban, danger: true, onClick: async () => { if (await blockPerson(person)) onBlockChange?.(true); } },
+              ]} />
+          )}
         </div>
+        {viewer.blocked && (
+          <p className="flex items-start gap-2 self-start rounded-2xl bg-black/40 px-4 py-2 text-sm text-white backdrop-blur">
+            <EyeOff className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <span>
+              You blocked {first}. Their notes and comments are hidden from you.{" "}
+              <button type="button" onClick={unblock} className="inline font-semibold !bg-transparent p-0 text-white underline">Unblock</button>
+            </span>
+          </p>
+        )}
       </div>
+      {reporting && <ReportDialog person={person} onClose={() => setReporting(false)} />}
       <FollowListModal key={`${person.username}-${person.followers_count}`} person={person} which={list} onWhich={setList} onClose={() => setList(null)} />
     </header>
   );
