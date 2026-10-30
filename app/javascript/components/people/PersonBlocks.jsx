@@ -45,8 +45,9 @@ function AboutBlock({ block, compact, editing, context, title }) {
 
 const SHOW = { all: null, notes: "note", highlights: "highlight" };
 
-// Their notes and highlights, newest first, as far as the viewer may see them. On your
-// own profile you write notes right here.
+// Their notes and highlights, and notes written on their page, newest first, as far as the
+// viewer may see them. On your own profile you write notes right here; on the page of
+// someone you follow or who follows you, you write a note on their page.
 function FeedBlock({ block, compact, editing, context, title }) {
   const [items, setItems] = useState(context.feed || []);
   const [more, setMore] = useState((context.feed || []).length >= 40);
@@ -86,6 +87,13 @@ function FeedBlock({ block, compact, editing, context, title }) {
           <div className="mb-4">
             <NoteEditor groups={context.viewer.groups} defaultVisibility={context.viewer.default_note_visibility} max={context.note_max} imagesMax={context.images_max}
               placeholder="What's on your mind today? Select words to format them, and add photos if you like."
+              onSaved={(note) => setItems((list) => [note, ...list])} />
+          </div>
+        )}
+        {context.viewer?.can_write && !editing && kind !== "highlight" && (
+          <div className="mb-4">
+            <NoteEditor to={context.person} defaultVisibility={context.viewer.default_note_visibility} max={context.note_max} imagesMax={context.images_max}
+              placeholder={`Write something to ${context.person.name.split(" ")[0]}. They'll get a notification.`}
               onSaved={(note) => setItems((list) => [note, ...list])} />
           </div>
         )}

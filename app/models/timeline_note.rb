@@ -18,6 +18,12 @@
 # as Chips.catalog does and `chip` is how it looked then, kept as it was. While its author no
 # longer has a sobriety chip they shared (they changed their sobriety date), `chip_hidden`
 # keeps it, and reposts of it, off everyone else's feeds (sync_chips).
+#
+# A note can be written on someone else's profile, someone its author follows or who follows
+# them (writable_by?): `recipient` is whose page it's on. It shows on both their timelines.
+# Its `visibility` still says who else sees it, counted from its author (so "private" is
+# just the two of them), and the person it's on always sees it and can take it off their
+# page. These notes aren't shared to groups and can't be reposted.
 class TimelineNote < ApplicationRecord
   include Visibility
   include Reactable
@@ -31,6 +37,7 @@ class TimelineNote < ApplicationRecord
   has_many_attached :images
   has_many :comments, -> { order(:created_at, :id) }, class_name: "NoteComment", dependent: :destroy
   has_one_attached :link_image
+  belongs_to :recipient, class_name: "User", optional: true
   belongs_to :repost_of, class_name: "TimelineNote", optional: true, inverse_of: :reposts
   has_many :reposts, class_name: "TimelineNote", foreign_key: :repost_of_id, inverse_of: :repost_of, dependent: :destroy
 
@@ -38,6 +45,7 @@ class TimelineNote < ApplicationRecord
   validate :has_something, unless: :repost?
   validate :images_are_pictures
   validate :can_be_reposted, if: :repost?
+  validate :can_write_to_recipient, on: :create, if: :recipient_id
   validates :repost_of_id, uniqueness: { scope: :user_id, message: "is already on your timeline" }, if: :repost?
 
   before_save { self.hashtags = Hashtags.in(body) if body_changed? || new_record? }
@@ -54,7 +62,7 @@ class TimelineNote < ApplicationRecord
   # What a feed needs to show notes (and the originals of reposts) without a query each
   scope :for_feed, lambda {
     people = { user: { avatar_attachment: :blob } }
-    shown = [:groups, :reposts, { images_attachments: :blob, link_image_attachment: :blob, **people, reactions: people,
+    shown = [:groups, :reposts, { recipient: { avatar_attachment: :blob } }, { images_attachments: :blob, link_image_attachment: :blob, **people, reactions: people,
                                   comments: [people, { reactions: people, timeline_note: :groups }] }]
     includes(*shown, repost_of: shown)
   }
@@ -73,12 +81,32 @@ class TimelineNote < ApplicationRecord
         JOIN group_memberships am ON am.group_id = s.group_id AND am.user_id = timeline_notes.user_id AND am.status = 'active'
         WHERE s.timeline_note_id = timeline_notes.id)
     SQL
-    seen = where(user_id: viewer.id).or(where(in_group, viewer: viewer.id))
+    seen = where(user_id: viewer.id).or(where(recipient_id: viewer.id)).or(where(in_group, viewer: viewer.id))
     if User.profiles_open_to?(viewer)
       followed = Follow.where(follower_id: viewer.id).select(:followed_id)
       seen = seen.or(where(visibility: "public")).or(where(visibility: "followers", user_id: followed))
     end
     seen.where(repost_of_id: nil).merge(where(user_id: viewer.id).or(shown))
+  end
+
+  # What `person`'s profile timeline shows `viewer`: the notes they wrote and the ones written
+  # on their page, the ones the viewer may see (all of them, on your own profile)
+  def self.on_profile_of(person, viewer)
+    theirs = where(user_id: person.id).or(where(recipient_id: person.id))
+    return theirs if viewer&.id == person.id
+    return none unless viewer && User.profiles_open_to?(viewer)
+
+    followed = Follow.where(follower_id: viewer.id).select(:followed_id)
+    seen = where(user_id: viewer.id).or(where(recipient_id: viewer.id)).or(where(visibility: "public"))
+                                    .or(where(visibility: "followers", user_id: followed))
+    theirs.and(seen)
+  end
+
+  # Whether `author` may write a note on `person`'s page: someone they follow or who follows them
+  def self.writable_by?(author, person)
+    return false unless author && person && author.id != person.id
+
+    Follow.where(follower_id: author.id, followed_id: person.id).or(Follow.where(follower_id: person.id, followed_id: author.id)).exists?
   end
 
   # The chip they're sharing, as their Chips page shows it (Chips.catalog), with the design it
@@ -115,6 +143,7 @@ class TimelineNote < ApplicationRecord
   # A repost also needs its original to still be shared with Members.
   def visible_to?(viewer)
     return false unless viewer
+    return true if recipient_id && viewer.id == recipient_id
     return false if viewer.id != user_id && (chip_hidden || repost_of&.chip_hidden)
     return repost_of&.visibility == "public" && seen_on_profile_by?(viewer) if repost?
 
@@ -122,11 +151,12 @@ class TimelineNote < ApplicationRecord
   end
 
   # Others may repost it when it's shared with Members, unless it's a repost itself
-  def repostable_by?(viewer) = !!viewer && viewer.id != user_id && !repost? && visibility == "public"
+  def repostable_by?(viewer) = !!viewer && viewer.id != user_id && !repost? && !recipient_id && visibility == "public"
 
   # Why someone else can't repost it (their Repost button says so), or nil when they can
   def repost_blocked_reason(viewer)
     return if !viewer || viewer.id == user_id || repost? || repostable_by?(viewer)
+    return "Notes written on someone's page can't be reposted." if recipient_id
 
     shared = visibility == "followers" ? "with their followers" : "with their group"
     "#{user.display_name.split.first} shared this only #{shared}, so it can't be reposted. Only notes shared with Members can be."
@@ -134,6 +164,8 @@ class TimelineNote < ApplicationRecord
 
   # Shares it to these groups, only the ones its author is in, and stops sharing it to the rest
   def share_to!(groups)
+    return if recipient_id
+
     allowed = groups.select { |g| g.member?(user) }
     shares.where.not(group_id: allowed.map(&:id)).destroy_all
     allowed.each { |g| shares.find_or_create_by!(group: g) }
@@ -156,6 +188,7 @@ class TimelineNote < ApplicationRecord
 
   # With `group`, as that group's timeline shows it (can_remove: its author, or the
   # group's admins); without, as a profile shows it (its author also sees where it's shared)
+  # and the person it's on can take it off). `recipient` is whose page it was written on.
   # A repost shows its original as `note`, with who reposted it as `author`.
   def as_api_json(viewer:, group: nil)
     return repost_json(viewer) if repost?
@@ -165,11 +198,14 @@ class TimelineNote < ApplicationRecord
              author: user.as_person_json, mine: mine, **social_json(viewer) }
     json[:chip] = chip if chip_id
     json[:chip_hidden] = true if mine && chip_hidden
+    json[:recipient] = recipient.as_person_json if recipient
     if group
       json[:can_remove] = mine || group.manageable_by?(viewer)
     elsif mine
       json[:visibility] = visibility
       json[:groups] = groups.map { |g| { slug: g.slug, title: g.title } }
+    elsif recipient_id && viewer&.id == recipient_id
+      json[:can_remove] = true
     end
     json
   end
@@ -228,6 +264,13 @@ class TimelineNote < ApplicationRecord
   end
 
   def drop_reposts = reposts.destroy_all
+
+  def can_write_to_recipient
+    return errors.add(:base, "You can't share or repost a note on someone's page.") if repost? || chip_id
+    return if self.class.writable_by?(user, recipient)
+
+    errors.add(:base, "You can write on the pages of people you follow or who follow you.")
+  end
 
   def has_something
     errors.add(:base, "Write something or add a picture") if body.to_s.strip.empty? && !images.attached? && !chip_id

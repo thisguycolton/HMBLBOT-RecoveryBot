@@ -15,13 +15,14 @@ import NoteEditor from "./NoteEditor";
 import VisibilityPicker from "./VisibilityPicker";
 import ChipModal, { FlatChip } from "../recovery/ChipModal";
 import { dayLabel } from "../recovery/lib";
-import { HIGHLIGHT_VISIBILITY, saveNote } from "./lib";
+import { HIGHLIGHT_VISIBILITY, recipientVisibility, saveNote } from "./lib";
 
 // One thing on a timeline: a note (Markdown and pictures), a repost of someone's note, or a
 // highlight (its quote, its note and where it's from). Its owner edits it right there and
 // picks who sees it; others react to notes and repost them (NoteActions).
 // `showAuthor` puts their name on it (a feed of several people); `readOnly` (the editor's
-// canvas) leaves off the owner's buttons. Needs a `.wb` around it.
+// canvas) leaves off the owner's buttons. A note written on someone's page always names who
+// wrote it and whose page it's on, and that person can take it off. Needs a `.wb` around it.
 export default function FeedItem({ item: given, readOnly = false, showAuthor = false, compact = false, groups = null, max, imagesMax, onChange, onRemove, extraAction }) {
   const item = readOnly ? { ...given, mine: false, by: null } : given;
   const [editing, setEditing] = useState(false);
@@ -113,22 +114,25 @@ function ItemHead({ item, showAuthor, compact, extraAction, onChange, onRemove, 
       showToast("Couldn't change who sees it.", { tone: "error" });
     }
   };
+  const to = item.kind === "note" && item.recipient;
+  const visibilityOptions = item.kind === "highlight" ? { options: HIGHLIGHT_VISIBILITY, title: "Who sees this on your timeline" }
+    : to ? { options: recipientVisibility(to), title: "Who sees this note" } : {};
   return (
     <header className="wb-feed-item__head">
-      {showAuthor && (
+      {(showAuthor || to) && (
         <a href={`/people/${item.author.username}`} className="wb-feed-item__author">
           <Avatar person={item.author} size={compact ? 26 : 32} />
           <span>{item.author.name}</span>
         </a>
       )}
       <span className="wb-feed-item__meta">
-        {item.kind === "highlight" ? "Highlighted" : item.chip ? "Chip" : "Note"} · {timeAgo(item.created_at)}{item.edited ? " · edited" : ""}
+        {to ? <>To <a href={`/people/${to.username}`} className="font-semibold hover:underline">{to.name}</a></>
+          : item.kind === "highlight" ? "Highlighted" : item.chip ? "Chip" : "Note"} · {timeAgo(item.created_at)}{item.edited ? " · edited" : ""}
       </span>
       <span className="flex-1" />
       {extraAction}
       {item.mine && item.visibility && !editing && (
-        <VisibilityPicker value={item.visibility} onChange={changeVisibility} align="right"
-          {...(item.kind === "highlight" ? { options: HIGHLIGHT_VISIBILITY, title: "Who sees this on your timeline" } : {})} />
+        <VisibilityPicker value={item.visibility} onChange={changeVisibility} align="right" {...visibilityOptions} />
       )}
     </header>
   );
@@ -151,7 +155,9 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
   const [open, setOpen] = useState(null);
 
   const destroy = async () => {
-    if (!window.confirm(item.groups?.length ? "Delete this note? It comes off every group it's shared to." : "Delete this note?")) return;
+    const ask = !item.mine ? `Take ${item.author.name.split(" ")[0]}'s note off your page? It's deleted for both of you.`
+      : item.groups?.length ? "Delete this note? It comes off every group it's shared to." : "Delete this note?";
+    if (!window.confirm(ask)) return;
     try {
       await api(`/timeline_notes/${item.id}`, { method: "DELETE" });
       onRemove?.(item.id);
@@ -190,6 +196,12 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
           <span className="flex-1" />
           <button type="button" className="wb-hl-note__edit" onClick={() => setEditing(true)}><Pencil size={13} aria-hidden="true" /> Edit</button>
           <button type="button" className="wb-hl-note__edit wb-hl-note__delete" onClick={destroy}><Trash2 size={13} aria-hidden="true" /> Delete</button>
+        </div>
+      )}
+      {!item.mine && item.recipient && item.can_remove && (
+        <div className="wb-feed-item__foot">
+          <span className="flex-1" />
+          <button type="button" className="wb-hl-note__edit wb-hl-note__delete" onClick={destroy}><Trash2 size={13} aria-hidden="true" /> Take off my page</button>
         </div>
       )}
     </>

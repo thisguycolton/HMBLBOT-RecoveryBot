@@ -71,6 +71,7 @@ class User < ApplicationRecord
   has_many :schedule_poll_ballots, dependent: :nullify
   has_many :event_collaborators, dependent: :destroy
   has_many :timeline_notes, dependent: :destroy
+  has_many :notes_received, class_name: "TimelineNote", foreign_key: :recipient_id, dependent: :destroy, inverse_of: :recipient
   has_many :note_reactions, dependent: :delete_all
   has_many :note_comments, dependent: :destroy
   has_many :event_rsvps, dependent: :destroy
