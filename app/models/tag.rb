@@ -1,4 +1,5 @@
 class Tag < ApplicationRecord
+  moderates_language :title, :description
   has_many :reading_tags, dependent: :destroy
   has_many :readings, through: :reading_tags
 

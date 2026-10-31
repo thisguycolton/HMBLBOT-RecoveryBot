@@ -1,0 +1,93 @@
+# Words people can't post anywhere in the app (chat, notes, comments, profiles, documents,
+# events, ...). Ordinary swearing (fuck, shit, ass, bitch, damn, ...) is fine and is NOT listed
+# here; this is for racist slurs and hate speech.
+#
+# How matching works (see app/models/blocked_language.rb):
+# - Case doesn't matter, and accents, look-alike letters from other alphabets (Cyrillic "а",
+#   Greek "ο", fullwidth "ｎ", ...) and invisible characters are ignored.
+# - Each letter also matches common stand-ins: a=4@, e=3, i=1!| (and l in `anywhere` words), o=0, s=5$z, g=9 6, t=7+, b=8,
+#   and a vowel can be written as *.
+# - In words of 5+ letters a letter may be repeated ("niiigggerrr"), and a trailing s/z/es is allowed (plurals).
+# - Letters spelled out one at a time are joined back up ("n i g g e r", "n.i.g.g.e.r").
+#
+# words:     matched as a whole word only, so "spic" doesn't catch "spice" and "paki" doesn't
+#            catch "Pakistan". Phrases with spaces match with any spaces/punctuation between
+#            the words.
+# anywhere:  matched even inside another word ("xxnigger"), and with spaces or punctuation
+#            between letters ("nig ger"; stand-ins like 1 or 3 only count when the letters
+#            are together, so "in 1966. a" isn't caught). Only for words no innocent word contains (use
+#            `allowed` for the few that do).
+# allowed:   innocent words or phrases (regular expressions, case-insensitive, matched against
+#            the cleaned-up text) that are removed before checking, so "snigger", "Maine Coon"
+#            and "chink in the armor" are fine.
+#
+# After editing, restart the app (the list is read once). Run
+# `bin/rails test test/models/blocked_language_test.rb` to check nothing innocent got caught.
+
+anywhere:
+  - nigger
+  - nigga
+  - niggah
+  - nigguh
+  - niglet
+  - nignog
+
+words:
+  # anti-Black
+  - coon
+  - darkie
+  - jigaboo
+  - jiggaboo
+  - pickaninny
+  - porch monkey
+  - jungle bunny
+  - golliwog
+  # anti-Latino
+  - spic
+  - spick
+  - wetback
+  - beaner
+  # anti-Asian
+  - chink
+  - gook
+  - zipperhead
+  - slant eye
+  - slanty eye
+  - chinaman
+  - ching chong
+  - jap
+  # anti-South Asian / Middle Eastern
+  - paki
+  - towelhead
+  - towel head
+  - raghead
+  - rag head
+  - camel jockey
+  - sand monkey
+  # anti-Native
+  - redskin
+  - squaw
+  - injun
+  # anti-Jewish
+  - kike
+  - kyke
+  - yid
+  # anti-white / others
+  - honky
+  - wop
+  # other hate slurs
+  - faggot
+  - faggit
+  - tranny
+  # hate phrases
+  - heil hitler
+  - sieg heil
+
+allowed:
+  - '\bsnigger(?:s|ed|ing)?\b'
+  - '\bniggard(?:s|ly|liness)?\b'
+  - '\bmaine coons?\b'
+  - '\bcoon ?(?:hounds?|dogs?|cats?)\b'
+  - '\bchinks? (?:in|of) '  # "a chink in the walls their ego has built" (As Bill Sees It), "a chink of light"
+  - '\bhonky[ -]?tonks?\b'
+  - '\bspick (?:and|&|n) span\b'

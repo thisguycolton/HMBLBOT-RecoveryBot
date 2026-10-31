@@ -7,6 +7,7 @@
 # Names are plain text (first name and last initial), never links to accounts, so a record read
 # or printed by everyone exposes nobody.
 class Motion < ApplicationRecord
+  moderates_language :title, :text, :moved_by_name, :seconded_by_name, :minority_opinion, :amended_text, :note, :committee
   STATUSES = %w[proposed passed failed tabled withdrawn no_second referred postponed postponed_indefinitely out_of_order].freeze
   CATEGORIES = %w[money format service literature meeting other].freeze
   VISIBILITIES = %w[members public].freeze

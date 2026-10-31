@@ -3,6 +3,7 @@
 # (and a notification); any other gets an email with a link to claim it (ChipsController#claim),
 # and it's theirs when they open it signed in, or confirm an account made with that address.
 class ChipAward < ApplicationRecord
+  moderates_language :note
   ROUND_KEYS = ChipDesign::ROUND_KEYS
   LABELS = { "24h" => "24 hours", "30d" => "30 days", "60d" => "60 days", "90d" => "90 days", "6m" => "6 months", "9m" => "9 months", "18m" => "18 months" }.freeze
 

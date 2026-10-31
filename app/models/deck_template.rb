@@ -2,6 +2,7 @@
 # site-wide gallery when the group asks (gallery: pending) and a site admin publishes it. The
 # built-in templates (Host a meeting, Business meeting...) are in the page (deck/templates.js).
 class DeckTemplate < ApplicationRecord
+  moderates_language :name, :description
   PURPOSES = %w[meeting business_meeting onboarding event general].freeze
   GALLERY = %w[none pending published declined].freeze
 

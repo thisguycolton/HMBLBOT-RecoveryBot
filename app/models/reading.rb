@@ -1,4 +1,5 @@
 class Reading < ApplicationRecord
+  moderates_language :title, :host, :meetingName, :content, :topic
   has_rich_text :content
   has_richer_text :richer_content, store_as: :json
   has_rich_text :topic

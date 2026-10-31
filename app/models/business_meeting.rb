@@ -3,6 +3,7 @@
 # they're ready and approved at the next one. Decisions made at it (Motion) link back to it.
 # It can have an Event announcing it, so RSVPs, the flyer and a date poll come with Events.
 class BusinessMeeting < ApplicationRecord
+  moderates_language :chair_name, :secretary_name, :minutes
   STATUSES = %w[planned held cancelled].freeze
   MINUTES_STATUSES = %w[draft posted approved].freeze
   VISIBILITIES = %w[members keepers].freeze

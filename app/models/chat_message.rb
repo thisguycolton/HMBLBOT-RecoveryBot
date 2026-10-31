@@ -7,6 +7,7 @@
 # its first link (LinkPreview, read in the background by ChatLinkPreviewJob). Its writer can also
 # attach the group's documents (document_ids): each reader sees the ones they may open.
 class ChatMessage < ApplicationRecord
+  moderates_language :body
   include Mentionable
 
   BODY_MAX = 4000

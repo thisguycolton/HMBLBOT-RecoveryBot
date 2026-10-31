@@ -1,5 +1,6 @@
 # app/models/user_highlight.rb
 class UserHighlight < ApplicationRecord
+  moderates_language :note
   # Highlights stay with their reader until they share one to their timeline: then
   # `visibility` (Followers or Members) says who sees it there and `shared_at` dates it in
   # the feed. Setting it back to private takes it off every timeline, theirs included.
