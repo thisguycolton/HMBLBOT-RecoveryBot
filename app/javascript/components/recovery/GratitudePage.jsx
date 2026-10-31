@@ -3,6 +3,8 @@ import { Plus, X } from "lucide-react";
 import { inputClass } from "../ui/styles";
 import { Card, primaryButton, quietButton } from "../groups/ui";
 import { EntryShell, useEntry } from "./EntryShell";
+import EntryShare from "./EntryShare";
+import { dayLabel } from "./lib";
 
 const MAX = 50; // GratitudeList::MAX_ITEMS
 
@@ -28,6 +30,7 @@ export default function GratitudePage() {
     focusAt.current = null;
   });
 
+  const filled = items.map((i) => i.trim()).filter(Boolean);
   const change = (next) => { setItems(next); setSaved(false); };
   const add = (at) => {
     if (items.length >= MAX) return;
@@ -37,7 +40,7 @@ export default function GratitudePage() {
   const remove = (i) => change(items.length > 1 ? items.filter((_, j) => j !== i) : [""]);
   const submit = (e) => {
     e?.preventDefault();
-    save({ items: items.map((i) => i.trim()).filter(Boolean) }, ({ kind, count: n }) => (kind.endsWith("-streak")
+    save({ items: filled }, ({ kind, count: n }) => (kind.endsWith("-streak")
       ? { title: `${n} days in a row`, text: `${n} days of gratitude in a row. Keep it going.` }
       : {
         title: n === 1 ? "Your first gratitude list" : `${n.toLocaleString()} gratitude lists`,
@@ -68,8 +71,10 @@ export default function GratitudePage() {
           </ol>
           {items.length < MAX && <button type="button" className={`${quietButton} ml-8`} onClick={() => add(items.length)}><Plus className="size-4" /> Another</button>}
         </Card>
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {saved && <span role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{entry ? "Saved." : "Cleared."}</span>}
+          <EntryShare tool="gratitude" what="gratitude list" title={`My gratitude list · ${dayLabel(on)}`} disabled={!filled.length}
+            build={() => filled.map((item, i) => `${i + 1}. ${item}`).join("\n")} />
           <button type="submit" disabled={saving} className={primaryButton}>{saving ? "Saving…" : "Save list"}</button>
         </div>
       </form>
