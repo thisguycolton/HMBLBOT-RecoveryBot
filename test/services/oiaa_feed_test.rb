@@ -74,4 +74,11 @@ class OiaaFeedTest < ActiveSupport::TestCase
   ensure
     ENV.delete("AA_INTERGROUP_FEED_URL")
   end
+
+  test "imported text keeps its ampersands and quotes as characters" do
+    assert_equal "Post & Wellesley", OiaaFeed.clean("Post & Wellesley")
+    assert_equal "Post & Wellesley", OiaaFeed.clean("Post &amp; Wellesley")
+    assert_equal "Post & Wellesley", OiaaFeed.clean("Post &amp;amp; Wellesley")
+    assert_equal "Bill's <3 group", OiaaFeed.clean("<b>Bill&#39;s</b> &lt;3 group")
+  end
 end

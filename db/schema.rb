@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_31_170000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_31_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -922,6 +922,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_170000) do
     t.datetime "oiaa_synced_at"
     t.boolean "oiaa_missing", default: false, null: false
     t.jsonb "chip_design"
+    t.decimal "latitude", precision: 9, scale: 6
+    t.decimal "longitude", precision: 9, scale: 6
     t.index ["group_id"], name: "index_meetings_on_group_id"
     t.index ["oiaa_slug"], name: "index_meetings_on_oiaa_slug"
   end
@@ -1031,6 +1033,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_170000) do
     t.string "source_slug"
     t.text "location_notes"
     t.datetime "hidden_at"
+    t.decimal "latitude", precision: 9, scale: 6
+    t.decimal "longitude", precision: 9, scale: 6
     t.index ["conference_id"], name: "index_oiaa_meetings_on_conference_id"
     t.index ["last_seen_at"], name: "index_oiaa_meetings_on_last_seen_at"
     t.index ["meeting_directory_id"], name: "index_oiaa_meetings_on_meeting_directory_id"

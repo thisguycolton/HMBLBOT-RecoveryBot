@@ -183,7 +183,13 @@ export default function PrivacyPage({ turnstile = false }) {
             <li>
               <strong>Local meeting lists:</strong> in-person meetings in Find a meeting come from the public meeting lists that local
               AA intergroups publish, which our admins import. That's information about meetings too, and nothing about you goes to them.
-              A meeting's address links to Google Maps; nothing is sent to Google unless you open that link.
+              A meeting's address opens your own maps app (Apple Maps, the one you chose on Android, or Google Maps in other
+              browsers); nothing is sent to them unless you open it.
+            </li>
+            <li>
+              <strong>Meeting maps:</strong> the little map on a group's page is drawn by our server from OpenStreetMap. To draw it,
+              our server sends the meeting's address (never anything about you) to OpenStreetMap's address lookup and fetches their
+              map pictures. Your browser only loads the finished picture from us.
             </li>
           </ul>
 

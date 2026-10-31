@@ -110,10 +110,24 @@ module OiaaFeed
     {
       attendance_option: (option if %w[online in_person hybrid inactive].include?(option)),
       location: clean(record["location"]).presence&.first(255), formatted_address: address&.first(255), region: region&.first(255),
+      latitude: coordinate(record["latitude"], 90), longitude: coordinate(record["longitude"], 180),
     }
   end
 
-  def clean(text) = ActionController::Base.helpers.strip_tags(text.to_s).strip
+  # A feed's latitude or longitude, when it's a real one (0 is what some feeds put for none)
+  def coordinate(value, limit)
+    number = Float(value.to_s.strip, exception: false)
+    number.round(6) if number && number.abs <= limit && !number.zero?
+  end
+
+  # Plain text: tags dropped and entities turned back into characters ("&amp;" -> "&"; some
+  # feeds encode twice). strip_tags leaves its result HTML-escaped, which showed as "&amp;".
+  # It's shown as text everywhere, so a "<" stays a "<".
+  def clean(text)
+    plain = ActionController::Base.helpers.strip_tags(text.to_s)
+    2.times { plain = CGI.unescapeHTML(plain) }
+    plain.tr("\u00a0", " ").strip
+  end
 
   # The same video meeting written different ways: a Zoom meeting ID (from a link or typed
   # with spaces), or the link's host and path for anything else.
