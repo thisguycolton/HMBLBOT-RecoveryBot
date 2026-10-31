@@ -79,6 +79,7 @@ class Api::HighlightsController < ApplicationController
       visibility: Visibility::LEVELS.include?(highlight_params[:visibility]) ? highlight_params[:visibility] : "private"
     )
     h.save!
+    h.mention!(current_user)
     render json: highlight_json(h), status: :created
   rescue ActiveRecord::RecordNotFound => e
     render json: { error: e.message }, status: :not_found
@@ -97,6 +98,8 @@ class Api::HighlightsController < ApplicationController
     h.visibility = attrs[:visibility] if attrs.key?(:visibility)
     h.style = attrs[:style] if attrs[:style].present?
     h.save!
+    # Tells who its note newly @ mentions, once it's shared and they can see it (UserHighlight)
+    h.mention!(current_user)
     render json: highlight_json(h)
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
@@ -119,6 +122,9 @@ class Api::HighlightsController < ApplicationController
 
   def highlight_json(h)
     json = h.as_json(only: [:id, :style, :selector, :note, :created_at, :updated_at])
+    # Who its @ mentions name, only for people who can see profiles (share links can be opened
+    # signed out, and they don't get people's names)
+    json["mentions"] = User.profiles_open_to?(current_user) ? h.mentions : {}
     mine = current_user.present? && h.user_id == current_user.id
     json["mine"] = mine
     if mine
