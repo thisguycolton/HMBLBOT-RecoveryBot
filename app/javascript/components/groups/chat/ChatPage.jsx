@@ -601,18 +601,44 @@ function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, ca
   );
 }
 
-// The emoji on a message, each with how many: tap one to add yours or take it off; hovering
-// (or a long press) says who
+// The emoji on a message, each with how many: tap one to add yours or take it off. Who reacted
+// shows on hover, or with a long press on a phone.
 function Reactions({ reactions, canReact, onReact, onMore }) {
+  const [showing, setShowing] = useState(null); // the emoji whose names show, after a long press
+  const press = useRef({ timer: null, long: false });
+  useEffect(() => {
+    if (!showing) return undefined;
+    const away = () => setShowing(null);
+    const timer = setTimeout(away, 4000);
+    document.addEventListener("pointerdown", away);
+    return () => { clearTimeout(timer); document.removeEventListener("pointerdown", away); };
+  }, [showing]);
+  const down = (e, emoji) => {
+    if (e.pointerType !== "touch") return;
+    press.current.long = false;
+    clearTimeout(press.current.timer);
+    press.current.timer = setTimeout(() => { press.current.long = true; setShowing(emoji); navigator.vibrate?.(10); }, 450);
+  };
+  const cancel = () => clearTimeout(press.current.timer);
   return (
     <div className="mt-1 flex flex-wrap items-center gap-1">
       {reactions.map((r) => {
         const who = `${listNames(r.names, r.count)} reacted with ${r.emoji}`;
         return (
-          <button key={r.emoji} type="button" disabled={!canReact} onClick={() => onReact(r.emoji)} title={who} aria-label={`${who}${r.mine ? ". Tap to take yours off" : ""}`} aria-pressed={r.mine}
-            className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-sm tabular-nums ring-1 transition disabled:cursor-default ${r.mine ? "!bg-accent/10 font-semibold !text-accent ring-accent/60" : "!bg-neutral-100 text-slate-600 ring-transparent hover:ring-neutral-300 dark:!bg-neutral-800 dark:text-neutral-300 dark:hover:ring-neutral-600"}`}>
-            <span className="text-base leading-none">{r.emoji}</span> <span className="text-xs">{r.count}</span>
-          </button>
+          <span key={r.emoji} className="relative">
+            <button type="button" title={who} aria-label={`${who}${r.mine ? ". Tap to take yours off" : ""}`} aria-pressed={r.mine}
+              onPointerDown={(e) => down(e, r.emoji)} onPointerUp={cancel} onPointerLeave={cancel} onPointerCancel={cancel}
+              onContextMenu={(e) => e.preventDefault()}
+              onClick={() => { if (press.current.long) { press.current.long = false; return; } if (canReact) onReact(r.emoji); }}
+              className={`inline-flex h-7 select-none items-center gap-1 rounded-full px-2 text-sm tabular-nums ring-1 transition [-webkit-touch-callout:none] ${canReact ? "" : "cursor-default"} ${r.mine ? "!bg-accent/10 font-semibold !text-accent ring-accent/60" : "!bg-neutral-100 text-slate-600 ring-transparent hover:ring-neutral-300 dark:!bg-neutral-800 dark:text-neutral-300 dark:hover:ring-neutral-600"}`}>
+              <span className="text-base leading-none">{r.emoji}</span> <span className="text-xs">{r.count}</span>
+            </button>
+            {showing === r.emoji && (
+              <span role="tooltip" className="absolute bottom-full left-0 z-20 mb-1.5 w-max max-w-[16rem] rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs leading-snug text-white shadow-lg dark:bg-neutral-700">
+                {who}
+              </span>
+            )}
+          </span>
         );
       })}
       {canReact && (
