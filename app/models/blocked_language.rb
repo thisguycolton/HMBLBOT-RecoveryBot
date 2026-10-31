@@ -1,6 +1,7 @@
 # Finds racist slurs and hate speech in text people write, including the usual ways of sneaking
 # them past a filter (l33t, spacing, symbols, repeated letters, look-alike letters, invisible
-# characters). Ordinary swearing is fine. The list lives in config/blocked_language.yml.
+# characters). Ordinary swearing is fine. The list is LanguageRule (edited in the admin suite),
+# or config/blocked_language.yml while that's empty.
 #
 #   BlockedLanguage.found?("some text")  # => true / false
 #   BlockedLanguage.match("some text")   # => the offending bit as written, or nil
@@ -40,8 +41,18 @@ class BlockedLanguage
   NOT_WRITING = %r{\A(?:data:|https?://)|\A\S{120,}\z}
 
   class << self
-    def instance = @instance ||= new(YAML.load_file(CONFIG))
+    # Rebuilt whenever the list changes (any app process, since it's checked against the table)
+    def instance
+      stamp = LanguageRule.stamp
+      if @instance.nil? || stamp != @stamp
+        @instance = new(stamp ? LanguageRule.config : starter_config)
+        @stamp = stamp
+      end
+      @instance
+    end
+
     def reload! = @instance = nil
+    def starter_config = YAML.load_file(CONFIG)
 
     def found?(*texts) = texts.any? { |text| instance.match(text) }
     def match(text) = instance.match(text)
@@ -59,7 +70,7 @@ class BlockedLanguage
   end
 
   def initialize(config)
-    @allowed = Array(config["allowed"]).map { |source| Regexp.new(source, Regexp::IGNORECASE) }
+    @allowed = Array(config["allowed"]).map { |phrase| allowed_pattern(phrase) }
     # stand-ins only when the letters are together; spaced out, only real letters count (so
     # "in 1966. a" isn't one)
     anywhere = Array(config["anywhere"]).flat_map { |term| [term_pattern(term, anywhere: true), term_pattern(term, anywhere: true, spaced: true)] }
@@ -94,6 +105,12 @@ class BlockedLanguage
     text = CGI.unescapeHTML(text) if text.include?("&")
     text = text.unicode_normalize(:nfkd) if text.valid_encoding?
     text.gsub(/\p{Mn}/, "").gsub(INVISIBLE, "").downcase.tr(LOOKALIKE_FROM, LOOKALIKE_TO).gsub(/\s+/, " ")
+  end
+
+  # "coon hound" -> whole words, the space also matching a hyphen or nothing
+  def allowed_pattern(phrase)
+    words = phrase.downcase.split(/[^\p{L}\p{N}']+/).compact_blank.map { |w| Regexp.escape(w) }
+    Regexp.new("(?<![\\p{L}\\p{N}])#{words.join("[\\s\\-]*")}(?![\\p{L}\\p{N}])", Regexp::IGNORECASE)
   end
 
   # "nigger" -> n+ [i1!|l*]+ [g96]+ ... ; phrases allow any punctuation/space between words.

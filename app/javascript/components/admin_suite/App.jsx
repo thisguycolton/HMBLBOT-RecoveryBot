@@ -9,6 +9,7 @@ import AnalyticsPage from "./AnalyticsPage";
 import UsersPage from "./UsersPage";
 import ReadingsPage from "./ReadingsPage";
 import TagsPage from "./TagsPage";
+import BlockedWordsPage from "./BlockedWordsPage";
 import CourtVerificationsPage from "./CourtVerificationsPage";
 import TextReportsPage from "./TextReportsPage";
 import ContactRequestsPage from "./ContactRequestsPage";
@@ -55,6 +56,7 @@ function SuiteShell() {
           <Route path="/users" element={<UsersPage notify={notify} />} />
           <Route path="/readings" element={<ReadingsPage notify={notify} />} />
           <Route path="/tags" element={<TagsPage notify={notify} />} />
+          <Route path="/blocked_words" element={<BlockedWordsPage notify={notify} />} />
           <Route path="/notices" element={<NoticesPage notify={notify} />} />
           <Route path="/meeting_lists" element={<MeetingListsPage notify={notify} />} />
           <Route path="/chip_design" element={<ChipDesignPage notify={notify} />} />
