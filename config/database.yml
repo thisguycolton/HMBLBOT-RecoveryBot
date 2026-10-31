@@ -86,3 +86,9 @@ production:
   host: <%= ENV["POSTGRE_SQL_HOST"] %>
   username: postgres
   password: <%= ENV["POSTGRE_SQL_PASSWORD"] %>
+  # Send TCP keepalives, so a connection that sits quiet (the cable's LISTEN one most of all)
+  # isn't dropped by Docker's network after its idle timeout
+  keepalives: 1
+  keepalives_idle: 60
+  keepalives_interval: 10
+  keepalives_count: 3

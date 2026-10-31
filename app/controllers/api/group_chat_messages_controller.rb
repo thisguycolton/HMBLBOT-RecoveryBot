@@ -1,8 +1,12 @@
 # One message in a group's chat: fetched when the live channel says it's new or changed
 # (GroupChatChannel), changed by its writer, deleted by its writer or the group's admins. Anyone
-# in its channel puts emoji on it and takes theirs off (ChatReaction).
+# in its channel puts emoji on it and takes theirs off (ChatReaction). Whoever manages the channel
+# pins it; the group's admins move it to another channel.
 class Api::GroupChatMessagesController < ApplicationController
   include GroupScoped
+
+  # A channel holds this many pinned messages at most
+  PINS_MAX = 50
 
   before_action :set_group
   before_action :set_message
@@ -50,6 +54,41 @@ class Api::GroupChatMessagesController < ApplicationController
 
     @message.reactions.where(user: current_user, emoji: params[:emoji].to_s.strip).delete_all
     changed
+  end
+
+  # POST /api/groups/:group_slug/chat_messages/:id/pin -> the message (admins and whoever manages the channel)
+  def pin
+    channel = @message.chat_channel
+    return render(json: { error: "Only admins and whoever added this channel can pin messages." }, status: :forbidden) unless ChatMessage.permissions(channel, current_user)[:pin]
+    return archived if channel.archived
+    if !@message.pinned? && channel.messages.where.not(pinned_at: nil).count >= PINS_MAX
+      return render(json: { error: "##{channel.name} has #{PINS_MAX} pinned messages already. Unpin one first." }, status: :unprocessable_entity)
+    end
+
+    @message.pin!(current_user, true) unless @message.pinned?
+    changed
+  end
+
+  # DELETE /api/groups/:group_slug/chat_messages/:id/pin -> the message
+  def unpin
+    return render(json: { error: "Only admins and whoever added this channel can unpin messages." }, status: :forbidden) unless ChatMessage.permissions(@message.chat_channel, current_user)[:pin]
+
+    @message.pin!(current_user, false)
+    changed
+  end
+
+  # POST /api/groups/:group_slug/chat_messages/:id/move { channel_id } -> the message (the group's
+  # admins): it and the replies under it go to that channel
+  def move
+    return render(json: { error: "Only this group's admins can move messages." }, status: :forbidden) unless @group.manageable_by?(current_user)
+
+    to = @group.chat_channels.find_by(id: params[:channel_id])
+    return render(json: { error: "Pick a channel to move it to." }, status: :unprocessable_entity) unless to&.readable_by?(current_user)
+    return render(json: { error: "It's in ##{to.name} already." }, status: :unprocessable_entity) if to.id == @message.chat_channel_id
+    return render(json: { error: "##{to.name} is archived." }, status: :unprocessable_entity) if to.archived
+
+    moved = @message.move_to!(to)
+    render json: @message.as_api_json(viewer: current_user).merge(moved: moved.size)
   end
 
   private
