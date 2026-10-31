@@ -199,7 +199,7 @@ function HighlightBody({ item, onChange }) {
         <mark style={{ "--hl": highlightCss(item.color) }}>{item.quote}</mark>
       </blockquote>
       <a href={href} className="wb-feed-item__source"><BookOpen size={13} aria-hidden="true" /> {item.book_title} · {item.chapter_title}</a>
-      <HighlightNote highlight={{ ...item, by: item.by === null ? null : item.author?.name?.split(" ")[0] }} onChange={(h) => onChange?.({ ...item, note: h.note })} />
+      <HighlightNote highlight={{ ...item, by: item.by === null ? null : item.author?.name?.split(" ")[0] }} onChange={(h) => onChange?.({ ...item, note: h.note, mentions: h.mentions })} />
     </>
   );
 }
