@@ -454,6 +454,13 @@ end
       resources :chip_templates, only: %i[index show create update destroy] do
         post :publish, on: :member
       end
+      # Local meeting lists (an intergroup's in-person meetings) imported next to AA Intergroup's
+      resources :meeting_directories, only: %i[index create update destroy] do
+        member do
+          post :preview
+          post :import, action: :import_listings
+        end
+      end
       resource :chip_design, only: %i[show update] do
         post :relief
       end

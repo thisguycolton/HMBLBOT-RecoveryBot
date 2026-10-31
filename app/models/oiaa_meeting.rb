@@ -1,10 +1,21 @@
-# A meeting in OIAA's directory, cached from its Meeting Guide feed by OiaaFeed. Groups
-# search these to import or link their meetings; nothing here is edited by hand.
+# A meeting in a directory: OIAA's ("AA Intergroup", cached from its Meeting Guide feed by
+# OiaaFeed), or a local meeting list an admin imported (meeting_directory, MeetingListImport),
+# such as an area intergroup's in-person meetings. Groups search these to import or link
+# their meetings; nothing here is edited by hand.
 class OiaaMeeting < ApplicationRecord
   # Linked meetings refresh when the cache is older than this
   STALE_AFTER = 1.week
 
-  scope :listed, -> { where(last_seen_at: (OiaaFeed.last_synced_at || Time.at(0))..) }
+  belongs_to :meeting_directory, optional: true
+
+  scope :aa_intergroup, -> { where(meeting_directory_id: nil) }
+  scope :imported, -> { where.not(meeting_directory_id: nil) }
+  # AA Intergroup's listings from its latest sync, and the imported lists' listings that
+  # an admin hasn't taken off (they stay until then: there's no feed telling us they've gone)
+  scope :listed, lambda {
+    where(meeting_directory_id: nil, last_seen_at: (OiaaFeed.last_synced_at || Time.at(0))..)
+      .or(where.not(meeting_directory_id: nil).where(hidden_at: nil))
+  }
 
   def self.search(query, limit: 100) = listed.matching(query).order(:name).limit(limit)
 
@@ -28,7 +39,10 @@ class OiaaMeeting < ApplicationRecord
       .find(&:exists?)&.order(:start_time, :name)&.limit(limit) || search(title, limit: limit)
   end
 
-  def zone = ActiveSupport::TimeZone[time_zone.presence || "America/New_York"]
+  def zone = ActiveSupport::TimeZone[time_zone.presence || meeting_directory&.time_zone || "America/New_York"]
+  def imported? = meeting_directory_id.present?
+  # Who lists it, as people see it: "AA Intergroup" or the imported list's name
+  def source_name = meeting_directory&.name || "AA Intergroup"
   def start_minute = self.class.minutes(start_time)
   def end_minute = self.class.minutes(end_time)
 
@@ -52,7 +66,13 @@ class OiaaMeeting < ApplicationRecord
 
   # in_person, online or hybrid: the feed's attendance option, else online (AA Intergroup
   # lists online meetings)
-  def attendance = attendance_option.presence_in(%w[online in_person hybrid]) || "online"
+  def attendance
+    option = attendance_option.presence_in(%w[online in_person hybrid])
+    return option if option
+    return "online" unless place
+
+    conference_url.present? ? "hybrid" : "in_person"
+  end
   def place = [location, formatted_address].compact_blank.uniq.join(", ").presence
 
   def self.minutes(hhmm)
@@ -75,6 +95,7 @@ class OiaaMeeting < ApplicationRecord
       end_minute: end_minute || (start_minute && [start_minute + 60, Meeting::DAY_MINUTES].min),
       time_zone: zone.tzinfo.name, conference_url: conference_url, conference_url_notes: conference_url_notes,
       conference_phone: conference_phone, types: types, oiaa_url: url,
+      location: location, formatted_address: formatted_address,
     }
   end
 
@@ -82,7 +103,7 @@ class OiaaMeeting < ApplicationRecord
     {
       slug: slug, name: name, group_name: group_name, days: days, start_time: start_time, end_time: end_time,
       time_zone: zone.tzinfo.name, conference_url: conference_url, types: types, url: url,
-      schedule_label: schedule_label,
+      schedule_label: schedule_label, attendance: attendance, place: place, source: source_name,
     }
   end
 

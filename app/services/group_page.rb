@@ -59,7 +59,8 @@ class GroupPage
       cover_url: image_path(template.cover),
       can_edit: false,
       context: {
-        group: { title: first.group_name.presence || first.name, time_zone: first.zone.tzinfo.name, members_count: 0 },
+        group: { title: first.group_name.presence || first.name, time_zone: first.zone.tzinfo.name, members_count: 0,
+                 source: first.source_name, source_url: first.url.presence || first.meeting_directory&.website },
         oiaa_slug: slug,
         viewer: viewer_json,
         meetings: listings.map { |r| listing_json(r) },
@@ -178,6 +179,7 @@ class GroupPage
     { id: record.slug, name: record.name, schedule_label: record.schedule_label, types: record.types,
       conference_url: record.conference_url, conference_url_notes: record.conference_url_notes,
       time_zone: record.zone.tzinfo.name, oiaa_url: record.url,
+      location: record.location, formatted_address: record.formatted_address, location_notes: record.location_notes,
       upcoming_start: upcoming&.first&.iso8601, upcoming_end: upcoming&.last&.iso8601 }
   end
 

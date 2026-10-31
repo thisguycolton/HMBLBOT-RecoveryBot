@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_31_164000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_31_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -830,6 +830,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_164000) do
     t.index ["user_id"], name: "index_intergroup_follows_on_user_id"
   end
 
+  create_table "meeting_directories", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "key", null: false
+    t.string "feed_url"
+    t.string "website"
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.datetime "imported_at"
+    t.bigint "imported_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["imported_by_id"], name: "index_meeting_directories_on_imported_by_id"
+    t.index ["key"], name: "index_meeting_directories_on_key", unique: true
+  end
+
   create_table "meeting_host_covers", force: :cascade do |t|
     t.bigint "meeting_id", null: false
     t.bigint "user_id"
@@ -1013,8 +1027,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_164000) do
     t.string "location"
     t.string "formatted_address"
     t.string "region"
+    t.bigint "meeting_directory_id"
+    t.string "source_slug"
+    t.text "location_notes"
+    t.datetime "hidden_at"
     t.index ["conference_id"], name: "index_oiaa_meetings_on_conference_id"
     t.index ["last_seen_at"], name: "index_oiaa_meetings_on_last_seen_at"
+    t.index ["meeting_directory_id"], name: "index_oiaa_meetings_on_meeting_directory_id"
     t.index ["slug"], name: "index_oiaa_meetings_on_slug", unique: true
   end
 
@@ -1650,6 +1669,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_164000) do
   add_foreign_key "hosting_sessions", "decks", on_delete: :cascade
   add_foreign_key "hosting_sessions", "meetings", on_delete: :cascade
   add_foreign_key "intergroup_follows", "users"
+  add_foreign_key "meeting_directories", "users", column: "imported_by_id", on_delete: :nullify
   add_foreign_key "meeting_host_covers", "meetings", on_delete: :cascade
   add_foreign_key "meeting_host_covers", "users", on_delete: :nullify
   add_foreign_key "meeting_host_reminders", "meetings", on_delete: :cascade
@@ -1669,6 +1689,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_164000) do
   add_foreign_key "note_comments", "users", on_delete: :cascade
   add_foreign_key "note_reactions", "users", on_delete: :cascade
   add_foreign_key "notifications", "users"
+  add_foreign_key "oiaa_meetings", "meeting_directories"
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
   add_foreign_key "push_subscriptions", "users"

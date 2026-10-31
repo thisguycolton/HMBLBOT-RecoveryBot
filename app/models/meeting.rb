@@ -132,7 +132,10 @@ class Meeting < ApplicationRecord
   # Copy OIAA's listing onto this meeting (for the given weekday, when it lists several)
   def apply_oiaa(record, day: nil)
     day ||= day_of_week.presence_in(record.days) || record.days.first
-    self.attributes = record.meeting_attributes(day).slice(*OIAA_FIELDS)
+    attrs = record.meeting_attributes(day)
+    self.attributes = attrs.slice(*OIAA_FIELDS)
+    # An in-person listing brings its place too, unless the group already gave this meeting one
+    self.attributes = attrs.slice(:location, :formatted_address) if record.place.present? && place.blank?
     self.recurrence = "weekly"
     self.oiaa_slug = record.slug
     self.source = "oiaa"

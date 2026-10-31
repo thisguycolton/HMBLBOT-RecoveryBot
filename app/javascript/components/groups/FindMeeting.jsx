@@ -130,7 +130,7 @@ export default function FindMeeting() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Find a meeting</h1>
           <p className="text-sm text-slate-600 dark:text-neutral-400">
-            AA Intergroup's meetings and our groups' own. Times are in your time zone ({viewerZoneName()}).
+            AA Intergroup's online meetings, local intergroups' in-person ones, and our groups' own. Times are in your time zone ({viewerZoneName()}).
           </p>
         </div>
       </div>
@@ -301,7 +301,7 @@ function MeetingCard({ meeting: m, now }) {
         <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/25 to-transparent p-4">
           <p className="ev-heading line-clamp-2 text-xl font-extrabold leading-tight tracking-tight text-white">{group.title}</p>
           <p className="mt-1 flex items-center gap-1 text-xs font-medium text-white/80">
-            {group.here ? <><Users className="h-3 w-3" /> {group.members_count} {group.members_count === 1 ? "member" : "members"}</> : "AA Intergroup"}
+            {group.here ? <><Users className="h-3 w-3" /> {group.members_count} {group.members_count === 1 ? "member" : "members"}</> : group.source || "AA Intergroup"}
           </p>
         </div>
         <LiveBadge start={start(m)} end={end(m)} now={now} className="absolute right-3 top-3" />

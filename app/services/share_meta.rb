@@ -85,7 +85,7 @@ class ShareMeta
 
   def self.listing(record)
     new(title: record.group_name.presence || record.name,
-        description: [record.name, record.schedule_label, "AA Intergroup"].uniq.join(" · "),
+        description: [record.name, record.schedule_label, record.source_name].uniq.join(" · "),
         path: "/groups/find/#{ERB::Util.url_encode(record.slug)}", kind: "listing", id: record.slug, card: ShareCard.for(record))
   end
 

@@ -56,7 +56,7 @@ export default function IntergroupPage({ template = false }) {
         bleed
         group={context.group}
         coverUrl={page.cover_url}
-        note={template ? "A made-up group, to show the default page" : "Listed by AA Intergroup · not on RecoveryBot yet"}
+        note={template ? "A made-up group, to show the default page" : `Listed by ${context.group?.source || "AA Intergroup"} · not on RecoveryBot yet`}
         next={!template && <NextMeeting meetings={context.meetings} buttonClass={heroButton} quietClass={heroQuietButton} />}
         actions={
           <>

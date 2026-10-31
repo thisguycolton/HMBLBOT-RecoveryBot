@@ -16,6 +16,7 @@ import UserReportsPage from "./UserReportsPage";
 import NoticesPage from "./NoticesPage";
 import ChipTemplatesPage from "./ChipTemplatesPage";
 import ChipDesignPage from "./ChipDesignPage";
+import MeetingListsPage from "./MeetingListsPage";
 
 export { BASE, OTHER_TOOLS };
 
@@ -55,6 +56,7 @@ function SuiteShell() {
           <Route path="/readings" element={<ReadingsPage notify={notify} />} />
           <Route path="/tags" element={<TagsPage notify={notify} />} />
           <Route path="/notices" element={<NoticesPage notify={notify} />} />
+          <Route path="/meeting_lists" element={<MeetingListsPage notify={notify} />} />
           <Route path="/chip_design" element={<ChipDesignPage notify={notify} />} />
           <Route path="/chip_templates" element={<ChipTemplatesPage notify={notify} />} />
           <Route path="/chip_templates/:id" element={<ChipTemplatesPage notify={notify} />} />

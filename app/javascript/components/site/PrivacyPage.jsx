@@ -180,6 +180,11 @@ export default function PrivacyPage({ turnstile = false }) {
               <strong>AA Intergroup meeting list:</strong> Find a meeting copies the public meeting directory published by the Online
               Intergroup of AA. It's information about meetings, not about you, and we don't send them anything.
             </li>
+            <li>
+              <strong>Local meeting lists:</strong> in-person meetings in Find a meeting come from the public meeting lists that local
+              AA intergroups publish, which our admins import. That's information about meetings too, and nothing about you goes to them.
+              A meeting's address links to Google Maps; nothing is sent to Google unless you open that link.
+            </li>
           </ul>
 
           <H2 id="who-sees-what">Who sees what</H2>
