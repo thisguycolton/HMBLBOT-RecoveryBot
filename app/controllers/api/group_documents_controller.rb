@@ -137,6 +137,10 @@ class Api::GroupDocumentsController < ApplicationController
     end
 
     state = decode64(params[:state]) or return render(json: { error: "That copy didn't come through." }, status: :unprocessable_entity)
+    # typed live, so the model's check never sees it: don't write it down
+    if BlockedLanguage.found?(params[:title], params[:body])
+      return render(json: { ok: false, error: "This document #{BlockedLanguage.message}" })
+    end
     ok = @document.live_fold!(state, upto: params[:upto], epoch: params[:epoch], title: params[:title], body: params[:body], user: current_user)
     ActionCable.server.broadcast(@document.live_stream, { type: "saved", unversioned: @document.live_unversioned, updated_at: @document.updated_at.iso8601, updated_by: current_user.display_name }) if ok
     render json: { ok: ok }

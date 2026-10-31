@@ -1,4 +1,5 @@
 class User < ApplicationRecord
+  moderates_language :name, :username, :bio, :page_blocks
   # Include default devise modules. Others available are:
   # :lockable, :timeoutable, :trackable and :omniauthable
   # :confirmable: new accounts confirm their email address before they can sign in

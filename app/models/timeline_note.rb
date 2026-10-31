@@ -30,6 +30,7 @@
 # Notes by someone the viewer blocked (UserBlock), and reposts of them, are left out of what
 # they see (not_blocked_by).
 class TimelineNote < ApplicationRecord
+  moderates_language :body, :hashtags
   include Visibility
   include Reactable
   include Mentionable

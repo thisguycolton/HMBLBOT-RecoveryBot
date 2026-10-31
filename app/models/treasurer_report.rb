@@ -3,6 +3,7 @@
 # shared (the Seventh Tradition split). Money is whole cents. Drafts are for record keepers;
 # a posted report is read by members.
 class TreasurerReport < ApplicationRecord
+  moderates_language :notes, :lines
   STATUSES = %w[draft posted].freeze
   VISIBILITIES = %w[members keepers].freeze
   KINDS = %w[income expense].freeze

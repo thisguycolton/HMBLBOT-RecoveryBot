@@ -2,6 +2,7 @@
 # page 86. Only its owner ever sees it (Api::StepInventoriesController). Each question keeps
 # a yes or no and a note: answers = { "resentful" => { "answer" => "yes", "note" => "..." } }.
 class StepInventory < ApplicationRecord
+  moderates_language :answers, :notes
   include RecoveryEntry
 
   # The questions, worded in components/recovery/InventoryPage.jsx; the last two are written out

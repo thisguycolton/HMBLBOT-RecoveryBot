@@ -1,6 +1,7 @@
 # One thing on a business meeting's agenda. A member's suggestion comes in as "suggested" and
 # waits for a record keeper to put it on the agenda.
 class AgendaItem < ApplicationRecord
+  moderates_language :title, :details
   KINDS = %w[report old_business new_business other].freeze
   STATUSES = %w[suggested on_agenda tabled done].freeze
 

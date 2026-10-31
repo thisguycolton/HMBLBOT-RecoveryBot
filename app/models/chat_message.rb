@@ -4,6 +4,7 @@
 # Whoever manages the channel pins it there; the group's admins move it (and the replies under
 # it) to another channel when it went in the wrong one.
 class ChatMessage < ApplicationRecord
+  moderates_language :body
   include Mentionable
 
   BODY_MAX = 4000

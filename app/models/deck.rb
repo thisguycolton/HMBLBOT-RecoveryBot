@@ -3,6 +3,7 @@
 # `arrangement` (DeckArrangement; nil is its purpose's template, in the page). It's run like a
 # meeting: a HostingSession for each date, which is its live state and what it keeps.
 class Deck < ApplicationRecord
+  moderates_language :name, :intro_title
   PURPOSES = %w[business_meeting onboarding event general].freeze
   # What people without an account may do with the share link: nothing (the link only brings
   # members to the deck), or follow the deck read-only, as the hosts move through it

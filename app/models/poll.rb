@@ -1,4 +1,5 @@
 class Poll < ApplicationRecord
+  moderates_language :description
   has_rich_text :description
   has_many :options, dependent: :destroy
 

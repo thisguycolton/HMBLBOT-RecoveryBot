@@ -3,6 +3,7 @@
 # when a group by that name (or with one of those meetings) is approved here, its followers are
 # told, once.
 class IntergroupFollow < ApplicationRecord
+  moderates_language :group_name
   belongs_to :user
 
   before_validation { self.group_name = group_name.to_s.squish.downcase }

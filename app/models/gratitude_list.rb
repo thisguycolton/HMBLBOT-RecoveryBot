@@ -1,6 +1,7 @@
 # A member's gratitude list for one day. Only its owner ever sees it
 # (Api::GratitudeListsController).
 class GratitudeList < ApplicationRecord
+  moderates_language :items
   include RecoveryEntry
 
   MAX_ITEMS = 50

@@ -14,6 +14,7 @@
 #
 # Minted chips never change: once the first is out (locked_at), the design and name are fixed.
 class ChipEdition < ApplicationRecord
+  moderates_language :name
   KINDS = %w[milestone meeting_maker].freeze
   HOW_MANY = %w[everyone first_n given_n].freeze
   WINDOWS = %w[year month week holiday custom].freeze

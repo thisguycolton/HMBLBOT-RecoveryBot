@@ -4,6 +4,7 @@
 # that one event. A published event is public to anyone with its link (so people without
 # an account can RSVP with just an email); drafts are seen only by the people editing.
 class Event < ApplicationRecord
+  moderates_language :title, :short_description, :location, :blocks
   LAYOUTS = %w[main_side centered side_main].freeze
   STATUSES = %w[draft published].freeze
   IMAGE_TYPES = %w[image/jpeg image/png image/webp image/gif].freeze

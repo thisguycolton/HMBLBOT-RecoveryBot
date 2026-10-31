@@ -1,6 +1,7 @@
 # A message sent from the Contact page (/contact). Kept so admins can work through them in
 # the admin suite (Contact requests), and emailed to ContactMailer::RECIPIENT as it arrives.
 class ContactRequest < ApplicationRecord
+  moderates_language :name, :message
   STATUSES = %w[open handled].freeze
   MAX_MESSAGE = 5_000
 
