@@ -40,7 +40,7 @@ export function PinnedPanel({ channel, pins, me, onJump, onUnpin, onClose }) {
                   <span className="block text-xs text-slate-400">A message from someone you blocked</span>
                 ) : (
                   <span className="chat-body line-clamp-4 block text-sm text-slate-700 dark:text-neutral-200">
-                    <Markdown source={m.body} mentions={m.mentions} me={me} mine={m.mentions_me} className="text-sm leading-snug" />
+                    {m.body ? <Markdown source={m.body} mentions={m.mentions} me={me} mine={m.mentions_me} className="text-sm leading-snug" /> : <span className="text-slate-500">{m.files?.length || 0} {m.files?.length === 1 ? "file" : "files"}</span>}
                   </span>
                 )}
                 {m.pinned?.by && <span className="mt-0.5 block text-[0.7rem] text-slate-400">Pinned by {m.pinned.by}</span>}
@@ -93,7 +93,7 @@ export function MoveDialog({ chat, channel, message, slug, onClose, onMoved }) {
         </>
       )}>
       <blockquote className="mb-3 rounded-xl bg-neutral-100 px-3 py-2 text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
-        <span className="font-semibold text-slate-900 dark:text-white">{message.author.name}:</span> {excerptOf(message.body).slice(0, 200)}
+        <span className="font-semibold text-slate-900 dark:text-white">{message.author.name}:</span> {excerptOf(message.body).slice(0, 200) || (message.files?.length ? `${message.files.length} ${message.files.length === 1 ? "file" : "files"}` : "")}
       </blockquote>
       <p className="mb-3 !font-sans text-slate-600 dark:text-neutral-300">
         Replies to it go along. It shows in the new channel where it falls by time, marked as moved from #{channel.name}; people who aren't in that channel won't see it anymore.

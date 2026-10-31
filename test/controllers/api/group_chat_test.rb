@@ -1,8 +1,10 @@
 require "test_helper"
+require "minitest/mock"
 
 class Api::GroupChatTest < ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
   include ActionCable::TestHelper
+  include ActiveJob::TestHelper
 
   self.fixture_table_names = []
 
@@ -378,5 +380,66 @@ class Api::GroupChatTest < ActionDispatch::IntegrationTest
     get "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages", params: { from: messages[3].id }
     assert_equal messages.first.id, response.parsed_body["messages"].first["id"]
     refute response.parsed_body["more"]
+  end
+
+  test "pictures and files go with a message, and only people in the channel get them" do
+    hosts = @group.chat_channels.create!(name: "hosts", access_roles: ["hosts"])
+    path = "/api/groups/#{@group.slug}/chat_channels/#{hosts.id}/messages"
+    picture = Rack::Test::UploadedFile.new(file_fixture("avatar.png"), "image/png")
+    pdf = Rack::Test::UploadedFile.new(StringIO.new("%PDF-1.4 minutes"), "application/pdf", original_filename: "Minutes.pdf")
+    sign_in @bo
+    post path, params: { body: "", files: [picture, pdf] }
+    assert_response :created
+    files = response.parsed_body["files"]
+    assert_equal [["avatar.png", true], ["Minutes.pdf", false]], files.map { _1.values_at("name", "image") }
+
+    get files.last["url"]
+    assert_response :redirect
+
+    exe = Rack::Test::UploadedFile.new(StringIO.new("MZ"), "application/octet-stream", original_filename: "run.exe")
+    post path, params: { body: "hi", files: [exe] }
+    assert_response :unprocessable_entity
+    assert_match "run.exe can't be sent here", response.parsed_body["error"]
+    post path, params: { body: "  " }
+    assert_response :unprocessable_entity
+
+    # Cy isn't in #hosts
+    sign_in @cy
+    get files.first["url"]
+    assert_response :not_found
+
+    # A reply to a picture says so
+    sign_in @ann
+    post path, params: { body: "Nice", reply_to_id: ChatMessage.last.id }, as: :json
+    assert_equal "📎 2 files", response.parsed_body["reply_to"]["excerpt"]
+  end
+
+  test "a message's first link gets a card, read in the background; its writer can take it off" do
+    general = @group.general_channel
+    preview = { url: "https://example.org/step-one", title: "Step One", description: "We admitted we were powerless", site_name: "example.org", image_url: nil }
+    sign_in @bo
+    LinkPreview.stub(:fetch, preview) do
+      perform_enqueued_jobs do
+        assert_broadcasts(general.stream, 2) do
+          post "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages", params: { body: "Read https://example.org/step-one." }, as: :json
+        end
+      end
+    end
+    message = ChatMessage.last
+    get "/api/groups/#{@group.slug}/chat_messages/#{message.id}"
+    assert_equal ["Step One", "https://example.org/step-one"], response.parsed_body["link"].values_at("title", "url")
+
+    sign_in @cy
+    delete "/api/groups/#{@group.slug}/chat_messages/#{message.id}/link"
+    assert_response :forbidden
+    sign_in @bo
+    delete "/api/groups/#{@group.slug}/chat_messages/#{message.id}/link"
+    assert_nil response.parsed_body["link"]
+    refute message.reload.link_outdated?, "an edit that keeps the link doesn't bring the card back"
+
+    # No link, no card
+    assert_no_enqueued_jobs(only: ChatLinkPreviewJob) do
+      post "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages", params: { body: "No links here" }, as: :json
+    end
   end
 end

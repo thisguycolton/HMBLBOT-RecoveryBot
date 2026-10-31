@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "October 30, 2026";
+const UPDATED = "October 31, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -144,11 +144,11 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. Turning them off, removing the device in your settings, or signing out on that device deletes it.</li>
             <li><strong>Reactions, comments and reposts:</strong> the Like, Love or Hugs you give a note or comment, comments you write on notes, and notes you repost to your timeline.</li>
             <li><strong>Notes on someone's page:</strong> a note you write on the profile of someone you follow (or who follows you) is kept like your other notes, and also says whose page it's on. They're told, and they can take it off their page.</li>
-            <li><strong>Group chat:</strong> messages you post in your groups' chat channels, when you posted and changed them, and how far you've read in each channel (so we can show what's new). We also keep each channel's name, what it's for, who added it and who's in it.</li>
+            <li><strong>Group chat:</strong> messages you post in your groups' chat channels (with any pictures and files you attach), when you posted and changed them, and how far you've read in each channel (so we can show what's new). We also keep each channel's name, what it's for, who added it and who's in it.</li>
             <li><strong>@ mentions:</strong> when you @ mention someone, or a role like @hosts, in a chat message, note or comment, we keep who it meant and who we told, and send them a notification. People are only told about things they can already read.</li>
             <li><strong>Reports and blocks:</strong> if you report someone to the site admins, we keep your report, who it's about, and a copy of what they wrote, so it can still be read if they delete it. If a group's admins block someone, we keep who was blocked from which group, and by whom. If you block someone yourself, we keep that you blocked them, so their notes, comments and chat messages stay hidden from you and you aren't told about what they do. They aren't told you blocked them.</li>
             <li><strong>Comments turned off:</strong> if you turn off comments on a note, we keep that setting with the note.</li>
-            <li><strong>Link previews:</strong> when a note has a link, our server visits that page to read its title, description and picture, and keeps them (with a copy of the picture) with your note. The other site sees a visit from RecoveryBot, not from you or the people reading your note.</li>
+            <li><strong>Link previews:</strong> when a note or chat message has a link, our server visits that page to read its title, description and picture, and keeps them (with a copy of the picture) with your note or message. The other site sees a visit from RecoveryBot, not from you or the people reading it.</li>
             <li><strong>Groups:</strong> the groups you join or ask to join, your role (member, admin, record keeper, host scheduler, treasurer), and the meetings you host or cover. While you have a meeting's HostDeck open, the group's other hosts see that you're there and what you're on, and what you did in it (like copying a chat posting) is kept with that meeting's date.</li>
             <li><strong>Group records:</strong> documents, decisions, business meeting agendas and minutes, elected officials, host schedules and treasurer reports that members write for their group.</li>
             <li><strong>Events:</strong> events you create, and RSVPs. If you RSVP without an account we ask for a name and email address so we can send you the event's updates.</li>
@@ -188,7 +188,7 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Signed-in members:</strong> profiles, and notes or highlights set to <em>Members</em>. Notes set to <em>Followers</em> are only seen by people who follow you; <em>Private</em> ones (the default) only by you. Highlights are private until you share one to your timeline. Highlights you share by link can be opened by anyone with that link. Anyone who can see a note sees its comments, and who reacted to it and how. Only notes set to <em>Members</em> can be reposted, and when you narrow or delete one, its reposts go too.</li>
             <li><strong>Only you:</strong> your 10th step inventories, gratitude lists and chips (except the favorite chips you choose to show on your profile, which members who can see your profile see), and notes set to <em>Private</em>.</li>
             <li><strong>Your groups:</strong> members of a group see its member list, its members-only pages and records, and notes you share to it. Record keepers and admins of the group see drafts and everything else the group keeps.</li>
-            <li><strong>Group chat:</strong> what you post in a channel is seen by the people in that channel: everyone in the group for most channels, or only the group's admins and the roles and people a channel is limited to. A group's admins can delete any message. Typing in a channel briefly shows "is typing" to the others there; that isn't stored.</li>
+            <li><strong>Group chat:</strong> what you post in a channel is seen by the people in that channel: everyone in the group for most channels, or only the group's admins and the roles and people a channel is limited to. Pictures and files in a message are only handed to people in that channel, through links that stop working after a few minutes. A group's admins can delete any message. Typing in a channel briefly shows "is typing" to the others there; that isn't stored.</li>
             <li><strong>Notes on someone's page:</strong> seen as you choose when you write it: just the two of you, your followers, or Members. The person whose page it's on always sees it.</li>
             <li><strong>Site admins:</strong> reports about people, with the copy of what was reported.</li>
             <li><strong>Site admins:</strong> the few people who run RecoveryBot can see what's stored, to fix problems and answer requests. We don't browse your things without a reason.</li>
@@ -212,7 +212,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <p>These services handle some data for us, only to do the job listed:</p>
           <ul>
             <li><strong>Hosting:</strong> the site and its database run on a server we rent, managed with CapRover.</li>
-            <li><strong>Amazon Web Services (S3):</strong> stores uploaded files such as profile pictures, note pictures and group documents, in the United States.</li>
+            <li><strong>Amazon Web Services (S3):</strong> stores uploaded files such as profile pictures, note pictures, chat pictures and files, and group documents, in the United States.</li>
             <li><strong>Apple iCloud Mail:</strong> sends the site's emails.</li>
             <li>
               <strong>Browser push services:</strong> if you turn on notifications, each one goes through the push service of the company that

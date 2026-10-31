@@ -113,6 +113,8 @@ Rails.application.routes.draw do
         post :pin
         delete :pin, action: :unpin
         post :move
+        get "files/:file_id", action: :file, as: :file
+        delete :link, action: :hide_link
       end
     end
     resources :blocks, controller: "group_blocks", only: %i[index create destroy]
