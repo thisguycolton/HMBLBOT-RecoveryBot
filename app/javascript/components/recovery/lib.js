@@ -18,3 +18,10 @@ export function nightLabel(iso) {
   if (iso === shiftDay(today, -1)) return "Yesterday";
   return dayLabel(iso, { weekday: "short", month: "short", day: "numeric", year: iso.slice(0, 4) === today.slice(0, 4) ? undefined : "numeric" });
 }
+
+// Where a Meeting Maker series counts: every meeting, a group's meetings, or one meeting
+export function meetingPlace(m, at = "") {
+  if (m.scope === "all") return "";
+  if (m.scope === "group" || m.name === m.group_title) return `${at}${m.group_title}`;
+  return `${at}${m.name} (${m.group_title})`;
+}

@@ -16,7 +16,7 @@ import NoteEditor from "./NoteEditor";
 import PostMenu, { blockPerson, useBlocked } from "./PostMenu";
 import VisibilityPicker from "./VisibilityPicker";
 import ChipModal, { FlatChip } from "../recovery/ChipModal";
-import { dayLabel } from "../recovery/lib";
+import { dayLabel, meetingPlace } from "../recovery/lib";
 import { HIGHLIGHT_VISIBILITY, recipientVisibility, saveNote } from "./lib";
 
 // One thing on a timeline: a note (Markdown and pictures), a repost of someone's note, or a
@@ -244,7 +244,7 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
 export function chipLine(chip) {
   const on = chip.on ? dayLabel(chip.on, { month: "long", day: "numeric", year: "numeric" }) : "";
   if (chip.source === "given") return `From ${chip.group?.title}${chip.given_by ? `, given by ${chip.given_by}` : ""} · ${on}`;
-  if (chip.kind === "meeting") return `Meeting Maker at ${chip.meeting?.name} · ${on}`;
+  if (chip.kind === "meeting") return `Meeting Maker${chip.meeting ? meetingPlace(chip.meeting, " at ") : ""} · ${on}`;
   if (chip.kind === "round") return `Sobriety · ${on}`;
   return on;
 }

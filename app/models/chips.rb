@@ -4,8 +4,9 @@
 #   6, 9 and 18 months, and every year.
 # - Triangle chips for how many 10th step inventories and gratitude lists they've written in
 #   total (TRIANGLE_COUNTS), and for their best run of days in a row (STREAK_COUNTS).
-# - Meeting Maker triangle chips, one series for each meeting (all its days), for each time they clicked Join
-#   in the half hour before it started (MeetingJoin, MEETING_COUNTS).
+# - Meeting Maker triangle chips for each time they clicked Join in the half hour before a meeting
+#   started (MeetingJoin, MEETING_COUNTS): a series for each meeting (by name, in its group), for
+#   each group's meetings together, and for all of them.
 #
 # - Special Editions (ChipEdition) a group made for a window of time: milestone ones a member
 #   claimed (or a host gave, on the ChipAward), Meeting Maker ones they earned; and the ones
@@ -91,29 +92,78 @@ module Chips
     { id: "#{kind}:#{count}", slot: "#{kind}:#{count}", shape: "triangle", kind: kind, count: count, label: label, on: on&.iso8601, source: "earned" }.merge(extra)
   end
 
-  # Meeting Maker: each meeting they joined, its chips (a join counts once the meeting started),
-  # each drawn as the meeting's chips looked on the day it was earned (minted chips never change).
-  # A weekly meeting is stored once per weekday (Meeting#series), so its days count together as
-  # one meeting, under the id of its first-made day.
+  # Meeting Maker: their meetings counted three ways, each its own series of chips (a join
+  # counts once the meeting started): all of them anywhere, all of a group's, and each meeting.
+  # A meeting held on several days is often one record a day with the same name (The Acid Test,
+  # every day), so those count as one meeting, under the group's lowest-id one so its chip ids
+  # stay put as they join on other days. A group's count only shows when they've been to more
+  # than one of its meetings, and the count of all of them when they've been to more than one
+  # meeting, so the same chips never show twice.
+  # Each chip is drawn as it looked on the day it was earned (minted chips never change): a
+  # meeting's in that day's meeting's design, a group's in the group's, all of them in
+  # RecoveryBot's.
   def meeting_chips(user, now = Time.current)
     joins = MeetingJoin.where(user: user).where(starts_at: ..now).includes(meeting: :group).order(:starts_at).to_a
+    return [] if joins.empty?
+
     versions = ChipDesignVersion.where(owner_type: "Meeting", owner_id: joins.map(&:meeting_id).uniq).order(:created_at, :id).group_by(&:owner_id)
-    series_ids = {}
-    joins.group_by { |j| series_ids[j.meeting_id] ||= j.meeting.series.minimum(:id) || j.meeting_id }.flat_map do |series_id, list|
-      latest = list.last.meeting
-      info = { id: series_id, name: latest.name, group_title: latest.group.title }
-      chip = lambda do |n, on, design, label|
-        triangle("meeting-#{series_id}", n, on, label, meeting: info, design: design)
-          .merge(kind: "meeting", series: "meeting-#{series_id}", shape: design.dig("meeting", "shape") || "triangle")
-      end
-      earned = counts(MEETING_COUNTS, list.size, 100).select { |n| n <= list.size }.map do |n|
-        meeting = list[n - 1].meeting
-        on = list[n - 1].starts_at.in_time_zone(meeting.zone).to_date
-        chip.call(n, on, ChipDesign.for_meeting_on(meeting, on, versions[meeting.id] || []), "#{n} #{n == 1 ? 'meeting' : 'meetings'}")
-      end
-      upcoming = counts(MEETING_COUNTS, list.size, 100).find { |n| n > list.size }
-      earned + [chip.call(upcoming, nil, ChipDesign.for_meeting(latest), "#{upcoming} meetings").merge(upcoming: true, to_go: upcoming - list.size)]
+    series = meeting_series(joins.map(&:meeting).uniq)
+    by_meeting = joins.group_by { |j| series[j.meeting_id] }
+    out = []
+    if by_meeting.size > 1
+      site = ChipDesign.site_versions
+      out.concat(meeting_series_chips("meetings-all", { id: "all", scope: "all", name: "All meetings" }, joins) do |on|
+        with_meeting_name((on && ChipDesign.for_site_on(on, site)) || ChipDesign.for_site, "All meetings")
+      end)
     end
+    by_meeting.group_by { |main, _| main.group }.each do |group, meetings|
+      if meetings.size > 1
+        list = meetings.flat_map(&:last).sort_by(&:starts_at)
+        out.concat(meeting_series_chips("meetings-group-#{group.id}", { id: "group-#{group.id}", scope: "group", name: "All meetings", group_title: group.title }, list) do |on|
+          with_meeting_name((on && ChipDesignVersion.on(group, on)) || ChipDesign.for_group(group), group.title)
+        end)
+      end
+      meetings.each do |main, list|
+        out.concat(meeting_series_chips("meeting-#{main.id}", { id: main.id, scope: "meeting", name: main.name, group_title: group.title }, list) do |on, join|
+          on ? ChipDesign.for_meeting_on(join.meeting, on, versions[join.meeting_id] || []) : ChipDesign.for_meeting(list.last.meeting)
+        end)
+      end
+    end
+    out
+  end
+
+  # A series' chips earned from these joins (oldest first) and the next one; the block gives the
+  # design for the day one was earned (nil: the next one) and the join it was earned at
+  def meeting_series_chips(series, info, joins)
+    total = joins.size
+    chip = lambda do |n, on, design, label|
+      triangle(series, n, on, label, meeting: info, design: design)
+        .merge(kind: "meeting", series: series, shape: design.dig("meeting", "shape") || "triangle")
+    end
+    earned = counts(MEETING_COUNTS, total, 100).select { |n| n <= total }.map do |n|
+      join = joins[n - 1]
+      on = join.starts_at.in_time_zone(join.meeting.zone).to_date
+      chip.call(n, on, yield(on, join), "#{n} #{n == 1 ? 'meeting' : 'meetings'}")
+    end
+    upcoming = counts(MEETING_COUNTS, total, 100).find { |n| n > total }
+    earned + [chip.call(upcoming, nil, yield(nil, joins.last), "#{upcoming} meetings").merge(upcoming: true, to_go: upcoming - total)]
+  end
+
+  # The design with `name` along a Meeting Maker chip's third side, unless it has its own
+  def with_meeting_name(design, name)
+    design = design.deep_dup
+    sides = design.dig("meeting", "sides")
+    sides[2] = name.to_s.first(24) if sides.is_a?(Array) && sides[2].blank?
+    design
+  end
+
+  # Each of these meetings' series: the lowest-id meeting in its group with the same name
+  # (a meeting with no name is a series of its own), by meeting id
+  def meeting_series(meetings)
+    key = ->(m) { m.name.to_s.squish.downcase.presence }
+    mains = Meeting.where(group_id: meetings.map(&:group_id).uniq).order(:id).includes(:group)
+      .each_with_object({}) { |m, by| by[[m.group_id, key.call(m)]] ||= m if key.call(m) }
+    meetings.to_h { |m| [m.id, (key.call(m) && mains[[m.group_id, key.call(m)]]) || m] }
   end
 
   # Every chip a member has, and the next one in each series (upcoming: true), for the Chips
