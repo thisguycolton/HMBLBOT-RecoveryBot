@@ -1,11 +1,12 @@
 # A group's chat (ChatChannel): the channels a member is in with what they haven't read, and
-# who may add channels, which the group's admins pick (roles from ChatChannel::ROLES, and people).
+# who may add channels, which the group's admins pick (roles from ChatChannel::ROLES, and people),
+# and the order the channels go in, which they set for everyone.
 class Api::GroupChatController < ApplicationController
   include GroupScoped
 
   before_action :set_group
   before_action :require_chat_member
-  before_action :require_manager, only: :update
+  before_action :require_manager, only: %i[update order]
 
   # GET /api/groups/:group_slug/chat -> { channels, can_create, can_manage, settings?, roles, people, message_max }
   def show
@@ -23,6 +24,19 @@ class Api::GroupChatController < ApplicationController
     render json: chat_json
   rescue ActiveRecord::RecordInvalid
     render_errors(@group)
+  end
+
+  # PATCH /api/groups/:group_slug/chat/order { channel_ids: [] } (admins) -> the chat
+  # The channels in that order; any left out keep theirs, after them
+  def order
+    ids = Array(params[:channel_ids]).map(&:to_i)
+    channels = @group.chat_channels.order(:position, :id).to_a
+    ordered = ids.filter_map { |id| channels.find { |c| c.id == id } }.uniq
+    ChatChannel.transaction do
+      (ordered + (channels - ordered)).each_with_index { |c, i| c.update_column(:position, i + 1) unless c.position == i + 1 }
+    end
+    GroupChatChannel.channels_changed(@group)
+    render json: chat_json
   end
 
   private

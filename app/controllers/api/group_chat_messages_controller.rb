@@ -1,5 +1,6 @@
 # One message in a group's chat: fetched when the live channel says it's new or changed
-# (GroupChatChannel), changed by its writer, deleted by its writer or the group's admins.
+# (GroupChatChannel), changed by its writer, deleted by its writer or the group's admins. Anyone
+# in its channel puts emoji on it and takes theirs off (ChatReaction).
 class Api::GroupChatMessagesController < ApplicationController
   include GroupScoped
 
@@ -31,7 +32,36 @@ class Api::GroupChatMessagesController < ApplicationController
     head :no_content
   end
 
+  # POST /api/groups/:group_slug/chat_messages/:id/reactions { emoji } -> the message
+  def react
+    return archived if @message.chat_channel.archived
+
+    reaction = @message.reactions.find_or_initialize_by(user: current_user, emoji: params[:emoji].to_s.strip)
+    return render_errors(reaction) unless reaction.persisted? || reaction.save
+
+    changed
+  rescue ActiveRecord::RecordNotUnique
+    changed
+  end
+
+  # DELETE /api/groups/:group_slug/chat_messages/:id/reactions?emoji= -> the message
+  def unreact
+    return archived if @message.chat_channel.archived
+
+    @message.reactions.where(user: current_user, emoji: params[:emoji].to_s.strip).delete_all
+    changed
+  end
+
   private
+
+  # Everyone in the channel sees the reactions change
+  def changed
+    @message.reactions.reset
+    @message.broadcast("updated")
+    render json: @message.as_api_json(viewer: current_user)
+  end
+
+  def archived = render(json: { error: "This channel is archived." }, status: :unprocessable_entity)
 
   def set_message
     @message = ChatMessage.joins(:chat_channel).where(chat_channels: { group_id: @group.id }).find(params[:id])

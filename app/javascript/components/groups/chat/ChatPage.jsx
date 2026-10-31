@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Archive, ArrowLeft, Ban, EyeOff, Flag, Hash, Loader2, Lock, MoreHorizontal, Pencil, Plus, SendHorizontal, Settings, Trash2, UserX } from "lucide-react";
+import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Archive, ArrowDownUp, ArrowLeft, Ban, ChevronDown, ChevronUp, EyeOff, Flag, GripVertical, Hash, Loader2, Lock, MoreHorizontal, Pencil, Plus, SendHorizontal, Settings, SmilePlus, Trash2, UserX } from "lucide-react";
 import { blockPerson, useBlocked } from "../../notes/PostMenu";
 import Layout from "../../Layout";
 import Markdown from "../../book/Markdown";
@@ -22,7 +25,8 @@ const TYPING_FOR = 4000;
 // A group's chat (/groups/:slug/messages/:channelId, Api::GroupChatController): its channels on
 // the left (a screen of their own on phones), the conversation on the right with the message box
 // pinned to the bottom. New, changed and deleted messages arrive live (GroupChatChannel), with
-// who's typing. @ in the box offers people and role handles; only mentions notify anyone.
+// who's typing. @ in the box offers people and role handles; only mentions notify anyone. Anyone
+// puts emoji on a message; admins set the order of the channels for everyone.
 export default function ChatPage() {
   const { slug, channelId } = useParams();
   const navigate = useNavigate();
@@ -109,7 +113,7 @@ export default function ChatPage() {
       <div className="wb chat-page flex h-[calc(100dvh-var(--nav-h)-var(--shell-bottom,0px))] min-h-[22rem] !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none lg:h-[calc(100dvh-var(--nav-h))]">
         {showList && (
           <ChannelList chat={chat} slug={slug} currentId={currentId} wide={wide}
-            onAdd={() => setForm({})} onSettings={() => setSettings(true)} />
+            onAdd={() => setForm({})} onSettings={() => setSettings(true)} onArranged={setChat} />
         )}
         {showConversation && (current ? (
           <Conversation key={current.id} chat={chat} channel={current} slug={slug} wide={wide} listen={listen}
@@ -134,8 +138,9 @@ export default function ChatPage() {
   );
 }
 
-function ChannelList({ chat, slug, currentId, wide, onAdd, onSettings }) {
+function ChannelList({ chat, slug, currentId, wide, onAdd, onSettings, onArranged }) {
   const [showArchived, setShowArchived] = useState(false);
+  const [arranging, setArranging] = useState(false);
   const open = chat.channels.filter((c) => !c.archived);
   const archived = chat.channels.filter((c) => c.archived);
   return (
@@ -153,26 +158,108 @@ function ChannelList({ chat, slug, currentId, wide, onAdd, onSettings }) {
             className="inline-grid size-9 place-items-center rounded-full !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800"><Settings className="size-4" /></button>
         )}
       </div>
-      <div className="flex items-center justify-between px-4 pb-1 pt-3">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-neutral-400">Channels</h2>
-        {chat.can_create && (
-          <button type="button" onClick={onAdd} className="inline-flex items-center gap-1 rounded-full !bg-transparent px-2 py-1 text-xs font-semibold text-accent hover:!bg-accent/10">
-            <Plus className="size-3.5" /> Add
-          </button>
-        )}
-      </div>
-      <nav className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-6">
-        {open.map((c) => <ChannelLink key={c.id} channel={c} slug={slug} active={c.id === currentId} big={!wide} />)}
-        {archived.length > 0 && (
+      <div className="flex items-center justify-between gap-1 px-4 pb-1 pt-3">
+        <h2 className="mr-auto text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-neutral-400">Channels</h2>
+        {arranging ? (
+          <button type="button" onClick={() => setArranging(false)} className="rounded-full !bg-accent px-3 py-1 text-xs font-semibold !text-white">Done</button>
+        ) : (
           <>
-            <button type="button" onClick={() => setShowArchived((s) => !s)} className="mt-3 flex w-full items-center gap-1.5 rounded-lg !bg-transparent px-3 py-1.5 text-xs font-medium text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800">
-              <Archive className="size-3.5" /> {showArchived ? "Hide" : "Show"} {archived.length} archived
-            </button>
-            {showArchived && archived.map((c) => <ChannelLink key={c.id} channel={c} slug={slug} active={c.id === currentId} big={!wide} />)}
+            {chat.can_manage && open.length > 1 && (
+              <button type="button" onClick={() => setArranging(true)} title="Change the order of the channels for everyone"
+                className="inline-flex items-center gap-1 rounded-full !bg-transparent px-2 py-1 text-xs font-semibold text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800">
+                <ArrowDownUp className="size-3.5" /> Rearrange
+              </button>
+            )}
+            {chat.can_create && (
+              <button type="button" onClick={onAdd} className="inline-flex items-center gap-1 rounded-full !bg-transparent px-2 py-1 text-xs font-semibold text-accent hover:!bg-accent/10">
+                <Plus className="size-3.5" /> Add
+              </button>
+            )}
           </>
         )}
-      </nav>
+      </div>
+      {arranging ? (
+        <ArrangeChannels channels={open} slug={slug} big={!wide} onArranged={onArranged} />
+      ) : (
+        <nav className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-6">
+          {open.map((c) => <ChannelLink key={c.id} channel={c} slug={slug} active={c.id === currentId} big={!wide} />)}
+          {archived.length > 0 && (
+            <>
+              <button type="button" onClick={() => setShowArchived((s) => !s)} className="mt-3 flex w-full items-center gap-1.5 rounded-lg !bg-transparent px-3 py-1.5 text-xs font-medium text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800">
+                <Archive className="size-3.5" /> {showArchived ? "Hide" : "Show"} {archived.length} archived
+              </button>
+              {showArchived && archived.map((c) => <ChannelLink key={c.id} channel={c} slug={slug} active={c.id === currentId} big={!wide} />)}
+            </>
+          )}
+        </nav>
+      )}
     </aside>
+  );
+}
+
+// Admins put the channels in order for everyone: drag by the handle, or the arrows (one step at
+// a time, for phones and keyboards). Each move saves.
+function ArrangeChannels({ channels, slug, big, onArranged }) {
+  const [list, setList] = useState(channels);
+  const [saving, setSaving] = useState(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const save = async (next) => {
+    const before = list;
+    setList(next);
+    setSaving(true);
+    try {
+      onArranged(await api(`/groups/${slug}/chat/order`, { method: "PATCH", body: { channel_ids: next.map((c) => c.id) } }));
+    } catch (e) {
+      setList(before);
+      showToast(e.message, { tone: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+  const move = (from, to) => { if (to >= 0 && to < list.length) save(arrayMove(list, from, to)); };
+  const end = ({ active, over }) => {
+    if (!over || active.id === over.id) return;
+    move(list.findIndex((c) => c.id === active.id), list.findIndex((c) => c.id === over.id));
+  };
+  return (
+    <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-6">
+      <p className="px-3 pb-2 text-xs text-slate-500 dark:text-neutral-400">
+        Drag or use the arrows. Everyone in the group sees this order. {saving && <Loader2 className="inline size-3 animate-spin" aria-label="Saving" />}
+      </p>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={end}>
+        <SortableContext items={list.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+          <ul className="space-y-1">
+            {list.map((c, i) => (
+              <ArrangeRow key={c.id} channel={c} big={big} first={i === 0} last={i === list.length - 1}
+                onUp={() => move(i, i - 1)} onDown={() => move(i, i + 1)} />
+            ))}
+          </ul>
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+}
+
+function ArrangeRow({ channel: c, big, first, last, onUp, onDown }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: c.id });
+  const restricted = !c.access_roles.includes("members");
+  const arrow = "inline-grid size-8 place-items-center rounded-lg !bg-transparent text-slate-500 hover:!bg-neutral-200 disabled:opacity-25 dark:text-neutral-400 dark:hover:!bg-neutral-700";
+  return (
+    <li ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={`flex items-center gap-1 rounded-xl bg-neutral-100 pl-1 pr-1 dark:bg-neutral-800 ${big ? "py-1.5 text-base" : "py-0.5 text-sm"} ${isDragging ? "relative z-10 shadow-lg ring-2 ring-accent" : ""}`}>
+      <button type="button" ref={setActivatorNodeRef} {...attributes} {...listeners} aria-label={`Drag #${c.name}`}
+        className="grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg !bg-transparent text-slate-400 hover:text-slate-700 active:cursor-grabbing dark:hover:text-white">
+        <GripVertical className="size-4" />
+      </button>
+      {restricted ? <Lock className="size-3.5 shrink-0 text-slate-500" aria-label="Not everyone" /> : <Hash className="size-4 shrink-0 text-slate-500" aria-hidden="true" />}
+      <span className="min-w-0 flex-1 truncate text-slate-700 dark:text-neutral-200">{c.name}</span>
+      <button type="button" onClick={onUp} disabled={first} aria-label={`Move #${c.name} up`} className={arrow}><ChevronUp className="size-4" /></button>
+      <button type="button" onClick={onDown} disabled={last} aria-label={`Move #${c.name} down`} className={arrow}><ChevronDown className="size-4" /></button>
+    </li>
   );
 }
 
@@ -314,6 +401,25 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
     }
   };
 
+  // An emoji on or off: shown at once, then as the server has it (everyone else hears it live)
+  const react = async (m, emoji) => {
+    const had = m.reactions.find((r) => r.emoji === emoji);
+    const taking = !!had?.mine;
+    const reactions = taking
+      ? m.reactions.map((r) => (r.emoji === emoji ? { ...r, count: r.count - 1, mine: false, names: r.names.filter((n) => n !== "You") } : r)).filter((r) => r.count > 0)
+      : had ? m.reactions.map((r) => (r.emoji === emoji ? { ...r, count: r.count + 1, mine: true, names: [...r.names, "You"] } : r))
+        : [...m.reactions, { emoji, count: 1, mine: true, names: ["You"] }];
+    const put = (msg) => setMessages((list) => list.map((x) => (x.id === msg.id ? msg : x)));
+    put({ ...m, reactions });
+    try {
+      const path = `/groups/${slug}/chat_messages/${m.id}/reactions`;
+      put(await api(taking ? `${path}?emoji=${encodeURIComponent(emoji)}` : path, taking ? { method: "DELETE" } : { method: "POST", body: { emoji } }));
+    } catch (e) {
+      put(m);
+      showToast(e.message, { tone: "error" });
+    }
+  };
+
   // Blocking someone for yourself folds up their messages here
   useBlocked((id, blocked) => setMessages((list) => list?.map((m) => (m.author.id === id ? { ...m, blocked } : m))));
 
@@ -386,7 +492,7 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
                   ) : (
                     <ChatMessage message={m} run={run} me={chat.me.username} focused={m.id === focusId}
                       active={active === m.id} onTap={() => setActive((a) => (a === m.id ? null : m.id))}
-                      canBlock={chat.can_manage && !m.mine}
+                      canBlock={chat.can_manage && !m.mine} canReact={!channel.archived} onReact={(emoji) => react(m, emoji)}
                       onEdit={() => { setActive(null); setEditing(m.id); }} onDelete={() => remove(m)}
                       onReport={() => setReporting(m)} onBlock={() => block(m.author)} onBlockForMe={() => blockPerson(m.author)} />
                   )}
@@ -434,8 +540,9 @@ function TypingLine({ names }) {
   return <span className="inline-flex items-center gap-1.5"><span className="chat-typing" aria-hidden="true"><i /><i /><i /></span> {who} {names.length === 1 ? "is" : "are"} typing…</span>;
 }
 
-function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, onEdit, onDelete, onReport, onBlock, onBlockForMe }) {
+function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, canReact, onReact, onEdit, onDelete, onReport, onBlock, onBlockForMe }) {
   const [menu, setMenu] = useState(false);
+  const [picking, setPicking] = useState(false);
   const [shown, setShown] = useState(false);
   if (m.blocked && !shown) {
     return (
@@ -466,8 +573,15 @@ function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, on
           <Markdown source={m.body} mentions={m.mentions} me={me} mine={m.mentions_me} className="text-[0.95rem] leading-relaxed text-slate-800 dark:text-neutral-100" />
           {m.edited && <span className="text-[0.7rem] text-slate-400"> (edited)</span>}
         </div>
+        {m.reactions?.length > 0 && <Reactions reactions={m.reactions} canReact={canReact} onReact={onReact} onMore={() => setPicking(true)} />}
       </div>
-      <div className={`absolute -top-3 right-2 z-[2] ${active || menu ? "flex" : "hidden group-hover:flex"} items-center rounded-lg bg-white shadow-md ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700`}>
+      <div className={`absolute -top-3 right-2 z-[2] ${active || menu || picking ? "flex" : "hidden group-hover:flex"} items-center rounded-lg bg-white shadow-md ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700`}>
+        {canReact && (
+          <div className="relative">
+            <IconButton label="Add a reaction" onClick={() => setPicking((o) => !o)} icon={SmilePlus} />
+            {picking && <EmojiPicker onPick={(emoji) => { setPicking(false); onReact(emoji); }} onClose={() => setPicking(false)} />}
+          </div>
+        )}
         {m.mine && <IconButton label="Edit" onClick={onEdit} icon={Pencil} />}
         {m.can_remove && <IconButton label="Delete" onClick={onDelete} icon={Trash2} danger />}
         {!m.mine && (
@@ -482,6 +596,76 @@ function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, on
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// The emoji on a message, each with how many: tap one to add yours or take it off; hovering
+// (or a long press) says who
+function Reactions({ reactions, canReact, onReact, onMore }) {
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1">
+      {reactions.map((r) => {
+        const who = `${listNames(r.names, r.count)} reacted with ${r.emoji}`;
+        return (
+          <button key={r.emoji} type="button" disabled={!canReact} onClick={() => onReact(r.emoji)} title={who} aria-label={`${who}${r.mine ? ". Tap to take yours off" : ""}`} aria-pressed={r.mine}
+            className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-sm tabular-nums ring-1 transition disabled:cursor-default ${r.mine ? "!bg-accent/10 font-semibold !text-accent ring-accent/60" : "!bg-neutral-100 text-slate-600 ring-transparent hover:ring-neutral-300 dark:!bg-neutral-800 dark:text-neutral-300 dark:hover:ring-neutral-600"}`}>
+            <span className="text-base leading-none">{r.emoji}</span> <span className="text-xs">{r.count}</span>
+          </button>
+        );
+      })}
+      {canReact && (
+        <button type="button" onClick={onMore} aria-label="Add a reaction" title="Add a reaction"
+          className="inline-grid h-7 w-8 place-items-center rounded-full !bg-neutral-100 text-slate-500 ring-1 ring-transparent hover:ring-neutral-300 dark:!bg-neutral-800 dark:text-neutral-400 dark:hover:ring-neutral-600">
+          <SmilePlus className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function listNames(names, count) {
+  const shown = names.length;
+  const others = count - shown;
+  const all = others > 0 ? [...names, `${others} ${others === 1 ? "other" : "others"}`] : names;
+  if (all.length <= 1) return all[0] || `${count} ${count === 1 ? "person" : "people"}`;
+  return `${all.slice(0, -1).join(", ")} and ${all[all.length - 1]}`;
+}
+
+// The emoji people reach for first, then more under them
+const QUICK_EMOJI = ["👍", "❤️", "😂", "🙏", "🎉", "🤗"];
+const MORE_EMOJI = [
+  "😀", "😊", "🥰", "😍", "😎", "🤩", "🥳", "😅", "🤣", "😉", "🙂", "😌",
+  "😮", "😢", "😭", "😬", "🤔", "🫡", "🙌", "👏", "💪", "👀", "✨", "🔥",
+  "💯", "✅", "☕", "🌅", "🌈", "🕊️", "💙", "💜", "💚", "🧡", "⭐", "🎂",
+  "🙃", "😴", "🫶", "🤝", "👋", "🤞", "🍪", "🍕",
+];
+
+// Opens below the message's buttons, or above them low on the screen, so it's never cut off
+function EmojiPicker({ onPick, onClose }) {
+  const ref = useRef(null);
+  const [up, setUp] = useState(false);
+  useLayoutEffect(() => {
+    const anchor = ref.current?.parentElement?.getBoundingClientRect();
+    if (anchor) setUp(anchor.top > window.innerHeight / 2);
+  }, []);
+  useEffect(() => {
+    const away = (e) => { if (!ref.current?.parentElement?.contains(e.target)) onClose(); };
+    const esc = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", away); document.removeEventListener("keydown", esc); };
+  }, [onClose]);
+  const cell = "inline-grid size-9 place-items-center rounded-lg !bg-transparent text-xl hover:!bg-neutral-100 dark:hover:!bg-neutral-800";
+  return (
+    <div ref={ref} role="dialog" aria-label="Pick a reaction"
+      className={`absolute right-0 z-20 w-[19.5rem] ${up ? "bottom-full mb-1" : "top-full mt-1"} max-w-[calc(100vw-2rem)] rounded-xl bg-white p-2 shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700`}>
+      <div className="flex justify-between border-b border-neutral-200 pb-1.5 dark:border-neutral-700">
+        {QUICK_EMOJI.map((e) => <button key={e} type="button" className={cell} onClick={() => onPick(e)} aria-label={`React with ${e}`}>{e}</button>)}
+      </div>
+      <div className="grid max-h-48 grid-cols-8 overflow-y-auto pt-1.5">
+        {MORE_EMOJI.map((e) => <button key={e} type="button" className={cell} onClick={() => onPick(e)} aria-label={`React with ${e}`}>{e}</button>)}
       </div>
     </div>
   );

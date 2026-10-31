@@ -271,6 +271,20 @@ class Api::RecoveryToolsTest < ActionDispatch::IntegrationTest
     assert_not response.parsed_body["counted"], "once it's started, the next one is a week away"
   end
 
+  test "Meeting Maker: a weekly meeting's days count together as one meeting" do
+    days = (0..2).map { |d| @group.meetings.create!(name: "The Acid Test", recurrence: "weekly", day_of_week: d, start_minute: 420, end_minute: 480, time_zone: Time.zone.name) }
+    other = @group.meetings.create!(name: "Night Owls", recurrence: "weekly", day_of_week: 1, start_minute: 1260, time_zone: Time.zone.name)
+    days.each_with_index { |m, i| MeetingJoin.create!(user: @kim, meeting: m, starts_at: 3.days.ago + i.days) }
+    MeetingJoin.create!(user: @kim, meeting: other, starts_at: 2.days.ago)
+    sign_in @kim
+    get "/api/recovery"
+    chips = response.parsed_body["chips"].select { |c| c["kind"] == "meeting" }
+    assert_equal ["meeting-#{days.first.id}:1", "meeting-#{other.id}:1"], chips.map { _1["id"] }.sort
+    upcoming = response.parsed_body["upcoming"].select { |c| c["kind"] == "meeting" }
+    assert_equal [[5, 2], [5, 4]], upcoming.map { [_1["count"], _1["to_go"]] }.sort
+    assert_equal "The Acid Test", chips.find { _1["series"] == "meeting-#{days.first.id}" }.dig("meeting", "name")
+  end
+
   test "group admins give each meeting's Meeting Maker chips their own look" do
     meeting = @group.meetings.create!(name: "Sunrise", recurrence: "weekly", day_of_week: 1, start_minute: 420)
     @group.memberships.create!(user: @kim, role: "admin")

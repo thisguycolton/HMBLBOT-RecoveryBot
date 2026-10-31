@@ -4,7 +4,7 @@
 #   6, 9 and 18 months, and every year.
 # - Triangle chips for how many 10th step inventories and gratitude lists they've written in
 #   total (TRIANGLE_COUNTS), and for their best run of days in a row (STREAK_COUNTS).
-# - Meeting Maker triangle chips, one series for each meeting, for each time they clicked Join
+# - Meeting Maker triangle chips, one series for each meeting (all its days), for each time they clicked Join
 #   in the half hour before it started (MeetingJoin, MEETING_COUNTS).
 #
 # - Special Editions (ChipEdition) a group made for a window of time: milestone ones a member
@@ -92,22 +92,27 @@ module Chips
   end
 
   # Meeting Maker: each meeting they joined, its chips (a join counts once the meeting started),
-  # each drawn as the meeting's chips looked on the day it was earned (minted chips never change)
+  # each drawn as the meeting's chips looked on the day it was earned (minted chips never change).
+  # A weekly meeting is stored once per weekday (Meeting#series), so its days count together as
+  # one meeting, under the id of its first-made day.
   def meeting_chips(user, now = Time.current)
-    joins = MeetingJoin.where(user: user).where(starts_at: ..now).includes(meeting: :group).order(:starts_at).group_by(&:meeting)
-    versions = ChipDesignVersion.where(owner_type: "Meeting", owner_id: joins.keys.map(&:id)).order(:created_at, :id).group_by(&:owner_id)
-    joins.flat_map do |meeting, list|
-      info = { id: meeting.id, name: meeting.name, group_title: meeting.group.title }
+    joins = MeetingJoin.where(user: user).where(starts_at: ..now).includes(meeting: :group).order(:starts_at).to_a
+    versions = ChipDesignVersion.where(owner_type: "Meeting", owner_id: joins.map(&:meeting_id).uniq).order(:created_at, :id).group_by(&:owner_id)
+    series_ids = {}
+    joins.group_by { |j| series_ids[j.meeting_id] ||= j.meeting.series.minimum(:id) || j.meeting_id }.flat_map do |series_id, list|
+      latest = list.last.meeting
+      info = { id: series_id, name: latest.name, group_title: latest.group.title }
       chip = lambda do |n, on, design, label|
-        triangle("meeting-#{meeting.id}", n, on, label, meeting: info, design: design)
-          .merge(kind: "meeting", series: "meeting-#{meeting.id}", shape: design.dig("meeting", "shape") || "triangle")
+        triangle("meeting-#{series_id}", n, on, label, meeting: info, design: design)
+          .merge(kind: "meeting", series: "meeting-#{series_id}", shape: design.dig("meeting", "shape") || "triangle")
       end
       earned = counts(MEETING_COUNTS, list.size, 100).select { |n| n <= list.size }.map do |n|
+        meeting = list[n - 1].meeting
         on = list[n - 1].starts_at.in_time_zone(meeting.zone).to_date
         chip.call(n, on, ChipDesign.for_meeting_on(meeting, on, versions[meeting.id] || []), "#{n} #{n == 1 ? 'meeting' : 'meetings'}")
       end
       upcoming = counts(MEETING_COUNTS, list.size, 100).find { |n| n > list.size }
-      earned + [chip.call(upcoming, nil, ChipDesign.for_meeting(meeting), "#{upcoming} meetings").merge(upcoming: true, to_go: upcoming - list.size)]
+      earned + [chip.call(upcoming, nil, ChipDesign.for_meeting(latest), "#{upcoming} meetings").merge(upcoming: true, to_go: upcoming - list.size)]
     end
   end
 
