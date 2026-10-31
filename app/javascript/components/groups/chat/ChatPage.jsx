@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Archive, ArrowDownUp, Paperclip, ArrowLeft, ArrowRightLeft, Ban, ChevronDown, ChevronUp, EyeOff, Flag, GripVertical, Hash, Loader2, Lock, MoreHorizontal, Pencil, Pin, PinOff, Plus, Reply, SendHorizontal, Settings, SmilePlus, Trash2, UserX, X } from "lucide-react";
+import { Archive, ArrowDownUp, FolderOpen, Paperclip, ArrowLeft, ArrowRightLeft, Ban, ChevronDown, ChevronUp, EyeOff, Flag, GripVertical, Hash, Loader2, Lock, MoreHorizontal, Pencil, Pin, PinOff, Plus, Reply, SendHorizontal, Settings, SmilePlus, Trash2, UserX, X } from "lucide-react";
 import { blockPerson, useBlocked } from "../../notes/PostMenu";
 import Layout from "../../Layout";
 import Markdown from "../../book/Markdown";
@@ -18,7 +18,7 @@ import { ChannelForm, ChatSettings } from "./ChannelForm";
 import MentionTextarea from "./MentionTextarea";
 import ReportDialog from "./ReportDialog";
 import { MoveDialog, PinnedPanel, excerptOf } from "./PinsAndMove";
-import { ACCEPT, FILES_MAX, MessageFiles, PendingFiles, fileProblem } from "./Attachments";
+import { ACCEPT, DocumentPicker, FILES_MAX, MessageDocuments, MessageFiles, PendingFiles, fileProblem } from "./Attachments";
 import LinkCard from "../../notes/LinkCard";
 
 // Messages from the same person this close together run on under one name, like Slack
@@ -623,7 +623,7 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
         </p>
       ) : (
         <Composer channel={channel} base={base} where={where} max={chat.message_max} onSent={sent} onTyping={() => sayTyping(channel.id)}
-          replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
+          replyTo={replyTo} onCancelReply={() => setReplyTo(null)} slug={slug} />
       )}
       {reporting && <ReportDialog subject={{ type: "chat_message", id: reporting.id }} person={reporting.author} onClose={() => setReporting(null)} />}
       {moving && (
@@ -704,6 +704,7 @@ function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, ca
           {m.edited && <span className="text-[0.7rem] text-slate-400"> (edited)</span>}
         </div>
         {m.files?.length > 0 && <MessageFiles files={m.files} />}
+        {m.documents?.length > 0 && <MessageDocuments documents={m.documents} />}
         {m.link && <div className="chat-link mt-1 max-w-md"><LinkCard link={m.link} onRemove={m.mine ? onHideLink : undefined} /></div>}
         {m.reactions?.length > 0 && <Reactions reactions={m.reactions} canReact={canReact} onReact={onReact} onMore={() => setPicking(true)} />}
       </div>
@@ -861,6 +862,23 @@ function IconButton({ label, onClick, icon: Icon, danger = false }) {
   );
 }
 
+// What the paperclip offers, above the box
+function AttachMenu({ onClose, children }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const away = (e) => { if (!ref.current?.parentElement?.contains(e.target)) onClose(); };
+    const esc = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", away); document.removeEventListener("keydown", esc); };
+  }, [onClose]);
+  return (
+    <div ref={ref} role="menu" className="absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-xl bg-white py-1 text-sm shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
+      {children}
+    </div>
+  );
+}
+
 // A message's ••• menu: opens below its buttons, or above them low on the screen, and closes
 // when the pointer leaves it, on a tap elsewhere, or with Esc
 function PopMenu({ onClose, children }) {
@@ -897,10 +915,13 @@ function MenuItem({ icon: Icon, onClick, danger = false, children }) {
 // button sends
 const finePointer = () => window.matchMedia("(pointer: fine)").matches;
 
-function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCancelReply }) {
+function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCancelReply, slug }) {
   const key = `hb-chat-draft-${channel.id}`;
   const [body, setBody] = useState(() => { try { return sessionStorage.getItem(key) || ""; } catch { return ""; } });
   const [files, setFiles] = useState([]);
+  const [docs, setDocs] = useState([]); // group documents: { id, title }
+  const [attachMenu, setAttachMenu] = useState(false);
+  const [pickingDocs, setPickingDocs] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -925,7 +946,7 @@ function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCanc
     if (text.trim() && Date.now() - lastTyping.current > 3000) { lastTyping.current = Date.now(); onTyping(); }
   };
 
-  const ready = !!body.trim() || files.length > 0;
+  const ready = !!body.trim() || files.length > 0 || docs.length > 0;
   const send = async () => {
     if (!ready || sending) return;
     setSending(true);
@@ -937,12 +958,14 @@ function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCanc
         form.append("body", body);
         if (replyTo) form.append("reply_to_id", replyTo.id);
         files.forEach((f) => form.append("files[]", f));
+        docs.forEach((d) => form.append("document_ids[]", d.id));
         message = await api(`${base}/messages`, { method: "POST", form });
       } else {
-        message = await api(`${base}/messages`, { method: "POST", body: { body, ...(replyTo ? { reply_to_id: replyTo.id } : {}) } });
+        message = await api(`${base}/messages`, { method: "POST", body: { body, ...(replyTo ? { reply_to_id: replyTo.id } : {}), ...(docs.length ? { document_ids: docs.map((d) => d.id) } : {}) } });
       }
       setBody("");
       setFiles([]);
+      setDocs([]);
       lastTyping.current = 0;
       onSent(message);
     } catch (e) {
@@ -970,14 +993,25 @@ function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCanc
             className="inline-grid size-7 shrink-0 place-items-center rounded-full !bg-transparent text-slate-500 hover:!bg-neutral-200 dark:hover:!bg-neutral-700"><X className="size-3.5" /></button>
         </div>
       )}
-      {files.length > 0 && <PendingFiles files={files} onRemove={(i) => setFiles((list) => list.filter((_, j) => j !== i))} />}
+      {(files.length > 0 || docs.length > 0) && (
+        <PendingFiles files={files} documents={docs} onRemove={(i) => setFiles((list) => list.filter((_, j) => j !== i))}
+          onRemoveDocument={(id) => setDocs((list) => list.filter((d) => d.id !== id))} />
+      )}
       <div className="flex items-end gap-1.5">
         <input ref={picker} type="file" multiple accept={ACCEPT} className="hidden" tabIndex={-1}
           onChange={(e) => { addFiles([...e.target.files]); e.target.value = ""; }} />
-        <button type="button" onClick={() => picker.current?.click()} disabled={files.length >= FILES_MAX} aria-label="Attach pictures or files" title="Attach pictures or files"
-          className="mb-0.5 inline-grid size-10 shrink-0 place-items-center rounded-xl !bg-transparent text-slate-500 hover:!bg-neutral-200 disabled:opacity-40 dark:text-neutral-400 dark:hover:!bg-neutral-700">
-          <Paperclip className="size-5" />
-        </button>
+        <div className="relative mb-0.5 shrink-0">
+          <button type="button" onClick={() => setAttachMenu((o) => !o)} aria-label="Attach" aria-expanded={attachMenu} title="Attach pictures, files or group documents"
+            className={`inline-grid size-10 place-items-center rounded-xl text-slate-500 hover:!bg-neutral-200 dark:text-neutral-400 dark:hover:!bg-neutral-700 ${attachMenu ? "!bg-neutral-200 dark:!bg-neutral-700" : "!bg-transparent"}`}>
+            <Paperclip className="size-5" />
+          </button>
+          {attachMenu && (
+            <AttachMenu onClose={() => setAttachMenu(false)}>
+              <MenuItem icon={Paperclip} onClick={() => { setAttachMenu(false); if (files.length < FILES_MAX) picker.current?.click(); }}>Pictures or files</MenuItem>
+              <MenuItem icon={FolderOpen} onClick={() => { setAttachMenu(false); setPickingDocs(true); }}>A group document</MenuItem>
+            </AttachMenu>
+          )}
+        </div>
         <div className="min-w-0 flex-1">
           <MentionTextarea ref={ref} value={body} onChange={change} where={where} minRows={1} maxLength={max}
             placeholder={replyTo ? `Reply to ${replyTo.author.name.split(" ")[0]}` : `Message #${channel.name}`} aria-label={`Message #${channel.name}`} enterKeyHint={finePointer() ? "send" : "enter"}
@@ -992,6 +1026,7 @@ function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCanc
           {sending ? <Loader2 className="size-5 animate-spin" /> : <SendHorizontal className="size-5" />}
         </button>
       </div>
+      {pickingDocs && <DocumentPicker slug={slug} picked={docs} onClose={() => setPickingDocs(false)} onDone={(list) => { setDocs(list); setPickingDocs(false); ref.current?.focus(); }} />}
     </form>
   );
 }

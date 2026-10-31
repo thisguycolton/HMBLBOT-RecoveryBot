@@ -220,6 +220,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_163000) do
     t.bigint "moved_from_channel_id"
     t.datetime "moved_at"
     t.jsonb "link_preview"
+    t.bigint "document_ids", default: [], null: false, array: true
     t.index ["chat_channel_id", "id"], name: "index_chat_messages_on_chat_channel_id_and_id"
     t.index ["chat_channel_id", "pinned_at"], name: "index_chat_messages_pinned", where: "(pinned_at IS NOT NULL)"
     t.index ["pinned_by_id"], name: "index_chat_messages_on_pinned_by_id"

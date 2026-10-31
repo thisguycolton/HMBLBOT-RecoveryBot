@@ -4,7 +4,8 @@
 # Whoever manages the channel pins it there; the group's admins move it (and the replies under
 # it) to another channel when it went in the wrong one. It can carry pictures and files, seen
 # only by people in its channel (Api::GroupChatMessagesController#file), and shows a card for
-# its first link (LinkPreview, read in the background by ChatLinkPreviewJob).
+# its first link (LinkPreview, read in the background by ChatLinkPreviewJob). Its writer can also
+# attach the group's documents (document_ids): each reader sees the ones they may open.
 class ChatMessage < ApplicationRecord
   include Mentionable
 
@@ -12,6 +13,7 @@ class ChatMessage < ApplicationRecord
   # How much of the message a reply shows it answered
   QUOTE_MAX = 160
   FILES_MAX = 6
+  DOCUMENTS_MAX = 6
   IMAGE_MAX = 10.megabytes
   FILE_MAX = 20.megabytes
   # What can be attached, by extension, and the type it's served as. Pictures show in the
@@ -43,7 +45,9 @@ class ChatMessage < ApplicationRecord
 
   before_validation { self.body = body.to_s.gsub("\r\n", "\n").strip }
   validates :body, length: { maximum: BODY_MAX }
-  validate { errors.add(:body, "can't be blank") if body.blank? && !files.attached? }
+  before_validation { self.document_ids = Array(document_ids).map(&:to_i).uniq.reject(&:zero?) }
+  validate { errors.add(:body, "can't be blank") if body.blank? && !files.attached? && document_ids.empty? }
+  validate { errors.add(:document_ids, "can be up to #{DOCUMENTS_MAX}") if document_ids.size > DOCUMENTS_MAX }
   validate(on: :create) { (problem = self.class.upload_problem(files.map(&:blob))) && errors.add(:files, problem) }
   validate(on: :create) { errors.add(:reply_to, "isn't in this channel") if reply_to && reply_to.chat_channel_id != chat_channel_id }
 
@@ -74,6 +78,7 @@ class ChatMessage < ApplicationRecord
   # A line about it for notifications and reply quotes: its words, or what it carries
   def summary(max)
     return body.gsub(/\s+/, " ").truncate(max) if body.present?
+    return "📄 #{document_ids.size == 1 ? 'A group document' : "#{document_ids.size} group documents"}" unless files.attached?
 
     n = files.size
     pictures = files.all? { |f| f.content_type.to_s.start_with?("image/") }
@@ -153,8 +158,24 @@ class ChatMessage < ApplicationRecord
       pinned: pinned? ? { at: pinned_at.iso8601, by: pinned_by&.display_name } : nil,
       moved_from: moved_from_channel_id && { id: moved_from_channel_id, name: ChatChannel.where(id: moved_from_channel_id).pick(:name) },
       can_pin: can[:pin], can_move: can[:admin],
-      files: files_json, link: link_json,
+      files: files_json, link: link_json, documents: documents_json(viewer),
     }
+  end
+
+  # The group documents on it: the ones the viewer may open with their title and file, the rest
+  # only as there (GroupDocument.visible_to), and none that were deleted
+  def documents_json(viewer)
+    return [] if document_ids.empty?
+
+    all = group.documents.where(id: document_ids).with_attached_file.index_by(&:id)
+    open = GroupDocument.visible_to(group, viewer).where(id: all.keys).pluck(:id)
+    document_ids.filter_map do |doc_id|
+      doc = all[doc_id] or next
+      next { id: doc_id, hidden: true } unless open.include?(doc_id)
+
+      { id: doc_id, title: doc.title, kind: doc.kind, url: "/groups/#{group.slug}/conscience/documents/#{doc_id}",
+        file: (doc.file.attached? ? { name: doc.file.filename.to_s, type: doc.served_type, size: doc.file.byte_size } : nil) }
+    end
   end
 
   # Its pictures and files, each through Api::GroupChatMessagesController#file (preload

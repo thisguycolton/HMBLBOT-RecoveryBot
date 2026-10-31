@@ -442,4 +442,28 @@ class Api::GroupChatTest < ActionDispatch::IntegrationTest
       post "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages", params: { body: "No links here" }, as: :json
     end
   end
+
+  test "attaching the group's documents: only ones the writer can open, and each reader sees theirs" do
+    general = @group.general_channel
+    guidelines = @group.documents.create!(title: "Guidelines", kind: "guidelines", body: "Be kind", visibility: "members", status: "current")
+    treasury = @group.documents.create!(title: "Treasurer notes", kind: "treasury", body: "Reserve", visibility: "keepers", status: "current")
+    treasury.file.attach(io: StringIO.new("%PDF-1.4"), filename: "October.pdf", content_type: "application/pdf")
+    path = "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages"
+
+    sign_in @cy
+    post path, params: { body: "", document_ids: [treasury.id] }, as: :json
+    assert_response :unprocessable_entity, "Cy can't open the treasurer's notes"
+
+    sign_in @ann
+    post path, params: { body: "", document_ids: [treasury.id, guidelines.id] }, as: :json
+    assert_response :created
+    docs = response.parsed_body["documents"]
+    assert_equal [["Treasurer notes", "October.pdf"], ["Guidelines", nil]], docs.map { [_1["title"], _1.dig("file", "name")] }
+    assert_equal "/groups/#{@group.slug}/conscience/documents/#{guidelines.id}", docs.last["url"]
+
+    sign_in @cy
+    get path
+    seen = response.parsed_body["messages"].last["documents"]
+    assert_equal [{ "id" => treasury.id, "hidden" => true }, guidelines.id], [seen.first, seen.last["id"]]
+  end
 end

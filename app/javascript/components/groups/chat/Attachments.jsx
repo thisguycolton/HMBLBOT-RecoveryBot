@@ -1,9 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Download, ExternalLink, FileSpreadsheet, FileText, File as FileIcon, Presentation, X } from "lucide-react";
+import { Check, Download, ExternalLink, FileSpreadsheet, FileText, File as FileIcon, FolderOpen, Lock, Presentation, Search, X } from "lucide-react";
+import { api } from "../lib";
+import { ErrorNote, primaryButton, quietButton } from "../ui";
+import Dialog from "./Dialog";
 
 // What can go on a chat message (ChatMessage::FILE_TYPES), as the file picker takes it
 export const FILES_MAX = 6;
+export const DOCUMENTS_MAX = 6;
 const EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif", "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"];
 export const ACCEPT = EXTENSIONS.map((e) => `.${e}`).join(",") + ",image/png,image/jpeg,image/webp,image/gif";
 const extOf = (name) => (name.split(".").pop() || "").toLowerCase();
@@ -33,8 +37,9 @@ function KindIcon({ name, className }) {
   return <Icon className={className} aria-hidden="true" />;
 }
 
-// The files waiting to go with a message in the box, each with an X to take it off
-export function PendingFiles({ files, onRemove }) {
+// The files waiting to go with a message in the box (and group documents, after them), each with
+// an X to take it off
+export function PendingFiles({ files, documents = [], onRemove, onRemoveDocument }) {
   const shown = useMemo(() => files.map((file) => ({ file, url: isPicture(file.name) ? URL.createObjectURL(file) : null })), [files]);
   useEffect(() => () => shown.forEach((s) => s.url && URL.revokeObjectURL(s.url)), [shown]);
   return (
@@ -58,7 +63,112 @@ export function PendingFiles({ files, onRemove }) {
           </button>
         </li>
       ))}
+      {documents.map((d) => (
+        <li key={`doc-${d.id}`} className="relative shrink-0">
+          <span className="flex h-16 w-44 items-center gap-2 rounded-xl bg-white px-2.5 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
+            <FolderOpen className="size-6 shrink-0 text-amber-600" aria-hidden="true" />
+            <span className="min-w-0 text-xs">
+              <span className="block truncate font-semibold text-slate-800 dark:text-neutral-100">{d.title}</span>
+              <span className="text-slate-500">Group document</span>
+            </span>
+          </span>
+          <button type="button" onClick={() => onRemoveDocument(d.id)} aria-label={`Don't attach ${d.title}`} title="Remove"
+            className="absolute -right-1.5 -top-1.5 inline-grid size-6 place-items-center rounded-full !bg-slate-800 !text-white shadow ring-2 ring-white dark:ring-neutral-800">
+            <X className="size-3.5" />
+          </button>
+        </li>
+      ))}
     </ul>
+  );
+}
+
+// The group documents on a message: each opens its page (where an uploaded one shows its file).
+// One the reader isn't allowed to open only says it's there.
+export function MessageDocuments({ documents }) {
+  return (
+    <div className="mt-1 space-y-1.5">
+      {documents.map((d) => (d.hidden ? (
+        <p key={d.id} className="flex max-w-sm items-center gap-3 rounded-xl bg-neutral-50 px-3 py-2.5 text-sm text-slate-500 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:text-neutral-400 dark:ring-neutral-700">
+          <Lock className="size-5 shrink-0" aria-hidden="true" /> A group document you don't have access to
+        </p>
+      ) : (
+        <a key={d.id} href={d.url}
+          className="flex max-w-sm items-center gap-3 rounded-xl bg-white px-3 py-2.5 !no-underline ring-1 ring-neutral-200 hover:bg-neutral-50 dark:bg-neutral-900 dark:ring-neutral-700 dark:hover:bg-neutral-800">
+          {d.file ? <KindIcon name={d.file.name} className="size-8 shrink-0 text-amber-600" /> : <FolderOpen className="size-8 shrink-0 text-amber-600" aria-hidden="true" />}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{d.title}</span>
+            <span className="text-xs text-slate-500 dark:text-neutral-400">
+              Group document{d.file ? ` · ${extOf(d.file.name).toUpperCase()} · ${fileSize(d.file.size)}` : ""}
+            </span>
+          </span>
+        </a>
+      )))}
+    </div>
+  );
+}
+
+// Picking the group's documents to attach: the ones this person may open, searchable, uploaded
+// files first
+export function DocumentPicker({ slug, picked, onDone, onClose }) {
+  const [query, setQuery] = useState("");
+  const [docs, setDocs] = useState(null);
+  const [error, setError] = useState(null);
+  const [chosen, setChosen] = useState(picked);
+
+  useEffect(() => {
+    let current = true;
+    const timer = setTimeout(() => {
+      api(`/groups/${slug}/documents${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`)
+        .then((data) => current && setDocs(data.documents))
+        .catch((e) => current && setError(e.message));
+    }, query ? 250 : 0);
+    return () => { current = false; clearTimeout(timer); };
+  }, [slug, query]);
+
+  const sorted = useMemo(() => (docs ? [...docs.filter((d) => d.file), ...docs.filter((d) => !d.file)] : null), [docs]);
+  const isChosen = (d) => chosen.some((c) => c.id === d.id);
+  const toggle = (d) => setChosen((list) => (isChosen(d) ? list.filter((c) => c.id !== d.id) : list.length >= DOCUMENTS_MAX ? list : [...list, { id: d.id, title: d.title }]));
+
+  return (
+    <Dialog title="Attach a group document" onClose={onClose}
+      footer={(
+        <>
+          <span className="flex-1 text-xs text-slate-500">{chosen.length ? `${chosen.length} picked` : ""}</span>
+          <button type="button" className={quietButton} onClick={onClose}>Cancel</button>
+          <button type="button" className={primaryButton} onClick={() => onDone(chosen)}>Attach</button>
+        </>
+      )}>
+      <label className="relative mb-3 block">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search documents" aria-label="Search documents"
+          className="w-full rounded-xl border-0 bg-neutral-100 py-2 pl-9 pr-3 text-sm text-slate-900 ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent dark:bg-neutral-800 dark:text-white dark:ring-neutral-700" />
+      </label>
+      <ErrorNote error={error} />
+      {!sorted ? <p className="py-6 text-center text-slate-500">Loading…</p> : sorted.length === 0 ? (
+        <p className="py-6 text-center !font-sans text-slate-500">{query ? "No documents match." : "Your group has no documents you can open yet."}</p>
+      ) : (
+        <ul className="space-y-1">
+          {sorted.map((d) => {
+            const on = isChosen(d);
+            return (
+              <li key={d.id}>
+                <button type="button" onClick={() => toggle(d)} aria-pressed={on}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ring-1 ${on ? "!bg-accent/10 ring-accent" : "!bg-transparent ring-neutral-200 hover:!bg-neutral-50 dark:ring-neutral-700 dark:hover:!bg-neutral-800"}`}>
+                  {d.file ? <KindIcon name={d.file.name} className="size-6 shrink-0 text-amber-600" /> : <FolderOpen className="size-6 shrink-0 text-amber-600" aria-hidden="true" />}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-slate-900 dark:text-white">{d.title}</span>
+                    <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">
+                      {d.file ? `${d.file.name} · ${fileSize(d.file.size)}` : "Written in the app"}{d.status !== "current" ? ` · ${d.status}` : ""}
+                    </span>
+                  </span>
+                  <span className={`inline-grid size-6 shrink-0 place-items-center rounded-full ${on ? "bg-accent text-white" : "ring-1 ring-neutral-300 dark:ring-neutral-600"}`}>{on && <Check className="size-4" />}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Dialog>
   );
 }
 
