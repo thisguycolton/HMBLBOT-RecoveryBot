@@ -21,6 +21,12 @@ default: &default
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   # the web threads, plus Action Cable's own workers (live document editing)
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 }.to_i + 5 %>
+  # TCP keepalives, so a quiet connection (Action Cable's LISTEN one is quiet whenever nobody is
+  # chatting) isn't closed by the Docker network, and a dead one is noticed within a couple of minutes
+  keepalives: 1
+  keepalives_idle: 60
+  keepalives_interval: 10
+  keepalives_count: 3
 
 development:
   <<: *default
