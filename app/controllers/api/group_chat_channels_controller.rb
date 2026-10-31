@@ -49,7 +49,7 @@ class Api::GroupChatChannelsController < ApplicationController
 
   # GET /api/groups/:group_slug/chat_channels/:id/messages?before=ID -> { messages (oldest first), more, last_read }
   def messages
-    scope = @channel.messages.includes(user: { avatar_attachment: :blob }).order(id: :desc)
+    scope = @channel.messages.includes({ user: { avatar_attachment: :blob } }, reactions: :user).order(id: :desc)
     scope = scope.where(id: ...params[:before].to_i) if params[:before].present?
     page = scope.limit(PAGE + 1).to_a
     read = ChatRead.find_by(chat_channel: @channel, user: current_user)&.last_read_message_id || 0

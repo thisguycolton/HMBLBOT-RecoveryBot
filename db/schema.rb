@@ -218,6 +218,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_000000) do
     t.index ["user_id"], name: "index_chat_messages_on_user_id"
   end
 
+  create_table "chat_reactions", force: :cascade do |t|
+    t.bigint "chat_message_id", null: false
+    t.bigint "user_id", null: false
+    t.string "emoji", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chat_message_id", "emoji", "user_id"], name: "index_chat_reactions_on_chat_message_id_and_emoji_and_user_id", unique: true
+    t.index ["user_id"], name: "index_chat_reactions_on_user_id"
+  end
+
   create_table "chat_reads", force: :cascade do |t|
     t.bigint "chat_channel_id", null: false
     t.bigint "user_id", null: false
@@ -1546,6 +1556,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_000000) do
   add_foreign_key "chat_channels", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chat_messages", "chat_channels"
   add_foreign_key "chat_messages", "users"
+  add_foreign_key "chat_reactions", "chat_messages", on_delete: :cascade
+  add_foreign_key "chat_reactions", "users", on_delete: :cascade
   add_foreign_key "chat_reads", "chat_channels"
   add_foreign_key "chat_reads", "users"
   add_foreign_key "chip_awards", "chip_editions", on_delete: :nullify
