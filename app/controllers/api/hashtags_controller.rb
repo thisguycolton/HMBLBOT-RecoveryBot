@@ -34,7 +34,7 @@ class Api::HashtagsController < ApplicationController
       page_highlights = page_highlights.where(shared_at: ...before_param)
     end
     page_notes = page_notes.for_feed.newest_first.limit(FEED_MAX + 1).to_a
-    page_highlights = page_highlights.includes(chapter: :book, user: { avatar_attachment: :blob })
+    page_highlights = page_highlights.includes(:reposts, chapter: :book, user: { avatar_attachment: :blob })
                                      .order(shared_at: :desc, id: :desc).limit(FEED_MAX + 1).to_a
     page = (page_notes.map { |n| n.as_api_json(viewer: current_user) } + page_highlights.map { |h| h.as_feed_json(viewer: current_user) })
            .sort_by.with_index { |item, i| [item[:created_at], -i] }.reverse

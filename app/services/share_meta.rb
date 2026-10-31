@@ -36,7 +36,17 @@ class ShareMeta
     when Group then group(record)
     when Meeting then meeting(record)
     when OiaaMeeting then listing(record)
+    when UserHighlight then highlight(record)
     end
+  end
+
+  # A highlight's share link (?hl=, which only its owner hands out): the quote and where it's
+  # from, and its picture (QuoteCard, with its note). It names nobody: the link may be posted
+  # anywhere, and whether to say who they are is up to them.
+  def self.highlight(highlight)
+    book = highlight.chapter.book
+    new(title: "A highlight from #{book.title}", description: "“#{highlight.quote.squish.truncate(180, separator: ' ')}” · #{highlight.chapter.title}",
+        path: highlight.page_path, kind: "highlight", id: highlight.signed_id(purpose: :share), card: QuoteCard.highlight(highlight))
   end
 
   def self.document(doc)

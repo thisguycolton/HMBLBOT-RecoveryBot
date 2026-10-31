@@ -1,6 +1,10 @@
 class PagesController < ApplicationController
   include KeepsRobotsOut
-  keep_robots_out(only: %i[library reader])
+  keep_robots_out(only: :library)
+  # The reader is for people too, but a highlight's share link (?hl=) shows link-preview
+  # fetchers its quote and picture (ShareMeta.highlight)
+  before_action :answer_robots, only: :reader
+  after_action :tag_noindex, only: :reader
   before_action :set_page, only: %i[ edit update destroy ]
   layout "reader", only: %i[topicificator library home reader]
 
@@ -10,6 +14,7 @@ class PagesController < ApplicationController
   def reader
     @book_slug = params[:book_slug]
     @chapter_slug = params[:chapter_slug]
+    @share = shared_highlight_meta
   end
   def library; end
 
@@ -90,6 +95,24 @@ class PagesController < ApplicationController
   end
 
   private
+
+  def answer_robots
+    return unless robot_request?
+
+    share = link_preview_request? && shared_highlight_meta
+    share ? link_preview(share) : turn_robots_away
+  end
+
+  # The link preview of the highlight a ?hl= link opens, when it's in this chapter
+  def shared_highlight_meta
+    return if params[:hl].blank?
+
+    @shared_highlight_meta ||= ShareMeta.safely do
+      highlight = UserHighlight.find_signed(params[:hl].to_s, purpose: :share)
+      ShareMeta.highlight(highlight) if highlight && highlight.chapter.slug == params[:chapter_slug] && highlight.chapter.book.slug == params[:book_slug]
+    end
+  end
+
     # Use callbacks to share common setup or constraints between actions.
     def set_page
       @page = Page.find(params[:id])

@@ -31,7 +31,7 @@ class Notification < ApplicationRecord
                          kinds: %w[note.on_profile] },
     "document_comments" => { label: "Comments on group documents", description: "New comments on documents you saved, and replies in comment threads you're in.",
                              kinds: %w[document.comment] },
-    "reactions" => { label: "Reactions and reposts", description: "When someone reacts to your notes or comments, or reposts a note.",
+    "reactions" => { label: "Reactions and reposts", description: "When someone reacts to your notes or comments, or reposts a note or highlight.",
                      kinds: %w[note.reaction comment.reaction note.repost] },
     "follows" => { label: "New followers", description: "When someone follows you.", kinds: %w[follow.created] },
     "chips" => { label: "Chips", description: "When someone gives you a chip, you earn a Special Edition, or your group makes a new one.",

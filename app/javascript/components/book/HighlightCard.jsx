@@ -1,9 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Link2, Trash2, X } from "lucide-react";
+import { ImageIcon, Link2, Trash2, X } from "lucide-react";
 import HighlightNote from "./HighlightNote";
 import ShareToTimeline from "./ShareToTimeline";
 import { highlightUrl, shareLink } from "./highlightSharing";
+import PictureShare from "../share/PictureShare";
 
 export const HIGHLIGHT_PALETTE = {
   yellow: "#fef08a",
@@ -16,15 +17,17 @@ export const HIGHLIGHT_PALETTE = {
 export const highlightCss = (stored) => HIGHLIGHT_PALETTE[stored] || stored || HIGHLIGHT_PALETTE.yellow;
 
 // One highlight, opened by tapping it in the text: the quote, its note, and
-// (for the reader who made it) color, share to timeline, share link and delete.
+// (for the reader who made it) color, share to timeline, share as a picture (PictureShare),
+// share link and delete.
 // Highlights stay with their reader until they pick Share to timeline.
 export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlug, onChange, onDelete, toast, startEditing = false }) {
+  const [picturing, setPicturing] = useState(false);
   useEffect(() => {
-    if (!highlight) return;
+    if (!highlight || picturing) return;
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [highlight, onClose]);
+  }, [highlight, onClose, picturing]);
 
   if (!highlight) return null;
 
@@ -86,6 +89,9 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
             </div>
             <span className="flex-1" />
             <ShareToTimeline highlight={highlight} onChange={onChange} toast={toast} up />
+            <button type="button" className="wb-btn" onClick={() => setPicturing(true)}>
+              <ImageIcon size={15} aria-hidden="true" /> Picture
+            </button>
             <button type="button" className="wb-btn" onClick={share}>
               <Link2 size={15} aria-hidden="true" /> Copy link
             </button>
@@ -101,6 +107,10 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
           </div>
         )}
       </div>
+      {picturing && (
+        <PictureShare onClose={() => setPicturing(false)} cardUrl={`/api/highlights/${highlight.id}/card`} kind="highlight"
+          hasNote={!!highlight.note?.trim()} link={highlightUrl(bookSlug, chapterSlug, highlight)} title="A highlight" />
+      )}
     </div>
   );
 }
