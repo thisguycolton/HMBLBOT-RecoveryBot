@@ -18,7 +18,7 @@ export default function EntryShare({ tool, what, title, build, choices = [], dis
   const box = useRef(null);
   const link = new URL(`/start/${tool}`, window.location.origin).toString();
   const body = open ? build(opts) : "";
-  const text = `${title}\nStart your own (free, and private): ${link}\n\n${body}`.trim();
+  const text = `${title}\nSign up to write your own: ${link}\n\n${body}`.trim();
 
   useEffect(() => {
     if (!open) return undefined;

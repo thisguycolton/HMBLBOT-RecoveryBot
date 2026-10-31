@@ -19,6 +19,6 @@ class StartToolsController < ApplicationController
 
     store_location_for(:user, tool[:path])
     redirect_to new_user_registration_path,
-                notice: "Someone shared their #{tool[:name]} with you. Make a free account (or log in) to start your own. Only you can ever read it."
+                notice: "Someone shared their #{tool[:name]} with you. Sign up to write your own (or log in if you have an account). Only you can ever read it."
   end
 end
