@@ -387,6 +387,8 @@ end
   # A member's own chips, 10th step and gratitude lists: a React app (entrypoints/recovery.jsx)
   get "/recovery", to: "recovery#app", as: :recovery
   get "/chips/claim/:token", to: "chips#claim", as: :claim_chip
+  # The link on a shared gratitude list or 10th step: your own, or sign up to start one
+  get "/start/:tool", to: "start_tools#show", as: :start_tool, constraints: { tool: /gratitude|10th-step/ }
   get "/recovery/*path", to: "recovery#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { inputClass } from "../ui/styles";
 import { Card, primaryButton } from "../groups/ui";
 import { EntryShell, useEntry } from "./EntryShell";
+import EntryShare from "./EntryShare";
+import { dayLabel } from "./lib";
 
 // The nightly review's questions; their keys are StepInventory::KEYS
 const QUESTIONS = [
@@ -23,6 +25,20 @@ function summary(entry) {
   if (yes.length) return yes.join(", ");
   const firstNote = Object.values(entry.answers || {}).map((a) => a.note).find(Boolean) || entry.notes;
   return firstNote ? firstNote.slice(0, 120) : "Written";
+}
+
+// The night as plain text to share (EntryShare): each question answered, with its note
+// unless `notes` is off, and the closing notes
+function shareText(answers, notes, { notes: withNotes }) {
+  const lines = QUESTIONS.flatMap((q) => {
+    const a = answers[q.key] || {};
+    const note = withNotes ? (a.note || "").trim() : "";
+    if (!a.answer && !note) return [];
+    const said = [a.answer === "yes" ? "Yes." : a.answer === "no" ? "No." : "", note].filter(Boolean).join(" ");
+    return [`${q.text}\n${said}`];
+  });
+  if (withNotes && notes.trim()) lines.push(`Anything else, and what I'll do about it tomorrow\n${notes.trim()}`);
+  return lines.join("\n\n");
 }
 
 // The 10th step (/recovery/inventory): the nightly review from the Big Book (page 86), one a
@@ -81,8 +97,12 @@ export default function InventoryPage() {
             <textarea id="q-notes" rows={3} maxLength={10000} className={inputClass} value={notes} onChange={(e) => { setNotes(e.target.value); setSaved(false); }} />
           </div>
         </Card>
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {saved && <span role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{entry ? "Saved." : "Cleared."}</span>}
+          <EntryShare tool="10th-step" what="10th step" title={`My 10th step · ${dayLabel(on)}`}
+            disabled={!shareText(answers, notes, { notes: true })}
+            choices={[{ key: "notes", label: "Include what I wrote, not just yes and no" }]}
+            build={(o) => shareText(answers, notes, o)} />
           <button type="submit" disabled={saving} className={primaryButton}>{saving ? "Saving…" : "Save inventory"}</button>
         </div>
       </form>
