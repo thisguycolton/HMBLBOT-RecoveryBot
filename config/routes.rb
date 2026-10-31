@@ -102,6 +102,7 @@ Rails.application.routes.draw do
       member do
         get :messages
         post :messages, action: :post_message
+        get :pins
         post :read
       end
     end
@@ -109,6 +110,9 @@ Rails.application.routes.draw do
       member do
         post :reactions, action: :react
         delete :reactions, action: :unreact
+        post :pin
+        delete :pin, action: :unpin
+        post :move
       end
     end
     resources :blocks, controller: "group_blocks", only: %i[index create destroy]

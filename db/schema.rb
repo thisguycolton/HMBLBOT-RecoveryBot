@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_31_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_31_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -214,7 +214,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_000000) do
     t.bigint "mentioned_user_ids", default: [], null: false, array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "reply_to_id"
+    t.datetime "pinned_at"
+    t.bigint "pinned_by_id"
+    t.bigint "moved_from_channel_id"
+    t.datetime "moved_at"
     t.index ["chat_channel_id", "id"], name: "index_chat_messages_on_chat_channel_id_and_id"
+    t.index ["chat_channel_id", "pinned_at"], name: "index_chat_messages_pinned", where: "(pinned_at IS NOT NULL)"
+    t.index ["pinned_by_id"], name: "index_chat_messages_on_pinned_by_id"
+    t.index ["reply_to_id"], name: "index_chat_messages_on_reply_to_id"
     t.index ["user_id"], name: "index_chat_messages_on_user_id"
   end
 
@@ -1556,6 +1564,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_000000) do
   add_foreign_key "chat_channels", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chat_messages", "chat_channels"
   add_foreign_key "chat_messages", "users"
+  add_foreign_key "chat_messages", "users", column: "pinned_by_id", on_delete: :nullify
   add_foreign_key "chat_reactions", "chat_messages", on_delete: :cascade
   add_foreign_key "chat_reactions", "users", on_delete: :cascade
   add_foreign_key "chat_reads", "chat_channels"

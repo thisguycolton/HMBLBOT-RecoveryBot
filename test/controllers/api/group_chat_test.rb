@@ -261,4 +261,122 @@ class Api::GroupChatTest < ActionDispatch::IntegrationTest
     post path, params: { emoji: "👍" }, as: :json
     assert_response :unprocessable_entity
   end
+
+  test "replying to a message quotes it and tells its writer, if they can see the channel" do
+    general = @group.general_channel
+    first = general.messages.create!(user: @cy, body: "Anyone have a ride\nto the meeting?")
+    path = "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages"
+    sign_in @bo
+    assert_difference -> { Notification.where(kind: "reply.chat").count }, 1 do
+      post path, params: { body: "I can!", reply_to_id: first.id }, as: :json
+    end
+    assert_response :created
+    reply = response.parsed_body["reply_to"]
+    assert_equal [first.id, "Cy C", "Anyone have a ride to the meeting?"], [reply["id"], reply["author"]["name"], reply["excerpt"]]
+    assert_equal "Bo B replied to you in #general", @cy.notifications.last.title
+    assert_includes Notification::PUSH_CATEGORIES["mentions"][:kinds], "reply.chat"
+
+    # Mentioned as well: one notification, the mention. Replying to yourself: none.
+    assert_difference -> { @cy.notifications.count }, 1 do
+      post path, params: { body: "@#{@cy.username} see above", reply_to_id: first.id }, as: :json
+    end
+    assert_equal "mention.chat", @cy.notifications.last.kind
+    mine = ChatMessage.last
+    assert_no_difference -> { Notification.count } do
+      post path, params: { body: "and me", reply_to_id: mine.id }, as: :json
+    end
+
+    # Only to a message in the same channel
+    other = @group.chat_channels.create!(name: "other", access_roles: ["members"])
+    elsewhere = other.messages.create!(user: @cy, body: "Over here")
+    post path, params: { body: "Hm", reply_to_id: elsewhere.id }, as: :json
+    assert_response :unprocessable_entity
+
+    # The one it answered gone: the reply says so
+    first.destroy!
+    get path
+    assert_equal({ "id" => first.id, "gone" => true }, response.parsed_body["messages"].find { _1["body"] == "I can!" }["reply_to"])
+  end
+
+  test "admins and whoever added a channel pin messages there; everyone sees the pins" do
+    general = @group.general_channel
+    message = general.messages.create!(user: @cy, body: "Meeting moved to 7pm")
+    pin = "/api/groups/#{@group.slug}/chat_messages/#{message.id}/pin"
+    sign_in @cy
+    post pin, as: :json
+    assert_response :forbidden
+
+    sign_in @ann
+    assert_broadcasts(general.stream, 1) { post pin, as: :json }
+    assert_response :success
+    assert_equal "Ann A", response.parsed_body["pinned"]["by"]
+
+    sign_in @cy
+    get "/api/groups/#{@group.slug}/chat_channels/#{general.id}/pins"
+    assert_equal [message.id], response.parsed_body["messages"].map { _1["id"] }
+    refute response.parsed_body["messages"].first["can_pin"]
+
+    mine = @group.chat_channels.create!(name: "cy-stuff", access_roles: ["members"], created_by: @cy)
+    m2 = mine.messages.create!(user: @bo, body: "Pin me")
+    post "/api/groups/#{@group.slug}/chat_messages/#{m2.id}/pin", as: :json
+    assert_response :success, "whoever added the channel pins in it"
+
+    sign_in @ann
+    delete pin
+    assert_response :success
+    assert_nil response.parsed_body["pinned"]
+    get "/api/groups/#{@group.slug}/chat_channels/#{general.id}/pins"
+    assert_empty response.parsed_body["messages"]
+  end
+
+  test "admins move a message and its replies to another channel" do
+    general = @group.general_channel
+    hosts = @group.chat_channels.create!(name: "hosts", access_roles: ["hosts"])
+    archived = @group.chat_channels.create!(name: "old", access_roles: ["members"], archived: true)
+    wrong = general.messages.create!(user: @bo, body: "Who's covering Tuesday?")
+    stays = general.messages.create!(user: @cy, body: "Unrelated")
+    reply = general.messages.create!(user: @ann, body: "I am", reply_to: wrong)
+    deeper = general.messages.create!(user: @bo, body: "Thanks", reply_to: reply)
+    @group.chat_channels.where(id: general.id).update_all(last_message_at: 1.minute.ago)
+    path = "/api/groups/#{@group.slug}/chat_messages/#{wrong.id}/move"
+
+    sign_in @bo
+    post path, params: { channel_id: hosts.id }, as: :json
+    assert_response :forbidden
+
+    sign_in @ann
+    post path, params: { channel_id: archived.id }, as: :json
+    assert_response :unprocessable_entity
+    post path, params: { channel_id: general.id }, as: :json
+    assert_response :unprocessable_entity
+    assert_broadcasts(general.stream, 3) do
+      assert_broadcasts(hosts.stream, 3) { post path, params: { channel_id: hosts.id }, as: :json }
+    end
+    assert_response :success
+    assert_equal [3, hosts.id, "general"], [response.parsed_body["moved"], response.parsed_body["channel_id"], response.parsed_body["moved_from"]["name"]]
+    assert_equal [hosts.id] * 3, [wrong, reply, deeper].map { _1.reload.chat_channel_id }
+    assert_equal general.id, stays.reload.chat_channel_id
+    assert_equal deeper.created_at.to_i, hosts.reload.last_message_at.to_i
+
+    # Cy isn't in #hosts, so it's gone for them
+    sign_in @cy
+    get "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages"
+    assert_equal ["Unrelated"], response.parsed_body["messages"].map { _1["body"] }
+    get "/api/groups/#{@group.slug}/chat_messages/#{wrong.id}"
+    assert_response :not_found
+  end
+
+  test "opening on an older message loads from just before it to the newest" do
+    general = @group.general_channel
+    messages = Array.new(80) { |i| general.messages.create!(user: @bo, body: "Message #{i}") }
+    sign_in @cy
+    get "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages", params: { from: messages[20].id }
+    body = response.parsed_body
+    assert_equal messages[10].id, body["messages"].first["id"]
+    assert_equal messages.last.id, body["messages"].last["id"]
+    assert body["more"]
+    get "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages", params: { from: messages[3].id }
+    assert_equal messages.first.id, response.parsed_body["messages"].first["id"]
+    refute response.parsed_body["more"]
+  end
 end

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Archive, ArrowDownUp, ArrowLeft, Ban, ChevronDown, ChevronUp, EyeOff, Flag, GripVertical, Hash, Loader2, Lock, MoreHorizontal, Pencil, Plus, SendHorizontal, Settings, SmilePlus, Trash2, UserX } from "lucide-react";
+import { Archive, ArrowDownUp, ArrowLeft, ArrowRightLeft, Ban, ChevronDown, ChevronUp, EyeOff, Flag, GripVertical, Hash, Loader2, Lock, MoreHorizontal, Pencil, Pin, PinOff, Plus, Reply, SendHorizontal, Settings, SmilePlus, Trash2, UserX, X } from "lucide-react";
 import { blockPerson, useBlocked } from "../../notes/PostMenu";
 import Layout from "../../Layout";
 import Markdown from "../../book/Markdown";
@@ -17,6 +17,7 @@ import { showToast } from "../../../lib/toast";
 import { ChannelForm, ChatSettings } from "./ChannelForm";
 import MentionTextarea from "./MentionTextarea";
 import ReportDialog from "./ReportDialog";
+import { MoveDialog, PinnedPanel, excerptOf } from "./PinsAndMove";
 
 // Messages from the same person this close together run on under one name, like Slack
 const RUN_GAP = 5 * 60 * 1000;
@@ -25,8 +26,9 @@ const TYPING_FOR = 4000;
 // A group's chat (/groups/:slug/messages/:channelId, Api::GroupChatController): its channels on
 // the left (a screen of their own on phones), the conversation on the right with the message box
 // pinned to the bottom. New, changed and deleted messages arrive live (GroupChatChannel), with
-// who's typing. @ in the box offers people and role handles; only mentions notify anyone. Anyone
-// puts emoji on a message; admins set the order of the channels for everyone.
+// who's typing. @ in the box offers people and role handles; mentions and replies notify people.
+// Anyone puts emoji on a message or replies to it; whoever manages a channel pins messages in it;
+// admins move a message to the right channel and set the order of the channels for everyone.
 export default function ChatPage() {
   const { slug, channelId } = useParams();
   const navigate = useNavigate();
@@ -287,6 +289,7 @@ function dayLabel(iso) {
 const clockOf = (iso) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
 function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingNames, onRead, onEdit, reload }) {
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [messages, setMessages] = useState(null);
   const [more, setMore] = useState(false);
@@ -296,7 +299,15 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
   const [active, setActive] = useState(null); // the message whose actions show (tapped, on phones)
   const [editing, setEditing] = useState(null);
   const [reporting, setReporting] = useState(null);
+  const [replyTo, setReplyTo] = useState(null);
+  const [pins, setPins] = useState([]);
+  const [showPins, setShowPins] = useState(false);
+  const [moving, setMoving] = useState(null);
   const [focusId, setFocusId] = useState(() => Number(params.get("m")) || null);
+  const startAt = useRef(focusId);
+  const shownFocus = useRef(null);
+  const listRef = useRef(null);
+  listRef.current = messages;
   const scroller = useRef(null);
   const atBottom = useRef(true);
   const keepFrom = useRef(null); // scrollHeight before older messages went in on top
@@ -321,24 +332,63 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
     read(data.messages);
   }).catch((e) => setError(e.message)), [base, read]);
 
-  useEffect(() => { loadLatest(); }, [loadLatest]);
+  // Going to a message (a reply's quote, a pin, a notification): there already, or loaded from a
+  // little before it to the newest; one that was moved opens in its channel now
+  const jump = useCallback(async (id) => {
+    shownFocus.current = null;
+    if (listRef.current?.some((m) => m.id === id)) { setFocusId(id); return; }
+    try {
+      const data = await api(`${base}/messages?from=${id}`);
+      if (data.messages.some((m) => m.id === id)) {
+        setMessages(data.messages);
+        setMore(data.more);
+        setLastRead((r) => r || data.last_read);
+        setFocusId(id);
+        read(data.messages);
+        return;
+      }
+      if (!listRef.current) { setMessages(data.messages); setMore(data.more); setLastRead((r) => r || data.last_read); read(data.messages); }
+      const message = await api(`/groups/${slug}/chat_messages/${id}`);
+      if (message.channel_id !== channel.id) navigate(`/${slug}/messages/${message.channel_id}?m=${id}`, { replace: !listRef.current });
+      else showToast("That message is too far back to open here. Scroll up to find it.");
+    } catch {
+      setFocusId(null);
+      showToast("That message isn't here anymore, or you can't see where it is.", { tone: "error" });
+    }
+  }, [base, slug, channel.id, navigate, read]);
+
+  useEffect(() => { if (startAt.current) jump(startAt.current); else loadLatest(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { api(`${base}/pins`).then((data) => setPins(data.messages)).catch(() => {}); }, [base]);
+
+  // The pins follow each message as it changes
+  const syncPin = useCallback((message, gone = false) => setPins((list) => {
+    const rest = list.filter((m) => m.id !== message.id);
+    return !gone && message.pinned ? [message, ...rest].sort((a, b) => b.pinned.at.localeCompare(a.pinned.at)) : rest;
+  }), []);
 
   // Live: fetch a message that's new or changed, drop one that's gone
   useEffect(() => listen(async (data) => {
     if (data.type === "connected") { loadLatest(); return; }
     if (data.channel_id !== channel.id) return;
-    if (data.type === "deleted") { setMessages((list) => list?.filter((m) => m.id !== data.id)); return; }
+    if (data.type === "deleted") {
+      setMessages((list) => list?.filter((m) => m.id !== data.id));
+      syncPin({ id: data.id }, true);
+      setReplyTo((r) => (r?.id === data.id ? null : r));
+      return;
+    }
     if (data.type !== "created" && data.type !== "updated") return;
     try {
       const message = await api(`/groups/${slug}/chat_messages/${data.id}`);
       setMessages((list) => {
         if (!list) return list;
         if (list.some((m) => m.id === message.id)) return list.map((m) => (m.id === message.id ? message : m));
+        // (a new one, or one moved here, where it falls)
         return [...list, message].sort((a, b) => a.id - b.id);
       });
+      syncPin(message);
       if (data.type === "created") read([message]);
     } catch { /* deleted again before it came */ }
-  }), [listen, channel.id, slug, loadLatest, read]);
+  }), [listen, channel.id, slug, loadLatest, read, syncPin]);
 
   // Back to the tab: read what came in meanwhile
   useEffect(() => {
@@ -348,21 +398,29 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
   }, [messages, read]);
 
   // Stay at the bottom as messages come, unless they scrolled up to read; keep their place
-  // when older ones go in above; open on a message from a notification
+  // when older ones go in above; go to a message once it's there (jump)
   useLayoutEffect(() => {
     const el = scroller.current;
     if (!el || !messages) return;
     if (keepFrom.current != null) { el.scrollTop += el.scrollHeight - keepFrom.current; keepFrom.current = null; return; }
     if (focusId) {
       const target = el.querySelector(`[data-message="${focusId}"]`);
-      if (target) {
+      if (target && shownFocus.current !== focusId) {
+        shownFocus.current = focusId;
         target.scrollIntoView({ block: "center" });
-        setTimeout(() => { setFocusId(null); setParams((p) => { p.delete("m"); return p; }, { replace: true }); }, 2500);
+        atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
         return;
       }
     }
     if (atBottom.current) el.scrollTop = el.scrollHeight;
-  }, [messages, typingNames.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [messages, typingNames.length, focusId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The highlight fades, and the link to it leaves the address
+  useEffect(() => {
+    if (!focusId) return undefined;
+    const timer = setTimeout(() => { setFocusId(null); setParams((p) => { p.delete("m"); return p; }, { replace: true }); }, 2600);
+    return () => clearTimeout(timer);
+  }, [focusId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const older = async () => {
     if (!messages?.length || olderLoading) return;
@@ -387,9 +445,25 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
 
   const sent = (message) => {
     atBottom.current = true;
+    setReplyTo(null);
     setMessages((list) => (list.some((m) => m.id === message.id) ? list : [...list, message]));
     setLastRead(message.id);
   };
+
+  const put = (msg) => setMessages((list) => list.map((x) => (x.id === msg.id ? msg : x)));
+
+  const pin = async (m, on) => {
+    try {
+      const saved = await api(`/groups/${slug}/chat_messages/${m.id}/pin`, { method: on ? "POST" : "DELETE" });
+      put(saved);
+      syncPin(saved);
+      showToast(on ? `Pinned in #${channel.name}.` : "Unpinned.");
+    } catch (e) {
+      showToast(e.message, { tone: "error" });
+    }
+  };
+
+  const reply = (m) => { setActive(null); setReplyTo(m); };
 
   const remove = async (m) => {
     if (!window.confirm(m.mine ? "Delete your message?" : `Delete ${m.author.name}'s message?`)) return;
@@ -409,7 +483,6 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
       ? m.reactions.map((r) => (r.emoji === emoji ? { ...r, count: r.count - 1, mine: false, names: r.names.filter((n) => n !== "You") } : r)).filter((r) => r.count > 0)
       : had ? m.reactions.map((r) => (r.emoji === emoji ? { ...r, count: r.count + 1, mine: true, names: [...r.names, "You"] } : r))
         : [...m.reactions, { emoji, count: 1, mine: true, names: ["You"] }];
-    const put = (msg) => setMessages((list) => list.map((x) => (x.id === msg.id ? msg : x)));
     put({ ...m, reactions });
     try {
       const path = `/groups/${slug}/chat_messages/${m.id}/reactions`;
@@ -454,12 +527,23 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
             </p>
           )}
         </div>
+        {pins.length > 0 && (
+          <button type="button" onClick={() => setShowPins((o) => !o)} aria-expanded={showPins} aria-label={`${pins.length} pinned ${pins.length === 1 ? "message" : "messages"}`} title="Pinned messages"
+            className={`inline-flex h-9 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold tabular-nums ${showPins ? "!bg-accent/10 !text-accent" : "!bg-transparent text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800"}`}>
+            <Pin className="size-4" /> {pins.length}
+          </button>
+        )}
         {channel.can_manage && (
           <button type="button" onClick={onEdit} aria-label="Change this channel" title="Change this channel"
             className="inline-grid size-9 shrink-0 place-items-center rounded-full !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800"><Pencil className="size-4" /></button>
         )}
       </header>
 
+      <div className="relative flex min-h-0 flex-1 flex-col">
+      {showPins && (
+        <PinnedPanel channel={channel} pins={pins} me={chat.me.username} onClose={() => setShowPins(false)}
+          onJump={(id) => { if (!wide) setShowPins(false); jump(id); }} onUnpin={(m) => pin(m, false)} />
+      )}
       <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3 sm:px-4">
         <ErrorNote error={error} />
         {!messages ? <Loading /> : (
@@ -481,7 +565,8 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
               return messages.map((m, i) => {
               const prev = messages[i - 1];
               const newDay = !prev || dayKey(prev.created_at) !== dayKey(m.created_at);
-              const run = !newDay && prev.author.id === m.author.id && new Date(m.created_at) - new Date(prev.created_at) < RUN_GAP;
+              const run = !newDay && prev.author.id === m.author.id && new Date(m.created_at) - new Date(prev.created_at) < RUN_GAP
+                && !m.reply_to && !m.pinned && !m.moved_from;
               const firstUnread = m.id === firstNew && i > 0;
               return (
                 <React.Fragment key={m.id}>
@@ -493,6 +578,7 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
                     <ChatMessage message={m} run={run} me={chat.me.username} focused={m.id === focusId}
                       active={active === m.id} onTap={() => setActive((a) => (a === m.id ? null : m.id))}
                       canBlock={chat.can_manage && !m.mine} canReact={!channel.archived} onReact={(emoji) => react(m, emoji)}
+                      onReply={() => reply(m)} onJump={jump} onPin={(on) => { setActive(null); pin(m, on); }} onMove={() => { setActive(null); setMoving(m); }}
                       onEdit={() => { setActive(null); setEditing(m.id); }} onDelete={() => remove(m)}
                       onReport={() => setReporting(m)} onBlock={() => block(m.author)} onBlockForMe={() => blockPerson(m.author)} />
                   )}
@@ -503,6 +589,7 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
           </>
         )}
       </div>
+      </div>
 
       <div className="h-5 px-5 text-xs text-slate-500 dark:text-neutral-400" aria-live="polite">
         {typingNames.length > 0 && <TypingLine names={typingNames} />}
@@ -512,9 +599,14 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
           <Archive className="mr-1 inline size-4" /> This channel is archived. You can read it, but not post in it.
         </p>
       ) : (
-        <Composer channel={channel} base={base} where={where} max={chat.message_max} onSent={sent} onTyping={() => sayTyping(channel.id)} />
+        <Composer channel={channel} base={base} where={where} max={chat.message_max} onSent={sent} onTyping={() => sayTyping(channel.id)}
+          replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
       )}
       {reporting && <ReportDialog subject={{ type: "chat_message", id: reporting.id }} person={reporting.author} onClose={() => setReporting(null)} />}
+      {moving && (
+        <MoveDialog chat={chat} channel={channel} message={moving} slug={slug} onClose={() => setMoving(null)}
+          onMoved={() => { setMoving(null); setMessages((list) => list.filter((x) => x.id !== moving.id && x.reply_to?.id !== moving.id)); }} />
+      )}
     </section>
   );
 }
@@ -540,7 +632,7 @@ function TypingLine({ names }) {
   return <span className="inline-flex items-center gap-1.5"><span className="chat-typing" aria-hidden="true"><i /><i /><i /></span> {who} {names.length === 1 ? "is" : "are"} typing…</span>;
 }
 
-function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, canReact, onReact, onEdit, onDelete, onReport, onBlock, onBlockForMe }) {
+function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, canReact, onReact, onReply, onJump, onPin, onMove, onEdit, onDelete, onReport, onBlock, onBlockForMe }) {
   const [menu, setMenu] = useState(false);
   const [picking, setPicking] = useState(false);
   const [shown, setShown] = useState(false);
@@ -552,11 +644,21 @@ function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, ca
       </p>
     );
   }
-  const tap = (e) => { if (!e.target.closest("a, button")) onTap(); };
-  const hl = m.mentions_me ? "bg-amber-50 dark:bg-amber-950/30 shadow-[inset_3px_0_0_theme(colors.amber.400)]" : "";
+  const tap = (e) => { if (!e.target.closest("a, button, [role=button]")) onTap(); };
+  const hl = m.mentions_me ? "bg-amber-50 dark:bg-amber-950/30 shadow-[inset_3px_0_0_theme(colors.amber.400)]"
+    : m.pinned ? "bg-sky-50/70 dark:bg-sky-950/20" : "";
+  const canPin = m.can_pin && (canReact || m.pinned);
+  const hasMenu = !m.mine || canPin || m.can_move;
   return (
     <div data-message={m.id} onClick={tap}
-      className={`group relative flex gap-3 rounded-xl px-3 ${run ? "py-0.5" : "mt-2 pb-0.5 pt-1.5"} hover:bg-neutral-50 dark:hover:bg-neutral-800/50 ${hl} ${focused ? "chat-focus" : ""} ${active ? "bg-neutral-50 dark:bg-neutral-800/50" : ""}`}>
+      className={`group relative rounded-xl px-3 ${run ? "py-0.5" : "mt-2 pb-0.5 pt-1.5"} hover:bg-neutral-50 dark:hover:bg-neutral-800/50 ${hl} ${focused ? "chat-focus" : ""} ${active ? "bg-neutral-50 dark:bg-neutral-800/50" : ""}`}>
+      {m.pinned && (
+        <p className="mb-0.5 flex items-center gap-1 pl-12 text-[0.7rem] font-semibold text-sky-700 dark:text-sky-400">
+          <Pin className="size-3" aria-hidden="true" /> Pinned{m.pinned.by ? ` by ${m.pinned.by}` : ""}
+        </p>
+      )}
+      {m.reply_to && <ReplyQuote reply={m.reply_to} here={m.channel_id} onJump={onJump} />}
+      <div className="flex gap-3">
       <div className="w-9 shrink-0">
         {run
           ? <time dateTime={m.created_at} className="hidden pt-0.5 text-[0.65rem] tabular-nums text-slate-400 group-hover:block">{clockOf(m.created_at).replace(/\s?[AP]M$/i, "")}</time>
@@ -567,6 +669,11 @@ function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, ca
           <p className="flex items-baseline gap-2 leading-tight">
             <a href={`/people/${m.author.username}`} className="truncate font-semibold !text-slate-900 hover:underline dark:!text-white">{m.author.name}</a>
             <time dateTime={m.created_at} className="shrink-0 text-xs text-slate-500 dark:text-neutral-400">{clockOf(m.created_at)}</time>
+            {m.moved_from && (
+              <span className="inline-flex min-w-0 items-center gap-1 truncate text-[0.7rem] text-slate-400" title="An admin moved this here">
+                <ArrowRightLeft className="size-3 shrink-0" aria-hidden="true" /> moved from #{m.moved_from.name || "a deleted channel"}
+              </span>
+            )}
           </p>
         )}
         <div className="chat-body">
@@ -575,6 +682,7 @@ function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, ca
         </div>
         {m.reactions?.length > 0 && <Reactions reactions={m.reactions} canReact={canReact} onReact={onReact} onMore={() => setPicking(true)} />}
       </div>
+      </div>
       <div className={`absolute -top-3 right-2 z-[2] ${active || menu || picking ? "flex" : "hidden group-hover:flex"} items-center rounded-lg bg-white shadow-md ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700`}>
         {canReact && (
           <div className="relative">
@@ -582,22 +690,44 @@ function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, ca
             {picking && <EmojiPicker onPick={(emoji) => { setPicking(false); onReact(emoji); }} onClose={() => setPicking(false)} />}
           </div>
         )}
+        {canReact && <IconButton label="Reply" onClick={onReply} icon={Reply} />}
         {m.mine && <IconButton label="Edit" onClick={onEdit} icon={Pencil} />}
         {m.can_remove && <IconButton label="Delete" onClick={onDelete} icon={Trash2} danger />}
-        {!m.mine && (
+        {hasMenu && (
           <div className="relative">
             <IconButton label="More" onClick={() => setMenu((o) => !o)} icon={MoreHorizontal} />
             {menu && (
-              <div className="absolute right-0 top-full z-10 mt-1 w-56 overflow-hidden rounded-xl bg-white py-1 text-sm shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700" onMouseLeave={() => setMenu(false)}>
-                <MenuItem icon={Flag} onClick={() => { setMenu(false); onReport(); }}>Report to site admins</MenuItem>
-                {!m.blocked && <MenuItem icon={UserX} danger onClick={() => { setMenu(false); onBlockForMe(); }}>Block {m.author.name.split(" ")[0]}</MenuItem>}
+              <PopMenu onClose={() => setMenu(false)}>
+                {canPin && <MenuItem icon={m.pinned ? PinOff : Pin} onClick={() => { setMenu(false); onPin(!m.pinned); }}>{m.pinned ? "Unpin" : "Pin to this channel"}</MenuItem>}
+                {m.can_move && <MenuItem icon={ArrowRightLeft} onClick={() => { setMenu(false); onMove(); }}>Move to another channel</MenuItem>}
+                {!m.mine && <MenuItem icon={Flag} onClick={() => { setMenu(false); onReport(); }}>Report to site admins</MenuItem>}
+                {!m.mine && !m.blocked && <MenuItem icon={UserX} danger onClick={() => { setMenu(false); onBlockForMe(); }}>Block {m.author.name.split(" ")[0]}</MenuItem>}
                 {canBlock && <MenuItem icon={Ban} danger onClick={() => { setMenu(false); onBlock(); }}>Block from the group</MenuItem>}
-              </div>
+              </PopMenu>
             )}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+// What a reply answers, above it: who and how it starts, joined to it by a little line. Tapping
+// it goes there (to its channel, if an admin moved it).
+function ReplyQuote({ reply, here, onJump }) {
+  const spine = <span aria-hidden="true" className="absolute left-[1.05rem] top-1/2 h-2.5 w-6 rounded-tl-md border-l-2 border-t-2 border-neutral-300 dark:border-neutral-600" />;
+  if (reply.gone) {
+    return <p className="relative mb-0.5 pl-12 text-xs italic text-slate-400">{spine}The message this replied to was deleted</p>;
+  }
+  return (
+    <button type="button" onClick={() => onJump(reply.id)} aria-label={`Replying to ${reply.author.name}. Go to their message`}
+      className="relative mb-0.5 flex w-full min-w-0 items-center gap-1.5 !bg-transparent pl-12 text-left text-xs text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white">
+      {spine}
+      <Reply className="size-3 shrink-0" aria-hidden="true" />
+      <span className="shrink-0 font-semibold text-slate-700 dark:text-neutral-200">{reply.author.name}</span>
+      <span className="min-w-0 truncate">{reply.blocked ? "A message from someone you blocked" : excerptOf(reply.excerpt)}</span>
+      {reply.channel_id !== here && <span className="shrink-0 text-slate-400">(in another channel)</span>}
+    </button>
   );
 }
 
@@ -706,6 +836,30 @@ function IconButton({ label, onClick, icon: Icon, danger = false }) {
   );
 }
 
+// A message's ••• menu: opens below its buttons, or above them low on the screen, and closes
+// when the pointer leaves it, on a tap elsewhere, or with Esc
+function PopMenu({ onClose, children }) {
+  const ref = useRef(null);
+  const [up, setUp] = useState(false);
+  useLayoutEffect(() => {
+    const anchor = ref.current?.parentElement?.getBoundingClientRect();
+    if (anchor) setUp(anchor.top > window.innerHeight * 0.55);
+  }, []);
+  useEffect(() => {
+    const away = (e) => { if (!ref.current?.parentElement?.contains(e.target)) onClose(); };
+    const esc = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", away); document.removeEventListener("keydown", esc); };
+  }, [onClose]);
+  return (
+    <div ref={ref} role="menu" onMouseLeave={onClose}
+      className={`absolute right-0 z-10 w-56 overflow-hidden rounded-xl bg-white py-1 text-sm shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700 ${up ? "bottom-full mb-1" : "top-full mt-1"}`}>
+      {children}
+    </div>
+  );
+}
+
 function MenuItem({ icon: Icon, onClick, danger = false, children }) {
   return (
     <button type="button" onClick={onClick} className={`flex w-full items-center gap-2 !bg-transparent px-3 py-2 text-left hover:!bg-neutral-100 dark:hover:!bg-neutral-800 ${danger ? "text-rose-600" : "text-slate-700 dark:text-neutral-200"}`}>
@@ -718,7 +872,7 @@ function MenuItem({ icon: Icon, onClick, danger = false, children }) {
 // button sends
 const finePointer = () => window.matchMedia("(pointer: fine)").matches;
 
-function Composer({ channel, base, where, max, onSent, onTyping }) {
+function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCancelReply }) {
   const key = `hb-chat-draft-${channel.id}`;
   const [body, setBody] = useState(() => { try { return sessionStorage.getItem(key) || ""; } catch { return ""; } });
   const [sending, setSending] = useState(false);
@@ -727,6 +881,7 @@ function Composer({ channel, base, where, max, onSent, onTyping }) {
   const ref = useRef(null);
 
   useEffect(() => { if (finePointer()) ref.current?.focus(); }, []);
+  useEffect(() => { if (replyTo) ref.current?.focus(); }, [replyTo?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { try { body ? sessionStorage.setItem(key, body) : sessionStorage.removeItem(key); } catch { /* private window */ } }, [key, body]);
 
   const change = (text) => {
@@ -739,7 +894,7 @@ function Composer({ channel, base, where, max, onSent, onTyping }) {
     setSending(true);
     setError(null);
     try {
-      const message = await api(`${base}/messages`, { method: "POST", body: { body } });
+      const message = await api(`${base}/messages`, { method: "POST", body: { body, ...(replyTo ? { reply_to_id: replyTo.id } : {}) } });
       setBody("");
       lastTyping.current = 0;
       onSent(message);
@@ -755,12 +910,22 @@ function Composer({ channel, base, where, max, onSent, onTyping }) {
     <form className="chat-composer m-2 mt-0 rounded-2xl bg-neutral-100 p-1.5 ring-1 ring-neutral-200 focus-within:ring-2 focus-within:ring-accent dark:bg-neutral-800 dark:ring-neutral-700 sm:m-3 sm:mt-0"
       onSubmit={(e) => { e.preventDefault(); send(); }}>
       {error && <p role="alert" className="px-2 pb-1 text-xs text-rose-600">{error}</p>}
+      {replyTo && (
+        <div className="flex items-center gap-1.5 px-2 pb-1 pt-0.5 text-xs text-slate-600 dark:text-neutral-300">
+          <Reply className="size-3.5 shrink-0" aria-hidden="true" />
+          <span className="shrink-0">Replying to <b className="text-slate-900 dark:text-white">{replyTo.author.name}</b></span>
+          <span className="min-w-0 flex-1 truncate text-slate-500 dark:text-neutral-400">{excerptOf(replyTo.body)}</span>
+          <button type="button" onClick={onCancelReply} aria-label="Don't reply" title="Don't reply"
+            className="inline-grid size-7 shrink-0 place-items-center rounded-full !bg-transparent text-slate-500 hover:!bg-neutral-200 dark:hover:!bg-neutral-700"><X className="size-3.5" /></button>
+        </div>
+      )}
       <div className="flex items-end gap-1.5">
         <div className="min-w-0 flex-1">
           <MentionTextarea ref={ref} value={body} onChange={change} where={where} minRows={1} maxLength={max}
-            placeholder={`Message #${channel.name}`} aria-label={`Message #${channel.name}`} enterKeyHint={finePointer() ? "send" : "enter"}
+            placeholder={replyTo ? `Reply to ${replyTo.author.name.split(" ")[0]}` : `Message #${channel.name}`} aria-label={`Message #${channel.name}`} enterKeyHint={finePointer() ? "send" : "enter"}
             className="chat-input"
             onKeyDown={(e) => {
+              if (e.key === "Escape" && replyTo) { e.preventDefault(); onCancelReply(); return; }
               if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && finePointer()) { e.preventDefault(); send(); }
             }} />
         </div>
