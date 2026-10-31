@@ -12,7 +12,8 @@
 # deletes it), its reposts go.
 #
 # The #hashtags in its words (Hashtags) are kept in `hashtags`: each tag has a page listing
-# the notes the viewer can see that have it (/people/tags/:tag, Api::HashtagsController).
+# the notes (and shared highlight notes, UserHighlight) the viewer can see that have it
+# (/people/tags/:tag, Api::HashtagsController).
 #
 # A note can carry one of its author's chips (Share to timeline on a chip): `chip_id` names it
 # as Chips.catalog does and `chip` is how it looked then, kept as it was. While its author no
@@ -30,6 +31,7 @@
 # Notes by someone the viewer blocked (UserBlock), and reposts of them, are left out of what
 # they see (not_blocked_by).
 class TimelineNote < ApplicationRecord
+  moderates_language :body, :hashtags
   include Visibility
   include Reactable
   include Mentionable
@@ -146,11 +148,12 @@ class TimelineNote < ApplicationRecord
     notes.where.not(chip_id: held).update_all(chip_hidden: true)
   end
 
-  # The tags on notes `viewer` can see that start with `prefix`, most used first, as
-  # [{ name:, count: }], counting only those notes
+  # The tags on notes and shared highlight notes `viewer` can see that start with `prefix`,
+  # most used first, as [{ name:, count: }], counting only those
   def self.hashtag_counts(viewer, prefix: "", limit: 8)
-    tags = seen_by(viewer).where.not(hashtags: []).select("unnest(timeline_notes.hashtags) AS tag")
-    unscoped.from(tags, :tags).where("tags.tag LIKE ?", "#{sanitize_sql_like(prefix.to_s.downcase)}%")
+    notes = seen_by(viewer).where.not(hashtags: []).select("unnest(timeline_notes.hashtags) AS tag")
+    highlights = UserHighlight.seen_by(viewer).where.not(hashtags: []).select("unnest(user_highlights.hashtags) AS tag")
+    unscoped.from("(#{notes.to_sql} UNION ALL #{highlights.to_sql}) tags").where("tags.tag LIKE ?", "#{sanitize_sql_like(prefix.to_s.downcase)}%")
             .group("tags.tag").order(Arel.sql("COUNT(*) DESC, tags.tag")).limit(limit).count
             .map { |name, count| { name: name, count: count } }
   end

@@ -2,6 +2,7 @@
 # dashboard): a mark at the top (none, the group's logo, or a seal uploaded for it), a heading
 # and a line under it, and a footer. Documents in that folder show it on the page and in print.
 class GroupDocumentTemplate < ApplicationRecord
+  moderates_language :header_text, :subheader_text, :footer_text
   MARKS = %w[none group_logo seal].freeze
   ALIGNS = %w[left center right].freeze
   IMAGE_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze

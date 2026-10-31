@@ -5,6 +5,7 @@
 # A meeting linked to OIAA (oiaa_slug) takes its schedule, links and types from OIAA's
 # directory (OiaaMeeting) and refreshes when that does; unlinking makes it editable again.
 class Meeting < ApplicationRecord
+  moderates_language :name, :host, :notes, :conference_url_notes, :location
   RECURRENCES = %w[weekly once].freeze
   DAY_MINUTES = 24 * 60
   DAY_NAMES = Date::DAYNAMES

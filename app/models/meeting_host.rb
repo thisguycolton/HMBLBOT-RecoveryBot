@@ -1,6 +1,7 @@
 # Someone hosting (or co-hosting) one of a group's weekly meetings from one date to another,
 # until someone else is put in. A one-date swap is a MeetingHostCover.
 class MeetingHost < ApplicationRecord
+  moderates_language :name
   ROLES = %w[host co_host].freeze
   ROLE_LABELS = { "host" => "Host", "co_host" => "Co-host" }.freeze
 

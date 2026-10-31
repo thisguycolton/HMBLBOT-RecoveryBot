@@ -219,6 +219,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_170000) do
     t.bigint "pinned_by_id"
     t.bigint "moved_from_channel_id"
     t.datetime "moved_at"
+    t.jsonb "link_preview"
+    t.bigint "document_ids", default: [], null: false, array: true
     t.index ["chat_channel_id", "id"], name: "index_chat_messages_on_chat_channel_id_and_id"
     t.index ["chat_channel_id", "pinned_at"], name: "index_chat_messages_pinned", where: "(pinned_at IS NOT NULL)"
     t.index ["pinned_by_id"], name: "index_chat_messages_on_pinned_by_id"
@@ -1496,7 +1498,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_170000) do
     t.datetime "updated_at", null: false
     t.string "visibility", default: "private", null: false
     t.datetime "shared_at"
+    t.string "hashtags", default: [], null: false, array: true
+    t.jsonb "mentions", default: {}, null: false
+    t.bigint "mentioned_user_ids", default: [], null: false, array: true
     t.index ["chapter_id"], name: "index_user_highlights_on_chapter_id"
+    t.index ["hashtags"], name: "index_user_highlights_on_hashtags", using: :gin
     t.index ["user_id", "chapter_id"], name: "index_user_highlights_on_user_id_and_chapter_id"
     t.index ["user_id", "created_at"], name: "index_user_highlights_on_user_id_and_created_at"
     t.index ["user_id", "shared_at"], name: "index_user_highlights_on_user_id_and_shared_at"

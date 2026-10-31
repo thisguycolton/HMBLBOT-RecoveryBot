@@ -1,9 +1,11 @@
 # One message in a group's chat: fetched when the live channel says it's new or changed
 # (GroupChatChannel), changed by its writer, deleted by its writer or the group's admins. Anyone
 # in its channel puts emoji on it and takes theirs off (ChatReaction). Whoever manages the channel
-# pins it; the group's admins move it to another channel.
+# pins it; the group's admins move it to another channel. Its pictures and files are only
+# handed to people in its channel (#file); its writer takes its link's card off.
 class Api::GroupChatMessagesController < ApplicationController
   include GroupScoped
+  include ActiveStorage::SetCurrent
 
   # A channel holds this many pinned messages at most
   PINS_MAX = 50
@@ -34,6 +36,26 @@ class Api::GroupChatMessagesController < ApplicationController
 
     @message.destroy!
     head :no_content
+  end
+
+  # GET /api/groups/:group_slug/chat_messages/:id/files/:file_id -> off to the file for a few
+  # minutes (pictures and PDFs open in the browser; the rest download)
+  def file
+    attachment = @message.files.attachments.find_by(id: params[:file_id])
+    type = attachment && ChatMessage.file_type_for(attachment.filename)
+    return head(:not_found) unless type
+
+    inline = ChatMessage::INLINE_TYPES.include?(type)
+    expires_in 4.minutes, public: false
+    redirect_to attachment.blob.url(expires_in: 5.minutes, disposition: inline ? :inline : :attachment), allow_other_host: true
+  end
+
+  # DELETE /api/groups/:group_slug/chat_messages/:id/link -> the message (its writer): no card for its link
+  def hide_link
+    return render(json: { error: "Only its writer can take the preview off." }, status: :forbidden) unless @message.user_id == current_user.id
+
+    @message.hide_link!
+    render json: @message.as_api_json(viewer: current_user)
   end
 
   # POST /api/groups/:group_slug/chat_messages/:id/reactions { emoji } -> the message

@@ -2,6 +2,7 @@
 # or deleted by its writer (the note's author can delete it too). Anyone who can see the
 # note can comment, and sees its comments; a repost's comments go to the original.
 class NoteComment < ApplicationRecord
+  moderates_language :body
   include Reactable
   include Mentionable
 

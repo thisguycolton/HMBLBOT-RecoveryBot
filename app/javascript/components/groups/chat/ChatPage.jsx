@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Archive, ArrowDownUp, ArrowLeft, ArrowRightLeft, Ban, ChevronDown, ChevronUp, EyeOff, Flag, GripVertical, Hash, Loader2, Lock, MoreHorizontal, Pencil, Pin, PinOff, Plus, Reply, SendHorizontal, Settings, SmilePlus, Trash2, UserX, X } from "lucide-react";
+import { Archive, ArrowDownUp, FolderOpen, Paperclip, ArrowLeft, ArrowRightLeft, Ban, ChevronDown, ChevronUp, EyeOff, Flag, GripVertical, Hash, Loader2, Lock, MoreHorizontal, Pencil, Pin, PinOff, Plus, Reply, SendHorizontal, Settings, SmilePlus, Trash2, UserX, X } from "lucide-react";
 import { blockPerson, useBlocked } from "../../notes/PostMenu";
 import Layout from "../../Layout";
 import Markdown from "../../book/Markdown";
@@ -18,6 +18,8 @@ import { ChannelForm, ChatSettings } from "./ChannelForm";
 import MentionTextarea from "./MentionTextarea";
 import ReportDialog from "./ReportDialog";
 import { MoveDialog, PinnedPanel, excerptOf } from "./PinsAndMove";
+import { ACCEPT, DocumentPicker, FILES_MAX, MessageDocuments, MessageFiles, PendingFiles, fileProblem } from "./Attachments";
+import LinkCard from "../../notes/LinkCard";
 
 // Messages from the same person this close together run on under one name, like Slack
 const RUN_GAP = 5 * 60 * 1000;
@@ -29,6 +31,8 @@ const TYPING_FOR = 4000;
 // who's typing. @ in the box offers people and role handles; mentions and replies notify people.
 // Anyone puts emoji on a message or replies to it; whoever manages a channel pins messages in it;
 // admins move a message to the right channel and set the order of the channels for everyone.
+// Messages carry pictures and files (picked, pasted or dropped on the box) and a card for their
+// first link, which the server reads after the message is posted.
 export default function ChatPage() {
   const { slug, channelId } = useParams();
   const navigate = useNavigate();
@@ -415,6 +419,15 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
     if (atBottom.current) el.scrollTop = el.scrollHeight;
   }, [messages, typingNames.length, focusId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The box growing (files picked, a reply, more lines) keeps the newest messages in view
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(() => { if (atBottom.current) el.scrollTop = el.scrollHeight; });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   // The highlight fades, and the link to it leaves the address
   useEffect(() => {
     if (!focusId) return undefined;
@@ -464,6 +477,14 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
   };
 
   const reply = (m) => { setActive(null); setReplyTo(m); };
+
+  const hideLink = async (m) => {
+    try {
+      put(await api(`/groups/${slug}/chat_messages/${m.id}/link`, { method: "DELETE" }));
+    } catch (e) {
+      showToast(e.message, { tone: "error" });
+    }
+  };
 
   const remove = async (m) => {
     if (!window.confirm(m.mine ? "Delete your message?" : `Delete ${m.author.name}'s message?`)) return;
@@ -544,7 +565,9 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
         <PinnedPanel channel={channel} pins={pins} me={chat.me.username} onClose={() => setShowPins(false)}
           onJump={(id) => { if (!wide) setShowPins(false); jump(id); }} onUnpin={(m) => pin(m, false)} />
       )}
-      <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3 sm:px-4">
+      {/* Pictures arriving push the newest messages down: stay at the bottom if they were there */}
+      <div ref={scroller} onScroll={onScroll} onLoadCapture={() => { if (atBottom.current && scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3 sm:px-4">
         <ErrorNote error={error} />
         {!messages ? <Loading /> : (
           <>
@@ -578,7 +601,7 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
                     <ChatMessage message={m} run={run} me={chat.me.username} focused={m.id === focusId}
                       active={active === m.id} onTap={() => setActive((a) => (a === m.id ? null : m.id))}
                       canBlock={chat.can_manage && !m.mine} canReact={!channel.archived} onReact={(emoji) => react(m, emoji)}
-                      onReply={() => reply(m)} onJump={jump} onPin={(on) => { setActive(null); pin(m, on); }} onMove={() => { setActive(null); setMoving(m); }}
+                      onReply={() => reply(m)} onJump={jump} onHideLink={() => hideLink(m)} onPin={(on) => { setActive(null); pin(m, on); }} onMove={() => { setActive(null); setMoving(m); }}
                       onEdit={() => { setActive(null); setEditing(m.id); }} onDelete={() => remove(m)}
                       onReport={() => setReporting(m)} onBlock={() => block(m.author)} onBlockForMe={() => blockPerson(m.author)} />
                   )}
@@ -600,7 +623,7 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
         </p>
       ) : (
         <Composer channel={channel} base={base} where={where} max={chat.message_max} onSent={sent} onTyping={() => sayTyping(channel.id)}
-          replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
+          replyTo={replyTo} onCancelReply={() => setReplyTo(null)} slug={slug} />
       )}
       {reporting && <ReportDialog subject={{ type: "chat_message", id: reporting.id }} person={reporting.author} onClose={() => setReporting(null)} />}
       {moving && (
@@ -632,7 +655,7 @@ function TypingLine({ names }) {
   return <span className="inline-flex items-center gap-1.5"><span className="chat-typing" aria-hidden="true"><i /><i /><i /></span> {who} {names.length === 1 ? "is" : "are"} typing…</span>;
 }
 
-function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, canReact, onReact, onReply, onJump, onPin, onMove, onEdit, onDelete, onReport, onBlock, onBlockForMe }) {
+function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, canReact, onReact, onReply, onJump, onPin, onMove, onHideLink, onEdit, onDelete, onReport, onBlock, onBlockForMe }) {
   const [menu, setMenu] = useState(false);
   const [picking, setPicking] = useState(false);
   const [shown, setShown] = useState(false);
@@ -677,9 +700,12 @@ function ChatMessage({ message: m, run, me, focused, active, onTap, canBlock, ca
           </p>
         )}
         <div className="chat-body">
-          <Markdown source={m.body} mentions={m.mentions} me={me} mine={m.mentions_me} className="text-[0.95rem] leading-relaxed text-slate-800 dark:text-neutral-100" />
+          {m.body && <Markdown source={m.body} mentions={m.mentions} me={me} mine={m.mentions_me} className="text-[0.95rem] leading-relaxed text-slate-800 dark:text-neutral-100" />}
           {m.edited && <span className="text-[0.7rem] text-slate-400"> (edited)</span>}
         </div>
+        {m.files?.length > 0 && <MessageFiles files={m.files} />}
+        {m.documents?.length > 0 && <MessageDocuments documents={m.documents} />}
+        {m.link && <div className="chat-link mt-1 max-w-md"><LinkCard link={m.link} onRemove={m.mine ? onHideLink : undefined} /></div>}
         {m.reactions?.length > 0 && <Reactions reactions={m.reactions} canReact={canReact} onReact={onReact} onMore={() => setPicking(true)} />}
       </div>
       </div>
@@ -836,6 +862,23 @@ function IconButton({ label, onClick, icon: Icon, danger = false }) {
   );
 }
 
+// What the paperclip offers, above the box
+function AttachMenu({ onClose, children }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const away = (e) => { if (!ref.current?.parentElement?.contains(e.target)) onClose(); };
+    const esc = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", away); document.removeEventListener("keydown", esc); };
+  }, [onClose]);
+  return (
+    <div ref={ref} role="menu" className="absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-xl bg-white py-1 text-sm shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
+      {children}
+    </div>
+  );
+}
+
 // A message's ••• menu: opens below its buttons, or above them low on the screen, and closes
 // when the pointer leaves it, on a tap elsewhere, or with Esc
 function PopMenu({ onClose, children }) {
@@ -872,13 +915,27 @@ function MenuItem({ icon: Icon, onClick, danger = false, children }) {
 // button sends
 const finePointer = () => window.matchMedia("(pointer: fine)").matches;
 
-function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCancelReply }) {
+function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCancelReply, slug }) {
   const key = `hb-chat-draft-${channel.id}`;
   const [body, setBody] = useState(() => { try { return sessionStorage.getItem(key) || ""; } catch { return ""; } });
+  const [files, setFiles] = useState([]);
+  const [docs, setDocs] = useState([]); // group documents: { id, title }
+  const [attachMenu, setAttachMenu] = useState(false);
+  const [pickingDocs, setPickingDocs] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const lastTyping = useRef(0);
   const ref = useRef(null);
+  const picker = useRef(null);
+
+  const addFiles = (list) => {
+    const next = [...files, ...list];
+    const problem = fileProblem(next);
+    if (problem) { setError(problem); return; }
+    setError(null);
+    setFiles(next);
+  };
 
   useEffect(() => { if (finePointer()) ref.current?.focus(); }, []);
   useEffect(() => { if (replyTo) ref.current?.focus(); }, [replyTo?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -889,13 +946,26 @@ function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCanc
     if (text.trim() && Date.now() - lastTyping.current > 3000) { lastTyping.current = Date.now(); onTyping(); }
   };
 
+  const ready = !!body.trim() || files.length > 0 || docs.length > 0;
   const send = async () => {
-    if (!body.trim() || sending) return;
+    if (!ready || sending) return;
     setSending(true);
     setError(null);
     try {
-      const message = await api(`${base}/messages`, { method: "POST", body: { body, ...(replyTo ? { reply_to_id: replyTo.id } : {}) } });
+      let message;
+      if (files.length) {
+        const form = new FormData();
+        form.append("body", body);
+        if (replyTo) form.append("reply_to_id", replyTo.id);
+        files.forEach((f) => form.append("files[]", f));
+        docs.forEach((d) => form.append("document_ids[]", d.id));
+        message = await api(`${base}/messages`, { method: "POST", form });
+      } else {
+        message = await api(`${base}/messages`, { method: "POST", body: { body, ...(replyTo ? { reply_to_id: replyTo.id } : {}), ...(docs.length ? { document_ids: docs.map((d) => d.id) } : {}) } });
+      }
       setBody("");
+      setFiles([]);
+      setDocs([]);
       lastTyping.current = 0;
       onSent(message);
     } catch (e) {
@@ -907,19 +977,41 @@ function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCanc
   };
 
   return (
-    <form className="chat-composer m-2 mt-0 rounded-2xl bg-neutral-100 p-1.5 ring-1 ring-neutral-200 focus-within:ring-2 focus-within:ring-accent dark:bg-neutral-800 dark:ring-neutral-700 sm:m-3 sm:mt-0"
-      onSubmit={(e) => { e.preventDefault(); send(); }}>
+    <form className={`chat-composer m-2 mt-0 rounded-2xl bg-neutral-100 p-1.5 ring-1 focus-within:ring-2 focus-within:ring-accent dark:bg-neutral-800 sm:m-3 sm:mt-0 ${dragging ? "ring-2 ring-accent" : "ring-neutral-200 dark:ring-neutral-700"}`}
+      onSubmit={(e) => { e.preventDefault(); send(); }}
+      onDragOver={(e) => { if ([...e.dataTransfer.types].includes("Files")) { e.preventDefault(); setDragging(true); } }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false); }}
+      onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); setDragging(false); addFiles([...e.dataTransfer.files]); } }}
+      onPaste={(e) => { const pasted = [...(e.clipboardData?.files || [])]; if (pasted.length) { e.preventDefault(); addFiles(pasted); } }}>
       {error && <p role="alert" className="px-2 pb-1 text-xs text-rose-600">{error}</p>}
       {replyTo && (
         <div className="flex items-center gap-1.5 px-2 pb-1 pt-0.5 text-xs text-slate-600 dark:text-neutral-300">
           <Reply className="size-3.5 shrink-0" aria-hidden="true" />
           <span className="shrink-0">Replying to <b className="text-slate-900 dark:text-white">{replyTo.author.name}</b></span>
-          <span className="min-w-0 flex-1 truncate text-slate-500 dark:text-neutral-400">{excerptOf(replyTo.body)}</span>
+          <span className="min-w-0 flex-1 truncate text-slate-500 dark:text-neutral-400">{excerptOf(replyTo.body) || (replyTo.files?.length ? `${replyTo.files.length} ${replyTo.files.length === 1 ? "file" : "files"}` : "")}</span>
           <button type="button" onClick={onCancelReply} aria-label="Don't reply" title="Don't reply"
             className="inline-grid size-7 shrink-0 place-items-center rounded-full !bg-transparent text-slate-500 hover:!bg-neutral-200 dark:hover:!bg-neutral-700"><X className="size-3.5" /></button>
         </div>
       )}
+      {(files.length > 0 || docs.length > 0) && (
+        <PendingFiles files={files} documents={docs} onRemove={(i) => setFiles((list) => list.filter((_, j) => j !== i))}
+          onRemoveDocument={(id) => setDocs((list) => list.filter((d) => d.id !== id))} />
+      )}
       <div className="flex items-end gap-1.5">
+        <input ref={picker} type="file" multiple accept={ACCEPT} className="hidden" tabIndex={-1}
+          onChange={(e) => { addFiles([...e.target.files]); e.target.value = ""; }} />
+        <div className="relative mb-0.5 shrink-0">
+          <button type="button" onClick={() => setAttachMenu((o) => !o)} aria-label="Attach" aria-expanded={attachMenu} title="Attach pictures, files or group documents"
+            className={`inline-grid size-10 place-items-center rounded-xl text-slate-500 hover:!bg-neutral-200 dark:text-neutral-400 dark:hover:!bg-neutral-700 ${attachMenu ? "!bg-neutral-200 dark:!bg-neutral-700" : "!bg-transparent"}`}>
+            <Paperclip className="size-5" />
+          </button>
+          {attachMenu && (
+            <AttachMenu onClose={() => setAttachMenu(false)}>
+              <MenuItem icon={Paperclip} onClick={() => { setAttachMenu(false); if (files.length < FILES_MAX) picker.current?.click(); }}>Pictures or files</MenuItem>
+              <MenuItem icon={FolderOpen} onClick={() => { setAttachMenu(false); setPickingDocs(true); }}>A group document</MenuItem>
+            </AttachMenu>
+          )}
+        </div>
         <div className="min-w-0 flex-1">
           <MentionTextarea ref={ref} value={body} onChange={change} where={where} minRows={1} maxLength={max}
             placeholder={replyTo ? `Reply to ${replyTo.author.name.split(" ")[0]}` : `Message #${channel.name}`} aria-label={`Message #${channel.name}`} enterKeyHint={finePointer() ? "send" : "enter"}
@@ -929,11 +1021,12 @@ function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCanc
               if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && finePointer()) { e.preventDefault(); send(); }
             }} />
         </div>
-        <button type="submit" disabled={sending || !body.trim()} aria-label="Send"
+        <button type="submit" disabled={sending || !ready} aria-label="Send"
           className="mb-0.5 inline-grid size-10 shrink-0 place-items-center rounded-xl !bg-accent !text-white disabled:opacity-40">
           {sending ? <Loader2 className="size-5 animate-spin" /> : <SendHorizontal className="size-5" />}
         </button>
       </div>
+      {pickingDocs && <DocumentPicker slug={slug} picked={docs} onClose={() => setPickingDocs(false)} onDone={(list) => { setDocs(list); setPickingDocs(false); ref.current?.focus(); }} />}
     </form>
   );
 }

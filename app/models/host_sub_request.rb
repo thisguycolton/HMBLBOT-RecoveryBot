@@ -2,6 +2,7 @@
 # one meeting on one date. Every member is told; the first to take it becomes a
 # MeetingHostCover for that date and the request is filled.
 class HostSubRequest < ApplicationRecord
+  moderates_language :note
   STATUSES = %w[open filled cancelled].freeze
 
   belongs_to :meeting

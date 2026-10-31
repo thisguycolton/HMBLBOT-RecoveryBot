@@ -5,6 +5,7 @@
 # note, and the newest is always the document as it is. Comments (GroupDocumentComment) are
 # off unless the document turns them on (comment_mode), for its editors or for every member.
 class GroupDocument < ApplicationRecord
+  moderates_language :title, :body
   include Live
 
   KINDS = %w[format guidelines treasury service outreach other].freeze

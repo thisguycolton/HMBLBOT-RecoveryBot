@@ -3,6 +3,7 @@
 # into it, and a summary of the change from the version before (words added and removed, and
 # the sections they were in; DocumentDiff). The newest one is the document as it is.
 class GroupDocumentVersion < ApplicationRecord
+  moderates_language :message
   # created: the document's first version; restored: an older version put back
   KINDS = %w[created saved restored].freeze
 

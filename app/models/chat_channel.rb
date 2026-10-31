@@ -4,6 +4,7 @@
 # people named in access_user_ids. Members read and write in the channels they're in;
 # messages arrive live (GroupChatChannel), and only @ mentions notify anyone (Mentions).
 class ChatChannel < ApplicationRecord
+  moderates_language :name, :topic
   # Who a channel can be open to, and who an admin can let add channels (Group#chat_creator_roles)
   ROLES = {
     "members" => "Everyone in the group",

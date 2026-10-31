@@ -2,6 +2,7 @@
 # reader dismisses it, then stays hidden in that browser for a day (components/SiteNotices.jsx).
 # A notice with a body (Markdown) opens it in a modal from the toast's "Read more".
 class SiteNotice < ApplicationRecord
+  moderates_language :title, :summary, :body, :link_label
   TONES = %w[info success warning].freeze
   AUDIENCES = %w[everyone members guests].freeze
 

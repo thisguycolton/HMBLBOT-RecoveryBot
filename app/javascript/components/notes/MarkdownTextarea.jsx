@@ -178,12 +178,18 @@ const MarkdownTextarea = forwardRef(function MarkdownTextarea({ value, onChange,
               <button type="button" className="wb-md-input__btn" onClick={() => paint(picking, null)} aria-label="No color" title="No color"><X size={15} aria-hidden="true" /></button>
             </div>
           ) : linking ? (
-            <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); applyLink(); }}>
-              <input autoFocus type="url" inputMode="url" placeholder="Paste a link" value={linking.url} aria-label="Link"
+            // Not a <form>: this box usually sits inside one (a note, a chat message), and a form in
+            // a form submits the outer one, or the browser refuses "aa.org" as a web address
+            <div className="flex items-center gap-1" role="group" aria-label="Add a link">
+              <input autoFocus type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                placeholder="Paste a link" value={linking.url} aria-label="Link"
                 onChange={(e) => setLinking((l) => ({ ...l, url: e.target.value }))}
-                onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setLinking(null); textRef.current?.focus(); } }} />
-              <button type="submit" className="wb-md-input__btn wb-md-input__btn--text">Add</button>
-            </form>
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); applyLink(); }
+                  if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setLinking(null); textRef.current?.focus(); }
+                }} />
+              <button type="button" className="wb-md-input__btn wb-md-input__btn--text" onClick={applyLink}>Add</button>
+            </div>
           ) : (
             <>
               {MARKS.map((m) => {

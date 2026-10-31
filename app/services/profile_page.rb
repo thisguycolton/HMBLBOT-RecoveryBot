@@ -81,7 +81,7 @@ class ProfilePage
   def feed(person, before: nil)
     notes = TimelineNote.on_profile_of(person, @viewer)
     notes = notes.shown unless @viewer&.id == person.id
-    merge(notes, UserHighlight.visible_to(@viewer, owner: person).on_timeline, before: before)
+    merge(notes, UserHighlight.visible_to(@viewer, owner: person).on_timeline.not_blocked_by(@viewer), before: before)
   end
 
   # Followers or following, newest first

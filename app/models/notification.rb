@@ -23,7 +23,7 @@ class Notification < ApplicationRecord
                   kinds: %w[event.update event.collaborator] },
     "schedule_polls" => { label: "Scheduling polls", description: "Being asked to vote or help run a poll, and new votes in polls you run.",
                           kinds: %w[schedule_poll.invitee schedule_poll.collaborator schedule_poll.vote] },
-    "mentions" => { label: "Mentions and replies", description: "When someone @ mentions you, or a role you hold, in chat, a note or a comment, and when someone replies to your chat message.",
+    "mentions" => { label: "Mentions and replies", description: "When someone @ mentions you, or a role you hold, in chat, a note, a comment or a highlight note, and when someone replies to your chat message.",
                     kinds: %w[mention.chat mention.note reply.chat] },
     "comments" => { label: "Comments on your notes", description: "When someone comments on one of your notes.",
                     kinds: %w[note.comment] },

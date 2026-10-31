@@ -7,6 +7,10 @@ class ApplicationController < ActionController::Base
 
     before_action :configure_permitted_parameters, if: :devise_controller?
 
+    # A save the API didn't expect to fail (e.g. it has a slur in it, see BlockedLanguage)
+    # answers with why, instead of a 500
+    rescue_from ActiveRecord::RecordInvalid, with: :render_record_invalid
+
   protected
 
   # An invite link followed while signed out (GroupsController#join) lands them in the group;
@@ -48,6 +52,13 @@ class ApplicationController < ActionController::Base
     current_user.notifications.unread
                 .where("split_part(split_part(url, '#', 1), '?', 1) = :path", path: request.path)
                 .update_all(read_at: Time.current)
+  end
+
+  def render_record_invalid(error)
+    raise error unless request.path.start_with?("/api/") || request.format.json?
+
+    messages = error.record.errors.full_messages
+    render json: { error: messages.to_sentence, errors: messages }, status: :unprocessable_entity
   end
 
   def track_action
