@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_31_190000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_31_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -828,6 +828,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_190000) do
     t.index ["group_name"], name: "index_intergroup_follows_on_group_name"
     t.index ["user_id", "group_name"], name: "index_intergroup_follows_on_user_id_and_group_name", unique: true
     t.index ["user_id"], name: "index_intergroup_follows_on_user_id"
+  end
+
+  create_table "language_rules", force: :cascade do |t|
+    t.string "kind", null: false
+    t.string "term", null: false
+    t.string "note"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_language_rules_on_created_by_id"
+    t.index ["kind", "term"], name: "index_language_rules_on_kind_and_term", unique: true
   end
 
   create_table "meeting_directories", force: :cascade do |t|
@@ -1673,6 +1684,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_190000) do
   add_foreign_key "hosting_sessions", "decks", on_delete: :cascade
   add_foreign_key "hosting_sessions", "meetings", on_delete: :cascade
   add_foreign_key "intergroup_follows", "users"
+  add_foreign_key "language_rules", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "meeting_directories", "users", column: "imported_by_id", on_delete: :nullify
   add_foreign_key "meeting_host_covers", "meetings", on_delete: :cascade
   add_foreign_key "meeting_host_covers", "users", on_delete: :nullify

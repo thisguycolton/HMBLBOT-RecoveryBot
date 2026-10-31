@@ -448,6 +448,10 @@ end
       end
       resources :readings, only: %i[index update destroy]
       resources :tags, only: %i[index create update destroy]
+      # Blocked words (LanguageRule / BlockedLanguage)
+      resources :language_rules, only: %i[index create destroy] do
+        post :check, on: :collection
+      end
       resources :site_notices, only: %i[index create update destroy]
       resources :text_reports, only: %i[index update destroy] do
         post :comment, on: :member

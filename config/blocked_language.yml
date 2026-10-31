@@ -5,8 +5,8 @@
 # How matching works (see app/models/blocked_language.rb):
 # - Case doesn't matter, and accents, look-alike letters from other alphabets (Cyrillic "а",
 #   Greek "ο", fullwidth "ｎ", ...) and invisible characters are ignored.
-# - Each letter also matches common stand-ins: a=4@, e=3, i=1!| (and l in `anywhere` words), o=0, s=5$z, g=9 6, t=7+, b=8,
-#   and a vowel can be written as *.
+# - Each letter also matches common stand-ins: a=4@, e=3, i=1!| (and l in `anywhere` words),
+#   o=0, s=5$z, g=9 6, t=7+, b=8, and a vowel can be written as *.
 # - In words of 5+ letters a letter may be repeated ("niiigggerrr"), and a trailing s/z/es is allowed (plurals).
 # - Letters spelled out one at a time are joined back up ("n i g g e r", "n.i.g.g.e.r").
 #
@@ -15,14 +15,16 @@
 #            the words.
 # anywhere:  matched even inside another word ("xxnigger"), and with spaces or punctuation
 #            between letters ("nig ger"; stand-ins like 1 or 3 only count when the letters
-#            are together, so "in 1966. a" isn't caught). Only for words no innocent word contains (use
-#            `allowed` for the few that do).
-# allowed:   innocent words or phrases (regular expressions, case-insensitive, matched against
-#            the cleaned-up text) that are removed before checking, so "snigger", "Maine Coon"
-#            and "chink in the armor" are fine.
+#            are together, so "in 1966. a" isn't caught). Only for words no innocent word
+#            contains (use `allowed` for the few that do).
+# allowed:   innocent words or phrases that are skipped before checking, so "snigger",
+#            "Maine Coon" and "chink in the armor" are fine. Whole words; spaces in a phrase
+#            also match a hyphen or nothing ("coon hound" covers "coonhound").
 #
-# After editing, restart the app (the list is read once). Run
-# `bin/rails test test/models/blocked_language_test.rb` to check nothing innocent got caught.
+# This file is only the STARTER list. The live list is in the database (LanguageRule) and is
+# edited in the admin suite under Content > Blocked words; a migration copied this file there.
+# The app falls back to this file only while that table is empty (fresh setups and tests).
+# Run `bin/rails test test/models/blocked_language_test.rb` after changing it.
 
 anywhere:
   - nigger
@@ -84,10 +86,27 @@ words:
   - sieg heil
 
 allowed:
-  - '\bsnigger(?:s|ed|ing)?\b'
-  - '\bniggard(?:s|ly|liness)?\b'
-  - '\bmaine coons?\b'
-  - '\bcoon ?(?:hounds?|dogs?|cats?)\b'
-  - '\bchinks? (?:in|of) '  # "a chink in the walls their ego has built" (As Bill Sees It), "a chink of light"
-  - '\bhonky[ -]?tonks?\b'
-  - '\bspick (?:and|&|n) span\b'
+  - snigger
+  - sniggers
+  - sniggered
+  - sniggering
+  - niggard
+  - niggardly
+  - niggardliness
+  - maine coon
+  - maine coons
+  - coon hound
+  - coon hounds
+  - coon dog
+  - coon dogs
+  - coon cat
+  - coon cats
+  # "a chink in the walls their ego has built" (As Bill Sees It, Twelve and Twelve), "a chink of light"
+  - chink in
+  - chinks in
+  - chink of
+  - chinks of
+  - honky tonk
+  - honky tonks
+  - spick and span
+  - spick n span
