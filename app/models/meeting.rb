@@ -135,7 +135,7 @@ class Meeting < ApplicationRecord
     attrs = record.meeting_attributes(day)
     self.attributes = attrs.slice(*OIAA_FIELDS)
     # An in-person listing brings its place too, unless the group already gave this meeting one
-    self.attributes = attrs.slice(:location, :formatted_address) if record.place.present? && place.blank?
+    self.attributes = attrs.slice(:location, :formatted_address, :latitude, :longitude) if record.place.present? && place.blank?
     self.recurrence = "weekly"
     self.oiaa_slug = record.slug
     self.source = "oiaa"
@@ -165,8 +165,16 @@ class Meeting < ApplicationRecord
       schedule_label: schedule_label, conference_url: conference_url, conference_url_notes: conference_url_notes,
       conference_phone: conference_phone, location: location, formatted_address: formatted_address,
       types: types, notes: notes, oiaa_slug: oiaa_slug, oiaa_url: oiaa_url, oiaa_missing: oiaa_missing,
-      oiaa_synced_at: oiaa_synced_at&.iso8601,
+      oiaa_synced_at: oiaa_synced_at&.iso8601, **map_json,
     }
+  end
+
+  # Its little map (MeetingMap) and where it is, for an in-person meeting
+  def map_json
+    return { map_url: nil } if place.blank?
+
+    { map_url: "/meeting_maps/meeting/#{id}.png?v=#{Digest::SHA256.hexdigest(place).first(8)}",
+      latitude: latitude&.to_f, longitude: longitude&.to_f }
   end
 
   private
@@ -184,6 +192,8 @@ class Meeting < ApplicationRecord
   def tidy
     self.time_zone = group&.time_zone if time_zone.blank?
     self.types = Array(types).map(&:to_s).map(&:strip).reject(&:blank?).uniq
+    # A new address is looked up again for its map (MeetingMap), unless it came with its spot
+    self.latitude = self.longitude = nil if (location_changed? || formatted_address_changed?) && !latitude_changed? && persisted?
     if once?
       self.day_of_week = self.start_minute = self.end_minute = nil
       self.ends_at ||= starts_at && starts_at + 1.hour

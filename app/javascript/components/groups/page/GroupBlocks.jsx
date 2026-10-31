@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Gavel, Lock, MapPin, MessagesSquare, Mic, Pin, Scale, Trash2, UserPlus, Users, Video } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Gavel, Lock, MapPin, MessagesSquare, Mic, Navigation, Pin, Scale, Trash2, UserPlus, Users, Video } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { tone } from "../../events/lib";
 import Avatar from "../Avatar";
@@ -67,11 +67,62 @@ function meetingRows(meetings) {
   ];
 }
 
-// Where an in-person meeting is: its place and address, linking to a map
+const placeOf = (m) => [m.location, m.formatted_address].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ");
+const placeKey = (m) => (m.formatted_address || m.location || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+// The place every in-person meeting of the group is at, when it's always the same one
+export function sharedPlace(meetings) {
+  const placed = meetings.filter((m) => placeKey(m));
+  if (placed.length === 0) return null;
+  return placed.every((m) => placeKey(m) === placeKey(placed[0])) ? (placed.find((m) => m.map_url) || placed[0]) : null;
+}
+
+// A link that opens the visitor's own maps app: Apple Maps on iPhones, iPads and Macs, the
+// map app they picked on Android (geo:), Google Maps in other browsers
+export function mapsLink(m) {
+  const address = m.formatted_address || m.location || "";
+  const spot = m.latitude != null && m.longitude != null ? `${m.latitude},${m.longitude}` : null;
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  if (/iPhone|iPad|iPod|Macintosh/.test(ua)) {
+    return `https://maps.apple.com/?${new URLSearchParams(spot ? { q: address || m.name, sll: spot } : { q: address })}`;
+  }
+  if (/Android/.test(ua)) return `geo:${spot || "0,0"}?q=${encodeURIComponent(address || spot)}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || spot)}`;
+}
+
+// The little map of where the group meets (MeetingMap, drawn by our server from
+// OpenStreetMap), showing the main cross streets; tapping it opens their own maps app
+function MeetingMapCard({ meeting, editing, compact }) {
+  const [failed, setFailed] = useState(false);
+  const place = placeOf(meeting);
+  const href = mapsLink(meeting);
+  const stop = (e) => editing && e.preventDefault();
+  return (
+    <div className={compact ? "mb-3" : "mb-4"}>
+      {meeting.map_url && !failed && (
+        <a href={href} target="_blank" rel="noreferrer" onClick={stop} className="group/map relative block overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700" aria-label={`Open ${place} in your maps app`}>
+          <img src={meeting.map_url} alt={`Map of the streets around ${place}`} loading="lazy" width="720" height="360"
+            className="block aspect-[2/1] w-full object-cover transition group-hover/map:scale-[1.02]" onError={() => setFailed(true)} />
+          <span className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1 text-xs font-semibold text-slate-900 shadow-sm dark:bg-neutral-900/90 dark:text-white">
+            <Navigation className="size-3.5" /> Open in Maps
+          </span>
+        </a>
+      )}
+      <p className="mt-2 text-sm text-slate-700 dark:text-neutral-200">
+        <MapPin className="mr-1 inline size-3.5 align-[-2px]" />
+        <span className="font-medium">We meet at </span>
+        <a href={href} target="_blank" rel="noreferrer" onClick={stop} className="hover:underline">{place}</a>
+        {meeting.location_notes && <span className="block text-xs text-slate-500 dark:text-neutral-400">{meeting.location_notes}</span>}
+      </p>
+    </div>
+  );
+}
+
+// Where an in-person meeting is: its place and address, opening their maps app
 function MeetingPlace({ meeting, editing }) {
-  const place = [meeting.location, meeting.formatted_address].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ");
+  const place = placeOf(meeting);
   if (!place) return null;
-  const map = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meeting.formatted_address || place)}`;
+  const map = mapsLink(meeting);
   return (
     <p className="mt-0.5 text-sm text-slate-600 dark:text-neutral-300">
       <MapPin className="mr-1 inline size-3.5 align-[-2px]" />
@@ -108,8 +159,10 @@ function MeetingHosts({ hosts, on, editing }) {
 function MeetingsBlock({ block, compact, editing, context, title }) {
   const rows = meetingRows(context.meetings || []);
   const t = tone(block);
+  const shared = sharedPlace(context.meetings || []);
   return (
     <Card block={block} compact={compact} title={title} icon={CalendarClock}>
+      {shared && <MeetingMapCard meeting={shared} editing={editing} compact={compact} />}
       {rows.length === 0 && <Empty>{editing ? "The group's meetings show here." : "No meetings listed yet."}</Empty>}
       <ul className={compact ? "space-y-3" : "divide-y divide-neutral-200/70 dark:divide-neutral-700/60"}>
         {rows.map((m) => (
@@ -117,7 +170,7 @@ function MeetingsBlock({ block, compact, editing, context, title }) {
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-slate-900 dark:text-white">{m.name}</p>
               <p className="text-sm text-slate-600 dark:text-neutral-300">{m.label}</p>
-              <MeetingPlace meeting={m} editing={editing} />
+              {!shared && <MeetingPlace meeting={m} editing={editing} />}
               <MeetingHosts hosts={m.hosts} on={m.hosts_on} editing={editing} />
               {m.types?.length > 0 && (
                 <p className="mt-1 flex flex-wrap gap-1">

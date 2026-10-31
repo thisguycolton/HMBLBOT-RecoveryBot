@@ -19,7 +19,8 @@ class MeetingListImport
   MAX_ROWS = 5000
   # What a listing's preview compares, and shows when it changed
   FIELDS = %i[name group_name days start_time end_time time_zone types notes location location_notes
-              formatted_address region attendance_option conference_url conference_url_notes conference_phone url].freeze
+              formatted_address region attendance_option conference_url conference_url_notes conference_phone url
+              latitude longitude].freeze
 
   DAY_NAMES = Date::DAYNAMES.each_with_index.flat_map { |d, i| [[d.downcase, i], [d[0, 3].downcase, i]] }.to_h
                   .merge("tues" => 2, "weds" => 3, "thur" => 4, "thurs" => 4).freeze
@@ -47,7 +48,8 @@ class MeetingListImport
     "formatted address" => :formatted_address, "types" => :types, "type" => :types, "notes" => :notes,
     "meeting notes" => :notes, "location notes" => :location_notes, "group" => :group, "group name" => :group,
     "region" => :region, "sub region" => :sub_region, "district" => :sub_region, "timezone" => :timezone,
-    "time zone" => :timezone, "conference url" => :conference_url, "online meeting url" => :conference_url,
+    "time zone" => :timezone, "latitude" => :latitude, "lat" => :latitude, "longitude" => :longitude,
+    "lng" => :longitude, "lon" => :longitude, "conference url" => :conference_url, "online meeting url" => :conference_url,
     "conference url notes" => :conference_url_notes, "conference phone" => :conference_phone,
     "attendance option" => :attendance_option, "url" => :url, "website" => :url,
   }.freeze
@@ -152,7 +154,7 @@ class MeetingListImport
       fields = columns.each_with_object({}) { |(header, field), h| h[field] = line[header].to_s.strip.presence || h[field] }
       record = fields.slice(:slug, :name, :location, :address, :city, :state, :postal_code, :country, :formatted_address,
                             :notes, :location_notes, :group, :timezone, :conference_url, :conference_url_notes,
-                            :conference_phone, :attendance_option, :url).transform_keys(&:to_s)
+                            :conference_phone, :attendance_option, :url, :latitude, :longitude).transform_keys(&:to_s)
       record["day"] = fields[:day].to_s.split(/[,;\/]|\band\b/).map(&:strip).reject(&:empty?)
       record["time"] = fields[:time]
       record["end_time"] = fields[:end_time]
@@ -234,6 +236,7 @@ class MeetingListImport
       b = row[field]
       a = a.sort if field == :days && a
       b = b.sort if field == :days && b
+      a, b = [a, b].map { |v| v&.to_f&.round(5) } if %i[latitude longitude].include?(field)
       a.presence != b.presence
     end.map(&:to_s)
   end

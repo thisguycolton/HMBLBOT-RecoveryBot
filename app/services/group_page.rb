@@ -179,7 +179,7 @@ class GroupPage
     { id: record.slug, name: record.name, schedule_label: record.schedule_label, types: record.types,
       conference_url: record.conference_url, conference_url_notes: record.conference_url_notes,
       time_zone: record.zone.tzinfo.name, oiaa_url: record.url,
-      location: record.location, formatted_address: record.formatted_address, location_notes: record.location_notes,
+      location: record.location, formatted_address: record.formatted_address, location_notes: record.location_notes, **record.map_json,
       upcoming_start: upcoming&.first&.iso8601, upcoming_end: upcoming&.last&.iso8601 }
   end
 

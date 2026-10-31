@@ -35,6 +35,9 @@ Rails.application.routes.draw do
   # The picture a shared link shows (og:image)
   get "/share_cards/:kind/:id.png", to: "share_cards#show", as: :share_card, format: false,
       constraints: { kind: /document|reading|event|group|meeting|listing|site/, id: %r{[^/]+} }
+  # The little map of where an in-person meeting is (MeetingMap)
+  get "/meeting_maps/:kind/:id.png", to: "meeting_maps#show", as: :meeting_map, format: false,
+      constraints: { kind: /meeting|listing/, id: %r{[^/]+} }
   # Events: a React app (app/javascript/entrypoints/events.jsx) with the HMBLBOT Editor
   get "/events/:token/unsubscribe", to: "events#unsubscribe", as: :event_unsubscribe
   get "/events/:token(/*path)", to: "events#app", as: :event, format: false

@@ -75,6 +75,14 @@ class OiaaMeeting < ApplicationRecord
   end
   def place = [location, formatted_address].compact_blank.uniq.join(", ").presence
 
+  # Its little map (MeetingMap) and where it is, for an in-person listing
+  def map_json
+    return { map_url: nil } if place.blank?
+
+    { map_url: "/meeting_maps/listing/#{ERB::Util.url_encode(slug)}.png?v=#{Digest::SHA256.hexdigest(place).first(8)}",
+      latitude: latitude&.to_f, longitude: longitude&.to_f }
+  end
+
   def self.minutes(hhmm)
     m = /\A(\d{1,2}):(\d{2})/.match(hhmm.to_s)
     m && (m[1].to_i * 60 + m[2].to_i)
@@ -95,7 +103,7 @@ class OiaaMeeting < ApplicationRecord
       end_minute: end_minute || (start_minute && [start_minute + 60, Meeting::DAY_MINUTES].min),
       time_zone: zone.tzinfo.name, conference_url: conference_url, conference_url_notes: conference_url_notes,
       conference_phone: conference_phone, types: types, oiaa_url: url,
-      location: location, formatted_address: formatted_address,
+      location: location, formatted_address: formatted_address, latitude: latitude, longitude: longitude,
     }
   end
 
