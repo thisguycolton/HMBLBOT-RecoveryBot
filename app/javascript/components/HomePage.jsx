@@ -1,19 +1,24 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import {
+  ArrowDown,
   ArrowRight,
-  Bell,
-  BookOpen,
+  CalendarDays,
   Check,
-  Gamepad2,
+  HandHeart,
   Highlighter,
+  House,
+  Medal,
+  MessagesSquare,
+  MonitorPlay,
+  MoonStar,
   RefreshCw,
-  Search,
-  Share2,
   UserPlus,
+  Users,
 } from "lucide-react";
-import { NAV_CATEGORIES, showItem } from "./nav/siteMenu";
+import { NAV_CATEGORIES } from "./nav/siteMenu";
 import GroupNudge from "./GroupNudge";
+import FeatureTour from "./home/FeatureTour";
 
 const MIN_SKELETON_MS = 350;
 const FADE_MS = 180;
@@ -82,7 +87,7 @@ function HomePreview() {
 
   return (
     <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-gradient-to-br from-slate-100 to-white p-6 shadow-sm dark:from-neutral-600 dark:to-neutral-700">
-      <div className="relative rounded-2xl border dark:border-neutral-800 bg-gradient-to-r from-amber-600 to-amber-800 bg-white p-5">
+      <div className="relative rounded-2xl border dark:border-neutral-800 bg-gradient-to-r from-amber-600 to-amber-800 p-5">
         <div className="flex items-center justify-between">
           <div className="text-sm font-medium text-slate-50 uppercase">
             Topicificator 9002
@@ -90,7 +95,7 @@ function HomePreview() {
           <div className="text-xs text-slate-50">Live Preview</div>
         </div>
 
-        <div className="mt-22 min-h-[120px]">
+        <div className="mt-10 min-h-[120px]">
           {loading && (
             <div className="space-y-3">
               <div className="h-8 lg:h-12 w-1/2 rounded bg-slate-100 animate-pulse mx-auto" />
@@ -100,11 +105,11 @@ function HomePreview() {
 
           {!loading && topic && (
             <>
-              <div className="text-2xl lg:text-4xl font-bold text-slate-50 text-center mt-22 tracking-wide ttSans">
+              <div className="text-2xl lg:text-4xl font-bold text-slate-50 text-center tracking-wide ttSans">
                 {topic.title}
               </div>
               {topic.subtitle && (
-                <div className="mt-2 text-sm text-semibold! text-slate-50 text-center">
+                <div className="mt-2 text-sm font-semibold text-slate-50 text-center">
                   {topic.subtitle}
                 </div>
               )}
@@ -112,7 +117,7 @@ function HomePreview() {
           )}
 
           {!loading && !topic && (
-            <div className="text-2xl font-bold text-slate-50 text-center mt-22 tracking-wide ttSans">
+            <div className="text-2xl font-bold text-slate-50 text-center tracking-wide ttSans">
               Unable to load topic preview.
             </div>
           )}
@@ -143,52 +148,48 @@ function HomePreview() {
   );
 }
 
-// What's new lately, newest first. Each links to where you can try it.
-const WHATS_NEW = [
+// Home-only groups for the tool list below, beside the site menu's (the footer keeps to those)
+const MORE_CATEGORIES = [
   {
-    title: "A library you can actually read in",
-    body: "The Big Book, the Twelve and Twelve, Daily Reflections and more, in a clean reader with page numbers, fonts and dark mode.",
-    icon: BookOpen,
-    href: "/library",
-    cta: "Open the library",
+    key: "groups",
+    label: "Groups",
+    blurb: "Your home group",
+    items: [
+      { label: "Find your group", href: "/groups/find", icon: Users, note: "Group pages with meetings, events and chat", groups: true },
+      { label: "Home feed", href: "/people", icon: House, note: "Notes from the people you follow", auth: true, groups: true },
+      { label: "Hosting", href: "/people/me/hosting", icon: MonitorPlay, note: "Your shifts, subs and HostDeck", auth: true, groups: true },
+    ],
   },
   {
-    title: "Search every book at once",
-    body: "Find the passage you half remember across the whole library, then jump straight to the page.",
-    icon: Search,
-    href: "/library",
-    cta: "Search the library",
-  },
-  {
-    title: "Highlights and notes",
-    body: "Mark the lines that hit home, add your own notes, and share a passage with your group in one link.",
-    icon: Highlighter,
-    href: "/library/highlights",
-    cta: "See your highlights",
-    member: true,
-  },
-  {
-    title: "The Acid Quest",
-    body: "A pixel-art adventure where every encounter is a real meeting topic. Play solo or with your group.",
-    icon: Gamepad2,
-    href: "/game/game",
-    cta: "Play",
+    key: "recovery",
+    label: "Recovery",
+    blurb: "Private to you",
+    items: [
+      { label: "Chips", href: "/recovery", icon: Medal, note: "Your day count and every chip you've earned", auth: true },
+      { label: "10th step", href: "/recovery/inventory", icon: MoonStar, note: "The nightly review, with a reminder", auth: true },
+      { label: "Gratitude", href: "/recovery/gratitude", icon: HandHeart, note: "A short list each day", auth: true },
+    ],
   },
 ];
 
 // Why make an account (shown to people who aren't signed in)
 const MEMBER_PERKS = [
-  { icon: Highlighter, text: "Save highlights and notes in every book" },
-  { icon: Share2, text: "Share passages with your home group" },
-  { icon: BookOpen, text: "Keep your own meeting readings and topics" },
-  { icon: Bell, text: "Get notified when something you asked about is done" },
+  { icon: Medal, text: "Keep your day count and collect your chips" },
+  { icon: MoonStar, text: "A private 10th step and gratitude list, with reminders" },
+  { icon: Highlighter, text: "Highlights and notes in every book" },
+  { icon: MessagesSquare, text: "Chat with your home group and @ mention people" },
+  { icon: CalendarDays, text: "See your service for the week in Today" },
 ];
 
 const FAQ = [
   { q: "Is it free?", a: "Yes. Everything here is free to use. Donations help pay for the server." },
   {
     q: "Do I need an account?",
-    a: "No. Topics, service readings and the whole library are open to everyone. An account adds highlights, notes, sharing and your own readings.",
+    a: "No. Finding a meeting, group pages, topics, service readings and the whole library are open to everyone. An account adds chips, your 10th step, highlights and notes, and your group's chat.",
+  },
+  {
+    q: "Who sees what I write?",
+    a: "Your 10th step, gratitude list and highlights are yours alone. A note or highlight only goes on a timeline when you share it and pick who sees it.",
   },
   {
     q: "How do I get an account?",
@@ -196,7 +197,7 @@ const FAQ = [
   },
   {
     q: "Can I use it on my phone during a meeting?",
-    a: "That's the point: big text, dark mode, and pages that read well on a phone, a laptop or a Zoom screen share.",
+    a: "That's the point: big text, dark mode, and pages that read well on a phone, a laptop or a Zoom screen share. You can add it to your home screen too.",
   },
 ];
 
@@ -214,6 +215,12 @@ function SignUpButton({ className = "" }) {
 
 export default function HomePage() {
   const signedIn = document.body.dataset.currentUser === "true";
+  const groups = signedIn && document.body.dataset.groups === "true";
+  // Members-only tools show to everyone here, marked; Groups ones only to who sees Groups (or
+  // anyone signed out, since group pages are public)
+  const categories = [...NAV_CATEGORIES, ...MORE_CATEGORIES]
+    .map((c) => ({ ...c, items: c.items.filter((item) => (!item.groups || !signedIn || groups)) }))
+    .filter((c) => c.items.length);
 
   return (
     <div className="min-h-screen w-full bg-white dark:bg-neutral-900 text-slate-900 !font-sans">
@@ -223,33 +230,33 @@ export default function HomePage() {
           <div className="grid gap-10 md:grid-cols-2 md:items-center">
             <div>
               <p className="sans !text-left !hyphens-none mb-3 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/30">
-                New: the library, highlights and the Acid Quest
+                New: group chat, chips and HostDeck
               </p>
               <h1 className="!text-4xl md:!text-5xl font-semibold tracking-tight !leading-tight !font-sans !text-white">
                 Meeting in a box? Meet Meeting in your Pocket.
               </h1>
               <p className="sans !text-left !hyphens-none mt-4 text-lg text-sky-100">
-                Draw a topic, read the service readings aloud, and dig into the Big Book and the Twelve and Twelve with
-                highlights and notes you can share with your group.
+                Find a meeting, host it from one screen, and stay close to your home group between meetings. Read and
+                highlight the Big Book, keep your day count, and earn a chip for every milestone.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 {signedIn ? (
                   <a
-                    href="/library"
+                    href={groups ? "/people" : "/library"}
                     className="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold !text-sky-800 hover:bg-sky-50"
                   >
-                    Open the library
+                    {groups ? "Open your home feed" : "Open the library"}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 ) : (
                   <SignUpButton />
                 )}
                 <a
-                  href="/topicificator"
+                  href="#how-it-works"
                   className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-medium !text-white hover:bg-slate-800"
                 >
-                  Try the Topicificator
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  See how it works
+                  <ArrowDown className="ml-2 h-4 w-4" />
                 </a>
               </div>
               {!signedIn && (
@@ -269,62 +276,30 @@ export default function HomePage() {
 
       <GroupNudge />
 
-      {/* What's new */}
-      <section className="border-b border-neutral-200 dark:border-neutral-800">
-        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-          <h2 className="!text-2xl md:!text-3xl font-semibold tracking-tight text-slate-900 dark:text-white !font-sans">
-            What's new
-          </h2>
-          <p className="sans !text-left !hyphens-none mt-2 text-slate-600 dark:text-neutral-300">The latest additions to the site.</p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {WHATS_NEW.map((f) => {
-              const Icon = f.icon;
-              const href = f.member && !signedIn ? "/users/sign_up" : f.href;
-              return (
-                <a
-                  key={f.title}
-                  href={href}
-                  className="group flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-800"
-                >
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-200">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span className="mt-4 font-semibold text-slate-900 dark:text-white">{f.title}</span>
-                  <span className="mt-1 flex-1 text-sm text-slate-600 dark:text-neutral-300">{f.body}</span>
-                  <span className="mt-4 inline-flex items-center text-sm font-medium text-sky-700 dark:text-sky-300">
-                    {f.member && !signedIn ? "Sign up to start" : f.cta}
-                    <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
-                  </span>
-                </a>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      <FeatureTour signedIn={signedIn} />
 
-      {/* Every tool, by category (the same groups as the nav): one card per group, tools as rows;
-          the long Meetings list fills the left column and the rest stack on the right */}
-      <section id="features" className="bg-slate-50 dark:bg-neutral-950">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      {/* Every tool, by category: the site menu's groups (the same as the footer) plus Groups and
+          Recovery, as cards flowing down two or three columns */}
+      <section id="features" className="border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
             <h2 className="!text-2xl md:!text-3xl font-semibold tracking-tight text-slate-900 dark:text-white !font-sans">
-              Everything RecoveryBot can do
+              Every tool in one place
             </h2>
-            <p className="sans !text-left !hyphens-none !mb-0 text-sm text-slate-500 dark:text-neutral-400">Pick what you need. Each tool stands alone.</p>
+            <p className="sans !text-left !hyphens-none !mb-0 text-sm text-slate-500 dark:text-neutral-400">Pick what you need. Each one stands alone.</p>
           </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-2 md:grid-flow-col md:grid-rows-[auto_1fr]">
-            {NAV_CATEGORIES.map((category, index) => (
+          <div className="mt-6 gap-4 md:columns-2 lg:columns-3">
+            {categories.map((category) => (
               <div
                 key={category.key}
-                className={`${index === 0 ? "md:row-span-2" : ""} overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900`}
+                className="mb-4 break-inside-avoid overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
               >
                 <div className="flex items-baseline justify-between gap-2 border-b border-neutral-200 bg-sky-50/70 px-4 py-2.5 dark:border-neutral-800 dark:bg-sky-950/30">
                   <h3 className="!text-sm font-semibold text-sky-900 dark:text-sky-200 !font-sans">{category.label}</h3>
                   <span className="text-xs text-slate-500 dark:text-neutral-400">{category.blurb}</span>
                 </div>
                 <ul className="divide-y divide-neutral-100 dark:divide-neutral-800 !m-0 !p-0 list-none">
-                  {/* members-only tools show to everyone here, marked; Groups ones only to who sees Groups */}
-                  {category.items.filter((item) => showItem(item, true)).map((item) => {
+                  {category.items.map((item) => {
                     const Icon = item.icon;
                     return (
                       <li key={item.href}>

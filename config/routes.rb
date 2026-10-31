@@ -95,7 +95,9 @@ Rails.application.routes.draw do
     end
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
     # Its chat (ChatChannel): channels, messages, who may add channels; and who its admins blocked
-    resource :chat, controller: "group_chat", only: %i[show update]
+    resource :chat, controller: "group_chat", only: %i[show update] do
+      patch :order
+    end
     resources :chat_channels, controller: "group_chat_channels", only: %i[create update destroy] do
       member do
         get :messages
@@ -103,7 +105,12 @@ Rails.application.routes.draw do
         post :read
       end
     end
-    resources :chat_messages, controller: "group_chat_messages", only: %i[show update destroy]
+    resources :chat_messages, controller: "group_chat_messages", only: %i[show update destroy] do
+      member do
+        post :reactions, action: :react
+        delete :reactions, action: :unreact
+      end
+    end
     resources :blocks, controller: "group_blocks", only: %i[index create destroy]
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]

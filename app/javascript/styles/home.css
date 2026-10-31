@@ -1,0 +1,7 @@
+/* The home page's walkthroughs (components/home): a chip turning over on its step */
+.hb-home-spin { animation: hb-home-spin 2.4s ease-in-out infinite; transform-style: preserve-3d; }
+@keyframes hb-home-spin {
+  0%, 30% { transform: perspective(300px) rotateY(0); }
+  70%, 100% { transform: perspective(300px) rotateY(360deg); }
+}
+@media (prefers-reduced-motion: reduce) { .hb-home-spin { animation: none; } }

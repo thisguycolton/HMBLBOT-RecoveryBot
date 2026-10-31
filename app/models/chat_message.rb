@@ -1,5 +1,6 @@
 # A message in a group's chat channel (ChatChannel): Markdown like a note, edited or deleted
 # by its writer (the group's admins delete any). Its @ mentions notify people (Mentionable).
+# Anyone in the channel puts emoji on it (ChatReaction).
 class ChatMessage < ApplicationRecord
   include Mentionable
 
@@ -7,6 +8,7 @@ class ChatMessage < ApplicationRecord
 
   belongs_to :chat_channel
   belongs_to :user
+  has_many :reactions, -> { order(:id) }, class_name: "ChatReaction", dependent: :delete_all
 
   before_validation { self.body = body.to_s.gsub("\r\n", "\n").strip }
   validates :body, presence: true, length: { maximum: BODY_MAX }
@@ -39,10 +41,21 @@ class ChatMessage < ApplicationRecord
       mine: user_id == viewer&.id, mentions_me: mentions?(viewer), can_remove: removable_by?(viewer),
       # From someone the viewer blocked: shown folded up, opened only if they ask
       blocked: !!viewer&.blocked?(user),
+      reactions: reactions_json(viewer),
     }
   end
 
-  private
+  # Each emoji on it, in the order they first went on, with how many, whether the viewer's is
+  # one, and who (leaving out the names of people the viewer blocked; preload
+  # `reactions: :user` for a list of messages)
+  def reactions_json(viewer)
+    blocked = viewer ? viewer.blocked_ids : []
+    reactions.group_by(&:emoji).map do |emoji, list|
+      { emoji: emoji, count: list.size, mine: list.any? { |r| r.user_id == viewer&.id },
+        names: list.reject { |r| blocked.include?(r.user_id) }.map { |r| r.user_id == viewer&.id ? "You" : r.user.display_name } }
+    end
+  end
+
 
   # Everyone listening hears which message changed; they fetch it, since the production cable
   # (Postgres) can't carry a long one

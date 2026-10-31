@@ -205,4 +205,60 @@ class Api::GroupChatTest < ActionDispatch::IntegrationTest
     post "/api/user_reports", params: { subject_type: "chat_message", subject_id: 0, reason: "x" }, as: :json
     assert_response :not_found
   end
+
+  test "admins put the channels in order for everyone" do
+    general = @group.general_channel
+    a = @group.chat_channels.create!(name: "alpha", access_roles: ["members"])
+    b = @group.chat_channels.create!(name: "beta", access_roles: ["members"])
+    sign_in @cy
+    patch "#{chat_path}/order", params: { channel_ids: [b.id, general.id, a.id] }, as: :json
+    assert_response :forbidden
+
+    sign_in @ann
+    assert_broadcasts(GroupChatChannel.group_stream(@group), 1) do
+      patch "#{chat_path}/order", params: { channel_ids: [b.id, general.id] }, as: :json
+    end
+    assert_response :success
+    assert_equal %w[beta general alpha], response.parsed_body["channels"].map { _1["name"] }, "any left out go after"
+    sign_in @cy
+    get chat_path
+    assert_equal %w[beta general alpha], response.parsed_body["channels"].map { _1["name"] }
+  end
+
+  test "anyone in a channel puts emoji on a message, each once, live" do
+    general = @group.general_channel
+    message = general.messages.create!(user: @bo, body: "Day 30 today")
+    path = "/api/groups/#{@group.slug}/chat_messages/#{message.id}/reactions"
+    sign_in @out
+    post path, params: { emoji: "🎉" }, as: :json
+    assert_response :not_found
+
+    sign_in @cy
+    assert_broadcasts(general.stream, 1) { post path, params: { emoji: "🎉" }, as: :json }
+    assert_response :success
+    post path, params: { emoji: "🎉" }, as: :json
+    post path, params: { emoji: "❤️" }, as: :json
+    post path, params: { emoji: "hello" }, as: :json
+    assert_response :unprocessable_entity
+    sign_in @ann
+    post path, params: { emoji: "🎉" }, as: :json
+    assert_equal [["🎉", 2, true, ["Cy C", "You"]], ["❤️", 1, false, ["Cy C"]]], response.parsed_body["reactions"].map { _1.values_at("emoji", "count", "mine", "names") }
+
+    # Someone the viewer blocked still counts, without their name
+    sign_in @bo
+    post "/api/people/#{@cy.username}/block", as: :json
+    assert_response :success
+    get "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages"
+    assert_equal [["🎉", 2, ["Ann A"]], ["❤️", 1, []]], response.parsed_body["messages"].first["reactions"].map { _1.values_at("emoji", "count", "names") }
+
+    sign_in @cy
+    delete "#{path}?emoji=#{CGI.escape('🎉')}"
+    assert_response :success
+    # (in the order the ones still on went on)
+    assert_equal [["❤️", 1, true], ["🎉", 1, false]], response.parsed_body["reactions"].map { _1.values_at("emoji", "count", "mine") }
+
+    general.update_column(:archived, true)
+    post path, params: { emoji: "👍" }, as: :json
+    assert_response :unprocessable_entity
+  end
 end
