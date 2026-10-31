@@ -21,7 +21,7 @@
   --hb-daycount-line: #e2e8f0;
   animation: hb-daycount-pop 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
   background: var(--hb-daycount-bg);
-  border-radius: 1.5rem;
+  border-radius: var(--radius-3xl, 2rem);
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
   color: var(--hb-daycount-ink);
   max-height: calc(100dvh - 2rem);
@@ -110,7 +110,7 @@ html.dark .hb-daycount__panel {
 .hb-daycount__button {
   background: transparent;
   border: 1px solid var(--hb-daycount-line);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-xl, 1.125rem);
   color: var(--hb-daycount-ink);
   cursor: pointer;
   font: inherit;

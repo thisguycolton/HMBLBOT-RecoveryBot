@@ -48,14 +48,14 @@ export function Tray({ label, action, children, className = "" }) {
           {action}
         </div>
       )}
-      <div className="rounded-2xl bg-neutral-100 p-1.5 dark:bg-neutral-800/70">{children}</div>
+      <div className="nest-tray rounded-3xl bg-neutral-100 p-1.5 dark:bg-neutral-800/70">{children}</div>
     </section>
   );
 }
 
 // On the shell's white stage a card is set off by a hairline as much as by its shadow
 export function Card({ children, className = "", ref, ...rest }) {
-  return <div ref={ref} {...rest} className={`rounded-xl bg-white shadow-panel ring-1 ring-neutral-200/80 dark:bg-neutral-900 dark:ring-neutral-800 ${className}`}>{children}</div>;
+  return <div ref={ref} {...rest} className={`rounded-2xl bg-white shadow-panel ring-1 ring-neutral-200/80 dark:bg-neutral-900 dark:ring-neutral-800 ${className}`}>{children}</div>;
 }
 
 export function copy(text, done) {

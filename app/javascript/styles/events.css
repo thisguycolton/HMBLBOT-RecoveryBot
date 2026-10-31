@@ -18,6 +18,7 @@
 .ev-md li + li { margin-top: 0.25em; }
 .ev-md li::marker { color: var(--color-accent); }
 .ev-md a { color: var(--color-accent); text-decoration: underline; }
+.dark .ev-md a { color: var(--color-accent-light); }
 .ev-md blockquote { border-inline-start: 3px solid rgb(203 213 225); padding-inline-start: 0.8em; color: rgb(71 85 105); }
 .ev-md code { background: rgb(241 245 249); border-radius: 0.25em; font-size: 0.9em; padding: 0.05em 0.3em; }
 .dark .ev-md code { background: rgb(38 38 38); }
@@ -29,7 +30,7 @@
 
 /* Editor canvas */
 /* Each block keeps a row on top for its toolbar, so the toolbar never covers what's in it */
-.ev-block { position: relative; padding-top: 2.4rem; border-radius: 1.1rem; outline: 2px solid transparent; outline-offset: 4px; transition: outline-color 0.12s; }
+.ev-block { position: relative; padding-top: 2.4rem; border-radius: var(--radius-2xl, 1.75rem); outline: 2px solid transparent; outline-offset: 4px; transition: outline-color 0.12s; }
 .ev-block .ev-tools, .ev-block .ev-resize { opacity: 0; transition: opacity 0.12s; }
 .ev-block:hover .ev-tools, .ev-block[data-selected="true"] .ev-tools, .ev-block:focus-within .ev-tools { opacity: 1; }
 .ev-block:hover .ev-resize { opacity: 0.5; }

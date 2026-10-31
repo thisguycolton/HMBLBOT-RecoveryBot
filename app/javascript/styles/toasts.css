@@ -31,7 +31,7 @@
   align-items: center;
   animation: hb-toast-in 0.18s ease-out;
   background: var(--hb-toast-bg);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-2xl, 1.75rem);
   box-shadow: 0 10px 25px -10px rgb(0 0 0 / 0.35), 0 0 0 1px var(--hb-toast-ring);
   color: var(--hb-toast-ink);
   display: flex;
@@ -49,7 +49,7 @@ html.dark .hb-toast {
 
 .hb-toast__icon {
   align-items: center;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg, 0.875rem);
   display: inline-flex;
   flex-shrink: 0;
   height: 2rem;
@@ -85,7 +85,7 @@ html.dark .hb-toast {
   align-items: center;
   background: transparent;
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg, 0.875rem);
   color: inherit;
   display: inline-flex;
   flex-shrink: 0;
@@ -172,7 +172,7 @@ html.dark .hb-toast--notice.hb-toast--info a.hb-notice__link { color: #7dd3fc; }
   --hb-modal-muted: #475569;
   --hb-modal-line: #e2e8f0;
   background: var(--hb-modal-bg);
-  border-radius: 1.25rem;
+  border-radius: var(--radius-3xl, 2rem);
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
   color: var(--hb-modal-ink);
   display: flex;
@@ -268,7 +268,7 @@ html.dark .hb-notice-modal__panel {
 .hb-notice-modal__button {
   background: transparent;
   border: 1px solid var(--hb-modal-line);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-xl, 1.125rem);
   color: var(--hb-modal-ink);
   cursor: pointer;
   font: inherit;

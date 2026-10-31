@@ -240,7 +240,7 @@ export default function FindMeeting() {
               {data.meetings.map((m) => <MeetingCard key={m.key} meeting={m} now={now} />)}
             </div>
           ) : (
-            <div className="space-y-1.5 rounded-2xl bg-neutral-100 p-1.5 dark:bg-neutral-800/70">
+            <div className="space-y-1.5 nest-tray rounded-3xl bg-neutral-100 p-1.5 dark:bg-neutral-800/70">
               {data.meetings.map((m) => <MeetingRow key={m.key} meeting={m} now={now} />)}
             </div>
           )}

@@ -32,7 +32,7 @@
   --wb-subtle-light: oklch(25.2% 0 0);
   --wb-subtle: oklch(30.12% 0 0);
   --wb-subtle-dark: oklch(44.95% 0 0);
-  --wb-link: oklch(72.25% 0.16 248);
+  --wb-link: var(--color-accent-light, oklch(76% 0.13 250));
 }
 
 .wb :where(h1, h2, h3) {
@@ -799,7 +799,7 @@ body:has(.wb) {
 
 @media (max-width: 640px) {
   .wb-page-toolbar {
-    border-radius: 1.25rem;
+    border-radius: var(--radius-2xl, 1.75rem);
   }
 
   .wb-page-toolbar__sep {
@@ -829,7 +829,7 @@ body:has(.wb) {
 .wb-popover {
   background: var(--wb-bg);
   border: 1px solid var(--wb-subtle);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-xl, 1.125rem);
   box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.35);
   color: var(--wb-ink);
   min-width: 15rem;
@@ -852,7 +852,7 @@ body:has(.wb) {
 .wb-popover select {
   background: var(--wb-bg);
   border: 1px solid var(--wb-subtle-dark);
-  border-radius: 0.4rem;
+  border-radius: var(--radius-md, 0.5rem);
   color: var(--wb-ink);
   padding: 0.35rem 0.5rem;
   width: 100%;
@@ -982,7 +982,7 @@ body:has(.wb) {
   align-items: center;
   background: color-mix(in oklab, var(--wb-link) 16%, var(--wb-bg));
   border-left: 4px solid var(--wb-link);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg, 0.875rem);
   box-shadow: 0 6px 8px -6px rgb(0 0 0 / 0.35);
   display: flex;
   font-size: 0.85rem;
@@ -1278,12 +1278,12 @@ body:has(.wb) {
 
 /* Highlight card and highlights list dialog */
 .wb-hl-card {
-  border-radius: 1rem 1rem 0 0;
+  border-radius: var(--radius-2xl, 1.75rem) var(--radius-2xl, 1.75rem) 0 0;
   padding: 1rem 1.25rem 1.25rem;
 }
 
 @media (min-width: 640px) {
-  .wb-hl-card { border-radius: 0.75rem; }
+  .wb-hl-card { border-radius: var(--radius-2xl, 1.75rem); }
 }
 
 .wb-hl-card__head {
@@ -1338,7 +1338,7 @@ body:has(.wb) {
 /* Notes */
 .wb-hl-note {
   background: var(--wb-subtle-light);
-  border-radius: 0.6rem;
+  border-radius: var(--radius-xl, 1.125rem);
   margin-top: 0.6rem;
   padding: 0.6rem 0.8rem;
 }
@@ -1377,7 +1377,7 @@ body:has(.wb) {
 .wb-hl-note__input {
   background: var(--wb-bg);
   border: 1px solid var(--wb-subtle);
-  border-radius: 0.6rem;
+  border-radius: var(--radius-lg, 0.875rem);
   color: inherit;
   font: inherit;
   line-height: 1.5;
@@ -1868,7 +1868,7 @@ body:has(.wb) {
 
 .wb-note-editor__images li {
   aspect-ratio: 1;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg, 0.875rem);
   overflow: hidden;
   position: relative;
 }
@@ -1915,14 +1915,15 @@ body:has(.wb) {
 .wb-note-editor--card {
   container-type: inline-size;
   background: oklch(98.5% 0 0);
-  border-radius: 1.75rem;
+  border-radius: var(--radius-2xl, 1.75rem);
   box-shadow: 0 0 0 1px oklch(92% 0 0);
   padding: 0.5rem 0.5rem 0.6rem;
 }
 .wb .wb-note-editor--card .wb-hl-note__input {
   background: #fff;
   border: 0;
-  border-radius: 1.35rem;
+  /* nested in the card's curve: its radius less its 0.5rem padding */
+  border-radius: calc(var(--radius-2xl, 1.75rem) - 0.5rem);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   padding: 0.85rem 1rem;
 }
@@ -1974,7 +1975,7 @@ body:has(.wb) {
   position: relative;
   background: var(--wb-bg);
   border: 1px solid var(--wb-subtle);
-  border-radius: 1rem;
+  border-radius: var(--radius-2xl, 1.75rem);
   padding: 0.9rem 1rem;
 }
 
@@ -2026,7 +2027,7 @@ body:has(.wb) {
 .wb .wb-feed-item__source:hover { color: var(--wb-link); }
 
 .wb-feed-item__images {
-  border-radius: 0.75rem;
+  border-radius: var(--radius-xl, 1.125rem);
   display: grid;
   gap: 0.25rem;
   margin-top: 0.6rem;
@@ -2144,7 +2145,7 @@ body:has(.wb) {
 /* A note's link preview (LinkCard) */
 .wb-link-card {
   border: 1px solid var(--wb-subtle);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-xl, 1.125rem);
   margin-top: 0.6rem;
   overflow: hidden;
   position: relative;
@@ -2196,7 +2197,7 @@ body:has(.wb) {
 .wb-comment { display: flex; gap: 0.5rem; }
 .wb-comment__avatar { flex-shrink: 0; }
 .wb-comment__main { flex: 1; min-width: 0; }
-.wb-comment__bubble { background: var(--wb-subtle-light); border-radius: 0.85rem; padding: 0.45rem 0.7rem 0.5rem; }
+.wb-comment__bubble { background: var(--wb-subtle-light); border-radius: var(--radius-xl, 1.125rem); padding: 0.45rem 0.7rem 0.5rem; }
 .wb-comment__head { align-items: center; display: flex; gap: 0.4rem; font-size: 0.8rem; }
 .wb .wb-comment__head a { color: var(--wb-ink); font-weight: 700; text-decoration: none; }
 .wb .wb-comment__head a:hover { text-decoration: underline; }
@@ -2221,7 +2222,7 @@ body:has(.wb) {
 .wb-feed-item__repost {
   position: relative;
   border: 1px solid var(--wb-subtle);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-xl, 1.125rem);
   padding: 0.7rem 0.8rem;
 }
 
@@ -2269,7 +2270,7 @@ body:has(.wb) {
 .wb-note-actions__menu {
   background: var(--wb-bg);
   border: 1px solid var(--wb-subtle);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-xl, 1.125rem);
   box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.3);
   list-style: none;
   margin: 0.25rem 0 0;
@@ -2285,7 +2286,7 @@ body:has(.wb) {
   align-items: center;
   background: transparent !important;
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg, 0.875rem);
   color: var(--wb-ink);
   display: flex;
   font-size: 0.85rem;
@@ -2309,7 +2310,7 @@ body:has(.wb) {
 .wb-tag-suggest {
   background: var(--wb-bg);
   border: 1px solid var(--wb-subtle);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-xl, 1.125rem);
   box-shadow: 0 10px 28px -10px rgb(0 0 0 / 0.35);
   list-style: none;
   margin: 0.3rem 0 0;
@@ -2323,7 +2324,7 @@ body:has(.wb) {
   align-items: baseline;
   background: none;
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg, 0.875rem);
   color: var(--wb-ink);
   cursor: pointer;
   display: flex;
