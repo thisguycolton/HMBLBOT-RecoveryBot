@@ -47,7 +47,7 @@ export default function TermsPage() {
           </nav>
         </aside>
 
-        <article className="prose prose-slate max-w-none [&_p]:!text-left [&_li]:!text-left dark:prose-invert prose-headings:font-semibold prose-a:text-accent prose-h2:mt-10 prose-h2:text-xl">
+        <article className="prose prose-slate max-w-none [&_p]:!text-left [&_li]:!text-left dark:prose-invert prose-headings:font-semibold prose-a:text-accent dark:prose-a:text-accent-light prose-h2:mt-10 prose-h2:text-xl">
           <div className="not-prose mb-8 flex items-start gap-3">
             <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-tint text-accent dark:bg-accent/30 dark:text-white">
               <ScrollText className="h-5 w-5" strokeWidth={2.5} />

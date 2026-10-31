@@ -59,7 +59,7 @@ export default function EventsTab({ group }) {
           <summary className="mb-2 flex cursor-pointer list-none items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200 [&::-webkit-details-marker]:hidden">
             <ChevronRight className="h-3.5 w-3.5 transition-transform group-open/past:rotate-90" /> Past events ({data.past_events.length})
           </summary>
-          <div className="rounded-2xl bg-neutral-100 p-1.5 dark:bg-neutral-800/70">
+          <div className="nest-tray rounded-3xl bg-neutral-100 p-1.5 dark:bg-neutral-800/70">
             <div className="grid gap-1.5 sm:grid-cols-2">{data.past_events.map((event) => <EventCard key={event.token} event={event} />)}</div>
           </div>
         </details>

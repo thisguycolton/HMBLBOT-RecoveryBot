@@ -268,7 +268,7 @@ function Topics({ center, live, activity, act, size }) {
   );
 }
 
-const tile = "flex items-start gap-3 rounded-xl !bg-white p-3 text-left shadow-panel ring-1 ring-neutral-200 hover:ring-accent/50 dark:!bg-neutral-900 dark:ring-neutral-800";
+const tile = "flex items-start gap-3 rounded-2xl !bg-white p-3 text-left shadow-panel ring-1 ring-neutral-200 hover:ring-accent/50 dark:!bg-neutral-900 dark:ring-neutral-800";
 function Tile({ icon: Icon, title, text, onClick, pressed }) {
   return (
     <button type="button" className={`${tile} ${pressed ? "!ring-2 !ring-accent" : ""}`} onClick={onClick} aria-pressed={pressed}>

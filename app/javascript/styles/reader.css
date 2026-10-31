@@ -98,7 +98,9 @@ blockquote.dark{
   color: #64748b;
 }
 
-.tiptap h2, p {
+/* Book text (the chapter reader and editor) is serif and justified; every other <p> keeps the
+   app's sans */
+.tiptap h2, .hb-reader p {
   text-align: justify;
   hyphens: auto;
   font-family: "Noto Serif", serif;

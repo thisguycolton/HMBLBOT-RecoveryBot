@@ -218,7 +218,7 @@ export default function DocumentsView({ group }) {
           <Tray label="Folders">
             <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
               {folders.map(({ key, label, note, icon: Icon }) => (
-                <button key={key} type="button" onClick={() => { setSelected(new Set()); setParams({ folder: key }); }} className="flex items-start gap-3 rounded-xl !bg-white p-3 text-left shadow-panel hover:ring-1 hover:ring-accent/40 dark:!bg-neutral-900">
+                <button key={key} type="button" onClick={() => { setSelected(new Set()); setParams({ folder: key }); }} className="flex items-start gap-3 rounded-2xl !bg-white p-3 text-left shadow-panel hover:ring-1 hover:ring-accent/40 dark:!bg-neutral-900">
                   <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent"><Icon className="size-5" /></span>
                   <span className="min-w-0">
                     <span className="block font-medium text-slate-900 dark:text-white">{label}</span>

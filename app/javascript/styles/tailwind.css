@@ -17,7 +17,24 @@
   --color-brand: #4c7ba6;
   --color-brand-light: #7ea7cc;
   --shadow-panel: 0 4px 12px rgb(0 0 0 / 0.1);
-  --radius-panel: 20px;
+  /* Links and accent text on dark backgrounds: the accent blue is too dark to read there */
+  --color-accent-light: oklch(76% 0.13 250);
+
+  /* Corners. Rounder than Tailwind's defaults (the note composer's look), and stepped so a box
+     sitting inside another with a little padding looks nested in its curve:
+     inner radius = outer radius - padding. Cards are rounded-2xl (1.75rem, the
+     note composer); a box in one with p-2 is calc(var(--radius-2xl) - 0.5rem), close to rounded-xl,
+     and a tray of cards is rounded-3xl p-1.5. */
+  --radius: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.75rem;
+  /* a gray tray holding cards with p-1.5 (.nest-tray below): the cards' radius plus that padding */
+  --radius-3xl: calc(var(--radius-2xl) + 0.375rem);
+  --radius-panel: 1.75rem;
+  /* the shell frame (ui/Shell.jsx): its panels' radius plus its p-3 */
+  --radius-4xl: calc(var(--radius-panel) + 0.75rem);
 }
 
 
@@ -65,6 +82,20 @@
   }
 }
 
+
+/* Accent-blue text (most links use text-accent) is too dark to read on dark backgrounds: a
+   lighter blue there, unless the element sets its own dark color */
+:where(html.dark) .text-accent:not([class*="dark:text-"]),
+:where(html.dark) .hover\:text-accent:hover:not([class*="dark:hover:text-"]) {
+  color: var(--color-accent-light);
+}
+
+/* A gray tray of cards or rows (rounded-3xl p-1.5, like ui.jsx's Tray): what sits in it, or in a
+   plain list/grid wrapper in it, follows its curve, whatever radius the row was given. */
+.nest-tray > :where([class*="rounded-lg"], [class*="rounded-xl"], [class*="rounded-2xl"]),
+.nest-tray > :not([class*="rounded"]) > :where([class*="rounded-lg"], [class*="rounded-xl"], [class*="rounded-2xl"]) {
+  border-radius: calc(var(--radius-3xl) - 0.375rem);
+}
 
 .prose.hb-reader {
   max-width: 70ch;

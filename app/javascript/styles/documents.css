@@ -73,9 +73,9 @@
 .doc-prose div[data-hc-section]::before { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 999px; color: #475569; content: "§ " attr(data-title); font-size: 11px; font-weight: 600; left: 0; line-height: 1.6; padding: 0 8px; position: absolute; top: -0.85em; }
 /* A form the hosts fill in in the script (Insert > Milestone Form, hostSection.jsx): a card in the
    editor; shown as HTML, the empty <div data-hc-form> draws a small label instead */
-.doc-prose div[data-hc-form] { border: 1px dashed #94a3b8; border-radius: 10px; margin: 1em 0; padding: 6px 10px; }
+.doc-prose div[data-hc-form] { border: 1px dashed #94a3b8; border-radius: var(--radius-lg, 0.875rem); margin: 1em 0; padding: 6px 10px; }
 .doc-prose div[data-hc-form]::before { color: #475569; content: "🎉 Milestone form: the hosts add who's celebrating here"; font-size: 12px; font-weight: 600; }
-.hc-form { background: #f8fafc; border: 1px dashed #94a3b8; border-radius: 12px; margin: 1em 0; padding: 10px 12px; user-select: none; }
+.hc-form { background: #f8fafc; border: 1px dashed #94a3b8; border-radius: var(--radius-xl, 1.125rem); margin: 1em 0; padding: 10px 12px; user-select: none; }
 .hc-form.ProseMirror-selectednode { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
 .hc-form__head { align-items: center; color: #334155; display: flex; gap: 6px; }
 .hc-form__title { font-size: 13px; font-weight: 700; }
@@ -83,7 +83,7 @@
 .hc-form__remove:hover { background: #fee2e2 !important; color: #be123c; }
 .hc-form__text { color: #64748b; font-size: 12px !important; line-height: 1.45; margin: 4px 0 8px !important; }
 .hc-form__mock { display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) 6rem 2rem; }
-.hc-form__mock > span { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; color: #94a3b8; font-size: 12px; padding: 4px 8px; }
+.hc-form__mock > span { background: #fff; border: 1px solid #cbd5e1; border-radius: var(--radius-md, 0.5rem); color: #94a3b8; font-size: 12px; padding: 4px 8px; }
 .hc-form__plus { display: grid; place-items: center; padding: 0 !important; }
 .hc-sec { margin: 1.6em 0 0.9em; user-select: none; }
 .hc-sec__line { border-top: 1px dashed #94a3b8; position: relative; }
@@ -98,7 +98,7 @@
    or hides the text under it. Shown as HTML it's a plain <details>; in the editor it's the node
    view's div, open or closed on screen only (print shows everything). Borders and tints are see-through
    so it sits on the white page, the dark page and the Command Center's dark script alike. */
-.doc-prose details, .doc-collapse { border: 1px solid rgb(148 163 184 / 0.55); border-radius: 10px; margin: 0.8em 0; padding: 0.35em 0.9em; }
+.doc-prose details, .doc-collapse { border: 1px solid rgb(148 163 184 / 0.55); border-radius: var(--radius-lg, 0.875rem); margin: 0.8em 0; padding: 0.35em 0.9em; }
 .doc-prose details > summary, .doc-collapse summary { cursor: pointer; margin-top: 0 !important; display: block; font-weight: 600; list-style: none; padding: 0.15em 0 0.15em 1.5em; position: relative; }
 .doc-prose details > summary::-webkit-details-marker { display: none; }
 .doc-prose details > summary::before { border-color: currentColor; border-style: solid; border-width: 0 2px 2px 0; content: ""; height: 0.45em; left: 0.3em; opacity: 0.6; position: absolute; top: 0.62em; transform: rotate(-45deg); transition: transform 0.15s; width: 0.45em; }
