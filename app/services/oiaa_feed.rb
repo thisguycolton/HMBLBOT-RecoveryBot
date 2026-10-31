@@ -31,7 +31,8 @@ module OiaaFeed
     get(URI.join(url, CGI.unescapeHTML(href)).to_s)
   end
 
-  def last_synced_at = OiaaMeeting.maximum(:last_seen_at)
+  # AA Intergroup's own listings only; imported meeting lists keep their own dates
+  def last_synced_at = OiaaMeeting.aa_intergroup.maximum(:last_seen_at)
   def stale? = last_synced_at.nil? || last_synced_at < OiaaMeeting::STALE_AFTER.ago
 
   def sync!(json = nil)
@@ -63,11 +64,14 @@ module OiaaFeed
     end
   end
 
-  # Copy the feed onto every linked meeting; flag the ones OIAA no longer lists
+  # Copy the feed onto every linked meeting; flag the ones OIAA no longer lists. Meetings
+  # linked to an imported list's listings refresh when that list is imported (MeetingListImport).
   def refresh_linked_meetings(synced_at = last_synced_at)
     listings = OiaaMeeting.where(slug: Meeting.linked_to_oiaa.select(:oiaa_slug)).index_by(&:slug)
     Meeting.linked_to_oiaa.includes(:group).find_each do |meeting|
       record = listings[meeting.oiaa_slug]
+      next if record&.imported?
+
       if record.nil? || record.last_seen_at < synced_at
         meeting.update_columns(oiaa_missing: true) unless meeting.oiaa_missing
       else

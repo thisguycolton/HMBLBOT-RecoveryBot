@@ -45,7 +45,7 @@ class ShareCard
           logo: record.group.logo, cover: record.group.cover)
     when OiaaMeeting
       new(style: :flyer, title: record.name, subtitle: record.schedule_label,
-          kicker: [record.group_name.presence, "AA Intergroup"].compact.uniq.join(" · "))
+          kicker: [record.group_name.presence, record.source_name].compact.uniq.join(" · "))
     when Group
       new(style: :group, title: record.title, subtitle: record.description, logo: record.logo, cover: record.cover)
     else

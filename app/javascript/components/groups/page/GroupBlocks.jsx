@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Gavel, Lock, MessagesSquare, Mic, Pin, Scale, Trash2, UserPlus, Users, Video } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Gavel, Lock, MapPin, MessagesSquare, Mic, Pin, Scale, Trash2, UserPlus, Users, Video } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { tone } from "../../events/lib";
 import Avatar from "../Avatar";
@@ -67,6 +67,20 @@ function meetingRows(meetings) {
   ];
 }
 
+// Where an in-person meeting is: its place and address, linking to a map
+function MeetingPlace({ meeting, editing }) {
+  const place = [meeting.location, meeting.formatted_address].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ");
+  if (!place) return null;
+  const map = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meeting.formatted_address || place)}`;
+  return (
+    <p className="mt-0.5 text-sm text-slate-600 dark:text-neutral-300">
+      <MapPin className="mr-1 inline size-3.5 align-[-2px]" />
+      <a href={map} target="_blank" rel="noreferrer" onClick={(e) => editing && e.preventDefault()} className="hover:underline">{place}</a>
+      {meeting.location_notes && <span className="block text-xs text-slate-500 dark:text-neutral-400">{meeting.location_notes}</span>}
+    </p>
+  );
+}
+
 const HOST_ROLE = { host: "Host", co_host: "Co-host" };
 
 // "Host Sam R. · Co-host Alex P.", for the next meeting (and which day, when it meets on several)
@@ -103,6 +117,7 @@ function MeetingsBlock({ block, compact, editing, context, title }) {
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-slate-900 dark:text-white">{m.name}</p>
               <p className="text-sm text-slate-600 dark:text-neutral-300">{m.label}</p>
+              <MeetingPlace meeting={m} editing={editing} />
               <MeetingHosts hosts={m.hosts} on={m.hosts_on} editing={editing} />
               {m.types?.length > 0 && (
                 <p className="mt-1 flex flex-wrap gap-1">
@@ -419,9 +434,9 @@ function JoinBlock({ block, compact, editing, context, title, markdown }) {
     <Card block={block} compact={compact} title={title} icon={UserPlus}>
       {markdown?.trim() && <Markdown source={markdown} className={`ev-md mb-4 ${compact ? "text-sm" : ""}`} />}
       {action}
-      {context.kind === "intergroup" && context.meetings?.[0]?.oiaa_url && (
-        <a href={context.meetings[0].oiaa_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">
-          See it on AA Intergroup <ExternalLink className="size-3" />
+      {context.kind === "intergroup" && (context.meetings?.[0]?.oiaa_url || context.group?.source_url) && (
+        <a href={context.meetings?.[0]?.oiaa_url || context.group.source_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">
+          See it on {context.group?.source || "AA Intergroup"} <ExternalLink className="size-3" />
         </a>
       )}
     </Card>

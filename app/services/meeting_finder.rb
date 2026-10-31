@@ -216,7 +216,7 @@ class MeetingFinder
   # --- what a page of results shows ---
 
   def hydrate(hits)
-    listings = OiaaMeeting.where(id: hits.select { |h| h.kind == "oiaa" }.map(&:id)).index_by(&:id)
+    listings = OiaaMeeting.where(id: hits.select { |h| h.kind == "oiaa" }.map(&:id)).includes(:meeting_directory).index_by(&:id)
     meetings = Meeting.where(id: hits.select { |h| h.kind == "meeting" }.map(&:id)).includes(group: { cover_attachment: :blob }).index_by(&:id)
     groups = groups_for(listings.values)
     template_cover = image_path(GroupPageTemplate.current.cover)
@@ -256,7 +256,7 @@ class MeetingFinder
 
   def intergroup_json(record, cover)
     { title: record.group_name.presence || record.name, cover_url: cover, members_count: 0,
-      href: "/find/#{ERB::Util.url_encode(record.slug)}", here: false }
+      href: "/find/#{ERB::Util.url_encode(record.slug)}", here: false, source: record.source_name }
   end
 
   def listing_json(record, hit, group)
@@ -264,7 +264,8 @@ class MeetingFinder
       key: "oiaa-#{record.slug}", name: record.name, group: group, days: record.days.sort, recurrence: "weekly",
       schedule_label: record.schedule_label, time_zone: record.zone.tzinfo.name, types: record.types,
       attendance: record.attendance, place: record.place, region: record.region, conference_url: record.conference_url, conference_url_notes: record.conference_url_notes,
-      notes: record.notes&.squish&.truncate(NOTES_MAX),
+      notes: record.notes&.squish&.truncate(NOTES_MAX), location_notes: record.location_notes&.squish&.truncate(NOTES_MAX),
+      source: record.source_name,
     )
   end
 
