@@ -1,6 +1,7 @@
 # A service position in a group (chair, secretary, treasurer, GSR, coffee maker...): what it
 # involves, how long a term lasts, and who has held it (ServiceTerm).
 class ServicePosition < ApplicationRecord
+  moderates_language :title, :description
   belongs_to :group
   has_many :terms, -> { order(starts_on: :desc, id: :desc) }, class_name: "ServiceTerm", dependent: :destroy
 

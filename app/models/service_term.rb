@@ -1,6 +1,7 @@
 # Someone holding a service position from one date to another. The name is plain text (first
 # name and last initial); user is only there so they can be told when it's nearly up.
 class ServiceTerm < ApplicationRecord
+  moderates_language :name
   REMIND_DAYS = 30
 
   belongs_to :service_position

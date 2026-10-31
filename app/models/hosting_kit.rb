@@ -3,6 +3,7 @@
 # readings to share on screen. A kit with no meeting is the group's default, used by every meeting
 # without its own; a meeting's kit covers all the days it runs (Meeting#series).
 class HostingKit < ApplicationRecord
+  moderates_language :intro_title, :activity_anchor
   MAX_READINGS = 30
   # The service a host lines people up for, as Host Helper had it; the script names them as
   # {{ service_hiw }}, the host and co-host come from the schedule

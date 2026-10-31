@@ -2,6 +2,7 @@
 # their account when signed in, otherwise by a cookie, and each network (IP) gets one
 # anonymous ballot per poll.
 class SchedulePollBallot < ApplicationRecord
+  moderates_language :voter_name
   belongs_to :schedule_poll
   belongs_to :user, optional: true
 

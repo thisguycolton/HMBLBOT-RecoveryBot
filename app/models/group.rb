@@ -5,6 +5,7 @@
 # everything, and anyone already in a group sees that group. An active group's page is
 # open to everyone, signed in or not (.viewable_by), for Find a meeting.
 class Group < ApplicationRecord
+  moderates_language :title, :description, :location, :court_email_subject, :court_email_body, :page_blocks
   TIME_ZONES = SchedulePoll::TIME_ZONES
   STATUSES = %w[active pending].freeze
   # Paths in the Groups app (app/javascript/entrypoints/groups.jsx) a group can't be named

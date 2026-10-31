@@ -1,5 +1,6 @@
 # Someone covering the host's (or co-host's) place at one meeting on one date
 class MeetingHostCover < ApplicationRecord
+  moderates_language :name
   belongs_to :meeting
   belongs_to :user, optional: true
 

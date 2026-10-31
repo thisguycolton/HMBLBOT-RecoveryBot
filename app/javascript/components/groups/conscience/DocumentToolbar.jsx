@@ -169,11 +169,14 @@ export default function DocumentToolbar({ editor, onImport, fullScreen, onFullSc
       <Tool label="Divider line" icon={Minus} onClick={run((c) => c.setHorizontalRule())} />
       <Divider />
       {linking ? (
-        <form onSubmit={applyLink} className="flex shrink-0 items-center gap-1">
-          <input autoFocus aria-label="Link address" value={href} onChange={(e) => setHref(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setLinking(false)} placeholder="Paste or type a link" className="h-8 w-44 rounded-lg border border-neutral-300 bg-white px-2 text-xs dark:border-neutral-600 dark:bg-neutral-900 dark:text-white" />
-          <button type="submit" className="h-8 rounded-lg !bg-accent px-2.5 text-xs font-semibold !text-white">Apply</button>
+        // Not a <form>: the toolbar can sit inside one, and a form in a form submits the outer one
+        <div role="group" aria-label="Add a link" className="flex shrink-0 items-center gap-1">
+          <input autoFocus aria-label="Link address" value={href} onChange={(e) => setHref(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") setLinking(false); if (e.key === "Enter") applyLink(e); }}
+            placeholder="Paste or type a link" className="h-8 w-44 rounded-lg border border-neutral-300 bg-white px-2 text-xs dark:border-neutral-600 dark:bg-neutral-900 dark:text-white" />
+          <button type="button" onClick={applyLink} className="h-8 rounded-lg !bg-accent px-2.5 text-xs font-semibold !text-white">Apply</button>
           <button type="button" onClick={() => setLinking(false)} className="h-8 rounded-lg !bg-transparent px-2 text-xs text-slate-600 dark:text-neutral-300">Cancel</button>
-        </form>
+        </div>
       ) : (
         <>
           <Tool label="Link" icon={Link2} active={editor.isActive("link")} onClick={startLink} />

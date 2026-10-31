@@ -1,6 +1,7 @@
 # Something the host pastes into the meeting's Zoom chat at a set minute (the welcome, the
 # Preamble, the 7th Tradition link), with a short title and a Lucide icon to find it by.
 class HostChatPosting < ApplicationRecord
+  moderates_language :title, :body
   BODY_MAX = 4000
 
   belongs_to :hosting_kit, inverse_of: :postings

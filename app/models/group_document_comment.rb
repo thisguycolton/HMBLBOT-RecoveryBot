@@ -4,6 +4,7 @@
 # can comment, and the page finds the words again after edits. If they're gone, it shows the
 # quote. Only top-level comments quote; replies belong to their comment's thread.
 class GroupDocumentComment < ApplicationRecord
+  moderates_language :body
   BODY_MAX = 4_000
   QUOTE_MAX = 1_000
   CONTEXT_MAX = 64

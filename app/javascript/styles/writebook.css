@@ -2377,6 +2377,9 @@ body:has(.wb) {
 .wb .chat-body .wb-md p { margin: 0; }
 .wb .chat-body .wb-md { display: inline; }
 .wb .chat-body .wb-md > p:last-child { display: inline; }
+/* A chat message's link card: a little smaller than a note's */
+.chat-link .wb-link-card { margin-top: 0; }
+.chat-link .wb-link-card__image { max-height: 12rem; }
 .chat-typing { display: inline-flex; gap: 2px; }
 .chat-typing i { animation: chat-typing 1.2s infinite ease-in-out; background: currentColor; border-radius: 9999px; display: block; height: 4px; width: 4px; }
 .chat-typing i:nth-child(2) { animation-delay: 0.15s; }

@@ -72,11 +72,22 @@ class Api::GroupChatChannelsController < ApplicationController
     render json: { messages: messages_json(message_scope(@channel.messages.where.not(pinned_at: nil)).order(pinned_at: :desc).to_a) }
   end
 
-  # POST /api/groups/:group_slug/chat_channels/:id/messages { body, reply_to_id? } -> the message
+  # POST /api/groups/:group_slug/chat_channels/:id/messages { body, reply_to_id?, files[]?, document_ids[]? } -> the message
   def post_message
     return render(json: { error: "This channel is archived." }, status: :unprocessable_entity) if @channel.archived
 
+    uploads = Array(params[:files]).select { |f| f.respond_to?(:original_filename) }
+    problem = ChatMessage.upload_problem(uploads)
+    return render(json: { error: problem }, status: :unprocessable_entity) if problem
+
     message = @channel.messages.new(user: current_user, body: params[:body])
+    message.files.attach(uploads) if uploads.any?
+    if params[:document_ids].present?
+      # Only ones the writer may open themselves
+      ids = Array(params[:document_ids]).map(&:to_i)
+      message.document_ids = ids & GroupDocument.visible_to(@group, current_user).where(id: ids).pluck(:id)
+      return render(json: { error: "You can't attach those documents." }, status: :unprocessable_entity) if message.document_ids.empty?
+    end
     if params[:reply_to_id].present?
       message.reply_to = @channel.messages.find_by(id: params[:reply_to_id])
       return render(json: { error: "The message you're replying to isn't here anymore." }, status: :unprocessable_entity) unless message.reply_to
@@ -97,7 +108,8 @@ class Api::GroupChatChannelsController < ApplicationController
   private
 
   def message_scope(scope)
-    scope.includes({ user: { avatar_attachment: :blob } }, { reactions: :user }, { reply_to: :user }, :pinned_by)
+    scope.includes({ user: { avatar_attachment: :blob } }, { reactions: :user }, { reply_to: [:user, { files_attachments: :blob }] }, :pinned_by,
+                   { files_attachments: :blob }, { link_image_attachment: :blob }, chat_channel: :group)
   end
 
   def messages_json(list)
