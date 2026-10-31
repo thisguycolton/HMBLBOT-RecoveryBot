@@ -9,7 +9,7 @@ import { pageInfo } from "./shell/pageInfo";
 import Sidebar from "./shell/Sidebar";
 import TopBar from "./shell/TopBar";
 import { ShellContext, useMedia, usePath, useNav, useTheme } from "./shell/useShell";
-import { forgetPushIfSignedOut, registerServiceWorker } from "../lib/push";
+import { forgetPushAfterSignOut, registerServiceWorker } from "../lib/push";
 
 // The site's shell, around every page: the sidebar on the left (You, Your groups, Explore),
 // the bar along the top (search, Donate, theme, notifications, account), and the stage, the
@@ -29,8 +29,8 @@ export default function Layout({ children, isAuthenticated, showFooter: footer =
   const [aside, setAside] = useState(null); // { title } while a page shows a side panel
   const [asideOpen, setAsideOpen] = useState(false);
 
-  // The service worker shows push notifications (lib/push.js); signed out, this browser stops getting them
-  useEffect(() => { registerServiceWorker().then(() => forgetPushIfSignedOut()); }, []);
+  // The service worker shows push notifications (lib/push.js); logging out, this browser stops getting them
+  useEffect(() => { registerServiceWorker().then(() => forgetPushAfterSignOut()); }, []);
   useEffect(() => { chrome.close(); setAsideOpen(false); }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!asideOpen) return undefined;

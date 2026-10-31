@@ -71,8 +71,12 @@ export async function turnOffPush() {
   return state;
 }
 
-// After signing out, this browser shouldn't keep getting the last account's notifications
-export async function forgetPushIfSignedOut() {
+// After logging out (config/initializers/web_push.rb leaves a forget_push cookie), this browser
+// shouldn't keep getting the last account's notifications. Just being signed out isn't enough:
+// a session that ran out (or a home-screen app that lost it) keeps them.
+export async function forgetPushAfterSignOut() {
+  if (!/(?:^|;\s*)forget_push=/.test(document.cookie)) return;
+  document.cookie = "forget_push=; Max-Age=0; path=/; SameSite=Lax";
   if (document.body.dataset.currentUser === "true") return;
   const sub = await currentSubscription().catch(() => null);
   if (!sub) return;

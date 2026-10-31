@@ -201,4 +201,14 @@ class Api::PushSubscriptionsTest < ActionDispatch::IntegrationTest
     @user.destroy!
     assert_equal 0, PushSubscription.count
   end
+
+  # A session running out keeps the device's notifications; logging out drops them (lib/push.js)
+  test "logging out tells the next page to forget this browser's subscription" do
+    subscribe
+    get "/"
+    assert_nil cookies["forget_push"]
+    get "/users/sign_out"
+    assert_equal "1", cookies["forget_push"]
+    assert_equal 1, PushSubscription.count
+  end
 end
