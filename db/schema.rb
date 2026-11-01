@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_31_220000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_31_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1392,8 +1392,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_220000) do
     t.boolean "comments_off", default: false, null: false
     t.jsonb "mentions", default: {}, null: false
     t.bigint "mentioned_user_ids", default: [], null: false, array: true
+    t.bigint "repost_of_highlight_id"
     t.index ["hashtags"], name: "index_timeline_notes_on_hashtags", using: :gin
     t.index ["recipient_id"], name: "index_timeline_notes_on_recipient_id"
+    t.index ["repost_of_highlight_id", "user_id"], name: "index_timeline_notes_on_repost_of_highlight_id_and_user_id", unique: true, where: "(repost_of_highlight_id IS NOT NULL)"
     t.index ["repost_of_id", "user_id"], name: "index_timeline_notes_on_repost_of_id_and_user_id", unique: true, where: "(repost_of_id IS NOT NULL)"
     t.index ["user_id", "chip_id"], name: "index_timeline_notes_on_user_id_and_chip_id", where: "(chip_id IS NOT NULL)"
     t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
@@ -1738,6 +1740,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_220000) do
   add_foreign_key "timeline_note_shares", "groups"
   add_foreign_key "timeline_note_shares", "timeline_notes"
   add_foreign_key "timeline_notes", "timeline_notes", column: "repost_of_id", on_delete: :cascade
+  add_foreign_key "timeline_notes", "user_highlights", column: "repost_of_highlight_id", on_delete: :cascade
   add_foreign_key "timeline_notes", "users"
   add_foreign_key "timeline_notes", "users", column: "recipient_id", on_delete: :cascade
   add_foreign_key "today_dismissals", "users", on_delete: :cascade

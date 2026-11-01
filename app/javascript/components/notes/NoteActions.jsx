@@ -17,7 +17,13 @@ const reactionOf = (value) => REACTIONS.find((r) => r.value === value);
 // their author shares with Members; the server says so in `can_repost`, and on someone
 // else's other notes says why not in `repost_blocked`, which the dimmed button shows). `onChange` gets
 // the note back. A comment has the same reactions (`path` is where it lives, `small` a
-// tighter row).
+// tighter row). `path` also says where its repost lives: a note's or a highlight's.
+// Under a highlight shared to a timeline: the same Like, Love and Hugs, and Repost (for
+// highlights shared with Members). Highlights have no comments.
+export function HighlightActions({ highlight, onChange }) {
+  return <NoteActions note={highlight} onChange={onChange} path={`/highlights/${highlight.id}`} />;
+}
+
 export default function NoteActions({ note, onChange, onComment, path = `/timeline_notes/${note.id}`, small = false }) {
   const [busy, setBusy] = useState(false);
 
@@ -48,13 +54,13 @@ export default function NoteActions({ note, onChange, onComment, path = `/timeli
 
   const repost = (visibility) => run({ reposted: true, repost_count: (note.repost_count || 0) + 1 },
     async () => {
-      const made = await api(`/timeline_notes/${note.id}/repost`, { method: "POST", body: { visibility } });
+      const made = await api(`${path}/repost`, { method: "POST", body: { visibility } });
       showToast("Reposted to your timeline.");
       return made.note;
     }, "Couldn't repost it.");
 
   const unrepost = () => run({ reposted: false, repost_count: Math.max(0, (note.repost_count || 0) - 1) },
-    () => api(`/timeline_notes/${note.id}/repost`, { method: "DELETE" }), "Couldn't undo the repost.");
+    () => api(`${path}/repost`, { method: "DELETE" }), "Couldn't undo the repost.");
 
   const reactions = note.reactions || {};
   return (
@@ -144,7 +150,7 @@ function WhoReacted({ reactors }) {
 }
 
 // Repost, asking who sees it on your timeline: your followers or every member
-function RepostMenu({ count, onPick }) {
+export function RepostMenu({ count, onPick }) {
   const { open, setOpen, ref } = usePopover();
   return (
     <div ref={ref} className="relative">

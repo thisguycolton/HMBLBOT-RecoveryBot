@@ -11,6 +11,10 @@
 # never shows a note to anyone its author didn't; when the author narrows who sees it (or
 # deletes it), its reposts go.
 #
+# A shared highlight can be reposted the same way (`repost_of_highlight`, UserHighlight): the
+# repost shows the quote, its note and its book with its reader's name, under the same rule
+# (only highlights shared with Members), and goes when they narrow who sees it or delete it.
+#
 # The #hashtags in its words (Hashtags) are kept in `hashtags`: each tag has a page listing
 # the notes (and shared highlight notes, UserHighlight) the viewer can see that have it
 # (/people/tags/:tag, Api::HashtagsController).
@@ -48,13 +52,15 @@ class TimelineNote < ApplicationRecord
   belongs_to :recipient, class_name: "User", optional: true
   belongs_to :repost_of, class_name: "TimelineNote", optional: true, inverse_of: :reposts
   has_many :reposts, class_name: "TimelineNote", foreign_key: :repost_of_id, inverse_of: :repost_of, dependent: :destroy
+  belongs_to :repost_of_highlight, class_name: "UserHighlight", optional: true, inverse_of: :reposts
 
   validates :body, length: { maximum: BODY_MAX }
   validate :has_something, unless: :repost?
   validate :images_are_pictures
   validate :can_be_reposted, if: :repost?
   validate :can_write_to_recipient, on: :create, if: :recipient_id
-  validates :repost_of_id, uniqueness: { scope: :user_id, message: "is already on your timeline" }, if: :repost?
+  validates :repost_of_id, uniqueness: { scope: :user_id, message: "is already on your timeline" }, if: :repost_of_id
+  validates :repost_of_highlight_id, uniqueness: { scope: :user_id, message: "is already on your timeline" }, if: :repost_of_highlight_id
 
   before_save { self.hashtags = Hashtags.in(body) if body_changed? || new_record? }
   after_update_commit :drop_reposts, if: -> { saved_change_to_visibility? && visibility != "public" }
@@ -72,18 +78,22 @@ class TimelineNote < ApplicationRecord
     people = { user: { avatar_attachment: :blob } }
     shown = [:groups, :reposts, { recipient: { avatar_attachment: :blob } }, { images_attachments: :blob, link_image_attachment: :blob, **people, reactions: people,
                                   comments: [people, { reactions: people, timeline_note: :groups }] }]
-    includes(*shown, repost_of: shown)
+    includes(*shown, repost_of: shown, repost_of_highlight: [:reposts, { chapter: :book, reactions: people, **people }])
   }
 
-  # Leaves out the notes by people `viewer` blocked, and reposts of their notes
+  # Leaves out the notes by people `viewer` blocked, and reposts of their notes and highlights
   scope :not_blocked_by, lambda { |viewer|
     next all unless viewer
 
     blocked = UserBlock.where(blocker_id: viewer.id).select(:blocked_id)
-    where.not(user_id: blocked).where(<<~SQL.squish, viewer: viewer.id)
+    where.not(user_id: blocked).where(<<~SQL.squish, viewer: viewer.id).where(<<~SQL.squish, viewer: viewer.id)
       timeline_notes.repost_of_id IS NULL OR NOT EXISTS (SELECT 1 FROM timeline_notes o
         JOIN user_blocks b ON b.blocked_id = o.user_id AND b.blocker_id = :viewer
         WHERE o.id = timeline_notes.repost_of_id)
+    SQL
+      timeline_notes.repost_of_highlight_id IS NULL OR NOT EXISTS (SELECT 1 FROM user_highlights h
+        JOIN user_blocks b ON b.blocked_id = h.user_id AND b.blocker_id = :viewer
+        WHERE h.id = timeline_notes.repost_of_highlight_id)
     SQL
   }
 
@@ -106,7 +116,7 @@ class TimelineNote < ApplicationRecord
       followed = Follow.where(follower_id: viewer.id).select(:followed_id)
       seen = seen.or(where(visibility: "public")).or(where(visibility: "followers", user_id: followed))
     end
-    seen.where(repost_of_id: nil).merge(where(user_id: viewer.id).or(shown)).not_blocked_by(viewer)
+    seen.where(repost_of_id: nil, repost_of_highlight_id: nil).merge(where(user_id: viewer.id).or(shown)).not_blocked_by(viewer)
   end
 
   # What `person`'s profile timeline shows `viewer`: the notes they wrote and the ones written
@@ -158,7 +168,7 @@ class TimelineNote < ApplicationRecord
             .map { |name, count| { name: name, count: count } }
   end
 
-  def repost? = repost_of_id.present?
+  def repost? = repost_of_id.present? || repost_of_highlight_id.present?
 
   # Whether `viewer` may see it (and so react to it or repost it): its author always; on
   # their profile as `visibility` says; and in any group it's shared to that both are in.
@@ -167,6 +177,7 @@ class TimelineNote < ApplicationRecord
     return false unless viewer
     return true if recipient_id && viewer.id == recipient_id
     return false if viewer.id != user_id && (chip_hidden || repost_of&.chip_hidden)
+    return repost_of_highlight&.visibility == "public" && seen_on_profile_by?(viewer) if repost_of_highlight_id
     return repost_of&.visibility == "public" && seen_on_profile_by?(viewer) if repost?
 
     seen_on_profile_by?(viewer) || groups.any? { |g| g.member?(viewer) && g.member?(user) }
@@ -293,8 +304,9 @@ class TimelineNote < ApplicationRecord
   end
 
   def repost_json(viewer)
+    original = repost_of_highlight ? repost_of_highlight.as_feed_json(viewer: viewer) : repost_of.as_api_json(viewer: viewer)
     json = { kind: "repost", id: id, created_at: created_at.iso8601, author: user.as_person_json,
-             mine: viewer&.id == user_id, note: repost_of.as_api_json(viewer: viewer) }
+             mine: viewer&.id == user_id, note: original }
     json[:visibility] = visibility if json[:mine]
     json
   end
@@ -307,7 +319,11 @@ class TimelineNote < ApplicationRecord
   end
 
   def can_be_reposted
-    errors.add(:base, "You can only repost a note shared with Members.") unless repost_of&.repostable_by?(user)
+    if repost_of_highlight_id
+      errors.add(:base, "You can only repost a highlight shared with Members.") unless repost_of_highlight&.repostable_by?(user)
+    else
+      errors.add(:base, "You can only repost a note shared with Members.") unless repost_of&.repostable_by?(user)
+    end
   end
 
   def drop_reposts = reposts.destroy_all

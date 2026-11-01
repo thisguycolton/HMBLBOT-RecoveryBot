@@ -1,5 +1,6 @@
 # GET /share_cards/:kind/:id.png -> the picture a shared link shows (ShareCard), for things
-# anyone may open (ShareMeta decides), so link-preview fetchers get it without an account
+# anyone may open (ShareMeta decides), so link-preview fetchers get it without an account.
+# A highlight's is found by its signed share id, so only someone holding its link gets it.
 class ShareCardsController < ApplicationController
   skip_after_action :track_action
 
@@ -27,6 +28,7 @@ class ShareCardsController < ApplicationController
     when "group" then Group.find_by!(slug: id)
     when "meeting" then Meeting.find(id)
     when "listing" then OiaaMeeting.find_by!(slug: id)
+    when "highlight" then UserHighlight.find_signed(id, purpose: :share) || raise(ActiveRecord::RecordNotFound)
     end
   end
 end

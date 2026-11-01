@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Ban, BookOpen, EyeOff, Flag, MessageSquareOff, MessageSquareText, Pencil, Repeat2, Trash2 } from "lucide-react";
+import { Ban, BookOpen, EyeOff, Flag, ImageIcon, MessageSquareOff, MessageSquareText, Pencil, Repeat2, Trash2 } from "lucide-react";
 import ReportDialog from "../groups/chat/ReportDialog";
 import Markdown from "../book/Markdown";
 import HighlightNote from "../book/HighlightNote";
@@ -10,7 +10,8 @@ import { api } from "../groups/lib";
 import { timeAgo } from "../groups/page/lib";
 import { showToast } from "../../lib/toast";
 import LinkCard from "./LinkCard";
-import NoteActions from "./NoteActions";
+import NoteActions, { HighlightActions } from "./NoteActions";
+import PictureShare from "../share/PictureShare";
 import NoteComments from "./NoteComments";
 import NoteEditor from "./NoteEditor";
 import PostMenu, { blockPerson, useBlocked } from "./PostMenu";
@@ -21,7 +22,7 @@ import { HIGHLIGHT_VISIBILITY, recipientVisibility, saveNote } from "./lib";
 
 // One thing on a timeline: a note (Markdown and pictures), a repost of someone's note, or a
 // highlight (its quote, its note and where it's from). Its owner edits it right there and
-// picks who sees it; others react to notes and repost them (NoteActions).
+// picks who sees it; others react to notes and shared highlights and repost them (NoteActions).
 // `showAuthor` puts their name on it (a feed of several people); `readOnly` (the editor's
 // canvas) leaves off the owner's buttons. A note written on someone's page always names who
 // wrote it and whose page it's on, and that person can take it off. Needs a `.wb` around it.
@@ -29,11 +30,14 @@ import { HIGHLIGHT_VISIBILITY, recipientVisibility, saveNote } from "./lib";
 // What else you can do with it is in the ••• at its top right (PostMenu): on yours, Edit,
 // Turn comments off and Delete; on someone else's, Report and Block them (and Take off my
 // page, when it's on yours). Blocking someone hides what's theirs here right away.
+// Your own highlights and notes can also be shared as a picture (PictureShare), and others'
+// highlights shared with Members can be reposted like notes (HighlightActions).
 export default function FeedItem({ item: given, readOnly = false, showAuthor = false, compact = false, groups = null, max, imagesMax, onChange, onRemove, extraAction }) {
   const item = readOnly ? { ...given, mine: false, by: null } : given;
   const [editing, setEditing] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [picturing, setPicturing] = useState(false);
   const authorId = item.kind === "repost" ? item.note?.author?.id : item.author?.id;
   useBlocked((id, blocked) => { if (blocked && (id === authorId || id === item.author?.id)) setHidden(true); });
   if (hidden) return null;
@@ -61,7 +65,9 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
     }
   };
   const note = item.kind === "note";
+  const picturable = item.kind === "highlight" || (note && !!item.body?.trim());
   const menu = readOnly || editing ? [] : item.mine ? [
+    picturable && { label: "Share as a picture", icon: ImageIcon, onClick: () => setPicturing(true) },
     note && { label: "Edit", icon: Pencil, onClick: () => setEditing(true) },
     note && { label: item.comments_off ? "Turn comments on" : "Turn comments off", icon: item.comments_off ? MessageSquareText : MessageSquareOff, onClick: toggleComments },
     note && { label: "Delete", icon: Trash2, danger: true, onClick: destroy },
@@ -77,10 +83,23 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
         ? <HighlightBody item={item} onChange={onChange} />
         : <NoteBody item={item} editing={editing} setEditing={setEditing} groups={groups} max={max} imagesMax={imagesMax} compact={compact} onChange={onChange} onDelete={destroy} />}
       {note && !readOnly && !editing && <Social note={item} onChange={onChange} />}
+      {item.kind === "highlight" && !readOnly && <HighlightActions highlight={item} onChange={onChange} />}
+      {picturing && <PictureShare onClose={() => setPicturing(false)} {...pictureProps(item)} />}
       {reporting && <ReportDialog subject={{ type: "timeline_note", id: item.id }} person={item.author} onClose={() => setReporting(false)} />}
     </article>
   );
 }
+
+// What PictureShare needs for a highlight or a note of yours
+function pictureProps(item) {
+  if (item.kind !== "highlight") return { cardUrl: `/api/timeline_notes/${item.id}/card`, kind: "note", title: "A note" };
+  return {
+    cardUrl: `/api/highlights/${item.id}/card`, kind: "highlight", hasNote: !!item.note?.trim(), title: `A highlight from ${item.book_title}`,
+    link: `${location.origin}${highlightHref(item)}`,
+  };
+}
+
+const highlightHref = (item) => `/books/${item.book_slug}/chapters/${item.chapter_slug}?hl=${encodeURIComponent(item.share_id)}#hl-${item.id}`;
 
 // The ••• on someone else's post: Take off my page (when it's on yours), Report, Block them
 function othersMenu(person, { takeOff, report }) {
@@ -104,11 +123,12 @@ function Social({ note, onChange }) {
   );
 }
 
-// Someone's note on the reposter's timeline: who reposted it and when, then the note as its
-// author wrote it. The reposter picks who sees the repost, or takes it off.
+// Someone's note (or highlight) on the reposter's timeline: who reposted it and when, then
+// the note as its author wrote it. The reposter picks who sees the repost, or takes it off.
 function Repost({ item, readOnly, compact, onChange, onRemove }) {
   const mine = item.mine && !readOnly;
   const note = { ...item.note, mine: false };
+  const highlight = note.kind === "highlight";
   const [reporting, setReporting] = useState(false);
 
   const changeVisibility = async (visibility) => {
@@ -142,10 +162,12 @@ function Repost({ item, readOnly, compact, onChange, onRemove }) {
         {!readOnly && <PostMenu className="wb-feed-item__menu" items={mine ? [{ label: "Take off my timeline", icon: Trash2, danger: true, onClick: undo }] : othersMenu(item.author, {})} />}
       </header>
       <div className="wb-feed-item__repost">
-        <ItemHead item={note} showAuthor compact menu={readOnly || item.note.mine ? [] : othersMenu(item.note.author, { report: () => setReporting(true) })} />
-        <NoteBody item={note} compact={compact} />
+        <ItemHead item={note} showAuthor compact menu={readOnly || item.note.mine ? [] : othersMenu(item.note.author, { report: !highlight && (() => setReporting(true)) })} />
+        {highlight ? <HighlightBody item={note} /> : <NoteBody item={note} compact={compact} />}
       </div>
-      {!readOnly && <Social note={item.note} onChange={(n) => onChange?.({ ...item, note: n })} />}
+      {!readOnly && (highlight
+        ? <HighlightActions highlight={item.note} onChange={(n) => onChange?.({ ...item, note: n })} />
+        : <Social note={item.note} onChange={(n) => onChange?.({ ...item, note: n })} />)}
       {reporting && <ReportDialog subject={{ type: "timeline_note", id: item.note.id }} person={item.note.author} onClose={() => setReporting(false)} />}
     </article>
   );
@@ -192,7 +214,7 @@ function ItemHead({ item, showAuthor, compact, extraAction, onChange, onRemove, 
 }
 
 function HighlightBody({ item, onChange }) {
-  const href = `/books/${item.book_slug}/chapters/${item.chapter_slug}?hl=${encodeURIComponent(item.share_id)}#hl-${item.id}`;
+  const href = highlightHref(item);
   return (
     <>
       <blockquote className="wb-hl-quote wb-feed-item__quote">

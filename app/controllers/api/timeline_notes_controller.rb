@@ -13,6 +13,7 @@
 class Api::TimelineNotesController < ApplicationController
   include GroupScoped
   include Reacting
+  include SendsQuoteCards
 
   before_action :require_profiles
   before_action :set_note, only: :update
@@ -111,6 +112,17 @@ class Api::TimelineNotesController < ApplicationController
   def unreact
     @reactable = @note
     remove_reaction { render json: note_json }
+  end
+
+  # GET /api/timeline_notes/:id/card?look=&size=&name=1&download=1 -> a picture of your own
+  # note's words to post anywhere (QuoteCard.note). Not of reposts, chips or notes with blocked words.
+  def card
+    note = current_user.timeline_notes.find(params[:id])
+    words = QuoteCard.plain(note.body)
+    return render(json: { error: "Only notes with words in them can be a picture." }, status: :unprocessable_entity) if note.repost? || words.blank?
+    return render(json: { error: BlockedLanguage.message }, status: :unprocessable_entity) if BlockedLanguage.found?(note.body)
+
+    send_card(QuoteCard.note(note, look: params[:look], size: params[:size], name: params[:name] == "1"))
   end
 
   # POST /api/timeline_notes/:id/repost  visibility -> the repost, now on your timeline

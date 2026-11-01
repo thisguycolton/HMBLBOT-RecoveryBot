@@ -4,9 +4,16 @@
 #   * every highlight a reader has made, with the reader's share_token
 #     (?share=TOKEN, or the collection page /library/highlights/TOKEN);
 #   * one highlight on its own, with that highlight's signed share id
-#     (?hl=SHARE_ID), which reveals nothing else.
+#     (?hl=SHARE_ID), which reveals nothing else. Its link preview shows a picture of it
+#     (ShareMeta.highlight), and its owner can make pictures of it to post (card).
+#
+# Others who see a highlight on a timeline can repost it to theirs when it's shared with
+# Members (UserHighlight#repostable_by?), and take the repost back. Anyone who sees it on a
+# timeline can react to it (Like, Love or Hugs), as with notes.
 class Api::HighlightsController < ApplicationController
   include KeepsRobotsOut
+  include SendsQuoteCards
+  include Reacting
   keep_robots_out
   before_action :authenticate_user!, except: [:index, :collection]
 
@@ -112,6 +119,56 @@ class Api::HighlightsController < ApplicationController
     head :no_content
   end
 
+  # GET /api/highlights/:id/card.png?look=paper|marker|night|sunrise&size=wide|square|story
+  #   &note=0 (leave the note off) &name=1 (put their first name on it) &download=1
+  # A picture of your own highlight to post anywhere (QuoteCard). Only yours.
+  def card
+    h = current_user.user_highlights.find(params[:id])
+    picture = QuoteCard.highlight(h, look: params[:look], size: params[:size], note: params[:note] != "0", name: params[:name] == "1")
+    send_card(picture)
+  end
+
+  # PUT /api/highlights/:id/reaction  kind: like|love|hugs -> the highlight as a feed shows it
+  def react
+    return unless (@reactable = visible_highlight)
+
+    save_reaction(what: "highlight", url: @reactable.user.profile_path) { render json: feed_json(@reactable) }
+  end
+
+  # DELETE /api/highlights/:id/reaction -> the highlight as a feed shows it
+  def unreact
+    return unless (@reactable = visible_highlight)
+
+    remove_reaction { render json: feed_json(@reactable) }
+  end
+
+  # POST /api/highlights/:id/repost  visibility -> the repost, now on your timeline
+  def repost
+    h = visible_highlight
+    return unless h
+
+    repost = current_user.timeline_notes.find_by(repost_of_highlight: h) ||
+             current_user.timeline_notes.create!(repost_of_highlight: h, body: "", visibility: repost_visibility)
+    if repost.previously_new_record?
+      Notification.deliver(h.user, kind: "note.repost", title: "#{current_user.display_name} reposted your highlight",
+                                   body: h.quote.truncate(120), url: current_user.profile_path, from: current_user)
+    end
+    render json: TimelineNote.for_feed.find(repost.id).as_api_json(viewer: current_user), status: :created
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordNotUnique
+    retry
+  end
+
+  # DELETE /api/highlights/:id/repost -> the highlight as a feed shows it, off your timeline
+  def unrepost
+    h = visible_highlight
+    return unless h
+
+    current_user.timeline_notes.where(repost_of_highlight: h).destroy_all
+    render json: feed_json(h)
+  end
+
   # POST /api/highlights/share -> { share_token: "..." }
   def share
     current_user.update!(share_token: SecureRandom.urlsafe_base64(16)) if current_user.share_token.blank?
@@ -119,6 +176,26 @@ class Api::HighlightsController < ApplicationController
   end
 
   private
+
+  def feed_json(h)
+    UserHighlight.includes(:reposts, chapter: :book, reactions: { user: { avatar_attachment: :blob } }).find(h.id).as_feed_json(viewer: current_user)
+  end
+
+  # The highlight to react to or repost, if they can see it on its owner's timeline (and didn't block them)
+  def visible_highlight
+    h = UserHighlight.find_by(id: params[:id])
+    return h if h&.visible_to?(current_user) && !current_user.blocked_ids.include?(h.user_id)
+
+    render json: { error: "That highlight isn't here anymore." }, status: :not_found
+    nil
+  end
+
+  # Who sees a new repost: as asked, or your followers unless you share notes with Members by default
+  def repost_visibility
+    return params[:visibility] if %w[followers public].include?(params[:visibility])
+
+    current_user.default_note_visibility == "public" ? "public" : "followers"
+  end
 
   def highlight_json(h)
     json = h.as_json(only: [:id, :style, :selector, :note, :created_at, :updated_at])

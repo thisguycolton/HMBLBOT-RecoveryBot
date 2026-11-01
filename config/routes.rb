@@ -34,7 +34,7 @@ Rails.application.routes.draw do
 
   # The picture a shared link shows (og:image)
   get "/share_cards/:kind/:id.png", to: "share_cards#show", as: :share_card, format: false,
-      constraints: { kind: /document|reading|event|group|meeting|listing|site/, id: %r{[^/]+} }
+      constraints: { kind: /document|reading|event|group|meeting|listing|highlight|site/, id: %r{[^/]+} }
   # The little map of where an in-person meeting is (MeetingMap)
   get "/meeting_maps/:kind/:id.png", to: "meeting_maps#show", as: :meeting_map, format: false,
       constraints: { kind: /meeting|listing/, id: %r{[^/]+} }
@@ -229,6 +229,8 @@ Rails.application.routes.draw do
       delete :reaction, action: :unreact
       post :repost
       delete :repost, action: :unrepost
+      # A picture of your note to post anywhere (ShareCard.note)
+      get :card
     end
     resources :comments, controller: :note_comments, only: :create
   end
@@ -294,6 +296,16 @@ Rails.application.routes.draw do
     collection do
       post :share
       get :collection
+    end
+    member do
+      # Like, Love or Hugs on a highlight shared to a timeline
+      put :reaction, action: :react
+      delete :reaction, action: :unreact
+      # Others repost a highlight shared with Members to their own timeline
+      post :repost
+      delete :repost, action: :unrepost
+      # A picture of your highlight to post anywhere (ShareCard.highlight)
+      get :card
     end
   end
 
