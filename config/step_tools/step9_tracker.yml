@@ -1,0 +1,25 @@
+key: step9-amends-tracker
+step: 9
+name: "Amends tracker"
+summary: "Each amend from planned to talked over with your sponsor to made, with how it went. Names can come from your 8th step list."
+default: true
+intro: >
+  "Made direct amends to such people wherever possible, except when to do so would injure them or others." Plan each
+  one, talk it over with your sponsor, then go. Afterwards, write down how it went.
+sections:
+  - id: amends
+    kind: table
+    title: "Amends"
+    fill: row
+    rows_from: { step: 8, role: who, label: "Add names from my 8th step" }
+    columns:
+      - { id: who, label: "Who", type: text, role: who }
+      - { id: plan, label: "What I'll say or do", type: text }
+      - { id: status, label: "Where it stands", type: choice, options: ["Planned", "Talked over with sponsor", "Made", "Living amends, ongoing", "Not possible, indirect instead"] }
+      - { id: date, label: "When", type: date }
+      - { id: went, label: "How it went", type: text }
+  - id: promises
+    kind: questions
+    title: "Looking back"
+    items:
+      - { id: promises, label: "Which of the promises (Big Book pages 83 and 84) am I starting to see come true?" }

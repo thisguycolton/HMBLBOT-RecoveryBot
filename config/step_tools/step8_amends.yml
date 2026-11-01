@@ -1,0 +1,30 @@
+key: step8-amends-list
+step: 8
+name: "Amends list"
+summary: "Everyone I've harmed, what the harm was, what kind of amends it calls for, and whether I'm willing yet. Names can come from your 4th step."
+default: true
+intro: >
+  "Made a list of all persons we had harmed, and became willing to make amends to them all." Write every name, even
+  the ones you aren't willing about yet. Willingness can come later; the list comes first.
+sections:
+  - id: amends
+    kind: table
+    title: "People I've harmed"
+    fill: row
+    rows_from: { step: 4, role: who, label: "Add names from my 4th step" }
+    columns:
+      - { id: who, label: "Who", type: text, role: who }
+      - { id: harm, label: "The harm I did", type: text }
+      - { id: kind, label: "Kind of amends", type: choice, options: ["Direct", "Living", "Indirect", "Not sure yet"] }
+      - { id: injure, label: "Could it injure them or others?", type: choice, options: ["No", "Maybe", "Yes, talk with sponsor"] }
+      - { id: willing, label: "Willing?", type: choice, options: ["Willing", "Not yet"] }
+  - id: reflect
+    kind: questions
+    title: "Becoming willing"
+    items:
+      - { id: hardest, label: "Which names am I least willing about? Why?" }
+      - { id: myself, label: "Is my own name on the list?" }
+  - id: sponsor
+    kind: note
+    tone: sponsor
+    body: "Go over the list with your sponsor before you start making amends, especially any marked Maybe or Yes for injuring someone."

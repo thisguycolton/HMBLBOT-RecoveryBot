@@ -1,0 +1,58 @@
+key: step4-big-book
+step: 4
+name: "Big Book four columns"
+summary: "The resentment, fear and sex conduct inventories as the Big Book lays them out (pages 64 to 71), filled in one column at a time."
+default: true
+intro: >
+  "We were usually as definite as this example." This inventory is a fact-finding, fact-facing process. Write it all
+  down, then go over it with your sponsor. Most sponsors suggest filling in one column at a time: every name first,
+  then every cause, and so on, so you aren't judging yourself before the list is done.
+sections:
+  - id: resentments
+    kind: table
+    title: "Resentments"
+    help: "People, institutions or principles I'm angry at, hurt by or can't let go of."
+    fill: column
+    prompts: ["Parents", "Brothers and sisters", "Partners, past and present", "Friends", "Bosses and coworkers", "Neighbors", "Police, courts, the law", "Church or religion", "Government", "Society", "Myself", "God"]
+    columns:
+      - { id: who, label: "I'm resentful at", type: text, role: who }
+      - { id: cause, label: "The cause", type: text }
+      - { id: affects, label: "Affects my", type: choices, options: ["Self-esteem", "Pride", "Ambitions", "Security", "Personal relations", "Sex relations", "Pocketbook"] }
+      - { id: part, label: "My part", type: choices, role: my_part, options: ["Selfish", "Dishonest", "Self-seeking", "Frightened"],
+          help: "Putting out of my mind the wrongs others had done, where was I to blame?" }
+  - id: resentment-review
+    kind: questions
+    title: "Looking back over the list"
+    items:
+      - { id: patterns, label: "What patterns do I see?" }
+      - { id: sick, label: "Can I see the people on this list as spiritually sick too? What would it look like to show them the tolerance and patience I'd want for myself?" }
+  - id: fears
+    kind: table
+    title: "Fears"
+    help: "Everything I'm afraid of, then why, and what it says about relying on myself."
+    fill: column
+    columns:
+      - { id: fear, label: "I'm afraid of", type: text }
+      - { id: why, label: "Why I have this fear", type: text }
+      - { id: affects, label: "Affects my", type: choices, options: ["Self-esteem", "Pride", "Ambitions", "Security", "Personal relations", "Sex relations", "Pocketbook"] }
+      - { id: part, label: "My part", type: choices, role: my_part, options: ["Selfish", "Dishonest", "Self-seeking", "Frightened"] }
+  - id: sex-conduct
+    kind: table
+    title: "Sex conduct"
+    help: "Not to judge, but to see where I've been selfish and what I'd want instead."
+    fill: row
+    columns:
+      - { id: who, label: "Who did I hurt?", type: text, role: who }
+      - { id: part, label: "Where was I", type: choices, role: my_part, options: ["Selfish", "Dishonest", "Inconsiderate"] }
+      - { id: aroused, label: "Did I arouse", type: choices, options: ["Jealousy", "Suspicion", "Bitterness"] }
+      - { id: fault, label: "Where was I at fault?", type: text }
+      - { id: instead, label: "What should I have done instead?", type: text }
+  - id: ideal
+    kind: questions
+    title: "My ideal"
+    items:
+      - { id: ideal, label: "What do I want my relationships and my sex life to look like going forward?" }
+  - id: sponsor
+    kind: note
+    tone: sponsor
+    body: "Talk with your sponsor about when you'll sit down for your 5th step. You don't need to have it perfect, just honest and written down."

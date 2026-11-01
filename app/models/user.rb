@@ -11,6 +11,7 @@ class User < ApplicationRecord
   # The member's own recovery tools, only ever seen by them (Api::RecoveryController)
   has_many :step_inventories, dependent: :delete_all
   has_many :gratitude_lists, dependent: :delete_all
+  has_many :step_works, dependent: :delete_all
   # Chips their groups' hosts gave them (and ones they gave), and the meetings they clicked
   # Join on, for Meeting Maker chips (Chips)
   has_many :chip_awards, dependent: :delete_all

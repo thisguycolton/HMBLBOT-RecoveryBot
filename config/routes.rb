@@ -90,6 +90,10 @@ Rails.application.routes.draw do
     end
   end
   resources :sponsorship_shares, only: %i[create update destroy]
+  # Working the steps: worksheets (StepTool) and a member's own work on them
+  resources :step_works, only: %i[index show create update destroy] do
+    get :pull, on: :collection
+  end
   # The shell: your groups and roles, the Hosting badge, Today; and the search box
   resource :nav, controller: "nav", only: :show
   # Clearing "Needs your attention" items from Today, and restoring them

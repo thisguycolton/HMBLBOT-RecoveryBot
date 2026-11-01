@@ -8,11 +8,13 @@
 class SponsorshipShare < ApplicationRecord
   moderates_language :title, :body, :reply
 
-  KINDS = { "gratitude" => "gratitude list", "inventory" => "10th step" }.freeze
+  KINDS = { "gratitude" => "gratitude list", "inventory" => "10th step", "step_work" => "step work" }.freeze
   BODY_MAX = 20_000
   REPLY_MAX = 500
 
   belongs_to :sponsorship
+  # Only the two of them should ever read these, so they're encrypted in the database
+  encrypts :body, :reply
 
   validates :kind, inclusion: { in: KINDS.keys }
   validates :on, :title, :body, presence: true

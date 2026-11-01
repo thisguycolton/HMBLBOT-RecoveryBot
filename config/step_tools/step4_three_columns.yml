@@ -1,0 +1,48 @@
+key: step4-three-columns
+step: 4
+name: "Big Book three columns, then my part"
+summary: "The three columns from the Big Book's example (who, why, what it affects), then the my part questions for each resentment, one at a time."
+intro: >
+  First list every resentment in the three columns. Only when the list is done, go back to each one and ask where
+  you were to blame.
+sections:
+  - id: resentments
+    kind: table
+    title: "Resentments"
+    fill: column
+    prompts: ["Parents", "Brothers and sisters", "Partners, past and present", "Friends", "Bosses and coworkers", "Institutions", "Principles", "Myself"]
+    columns:
+      - { id: who, label: "I'm resentful at", type: text, role: who }
+      - { id: cause, label: "The cause", type: text }
+      - { id: affects, label: "Affects my", type: choices, options: ["Self-esteem", "Pride", "Ambitions", "Security", "Personal relations", "Sex relations", "Pocketbook"] }
+  - id: my-part
+    kind: each
+    title: "My part"
+    help: "One resentment at a time. Put the other person's wrongs aside and look at my own."
+    from: resentments
+    items:
+      - { id: selfish, label: "Where was I selfish?" }
+      - { id: dishonest, label: "Where was I dishonest?" }
+      - { id: self-seeking, label: "Where was I self-seeking?" }
+      - { id: frightened, label: "Where was I frightened?" }
+      - { id: part, label: "So my part was", type: choices, role: my_part, options: ["Selfish", "Dishonest", "Self-seeking", "Frightened", "Inconsiderate"] }
+  - id: fears
+    kind: table
+    title: "Fears"
+    fill: column
+    columns:
+      - { id: fear, label: "I'm afraid of", type: text }
+      - { id: why, label: "Why I have this fear", type: text }
+      - { id: part, label: "My part", type: choices, role: my_part, options: ["Selfish", "Dishonest", "Self-seeking", "Frightened"] }
+  - id: sex-conduct
+    kind: table
+    title: "Sex conduct"
+    fill: row
+    columns:
+      - { id: who, label: "Who did I hurt?", type: text, role: who }
+      - { id: part, label: "Where was I", type: choices, role: my_part, options: ["Selfish", "Dishonest", "Inconsiderate"] }
+      - { id: instead, label: "What should I have done instead?", type: text }
+  - id: sponsor
+    kind: note
+    tone: sponsor
+    body: "Talk with your sponsor about when you'll sit down for your 5th step."

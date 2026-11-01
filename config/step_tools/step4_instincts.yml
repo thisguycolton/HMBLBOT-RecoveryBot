@@ -1,0 +1,36 @@
+key: step4-instincts
+step: 4
+name: "Instincts version"
+summary: "The same columns, with what each resentment affects sorted under the three instincts the 12&12 names: social, security and sex."
+intro: >
+  The 12&12 describes our defects as instincts gone out of bounds: the social instinct (to be liked, to belong, to be
+  somebody), the security instinct (money, a place, safety) and the sex instinct. For each resentment, mark which
+  instinct felt threatened.
+sections:
+  - id: resentments
+    kind: table
+    title: "Resentments"
+    fill: column
+    prompts: ["People", "Institutions", "Principles", "Myself"]
+    columns:
+      - { id: who, label: "I'm resentful at", type: text, role: who }
+      - { id: cause, label: "The cause", type: text }
+      - { id: affects, label: "Instinct threatened", type: choices,
+          options: ["Social: self-esteem", "Social: pride", "Social: personal relations", "Social: ambitions", "Security: material (pocketbook)", "Security: emotional", "Security: ambitions", "Sex: relations", "Sex: ambitions"] }
+      - { id: part, label: "My part", type: choices, role: my_part, options: ["Selfish", "Dishonest", "Self-seeking", "Frightened"] }
+  - id: fears
+    kind: table
+    title: "Fears"
+    fill: column
+    columns:
+      - { id: fear, label: "I'm afraid of", type: text }
+      - { id: affects, label: "Instinct threatened", type: choices, options: ["Social", "Security", "Sex"] }
+      - { id: part, label: "My part", type: choices, role: my_part, options: ["Selfish", "Dishonest", "Self-seeking", "Frightened"] }
+  - id: sex-conduct
+    kind: table
+    title: "Sex conduct"
+    fill: row
+    columns:
+      - { id: who, label: "Who did I hurt?", type: text, role: who }
+      - { id: part, label: "Where was I", type: choices, role: my_part, options: ["Selfish", "Dishonest", "Inconsiderate"] }
+      - { id: instead, label: "What should I have done instead?", type: text }

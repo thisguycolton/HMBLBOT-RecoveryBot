@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_01_200000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_01_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1345,7 +1345,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_200000) do
     t.datetime "updated_at", null: false
     t.index ["ended_by_id"], name: "index_sponsorships_on_ended_by_id"
     t.index ["sponsee_id"], name: "index_sponsorships_on_sponsee_id"
-    t.index ["sponsor_id", "sponsee_id"], name: "index_sponsorships_open_pair", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'active'::character varying])::text[]))"
+    t.index ["sponsor_id", "sponsee_id"], name: "index_sponsorships_open_pair", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('active'::character varying)::text]))"
     t.index ["sponsor_id"], name: "index_sponsorships_on_sponsor_id"
   end
 
@@ -1358,6 +1358,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_200000) do
     t.datetime "updated_at", null: false
     t.index ["user_id", "on"], name: "index_step_inventories_on_user_id_and_on", unique: true
     t.index ["user_id"], name: "index_step_inventories_on_user_id"
+  end
+
+  create_table "step_works", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.integer "step", null: false
+    t.string "tool_key"
+    t.string "name", null: false
+    t.jsonb "definition", default: {}, null: false
+    t.text "answers"
+    t.jsonb "settings", default: {}, null: false
+    t.string "status", default: "in_progress", null: false
+    t.datetime "done_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "step", "updated_at"], name: "index_step_works_on_user_id_and_step_and_updated_at"
+    t.index ["user_id"], name: "index_step_works_on_user_id"
   end
 
   create_table "tags", force: :cascade do |t|
@@ -1769,6 +1785,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_200000) do
   add_foreign_key "sponsorships", "users", column: "sponsee_id", on_delete: :cascade
   add_foreign_key "sponsorships", "users", column: "sponsor_id", on_delete: :cascade
   add_foreign_key "step_inventories", "users", on_delete: :cascade
+  add_foreign_key "step_works", "users", on_delete: :cascade
   add_foreign_key "text_report_comments", "text_reports"
   add_foreign_key "text_report_comments", "users"
   add_foreign_key "text_reports", "chapters"

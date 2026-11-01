@@ -1,0 +1,176 @@
+key: drop-the-rock
+step: 6
+steps: [6, 7]
+name: "Drop the Rock: Steps 6 and 7"
+summary: "A workbook in the spirit of Drop the Rock: Removing the Obstacles to Recovery. Recognize the rocks, become willing to put them down, and practice something in their place."
+default: true
+credit: "Follows the approach of Drop the Rock: Removing the Obstacles to Recovery (Hazelden). The wording here is our own."
+intro: >
+  Steps 6 and 7 aren't about beating ourselves up for our defects. They're about becoming willing to let go of the
+  behaviors, attitudes and patterns that keep us separated from others, from ourselves and from our Higher Power.
+  This moves from recognition to understanding, willingness, surrender and action, one defect at a time.
+
+  **Am I willing to put down something that has been protecting me, even if I haven't figured out how to live without it yet?**
+sections:
+  # Part I: Identify
+  - id: rock
+    part: "Part I · Identify: recognizing the rocks"
+    kind: questions
+    title: "Understanding the rock"
+    help: "What does it mean to carry a rock in recovery? How do my defects affect my relationships, my relationship with myself, and my spiritual growth? What am I holding onto because it feels safer than changing?"
+    items:
+      - { id: trouble, label: "What behaviors or attitudes repeatedly get me into trouble?" }
+      - { id: patterns, label: "What patterns have followed me into sobriety?" }
+      - { id: defending, label: "What do I find myself defending, justifying or rationalizing?" }
+      - { id: afraid, label: "What am I afraid would happen if I let these things go?" }
+  - id: defects
+    kind: picker
+    title: "Identifying my character defects"
+    help: "Tap the ones you recognize in yourself. Add your own if they aren't here."
+    suggest_from: { step: 4, role: my_part, label: "From my 4th step" }
+    groups:
+      - { label: "Fear", options: ["Fear", "Insecurity", "Anxiety", "Distrust", "Avoidance"] }
+      - { label: "Control", options: ["Manipulation", "Controlling behavior", "Stubbornness"] }
+      - { label: "Ego", options: ["Pride", "Arrogance", "Self-importance", "Vanity"] }
+      - { label: "Relationships", options: ["Jealousy", "Envy", "Possessiveness", "Resentment", "Intolerance", "People-pleasing"] }
+      - { label: "Dishonesty", options: ["Lying", "Exaggeration", "Rationalization"] }
+      - { label: "Self-centeredness", options: ["Self-pity", "Selfishness", "Entitlement", "Attention-seeking"] }
+      - { label: "Emotional avoidance", options: ["Anger", "Bitterness", "Defensiveness", "Isolation"] }
+      - { label: "Spiritual", options: ["Impatience", "Ingratitude", "Hopelessness", "Unwillingness"] }
+  - id: shows-up
+    kind: each
+    title: "How each one shows up"
+    from: defects
+    items:
+      - { id: how, label: "How does it show up?", placeholder: "I struggle to let others make decisions." }
+      - { id: who, label: "Who does it affect?", placeholder: "Family, friends" }
+  - id: sponsor-1
+    kind: note
+    tone: sponsor
+    body: "Talk with your sponsor about the list. Did anything on it surprise you? Is anything missing that they'd add?"
+  # Part II: Release
+  - id: understanding
+    part: "Part II · Release: Steps Six and Seven"
+    kind: each
+    title: "Understanding the defect"
+    help: "A defect isn't just a bad behavior. Often it's a misguided attempt to meet a real need: control trying to feel safe, pride protecting insecurity, resentment guarding against being hurt again, people-pleasing trying to be accepted, dishonesty avoiding consequences. One at a time."
+    from: defects
+    items:
+      - { id: when, label: "When does this behavior usually surface?" }
+      - { id: triggers, label: "What situations or emotions trigger it?" }
+      - { id: protect, label: "What am I trying to protect or accomplish?" }
+      - { id: short, label: "What does it give me in the short term?" }
+      - { id: long, label: "What does it cost me in the long term?" }
+      - { id: others, label: "How does it affect other people?" }
+      - { id: opposite, label: "What would the opposite behavior look like?" }
+  - id: willingness
+    kind: scale
+    title: "Step Six: were entirely ready"
+    help: "Willingness, not perfection. Rate how willing you are to have each one removed. Come back and change it as it grows; your earlier answers are kept."
+    from: defects
+    options: ["Not willing", "Somewhat", "Willing"]
+  - id: deeper
+    kind: questions
+    title: "Deeper questions"
+    items:
+      - { id: most, label: "Which defects am I most willing to let go of?" }
+      - { id: holding, label: "Which ones am I still holding onto?" }
+      - { id: getting, label: "What do I get out of keeping them?" }
+      - { id: become, label: "Am I afraid of who I might become without them?" }
+      - { id: willing, label: "Am I willing to become willing?" }
+      - { id: defending, label: "What would it look like to stop defending these behaviors?" }
+  - id: hardest
+    kind: questions
+    title: "The hardest rock to drop"
+    items:
+      - { id: which, label: "Which defect do I have the hardest time imagining life without?" }
+      - { id: why, label: "Why?" }
+      - { id: life, label: "What would my life look like if it no longer dictated my actions?" }
+  - id: prayer-reference
+    kind: reference
+    title: "Step Seven: humbly asked Him"
+    help: "From understanding to spiritual action. The Seventh Step Prayer from the Big Book (page 76):"
+    body: >
+      My Creator, I am now willing that you should have all of me, good and bad. I pray that you now remove from me every
+      single defect of character which stands in the way of my usefulness to you and my fellows. Grant me strength, as I
+      go out from here, to do your bidding. Amen.
+  - id: prayer
+    kind: questions
+    title: "My Seventh Step Prayer"
+    help: "What am I asking my Higher Power to help me change? Where do I need humility? What shortcomings am I willing to surrender? Where do I need help taking responsibility? What does becoming useful to others mean to me?"
+    items:
+      - { id: prayer, label: "My prayer", placeholder: "{{higher_power}}, I am asking you to help me…", rows: 8 }
+  - id: sponsor-2
+    kind: note
+    tone: sponsor
+    body: "Talk with your sponsor about the defect that's hardest to drop, and read your prayer to them if you're willing."
+  # Part III: Replace
+  - id: principles
+    part: "Part III · Replace: practicing spiritual principles"
+    kind: table
+    title: "Turning defects into principles"
+    help: "Something to practice, not just a list of what I don't want to be. Filled in for the defects you picked; change anything."
+    fill: row
+    rows_from_section: { section: defects, column: defect }
+    defaults:
+      Pride: { principle: "Humility", practice: "Admit when I'm wrong." }
+      Arrogance: { principle: "Humility", practice: "Listen more than I talk." }
+      Resentment: { principle: "Forgiveness", practice: "Stop rehearsing old arguments." }
+      Selfishness: { principle: "Service", practice: "Put someone else's needs first." }
+      Fear: { principle: "Faith", practice: "Take action despite uncertainty." }
+      Anxiety: { principle: "Faith", practice: "Do the next right thing and leave the rest." }
+      Lying: { principle: "Honesty", practice: "Tell the truth even when it's uncomfortable." }
+      Rationalization: { principle: "Honesty", practice: "Say what I did without the explanation." }
+      Controlling behavior: { principle: "Acceptance", practice: "Allow others to make their own decisions." }
+      Manipulation: { principle: "Acceptance", practice: "Ask for what I want directly." }
+      Impatience: { principle: "Tolerance", practice: "Allow things to unfold." }
+      Intolerance: { principle: "Tolerance", practice: "Look for what I have in common with them." }
+      Envy: { principle: "Gratitude", practice: "Appreciate what I already have." }
+      Ingratitude: { principle: "Gratitude", practice: "Write a gratitude list." }
+      Self-pity: { principle: "Gratitude", practice: "Call someone and ask how they're doing." }
+      Isolation: { principle: "Fellowship", practice: "Go to a meeting and stay after." }
+      Anger: { principle: "Patience", practice: "Pause before I answer." }
+      Stubbornness: { principle: "Open-mindedness", practice: "Try it someone else's way." }
+      People-pleasing: { principle: "Honesty", practice: "Say no when I mean no." }
+      Dishonesty: { principle: "Honesty", practice: "Tell the truth even when it's uncomfortable." }
+    columns:
+      - { id: defect, label: "Character defect", type: text }
+      - { id: principle, label: "Opposing spiritual principle", type: text }
+      - { id: practice, label: "How I can practice it", type: text }
+  - id: focus
+    kind: picker
+    title: "My action plan"
+    help: "Choose three defects to work on."
+    options_from: defects
+    max: 3
+  - id: plan
+    kind: each
+    title: "For each one"
+    from: focus
+    items:
+      - { id: principle, label: "What principle will I practice instead?" }
+      - { id: today, label: "What specific action can I take today?" }
+      - { id: progress, label: "How will I know I'm making progress?" }
+      - { id: accountable, label: "Who can help hold me accountable?" }
+  - id: practice
+    kind: days
+    title: "Daily practice: dropping the rock"
+    help: "Seven days, one question a day. Start another week whenever you like; each week is kept."
+    items:
+      - { id: d1, label: "Where did pride show up today?" }
+      - { id: d2, label: "Where did I try to control something?" }
+      - { id: d3, label: "Did I act out of fear or faith?" }
+      - { id: d4, label: "Where could I have practiced more patience?" }
+      - { id: d5, label: "Did I put someone else's needs ahead of mine?" }
+      - { id: d6, label: "Where did I struggle to accept reality?" }
+      - { id: d7, label: "What am I beginning to let go of?" }
+    review:
+      - { id: noticed, label: "What did I notice about myself?" }
+      - { id: most, label: "Which defects appeared most often?" }
+      - { id: willing, label: "Where did I experience a moment of willingness?" }
+      - { id: old, label: "Where did I fall back into old patterns?" }
+      - { id: continue, label: "What do I want to keep practicing?" }
+  - id: closing
+    kind: note
+    tone: sponsor
+    body: "Steps Six and Seven aren't a promise that we'll never act this way again. They're a chance to become willing to live differently, and to ask for help doing it. Share this week's practice with your sponsor."
