@@ -12,7 +12,9 @@ class Api::SponsorshipSharesController < ApplicationController
     sent = SponsorshipShare.transaction do
       sponsorships.map do |s|
         # Sent again before they opened it: the newer one takes its place
-        share = s.shares.where(kind: params[:kind].to_s, on: on, seen_at: nil).first_or_initialize
+        same = s.shares.where(kind: params[:kind].to_s, on: on, seen_at: nil)
+        same = same.where(title: params[:title].to_s.squish) if params[:kind].to_s == "step_work" # one per worksheet
+        share = same.first_or_initialize
         share.update!(title: params[:title], body: params[:body])
         share
       end

@@ -215,7 +215,7 @@ export default function StepsPage() {
         <div className="space-y-1.5">
           {data.steps.map(({ step, text }) => {
             const tools = toolsFor(step);
-            const builtIn = step === 10 ? [{ href: "/inventory", name: "Nightly review", summary: "The 10th step questions from page 86 of the Big Book, one night at a time." }] : [];
+            const builtIn = step === 10 ? [{ href: "/inventory", name: "Nightly review", summary: "The 10th step questions from page 86 of the Big Book, one night at a time, or your own: you can change them." }] : [];
             return (
               <Card key={step} id={`step-${step}`} className="scroll-mt-24 space-y-3 p-4">
                 <div className="flex gap-3">

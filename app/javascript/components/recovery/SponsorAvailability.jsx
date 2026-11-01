@@ -6,6 +6,7 @@ import Avatar from "../groups/Avatar";
 import ReportDialog from "../groups/chat/ReportDialog";
 import { inputClass, labelClass } from "../ui/styles";
 import { showToast } from "../../lib/toast";
+import SponsorCheck from "../ui/SponsorCheck";
 
 // Find a sponsor (Api::SponsorProfilesController#find): people in your groups who said they're
 // available to sponsor, with what they wrote and picked, and Ask. Only ever people you share
@@ -37,9 +38,9 @@ export function FindSponsor({ onAsked, group }) {
         {data.sponsors.map((s) => (
           <Card key={s.id} className="space-y-3 p-4">
             <div className="flex items-start gap-3">
-              <Avatar person={s.person} size={44} />
+              <span className="relative h-fit shrink-0"><Avatar person={s.person} size={44} /><SponsorCheck on size={18} /></span>
               <div className="min-w-0 flex-1">
-                <div className="font-medium text-slate-900 dark:text-white">{s.person.name}</div>
+                <div className="flex flex-wrap items-center gap-2 font-medium text-slate-900 dark:text-white">{s.person.name} <SponsorCheck badge /></div>
                 <div className="text-sm text-slate-500 dark:text-neutral-400">{[s.time_sober && `${s.time_sober} sober`, s.languages, s.groups.join(", ")].filter(Boolean).join(" · ")}</div>
               </div>
               {s.status === "active" ? <Pill tone="green">Your sponsor</Pill> : s.status === "pending" ? <Pill>Asked</Pill> : null}
@@ -112,9 +113,9 @@ export function OfferToSponsor() {
             <label className="flex items-start gap-3">
               <input type="checkbox" className="mt-1" checked={!!form.available} onChange={(e) => { set({ available: e.target.checked }); save({ available: e.target.checked }); }} />
               <span>
-                <span className="block font-medium text-slate-900 dark:text-white">I'm available to sponsor</span>
+                <span className="flex items-center gap-2 font-medium text-slate-900 dark:text-white"><SponsorCheck size={18} className={form.available ? "" : "!bg-neutral-300 dark:!bg-neutral-600"} /> I'm available to sponsor</span>
                 <span className="block text-sm text-slate-500 dark:text-neutral-400">
-                  People in your groups see you under Find a sponsor and can ask you. Nobody outside your groups does. You can say yes or not right now to each ask.
+                  People in your groups see a green check by your name, like in the Zoom rooms, and find you under Find a sponsor. They can ask you. Nobody outside your groups does. You can say yes or not right now to each ask.
                 </span>
               </span>
             </label>

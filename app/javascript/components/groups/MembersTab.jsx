@@ -4,6 +4,7 @@ import { iconInputClass, inputClass } from "../ui/styles";
 import { api, ROLE_LABELS, soberFor } from "./lib";
 import Avatar from "./Avatar";
 import { FindSponsor } from "../recovery/SponsorAvailability";
+import SponsorCheck from "../ui/SponsorCheck";
 import { Card, ErrorNote, Pill, Tray, copy, dangerButton, primaryButton, quietButton } from "./ui";
 
 // Members with their pictures and blurbs. Group admins also see join requests, add people
@@ -145,7 +146,7 @@ export default function MembersTab({ group, reload, setGroup }) {
         <div className="grid gap-1.5 sm:grid-cols-2">
           {members.map((person) => (
             <Card key={person.membership_id} className="flex gap-3 p-3">
-              <a href={person.username ? `/people/${person.username}` : undefined} className="shrink-0" aria-label={`${person.name}'s profile`}><Avatar person={person} size={48} /></a>
+              <a href={person.username ? `/people/${person.username}` : undefined} className="relative h-fit shrink-0" aria-label={`${person.name}'s profile`}><Avatar person={person} size={48} />{person.can_sponsor && <SponsorCheck on size={18} />}</a>
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900 dark:text-white">
                   {person.username ? <a href={`/people/${person.username}`} className="!text-slate-900 hover:underline dark:!text-white">{person.name}</a> : person.name}
@@ -154,6 +155,7 @@ export default function MembersTab({ group, reload, setGroup }) {
                   {person.can_schedule_hosts && <Pill tone="green">{person.host_slots_only && person.role !== "admin" ? `Host coordinator · ${person.host_slot_count} ${person.host_slot_count === 1 ? "time slot" : "time slots"}` : "Host coordinator"}</Pill>}
                   {person.can_keep_treasury && <Pill tone="green">Treasurer</Pill>}
                   {person.can_host && <Pill tone="green">Can host</Pill>}
+                  {person.can_sponsor && <SponsorCheck badge />}
                 </p>
                 {person.email && <p className="truncate text-xs text-slate-500 dark:text-neutral-400">{person.email}</p>}
                 {person.sobriety_date && (

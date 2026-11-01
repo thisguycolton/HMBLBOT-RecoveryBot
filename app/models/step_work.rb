@@ -17,10 +17,22 @@ class StepWork < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validate { errors.add(:answers, "is too long") if answers.to_json.size > ANSWERS_MAX }
   validate { errors.add(:definition, "is missing") if definition.blank? }
+  validates :remind_at, format: { with: /\A([01]\d|2[0-3]):[0-5]\d\z/, message: "should be a time like 18:00" }, allow_nil: true
+
+  # Its reminder (RecoveryReminders.remind_work): turning it on or moving it after today's time
+  # has passed starts it tomorrow
+  before_save do
+    if remind_at && (will_save_change_to_remind_at? || will_save_change_to_remind_days?)
+      now = Time.current.in_time_zone(user.zone)
+      self.reminded_on = now.to_date if now.hour * 60 + now.min >= RecoveryReminders.minutes(remind_at)
+    end
+  end
 
   before_validation do
     self.answers = {} unless answers.is_a?(Hash)
     self.settings = (settings || {}).slice("higher_power").transform_values { |v| v.to_s.strip.first(60) }
+    self.remind_at = remind_at.presence
+    self.remind_days = Array(remind_days).map(&:to_i).select { |d| (0..6).cover?(d) }.uniq.sort
   end
 
   def self.start!(user, tool)
@@ -61,6 +73,9 @@ class StepWork < ApplicationRecord
   def as_api_json(full: false)
     json = { id: id, step: step, tool_key: tool_key, name: name, status: status, updated_at: updated_at.iso8601,
              created_at: created_at.iso8601, done_at: done_at&.iso8601 }
-    full ? json.merge(definition: definition, answers: answers, settings: settings, credit: definition["credit"]) : json
+    return json unless full
+
+    json.merge(definition: definition, answers: answers, settings: settings, credit: definition["credit"],
+               remind_at: remind_at, remind_days: remind_days, auto_send: auto_send, auto_sent_at: auto_sent_at&.iso8601)
   end
 end

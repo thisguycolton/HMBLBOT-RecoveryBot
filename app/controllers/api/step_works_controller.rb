@@ -45,7 +45,9 @@ class Api::StepWorksController < ApplicationController
     render json: { work: @work.as_api_json(full: true) }
   end
 
-  # PATCH /api/step_works/:id { answers, name, status, settings, definition } -> saved
+  # PATCH /api/step_works/:id { answers, name, status, settings, definition, remind_at,
+  # remind_days, auto_send, send_text } -> saved. With auto_send on, `send_text` (the worksheet
+  # as text, made on the page) goes to their sponsors, replacing what they haven't opened yet.
   # (`definition` is their customized worksheet: StepTool.clean keeps only what it understands)
   def update
     @work.answers = params[:answers].respond_to?(:to_unsafe_h) ? params[:answers].to_unsafe_h : {} if params.key?(:answers)
@@ -56,7 +58,11 @@ class Api::StepWorksController < ApplicationController
       @work.status = params[:status].to_s
       @work.done_at = @work.status == "done" ? (@work.done_at || Time.current) : nil
     end
+    @work.remind_at = params[:remind_at] if params.key?(:remind_at)
+    @work.remind_days = Array(params[:remind_days]) if params.key?(:remind_days)
+    @work.auto_send = ActiveModel::Type::Boolean.new.cast(params[:auto_send]) if params.key?(:auto_send)
     @work.save!
+    auto_send!(params[:send_text].to_s) if @work.auto_send && params[:send_text].present?
     render json: { work: @work.as_api_json(full: true) }
   rescue StepTool::Invalid => e
     render json: { error: e.message }, status: :unprocessable_entity
@@ -77,6 +83,25 @@ class Api::StepWorksController < ApplicationController
   end
 
   private
+
+  # The worksheet sent to every sponsor as text, in place of the copy they haven't opened yet.
+  # A sponsor is told once, when a new copy reaches them, not on every save.
+  def auto_send!(text)
+    title = "#{@work.step == 6 && @work.tool_key == 'drop-the-rock' ? 'Steps 6 and 7' : "Step #{@work.step}"}: #{@work.name}".first(200)
+    sponsorships = Sponsorship.active.where(sponsee_id: current_user.id).includes(:sponsor).to_a
+    sponsorships.each do |s|
+      share = s.shares.where(kind: "step_work", title: title, seen_at: nil).first_or_initialize
+      fresh = share.new_record?
+      share.update!(on: Date.current, body: text.first(SponsorshipShare::BODY_MAX))
+      next unless fresh
+
+      Notification.deliver(s.sponsor, kind: "sponsorship.share", from: current_user,
+                                      title: "#{current_user.display_name} sent you their step work", body: title, url: "/recovery/sponsorship/#{s.id}")
+    end
+    @work.update_column(:auto_sent_at, Time.current) if sponsorships.any?
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.warn("[auto send] #{@work.id}: #{e.message}")
+  end
 
   def set_work
     @work = current_user.step_works.find_by(id: params[:id])

@@ -74,6 +74,7 @@ Rails.application.routes.draw do
     get :lookup, on: :collection
   end
   resources :meeting_joins, only: :create
+  resource :inventory_questions, only: %i[show update]
   resources :step_inventories, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   resources :gratitude_lists, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   # Sponsors and sponsees, and what a sponsee sends their sponsor

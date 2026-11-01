@@ -57,7 +57,7 @@ export function useEntry(endpoint, unit) {
     setSaving(false);
   };
 
-  return { on, today, entry, list, error, saving, saved, setSaved, save, loadList, earned, unit, closeEarned: () => setEarned(null) };
+  return { on, today, entry, setEntry, list, error, saving, saved, setSaved, save, loadList, earned, unit, closeEarned: () => setEarned(null) };
 }
 
 // The page around the form: title, the day with arrows to the days before and after, and

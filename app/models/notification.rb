@@ -38,8 +38,8 @@ class Notification < ApplicationRecord
                  kinds: %w[chip.given chip.edition chip.edition_new] },
     "sponsorship" => { label: "Sponsorship", description: "When someone asks you to be their sponsor or says yes, when a sponsee sends you something, when your sponsor leaves a note on it, suggests a worksheet, or marks the step you're on.",
                        kinds: %w[sponsorship.request sponsorship.accepted sponsorship.share sponsorship.reply sponsorship.suggestion sponsorship.step] },
-    "recovery_reminders" => { label: "Gratitude and 10th step reminders", description: "The daily reminders you turned on under Reminders.",
-                              kinds: %w[recovery.gratitude_reminder recovery.step_reminder] },
+    "recovery_reminders" => { label: "Gratitude, 10th step and worksheet reminders", description: "The reminders you turned on under Reminders, or on a step worksheet.",
+                              kinds: %w[recovery.gratitude_reminder recovery.step_reminder recovery.step_work_reminder] },
     "site_admin" => { label: "Site admin", description: "New groups waiting for approval, text reports and reports about people.",
                       kinds: %w[group.pending text_report.created user_report.created], admin_only: true },
   }.freeze

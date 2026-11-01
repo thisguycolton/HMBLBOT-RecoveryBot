@@ -9,6 +9,7 @@ import { localDate } from "../lib";
 import StepSection, { Prose } from "./StepSections";
 import StepCustomize from "./StepCustomize";
 import { ShareWorksheetDialog } from "./ShareWorksheet";
+import WorkSettings from "./WorkSettings";
 import { partsOf, workText } from "./stepText";
 
 const ORDINAL = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
@@ -61,7 +62,8 @@ export default function StepWorkPage() {
 
   const setAnswer = (sectionId, v) => setWork((w) => {
     const answers = { ...w.answers, [sectionId]: v };
-    queue({ answers });
+    // Sending as they write: the worksheet as text goes along (the server sends it on)
+    queue(w.auto_send ? { answers, send_text: workText({ ...w, answers }) } : { answers });
     return { ...w, answers };
   });
   const setSettings = (patch) => setWork((w) => { const settings = { ...w.settings, ...patch }; queue({ settings }); return { ...w, settings }; });
@@ -122,6 +124,8 @@ export default function StepWorkPage() {
           {p.sections.map((s) => <StepSection key={s.id} section={s} answers={work.answers || {}} setAnswer={setAnswer} definition={work.definition} settings={work.settings} />)}
         </div>
       ))}
+
+      <WorkSettings work={work} save={(patch) => save(patch.auto_send ? { ...patch, send_text: workText(work) || undefined } : patch)} />
 
       <Card className="flex flex-wrap items-center justify-between gap-3 p-4 print:hidden">
         {work.status === "done"

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_01_230000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_01_240000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1388,6 +1388,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_230000) do
     t.text "notes", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "questions"
     t.index ["user_id", "on"], name: "index_step_inventories_on_user_id_and_on", unique: true
     t.index ["user_id"], name: "index_step_inventories_on_user_id"
   end
@@ -1417,6 +1418,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_230000) do
     t.datetime "done_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "remind_at"
+    t.integer "remind_days", default: [], null: false, array: true
+    t.date "reminded_on"
+    t.boolean "auto_send", default: false, null: false
+    t.datetime "auto_sent_at"
+    t.index ["remind_at"], name: "index_step_works_on_remind_at", where: "(remind_at IS NOT NULL)"
     t.index ["user_id", "step", "updated_at"], name: "index_step_works_on_user_id_and_step_and_updated_at"
     t.index ["user_id"], name: "index_step_works_on_user_id"
   end
@@ -1678,6 +1685,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_230000) do
     t.date "step_reminded_on"
     t.string "time_zone"
     t.string "sponsor_invite_token"
+    t.jsonb "inventory_questions"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
