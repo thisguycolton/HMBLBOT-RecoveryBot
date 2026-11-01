@@ -26,9 +26,11 @@ class Sponsorship < ApplicationRecord
   belongs_to :sponsee, class_name: "User"
   belongs_to :ended_by, class_name: "User", optional: true
   has_many :shares, class_name: "SponsorshipShare", dependent: :delete_all
+  has_many :suggestions, class_name: "StepSuggestion", dependent: :delete_all
 
   validates :status, inclusion: { in: STATUSES }
   validates :note, length: { maximum: NOTE_MAX }
+  validates :current_step, inclusion: { in: StepTool::STEPS }, allow_nil: true
   validate { errors.add(:base, "You can't be your own sponsor.") if sponsor_id == sponsee_id }
   validate :one_open_pair, if: -> { OPEN.include?(status) }
 
@@ -95,6 +97,7 @@ class Sponsorship < ApplicationRecord
   def end!(by)
     transaction do
       shares.delete_all
+      suggestions.delete_all
       update!(status: "ended", ended_at: Time.current, ended_by: by)
     end
   end
@@ -109,7 +112,7 @@ class Sponsorship < ApplicationRecord
     {
       id: id, status: status, role: role, person: other(viewer).as_person_json,
       note: note, started_on: started_on&.iso8601, created_at: created_at.iso8601,
-      asked_by_me: role == "sponsee",
+      asked_by_me: role == "sponsee", current_step: current_step,
     }
   end
 

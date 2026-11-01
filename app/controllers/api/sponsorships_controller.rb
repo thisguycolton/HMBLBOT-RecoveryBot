@@ -3,7 +3,7 @@
 # here is between the two people in it.
 class Api::SponsorshipsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_sponsorship, only: %i[accept decline destroy shares]
+  before_action :set_sponsorship, only: %i[accept decline update destroy shares]
 
   # GET /api/sponsorships
   def index
@@ -49,6 +49,21 @@ class Api::SponsorshipsController < ApplicationController
     head :no_content
   end
 
+  # PATCH /api/sponsorships/:id { current_step } -> the step the sponsee is on (either of them;
+  # blank clears it). The other person is told when the sponsor sets it.
+  def update
+    return not_yours unless @sponsorship.active?
+
+    @sponsorship.update!(current_step: params[:current_step].presence)
+    if @sponsorship.current_step && @sponsorship.sponsor_id == current_user.id
+      Notification.deliver(@sponsorship.sponsee, kind: "sponsorship.step", from: current_user,
+                                                 title: "#{current_user.display_name} marked you on Step #{@sponsorship.current_step}", url: "/recovery/steps")
+    end
+    render json: { sponsorship: @sponsorship.as_api_json(current_user) }
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+
   # DELETE /api/sponsorships/:id -> ends it (either of them), takes back an ask, or clears a
   # declined one off the asker's list
   def destroy
@@ -69,7 +84,8 @@ class Api::SponsorshipsController < ApplicationController
 
     rows = @sponsorship.shares.order(created_at: :desc).to_a
     @sponsorship.shares.where(seen_at: nil).update_all(seen_at: Time.current) if @sponsorship.sponsor_id == current_user.id
-    render json: { sponsorship: @sponsorship.as_api_json(current_user), shares: rows.map(&:as_api_json) }
+    render json: { sponsorship: @sponsorship.as_api_json(current_user), shares: rows.map(&:as_api_json),
+                   suggestions: @sponsorship.suggestions.order(created_at: :desc).map(&:as_api_json) }
   end
 
   # POST /api/sponsorships/invite { reset } -> your invite link (a new one with reset, and the

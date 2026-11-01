@@ -4,7 +4,7 @@
 #
 # - someone asked them to be their sponsor
 # - a sponsee sent them something they haven't opened
-# - their sponsor left a note on something they sent (this past week)
+# - their sponsor left a note on something they sent (this past week), or suggested a worksheet
 # - Step 8 names marked "Yes, talk with sponsor", and Step 9 amends talked over and ready to make
 # - a worksheet they haven't touched in a week or more
 # - having finished a step, the next one (when they haven't started it)
@@ -37,6 +37,12 @@ module StepAttention
     notes.each do |share|
       items << { key: "note:#{share.id}", kind: "note", title: "#{share.sponsorship.sponsor.display_name} left a note on #{share.title}",
                  body: share.reply.to_s.truncate(140), url: "/sponsorship" }
+    end
+
+    StepSuggestion.waiting.joins(:sponsorship).merge(Sponsorship.active.where(sponsee_id: user.id))
+                  .includes(sponsorship: :sponsor).order(:created_at).each do |sg|
+      items << { key: "suggest:#{sg.id}", kind: "sponsorship", title: "#{sg.sponsorship.sponsor.display_name} suggested #{sg.name}",
+                 body: sg.note.presence || "Start it when you're ready, or set it aside.", url: "/steps#suggested" }
     end
 
     works = user.step_works.order(updated_at: :desc).to_a

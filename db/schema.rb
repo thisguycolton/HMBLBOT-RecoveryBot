@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_01_220000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_01_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -650,6 +650,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_220000) do
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_group_page_templates_on_key", unique: true
     t.index ["updated_by_id"], name: "index_group_page_templates_on_updated_by_id"
+  end
+
+  create_table "group_step_tools", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.string "name", null: false
+    t.integer "step", null: false
+    t.string "tool_key"
+    t.text "summary"
+    t.jsonb "definition", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_group_step_tools_on_created_by_id"
+    t.index ["group_id"], name: "index_group_step_tools_on_group_id"
   end
 
   create_table "groups", force: :cascade do |t|
@@ -1360,6 +1374,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_220000) do
     t.bigint "ended_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "current_step"
     t.index ["ended_by_id"], name: "index_sponsorships_on_ended_by_id"
     t.index ["sponsee_id"], name: "index_sponsorships_on_sponsee_id"
     t.index ["sponsor_id", "sponsee_id"], name: "index_sponsorships_open_pair", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('active'::character varying)::text]))"
@@ -1375,6 +1390,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_220000) do
     t.datetime "updated_at", null: false
     t.index ["user_id", "on"], name: "index_step_inventories_on_user_id_and_on", unique: true
     t.index ["user_id"], name: "index_step_inventories_on_user_id"
+  end
+
+  create_table "step_suggestions", force: :cascade do |t|
+    t.bigint "sponsorship_id", null: false
+    t.string "name", null: false
+    t.integer "step", null: false
+    t.string "tool_key"
+    t.text "note"
+    t.jsonb "definition", default: {}, null: false
+    t.datetime "started_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sponsorship_id"], name: "index_step_suggestions_on_sponsorship_id"
   end
 
   create_table "step_works", force: :cascade do |t|
@@ -1733,6 +1761,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_220000) do
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_page_templates", "users", column: "updated_by_id"
+  add_foreign_key "group_step_tools", "groups", on_delete: :cascade
+  add_foreign_key "group_step_tools", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "groups", "users", column: "created_by_id"
   add_foreign_key "host_chat_postings", "hosting_kits", on_delete: :cascade
   add_foreign_key "host_props", "hostificators"
@@ -1804,6 +1834,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_220000) do
   add_foreign_key "sponsorships", "users", column: "sponsee_id", on_delete: :cascade
   add_foreign_key "sponsorships", "users", column: "sponsor_id", on_delete: :cascade
   add_foreign_key "step_inventories", "users", on_delete: :cascade
+  add_foreign_key "step_suggestions", "sponsorships", on_delete: :cascade
   add_foreign_key "step_works", "users", on_delete: :cascade
   add_foreign_key "text_report_comments", "text_reports"
   add_foreign_key "text_report_comments", "users"

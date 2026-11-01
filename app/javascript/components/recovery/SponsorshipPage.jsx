@@ -6,6 +6,7 @@ import { Card, ErrorNote, Loading, Pill, Tray, dangerButton, linkButton, primary
 import Avatar from "../groups/Avatar";
 import { inputClass, labelClass } from "../ui/styles";
 import { showToast } from "../../lib/toast";
+import { SuggestWorksheet } from "./steps/ShareWorksheet";
 import { FindSponsor, OfferToSponsor } from "./SponsorAvailability";
 
 const since = (iso) => iso && new Date(`${iso}T12:00:00`).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" });
@@ -92,7 +93,7 @@ function Overview() {
         <div className="space-y-1.5">
           {data.sponsors.map((s) => (
             <Card key={s.id} className="flex items-center gap-2 p-3">
-              <Person person={s.person} to={`/sponsorship/${s.id}`}>Since {since(s.started_on)}</Person>
+              <Person person={s.person} to={`/sponsorship/${s.id}`}>Since {since(s.started_on)}{s.current_step && ` · You're on Step ${s.current_step}`}</Person>
               <button type="button" className={dangerButton} onClick={() => end(s)}>End</button>
             </Card>
           ))}
@@ -107,7 +108,7 @@ function Overview() {
           {data.sponsees.map((s) => (
             <Card key={s.id} className="flex items-center gap-2 p-3">
               <Person person={s.person} to={`/sponsorship/${s.id}`}>
-                Since {since(s.started_on)}{s.unseen > 0 && <> · <Pill tone="accent">{s.unseen} new</Pill></>}
+                Since {since(s.started_on)}{s.current_step && ` · On Step ${s.current_step}`}{s.unseen > 0 && <> · <Pill tone="accent">{s.unseen} new</Pill></>}
               </Person>
               <button type="button" className={dangerButton} onClick={() => end(s)}>End</button>
             </Card>
@@ -267,8 +268,15 @@ function Sponsorship({ id }) {
 
   const back = <Link to="/sponsorship" className="inline-flex items-center gap-1 text-sm"><ChevronLeft className="size-4" /> Sponsorship</Link>;
   if (!data) return <div className="mx-auto max-w-3xl space-y-4 !font-sans">{back}{error ? <ErrorNote error={error} /> : <Loading />}</div>;
-  const { sponsorship: s, shares } = data;
+  const { sponsorship: s, shares, suggestions = [] } = data;
   const sponsor = s.role === "sponsor";
+  const setStep = async (step) => {
+    setError(null);
+    try { const d = await api(`/sponsorships/${id}`, { method: "PATCH", body: { current_step: step } }); setData((x) => ({ ...x, sponsorship: d.sponsorship })); } catch (e) { setError(e.message); }
+  };
+  const takeBackSuggestion = async (sg) => {
+    try { await api(`/step_suggestions/${sg.id}`, { method: "DELETE" }); load(); } catch (e) { setError(e.message); }
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
@@ -281,6 +289,28 @@ function Sponsorship({ id }) {
         </div>
       </header>
       <ErrorNote error={error} />
+      <Card className="divide-y divide-neutral-200/70 dark:divide-neutral-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <label htmlFor="current-step" className="font-medium text-slate-900 dark:text-white">{sponsor ? `Step ${s.person.name} is on` : "The step you're on"}</label>
+          <select id="current-step" className={`${inputClass} max-w-[11rem]`} value={s.current_step || ""} onChange={(e) => setStep(e.target.value)}>
+            <option value="">Not set</option>
+            {Array.from({ length: 12 }, (_, n) => <option key={n + 1} value={n + 1}>Step {n + 1}</option>)}
+          </select>
+        </div>
+        {sponsor && <SuggestWorksheet sponsorshipId={s.id} name={s.person.name} onDone={load} />}
+        {suggestions.length > 0 && (
+          <div className="space-y-2 p-4">
+            <p className={labelClass}>{sponsor ? "Worksheets you suggested" : "Worksheets they suggested"}</p>
+            {suggestions.map((sg) => (
+              <div key={sg.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span>Step {sg.step}: {sg.name} <span className="text-slate-500 dark:text-neutral-400">· {sg.started ? "Started" : "Not started yet"}</span></span>
+                {sponsor && !sg.started && <button type="button" className={linkButton} onClick={() => takeBackSuggestion(sg)}>Take back</button>}
+                {!sponsor && !sg.started && <Link to="/steps#suggested">Open on Steps</Link>}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
       {shares.length === 0 && (
         <p className="text-slate-600 dark:text-neutral-400">
           {sponsor

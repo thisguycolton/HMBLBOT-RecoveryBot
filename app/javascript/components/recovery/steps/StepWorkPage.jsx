@@ -8,6 +8,7 @@ import { showToast } from "../../../lib/toast";
 import { localDate } from "../lib";
 import StepSection, { Prose } from "./StepSections";
 import StepCustomize from "./StepCustomize";
+import { ShareWorksheetDialog } from "./ShareWorksheet";
 import { partsOf, workText } from "./stepText";
 
 const ORDINAL = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
@@ -24,6 +25,7 @@ export default function StepWorkPage() {
   const [status, setStatus] = useState("saved"); // saved | unsaved | saving
   const [customizing, setCustomizing] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const pending = useRef(null);
   const timer = useRef(null);
 
@@ -101,6 +103,7 @@ export default function StepWorkPage() {
           <button type="button" className={primaryButton} onClick={() => setSending(true)}><Send className="size-4" /> Send to my sponsor</button>
           <button type="button" className={quietButton} onClick={() => setCustomizing(true)}><SlidersHorizontal className="size-4" /> Customize</button>
           <button type="button" className={quietButton} onClick={() => window.print()}><Printer className="size-4" /> Print</button>
+          <button type="button" className={quietButton} onClick={() => setSharing(true)} title="Suggest it to a sponsee or share it with a group, without your answers"><Copy className="size-4" /> Share a blank copy</button>
         </div>
       </header>
       <ErrorNote error={error} />
@@ -135,6 +138,7 @@ export default function StepWorkPage() {
 
       {customizing && <StepCustomize work={work} onClose={() => setCustomizing(false)} onSave={(definition) => save({ definition }, () => setCustomizing(false))} />}
       {sending && <SendDialog work={work} parts={parts} onClose={() => setSending(false)} />}
+      {sharing && <ShareWorksheetDialog source={{ work_id: work.id }} name={work.name} onClose={() => setSharing(false)} />}
     </div>
   );
 }

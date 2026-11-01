@@ -13,12 +13,22 @@ class Api::StepWorksController < ApplicationController
       tools: StepTool.all.map(&:as_api_json),
       works: works.map(&:as_api_json),
       attention: StepAttention.for(current_user),
+      # Worksheets their sponsors suggested and their groups shared (only worksheets, no answers)
+      suggestions: StepSuggestion.waiting.joins(:sponsorship).merge(Sponsorship.active.where(sponsee_id: current_user.id))
+                                 .includes(sponsorship: :sponsor).order(created_at: :desc).map(&:as_api_json),
+      group_tools: GroupStepTool.where(group: current_user.groups).includes(:group, :created_by).order(:step, :name).map { |t| t.as_api_json(current_user) },
+      # Where they can share a worksheet: their sponsees, and groups they host or run
+      sponsees: Sponsorship.active.where(sponsor_id: current_user.id).includes(:sponsee).map { |s| { id: s.id, name: s.sponsee.display_name } },
+      publish_groups: current_user.groups.order(:title).select { |g| GroupStepTool.publishable_by?(g, current_user) }.map { |g| { slug: g.slug, title: g.title } },
     }
   end
 
-  # POST /api/step_works { tool_key } | { copy_of: id } -> started
+  # POST /api/step_works { tool_key } | { copy_of: id } | { group_tool_id } -> started
   def create
-    work = if params[:copy_of].present?
+    work = if params[:group_tool_id].present?
+             t = GroupStepTool.where(group: current_user.groups).find(params[:group_tool_id])
+             current_user.step_works.create!(step: t.step, tool_key: t.tool_key, name: t.name, definition: t.definition, answers: {})
+           elsif params[:copy_of].present?
              source = current_user.step_works.find(params[:copy_of])
              current_user.step_works.create!(step: source.step, tool_key: source.tool_key, name: "#{source.name} (new)".first(200),
                                              definition: source.definition, settings: source.settings, answers: {})

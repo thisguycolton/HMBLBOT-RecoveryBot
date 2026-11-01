@@ -17,11 +17,17 @@ class Api::SponsorProfilesController < ApplicationController
     render json: settings_json
   end
 
-  # GET /api/sponsor_profile/find -> people in your groups offering to sponsor
+  # GET /api/sponsor_profile/find[?group=slug] -> people in your groups offering to sponsor
+  # (just that group's on its Members tab)
   def find
     asked = Sponsorship.where(sponsee_id: current_user.id, status: %w[pending active]).pluck(:sponsor_id, :status).to_h
+    visible = SponsorProfile.visible_to(current_user)
+    if params[:group].present?
+      title = current_user.groups.find_by(slug: params[:group].to_s)&.title
+      visible = visible.select { |_, groups| title && groups.include?(title) }
+    end
     render json: {
-      sponsors: SponsorProfile.visible_to(current_user).map { |p, groups| p.as_card_json(groups).merge(status: asked[p.user_id]) },
+      sponsors: visible.map { |p, groups| p.as_card_json(groups).merge(status: asked[p.user_id]) },
       in_groups: current_user.groups.exists?,
     }
   end

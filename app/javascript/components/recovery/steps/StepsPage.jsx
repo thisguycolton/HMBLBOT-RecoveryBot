@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { BellDot, CheckCircle2, ChevronRight, HandHeart, Lock, MessageSquareText, MoonStar, NotebookPen, Plus, Sparkles, Users } from "lucide-react";
 import { api } from "../../groups/lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton, quietButton } from "../../groups/ui";
@@ -90,6 +90,7 @@ export default function StepsPage() {
   const [busy, setBusy] = useState(null);
   const [recovery, setRecovery] = useState(null);
   const navigate = useNavigate();
+  const { hash } = useLocation();
   useEffect(() => {
     document.title = "Steps | RecoveryBot";
     api("/step_works").then(setData).catch((e) => setError(e.message));
@@ -97,8 +98,31 @@ export default function StepsPage() {
   }, []);
   // A link to a step (#step-5) scrolls to it once the steps are there
   useEffect(() => {
-    if (data && window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "start" });
-  }, [data]);
+    if (data && hash) document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [data, hash]);
+
+  const startFrom = async (busyKey, path, body) => {
+    setBusy(busyKey);
+    setError(null);
+    try {
+      const d = await api(path, { method: "POST", body });
+      navigate(`/steps/${d.work.id}`);
+    } catch (e) { setError(e.message); setBusy(null); }
+  };
+  const setAside = async (sg) => {
+    setError(null);
+    try {
+      await api(`/step_suggestions/${sg.id}`, { method: "DELETE" });
+      setData((d) => ({ ...d, suggestions: d.suggestions.filter((x) => x.id !== sg.id), attention: d.attention.filter((i) => i.key !== `suggest:${sg.id}`) }));
+    } catch (e) { setError(e.message); }
+  };
+  const takeDown = async (t) => {
+    if (!window.confirm(`Take ${t.name} off ${t.group.title}'s worksheets? Copies people already started stay theirs.`)) return;
+    try {
+      await api(`/group_step_tools/${t.id}`, { method: "DELETE" });
+      setData((d) => ({ ...d, group_tools: d.group_tools.filter((x) => x.id !== t.id) }));
+    } catch (e) { setError(e.message); }
+  };
 
   const start = async (key) => {
     setBusy(key);
@@ -146,7 +170,46 @@ export default function StepsPage() {
       <Attention items={[...(data.attention || []).filter((i) => i.kind === "sponsorship"), ...today, ...(data.attention || []).filter((i) => i.kind !== "sponsorship")]} />
       <ChipsRow recovery={recovery} />
 
+      {data.suggestions?.length > 0 && (
+        <Tray label="From your sponsor">
+          <div id="suggested" className="scroll-mt-32 space-y-1.5">
+            {data.suggestions.map((sg) => (
+              <Card key={sg.id} className="space-y-2 p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-accent">Step {sg.step} · suggested by {sg.sponsor.name}</div>
+                <div className="font-medium text-slate-900 dark:text-white">{sg.name}</div>
+                {sg.note && <p className="whitespace-pre-line rounded-xl bg-neutral-50 px-3 py-2 text-sm text-slate-700 dark:bg-neutral-800 dark:text-neutral-200">{sg.note}</p>}
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button type="button" className={quietButton} onClick={() => setAside(sg)}>Set aside</button>
+                  <button type="button" className={primaryButton} disabled={busy === `sg${sg.id}`} onClick={() => startFrom(`sg${sg.id}`, `/step_suggestions/${sg.id}/start`)}><Plus className="size-4" /> Start it</button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </Tray>
+      )}
+
       {going.length > 0 && <Tray label="Working on"><div className="space-y-1.5">{going.map((w) => <WorkRow key={w.id} w={w} />)}</div></Tray>}
+
+      {data.group_tools?.length > 0 && (
+        <Tray label="From your groups">
+          <div className="space-y-1.5">
+            {data.group_tools.map((t) => (
+              <Card key={t.id} className="flex flex-wrap items-center justify-between gap-2 p-4">
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-accent">Step {t.step} · {t.group.title}</div>
+                  <div className="font-medium text-slate-900 dark:text-white">{t.name}</div>
+                  {t.summary && <div className="text-sm text-slate-500 dark:text-neutral-400">{t.summary}</div>}
+                  {t.by && <div className="text-xs text-slate-400">Shared by {t.by}</div>}
+                </div>
+                <div className="flex gap-2">
+                  {t.can_remove && <button type="button" className={quietButton} onClick={() => takeDown(t)}>Take down</button>}
+                  <button type="button" className={primaryButton} disabled={busy === `gt${t.id}`} onClick={() => startFrom(`gt${t.id}`, "/step_works", { group_tool_id: t.id })}><Plus className="size-4" /> Start</button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </Tray>
+      )}
 
       <Tray label="The Twelve Steps">
         <div className="space-y-1.5">

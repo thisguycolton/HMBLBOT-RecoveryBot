@@ -3,6 +3,7 @@ import { Ban, Check, Copy, RefreshCw, Search, UserPlus, X } from "lucide-react";
 import { iconInputClass, inputClass } from "../ui/styles";
 import { api, ROLE_LABELS, soberFor } from "./lib";
 import Avatar from "./Avatar";
+import { FindSponsor } from "../recovery/SponsorAvailability";
 import { Card, ErrorNote, Pill, Tray, copy, dangerButton, primaryButton, quietButton } from "./ui";
 
 // Members with their pictures and blurbs. Group admins also see join requests, add people
@@ -69,6 +70,7 @@ export default function MembersTab({ group, reload, setGroup }) {
   return (
     <div className="space-y-5">
       <ErrorNote error={error} />
+      {group.show_sponsors !== false && <FindSponsor group={group.slug} />}
 
       {manage && group.requests?.length > 0 && (
         <Tray label={`Asking to join (${group.requests.length})`}>

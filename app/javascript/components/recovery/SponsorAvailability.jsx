@@ -10,13 +10,14 @@ import { showToast } from "../../lib/toast";
 // Find a sponsor (Api::SponsorProfilesController#find): people in your groups who said they're
 // available to sponsor, with what they wrote and picked, and Ask. Only ever people you share
 // a group with; nobody else sees these.
-export function FindSponsor({ onAsked }) {
+// `group` (a slug): just that group's, on its Members tab, and nothing at all when nobody there is offering
+export function FindSponsor({ onAsked, group }) {
   const [data, setData] = useState(null);
   const [asking, setAsking] = useState(null); // a card's id
   const [note, setNote] = useState("");
   const [error, setError] = useState(null);
   const [reporting, setReporting] = useState(null);
-  const load = () => api("/sponsor_profile/find").then(setData).catch((e) => setError(e.message));
+  const load = () => api(`/sponsor_profile/find${group ? `?group=${encodeURIComponent(group)}` : ""}`).then(setData).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
 
   const ask = async (s) => {
@@ -25,13 +26,13 @@ export function FindSponsor({ onAsked }) {
       await api("/sponsorships", { method: "POST", body: { username: s.person.username, note } });
       showToast(`Asked ${s.person.name}.`, { tone: "success" });
       setAsking(null); setNote("");
-      load(); onAsked();
+      load(); onAsked?.();
     } catch (e) { setError(e.message); }
   };
 
-  if (!data) return null;
+  if (!data || (group && !data.sponsors.length)) return null;
   return (
-    <Tray label={<span className="inline-flex items-center gap-1"><Search className="size-3.5" /> Find a sponsor</span>}>
+    <Tray label={<span className="inline-flex items-center gap-1"><Search className="size-3.5" /> {group ? "Sponsors in this group" : "Find a sponsor"}</span>}>
       <div className="space-y-1.5">
         {data.sponsors.map((s) => (
           <Card key={s.id} className="space-y-3 p-4">

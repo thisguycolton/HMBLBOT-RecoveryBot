@@ -77,7 +77,7 @@ Rails.application.routes.draw do
   resources :step_inventories, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   resources :gratitude_lists, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   # Sponsors and sponsees, and what a sponsee sends their sponsor
-  resources :sponsorships, only: %i[index create destroy] do
+  resources :sponsorships, only: %i[index create update destroy] do
     member do
       post :accept
       post :decline
@@ -91,6 +91,10 @@ Rails.application.routes.draw do
   end
   resources :sponsorship_shares, only: %i[create update destroy]
   # Available to sponsor: your own offer, and who's offering in your groups
+  resources :step_suggestions, only: %i[create destroy] do
+    post :start, on: :member
+  end
+  resources :group_step_tools, only: %i[create destroy]
   resource :sponsor_profile, only: %i[show update] do
     get :find
   end
