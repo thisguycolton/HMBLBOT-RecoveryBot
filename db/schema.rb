@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_01_210000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_01_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -679,6 +679,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_210000) do
     t.jsonb "chip_design"
     t.string "chat_creator_roles", default: [], null: false, array: true
     t.bigint "chat_creator_user_ids", default: [], null: false, array: true
+    t.boolean "show_sponsors", default: true, null: false
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -1318,6 +1319,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_210000) do
     t.index ["user_id"], name: "index_site_notices_on_user_id"
   end
 
+  create_table "sponsor_profiles", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.boolean "available", default: false, null: false
+    t.text "note"
+    t.string "picks", default: [], null: false, array: true
+    t.string "languages"
+    t.boolean "show_time_sober", default: false, null: false
+    t.integer "max_sponsees"
+    t.datetime "stopped_at"
+    t.bigint "stopped_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["stopped_by_id"], name: "index_sponsor_profiles_on_stopped_by_id"
+    t.index ["user_id"], name: "index_sponsor_profiles_on_user_id", unique: true
+  end
+
   create_table "sponsorship_shares", force: :cascade do |t|
     t.bigint "sponsorship_id", null: false
     t.string "kind", null: false
@@ -1780,6 +1797,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_210000) do
   add_foreign_key "service_terms", "service_positions", on_delete: :cascade
   add_foreign_key "service_terms", "users", on_delete: :nullify
   add_foreign_key "site_notices", "users", on_delete: :nullify
+  add_foreign_key "sponsor_profiles", "users", column: "stopped_by_id", on_delete: :nullify
+  add_foreign_key "sponsor_profiles", "users", on_delete: :cascade
   add_foreign_key "sponsorship_shares", "sponsorships", on_delete: :cascade
   add_foreign_key "sponsorships", "users", column: "ended_by_id", on_delete: :nullify
   add_foreign_key "sponsorships", "users", column: "sponsee_id", on_delete: :cascade

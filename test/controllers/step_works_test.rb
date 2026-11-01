@@ -97,4 +97,29 @@ class StepWorksTest < ActionDispatch::IntegrationTest
     assert_not_includes raw, "Dad"
     assert_equal "Step 4: Big Book four columns", SponsorshipShare.last.title
   end
+  test "needs your attention: sponsorship asks and sends, amends waiting, a stale worksheet and the next step" do
+    Sponsorship.create!(sponsor: @sam, sponsee: @lee, status: "pending", note: "From Tuesday")
+    pat = User.create!(name: "Pat", email: "pat@example.com", password: "password123", password_confirmation: "password123", confirmed_at: Time.current)
+    mine = Sponsorship.create!(sponsor: pat, sponsee: @sam, status: "active", started_on: Date.current)
+    mine.shares.create!(kind: "gratitude", on: Date.current, title: "My gratitude list", body: "Coffee", reply: "Love it", replied_at: Time.current)
+
+    post "/api/step_works", params: { tool_key: "step8-amends-list" }, as: :json
+    eight = StepWork.find(response.parsed_body.dig("work", "id"))
+    eight.update!(answers: { "amends" => [{ "who" => "My brother", "injure" => "Yes, talk with sponsor" }, { "who" => "Ann", "injure" => "No" }] })
+    post "/api/step_works", params: { tool_key: "step4-big-book" }, as: :json
+    four = StepWork.find(response.parsed_body.dig("work", "id"))
+    four.update_columns(updated_at: 10.days.ago)
+
+    get "/api/step_works"
+    titles = response.parsed_body["attention"].map { |i| i["title"] }
+    assert_includes titles, "Lee asked you to be their sponsor"
+    assert_includes titles, "Pat left a note on My gratitude list"
+    assert_includes titles, "One amends to talk over with your sponsor"
+    assert_includes titles, "Pick #{four.name} back up?"
+    assert_not titles.any? { |t| t.start_with?("Ready for") }
+
+    eight.update!(status: "done", done_at: Time.current)
+    get "/api/step_works"
+    assert_includes response.parsed_body["attention"].map { |i| i["title"] }, "Ready for Step 9?"
+  end
 end

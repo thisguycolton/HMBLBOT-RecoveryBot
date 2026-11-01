@@ -1,0 +1,39 @@
+key: step5-admitted
+step: 5
+name: "Admitted"
+summary: "Getting ready to sit down with your sponsor: the 4th step pulled in as a checklist, what still needs saying, and how it went."
+default: true
+intro: >
+  Step Five: admitted to God, to ourselves, and to another human being the exact nature of our wrongs. Your 4th step is
+  the script. This helps you get ready, keep track as you go through it with your sponsor, and look back afterwards.
+sections:
+  - id: ready
+    kind: questions
+    title: "Getting ready"
+    items:
+      - { id: when, label: "When and where are we meeting?", rows: 1 }
+      - { id: afraid, label: "What am I most afraid to say?" }
+      - { id: left-out, label: "Is there anything I left out of my 4th step on purpose?" }
+  - id: through
+    kind: table
+    title: "Going through it"
+    help: "Bring in the names from your 4th step and mark each one off as you go through it together."
+    fill: row
+    rows_from: { step: 4, role: who, label: "Add the names from my 4th step" }
+    columns:
+      - { id: who, label: "Who or what", type: text, role: who }
+      - { id: done, label: "Talked through", type: choice, options: ["Done", "Still to go"] }
+      - { id: notes, label: "What came up", type: text }
+  - id: exact-nature
+    kind: questions
+    title: "The exact nature"
+    items:
+      - { id: patterns, label: "Underneath the stories, what patterns did my sponsor and I see?", rows: 4 }
+  - id: after
+    kind: questions
+    title: "Afterwards"
+    help: "The Big Book suggests an hour alone afterwards, to look back over the first five steps (page 75)."
+    items:
+      - { id: feel, label: "How do I feel now?" }
+      - { id: missed, label: "Did I leave anything out? Is the foundation solid?" }
+      - { id: date, label: "The date I took my 5th step", rows: 1 }

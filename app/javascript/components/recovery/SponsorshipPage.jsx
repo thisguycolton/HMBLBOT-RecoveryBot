@@ -6,6 +6,7 @@ import { Card, ErrorNote, Loading, Pill, Tray, dangerButton, linkButton, primary
 import Avatar from "../groups/Avatar";
 import { inputClass, labelClass } from "../ui/styles";
 import { showToast } from "../../lib/toast";
+import { FindSponsor, OfferToSponsor } from "./SponsorAvailability";
 
 const since = (iso) => iso && new Date(`${iso}T12:00:00`).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" });
 const when = (iso) => new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -99,6 +100,8 @@ function Overview() {
         </div>
       </Tray>
 
+      <FindSponsor onAsked={load} />
+
       <Tray label="People you sponsor">
         <div className="space-y-1.5">
           {data.sponsees.map((s) => (
@@ -112,6 +115,8 @@ function Overview() {
           <InviteLink url={data.invite_url} onMade={load} />
         </div>
       </Tray>
+
+      <OfferToSponsor />
 
       {nobody && !invite && (
         <p className="text-sm text-slate-500 dark:text-neutral-400">

@@ -76,6 +76,16 @@ function Report({ report: r, act }) {
         </div>
         <div className="flex flex-wrap gap-1">
           {r.group && <a href={`/groups/${r.group.slug}/members`} className={buttonClass.secondary}><ExternalLink className="h-4 w-4" /> {r.group.title}</a>}
+          {r.sponsoring === "offering" && (
+            <button type="button" className={buttonClass.secondary} onClick={() => act(`/user_reports/${r.id}`, { method: "PATCH", body: { sponsoring: "stop" } }, "They can no longer offer to sponsor.")}>
+              Stop them offering to sponsor
+            </button>
+          )}
+          {r.sponsoring === "stopped" && (
+            <button type="button" className={buttonClass.secondary} onClick={() => act(`/user_reports/${r.id}`, { method: "PATCH", body: { sponsoring: "allow" } }, "They can offer to sponsor again.")}>
+              Let them offer to sponsor again
+            </button>
+          )}
           {resolved ? (
             <button type="button" className={buttonClass.secondary} onClick={() => act(`/user_reports/${r.id}`, { method: "PATCH", body: { status: "open" } }, "Moved back to review.")}>
               <RotateCcw className="h-4 w-4" /> Reopen

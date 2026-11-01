@@ -90,6 +90,10 @@ Rails.application.routes.draw do
     end
   end
   resources :sponsorship_shares, only: %i[create update destroy]
+  # Available to sponsor: your own offer, and who's offering in your groups
+  resource :sponsor_profile, only: %i[show update] do
+    get :find
+  end
   # Working the steps: worksheets (StepTool) and a member's own work on them
   resources :step_works, only: %i[index show create update destroy] do
     get :pull, on: :collection

@@ -4,13 +4,15 @@ class Api::StepWorksController < ApplicationController
   before_action :authenticate_user!
   before_action :set_work, only: %i[show update destroy]
 
-  # GET /api/step_works -> the steps, the worksheets for each, and their work
+  # GET /api/step_works -> the steps, the worksheets for each, their work, and what needs
+  # their attention (StepAttention)
   def index
     works = current_user.step_works.order(updated_at: :desc)
     render json: {
       steps: StepTool::STEPS.map { |n| { step: n, text: StepTool::STEP_NAMES[n - 1] } },
       tools: StepTool.all.map(&:as_api_json),
       works: works.map(&:as_api_json),
+      attention: StepAttention.for(current_user),
     }
   end
 

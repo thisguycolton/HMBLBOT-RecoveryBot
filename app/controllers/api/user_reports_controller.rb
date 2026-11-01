@@ -3,7 +3,7 @@
 class Api::UserReportsController < ApplicationController
   before_action :authenticate_user!
 
-  # POST /api/user_reports { subject_type: chat_message|timeline_note|note_comment, subject_id | user_id, reason }
+  # POST /api/user_reports { subject_type: chat_message|timeline_note|note_comment|sponsor_profile, subject_id | user_id, reason }
   def create
     report = UserReport.new(reporter: current_user, reason: params[:reason].to_s.strip)
     if (klass = UserReport::SUBJECTS[params[:subject_type].to_s])
@@ -31,6 +31,7 @@ class Api::UserReportsController < ApplicationController
     when ChatMessage then subject.chat_channel.readable_by?(current_user)
     when TimelineNote then subject.visible_to?(current_user)
     when NoteComment then subject.timeline_note.visible_to?(current_user)
+    when SponsorProfile then SponsorProfile.visible_to(current_user).key?(subject)
     end
   end
 
@@ -39,6 +40,7 @@ class Api::UserReportsController < ApplicationController
     when ChatMessage then "##{subject.chat_channel.name} in #{subject.group.title}"
     when TimelineNote then "A note"
     when NoteComment then "A comment on a note"
+    when SponsorProfile then "Their offer to sponsor"
     end
   end
 end

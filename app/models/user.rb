@@ -83,6 +83,7 @@ class User < ApplicationRecord
   has_many :blocks_received, class_name: "UserBlock", foreign_key: :blocked_id, dependent: :delete_all, inverse_of: :blocked
   # Sponsorship: the people they sponsor, and their sponsors
   has_many :sponsorships_as_sponsor, class_name: "Sponsorship", foreign_key: :sponsor_id, dependent: :destroy, inverse_of: :sponsor
+  has_one :sponsor_profile, dependent: :destroy
   has_many :sponsorships_as_sponsee, class_name: "Sponsorship", foreign_key: :sponsee_id, dependent: :destroy, inverse_of: :sponsee
   has_many :event_rsvps, dependent: :destroy
   has_many :intergroup_follows, dependent: :destroy
