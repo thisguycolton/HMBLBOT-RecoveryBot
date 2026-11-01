@@ -298,6 +298,9 @@ Rails.application.routes.draw do
       get :collection
     end
     member do
+      # Like, Love or Hugs on a highlight shared to a timeline
+      put :reaction, action: :react
+      delete :reaction, action: :unreact
       # Others repost a highlight shared with Members to their own timeline
       post :repost
       delete :repost, action: :unrepost

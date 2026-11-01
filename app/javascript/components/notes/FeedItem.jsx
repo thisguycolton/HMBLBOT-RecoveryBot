@@ -22,7 +22,7 @@ import { HIGHLIGHT_VISIBILITY, recipientVisibility, saveNote } from "./lib";
 
 // One thing on a timeline: a note (Markdown and pictures), a repost of someone's note, or a
 // highlight (its quote, its note and where it's from). Its owner edits it right there and
-// picks who sees it; others react to notes and repost them (NoteActions).
+// picks who sees it; others react to notes and shared highlights and repost them (NoteActions).
 // `showAuthor` puts their name on it (a feed of several people); `readOnly` (the editor's
 // canvas) leaves off the owner's buttons. A note written on someone's page always names who
 // wrote it and whose page it's on, and that person can take it off. Needs a `.wb` around it.

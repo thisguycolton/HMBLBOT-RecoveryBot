@@ -1,6 +1,7 @@
 require "test_helper"
 
-# Reposting someone's shared highlight to your own timeline (TimelineNote#repost_of_highlight)
+# Reposting someone's shared highlight to your own timeline (TimelineNote#repost_of_highlight),
+# and reacting to it
 class Api::HighlightRepostsTest < ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
 
@@ -121,5 +122,36 @@ class Api::HighlightRepostsTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     post "/api/timeline_notes/#{repost.id}/comments", params: { comment: { body: "hi" } }, as: :json
     assert_response :not_found
+  end
+
+  test "people who see a shared highlight react to it, once each, and its reader hears about the first" do
+    h = highlight(@lee)
+    sign_in @mo
+    assert_difference -> { @lee.notifications.count }, 1 do
+      put "/api/highlights/#{h.id}/reaction", params: { kind: "love" }, as: :json
+    end
+    assert_response :success
+    assert_equal "love", response.parsed_body["my_reaction"]
+    assert_equal({ "like" => 0, "love" => 1, "hugs" => 0 }, response.parsed_body["reactions"])
+    assert_equal "Mo loved your highlight", @lee.notifications.last.title
+    assert_equal "highlight.reaction", @lee.notifications.last.kind
+
+    assert_no_difference -> { @lee.notifications.count } do
+      put "/api/highlights/#{h.id}/reaction", params: { kind: "hugs" }, as: :json
+    end
+    assert_equal({ "like" => 0, "love" => 0, "hugs" => 1 }, response.parsed_body["reactions"])
+    assert_equal [["Mo", "hugs"]], ProfilePage.new(@oz).feed(@lee).first[:reactors].map { |p| [p[:name], p[:reaction]] }
+
+    delete "/api/highlights/#{h.id}/reaction", as: :json
+    assert_nil response.parsed_body["my_reaction"]
+    assert_equal 0, h.reactions.count
+
+    secret = highlight(@lee, visibility: "private")
+    put "/api/highlights/#{secret.id}/reaction", params: { kind: "like" }, as: :json
+    assert_response :not_found
+
+    put "/api/highlights/#{h.id}/reaction", params: { kind: "like" }, as: :json
+    h.destroy!
+    assert_equal 0, NoteReaction.count
   end
 end

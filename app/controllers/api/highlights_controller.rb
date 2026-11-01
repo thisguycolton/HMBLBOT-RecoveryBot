@@ -8,10 +8,12 @@
 #     (ShareMeta.highlight), and its owner can make pictures of it to post (card).
 #
 # Others who see a highlight on a timeline can repost it to theirs when it's shared with
-# Members (UserHighlight#repostable_by?), and take the repost back.
+# Members (UserHighlight#repostable_by?), and take the repost back. Anyone who sees it on a
+# timeline can react to it (Like, Love or Hugs), as with notes.
 class Api::HighlightsController < ApplicationController
   include KeepsRobotsOut
   include SendsQuoteCards
+  include Reacting
   keep_robots_out
   before_action :authenticate_user!, except: [:index, :collection]
 
@@ -126,6 +128,20 @@ class Api::HighlightsController < ApplicationController
     send_card(picture)
   end
 
+  # PUT /api/highlights/:id/reaction  kind: like|love|hugs -> the highlight as a feed shows it
+  def react
+    return unless (@reactable = visible_highlight)
+
+    save_reaction(what: "highlight", url: @reactable.user.profile_path) { render json: feed_json(@reactable) }
+  end
+
+  # DELETE /api/highlights/:id/reaction -> the highlight as a feed shows it
+  def unreact
+    return unless (@reactable = visible_highlight)
+
+    remove_reaction { render json: feed_json(@reactable) }
+  end
+
   # POST /api/highlights/:id/repost  visibility -> the repost, now on your timeline
   def repost
     h = visible_highlight
@@ -150,7 +166,7 @@ class Api::HighlightsController < ApplicationController
     return unless h
 
     current_user.timeline_notes.where(repost_of_highlight: h).destroy_all
-    render json: UserHighlight.includes(:reposts, chapter: :book).find(h.id).as_feed_json(viewer: current_user)
+    render json: feed_json(h)
   end
 
   # POST /api/highlights/share -> { share_token: "..." }
@@ -161,7 +177,11 @@ class Api::HighlightsController < ApplicationController
 
   private
 
-  # The highlight to repost, if they can see it on its owner's timeline (and didn't block them)
+  def feed_json(h)
+    UserHighlight.includes(:reposts, chapter: :book, reactions: { user: { avatar_attachment: :blob } }).find(h.id).as_feed_json(viewer: current_user)
+  end
+
+  # The highlight to react to or repost, if they can see it on its owner's timeline (and didn't block them)
   def visible_highlight
     h = UserHighlight.find_by(id: params[:id])
     return h if h&.visible_to?(current_user) && !current_user.blocked_ids.include?(h.user_id)

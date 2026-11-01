@@ -78,7 +78,7 @@ class TimelineNote < ApplicationRecord
     people = { user: { avatar_attachment: :blob } }
     shown = [:groups, :reposts, { recipient: { avatar_attachment: :blob } }, { images_attachments: :blob, link_image_attachment: :blob, **people, reactions: people,
                                   comments: [people, { reactions: people, timeline_note: :groups }] }]
-    includes(*shown, repost_of: shown, repost_of_highlight: [:reposts, { chapter: :book, **people }])
+    includes(*shown, repost_of: shown, repost_of_highlight: [:reposts, { chapter: :book, reactions: people, **people }])
   }
 
   # Leaves out the notes by people `viewer` blocked, and reposts of their notes and highlights

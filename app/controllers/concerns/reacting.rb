@@ -5,7 +5,7 @@ module Reacting
 
   private
 
-  # `what` names it for the notification: "note", "comment"
+  # `what` names it for the notification: "note", "comment", "highlight"
   def save_reaction(what:, url:)
     kind = params[:kind].to_s
     return render(json: { error: "Pick Like, Love or Hugs." }, status: :unprocessable_entity) unless NoteReaction::KINDS.include?(kind)
@@ -15,7 +15,7 @@ module Reacting
     reaction.update!(kind: kind)
     if first && @reactable.user_id != current_user.id
       Notification.deliver(@reactable.user, kind: "#{what}.reaction", title: "#{current_user.display_name} #{NoteReaction.phrase(kind)} your #{what}",
-                                            body: @reactable.body.to_s.truncate(120), url: url, from: current_user)
+                                            body: (@reactable.try(:body) || @reactable.try(:quote)).to_s.truncate(120), url: url, from: current_user)
     end
     yield
   rescue ActiveRecord::RecordNotUnique

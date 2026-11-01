@@ -12,6 +12,9 @@ class UserHighlight < ApplicationRecord
   # and they can see it, so a private highlight tells nobody until its owner shares it.
   # Highlights aren't shared to groups, so role handles (@hosts...) mean nothing here.
   #
+  # People who can see it shared on a timeline react to it with Like, Love or Hugs (Reactable),
+  # as they do to notes.
+  #
   # Others who can see it can repost it to their own timeline (TimelineNote#repost_of_highlight)
   # when it's shared with Members, as with notes. Narrowing who sees it, or taking it off the
   # timeline, takes its reposts away.
@@ -21,6 +24,7 @@ class UserHighlight < ApplicationRecord
   # previews. Only someone holding that link gets the picture, as only they get the highlight.
   include Visibility
   include Mentionable
+  include Reactable
 
   belongs_to :user
   belongs_to :chapter
@@ -106,7 +110,7 @@ class UserHighlight < ApplicationRecord
       book_slug: chapter.book.slug, book_title: chapter.book.title, chapter_slug: chapter.slug, chapter_title: chapter.title,
       share_id: signed_id(purpose: :share),
       repost_count: reposts.size, reposted: reposts.any? { |r| r.user_id == viewer&.id }, can_repost: repostable_by?(viewer),
-      repost_blocked: repost_blocked_reason(viewer),
+      repost_blocked: repost_blocked_reason(viewer), **reactions_json(viewer),
     }
   end
 end

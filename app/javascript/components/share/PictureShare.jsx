@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Copy, Download, ImageIcon, Link2, Loader2, Share2, X } from "lucide-react";
+import { Check, Copy, Download, ImageIcon, Link2, Loader2, Send, Share2, X } from "lucide-react";
 import { showToast } from "../../lib/toast";
+import { saveNote, VISIBILITY } from "../notes/lib";
 
 // "Share as a picture" for your own highlight or note: pick a look and a size, see it, then
 // share it straight from your phone's share sheet (Instagram, Messages, a story...), save
-// it, copy it, or copy the link. The picture is drawn on our server (QuoteCard), so the
+// it, copy it, copy the link, or post it to your own timeline as a note with the picture
+// (and a line of your own; a highlight's note links back to it in the book). The picture is drawn on our server (QuoteCard), so the
 // page never calls anyone else. It names nobody unless they tick "Add my first name".
 //
 // `cardUrl` is where the server draws it (/api/highlights/:id/card); `link` is the share
@@ -18,7 +20,7 @@ export const LOOKS = [
   { value: "sunrise", label: "Sunrise", swatch: "linear-gradient(150deg,#fb923c,#db2777)" },
 ];
 export const SIZES = [
-  { value: "square", label: "Post", hint: "Square, for a feed", ratio: "1 / 1" },
+  { value: "square", label: "Square", hint: "For a post or a feed", ratio: "1 / 1" },
   { value: "story", label: "Story", hint: "Tall, for stories", ratio: "9 / 16" },
   { value: "wide", label: "Wide", hint: "Like a link preview", ratio: "1200 / 630" },
 ];
@@ -32,6 +34,9 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(null);
   const [copied, setCopied] = useState(null);
+  const [posting, setPosting] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [visibility, setVisibility] = useState("followers");
 
   const src = useMemo(() => {
     const q = new URLSearchParams({ look, size });
@@ -89,6 +94,15 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
       window.prompt("Copy this link:", link);
     }
     flash("link");
+  });
+
+  const post = () => run("post", async () => {
+    const file = await fetchFile();
+    const body = [caption.trim(), link && `[Read it in the book](${link})`].filter(Boolean).join("\n\n");
+    await saveNote(null, { body, visibility, images: [file] });
+    showToast(visibility === "private" ? "Posted to your timeline, just for you." : "Posted to your timeline.");
+    setPosting(false);
+    setCaption("");
   });
 
   const flash = (what) => { setCopied(what); setTimeout(() => setCopied(null), 1600); };
@@ -172,6 +186,32 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
                   </button>
                 )}
               </div>
+              {!posting ? (
+                <button type="button" onClick={() => setPosting(true)}
+                  className="flex items-center justify-center gap-2 rounded-xl !bg-neutral-100 px-3 py-2.5 font-semibold text-slate-800 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:text-white">
+                  <Send className="size-4" /> Post to my timeline
+                </button>
+              ) : (
+                <div className="space-y-2 rounded-2xl p-3 ring-1 ring-neutral-200 dark:ring-neutral-700">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Post to my timeline</p>
+                  <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={2} maxLength={2000} placeholder="Say something (optional)" aria-label="Say something"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-base sm:text-sm dark:border-neutral-700 dark:bg-neutral-950" />
+                  <div className="grid grid-cols-3 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800" role="group" aria-label="Who sees it">
+                    {VISIBILITY.map((v) => (
+                      <button key={v.value} type="button" aria-pressed={visibility === v.value} title={v.note} onClick={() => setVisibility(v.value)}
+                        className={`rounded-lg px-1 py-1.5 text-xs font-semibold ${visibility === v.value ? "!bg-white text-slate-900 shadow-sm dark:!bg-neutral-950 dark:text-white" : "!bg-transparent text-slate-500 dark:text-neutral-400"}`}>
+                        {v.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setPosting(false)} className="flex-1 rounded-xl !bg-transparent px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-neutral-200 dark:text-neutral-300 dark:ring-neutral-700">Cancel</button>
+                    <button type="button" onClick={post} disabled={!!busy} className="flex flex-[2] items-center justify-center gap-1.5 rounded-xl !bg-accent px-3 py-2 text-xs font-semibold !text-white disabled:opacity-60">
+                      {busy === "post" ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Post
+                    </button>
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-slate-500 dark:text-neutral-400">
                 {size === "story" ? "For Instagram or Facebook stories: save it, then add it from your photos." : link
                   ? "Anyone you send the link to can open this highlight. Its link preview is a wide Paper picture."

@@ -97,7 +97,7 @@ class ProfilePage
       highlights = highlights.where(shared_at: ...before)
     end
     notes = notes.for_feed.newest_first.limit(FEED_MAX)
-    highlights = highlights.includes(:reposts, chapter: :book, user: { avatar_attachment: :blob }).order(shared_at: :desc, id: :desc).limit(FEED_MAX)
+    highlights = highlights.includes(:reposts, reactions: { user: { avatar_attachment: :blob } }, chapter: :book, user: { avatar_attachment: :blob }).order(shared_at: :desc, id: :desc).limit(FEED_MAX)
     (notes.map { |n| n.as_api_json(viewer: @viewer) } + highlights.map { |h| h.as_feed_json(viewer: @viewer) })
       .sort_by { |item| item[:created_at] }.reverse.first(FEED_MAX)
   end

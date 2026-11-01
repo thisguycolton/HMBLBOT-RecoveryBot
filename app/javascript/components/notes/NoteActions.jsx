@@ -17,55 +17,11 @@ const reactionOf = (value) => REACTIONS.find((r) => r.value === value);
 // their author shares with Members; the server says so in `can_repost`, and on someone
 // else's other notes says why not in `repost_blocked`, which the dimmed button shows). `onChange` gets
 // the note back. A comment has the same reactions (`path` is where it lives, `small` a
-// tighter row).
-// Under someone's highlight on a timeline: Repost (for highlights shared with Members) and
-// how many reposted it. Highlights have no reactions or comments.
+// tighter row). `path` also says where its repost lives: a note's or a highlight's.
+// Under a highlight shared to a timeline: the same Like, Love and Hugs, and Repost (for
+// highlights shared with Members). Highlights have no comments.
 export function HighlightActions({ highlight, onChange }) {
-  const [busy, setBusy] = useState(false);
-  const run = async (optimistic, request, failure) => {
-    if (busy) return;
-    const previous = highlight;
-    setBusy(true);
-    onChange?.({ ...highlight, ...optimistic });
-    try {
-      onChange?.(await request());
-    } catch (e) {
-      onChange?.(previous);
-      showToast(e.message || failure, { tone: "error" });
-    } finally {
-      setBusy(false);
-    }
-  };
-  const repost = (visibility) => run({ reposted: true, repost_count: (highlight.repost_count || 0) + 1 }, async () => {
-    const made = await api(`/highlights/${highlight.id}/repost`, { method: "POST", body: { visibility } });
-    showToast("Reposted to your timeline.");
-    return { ...highlight, ...made.note };
-  }, "Couldn't repost it.");
-  const unrepost = () => run({ reposted: false, repost_count: Math.max(0, (highlight.repost_count || 0) - 1) },
-    async () => ({ ...highlight, ...(await api(`/highlights/${highlight.id}/repost`, { method: "DELETE" })) }), "Couldn't undo the repost.");
-
-  if (!highlight.reposted && !highlight.can_repost && !highlight.repost_blocked && !highlight.repost_count) return null;
-  return (
-    <div className="wb-note-actions">
-      <span className="flex-1" />
-      {highlight.reposted ? (
-        <button type="button" className="wb-note-actions__btn wb-note-actions__btn--repost" aria-pressed="true" onClick={unrepost} title="Take it off your timeline">
-          <Repeat2 size={14} aria-hidden="true" /> <span>Reposted</span>
-          {highlight.repost_count > 0 && <span className="wb-note-actions__count">{highlight.repost_count}</span>}
-        </button>
-      ) : highlight.can_repost ? (
-        <RepostMenu count={highlight.repost_count} onPick={repost} />
-      ) : highlight.repost_blocked ? (
-        <button type="button" className="wb-note-actions__btn wb-note-actions__btn--repost" aria-disabled="true" title={highlight.repost_blocked}
-          onClick={() => showToast(highlight.repost_blocked)}>
-          <Repeat2 size={14} aria-hidden="true" /> <span>Repost</span>
-          {highlight.repost_count > 0 && <span className="wb-note-actions__count">{highlight.repost_count}</span>}
-        </button>
-      ) : (
-        <span className="wb-note-actions__static" title="Reposts"><Repeat2 size={14} aria-hidden="true" /> {highlight.repost_count}</span>
-      )}
-    </div>
-  );
+  return <NoteActions note={highlight} onChange={onChange} path={`/highlights/${highlight.id}`} />;
 }
 
 export default function NoteActions({ note, onChange, onComment, path = `/timeline_notes/${note.id}`, small = false }) {
@@ -98,13 +54,13 @@ export default function NoteActions({ note, onChange, onComment, path = `/timeli
 
   const repost = (visibility) => run({ reposted: true, repost_count: (note.repost_count || 0) + 1 },
     async () => {
-      const made = await api(`/timeline_notes/${note.id}/repost`, { method: "POST", body: { visibility } });
+      const made = await api(`${path}/repost`, { method: "POST", body: { visibility } });
       showToast("Reposted to your timeline.");
       return made.note;
     }, "Couldn't repost it.");
 
   const unrepost = () => run({ reposted: false, repost_count: Math.max(0, (note.repost_count || 0) - 1) },
-    () => api(`/timeline_notes/${note.id}/repost`, { method: "DELETE" }), "Couldn't undo the repost.");
+    () => api(`${path}/repost`, { method: "DELETE" }), "Couldn't undo the repost.");
 
   const reactions = note.reactions || {};
   return (
