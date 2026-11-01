@@ -73,7 +73,7 @@ export default function GratitudePage() {
         </Card>
         <div className="flex flex-wrap items-center justify-end gap-3">
           {saved && <span role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{entry ? "Saved." : "Cleared."}</span>}
-          <EntryShare tool="gratitude" what="gratitude list" title={`My gratitude list · ${dayLabel(on)}`} disabled={!filled.length}
+          <EntryShare tool="gratitude" kind="gratitude" on={on} what="gratitude list" title={`My gratitude list · ${dayLabel(on)}`} disabled={!filled.length}
             build={() => filled.map((item, i) => `${i + 1}. ${item}`).join("\n")} />
           <button type="submit" disabled={saving} className={primaryButton}>{saving ? "Saving…" : "Save list"}</button>
         </div>

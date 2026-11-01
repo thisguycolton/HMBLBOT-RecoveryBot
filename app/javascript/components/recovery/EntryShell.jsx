@@ -73,7 +73,7 @@ export function EntryShell({ base, title, intro, state, summary, reminder, child
       <header>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h1>
         <p className="mt-1 text-slate-600 dark:text-neutral-400">{intro}</p>
-        <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500 dark:text-neutral-400"><Lock className="size-4" /> Private. Only you can ever read this here (Share makes a copy for you to send yourself), and it goes when you delete your account.</p>
+        <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500 dark:text-neutral-400"><Lock className="size-4" /> Private. Only you can ever read this here, unless you send it to your sponsor (Share), and it goes when you delete your account.</p>
         {reminder && <div className="mt-4"><DailyReminder which={reminder} /></div>}
       </header>
 

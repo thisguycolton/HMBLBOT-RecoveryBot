@@ -99,7 +99,7 @@ export default function InventoryPage() {
         </Card>
         <div className="flex flex-wrap items-center justify-end gap-3">
           {saved && <span role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{entry ? "Saved." : "Cleared."}</span>}
-          <EntryShare tool="10th-step" what="10th step" title={`My 10th step · ${dayLabel(on)}`}
+          <EntryShare tool="10th-step" kind="inventory" on={on} what="10th step" title={`My 10th step · ${dayLabel(on)}`}
             disabled={!shareText(answers, notes, { notes: true })}
             choices={[{ key: "notes", label: "Include what I wrote, not just yes and no" }]}
             build={(o) => shareText(answers, notes, o)} />

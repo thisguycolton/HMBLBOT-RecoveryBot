@@ -76,6 +76,20 @@ Rails.application.routes.draw do
   resources :meeting_joins, only: :create
   resources :step_inventories, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   resources :gratitude_lists, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
+  # Sponsors and sponsees, and what a sponsee sends their sponsor
+  resources :sponsorships, only: %i[index create destroy] do
+    member do
+      post :accept
+      post :decline
+      get :shares
+    end
+    collection do
+      post :invite
+      get "invite/:token", action: :show_invite
+      post "invite/:token", action: :accept_invite
+    end
+  end
+  resources :sponsorship_shares, only: %i[create update destroy]
   # The shell: your groups and roles, the Hosting badge, Today; and the search box
   resource :nav, controller: "nav", only: :show
   # Clearing "Needs your attention" items from Today, and restoring them
@@ -401,6 +415,7 @@ end
   get "/chips/claim/:token", to: "chips#claim", as: :claim_chip
   # The link on a shared gratitude list or 10th step: your own, or sign up to start one
   get "/start/:tool", to: "start_tools#show", as: :start_tool, constraints: { tool: /gratitude|10th-step/ }
+  get "/sponsor/:token", to: "sponsor_invites#show", as: :sponsor_invite
   get "/recovery/*path", to: "recovery#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb
