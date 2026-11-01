@@ -2,7 +2,7 @@
 # a member's own work on them (StepWork). Everything here is the member's own.
 class Api::StepWorksController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_work, only: %i[show update destroy]
+  before_action :set_work, only: %i[show update destroy link unlink]
 
   # GET /api/step_works -> the steps, the worksheets for each, their work, and what needs
   # their attention (StepAttention)
@@ -71,6 +71,21 @@ class Api::StepWorksController < ApplicationController
   def destroy
     @work.destroy!
     head :no_content
+  end
+
+  # POST /api/step_works/:id/link { password, new_link } -> turns on (or changes) its
+  # password-protected link
+  def link
+    @work.share!(params[:password], new_link: ActiveModel::Type::Boolean.new.cast(params[:new_link]))
+    render json: { work: @work.as_api_json(full: true) }
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # DELETE /api/step_works/:id/link -> the link stops working
+  def unlink
+    @work.stop_sharing!
+    render json: { work: @work.as_api_json(full: true) }
   end
 
   # GET /api/step_works/pull?step=4&role=who -> names (or my part answers) from their work on

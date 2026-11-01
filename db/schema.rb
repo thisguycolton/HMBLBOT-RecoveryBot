@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_01_240000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_01_250000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1375,6 +1375,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_240000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "current_step"
+    t.datetime "nudged_at"
+    t.string "nudge_note"
     t.index ["ended_by_id"], name: "index_sponsorships_on_ended_by_id"
     t.index ["sponsee_id"], name: "index_sponsorships_on_sponsee_id"
     t.index ["sponsor_id", "sponsee_id"], name: "index_sponsorships_open_pair", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('active'::character varying)::text]))"
@@ -1423,7 +1425,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_240000) do
     t.date "reminded_on"
     t.boolean "auto_send", default: false, null: false
     t.datetime "auto_sent_at"
+    t.string "share_token"
+    t.string "share_password_digest"
+    t.datetime "shared_at"
+    t.datetime "share_viewed_at"
     t.index ["remind_at"], name: "index_step_works_on_remind_at", where: "(remind_at IS NOT NULL)"
+    t.index ["share_token"], name: "index_step_works_on_share_token", unique: true
     t.index ["user_id", "step", "updated_at"], name: "index_step_works_on_user_id_and_step_and_updated_at"
     t.index ["user_id"], name: "index_step_works_on_user_id"
   end

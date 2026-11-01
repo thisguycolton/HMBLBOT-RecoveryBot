@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Check, ChevronLeft, ChevronRight, Copy, HeartHandshake, Link2, Lock, RefreshCw, Trash2, UserPlus } from "lucide-react";
+import { BellRing, Check, ChevronLeft, ChevronRight, Copy, HeartHandshake, Link2, Lock, QrCode as QrCodeIcon, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import { api } from "../groups/lib";
 import { Card, ErrorNote, Loading, Pill, Tray, dangerButton, linkButton, primaryButton, quietButton } from "../groups/ui";
 import Avatar from "../groups/Avatar";
 import { inputClass, labelClass } from "../ui/styles";
 import { showToast } from "../../lib/toast";
+import { QrDialog } from "../ui/QrCode";
 import { SuggestWorksheet } from "./steps/ShareWorksheet";
 import { FindSponsor, OfferToSponsor } from "./SponsorAvailability";
 
@@ -192,6 +193,7 @@ function AskCard({ data, onAsked }) {
 // A sponsor's invite link: the only way to become someone's sponsor without being asked
 function InviteLink({ url, onMade }) {
   const [busy, setBusy] = useState(false);
+  const [qr, setQr] = useState(false);
   const [copied, setCopied] = useState(false);
   const make = async (reset) => {
     if (reset && !window.confirm("Make a new link? The old one will stop working (anyone already linked stays linked).")) return;
@@ -204,7 +206,7 @@ function InviteLink({ url, onMade }) {
   return (
     <Card className="space-y-3 p-4">
       <p className="text-sm text-slate-600 dark:text-neutral-400">
-        Sponsoring someone? Give them your invite link, in person or by text. When they open it and say yes, you're linked. Nobody can be
+        Sponsoring someone? Give them your invite link by text, or show them the QR code after the meeting. When they open it and say yes, you're linked. Nobody can be
         made your sponsee without saying yes themselves.
       </p>
       {url ? (
@@ -212,6 +214,7 @@ function InviteLink({ url, onMade }) {
           <input readOnly value={url} aria-label="Your invite link" onFocus={(e) => e.target.select()} className={`${inputClass} font-mono text-sm`} />
           <div className="flex flex-wrap justify-end gap-2">
             <button type="button" className={quietButton} disabled={busy} onClick={() => make(true)}><RefreshCw className="size-4" /> New link</button>
+            <button type="button" className={quietButton} onClick={() => setQr(true)}><QrCodeIcon className="size-4" /> Show QR code</button>
             <button type="button" className={primaryButton} onClick={copy}>{copied ? <><Check className="size-4" /> Copied</> : <><Copy className="size-4" /> Copy link</>}</button>
           </div>
         </>
@@ -220,6 +223,7 @@ function InviteLink({ url, onMade }) {
           <button type="button" className={quietButton} disabled={busy} onClick={() => make(false)}><Link2 className="size-4" /> Get my invite link</button>
         </div>
       )}
+      {qr && url && <QrDialog url={url} title="Scan to link up" text="Point your phone's camera here, then say yes to link up as sponsor and sponsee." onClose={() => setQr(false)} />}
     </Card>
   );
 }
@@ -297,6 +301,7 @@ function Sponsorship({ id }) {
             {Array.from({ length: 12 }, (_, n) => <option key={n + 1} value={n + 1}>Step {n + 1}</option>)}
           </select>
         </div>
+        {sponsor && <Nudge sponsorship={s} onDone={(x) => setData((d) => ({ ...d, sponsorship: x }))} />}
         {sponsor && <SuggestWorksheet sponsorshipId={s.id} name={s.person.name} onDone={load} />}
         {suggestions.length > 0 && (
           <div className="space-y-2 p-4">
@@ -319,6 +324,53 @@ function Sponsorship({ id }) {
         </p>
       )}
       {shares.map((sh) => <ShareCard key={sh.id} share={sh} sponsor={sponsor} name={s.person.name} onChange={load} setError={setError} />)}
+    </div>
+  );
+}
+
+// The sponsor checking in on the sponsee's step work: a nudge with an optional short note, at
+// most once a day. It waits under their Needs your attention until they work on something.
+function Nudge({ sponsorship: s, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const recent = s.nudged_at && Date.now() - new Date(s.nudged_at).getTime() < 20 * 3600 * 1000;
+  const send = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const d = await api(`/sponsorships/${s.id}/nudge`, { method: "POST", body: { note } });
+      onDone(d.sponsorship);
+      setOpen(false);
+      setNote("");
+      showToast(`${s.person.name} got your nudge.`, { tone: "success" });
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+  return (
+    <div className="space-y-2 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-medium text-slate-900 dark:text-white">Nudge {s.person.name} about their step work</p>
+          <p className="text-xs text-slate-500 dark:text-neutral-400">
+            {s.nudged_at ? `Last nudged ${new Date(s.nudged_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. ` : ""}
+            They get a notification, and it waits on their Steps page until they work on something.
+          </p>
+        </div>
+        {!open && <button type="button" className={quietButton} disabled={recent} title={recent ? "Once a day" : undefined} onClick={() => setOpen(true)}><BellRing className="size-4" /> {recent ? "Nudged today" : "Nudge"}</button>}
+      </div>
+      {open && (
+        <>
+          <textarea aria-label="A short note (optional)" className={inputClass} rows={2} maxLength={280} value={note} onChange={(e) => setNote(e.target.value)}
+            placeholder={`How's Step ${s.current_step || 4} going? Let's go over it Thursday.`} />
+          <ErrorNote error={error} />
+          <div className="flex justify-end gap-2">
+            <button type="button" className={quietButton} onClick={() => setOpen(false)}>Cancel</button>
+            <button type="button" className={primaryButton} disabled={busy} onClick={send}><BellRing className="size-4" /> {busy ? "Sending…" : "Send nudge"}</button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

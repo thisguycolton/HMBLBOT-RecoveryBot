@@ -9,6 +9,10 @@ class StepWork < ApplicationRecord
   STATUSES = %w[in_progress done].freeze
 
   belongs_to :user
+  # Its own link (/worksheet/:token), opened with a password they choose: read-only, the
+  # worksheet with everything written in it, until they turn it off
+  has_secure_password :share_password, validations: false
+  SHARE_PASSWORD_MIN = 6
   serialize :answers, coder: JSON
   encrypts :answers
 
@@ -40,6 +44,21 @@ class StepWork < ApplicationRecord
   end
 
   def tool = StepTool.find(tool_key)
+
+  # Turns on its link with this password (a new password keeps the link; `new_link` makes a
+  # new one, and the old link stops working)
+  def share!(password, new_link: false)
+    raise ArgumentError, "Use a password at least #{SHARE_PASSWORD_MIN} characters long." if password.to_s.length < SHARE_PASSWORD_MIN
+
+    self.share_token = nil if new_link
+    self.share_token ||= SecureRandom.urlsafe_base64(18)
+    self.share_password = password.to_s
+    self.shared_at ||= Time.current
+    save!
+  end
+
+  def stop_sharing! = update!(share_token: nil, share_password_digest: nil, shared_at: nil, share_viewed_at: nil)
+  def label = tool_key == "drop-the-rock" ? "Steps 6 and 7" : "Step #{step}"
 
   # Values from this member's work on `step` that carry `role` (names, my part), newest work
   # first, for a later step to pull in (StepTool `rows_from`, `suggest_from`)
@@ -76,6 +95,7 @@ class StepWork < ApplicationRecord
     return json unless full
 
     json.merge(definition: definition, answers: answers, settings: settings, credit: definition["credit"],
-               remind_at: remind_at, remind_days: remind_days, auto_send: auto_send, auto_sent_at: auto_sent_at&.iso8601)
+               remind_at: remind_at, remind_days: remind_days, auto_send: auto_send, auto_sent_at: auto_sent_at&.iso8601,
+               link: share_token && { path: "/worksheet/#{share_token}", shared_at: shared_at&.iso8601, viewed_at: share_viewed_at&.iso8601 })
   end
 end

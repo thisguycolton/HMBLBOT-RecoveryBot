@@ -18,6 +18,8 @@ class Sponsorship < ApplicationRecord
   STATUSES = %w[pending active declined ended].freeze
   OPEN = %w[pending active].freeze
   NOTE_MAX = 500
+  NUDGE_NOTE_MAX = 280
+  NUDGE_EVERY = 20.hours
   # How many people someone can be waiting on at once, and ask in a week
   PENDING_MAX = 3
   WEEKLY_MAX = 5
@@ -31,6 +33,7 @@ class Sponsorship < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :note, length: { maximum: NOTE_MAX }
   validates :current_step, inclusion: { in: StepTool::STEPS }, allow_nil: true
+  validates :nudge_note, length: { maximum: NUDGE_NOTE_MAX }
   validate { errors.add(:base, "You can't be your own sponsor.") if sponsor_id == sponsee_id }
   validate :one_open_pair, if: -> { OPEN.include?(status) }
 
@@ -94,6 +97,16 @@ class Sponsorship < ApplicationRecord
   end
 
   # Either of them, any time: no reason, no notification, and what was sent goes
+  # The sponsor checking in on the sponsee's step work: a notification, at most once a day, with
+  # an optional short note. It shows under Needs your attention until they work on a worksheet.
+  def nudge!(note = nil)
+    raise Refused, "You checked in less than a day ago." if nudged_at && nudged_at > NUDGE_EVERY.ago
+
+    update!(nudged_at: Time.current, nudge_note: note.to_s.strip.presence)
+    Notification.deliver(sponsee, kind: "sponsorship.nudge", from: sponsor, title: "#{sponsor.display_name} is checking in on your step work",
+                                  body: nudge_note || (current_step ? "You're on Step #{current_step}." : nil), url: "/recovery/steps")
+  end
+
   def end!(by)
     transaction do
       shares.delete_all
@@ -112,7 +125,7 @@ class Sponsorship < ApplicationRecord
     {
       id: id, status: status, role: role, person: other(viewer).as_person_json,
       note: note, started_on: started_on&.iso8601, created_at: created_at.iso8601,
-      asked_by_me: role == "sponsee", current_step: current_step,
+      asked_by_me: role == "sponsee", current_step: current_step, nudged_at: nudged_at&.iso8601,
     }
   end
 

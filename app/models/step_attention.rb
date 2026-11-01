@@ -4,7 +4,8 @@
 #
 # - someone asked them to be their sponsor
 # - a sponsee sent them something they haven't opened
-# - their sponsor left a note on something they sent (this past week), or suggested a worksheet
+# - their sponsor left a note on something they sent (this past week), suggested a worksheet,
+#   or checked in on their step work (until they work on something)
 # - Step 8 names marked "Yes, talk with sponsor", and Step 9 amends talked over and ready to make
 # - a worksheet they haven't touched in a week or more
 # - having finished a step, the next one (when they haven't started it)
@@ -46,6 +47,15 @@ module StepAttention
     end
 
     works = user.step_works.order(updated_at: :desc).to_a
+    last_worked = works.map(&:updated_at).max
+
+    # Their sponsor checked in this past week, and they haven't worked on anything since
+    Sponsorship.active.where(sponsee_id: user.id, nudged_at: NOTE_FRESH.ago..).includes(:sponsor).each do |s|
+      next if last_worked && last_worked > s.nudged_at
+
+      items << { key: "nudge:#{s.id}:#{s.nudged_at.to_i}", kind: "sponsorship", title: "#{s.sponsor.display_name} is checking in on your step work",
+                 body: s.nudge_note || (s.current_step ? "You're on Step #{s.current_step}." : "Pick up where you left off."), url: s.current_step ? "/steps#step-#{s.current_step}" : "/steps" }
+    end
     works.each { |w| items.concat(rows_waiting(w)) }
 
     works.select { |w| w.status != "done" && w.updated_at < STALE.ago }.each do |w|

@@ -82,6 +82,7 @@ Rails.application.routes.draw do
     member do
       post :accept
       post :decline
+      post :nudge
       get :shares
     end
     collection do
@@ -102,7 +103,13 @@ Rails.application.routes.draw do
   # Working the steps: worksheets (StepTool) and a member's own work on them
   resources :step_works, only: %i[index show create update destroy] do
     get :pull, on: :collection
+    member do
+      post :link
+      delete :link, action: :unlink
+    end
   end
+  # A worksheet's password-protected link: reading it (anyone with the link and password)
+  post "shared_worksheets/:token", to: "shared_worksheets#create", as: :open_shared_worksheet
   # The shell: your groups and roles, the Hosting badge, Today; and the search box
   resource :nav, controller: "nav", only: :show
   # Clearing "Needs your attention" items from Today, and restoring them
@@ -429,6 +436,8 @@ end
   # The link on a shared gratitude list or 10th step: your own, or sign up to start one
   get "/start/:tool", to: "start_tools#show", as: :start_tool, constraints: { tool: /gratitude|10th-step/ }
   get "/sponsor/:token", to: "sponsor_invites#show", as: :sponsor_invite
+  # A worksheet someone shared with a password (StepWork#share!): a small page that asks for it
+  get "/worksheet/:token", to: "shared_worksheets#show", as: :shared_worksheet
   get "/recovery/*path", to: "recovery#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb

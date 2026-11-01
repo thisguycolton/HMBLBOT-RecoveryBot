@@ -3,7 +3,7 @@
 # here is between the two people in it.
 class Api::SponsorshipsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_sponsorship, only: %i[accept decline update destroy shares]
+  before_action :set_sponsorship, only: %i[accept decline update destroy shares nudge]
 
   # GET /api/sponsorships
   def index
@@ -60,6 +60,18 @@ class Api::SponsorshipsController < ApplicationController
                                                  title: "#{current_user.display_name} marked you on Step #{@sponsorship.current_step}", url: "/recovery/steps")
     end
     render json: { sponsorship: @sponsorship.as_api_json(current_user) }
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+
+  # POST /api/sponsorships/:id/nudge { note } (the sponsor) -> checks in on the sponsee's step work
+  def nudge
+    return not_yours unless @sponsorship.active? && @sponsorship.sponsor_id == current_user.id
+
+    @sponsorship.nudge!(params[:note])
+    render json: { sponsorship: @sponsorship.as_api_json(current_user) }
+  rescue Sponsorship::Refused => e
+    render json: { error: e.message }, status: :unprocessable_entity
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   end

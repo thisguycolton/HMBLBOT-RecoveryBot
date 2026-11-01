@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Check, ChevronLeft, Copy, HeartHandshake, Lock, Printer, RotateCcw, Send, SlidersHorizontal, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, Copy, HeartHandshake, KeyRound, Lock, Printer, RotateCcw, Send, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { api } from "../../groups/lib";
 import { Card, ErrorNote, Loading, dangerButton, primaryButton, quietButton } from "../../groups/ui";
 import { inputClass, labelClass } from "../../ui/styles";
@@ -8,7 +8,7 @@ import { showToast } from "../../../lib/toast";
 import { localDate } from "../lib";
 import StepSection, { Prose } from "./StepSections";
 import StepCustomize from "./StepCustomize";
-import { ShareWorksheetDialog } from "./ShareWorksheet";
+import { ShareWorksheetDialog, WorksheetLinkDialog } from "./ShareWorksheet";
 import WorkSettings from "./WorkSettings";
 import { partsOf, workText } from "./stepText";
 
@@ -27,6 +27,7 @@ export default function StepWorkPage() {
   const [customizing, setCustomizing] = useState(false);
   const [sending, setSending] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [linking, setLinking] = useState(false);
   const pending = useRef(null);
   const timer = useRef(null);
 
@@ -100,12 +101,13 @@ export default function StepWorkPage() {
           className="w-full !bg-transparent p-0 text-3xl font-semibold tracking-tight text-slate-900 outline-none focus:ring-0 dark:text-white" />
         <Prose text={work.definition.intro?.replaceAll("{{higher_power}}", work.settings?.higher_power || "God")} className="text-slate-600 dark:text-neutral-400" />
         {work.credit && <p className="text-xs text-slate-500 dark:text-neutral-400">{work.credit}</p>}
-        <p className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-neutral-400 print:hidden"><Lock className="size-4 shrink-0" /> Private and encrypted. Only you can read it here, unless you send it to your sponsor.</p>
+        <p className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-neutral-400 print:hidden"><Lock className="size-4 shrink-0" /> {work.link ? "Encrypted. Its link is on: anyone with the link and password can read it." : "Private and encrypted. Only you can read it here, unless you send it to your sponsor."}</p>
         <div className="flex flex-wrap gap-2 pt-2 print:hidden">
           <button type="button" className={primaryButton} onClick={() => setSending(true)}><Send className="size-4" /> Send to my sponsor</button>
           <button type="button" className={quietButton} onClick={() => setCustomizing(true)}><SlidersHorizontal className="size-4" /> Customize</button>
           <button type="button" className={quietButton} onClick={() => window.print()}><Printer className="size-4" /> Print</button>
           <button type="button" className={quietButton} onClick={() => setSharing(true)} title="Suggest it to a sponsee or share it with a group, without your answers"><Copy className="size-4" /> Share a blank copy</button>
+          <button type="button" className={quietButton} onClick={() => setLinking(true)}><KeyRound className="size-4" /> {work.link ? "Link is on" : "Share a link"}</button>
         </div>
       </header>
       <ErrorNote error={error} />
@@ -142,6 +144,7 @@ export default function StepWorkPage() {
 
       {customizing && <StepCustomize work={work} onClose={() => setCustomizing(false)} onSave={(definition) => save({ definition }, () => setCustomizing(false))} />}
       {sending && <SendDialog work={work} parts={parts} onClose={() => setSending(false)} />}
+      {linking && <WorksheetLinkDialog work={work} onChanged={(w) => setWork((x) => ({ ...x, link: w.link }))} onClose={() => setLinking(false)} />}
       {sharing && <ShareWorksheetDialog source={{ work_id: work.id }} name={work.name} onClose={() => setSharing(false)} />}
     </div>
   );
