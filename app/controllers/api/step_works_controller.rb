@@ -23,9 +23,15 @@ class Api::StepWorksController < ApplicationController
     }
   end
 
-  # POST /api/step_works { tool_key } | { copy_of: id } | { group_tool_id } -> started
+  # POST /api/step_works { tool_key } | { copy_of: id } | { group_tool_id } | { step, blank: true }
+  # -> started. A blank one is their own worksheet for that step, to build in the editor.
   def create
-    work = if params[:group_tool_id].present?
+    work = if ActiveModel::Type::Boolean.new.cast(params[:blank])
+             step = params[:step].to_i
+             return render(json: { error: "Pick a step from 1 to 12." }, status: :unprocessable_entity) unless StepTool::STEPS.include?(step)
+
+             current_user.step_works.create!(step: step, name: "My Step #{step} worksheet", definition: StepTool.blank(step), answers: {})
+           elsif params[:group_tool_id].present?
              t = GroupStepTool.where(group: current_user.groups).find(params[:group_tool_id])
              current_user.step_works.create!(step: t.step, tool_key: t.tool_key, name: t.name, definition: t.definition, answers: {},
                                              settings: { "from" => "From #{t.group.title}", "from_note" => t.summary })
@@ -42,8 +48,12 @@ class Api::StepWorksController < ApplicationController
     render json: { work: work.as_api_json(full: true) }, status: :created
   end
 
+  # GET /api/step_works/:id(?editor=1) -> the work; for the editor, also the built-in it was
+  # started from, to start over from
   def show
-    render json: { work: @work.as_api_json(full: true) }
+    json = { work: @work.as_api_json(full: true) }
+    json[:original] = { name: @work.tool.name, definition: @work.tool.definition } if params[:editor].present? && @work.tool
+    render json: json
   end
 
   # PATCH /api/step_works/:id { answers, name, status, settings, definition, remind_at,
@@ -53,6 +63,7 @@ class Api::StepWorksController < ApplicationController
   def update
     @work.answers = params[:answers].respond_to?(:to_unsafe_h) ? params[:answers].to_unsafe_h : {} if params.key?(:answers)
     @work.name = params[:name] if params.key?(:name)
+    @work.step = params[:step].to_i if params.key?(:step)
     @work.settings = @work.settings.merge(params[:settings].to_unsafe_h.slice("higher_power")) if params[:settings].respond_to?(:to_unsafe_h)
     @work.definition = StepTool.clean(params[:definition]) if params[:definition].present?
     if params.key?(:status)

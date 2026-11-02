@@ -101,4 +101,34 @@ class StepSettingsTest < ActionDispatch::IntegrationTest
     get "/api/groups/#{group.slug}"
     assert response.parsed_body["members"].none? { |m| m["can_sponsor"] }
   end
+
+  test "the editor: a blank worksheet for any step, changed completely, with the built-in to start over from" do
+    post "/api/step_works", params: { step: 11, blank: true }, as: :json
+    assert_response :created
+    work = response.parsed_body["work"]
+    assert_equal [11, "My Step 11 worksheet", nil], [work["step"], work["name"], work["tool_key"]]
+    get "/api/step_works/#{work['id']}?editor=1"
+    assert_nil response.parsed_body["original"]
+
+    definition = { intro: "Mine", sections: [
+      { id: "fears", kind: "list", title: "Fears" },
+      { id: "picks", kind: "picker", title: "Pick some", groups: [{ label: "", options: ["Pride", "Fear"] }], max: 2 },
+      { id: "rate", kind: "scale", from: "picks", options: ["Not yet", "Ready"] },
+      { id: "week", kind: "days", items: [{ id: "d1", label: "Monday?" }], review: [{ id: "r1", label: "How was it?" }] },
+    ] }
+    patch "/api/step_works/#{work['id']}", params: { name: "Morning practice", step: 3, definition: definition }, as: :json
+    assert_response :success
+    saved = response.parsed_body["work"]
+    assert_equal ["Morning practice", 3], [saved["name"], saved["step"]]
+    assert_equal %w[list picker scale days], saved.dig("definition", "sections").map { |s| s["kind"] }
+
+    patch "/api/step_works/#{work['id']}", params: { step: 13 }, as: :json
+    assert_response :unprocessable_entity
+    post "/api/step_works", params: { step: 0, blank: true }, as: :json
+    assert_response :unprocessable_entity
+
+    started = StepWork.start!(@sam, StepTool.find("step8-amends-list"))
+    get "/api/step_works/#{started.id}?editor=1"
+    assert_equal StepTool.find("step8-amends-list").definition, response.parsed_body.dig("original", "definition")
+  end
 end

@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Check, ChevronLeft, Copy, HeartHandshake, KeyRound, Lock, Printer, RotateCcw, Send, SlidersHorizontal, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, Copy, HeartHandshake, KeyRound, Lock, Printer, PencilRuler, RotateCcw, Send, Trash2, X } from "lucide-react";
 import { api } from "../../groups/lib";
 import { Card, ErrorNote, Loading, dangerButton, primaryButton, quietButton } from "../../groups/ui";
 import { inputClass, labelClass } from "../../ui/styles";
 import { showToast } from "../../../lib/toast";
 import { localDate } from "../lib";
 import StepSection, { Prose } from "./StepSections";
-import StepCustomize from "./StepCustomize";
 import { ShareWorksheetDialog, WorksheetLinkDialog } from "./ShareWorksheet";
 import WorkSettings from "./WorkSettings";
 import PrintableWorksheet from "./PrintableWorksheet";
@@ -18,14 +17,13 @@ export const stepLabel = (w) => (w.tool_key === "drop-the-rock" ? "Steps 6 and 7
 
 // One worksheet a member is working (/recovery/steps/:id, Api::StepWorksController): the
 // sections of their copy of the step tool (StepSections), saved as they write. They can
-// customize their copy, mark it done, print it, and send it (or one part) to their sponsor.
+// change their copy in the HumbleBot Editor (WorksheetEditor), mark it done, print it, and send it (or one part) to their sponsor.
 export default function StepWorkPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [work, setWork] = useState(null);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState("saved"); // saved | unsaved | saving
-  const [customizing, setCustomizing] = useState(false);
   const [sending, setSending] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [linking, setLinking] = useState(false);
@@ -117,7 +115,7 @@ export default function StepWorkPage() {
         <p className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-neutral-400 print:hidden"><Lock className="size-4 shrink-0" /> {work.link ? "Encrypted. Its link is on: anyone with the link and password can read it." : "Private and encrypted. Only you can read it here, unless you send it to your sponsor."}</p>
         <div className="flex flex-wrap gap-2 pt-2 print:hidden">
           <button type="button" className={primaryButton} onClick={() => setSending(true)}><Send className="size-4" /> Send to my sponsor</button>
-          <button type="button" className={quietButton} onClick={() => setCustomizing(true)}><SlidersHorizontal className="size-4" /> Customize</button>
+          <Link to={`/steps/${id}/edit`} className={quietButton}><PencilRuler className="size-4" /> Edit worksheet</Link>
           <button type="button" className={quietButton} onClick={() => print(false)}><Printer className="size-4" /> Print</button>
           <button type="button" className={quietButton} onClick={() => print(true)} title="An empty copy of this worksheet, with your changes, to fill in by hand"><Printer className="size-4" /> Print blank</button>
           <button type="button" className={quietButton} onClick={() => setSharing(true)} title="Suggest it to a sponsee or share it with a group, without your answers"><Copy className="size-4" /> Share a blank copy</button>
@@ -156,7 +154,6 @@ export default function StepWorkPage() {
         </div>
       </Card>
 
-      {customizing && <StepCustomize work={work} onClose={() => setCustomizing(false)} onSave={(definition) => save({ definition }, () => setCustomizing(false))} />}
       {sending && <SendDialog work={work} parts={parts} onClose={() => setSending(false)} />}
       {linking && <WorksheetLinkDialog work={work} onChanged={(w) => setWork((x) => ({ ...x, link: w.link }))} onClose={() => setLinking(false)} />}
       {sharing && <ShareWorksheetDialog source={{ work_id: work.id }} name={work.name} onClose={() => setSharing(false)} />}

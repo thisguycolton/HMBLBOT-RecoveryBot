@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   BellDot, Check, CheckCircle2, ChevronRight, ClipboardList, Feather, Flower2, Hand, HandHeart, Handshake, HeartHandshake, Lock,
   MessageSquareText, MessagesSquare, MoonStar, NotebookPen, Plus, Signpost, Sparkles, Sprout, Sunrise, Users,
+  PencilRuler,
 } from "lucide-react";
 import { api } from "../../groups/lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton, quietButton } from "../../groups/ui";
@@ -96,7 +97,7 @@ function DoneCheck({ label }) {
 
 // One of the Twelve Steps as a tile: its icon, its words, where they are with it (a green
 // check once a worksheet for it is done), and its worksheets
-function StepTile({ step, text, tools, works, busy, start, tonight }) {
+function StepTile({ step, text, tools, works, busy, start, build, tonight }) {
   const Icon = STEP_ICONS[step] || CheckCircle2;
   const done = works.filter((w) => w.status === "done").sort((a, b) => (a.done_at < b.done_at ? 1 : -1))[0];
   const going = works.find((w) => w.status !== "done");
@@ -143,9 +144,13 @@ function StepTile({ step, text, tools, works, busy, start, tonight }) {
             </div>
           </details>
         )}
+        <div className="flex justify-end">
+          <button type="button" className="inline-flex items-center gap-1 !bg-transparent p-0 text-xs font-medium text-accent hover:underline disabled:opacity-50" disabled={busy === `build${step}`} onClick={() => build(step)}
+            title="Start a blank worksheet for this step and make it yours in the HumbleBot Editor"><PencilRuler className="size-3.5" /> Build your own</button>
+        </div>
         {elsewhere.length > 0 && <p className="text-xs text-slate-500 dark:text-neutral-400">{elsewhere.map((t) => t.name).join(", ")} (Step {elsewhere[0].step}) covers this step too.</p>}
         {step === 10 && <p className="text-xs text-slate-500 dark:text-neutral-400">The Big Book's nightly questions, or your own.</p>}
-        {step !== 10 && tools.length === 0 && <p className="text-xs text-slate-400">Worksheets for this step are coming.</p>}
+        {step !== 10 && tools.length === 0 && <p className="text-xs text-slate-400">No built-in worksheet for this step yet: build your own.</p>}
       </div>
     </Card>
   );
@@ -203,6 +208,15 @@ export default function StepsPage() {
     } catch (e) { setError(e.message); setBusy(null); }
   };
 
+  // A blank worksheet of their own for a step, straight into the editor
+  const build = async (step) => {
+    setBusy(`build${step}`);
+    try {
+      const d = await api("/step_works", { method: "POST", body: { step, blank: true } });
+      navigate(`/steps/${d.work.id}/edit`);
+    } catch (e) { setError(e.message); setBusy(null); }
+  };
+
   if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
   const going = data.works.filter((w) => w.status !== "done");
   const done = data.works.filter((w) => w.status === "done");
@@ -247,7 +261,7 @@ export default function StepsPage() {
       <Tray label="The Twelve Steps">
         <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
           {data.steps.map(({ step, text }) => (
-            <StepTile key={step} step={step} text={text} tools={toolsFor(step)} works={worksFor(step)} busy={busy} start={start}
+            <StepTile key={step} step={step} text={text} tools={toolsFor(step)} works={worksFor(step)} busy={busy} start={start} build={build}
               tonight={step === 10 && recovery?.today?.inventory} />
           ))}
         </div>

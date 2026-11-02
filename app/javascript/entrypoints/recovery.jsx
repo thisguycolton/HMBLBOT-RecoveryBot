@@ -17,6 +17,7 @@ import GivePage from "../components/recovery/GivePage";
 import SponsorshipPage from "../components/recovery/SponsorshipPage";
 import StepsPage from "../components/recovery/steps/StepsPage";
 import StepWorkPage from "../components/recovery/steps/StepWorkPage";
+import WorksheetEditor from "../components/recovery/steps/WorksheetEditor";
 
 function Shell() {
   return (
@@ -44,6 +45,7 @@ const router = createBrowserRouter(
         { path: "sponsorship/:id", element: <SponsorshipPage /> },
         { path: "steps", element: <StepsPage /> },
         { path: "steps/:id", element: <StepWorkPage /> },
+        { path: "steps/:id/edit", element: <WorksheetEditor /> },
       ],
     },
   ],

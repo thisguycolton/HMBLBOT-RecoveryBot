@@ -157,6 +157,13 @@ class StepTool
     { "step" => step, "role" => l["role"], "label" => text(l["label"], 100) }.compact
   end
 
+  # A new worksheet of their own for a step, to build in the editor (HumbleBot Editor)
+  def self.blank(step)
+    { "intro" => "Step #{step}: #{STEP_NAMES[step - 1]}",
+      "sections" => [{ "id" => "questions-1", "kind" => "questions", "title" => "Questions",
+                       "items" => [{ "id" => "q1", "label" => "What does this step mean to me today?" }] }] }
+  end
+
   def self.text(value, max) = value.to_s.strip.first(max).presence
   def self.id(value) = value.to_s[/\A[\w-]{1,40}\z/]
   def self.strings(list, max) = Array(list).map { |x| x.to_s.strip.first(200) }.compact_blank.uniq.first(max)
