@@ -21,7 +21,8 @@ class StepSuggestion < ApplicationRecord
   def start!(user)
     transaction do
       update!(started_at: Time.current)
-      user.step_works.create!(step: step, tool_key: tool_key, name: name, definition: definition, answers: {}, status: "in_progress")
+      user.step_works.create!(step: step, tool_key: tool_key, name: name, definition: definition, answers: {}, status: "in_progress",
+                              settings: { "from" => "Suggested by #{sponsorship.sponsor.display_name}", "from_note" => note })
     end
   end
 

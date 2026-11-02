@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { Printer, SlidersHorizontal } from "lucide-react";
 import { inputClass } from "../ui/styles";
 import { api } from "../groups/lib";
 import { Card, primaryButton, quietButton } from "../groups/ui";
 import QuestionEditor from "./QuestionEditor";
+import { PrintableInventory } from "./PrintableEntry";
 import { EntryShell, useEntry } from "./EntryShell";
 import EntryShare from "./EntryShare";
 import { dayLabel } from "./lib";
@@ -55,6 +56,8 @@ export default function InventoryPage() {
   const [notes, setNotes] = useState("");
   const [mine, setMine] = useState(null); // { questions, templates, custom, max }
   const [editing, setEditing] = useState(false);
+  const [printBlank, setPrintBlank] = useState(false);
+  const print = (blank) => { setPrintBlank(blank); setTimeout(() => window.print(), 50); };
   useEffect(() => { api("/inventory_questions").then(setMine).catch(() => {}); }, []);
   // A night already written keeps its questions; a new one uses theirs
   const questions = (entry?.questions || mine?.questions || QUESTIONS).map((q) => ({ ...q, open: !!q.open }));
@@ -74,6 +77,7 @@ export default function InventoryPage() {
 
   return (
     <EntryShell base="inventory" title="10th step" state={state} summary={summary} reminder="step"
+      printable={<PrintableInventory questions={printBlank ? (mine?.questions || questions) : questions} answers={answers} notes={notes} date={dayLabel(on)} blank={printBlank} />}
       intro="When we retire at night, we constructively review our day. A few honest minutes, then rest.">
       <form onSubmit={submit} className="space-y-4">
         <Card className="divide-y divide-neutral-200/70 dark:divide-neutral-800">
@@ -108,7 +112,11 @@ export default function InventoryPage() {
           </div>
         </Card>
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {mine && <button type="button" className={`${quietButton} mr-auto`} onClick={() => setEditing(true)}><SlidersHorizontal className="size-4" /> Change the questions</button>}
+          <div className="mr-auto flex flex-wrap gap-2">
+            {mine && <button type="button" className={quietButton} onClick={() => setEditing(true)}><SlidersHorizontal className="size-4" /> Change the questions</button>}
+            <button type="button" className={quietButton} onClick={() => print(false)}><Printer className="size-4" /> Print</button>
+            <button type="button" className={quietButton} onClick={() => print(true)} title="An empty sheet with your questions, to fill in by hand"><Printer className="size-4" /> Print blank</button>
+          </div>
           {saved && <span role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{entry ? "Saved." : "Cleared."}</span>}
           <EntryShare tool="10th-step" kind="inventory" on={on} what="10th step" title={`My 10th step · ${dayLabel(on)}`}
             disabled={!shareText(questions, answers, notes, { notes: true })}

@@ -1,6 +1,6 @@
 // A worksheet someone shared with its own link and a password (/worksheet/:token,
 // SharedWorksheetsController): asks for the password, then shows the worksheet and what's
-// written in it, read only. Nothing is shown, or kept in the browser, until the password is right.
+// written in it, read only, laid out as it prints (PrintableWorksheet). Nothing is shown, or kept in the browser, until the password is right.
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Lock, Printer } from "lucide-react";
@@ -11,7 +11,7 @@ import "../styles/reader.css";
 import { api } from "../components/groups/lib";
 import { ErrorNote, primaryButton, quietButton } from "../components/groups/ui";
 import { inputClass, labelClass } from "../components/ui/styles";
-import { partsOf, workText } from "../components/recovery/steps/stepText";
+import PrintableWorksheet from "../components/recovery/steps/PrintableWorksheet";
 
 function SharedWorksheet({ token }) {
   const [password, setPassword] = useState("");
@@ -48,30 +48,15 @@ function SharedWorksheet({ token }) {
     );
   }
 
-  const parts = partsOf(work.definition);
   return (
-    <article className="mx-auto w-full max-w-3xl space-y-6 px-4 py-10 !font-sans [&_*]:!font-sans">
-      <header className="space-y-1">
-        <div className="text-xs font-semibold uppercase tracking-wide text-accent">{work.label}{work.status === "done" ? " · Done" : ""}</div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{work.name}</h1>
-        <p className="text-sm text-slate-500 dark:text-neutral-400">Shared by {work.by} · last changed {new Date(work.updated_at).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}</p>
-        <div className="flex gap-2 pt-2 print:hidden">
-          <button type="button" className={quietButton} onClick={() => window.print()}><Printer className="size-4" /> Print</button>
-          <button type="button" className={quietButton} onClick={() => setWork(null)}><Lock className="size-4" /> Close</button>
-        </div>
-      </header>
-      {parts.map((p, n) => {
-        const text = workText(work, p.part);
-        if (!text) return null;
-        return (
-          <section key={n} className="space-y-2">
-            {p.part && <h2 className="border-b border-neutral-200 pb-2 text-xl font-semibold text-slate-900 dark:border-neutral-800 dark:text-white">{p.part}</h2>}
-            <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-800 dark:text-neutral-100">{text}</div>
-          </section>
-        );
-      })}
-      {!workText(work) && <p className="text-slate-600 dark:text-neutral-400">Nothing written here yet.</p>}
-    </article>
+    <div className="w-full px-4 py-8 !font-sans [&_*]:!font-sans print:p-0">
+      <div className="mx-auto mb-4 flex max-w-[7.5in] justify-end gap-2 print:hidden">
+        <button type="button" className={quietButton} onClick={() => window.print()}><Printer className="size-4" /> Print</button>
+        <button type="button" className={quietButton} onClick={() => setWork(null)}><Lock className="size-4" /> Close</button>
+      </div>
+      <PrintableWorksheet work={work} label={work.label} by={`Shared by ${work.by}`}
+        className="rounded-3xl p-8 shadow-panel ring-1 ring-neutral-200 print:rounded-none print:p-0 print:shadow-none print:ring-0" />
+    </div>
   );
 }
 

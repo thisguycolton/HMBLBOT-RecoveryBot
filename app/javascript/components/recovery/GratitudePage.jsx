@@ -3,6 +3,7 @@ import { Plus, X } from "lucide-react";
 import { inputClass } from "../ui/styles";
 import { Card, primaryButton, quietButton } from "../groups/ui";
 import { EntryShell, useEntry } from "./EntryShell";
+import { PrintableGratitude } from "./PrintableEntry";
 import EntryShare from "./EntryShare";
 import { dayLabel } from "./lib";
 
@@ -50,6 +51,7 @@ export default function GratitudePage() {
 
   return (
     <EntryShell base="gratitude" title="Gratitude" state={state} summary={summary} reminder="gratitude"
+      printable={<PrintableGratitude items={items} date={dayLabel(on)} />}
       intro="What you're grateful for today, big or small. One thing on each line.">
       <form onSubmit={submit} className="space-y-4">
         <Card className="space-y-2 p-4">

@@ -34,7 +34,10 @@ class StepWork < ApplicationRecord
 
   before_validation do
     self.answers = {} unless answers.is_a?(Hash)
-    self.settings = (settings || {}).slice("higher_power").transform_values { |v| v.to_s.strip.first(60) }
+    # What they call their Higher Power, and where the worksheet came from (their sponsor, with
+    # the note they sent, or a group's step study), for the page and the printed copy
+    limits = { "higher_power" => 60, "from" => 120, "from_note" => 500 }
+    self.settings = (settings || {}).to_h.stringify_keys.slice(*limits.keys).to_h { |k, v| [k, v.to_s.strip.first(limits[k])] }.compact_blank
     self.remind_at = remind_at.presence
     self.remind_days = Array(remind_days).map(&:to_i).select { |d| (0..6).cover?(d) }.uniq.sort
   end

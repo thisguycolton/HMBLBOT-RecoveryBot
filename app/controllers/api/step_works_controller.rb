@@ -27,7 +27,8 @@ class Api::StepWorksController < ApplicationController
   def create
     work = if params[:group_tool_id].present?
              t = GroupStepTool.where(group: current_user.groups).find(params[:group_tool_id])
-             current_user.step_works.create!(step: t.step, tool_key: t.tool_key, name: t.name, definition: t.definition, answers: {})
+             current_user.step_works.create!(step: t.step, tool_key: t.tool_key, name: t.name, definition: t.definition, answers: {},
+                                             settings: { "from" => "From #{t.group.title}", "from_note" => t.summary })
            elsif params[:copy_of].present?
              source = current_user.step_works.find(params[:copy_of])
              current_user.step_works.create!(step: source.step, tool_key: source.tool_key, name: "#{source.name} (new)".first(200),
@@ -52,7 +53,7 @@ class Api::StepWorksController < ApplicationController
   def update
     @work.answers = params[:answers].respond_to?(:to_unsafe_h) ? params[:answers].to_unsafe_h : {} if params.key?(:answers)
     @work.name = params[:name] if params.key?(:name)
-    @work.settings = params[:settings].to_unsafe_h if params[:settings].respond_to?(:to_unsafe_h)
+    @work.settings = @work.settings.merge(params[:settings].to_unsafe_h.slice("higher_power")) if params[:settings].respond_to?(:to_unsafe_h)
     @work.definition = StepTool.clean(params[:definition]) if params[:definition].present?
     if params.key?(:status)
       @work.status = params[:status].to_s

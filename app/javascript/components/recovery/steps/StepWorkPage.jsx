@@ -10,6 +10,7 @@ import StepSection, { Prose } from "./StepSections";
 import StepCustomize from "./StepCustomize";
 import { ShareWorksheetDialog, WorksheetLinkDialog } from "./ShareWorksheet";
 import WorkSettings from "./WorkSettings";
+import PrintableWorksheet from "./PrintableWorksheet";
 import { partsOf, workText } from "./stepText";
 
 const ORDINAL = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
@@ -28,6 +29,7 @@ export default function StepWorkPage() {
   const [sending, setSending] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [linking, setLinking] = useState(false);
+  const [printBlank, setPrintBlank] = useState(false);
   const pending = useRef(null);
   const timer = useRef(null);
 
@@ -86,8 +88,13 @@ export default function StepWorkPage() {
   const parts = partsOf(work.definition);
   const usesHigherPower = JSON.stringify(work.definition).includes("{{higher_power}}");
 
+  // Print: their copy of the worksheet laid out for paper (PrintableWorksheet), with what
+  // they wrote or as a blank form
+  const print = (blank) => { setPrintBlank(blank); setTimeout(() => window.print(), 50); };
+
   return (
-    <div className="mx-auto max-w-3xl space-y-8 !font-sans print:max-w-none [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
+    <>
+    <div className="mx-auto max-w-3xl space-y-8 !font-sans print:hidden [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
       <div className="flex items-center justify-between gap-2 print:hidden">
         <Link to="/steps" className="inline-flex items-center gap-1 text-sm"><ChevronLeft className="size-4" /> Steps</Link>
         <span role="status" className="text-sm text-slate-500 dark:text-neutral-400">
@@ -101,11 +108,18 @@ export default function StepWorkPage() {
           className="w-full !bg-transparent p-0 text-3xl font-semibold tracking-tight text-slate-900 outline-none focus:ring-0 dark:text-white" />
         <Prose text={work.definition.intro?.replaceAll("{{higher_power}}", work.settings?.higher_power || "God")} className="text-slate-600 dark:text-neutral-400" />
         {work.credit && <p className="text-xs text-slate-500 dark:text-neutral-400">{work.credit}</p>}
+        {work.settings?.from && (
+          <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+            <div className="text-xs font-semibold uppercase tracking-wide">{work.settings.from}</div>
+            {work.settings.from_note && <p className="mt-1 whitespace-pre-line">{work.settings.from_note}</p>}
+          </div>
+        )}
         <p className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-neutral-400 print:hidden"><Lock className="size-4 shrink-0" /> {work.link ? "Encrypted. Its link is on: anyone with the link and password can read it." : "Private and encrypted. Only you can read it here, unless you send it to your sponsor."}</p>
         <div className="flex flex-wrap gap-2 pt-2 print:hidden">
           <button type="button" className={primaryButton} onClick={() => setSending(true)}><Send className="size-4" /> Send to my sponsor</button>
           <button type="button" className={quietButton} onClick={() => setCustomizing(true)}><SlidersHorizontal className="size-4" /> Customize</button>
-          <button type="button" className={quietButton} onClick={() => window.print()}><Printer className="size-4" /> Print</button>
+          <button type="button" className={quietButton} onClick={() => print(false)}><Printer className="size-4" /> Print</button>
+          <button type="button" className={quietButton} onClick={() => print(true)} title="An empty copy of this worksheet, with your changes, to fill in by hand"><Printer className="size-4" /> Print blank</button>
           <button type="button" className={quietButton} onClick={() => setSharing(true)} title="Suggest it to a sponsee or share it with a group, without your answers"><Copy className="size-4" /> Share a blank copy</button>
           <button type="button" className={quietButton} onClick={() => setLinking(true)}><KeyRound className="size-4" /> {work.link ? "Link is on" : "Share a link"}</button>
         </div>
@@ -147,6 +161,8 @@ export default function StepWorkPage() {
       {linking && <WorksheetLinkDialog work={work} onChanged={(w) => setWork((x) => ({ ...x, link: w.link }))} onClose={() => setLinking(false)} />}
       {sharing && <ShareWorksheetDialog source={{ work_id: work.id }} name={work.name} onClose={() => setSharing(false)} />}
     </div>
+    <PrintableWorksheet work={work} label={stepLabel(work)} blank={printBlank} by={null} className="hidden !font-sans print:block [&_*]:!font-sans" />
+    </>
   );
 }
 

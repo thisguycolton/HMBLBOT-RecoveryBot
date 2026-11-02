@@ -62,14 +62,16 @@ export function useEntry(endpoint, unit) {
 
 // The page around the form: title, the day with arrows to the days before and after, and
 // the past days below. `reminder` names its daily reminder (ReminderSetting).
-export function EntryShell({ base, title, intro, state, summary, reminder, children }) {
+// `printable`, when given, is what prints in place of the page (PrintableEntry).
+export function EntryShell({ base, title, intro, state, summary, reminder, printable, children }) {
   const navigate = useNavigate();
   const { on, today, entry, list, error, earned, closeEarned, loadList, unit } = state;
   const go = (day) => navigate(day === today ? `/${base}` : `/${base}/${day}`);
   useEffect(() => { document.title = `${title} | RecoveryBot`; }, [title]);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
+    <>
+    <div className={`mx-auto max-w-3xl space-y-8 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none ${printable ? "print:hidden" : ""}`}>
       <header>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h1>
         <p className="mt-1 text-slate-600 dark:text-neutral-400">{intro}</p>
@@ -115,5 +117,7 @@ export function EntryShell({ base, title, intro, state, summary, reminder, child
 
       {earned && <ChipModal {...earned} onClose={closeEarned}><ChipShare chip={earned.chip} /></ChipModal>}
     </div>
+    {printable && <div className="hidden print:block">{printable}</div>}
+    </>
   );
 }
