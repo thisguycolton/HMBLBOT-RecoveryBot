@@ -1,0 +1,40 @@
+key: step12-service
+step: 12
+name: "Carrying the message"
+summary: "My spiritual awakening in my own words, the service I do, Twelfth Step calls, and practicing these principles in all my affairs."
+default: true
+intro: >
+  Having had a spiritual awakening as the result of these Steps, we try to carry this message to alcoholics, and to
+  practice these principles in all our affairs.
+sections:
+  - id: awakening
+    kind: questions
+    title: "My awakening"
+    items:
+      - { id: changed, label: "What has changed in me since I started the steps?", rows: 4 }
+      - { id: story, label: "My story in a few minutes: what it was like, what happened, what it's like now", rows: 6 }
+  - id: service
+    kind: table
+    title: "Service"
+    help: "Commitments, positions, coffee, setting up chairs, sponsoring, answering the phone."
+    fill: row
+    columns:
+      - { id: what, label: "What", type: text }
+      - { id: where, label: "Where", type: text }
+      - { id: since, label: "Since", type: date }
+  - id: calls
+    kind: table
+    title: "Twelfth Step calls"
+    help: "Times I carried the message to someone still suffering. First names only."
+    fill: row
+    columns:
+      - { id: who, label: "Who (first name)", type: text }
+      - { id: when, label: "When", type: date }
+      - { id: what, label: "What happened", type: text }
+  - id: principles
+    kind: questions
+    title: "In all my affairs"
+    items:
+      - { id: home, label: "At home" }
+      - { id: work, label: "At work" }
+      - { id: hard, label: "Where is it hardest to practice these principles right now?" }

@@ -1,0 +1,25 @@
+key: step4-12-and-12
+step: 4
+name: "12&12 character defects"
+summary: "An inventory by the seven defects the 12&12's Step Four looks at, each with where it shows up, and an assets list beside it."
+intro: >
+  Instead of columns, look at one defect at a time and write where it shows up in your life: at home, at work, in
+  your relationships, in your thinking. Then list your assets too. An inventory counts both.
+sections:
+  - id: defects
+    kind: each
+    title: "The seven"
+    over: ["Pride", "Greed", "Lust", "Anger", "Gluttony", "Envy", "Sloth"]
+    items:
+      - { id: where, label: "Where does this show up in my life?" }
+      - { id: examples, label: "Recent examples" }
+      - { id: part, label: "Is this one of mine?", type: choice, role: my_part_flag, options: ["Yes", "A little", "Not really"] }
+  - id: assets
+    kind: list
+    title: "My assets"
+    help: "What's good in me, and growing."
+    placeholder: "Honest with my sponsor…"
+  - id: sponsor
+    kind: note
+    tone: sponsor
+    body: "Go over this with your sponsor. Which defects surprised you? Which ones did you expect?"

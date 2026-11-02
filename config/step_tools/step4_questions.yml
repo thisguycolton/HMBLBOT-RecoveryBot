@@ -1,0 +1,23 @@
+key: step4-questions
+step: 4
+name: "Questions inventory"
+summary: "Written answers to a list of questions, a starting set meant to be changed. Tap Customize to make the questions your own."
+sections:
+  - id: questions
+    kind: questions
+    title: "Questions"
+    items:
+      - { id: q1, label: "Who do I resent, and why?" }
+      - { id: q2, label: "What am I afraid of?" }
+      - { id: q3, label: "Who have I harmed, and how?" }
+      - { id: q4, label: "Where have I been dishonest, with others or with myself?" }
+      - { id: q5, label: "Where have I been selfish or self-seeking?" }
+      - { id: q6, label: "What secrets am I keeping?" }
+      - { id: q7, label: "What do I feel guilty or ashamed about?" }
+      - { id: q8, label: "How has drinking affected my family, work, money and health?" }
+      - { id: q9, label: "What do I like about myself? What am I good at?" }
+      - { id: q10, label: "What do I want my life to look like?" }
+  - id: sponsor
+    kind: note
+    tone: sponsor
+    body: "Go over your answers with your sponsor, and ask what they'd add."

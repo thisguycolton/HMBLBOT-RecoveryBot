@@ -1,5 +1,5 @@
 # The daily nudges a member can turn on under account settings, or on the gratitude and 10th
-# step pages: "Time for your gratitude list" (noon unless they pick another time) and "Time for
+# step pages (and on any step worksheet, remind_work): "Time for your gratitude list" (noon unless they pick another time) and "Time for
 # your 10th step" (6 PM), at that time in their own time zone. A notification in the bell, and a
 # push to their devices that turned push on. Each goes out once a day, and not at all when
 # today's entry is already written. The server checks every few minutes in a background thread
@@ -22,6 +22,29 @@ module RecoveryReminders
     KINDS.each_key do |which|
       User.where("#{which}_reminder": true).find_each { |user| remind(user, which, now) }
     end
+    StepWork.where.not(remind_at: nil).where(status: "in_progress").includes(:user).find_each { |work| remind_work(work, now) }
+  end
+
+  # A worksheet's own reminder (StepWork#remind_at, on remind_days or every day), unless they
+  # already worked on it that day; true when it went out
+  def remind_work(work, now = Time.current)
+    local = now.in_time_zone(work.user.zone)
+    today = local.to_date
+    return false if work.remind_days.any? && !work.remind_days.include?(today.wday)
+
+    due = local.change(hour: 0) + minutes(work.remind_at).minutes
+    return false unless local >= due && local < due + LATE
+    return false if work.updated_at.in_time_zone(work.user.zone).to_date == today
+
+    claimed = StepWork.where(id: work.id).where("reminded_on IS NULL OR reminded_on < ?", today).update_all(reminded_on: today)
+    return false if claimed.zero?
+
+    Notification.deliver(work.user, kind: "recovery.step_work_reminder", title: "Time for #{work.name}",
+                                    body: "A few minutes on your step work.", url: "/recovery/steps/#{work.id}")
+    true
+  rescue StandardError => e
+    Rails.logger.warn("[recovery reminders] work #{work.id}: #{e.message}")
+    false
   end
 
   # Sends this one reminder to them if it's due; true when it went out

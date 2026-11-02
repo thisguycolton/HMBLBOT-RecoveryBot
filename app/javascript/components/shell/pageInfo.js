@@ -12,6 +12,8 @@ const ABOUT = {
   chips: "Your chips: sobriety milestones, 10th steps, gratitude, streaks and Meeting Maker. Tap one to spin it, star favorites for your profile.",
   inventory: "Your nightly 10th step. Answer each question, save it, and look back at the nights before. Only you see it.",
   gratitude: "Today's gratitude list, one thing on each line, and the days before. Only you see it.",
+  steps: "Worksheets for working the steps: pick one, fill it in at your own pace, change it to suit you and your sponsor. Only you see it.",
+  sponsorship: "Your sponsors and the people you sponsor. Sponsees send their lists one at a time; sponsors can leave a short note.",
   find: "Look up AA Intergroup's meetings, local in-person ones and our groups' own, by name, day or Zoom link. Times show in your time zone.",
   library: "The literature, ready to read. Open a book, search it, or go to a printed page. Select words to highlight them or add a note.",
   archive: "Readings people have shared. Search or browse them, and open one to read or share it.",

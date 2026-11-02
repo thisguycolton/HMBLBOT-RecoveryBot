@@ -15,7 +15,7 @@ export default function Footer() {
   const visible = (items) => items.filter((item) => showItem(item, signedIn));
 
   return (
-    <footer className="mt-auto bg-[#ececec] text-slate-900 !font-sans dark:bg-neutral-950 dark:text-white">
+    <footer className="mt-auto print:hidden bg-[#ececec] text-slate-900 !font-sans dark:bg-neutral-950 dark:text-white">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">

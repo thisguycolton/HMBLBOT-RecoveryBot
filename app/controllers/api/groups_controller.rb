@@ -201,7 +201,7 @@ class Api::GroupsController < ApplicationController
 
   def group_params
     params.require(:group).permit(:title, :description, :website, :time_zone, :court_email_subject, :court_email_body, :court_email_reply_to,
-                                  :quorum_count, :quorum_percent, :logo, :follows_roberts_rules, :show_hosts_publicly, deck_editors: [])
+                                  :quorum_count, :quorum_percent, :logo, :follows_roberts_rules, :show_hosts_publicly, :show_sponsors, deck_editors: [])
   end
 
   def group_card(group, membership)
@@ -226,13 +226,15 @@ class Api::GroupsController < ApplicationController
       meetings: @group.meetings.ordered.map(&:as_api_json),
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
       members_count: @group.members.count,
-      follows_roberts_rules: @group.follows_roberts_rules, show_hosts_publicly: @group.show_hosts_publicly, deck_editors: @group.deck_editors,
+      follows_roberts_rules: @group.follows_roberts_rules, show_hosts_publicly: @group.show_hosts_publicly, show_sponsors: @group.show_sponsors, deck_editors: @group.deck_editors,
       logo_url: @group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.logo, only_path: true) : nil,
       cover_url: @group.cover.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.cover, only_path: true) : nil,
     }
     if member
+      # The green check (like in the Zoom rooms) on anyone here offering to sponsor
+      sponsoring = sponsoring_ids
       json[:members] = @group.active_memberships.includes(user: { avatar_attachment: :blob }).sort_by { |m| [m.admin? ? 0 : 1, m.user.display_name.downcase] }
-                             .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records, can_schedule_hosts: m.can_schedule_hosts, can_keep_treasury: m.can_keep_treasury, can_host: m.can_host, host_slots_only: m.host_slots_only, host_slot_count: m.host_meeting_ids.size) }
+                             .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records, can_schedule_hosts: m.can_schedule_hosts, can_keep_treasury: m.can_keep_treasury, can_host: m.can_host, host_slots_only: m.host_slots_only, host_slot_count: m.host_meeting_ids.size, can_sponsor: sponsoring.include?(m.user_id)) }
       json[:books] = @group.group_books.includes(book: { cover_image_attachment: :blob }).order(:created_at).map do |gb|
         { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color } }
       end
@@ -249,5 +251,15 @@ class Api::GroupsController < ApplicationController
       json[:quorum] = { count: @group.quorum_count, percent: @group.quorum_percent, needed: @group.quorum_needed }
     end
     json
+  end
+
+  # Who in this group the viewer sees as available to sponsor (SponsorProfile.visible_to), and
+  # the viewer themself when they're offering
+  def sponsoring_ids
+    return [] unless @group.show_sponsors && current_user
+
+    ids = SponsorProfile.visible_to(current_user).select { |_, groups| groups.include?(@group.title) }.keys.map(&:user_id)
+    ids << current_user.id if current_user.sponsor_profile&.listed?
+    ids
   end
 end

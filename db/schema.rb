@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_31_230000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_01_250000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -652,6 +652,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_230000) do
     t.index ["updated_by_id"], name: "index_group_page_templates_on_updated_by_id"
   end
 
+  create_table "group_step_tools", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.string "name", null: false
+    t.integer "step", null: false
+    t.string "tool_key"
+    t.text "summary"
+    t.jsonb "definition", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_group_step_tools_on_created_by_id"
+    t.index ["group_id"], name: "index_group_step_tools_on_group_id"
+  end
+
   create_table "groups", force: :cascade do |t|
     t.string "title"
     t.string "description"
@@ -679,6 +693,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_230000) do
     t.jsonb "chip_design"
     t.string "chat_creator_roles", default: [], null: false, array: true
     t.bigint "chat_creator_user_ids", default: [], null: false, array: true
+    t.boolean "show_sponsors", default: true, null: false
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -1318,6 +1333,56 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_230000) do
     t.index ["user_id"], name: "index_site_notices_on_user_id"
   end
 
+  create_table "sponsor_profiles", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.boolean "available", default: false, null: false
+    t.text "note"
+    t.string "picks", default: [], null: false, array: true
+    t.string "languages"
+    t.boolean "show_time_sober", default: false, null: false
+    t.integer "max_sponsees"
+    t.datetime "stopped_at"
+    t.bigint "stopped_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["stopped_by_id"], name: "index_sponsor_profiles_on_stopped_by_id"
+    t.index ["user_id"], name: "index_sponsor_profiles_on_user_id", unique: true
+  end
+
+  create_table "sponsorship_shares", force: :cascade do |t|
+    t.bigint "sponsorship_id", null: false
+    t.string "kind", null: false
+    t.date "on", null: false
+    t.string "title", null: false
+    t.text "body", null: false
+    t.datetime "seen_at"
+    t.text "reply"
+    t.datetime "replied_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sponsorship_id", "created_at"], name: "index_sponsorship_shares_on_sponsorship_id_and_created_at"
+    t.index ["sponsorship_id"], name: "index_sponsorship_shares_on_sponsorship_id"
+  end
+
+  create_table "sponsorships", force: :cascade do |t|
+    t.bigint "sponsor_id", null: false
+    t.bigint "sponsee_id", null: false
+    t.string "status", default: "pending", null: false
+    t.text "note"
+    t.date "started_on"
+    t.datetime "ended_at"
+    t.bigint "ended_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "current_step"
+    t.datetime "nudged_at"
+    t.string "nudge_note"
+    t.index ["ended_by_id"], name: "index_sponsorships_on_ended_by_id"
+    t.index ["sponsee_id"], name: "index_sponsorships_on_sponsee_id"
+    t.index ["sponsor_id", "sponsee_id"], name: "index_sponsorships_open_pair", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('active'::character varying)::text]))"
+    t.index ["sponsor_id"], name: "index_sponsorships_on_sponsor_id"
+  end
+
   create_table "step_inventories", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.date "on", null: false
@@ -1325,8 +1390,49 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_230000) do
     t.text "notes", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "questions"
     t.index ["user_id", "on"], name: "index_step_inventories_on_user_id_and_on", unique: true
     t.index ["user_id"], name: "index_step_inventories_on_user_id"
+  end
+
+  create_table "step_suggestions", force: :cascade do |t|
+    t.bigint "sponsorship_id", null: false
+    t.string "name", null: false
+    t.integer "step", null: false
+    t.string "tool_key"
+    t.text "note"
+    t.jsonb "definition", default: {}, null: false
+    t.datetime "started_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sponsorship_id"], name: "index_step_suggestions_on_sponsorship_id"
+  end
+
+  create_table "step_works", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.integer "step", null: false
+    t.string "tool_key"
+    t.string "name", null: false
+    t.jsonb "definition", default: {}, null: false
+    t.text "answers"
+    t.jsonb "settings", default: {}, null: false
+    t.string "status", default: "in_progress", null: false
+    t.datetime "done_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "remind_at"
+    t.integer "remind_days", default: [], null: false, array: true
+    t.date "reminded_on"
+    t.boolean "auto_send", default: false, null: false
+    t.datetime "auto_sent_at"
+    t.string "share_token"
+    t.string "share_password_digest"
+    t.datetime "shared_at"
+    t.datetime "share_viewed_at"
+    t.index ["remind_at"], name: "index_step_works_on_remind_at", where: "(remind_at IS NOT NULL)"
+    t.index ["share_token"], name: "index_step_works_on_share_token", unique: true
+    t.index ["user_id", "step", "updated_at"], name: "index_step_works_on_user_id_and_step_and_updated_at"
+    t.index ["user_id"], name: "index_step_works_on_user_id"
   end
 
   create_table "tags", force: :cascade do |t|
@@ -1585,10 +1691,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_230000) do
     t.string "step_reminder_at", default: "18:00", null: false
     t.date "step_reminded_on"
     t.string "time_zone"
+    t.string "sponsor_invite_token"
+    t.jsonb "inventory_questions"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["share_token"], name: "index_users_on_share_token", unique: true
+    t.index ["sponsor_invite_token"], name: "index_users_on_sponsor_invite_token", unique: true
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
@@ -1667,6 +1776,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_230000) do
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_page_templates", "users", column: "updated_by_id"
+  add_foreign_key "group_step_tools", "groups", on_delete: :cascade
+  add_foreign_key "group_step_tools", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "groups", "users", column: "created_by_id"
   add_foreign_key "host_chat_postings", "hosting_kits", on_delete: :cascade
   add_foreign_key "host_props", "hostificators"
@@ -1731,7 +1842,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_31_230000) do
   add_foreign_key "service_terms", "service_positions", on_delete: :cascade
   add_foreign_key "service_terms", "users", on_delete: :nullify
   add_foreign_key "site_notices", "users", on_delete: :nullify
+  add_foreign_key "sponsor_profiles", "users", column: "stopped_by_id", on_delete: :nullify
+  add_foreign_key "sponsor_profiles", "users", on_delete: :cascade
+  add_foreign_key "sponsorship_shares", "sponsorships", on_delete: :cascade
+  add_foreign_key "sponsorships", "users", column: "ended_by_id", on_delete: :nullify
+  add_foreign_key "sponsorships", "users", column: "sponsee_id", on_delete: :cascade
+  add_foreign_key "sponsorships", "users", column: "sponsor_id", on_delete: :cascade
   add_foreign_key "step_inventories", "users", on_delete: :cascade
+  add_foreign_key "step_suggestions", "sponsorships", on_delete: :cascade
+  add_foreign_key "step_works", "users", on_delete: :cascade
   add_foreign_key "text_report_comments", "text_reports"
   add_foreign_key "text_report_comments", "users"
   add_foreign_key "text_reports", "chapters"

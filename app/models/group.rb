@@ -15,6 +15,7 @@ class Group < ApplicationRecord
   has_many :memberships, class_name: "GroupMembership", dependent: :destroy
   has_many :active_memberships, -> { active }, class_name: "GroupMembership"
   has_many :members, through: :active_memberships, source: :user
+  has_many :step_tools, class_name: "GroupStepTool", dependent: :delete_all
   has_many :meetings, dependent: :destroy
   has_many :group_books, dependent: :destroy
   has_many :books, through: :group_books

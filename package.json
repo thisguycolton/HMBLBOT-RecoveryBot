@@ -55,6 +55,7 @@
     "phaser": "^3.88.2",
     "pixi-filters": "^6.1.0",
     "pixi.js": "^8.8.1",
+    "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-calendar": "^6.0.0",
     "react-dom": "^19.1.0",
