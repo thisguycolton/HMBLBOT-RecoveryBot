@@ -1,0 +1,41 @@
+key: step2-came-to-believe
+step: 2
+name: "Came to believe"
+summary: "What I used to believe, what I'm open to now, and the evidence of sanity coming back. Works for believers, agnostics and atheists alike."
+default: true
+intro: >
+  Step Two asks only that we come to believe a Power greater than ourselves could restore us to sanity. It doesn't ask us
+  to define that Power, or to have it figured out. Open-mindedness is enough to start.
+sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: "Chapter 4, We Agnostics, in the Big Book. Step Two in the 12&12."
+  - id: before
+    kind: questions
+    title: "Where I'm starting from"
+    items:
+      - { id: raised, label: "What was I taught, or what did I believe, about God or a higher power growing up?" }
+      - { id: now, label: "What do I believe now? What am I unsure about?" }
+      - { id: blocks, label: "What gets in the way of believing? (Bad experiences, other people, my own pride…)" }
+  - id: insanity
+    kind: questions
+    title: "Insanity"
+    help: "Doing the same thing and expecting a different result."
+    items:
+      - { id: examples, label: "Where have I acted insanely around drinking, the first drink especially?" }
+  - id: power
+    kind: questions
+    title: "A Power greater than myself"
+    items:
+      - { id: candidates, label: "What could be a Power greater than me? (The group, the program, nature, love, God as I understand Him…)" }
+      - { id: describe, label: "If I could have a Higher Power that cared about me, what would it be like?", rows: 4 }
+  - id: evidence
+    kind: list
+    title: "Evidence of sanity coming back"
+    help: "Things that are already different since I got here."
+    placeholder: "I went to a meeting instead of the bar…"
+  - id: sponsor
+    kind: note
+    tone: sponsor
+    body: "Ask your sponsor how they came to believe, and what their Higher Power is like."

@@ -1,0 +1,46 @@
+key: step1-powerlessness
+step: 1
+name: "Powerlessness and unmanageability"
+summary: "Honest examples of losing control once I started, and of how my life became unmanageable, with The Doctor's Opinion and More About Alcoholism to read alongside."
+default: true
+intro: >
+  Step One asks us to admit two things: that once we start, we can't reliably stop (powerless), and that our lives had
+  become unmanageable. Specific examples are more convincing than general ones, especially to ourselves.
+sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: >
+      The Doctor's Opinion, and Chapter 3, More About Alcoholism, in the Big Book. Step One in the 12&12.
+  - id: control
+    kind: table
+    title: "Times I couldn't control it once I started"
+    help: "Times I meant to have one or two, or to stop at a certain hour, and didn't."
+    fill: row
+    columns:
+      - { id: when, label: "When", type: text }
+      - { id: meant, label: "What I meant to do", type: text }
+      - { id: happened, label: "What actually happened", type: text }
+  - id: stopping
+    kind: list
+    title: "Ways I tried to control or stop"
+    placeholder: "Only beer, only on weekends…"
+  - id: unmanageable
+    kind: questions
+    title: "How my life became unmanageable"
+    items:
+      - { id: relationships, label: "My relationships and family" }
+      - { id: work, label: "Work, school or money" }
+      - { id: health, label: "My health, body and mind" }
+      - { id: law, label: "Legal trouble, driving, danger I put myself or others in" }
+      - { id: inside, label: "Inside: shame, fear, isolation, the person I became" }
+  - id: admit
+    kind: questions
+    title: "Admitting it"
+    items:
+      - { id: admit, label: "In my own words, am I powerless over alcohol? What makes me sure?", rows: 4 }
+      - { id: reservations, label: "Do I still have any reservations, any idea that someday I'll be able to drink like other people?" }
+  - id: sponsor
+    kind: note
+    tone: sponsor
+    body: "Read your examples to your sponsor. Are there any you left out because they were too embarrassing?"

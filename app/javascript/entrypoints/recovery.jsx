@@ -1,6 +1,6 @@
 // A member's own recovery tools at /recovery (app/controllers/recovery_controller.rb): their
-// chips, the nightly 10th step and gratitude lists (only ever their own), and giving chips
-// for a group they host for.
+// chips, the nightly 10th step and gratitude lists (only ever their own, unless they send one
+// to their sponsor), their step work, their sponsors and sponsees, and giving chips for a group they host for.
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
@@ -14,6 +14,10 @@ import ChipsPage from "../components/recovery/ChipsPage";
 import InventoryPage from "../components/recovery/InventoryPage";
 import GratitudePage from "../components/recovery/GratitudePage";
 import GivePage from "../components/recovery/GivePage";
+import SponsorshipPage from "../components/recovery/SponsorshipPage";
+import StepsPage from "../components/recovery/steps/StepsPage";
+import StepWorkPage from "../components/recovery/steps/StepWorkPage";
+import WorksheetEditor from "../components/recovery/steps/WorksheetEditor";
 
 function Shell() {
   return (
@@ -37,6 +41,11 @@ const router = createBrowserRouter(
         { path: "gratitude", element: <GratitudePage /> },
         { path: "gratitude/:on", element: <GratitudePage /> },
         { path: "give", element: <GivePage /> },
+        { path: "sponsorship", element: <SponsorshipPage /> },
+        { path: "sponsorship/:id", element: <SponsorshipPage /> },
+        { path: "steps", element: <StepsPage /> },
+        { path: "steps/:id", element: <StepWorkPage /> },
+        { path: "steps/:id/edit", element: <WorksheetEditor /> },
       ],
     },
   ],

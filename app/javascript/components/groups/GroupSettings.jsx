@@ -19,7 +19,7 @@ const DECK_EDITORS = [
 // Group settings in the group dashboard (group admins): its name, about, website, time zone and logo
 export default function GroupSettings({ group, setGroup }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ title: group.title || "", description: group.description || "", website: group.website || "", time_zone: group.time_zone, follows_roberts_rules: group.follows_roberts_rules !== false, show_hosts_publicly: group.show_hosts_publicly !== false, deck_editors: group.deck_editors || ["host_coordinators", "record_keepers"] });
+  const [form, setForm] = useState({ title: group.title || "", description: group.description || "", website: group.website || "", time_zone: group.time_zone, follows_roberts_rules: group.follows_roberts_rules !== false, show_hosts_publicly: group.show_hosts_publicly !== false, show_sponsors: group.show_sponsors !== false, deck_editors: group.deck_editors || ["host_coordinators", "record_keepers"] });
   const [logo, setLogo] = useState(null); // a File waiting to be saved
   const [removeLogo, setRemoveLogo] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -110,6 +110,12 @@ export default function GroupSettings({ group, setGroup }) {
         <h2 className="font-semibold text-slate-900 dark:text-white">Meeting schedule</h2>
         <Toggle checked={form.show_hosts_publicly} onChange={(v) => set({ show_hosts_publicly: v })} label="Show who hosts each meeting"
           description="The meetings on the group's page say who hosts and co-hosts the next one, from the host schedule on Meetings. Anyone can see the group's page, so turn this off if your hosts would rather not be named there. Meetings with nobody on the schedule look the same either way." />
+      </Card>
+
+      <Card className="space-y-3 p-4 sm:p-5">
+        <h2 className="font-semibold text-slate-900 dark:text-white">Sponsors</h2>
+        <Toggle checked={form.show_sponsors} onChange={(v) => set({ show_sponsors: v })} label="Show members who are available to sponsor"
+          description="Members can say they're available to sponsor. Other members of this group see them under Sponsorship > Find a sponsor and can ask them. Nobody outside the group sees it. Turn this off and nobody is listed through this group." />
       </Card>
 
       <Card className="space-y-3 p-4 sm:p-5">

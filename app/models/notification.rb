@@ -36,8 +36,10 @@ class Notification < ApplicationRecord
     "follows" => { label: "New followers", description: "When someone follows you.", kinds: %w[follow.created] },
     "chips" => { label: "Chips", description: "When someone gives you a chip, you earn a Special Edition, or your group makes a new one.",
                  kinds: %w[chip.given chip.edition chip.edition_new] },
-    "recovery_reminders" => { label: "Gratitude and 10th step reminders", description: "The daily reminders you turned on under Reminders.",
-                              kinds: %w[recovery.gratitude_reminder recovery.step_reminder] },
+    "sponsorship" => { label: "Sponsorship", description: "When someone asks you to be their sponsor or says yes, when a sponsee sends you something, when your sponsor leaves a note on it, suggests a worksheet, marks the step you're on, or checks in on your step work.",
+                       kinds: %w[sponsorship.request sponsorship.accepted sponsorship.share sponsorship.reply sponsorship.suggestion sponsorship.step sponsorship.nudge] },
+    "recovery_reminders" => { label: "Gratitude, 10th step and worksheet reminders", description: "The reminders you turned on under Reminders, or on a step worksheet.",
+                              kinds: %w[recovery.gratitude_reminder recovery.step_reminder recovery.step_work_reminder] },
     "site_admin" => { label: "Site admin", description: "New groups waiting for approval, text reports and reports about people.",
                       kinds: %w[group.pending text_report.created user_report.created], admin_only: true },
   }.freeze

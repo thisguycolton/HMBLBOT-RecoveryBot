@@ -74,8 +74,42 @@ Rails.application.routes.draw do
     get :lookup, on: :collection
   end
   resources :meeting_joins, only: :create
+  resource :inventory_questions, only: %i[show update]
   resources :step_inventories, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
   resources :gratitude_lists, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
+  # Sponsors and sponsees, and what a sponsee sends their sponsor
+  resources :sponsorships, only: %i[index create update destroy] do
+    member do
+      post :accept
+      post :decline
+      post :nudge
+      get :shares
+    end
+    collection do
+      post :invite
+      get "invite/:token", action: :show_invite
+      post "invite/:token", action: :accept_invite
+    end
+  end
+  resources :sponsorship_shares, only: %i[create update destroy]
+  # Available to sponsor: your own offer, and who's offering in your groups
+  resources :step_suggestions, only: %i[create destroy] do
+    post :start, on: :member
+  end
+  resources :group_step_tools, only: %i[create destroy]
+  resource :sponsor_profile, only: %i[show update] do
+    get :find
+  end
+  # Working the steps: worksheets (StepTool) and a member's own work on them
+  resources :step_works, only: %i[index show create update destroy] do
+    get :pull, on: :collection
+    member do
+      post :link
+      delete :link, action: :unlink
+    end
+  end
+  # A worksheet's password-protected link: reading it (anyone with the link and password)
+  post "shared_worksheets/:token", to: "shared_worksheets#create", as: :open_shared_worksheet
   # The shell: your groups and roles, the Hosting badge, Today; and the search box
   resource :nav, controller: "nav", only: :show
   # Clearing "Needs your attention" items from Today, and restoring them
@@ -401,6 +435,9 @@ end
   get "/chips/claim/:token", to: "chips#claim", as: :claim_chip
   # The link on a shared gratitude list or 10th step: your own, or sign up to start one
   get "/start/:tool", to: "start_tools#show", as: :start_tool, constraints: { tool: /gratitude|10th-step/ }
+  get "/sponsor/:token", to: "sponsor_invites#show", as: :sponsor_invite
+  # A worksheet someone shared with a password (StepWork#share!): a small page that asks for it
+  get "/worksheet/:token", to: "shared_worksheets#show", as: :shared_worksheet
   get "/recovery/*path", to: "recovery#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb

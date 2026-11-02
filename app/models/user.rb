@@ -1,5 +1,5 @@
 class User < ApplicationRecord
-  moderates_language :name, :username, :bio, :page_blocks
+  moderates_language :name, :username, :bio, :page_blocks, :inventory_questions
   # Include default devise modules. Others available are:
   # :lockable, :timeoutable, :trackable and :omniauthable
   # :confirmable: new accounts confirm their email address before they can sign in
@@ -11,6 +11,7 @@ class User < ApplicationRecord
   # The member's own recovery tools, only ever seen by them (Api::RecoveryController)
   has_many :step_inventories, dependent: :delete_all
   has_many :gratitude_lists, dependent: :delete_all
+  has_many :step_works, dependent: :delete_all
   # Chips their groups' hosts gave them (and ones they gave), and the meetings they clicked
   # Join on, for Meeting Maker chips (Chips)
   has_many :chip_awards, dependent: :delete_all
@@ -80,6 +81,10 @@ class User < ApplicationRecord
   has_many :group_blocks, dependent: :delete_all
   has_many :blocks_given, class_name: "UserBlock", foreign_key: :blocker_id, dependent: :delete_all, inverse_of: :blocker
   has_many :blocks_received, class_name: "UserBlock", foreign_key: :blocked_id, dependent: :delete_all, inverse_of: :blocked
+  # Sponsorship: the people they sponsor, and their sponsors
+  has_many :sponsorships_as_sponsor, class_name: "Sponsorship", foreign_key: :sponsor_id, dependent: :destroy, inverse_of: :sponsor
+  has_one :sponsor_profile, dependent: :destroy
+  has_many :sponsorships_as_sponsee, class_name: "Sponsorship", foreign_key: :sponsee_id, dependent: :destroy, inverse_of: :sponsee
   has_many :event_rsvps, dependent: :destroy
   has_many :intergroup_follows, dependent: :destroy
   has_many :host_sub_requests_made, class_name: "HostSubRequest", foreign_key: :requested_by_id, dependent: :nullify, inverse_of: :requested_by
@@ -135,6 +140,14 @@ class User < ApplicationRecord
   def after_confirmation
     super if defined?(super)
     ChipAward.claim_for(self)
+  end
+
+  # Their invite link for someone they're sponsoring (/sponsor/:token), made the first time
+  def sponsor_invite_token!
+    return sponsor_invite_token if sponsor_invite_token.present?
+
+    update_column(:sponsor_invite_token, SecureRandom.urlsafe_base64(12))
+    sponsor_invite_token
   end
 
   def following?(other) = !!other && follows_given.exists?(followed_id: other.id)

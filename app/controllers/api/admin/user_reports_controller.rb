@@ -10,9 +10,16 @@ class Api::Admin::UserReportsController < Api::Admin::SuiteController
     render json: { total: reports.count, open: UserReport.unresolved.count, limit: LIMIT, reports: reports.limit(LIMIT).map { |r| report_json(r) } }
   end
 
-  # PATCH { status: "resolved" | "open" }
+  # PATCH { status: "resolved" | "open" } | { sponsoring: "stop" | "allow" } (whether the person
+  # reported can offer to sponsor: SponsorProfile#stopped_at)
   def update
     report = UserReport.find(params[:id])
+    if params[:sponsoring].present?
+      profile = SponsorProfile.for(report.user)
+      stop = params[:sponsoring] == "stop"
+      profile.update!(stopped_at: (Time.current if stop), stopped_by: (current_user if stop), available: stop ? false : profile.available)
+      return render(json: report_json(report.reload))
+    end
     case params[:status]
     when "resolved" then report.resolve!(current_user)
     when "open" then report.reopen!
@@ -37,6 +44,7 @@ class Api::Admin::UserReportsController < Api::Admin::SuiteController
       reporter: person(r.reporter), user: person(r.user),
       group: r.group && { slug: r.group.slug, title: r.group.title },
       still_there: r.subject_type.present? && r.subject_type.constantize.exists?(r.subject_id),
+      sponsoring: r.user.sponsor_profile&.then { |p| p.stopped_at ? "stopped" : (p.available ? "offering" : "off") },
     }
   end
 end

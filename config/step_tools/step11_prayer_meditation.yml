@@ -1,0 +1,35 @@
+key: step11-morning-evening
+step: 11
+name: "Morning and evening"
+summary: "The morning planning and evening review the Big Book describes on pages 86 to 88, with room for prayer and meditation, a week at a time."
+default: true
+intro: >
+  "On awakening let us think about the twenty-four hours ahead." The Big Book offers a simple practice: plan the day
+  in the morning and ask for direction, pause when agitated or doubtful during the day, and review it at night (your
+  10th step). This keeps a week of mornings.
+sections:
+  - id: practice
+    kind: questions
+    title: "My practice"
+    items:
+      - { id: when, label: "When and where will I pray and meditate each morning?", rows: 1 }
+      - { id: how, label: "What does prayer or meditation look like for me? (A reading, a prayer, sitting quietly, a walk…)" }
+      - { id: readings, label: "What will I read? (Daily Reflections, As Bill Sees It, the Big Book, Glad Day…)", rows: 1 }
+  - id: mornings
+    kind: days
+    title: "Mornings"
+    help: "Each morning: what's ahead today, and what I'm asking for."
+    items:
+      - { id: d1, label: "Today ahead, and what I'm asking for" }
+      - { id: d2, label: "Today ahead, and what I'm asking for" }
+      - { id: d3, label: "Today ahead, and what I'm asking for" }
+      - { id: d4, label: "Today ahead, and what I'm asking for" }
+      - { id: d5, label: "Today ahead, and what I'm asking for" }
+      - { id: d6, label: "Today ahead, and what I'm asking for" }
+      - { id: d7, label: "Today ahead, and what I'm asking for" }
+    review:
+      - { id: contact, label: "Where did I feel connected to {{higher_power}} this week?" }
+      - { id: paused, label: "When did I pause during the day, and what happened?" }
+  - id: evening
+    kind: note
+    body: "At night, do your 10th step review under 10th step in the sidebar."

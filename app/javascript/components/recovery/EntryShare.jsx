@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Check, Copy, Mail, MessageCircle, Share2, X } from "lucide-react";
-import { quietButton } from "../groups/ui";
+import { Check, Copy, HeartHandshake, Mail, MessageCircle, Send, Share2, X } from "lucide-react";
+import { api } from "../groups/lib";
+import { ErrorNote, quietButton } from "../groups/ui";
 
 // "Share" on a gratitude list or 10th step: the day's writing as plain text to paste
 // anywhere (a text to a sponsor, an email, a group chat), with a link at the top. The link
@@ -9,9 +10,12 @@ import { quietButton } from "../groups/ui";
 // nothing about who sent it. Nothing is sent or saved here; the text only leaves the device
 // when they paste or send it themselves.
 //
+// If they have a sponsor on the site (Sponsorship), it can also send the same text to them
+// (without the link): `kind` and `on` say what it is (SponsorshipShare).
+//
 // `what` names it ("gratitude list"), `title` heads the text. `build(options)` makes the text from what's on the form now; `options` are the checkboxes
 // (`choices`: [{ key, label, initial }]) for what to put in.
-export default function EntryShare({ tool, what, title, build, choices = [], disabled }) {
+export default function EntryShare({ tool, kind, on, what, title, build, choices = [], disabled }) {
   const [open, setOpen] = useState(false);
   const [opts, setOpts] = useState(() => Object.fromEntries(choices.map((c) => [c.key, c.initial ?? true])));
   const [copied, setCopied] = useState(false);
@@ -43,6 +47,27 @@ export default function EntryShare({ tool, what, title, build, choices = [], dis
   };
   const enc = encodeURIComponent;
 
+  // Their sponsors, looked up the first time it opens
+  const [sponsors, setSponsors] = useState(null);
+  const [to, setTo] = useState([]);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(null);
+  const [sendError, setSendError] = useState(null);
+  useEffect(() => {
+    if (!open || sponsors) return;
+    api("/sponsorships").then((d) => { setSponsors(d.sponsors); setTo(d.sponsors.map((s) => s.id)); }).catch(() => setSponsors([]));
+  }, [open, sponsors]);
+  useEffect(() => { setSent(null); }, [body]);
+  const send = async () => {
+    setSending(true);
+    setSendError(null);
+    try {
+      const d = await api("/sponsorship_shares", { method: "POST", body: { sponsorship_ids: to, kind, on, title, body } });
+      setSent(d.sent_to.join(" and "));
+    } catch (e) { setSendError(e.message); }
+    setSending(false);
+  };
+
   return (
     <>
       <button type="button" className={quietButton} disabled={disabled} onClick={() => setOpen(true)}
@@ -70,6 +95,31 @@ export default function EntryShare({ tool, what, title, build, choices = [], dis
                     {c.label}
                   </label>
                 ))}
+              </div>
+            )}
+            {sponsors?.length > 0 && (
+              <div className="space-y-2 rounded-2xl bg-accent/10 p-3 dark:bg-accent/20">
+                <p className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white"><HeartHandshake className="size-4" /> Send to your sponsor</p>
+                {sponsors.length > 1 && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                    {sponsors.map((s) => (
+                      <label key={s.id} className="inline-flex items-center gap-2">
+                        <input type="checkbox" checked={to.includes(s.id)} onChange={(e) => setTo((t) => (e.target.checked ? [...t, s.id] : t.filter((x) => x !== s.id)))} />
+                        {s.person.name}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs text-slate-600 dark:text-neutral-300">
+                    {sent ? `Sent to ${sent}.` : "They'll see it as it reads below (without the link), and can leave you a short note."}
+                  </span>
+                  <button type="button" onClick={send} disabled={sending || !to.length || !body || !!sent}
+                    className="inline-flex items-center gap-1.5 rounded-xl !bg-accent px-3.5 py-2 text-sm font-semibold !text-white disabled:opacity-50">
+                    {sent ? <><Check className="size-4" /> Sent</> : <><Send className="size-4" /> {sending ? "Sending…" : sponsors.length > 1 ? "Send" : `Send to ${sponsors[0].person.name}`}</>}
+                  </button>
+                </div>
+                <ErrorNote error={sendError} />
               </div>
             )}
             <textarea readOnly value={text} rows={10} aria-label="What will be copied" onFocus={(e) => e.target.select()}

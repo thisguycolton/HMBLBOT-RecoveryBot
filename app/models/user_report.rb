@@ -1,9 +1,9 @@
 # A member's report about someone to the site admins: a chat message, note or comment they
-# wrote, or the person themselves. What was written is kept as it was (`quote`), so it can
+# wrote, their offer to sponsor (SponsorProfile), or the person themselves. What was written is kept as it was (`quote`), so it can
 # still be read if it's deleted. Admins see them in the admin suite (Reports).
 class UserReport < ApplicationRecord
   STATUSES = %w[open resolved].freeze
-  SUBJECTS = { "chat_message" => "ChatMessage", "timeline_note" => "TimelineNote", "note_comment" => "NoteComment" }.freeze
+  SUBJECTS = { "chat_message" => "ChatMessage", "timeline_note" => "TimelineNote", "note_comment" => "NoteComment", "sponsor_profile" => "SponsorProfile" }.freeze
 
   belongs_to :reporter, class_name: "User"
   belongs_to :user

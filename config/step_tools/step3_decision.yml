@@ -1,0 +1,49 @@
+key: step3-decision
+step: 3
+name: "The decision"
+summary: "What turning it over means to me, the Third Step Prayer in the Big Book's words or my own, and a daily check on turning it over."
+default: true
+intro: >
+  Step Three is a decision, not a feeling: to turn our will and our lives over to the care of God as we understand Him.
+  The 12&12 says willingness is the key that opens the door.
+sections:
+  - id: meaning
+    kind: questions
+    title: "What it means to me"
+    items:
+      - { id: will, label: "What does \"my will\" mean? Where does it run my life?" }
+      - { id: care, label: "What would it look like to let {{higher_power}} care for my life, day to day?" }
+      - { id: afraid, label: "What am I afraid will happen if I turn it over?" }
+      - { id: holding, label: "What am I still trying to manage on my own?" }
+  - id: prayer-reference
+    kind: reference
+    title: "The Third Step Prayer"
+    help: "From the Big Book (page 63):"
+    body: >
+      God, I offer myself to Thee, to build with me and to do with me as Thou wilt. Relieve me of the bondage of self, that
+      I may better do Thy will. Take away my difficulties, that victory over them may bear witness to those I would help of
+      Thy Power, Thy Love, and Thy Way of life. May I do Thy will always!
+  - id: prayer
+    kind: questions
+    title: "In my own words"
+    items:
+      - { id: prayer, label: "My Third Step Prayer", placeholder: "{{higher_power}}, I offer myself to you…", rows: 6 }
+  - id: daily
+    kind: days
+    title: "A week of turning it over"
+    help: "Each night, one thing I turned over today, and how it went."
+    items:
+      - { id: d1, label: "What did I turn over today?" }
+      - { id: d2, label: "What did I turn over today?" }
+      - { id: d3, label: "What did I turn over today?" }
+      - { id: d4, label: "What did I turn over today?" }
+      - { id: d5, label: "What did I turn over today?" }
+      - { id: d6, label: "What did I turn over today?" }
+      - { id: d7, label: "What did I turn over today?" }
+    review:
+      - { id: noticed, label: "What did I notice when I let go?" }
+      - { id: took-back, label: "What did I take back?" }
+  - id: sponsor
+    kind: note
+    tone: sponsor
+    body: "Many people say the Third Step Prayer with their sponsor. Ask yours how they took this step."
