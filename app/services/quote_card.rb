@@ -24,6 +24,7 @@ class QuoteCard
     hand: ASSETS.join("Caveat_600SemiBold.ttf").to_s
   )
   QUOTE_MAX = 420
+  TOO_TALL = 100_000
   NOTE_MAX = 280
   HIGHLIGHT_COLORS = { "yellow" => "#fef08a", "lime" => "#bef264", "cyan" => "#a5f3fc", "pink" => "#fbcfe8", "orange" => "#fed7aa" }.freeze
 
@@ -34,8 +35,8 @@ class QuoteCard
     @kind = kind.to_sym
     @look = LOOKS.include?(look.to_s) ? look.to_s : LOOKS.first
     @size = SIZES.key?(size.to_s) ? size.to_s : "wide"
-    @quote = clean(quote).truncate(QUOTE_MAX, separator: " ")
-    @note = clean(note).truncate(NOTE_MAX, separator: " ").presence
+    @quote = clean(quote).truncate(QUOTE_MAX, separator: " ", omission: "…")
+    @note = clean(note).truncate(NOTE_MAX, separator: " ", omission: "…").presence
     @source = clean(source).truncate(90).presence
     @by = clean(by).truncate(40).presence
     @color = HIGHLIGHT_COLORS[color.to_s] || (color.to_s.match?(/\A#\h{6}\z/) ? color.to_s : HIGHLIGHT_COLORS["yellow"])
@@ -108,6 +109,10 @@ class QuoteCard
   def measure(value, font:, size:, width:)
     out, err, status = Open3.capture3(*ShareCard.magick, "-size", "#{width}x", "-font", FONTS[font], "-pointsize", size.to_s,
                                       "-interline-spacing", spacing(font, size).to_s, caption(italic?(font) ? "#{value}\u00A0" : value), "-format", "%h", "info:")
+    # ImageMagick 6.9.11 (Debian's, on the server) won't lay out a caption that comes out
+    # very tall (over about 2,000 pixels) and says "width or height exceeds limit": that's
+    # just too big, so the loop tries a smaller size
+    return TOO_TALL if !status.success? && err.include?("exceeds limit")
     raise ShareCard::Failed, err.to_s.first(500) unless status.success?
 
     out.to_i

@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 # Pictures of highlights and notes to post anywhere (QuoteCard), and a highlight's share link
 # preview (ShareMeta.highlight)
@@ -106,5 +107,20 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     repost = @mo.timeline_notes.create!(repost_of: note, body: "", visibility: "public")
     get "/api/timeline_notes/#{repost.id}/card"
     assert_response :unprocessable_entity
+  end
+
+  test "a long quote the server's ImageMagick 6 won't lay out big gets a smaller size, not an error" do
+    quote = "Here are some of the methods we have tried: Drinking beer only, limiting the number of drinks, " * 4
+    card = QuoteCard.new(quote: quote, look: "paper", size: "story")
+    real = Open3.method(:capture3)
+    # As Debian's ImageMagick 6.9.11 answers a caption over about 2,000 pixels tall
+    fake = lambda do |*args|
+      size = args[args.index("-pointsize") + 1].to_i if args.include?("-pointsize") && args.include?("info:")
+      next ["", "convert-im6.q16: width or height exceeds limit `...' @ error/caption.c/ReadCAPTIONImage.", Struct.new(:success?).new(false)] if size && size > 60
+
+      real.call(*args)
+    end
+    Open3.stub(:capture3, fake) { assert File.size(card.path).positive? }
+    assert_equal 1920, File.binread(card.path)[20, 4].unpack1("N")
   end
 end
