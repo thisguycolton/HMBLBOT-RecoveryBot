@@ -10,6 +10,7 @@
   <%= csrf_meta_tags %>
   <%= vite_client_tag %>
   <%= vite_react_refresh_tag if Rails.env.development? %>
+  <%= vite_javascript_tag 'pull_to_refresh' %>
 
   <%= render 'application/favicon' %>
   <%= render "application/share_meta" %>
