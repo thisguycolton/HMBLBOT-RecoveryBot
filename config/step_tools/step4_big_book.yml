@@ -8,6 +8,10 @@ intro: >
   down, then go over it with your sponsor. Most sponsors suggest filling in one column at a time: every name first,
   then every cause, and so on, so you aren't judging yourself before the list is done.
 sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: "The Big Book, pages 63 to 71. Step Four in the 12&12."
   - id: resentments
     kind: table
     title: "Resentments"

@@ -20,6 +20,7 @@ export default function BottomBar({ nav, isAuthenticated, onMenu, onActions, onT
     observer.observe(el);
     return () => { observer.disconnect(); root.removeProperty("--shell-bottom"); };
   }, []);
+  useKeepOnBottom(ref);
   return (
     <div ref={ref} className="shell-bottom pointer-events-none fixed inset-x-0 bottom-0 z-[60] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] !font-sans lg:hidden print:!hidden">
       {onNow && (
@@ -52,4 +53,62 @@ export default function BottomBar({ nav, isAuthenticated, onMenu, onActions, onT
       </nav>
     </div>
   );
+}
+
+const TYPED = /^(INPUT|TEXTAREA|SELECT)$/;
+const NOT_TYPED = /^(checkbox|radio|button|submit|reset|range|color|file|image)$/;
+const typing = () => {
+  const el = document.activeElement;
+  return !!el && (el.isContentEditable || (TYPED.test(el.tagName) && !NOT_TYPED.test(el.type)));
+};
+
+// Keeps the bar on the bottom of what's showing. On iPhones, a page with a lot of typing (a step
+// worksheet) can leave a `bottom: 0` bar floating mid-screen: while the keyboard is up, and for a
+// while after it closes, iOS lays fixed bars out against a viewport that has moved. So: while
+// they're typing on a touch screen the bar steps aside (it would cover what they're writing), and
+// whenever the visible part of the page (visualViewport) ends above the layout's bottom, the bar
+// is moved up to meet it.
+function useKeepOnBottom(ref) {
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const el = ref.current;
+    if (!vv || !el) return undefined;
+    const touch = window.matchMedia?.("(pointer: coarse)").matches;
+    let frame = 0;
+    let wasAway = false;
+    const place = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const away = touch && typing();
+        // Not while zoomed in: then the visible part is meant to be smaller than the page
+        const gap = vv.scale > 1.01 ? 0 : document.documentElement.clientHeight - (vv.offsetTop + vv.height);
+        // Slides away and back; following the viewport is immediate
+        el.style.transition = away !== wasAway ? "transform 200ms ease, opacity 200ms ease" : "none";
+        wasAway = away;
+        el.style.transform = away ? "translateY(calc(100% + 2rem))" : gap > 1 ? `translateY(${-gap}px)` : "";
+        el.style.opacity = away ? "0" : "";
+        el.inert = away;
+      });
+    };
+    // After the keyboard closes, iOS can take a moment to settle; check again once it has
+    const later = () => { place(); setTimeout(place, 350); };
+    vv.addEventListener("resize", place);
+    vv.addEventListener("scroll", place);
+    window.addEventListener("scroll", place, { passive: true });
+    document.addEventListener("focusin", place);
+    document.addEventListener("focusout", later);
+    place();
+    return () => {
+      cancelAnimationFrame(frame);
+      vv.removeEventListener("resize", place);
+      vv.removeEventListener("scroll", place);
+      window.removeEventListener("scroll", place);
+      document.removeEventListener("focusin", place);
+      document.removeEventListener("focusout", later);
+      el.style.transform = "";
+      el.style.transition = "";
+      el.style.opacity = "";
+      el.inert = false;
+    };
+  }, [ref]);
 }

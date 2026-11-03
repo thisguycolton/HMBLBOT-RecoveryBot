@@ -3,6 +3,10 @@ step: 4
 name: "Questions inventory"
 summary: "Written answers to a list of questions, a starting set meant to be changed. Tap Customize to make the questions your own."
 sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: "The Big Book, pages 63 to 71. Step Four in the 12&12."
   - id: questions
     kind: questions
     title: "Questions"

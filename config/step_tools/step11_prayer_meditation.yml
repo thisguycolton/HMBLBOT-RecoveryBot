@@ -8,6 +8,10 @@ intro: >
   in the morning and ask for direction, pause when agitated or doubtful during the day, and review it at night (your
   10th step). This keeps a week of mornings.
 sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: "The Big Book, pages 85 to 88. Step Eleven in the 12&12."
   - id: practice
     kind: questions
     title: "My practice"

@@ -2,7 +2,7 @@
 # a member's own work on them (StepWork). Everything here is the member's own.
 class Api::StepWorksController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_work, only: %i[show update destroy link unlink]
+  before_action :set_work, only: %i[show update destroy link unlink print_link]
 
   # GET /api/step_works -> the steps, the worksheets for each, their work, and what needs
   # their attention (StepAttention)
@@ -92,6 +92,13 @@ class Api::StepWorksController < ApplicationController
     render json: { work: @work.as_api_json(full: true) }
   rescue ArgumentError => e
     render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # POST /api/step_works/:id/print_link -> a page that prints this worksheet, for 30 minutes
+  # (StepWorkPrintsController). The home screen app on iPhones and iPads can't print, so it
+  # opens this in a Safari view instead, where printing works.
+  def print_link
+    render json: { path: "/worksheet/print/#{@work.print_token}" }
   end
 
   # DELETE /api/step_works/:id/link -> the link stops working

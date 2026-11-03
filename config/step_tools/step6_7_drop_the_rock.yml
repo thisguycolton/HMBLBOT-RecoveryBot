@@ -12,6 +12,10 @@ intro: >
 
   **Am I willing to put down something that has been protecting me, even if I haven't figured out how to live without it yet?**
 sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: "The Big Book, page 76. Step Six and Step Seven in the 12&12."
   # Part I: Identify
   - id: rock
     part: "Part I · Identify: recognizing the rocks"

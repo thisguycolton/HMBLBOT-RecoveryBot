@@ -4,6 +4,7 @@ import { api } from "../../groups/lib";
 import { Card, quietButton } from "../../groups/ui";
 import { inputClass } from "../../ui/styles";
 import { fill, thingsFor } from "./stepText";
+import { opensInPlace, readingPieces } from "./readingLinks";
 
 // How each kind of step tool section looks and takes answers (StepTool describes the kinds and
 // what their answers look like). `value` is the section's answers, `set(next)` saves them.
@@ -324,13 +325,23 @@ function Days({ section, value, set }) {
   );
 }
 
-// A paragraph for each line, with **bold**: enough for intros and readings
+// Text with readings in it (readingLinks.js) as links into the library
+function WithReadings({ text }) {
+  const inPlace = opensInPlace();
+  return readingPieces(text).map((piece, n) => (typeof piece === "string" ? piece : (
+    <a key={n} href={piece.href} target={inPlace ? undefined : "_blank"} rel={inPlace ? undefined : "noopener"}
+      title="Read it in the library" className="font-medium !text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent">{piece.text}</a>
+  )));
+}
+
+// A paragraph for each line, with **bold**: enough for intros and readings. Readings they
+// name become links to that chapter or page in the library.
 export function Prose({ text, className = "" }) {
   if (!text) return null;
   return (
     <div className={`space-y-2 ${className}`}>
       {text.trim().split(/\s*\n\s*/).map((para, n) => (
-        <p key={n}>{para.split(/(\*\*[^*]+\*\*)/).map((bit, j) => (bit.startsWith("**") ? <strong key={j}>{bit.slice(2, -2)}</strong> : bit))}</p>
+        <p key={n}>{para.split(/(\*\*[^*]+\*\*)/).map((bit, j) => (bit.startsWith("**") ? <strong key={j}><WithReadings text={bit.slice(2, -2)} /></strong> : <WithReadings key={j} text={bit} />))}</p>
       ))}
     </div>
   );

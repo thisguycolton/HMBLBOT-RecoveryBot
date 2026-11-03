@@ -26,6 +26,9 @@ Rails.application.routes.draw do
   get "/terms", to: "terms#show", as: :terms
   get "/contact", to: "contacts#new", as: :contact
   post "/contact", to: "contacts#create"
+  # A reading in a step worksheet ("Chapter 4, We Agnostics, in the Big Book", "page 63"):
+  # finds that book, chapter or printed page in the library and goes there (LibraryLinksController)
+  get "/library/go", to: "library_links#show", as: :library_go
   get "/library(/*path)", to: "pages#library"
 
   # Schedule polls: a React app (app/javascript/entrypoints/schedule_polls.jsx)
@@ -106,6 +109,7 @@ Rails.application.routes.draw do
     member do
       post :link
       delete :link, action: :unlink
+      post :print_link
     end
   end
   # A worksheet's password-protected link: reading it (anyone with the link and password)
@@ -437,6 +441,7 @@ end
   get "/start/:tool", to: "start_tools#show", as: :start_tool, constraints: { tool: /gratitude|10th-step/ }
   get "/sponsor/:token", to: "sponsor_invites#show", as: :sponsor_invite
   # A worksheet someone shared with a password (StepWork#share!): a small page that asks for it
+  get "/worksheet/print/:token", to: "step_work_prints#show", as: :step_work_print
   get "/worksheet/:token", to: "shared_worksheets#show", as: :shared_worksheet
   get "/recovery/*path", to: "recovery#app", format: false
   get 'host_helper/scratchpaper'

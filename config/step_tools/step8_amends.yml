@@ -7,6 +7,10 @@ intro: >
   "Made a list of all persons we had harmed, and became willing to make amends to them all." Write every name, even
   the ones you aren't willing about yet. Willingness can come later; the list comes first.
 sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: "The Big Book, pages 76 to 77. Step Eight in the 12&12."
   - id: amends
     kind: table
     title: "People I've harmed"

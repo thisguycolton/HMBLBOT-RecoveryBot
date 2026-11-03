@@ -7,6 +7,10 @@ intro: >
   Having had a spiritual awakening as the result of these Steps, we try to carry this message to alcoholics, and to
   practice these principles in all our affairs.
 sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: "Chapter 7, Working with Others, in the Big Book. Step Twelve in the 12&12."
   - id: awakening
     kind: questions
     title: "My awakening"

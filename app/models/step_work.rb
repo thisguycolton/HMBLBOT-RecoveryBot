@@ -60,6 +60,18 @@ class StepWork < ApplicationRecord
     save!
   end
 
+  # A link that prints this worksheet for the next 30 minutes, without signing in
+  # (StepWorkPrintsController): the iPhone home screen app opens it in a Safari view to print.
+  PRINT_LINK_FOR = 30.minutes
+  def self.print_verifier = Rails.application.message_verifier("step_work_print")
+  def print_token = self.class.print_verifier.generate([id, user_id], purpose: :print, expires_in: PRINT_LINK_FOR)
+  def self.from_print_token(token)
+    id, user_id = print_verifier.verified(token.to_s, purpose: :print)
+    id && find_by(id: id, user_id: user_id)
+  rescue ActiveSupport::MessageVerifier::InvalidSignature, ArgumentError
+    nil
+  end
+
   def stop_sharing! = update!(share_token: nil, share_password_digest: nil, shared_at: nil, share_viewed_at: nil)
   def label = tool_key == "drop-the-rock" ? "Steps 6 and 7" : "Step #{step}"
 

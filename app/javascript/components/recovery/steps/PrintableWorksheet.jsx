@@ -210,7 +210,7 @@ export default function PrintableWorksheet({ work, label, blank = false, by, cla
           <span>{label}</span>
           <span>{blank ? "Name ________________  Date __________" : by ? `${by} · ${new Date(work.updated_at || Date.now()).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}` : null}</span>
         </div>
-        <h1 className="text-[20pt] font-bold leading-tight">{work.name}</h1>
+        <h1 className="!text-[20pt] font-bold !leading-tight [overflow-wrap:anywhere]">{work.name}</h1>
         {definition.intro && <div className="space-y-1 text-[10.5pt] text-slate-700">{fill(definition.intro, settings).trim().split(/\s*\n\s*/).map((p, n) => <p key={n}>{p.replaceAll("**", "")}</p>)}</div>}
         {definition.credit && <p className="text-[8.5pt] text-slate-500">{definition.credit}</p>}
         {settings?.from && (
