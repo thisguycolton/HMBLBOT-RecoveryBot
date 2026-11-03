@@ -28,7 +28,7 @@ import { Indent } from "../tiptap/Indent";
 import { HBHighlight } from '../tiptap/HBHighlight';
 import HighlightCard, { HIGHLIGHT_PALETTE as PALETTE, highlightCss } from "./book/HighlightCard";
 import { highlightUrl, allHighlightsUrl, shareLink, useToast } from "./book/highlightSharing";
-import { MessageSquareText, TriangleAlert } from "lucide-react";
+import { MessageSquareText, TriangleAlert, X } from "lucide-react";
 import TextReportDialog from "./book/TextReportDialog";
 
 function offsetToPos(doc, target) {
@@ -566,7 +566,10 @@ export default function ChapterViewer({ bookSlug, slug }) {
   // The last text selection inside the chapter, kept so a tap on the
   // popover (which can collapse the selection on phones) still knows what to highlight.
   const lastSelectionRef = useRef(null);
-  const [selectionPop, setSelectionPop] = useState(null); // { x, y } in page coordinates
+  const [selectionPop, setSelectionPop] = useState(null); // { x, y } in page coordinates, or { docked: true }
+  // Set while a finger is down on the bar: phones drop the text selection the
+  // moment you touch anything else, and the bar has to stay put for the tap to land.
+  const popPressRef = useRef(false);
 
   useEffect(() => {
     if (!editor || sharedView) return;
@@ -578,7 +581,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
         try { view = editor.view; } catch { return; }
         const sel = window.getSelection();
         if (!view?.dom || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
-          setSelectionPop(null);
+          if (!popPressRef.current) setSelectionPop(null);
           return;
         }
         const range = sel.getRangeAt(0);
@@ -593,11 +596,16 @@ export default function ChapterViewer({ bookSlug, slug }) {
         } catch {
           return;
         }
+        // On touch screens the phone's own Copy / Look Up menu and the selection
+        // handles crowd the text, so the bar docks at the bottom of the screen instead.
+        if (window.matchMedia?.("(pointer: coarse)").matches) {
+          setSelectionPop({ docked: true });
+          return;
+        }
         const rect = range.getBoundingClientRect();
         const half = 150;
         const x = Math.min(Math.max(rect.left + rect.width / 2, half), window.innerWidth - half);
-        const below = window.matchMedia?.("(pointer: coarse)").matches;
-        setSelectionPop({ x: x + window.scrollX, y: (below ? rect.bottom : rect.top) + window.scrollY, below });
+        setSelectionPop({ x: x + window.scrollX, y: rect.top + window.scrollY });
       });
     };
     document.addEventListener("selectionchange", onSelectionChange);
@@ -636,6 +644,11 @@ export default function ChapterViewer({ bookSlug, slug }) {
     const selector = selectionSelector();
     if (!selector) return;
     setReporting(selector);
+    clearSelection();
+  }
+
+  function clearSelection() {
+    popPressRef.current = false;
     lastSelectionRef.current = null;
     window.getSelection()?.removeAllRanges();
     setSelectionPop(null);
@@ -667,9 +680,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
       const created = { ...payload.highlight, mine: true, ...data, id: String(data.id) };
       setHighlights((prev) => [...prev, created]);
       setColor(name);
-      lastSelectionRef.current = null;
-      window.getSelection()?.removeAllRanges();
-      setSelectionPop(null);
+      clearSelection();
       if (withNote) openCard(created.id, { edit: true });
     } catch (error) {
       if (error?.response?.status === 401) toast("Sign in to save highlights", { tone: "error" });
@@ -918,8 +929,8 @@ export default function ChapterViewer({ bookSlug, slug }) {
 
       {listReady && <ReaderFooter bookSlug={bookSlug} bookTitle={bookTitle} next={nextChapter} />}
 
-      {/* Reader bubble menu for highlights */}
-      <ReaderBubbleMenu
+      {/* Reader bubble menu for highlights (out of the way while the docked bar shows) */}
+      {!selectionPop?.docked && <ReaderBubbleMenu
         colors={PALETTE}
         value={cssFromStored(color)}
         onChangeColor={(css) => setColor(css)}
@@ -928,15 +939,18 @@ export default function ChapterViewer({ bookSlug, slug }) {
         onOpenChapters={() => setOpenChaptersModal(true)}
         onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
         isDark={document.documentElement.classList.contains('dark')}
-      />
+      />}
 
-      {/* Over selected text: tap a color to highlight, or start a note */}
+      {/* Over selected text (docked at the bottom on phones): tap a color to highlight, or start a note */}
       {selectionPop && (
         <div
-          className={`wb wb-selection-pop ${selectionPop.below ? "wb-selection-pop--below" : ""}`}
-          style={{ left: selectionPop.x, top: selectionPop.y }}
-          onPointerDown={(e) => e.preventDefault()}
+          className={`wb wb-selection-pop ${selectionPop.docked ? "wb-selection-pop--docked" : ""}`}
+          style={selectionPop.docked ? undefined : { left: selectionPop.x, top: selectionPop.y }}
+          onPointerDown={(e) => { popPressRef.current = true; e.preventDefault(); }}
+          onPointerUp={() => { setTimeout(() => { popPressRef.current = false; }, 400); }}
+          onPointerCancel={() => { popPressRef.current = false; }}
           onMouseDown={(e) => e.preventDefault()}
+          onContextMenu={(e) => e.preventDefault()}
           role="toolbar"
           aria-label="Highlight selection"
         >
@@ -969,6 +983,11 @@ export default function ChapterViewer({ bookSlug, slug }) {
             </>
           ) : (
             <a className="wb-selection-pop__btn" href="/users/sign_in">Sign in to highlight</a>
+          )}
+          {selectionPop.docked && (
+            <button type="button" className="wb-selection-pop__btn wb-selection-pop__close" aria-label="Cancel" onClick={clearSelection}>
+              <X size={16} aria-hidden="true" />
+            </button>
           )}
         </div>
       )}
