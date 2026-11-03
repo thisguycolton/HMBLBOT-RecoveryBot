@@ -1502,9 +1502,35 @@ body:has(.wb) {
   text-decoration: none;
 }
 
-/* On touch screens the system's copy menu sits above the selection, so ours goes below. */
-.wb-selection-pop--below {
-  transform: translate(-50%, 10px);
+/* On touch screens the phone's copy menu and selection handles sit around the
+   selected text, so ours docks at the bottom of the screen, above the nav bar. */
+.wb-selection-pop--docked {
+  -webkit-touch-callout: none;
+  bottom: calc(max(var(--shell-bottom, 0px), env(safe-area-inset-bottom, 0px)) + 0.75rem);
+  gap: 0.5rem;
+  left: 50%;
+  max-width: calc(100vw - 1.5rem);
+  padding: 0.45rem 0.6rem;
+  position: fixed;
+  top: auto;
+  transform: translateX(-50%);
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 60;
+}
+
+.wb-selection-pop--docked .wb-selection-pop__swatch {
+  height: 2rem;
+  width: 2rem;
+}
+
+.wb-selection-pop--docked .wb-selection-pop__btn {
+  min-height: 2rem;
+  white-space: nowrap;
+}
+
+.wb-selection-pop .wb-selection-pop__close {
+  padding-inline: 0.4rem;
 }
 
 .wb-md *,
