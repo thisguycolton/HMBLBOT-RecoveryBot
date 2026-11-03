@@ -1,0 +1,4 @@
+<% content_for(:page_title) { "Print: #{@work.name} | RecoveryBot" } %>
+<%= vite_javascript_tag "printed_worksheet.jsx" %>
+<script type="application/json" id="printed-worksheet-data"><%= json_escape(@work.as_api_json(full: true).to_json).html_safe %></script>
+<div id="printed-worksheet-root" class="w-full self-start" data-blank="<%= params[:blank] == "1" %>"></div>

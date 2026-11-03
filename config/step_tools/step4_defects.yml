@@ -6,6 +6,10 @@ intro: >
   Instead of columns, look at one defect at a time and write where it shows up in your life: at home, at work, in
   your relationships, in your thinking. Then list your assets too. An inventory counts both.
 sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: "The Big Book, pages 63 to 71. Step Four in the 12&12."
   - id: defects
     kind: each
     title: "The seven"

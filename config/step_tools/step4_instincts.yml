@@ -7,6 +7,10 @@ intro: >
   somebody), the security instinct (money, a place, safety) and the sex instinct. For each resentment, mark which
   instinct felt threatened.
 sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: "The Big Book, pages 63 to 71. Step Four in the 12&12."
   - id: resentments
     kind: table
     title: "Resentments"

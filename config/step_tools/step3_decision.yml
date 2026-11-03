@@ -7,6 +7,10 @@ intro: >
   Step Three is a decision, not a feeling: to turn our will and our lives over to the care of God as we understand Him.
   The 12&12 says willingness is the key that opens the door.
 sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    body: "Chapter 5, How It Works, in the Big Book, pages 58 to 63. Step Three in the 12&12."
   - id: meaning
     kind: questions
     title: "What it means to me"

@@ -13,6 +13,8 @@ import PrintableWorksheet from "./PrintableWorksheet";
 import { partsOf, workText } from "./stepText";
 
 const ORDINAL = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
+// Added to the home screen on an iPhone or iPad (navigator.standalone is only set there)
+const IOS_APP = typeof window !== "undefined" && window.navigator.standalone === true;
 export const stepLabel = (w) => (w.tool_key === "drop-the-rock" ? "Steps 6 and 7" : `Step ${w.step}`);
 
 // One worksheet a member is working (/recovery/steps/:id, Api::StepWorksController): the
@@ -32,6 +34,18 @@ export default function StepWorkPage() {
   const timer = useRef(null);
 
   useEffect(() => { api(`/step_works/${id}`).then((d) => setWork(d.work)).catch((e) => setError(e.message)); }, [id]);
+
+  // The home screen app on iPhones and iPads can't print (window.print does nothing there), so
+  // Print opens a 30 minute print link (StepWorkPrintsController) in a Safari view instead. The
+  // link is fetched ahead of time, because iOS only opens a new view straight from a tap.
+  const [printPath, setPrintPath] = useState(null);
+  useEffect(() => {
+    if (!IOS_APP) return undefined;
+    const get = () => api(`/step_works/${id}/print_link`, { method: "POST" }).then((d) => setPrintPath(d.path)).catch(() => {});
+    get();
+    const t = setInterval(get, 20 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [id]);
 
   const flush = useCallback(async () => {
     clearTimeout(timer.current);
@@ -89,6 +103,9 @@ export default function StepWorkPage() {
   // Print: their copy of the worksheet laid out for paper (PrintableWorksheet), with what
   // they wrote or as a blank form
   const print = (blank) => { setPrintBlank(blank); setTimeout(() => window.print(), 50); };
+  const printButton = (blank, label, title) => (IOS_APP && printPath
+    ? <a href={`${printPath}${blank ? "?blank=1" : ""}`} target="_blank" rel="noopener" className={quietButton} title={title} onPointerDown={flush} onClick={flush}><Printer className="size-4" /> {label}</a>
+    : <button type="button" className={quietButton} title={title} onClick={() => print(blank)}><Printer className="size-4" /> {label}</button>);
 
   return (
     <>
@@ -116,8 +133,8 @@ export default function StepWorkPage() {
         <div className="flex flex-wrap gap-2 pt-2 print:hidden">
           <button type="button" className={primaryButton} onClick={() => setSending(true)}><Send className="size-4" /> Send to my sponsor</button>
           <Link to={`/steps/${id}/edit`} className={quietButton}><PencilRuler className="size-4" /> Edit worksheet</Link>
-          <button type="button" className={quietButton} onClick={() => print(false)}><Printer className="size-4" /> Print</button>
-          <button type="button" className={quietButton} onClick={() => print(true)} title="An empty copy of this worksheet, with your changes, to fill in by hand"><Printer className="size-4" /> Print blank</button>
+          {printButton(false, "Print")}
+          {printButton(true, "Print blank", "An empty copy of this worksheet, with your changes, to fill in by hand")}
           <button type="button" className={quietButton} onClick={() => setSharing(true)} title="Suggest it to a sponsee or share it with a group, without your answers"><Copy className="size-4" /> Share a blank copy</button>
           <button type="button" className={quietButton} onClick={() => setLinking(true)}><KeyRound className="size-4" /> {work.link ? "Link is on" : "Share a link"}</button>
         </div>

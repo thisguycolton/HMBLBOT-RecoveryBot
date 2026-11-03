@@ -64,12 +64,12 @@ class StepWorksTest < ActionDispatch::IntegrationTest
   test "customizing keeps only what a worksheet can hold" do
     work = StepWork.start!(@sam, StepTool.find("step4-questions"))
     definition = work.definition.deep_dup
-    definition["sections"].first["items"] << { "id" => "mine", "label" => "What am I proud of?" }
+    definition["sections"].find { |s| s["items"] }["items"] << { "id" => "mine", "label" => "What am I proud of?" }
     definition["sections"] << { "id" => "bad", "kind" => "script", "title" => "Nope" }
     patch "/api/step_works/#{work.id}", params: { definition: definition }, as: :json
     assert_response :success
     sections = work.reload.definition["sections"]
-    assert_equal "What am I proud of?", sections.first["items"].last["label"]
+    assert_equal "What am I proud of?", sections.find { |s| s["items"] }["items"].last["label"]
     assert_not sections.any? { |s| s["kind"] == "script" }
 
     patch "/api/step_works/#{work.id}", params: { definition: { sections: [{ id: "x", kind: "nope" }] } }, as: :json
