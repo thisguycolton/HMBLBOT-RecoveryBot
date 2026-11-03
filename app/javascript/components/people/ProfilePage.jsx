@@ -34,8 +34,8 @@ export default function ProfilePage() {
       <ProfileHero bleed person={person} viewer={viewer} coverUrl={page.cover_url} onFollowChange={onFollowChange} onBlockChange={load}
         actions={viewer.is_me && (
           <>
-            <Link to="/me/edit" className={heroQuietButton}><Pencil className="size-4" /> Edit your page</Link>
-            <a href="/users/edit" className={heroQuietButton}><Settings className="size-4" /> Settings</a>
+            <Link to="/me/edit" className={`${heroQuietButton} max-sm:flex-1 max-sm:py-2.5`}><Pencil className="size-4" /> Edit your page</Link>
+            <a href="/users/edit" className={`${heroQuietButton} max-sm:size-10 max-sm:!p-0`} aria-label="Settings" title="Settings"><Settings className="size-4" /> <span className="max-sm:hidden">Settings</span></a>
           </>
         )} />
       <PageBlocks info layout={page.layout} blocks={page.blocks} context={context} hidden={(b) => hiddenFor(b, context)} />
