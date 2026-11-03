@@ -44,7 +44,7 @@ export function ChromeSheets({ chrome, nav, isAuthenticated, theme, path, pushed
           <button type="button" onClick={theme.toggle} className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl !bg-white px-3 py-2.5 font-medium text-slate-800 ring-1 ring-neutral-300/80 dark:!bg-neutral-900 dark:text-white dark:ring-neutral-700">
             {theme.isDark ? <Moon className="size-5" /> : <Sun className="size-5" />} Theme
           </button>
-          {isAuthenticated && <div className="grid h-11 place-items-center rounded-2xl bg-white px-1 ring-1 ring-neutral-300/80 dark:bg-neutral-900 dark:ring-neutral-700"><NotificationBell align="left" /></div>}
+          {isAuthenticated && <div className="grid h-11 place-items-center rounded-2xl bg-white px-1 ring-1 ring-neutral-300/80 dark:bg-neutral-900 dark:ring-neutral-700"><NotificationBell sheet /></div>}
         </div>
       </Sheet>
 
