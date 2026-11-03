@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { BellRing, Check, FileImage, HelpCircle, X } from "lucide-react";
 import { inputClass } from "../ui/styles";
-import { api, STATUS_LABEL } from "./lib";
+import { api } from "./lib";
 import Lightbox from "./Lightbox";
 
 const CHOICES = [
@@ -9,6 +9,26 @@ const CHOICES = [
   { status: "maybe", label: "Maybe", icon: HelpCircle },
   { status: "not_going", label: "Can't go", icon: X },
 ];
+
+// The card's headline, worded for the RSVP and whether the event is still ahead.
+const UPCOMING_HEADLINE = {
+  going: "You're going",
+  maybe: "You might go",
+  not_going: "You can't make it",
+  following: "You're following this event",
+};
+const PAST_HEADLINE = {
+  going: "This event is over. You were going.",
+  maybe: "This event is over. You were a maybe.",
+  not_going: "This event is over. You couldn't make it.",
+  following: "This event is over. You were following it.",
+};
+
+export function rsvpHeadline({ draft, over, status }) {
+  if (draft) return "RSVPs open once it's published";
+  if (over) return PAST_HEADLINE[status] || "This event is over";
+  return UPCOMING_HEADLINE[status] || "Are you coming?";
+}
 
 // RSVP for the event, with an account or just a name and email (for updates). Also the
 // flyer, when there is one.
@@ -66,7 +86,7 @@ export default function RsvpCard({ event, setEvent, preview = false }) {
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-base font-semibold text-slate-900 dark:text-white">
-            {draft ? "RSVPs open once it's published" : over ? "This event is over" : mine ? (mine.status === "following" ? "You're following this event" : `You're ${STATUS_LABEL[mine.status].toLowerCase()}`) : "Are you coming?"}
+            {rsvpHeadline({ draft, over, status: mine?.status })}
           </p>
           <p className="text-xs text-slate-500 dark:text-neutral-400">
             {event.counts.going} {over ? "went" : "going"}{!over && event.counts.maybe ? ` · ${event.counts.maybe} maybe` : ""}
