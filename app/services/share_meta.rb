@@ -6,7 +6,8 @@ class ShareMeta
 
   attr_reader :title, :description, :path, :kind, :id
 
-  def initialize(title:, description:, path:, kind: "site", id: "recoverybot", card: nil)
+  def initialize(title:, description:, path:, kind: "site", id: "recoverybot", card: nil, query: {})
+    @query = query
     @title = title.to_s.squish
     @description = description.to_s.squish.truncate(200)
     @path = path
@@ -42,11 +43,16 @@ class ShareMeta
 
   # A highlight's share link (?hl=, which only its owner hands out): the quote and where it's
   # from, and its picture (QuoteCard, with its note). It names nobody: the link may be posted
-  # anywhere, and whether to say who they are is up to them.
-  def self.highlight(highlight)
+  # anywhere, and whether to say who they are is up to them. A link handed out from "Share as a
+  # picture" carries the look picked there (&look=) and whether the note was left off (&note=0),
+  # so the preview matches the picture sent with it.
+  def self.highlight(highlight, look: nil, note: true)
     book = highlight.chapter.book
+    look = QuoteCard::LOOKS.include?(look.to_s) ? look.to_s : nil
+    picture = { look: look, note: (note ? nil : "0") }.compact
     new(title: "A highlight from #{book.title}", description: "“#{highlight.quote.squish.truncate(180, separator: ' ')}” · #{highlight.chapter.title}",
-        path: highlight.page_path, kind: "highlight", id: highlight.signed_id(purpose: :share), card: QuoteCard.highlight(highlight))
+        path: highlight.page_path(**picture), kind: "highlight", id: highlight.signed_id(purpose: :share),
+        card: QuoteCard.highlight(highlight, look: look, note: note), query: picture)
   end
 
   def self.document(doc)
@@ -112,5 +118,5 @@ class ShareMeta
 
   # The picture's address; the card's key in it gives every new look a new URL, which the
   # apps that keep previews (Facebook, iMessage) then fetch again
-  def image_path = "/share_cards/#{kind}/#{ERB::Util.url_encode(id.to_s)}.png?v=#{card.key.first(12)}"
+  def image_path = "/share_cards/#{kind}/#{ERB::Util.url_encode(id.to_s)}.png?#{@query.merge(v: card.key.first(12)).to_query}"
 end
