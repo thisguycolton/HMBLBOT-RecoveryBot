@@ -109,7 +109,7 @@ class PagesController < ApplicationController
 
     @shared_highlight_meta ||= ShareMeta.safely do
       highlight = UserHighlight.find_signed(params[:hl].to_s, purpose: :share)
-      ShareMeta.highlight(highlight) if highlight && highlight.chapter.slug == params[:chapter_slug] && highlight.chapter.book.slug == params[:book_slug]
+      ShareMeta.highlight(highlight, look: params[:look], note: params[:note] != "0") if highlight && highlight.chapter.slug == params[:chapter_slug] && highlight.chapter.book.slug == params[:book_slug]
     end
   end
 

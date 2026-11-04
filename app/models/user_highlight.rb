@@ -83,9 +83,9 @@ class UserHighlight < ApplicationRecord
     visibility == "public" || (visibility == "followers" && Follow.exists?(follower_id: viewer.id, followed_id: user_id))
   end
 
-  # Where it shows: in its chapter, opened on it
-  def page_path
-    "/books/#{chapter.book.slug}/chapters/#{chapter.slug}?hl=#{CGI.escape(signed_id(purpose: :share))}#hl-#{id}"
+  # Where it shows: in its chapter, opened on it (with the picture's look for its preview, if any)
+  def page_path(**picture)
+    "/books/#{chapter.book.slug}/chapters/#{chapter.slug}?#{{ hl: signed_id(purpose: :share) }.merge(picture).to_query}#hl-#{id}"
   end
 
   # Reads the @ mentions in its note, and tells the people newly mentioned who can see it.

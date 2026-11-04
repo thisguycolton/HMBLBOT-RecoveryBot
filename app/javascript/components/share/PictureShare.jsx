@@ -46,6 +46,17 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   }, [cardUrl, look, size, hasNote, withNote, withName]);
   useEffect(() => { setLoading(true); setFailed(false); }, [src]);
 
+  // The link sent with the picture carries its look (and a left-off note), so the preview
+  // Messages and the rest draw from it (ShareMeta.highlight) matches the picture
+  const shareLink = useMemo(() => {
+    if (!link) return link;
+    const [base, hash] = link.split("#");
+    const url = new URL(base, window.location.origin);
+    url.searchParams.set("look", look);
+    if (hasNote && !withNote) url.searchParams.set("note", "0"); else url.searchParams.delete("note");
+    return `${url}${hash ? `#${hash}` : ""}`;
+  }, [link, look, hasNote, withNote]);
+
   useEffect(() => {
     const esc = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
     window.addEventListener("keydown", esc, true);
@@ -78,7 +89,7 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
 
   const share = () => run("share", async () => {
     const file = await fetchFile();
-    await navigator.share({ files: [file], title, text: [text, link].filter(Boolean).join("\n") || undefined });
+    await navigator.share({ files: [file], title, text: [text, shareLink].filter(Boolean).join("\n") || undefined });
   });
 
   const copyPicture = () => run("copy", async () => {
@@ -89,16 +100,16 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
 
   const copyLink = () => run("link", async () => {
     try {
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(shareLink);
     } catch {
-      window.prompt("Copy this link:", link);
+      window.prompt("Copy this link:", shareLink);
     }
     flash("link");
   });
 
   const post = () => run("post", async () => {
     const file = await fetchFile();
-    const body = [caption.trim(), link && `[Read it in the book](${link})`].filter(Boolean).join("\n\n");
+    const body = [caption.trim(), shareLink && `[Read it in the book](${shareLink})`].filter(Boolean).join("\n\n");
     await saveNote(null, { body, visibility, images: [file] });
     showToast(visibility === "private" ? "Posted to your timeline, just for you." : "Posted to your timeline.");
     setPosting(false);
@@ -214,7 +225,7 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
               )}
               <p className="text-xs text-slate-500 dark:text-neutral-400">
                 {size === "story" ? "For Instagram or Facebook stories: save it, then add it from your photos." : link
-                  ? "Anyone you send the link to can open this highlight. Its link preview is a wide Paper picture."
+                  ? `Anyone you send the link to can open this highlight. Its link preview is a wide ${LOOKS.find((l) => l.value === look)?.label} picture, like this one.`
                   : "Notes are only for members, so there's no link: share the picture."}
               </p>
             </div>

@@ -84,6 +84,28 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "a link from Share as a picture previews in the look picked there" do
+    get "#{share_path}&look=marker&note=0", headers: { "User-Agent" => IMESSAGE }
+    assert_response :success
+    image = meta("og:image")
+    assert_match %r{look=marker}, image
+    assert_match %r{note=0}, image
+    assert_match %r{look=marker}, meta("og:url")
+
+    marker = QuoteCard.highlight(@highlight, look: "marker", note: false)
+    assert_includes image, "v=#{marker.key.first(12)}"
+    assert_not_includes image, QuoteCard.highlight(@highlight).key.first(12)
+
+    get URI(image).request_uri, headers: { "User-Agent" => IMESSAGE }
+    assert_response :success
+    assert_equal File.binread(marker.path), response.body
+
+    # A look that isn't one is the usual Paper picture
+    get "#{share_path}&look=nope", headers: { "User-Agent" => IMESSAGE }
+    assert_includes meta("og:image"), "v=#{QuoteCard.highlight(@highlight).key.first(12)}"
+    assert_no_match %r{look=}, meta("og:image")
+  end
+
   test "people opening the share link get the reader with the highlight's preview tags" do
     get share_path, headers: { "User-Agent" => BROWSER }
     assert_response :success

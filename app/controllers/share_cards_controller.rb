@@ -5,7 +5,12 @@ class ShareCardsController < ApplicationController
   skip_after_action :track_action
 
   def show
-    meta = (record = find_record) ? ShareMeta.for(record) : (ShareMeta.site if params[:kind] == "site")
+    record = find_record
+    meta = if record.is_a?(UserHighlight)
+      ShareMeta.highlight(record, look: params[:look], note: params[:note] != "0")
+    else
+      record ? ShareMeta.for(record) : (ShareMeta.site if params[:kind] == "site")
+    end
     return head(:not_found) unless meta
 
     expires_in 1.day, public: true
