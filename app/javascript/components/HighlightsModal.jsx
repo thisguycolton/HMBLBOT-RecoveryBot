@@ -29,7 +29,7 @@ export default function HighlightsModal({
   const title = sharedBy !== undefined && !mine ? `${sharedBy || "Shared"}${sharedBy ? "'s" : ""} highlights` : "Your highlights";
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="wb wb-hl-card relative w-full sm:max-w-2xl max-h-[85vh] overflow-auto shadow-xl bg-white dark:bg-neutral-900">
         <div className="wb-hl-card__head">

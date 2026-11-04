@@ -7,8 +7,9 @@ import { HIGHLIGHT_VISIBILITY, TIMELINE_AUDIENCES } from "../notes/lib";
 // A highlight stays with its reader until they share it to their timeline: Share to
 // timeline asks who sees it there (Followers or Members). Once it's shared, the same spot
 // changes who sees it or takes it back off. Only once profiles are open to them.
-// `iconOnly` fits a row of icon buttons (the Highlights page).
-export default function ShareToTimeline({ highlight, onChange, toast, iconOnly = false, up = false }) {
+// `iconOnly` fits a row of icon buttons (the Highlights page); `tile` is an icon over a
+// short label, for the row of actions along the bottom of a highlight (HighlightCard).
+export default function ShareToTimeline({ highlight, onChange, toast, iconOnly = false, tile = false, up = false, align = "right" }) {
   if (!highlight.profiles || !highlight.visibility) return null;
   const shared = highlight.visibility !== "private";
 
@@ -26,6 +27,15 @@ export default function ShareToTimeline({ highlight, onChange, toast, iconOnly =
     }
   }
 
+  if (tile) {
+    const label = shared ? (HIGHLIGHT_VISIBILITY.find((v) => v.value === highlight.visibility)?.label || "Shared") : "Timeline";
+    return (
+      <VisibilityPicker value={highlight.visibility} options={shared ? HIGHLIGHT_VISIBILITY : TIMELINE_AUDIENCES} onChange={change} align={align} up={up}
+        title={shared ? "Who sees this on your timeline" : "Share to your timeline"} className={`wb-btn wb-hl-card__action ${shared ? "wb-hl-shared" : ""}`}>
+        <Send size={18} aria-hidden="true" /> <span>{label}</span>
+      </VisibilityPicker>
+    );
+  }
   if (iconOnly) {
     return (
       <VisibilityPicker value={highlight.visibility} options={shared ? HIGHLIGHT_VISIBILITY : TIMELINE_AUDIENCES} onChange={change} align="right" up={up}
