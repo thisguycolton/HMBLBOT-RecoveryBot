@@ -54,9 +54,9 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label="Highlight">
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label="Highlight">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="wb wb-hl-card relative w-full sm:max-w-lg max-h-[85vh] overflow-auto shadow-xl bg-white dark:bg-neutral-900">
+      <div className={`wb wb-hl-card ${mine ? "wb-hl-card--actions" : ""} relative w-full sm:max-w-lg max-h-[85vh] overflow-auto shadow-xl bg-white dark:bg-neutral-900`}>
         <div className="wb-hl-card__head">
           <span className="wb-hl-card__title">{mine ? "Your highlight" : highlight.by ? `${highlight.by}'s highlight` : "Shared highlight"}</span>
           <button type="button" className="wb-btn wb-btn--icon" onClick={onClose} aria-label="Close">
@@ -73,7 +73,8 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
         <HighlightNote highlight={highlight} onChange={onChange} startEditing={startEditing} />
 
         {mine && (
-          <div className="wb-hl-card__foot">
+          // Pinned to the bottom of the sheet, so the actions stay in reach under a long note
+          <div className="wb-hl-card__foot wb-hl-card__foot--actions">
             <div className="wb-hl-card__swatches" role="group" aria-label="Highlight color">
               {Object.entries(HIGHLIGHT_PALETTE).map(([name, css]) => (
                 <button
@@ -87,23 +88,24 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
                 />
               ))}
             </div>
-            <span className="flex-1" />
-            <ShareToTimeline highlight={highlight} onChange={onChange} toast={toast} up />
-            <button type="button" className="wb-btn" onClick={() => setPicturing(true)}>
-              <ImageIcon size={15} aria-hidden="true" /> Picture
-            </button>
-            <button type="button" className="wb-btn" onClick={share}>
-              <Link2 size={15} aria-hidden="true" /> Copy link
-            </button>
-            <button
-              type="button"
-              className="wb-btn wb-hl-card__delete"
-              onClick={() => {
-                if (window.confirm(highlight.note ? "Delete this highlight and its note?" : "Delete this highlight?")) onDelete?.(highlight.id);
-              }}
-            >
-              <Trash2 size={15} aria-hidden="true" /> Delete
-            </button>
+            <div className="wb-hl-card__actions" role="group" aria-label="Highlight actions">
+              <ShareToTimeline highlight={highlight} onChange={onChange} toast={toast} tile up align="left" />
+              <button type="button" className="wb-btn wb-hl-card__action" onClick={() => setPicturing(true)}>
+                <ImageIcon size={18} aria-hidden="true" /> <span>Picture</span>
+              </button>
+              <button type="button" className="wb-btn wb-hl-card__action" onClick={share}>
+                <Link2 size={18} aria-hidden="true" /> <span>Copy link</span>
+              </button>
+              <button
+                type="button"
+                className="wb-btn wb-hl-card__action wb-hl-card__delete"
+                onClick={() => {
+                  if (window.confirm(highlight.note ? "Delete this highlight and its note?" : "Delete this highlight?")) onDelete?.(highlight.id);
+                }}
+              >
+                <Trash2 size={18} aria-hidden="true" /> <span>Delete</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
