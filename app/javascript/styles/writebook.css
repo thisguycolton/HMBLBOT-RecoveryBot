@@ -2384,6 +2384,10 @@ body:has(.wb) {
 .wb-tag-suggest__avatar { flex: none; }
 .wb-tag-suggest__hint { color: var(--wb-ink-soft, #64748b); flex: none; font-size: 0.85em; }
 
+/* The chat laid over what's visible while the phone's keyboard is up (groups/chat/useKeyboardFit.js) */
+.chat-page--keyboard { background: #fff; overscroll-behavior: contain; }
+.dark .chat-page--keyboard { background: var(--color-neutral-900, #171717); }
+
 /* The group chat (groups/chat/ChatPage.jsx): its message box, the @ suggestions above it, the
    typing dots and the message a notification opened on */
 .wb .chat-composer .wb-md-input__text.chat-input,
@@ -2393,9 +2397,12 @@ body:has(.wb) {
   box-shadow: none;
   font-size: 1rem;
   line-height: 1.45;
+  display: block; /* not inline: that left a gap under it and pushed the words above the buttons' middle */
   max-height: 40dvh;
   overflow-y: auto;
-  padding: 0.45rem 0.6rem;
+  /* One line is 2.5rem tall, like the paperclip and send buttons (the box grows 2px past its
+     words, MarkdownTextarea, so a little less under them) */
+  padding: 0.525rem 0.6rem 0.4rem;
   width: 100%;
 }
 .wb .chat-input:focus { outline: none; }
