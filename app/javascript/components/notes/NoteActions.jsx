@@ -127,7 +127,7 @@ function WhoReacted({ reactors }) {
   const first = reactors[0].name.split(" ")[0];
   const label = reactors.length === 1 ? first : `${first} and ${reactors.length - 1} other${reactors.length > 2 ? "s" : ""}`;
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative wb-note-actions__who-wrap">
       <button type="button" className="wb-note-actions__who" onClick={() => setOpen((o) => !o)} aria-expanded={open}>{label}</button>
       {open && (
         <ul className="wb-note-actions__menu left-0">
