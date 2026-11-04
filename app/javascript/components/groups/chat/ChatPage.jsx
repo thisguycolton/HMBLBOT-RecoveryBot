@@ -20,6 +20,7 @@ import ReportDialog from "./ReportDialog";
 import { MoveDialog, PinnedPanel, excerptOf } from "./PinsAndMove";
 import { ACCEPT, DocumentPicker, FILES_MAX, MessageDocuments, MessageFiles, PendingFiles, fileProblem } from "./Attachments";
 import LinkCard from "../../notes/LinkCard";
+import useKeyboardFit from "./useKeyboardFit";
 
 // Messages from the same person this close together run on under one name, like Slack
 const RUN_GAP = 5 * 60 * 1000;
@@ -37,6 +38,8 @@ export default function ChatPage() {
   const { slug, channelId } = useParams();
   const navigate = useNavigate();
   const wide = useMedia("(min-width: 1024px)");
+  const [pageEl, setPageEl] = useState(null);
+  useKeyboardFit(pageEl);
   const [chat, setChat] = useState(null);
   const [error, setError] = useState(null);
   const [version, setVersion] = useState(0);
@@ -116,7 +119,7 @@ export default function ChatPage() {
 
   return (
     <Layout isAuthenticated fill>
-      <div className="wb chat-page flex h-[calc(100dvh-var(--nav-h)-var(--shell-bottom,0px))] min-h-[22rem] !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none lg:h-[calc(100dvh-var(--nav-h))]">
+      <div ref={setPageEl} className="wb chat-page flex h-[calc(100dvh-var(--nav-h)-var(--shell-bottom,0px))] min-h-[22rem] !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none lg:h-[calc(100dvh-var(--nav-h))]">
         {showList && (
           <ChannelList chat={chat} slug={slug} currentId={currentId} wide={wide}
             onAdd={() => setForm({})} onSettings={() => setSettings(true)} onArranged={setChat} />

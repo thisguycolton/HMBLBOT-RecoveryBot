@@ -2384,6 +2384,10 @@ body:has(.wb) {
 .wb-tag-suggest__avatar { flex: none; }
 .wb-tag-suggest__hint { color: var(--wb-ink-soft, #64748b); flex: none; font-size: 0.85em; }
 
+/* The chat laid over what's visible while the phone's keyboard is up (groups/chat/useKeyboardFit.js) */
+.chat-page--keyboard { background: #fff; overscroll-behavior: contain; }
+.dark .chat-page--keyboard { background: var(--color-neutral-900, #171717); }
+
 /* The group chat (groups/chat/ChatPage.jsx): its message box, the @ suggestions above it, the
    typing dots and the message a notification opened on */
 .wb .chat-composer .wb-md-input__text.chat-input,
