@@ -1015,7 +1015,7 @@ function Composer({ channel, base, where, max, onSent, onTyping, replyTo, onCanc
             </AttachMenu>
           )}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="mb-0.5 min-w-0 flex-1">
           <MentionTextarea ref={ref} value={body} onChange={change} where={where} minRows={1} maxLength={max}
             placeholder={replyTo ? `Reply to ${replyTo.author.name.split(" ")[0]}` : `Message #${channel.name}`} aria-label={`Message #${channel.name}`} enterKeyHint={finePointer() ? "send" : "enter"}
             className="chat-input"
