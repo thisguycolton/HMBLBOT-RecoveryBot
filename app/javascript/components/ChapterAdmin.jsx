@@ -15,6 +15,7 @@ import {
   attachClosestEdge,
   extractClosestEdge,
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
+import Skeleton from "./ui/Skeleton";
 
 // helpers
 const dragCleanupByEl = new WeakMap();
@@ -351,7 +352,7 @@ const createOne = async () => {
     }
   };
 
-  if (loading) return <div className="p-4">Loading…</div>;
+  if (loading) return <Skeleton variant="list" className="p-4" />;
 
   return (
     <div className="mx-auto max-w-3xl p-4 space-y-4">

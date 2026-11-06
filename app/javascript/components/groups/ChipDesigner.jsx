@@ -38,7 +38,7 @@ export default function ChipDesigner({ group }) {
     api(`/groups/${group.slug}/chips`).then((d) => { setData(d); setDesign(d.design); setTemplates(d.templates || []); }).catch((e) => setError(e.message));
   }, [group.slug]);
 
-  if (!design) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!design) return error ? <ErrorNote error={error} /> : <Loading variant="form" />;
   const round = (patch) => { setDesign((d) => ({ ...d, round: { ...d.round, ...patch } })); setSaved(false); };
   const logoUrl = group.logo_url || data.logo_url;
 

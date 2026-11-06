@@ -55,7 +55,7 @@ function Overview() {
   };
   const end = (s) => window.confirm(endText(s)) && act(`/sponsorships/${s.id}`, { method: "DELETE" }, () => showToast("Ended."));
 
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="trays" />;
   const nobody = !data.sponsors.length && !data.sponsees.length && !data.asking_me.length;
 
   return (
@@ -271,7 +271,7 @@ function Sponsorship({ id }) {
   useEffect(() => { load(); }, [load]);
 
   const back = <Link to="/sponsorship" className="inline-flex items-center gap-1 text-sm"><ChevronLeft className="size-4" /> Sponsorship</Link>;
-  if (!data) return <div className="mx-auto max-w-3xl space-y-4 !font-sans">{back}{error ? <ErrorNote error={error} /> : <Loading />}</div>;
+  if (!data) return <div className="mx-auto max-w-3xl space-y-4 !font-sans">{back}{error ? <ErrorNote error={error} /> : <Loading variant="trays" />}</div>;
   const { sponsorship: s, shares, suggestions = [] } = data;
   const sponsor = s.role === "sponsor";
   const setStep = async (step) => {

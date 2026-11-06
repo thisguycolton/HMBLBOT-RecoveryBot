@@ -110,7 +110,7 @@ export default function ChatPage() {
   if (error && !chat) {
     return <Layout isAuthenticated fill><div className="p-6"><ErrorNote error={error} /><Link to={`/${slug}`} className="mt-4 inline-block text-sm text-accent">Back to the group</Link></div></Layout>;
   }
-  if (!chat) return <Layout isAuthenticated fill><div className="p-6"><Loading /></div></Layout>;
+  if (!chat) return <Layout isAuthenticated fill><Loading variant="chat" /></Layout>;
 
   const current = chat.channels.find((c) => c.id === currentId);
   const showList = wide || !currentId;
@@ -128,9 +128,13 @@ export default function ChatPage() {
           <Conversation key={current.id} chat={chat} channel={current} slug={slug} wide={wide} listen={listen}
             sayTyping={sayTyping} typingNames={typingIn} onRead={markedRead} onEdit={() => setForm({ channel: current })} reload={load} />
         ) : (
-          <section className="grid flex-1 place-items-center p-6 text-sm text-slate-500">
-            {currentId ? <span>That channel isn't here, or you're not in it. <Link to={`/${slug}/messages`} className="text-accent">See your channels</Link></span> : <Loader2 className="size-5 animate-spin" />}
-          </section>
+          currentId ? (
+            <section className="grid flex-1 place-items-center p-6 text-sm text-slate-500">
+              <span>That channel isn't here, or you're not in it. <Link to={`/${slug}/messages`} className="text-accent">See your channels</Link></span>
+            </section>
+          ) : (
+            <section className="min-w-0 flex-1 overflow-hidden"><Loading variant="messages" /></section>
+          )
         ))}
       </div>
       {form && (
@@ -572,7 +576,7 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
       <div ref={scroller} onScroll={onScroll} onLoadCapture={() => { if (atBottom.current && scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }}
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3 sm:px-4">
         <ErrorNote error={error} />
-        {!messages ? <Loading /> : (
+        {!messages ? <Loading variant="messages" /> : (
           <>
             {more ? (
               <div className="py-2 text-center"><button type="button" onClick={older} className="rounded-full !bg-neutral-100 px-3 py-1 text-xs font-medium text-slate-600 dark:!bg-neutral-800 dark:text-neutral-300">{olderLoading ? "Loading…" : "Load earlier messages"}</button></div>

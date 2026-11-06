@@ -114,7 +114,7 @@ export default function DocumentsView({ group }) {
     upload([...e.dataTransfer.files]);
   };
 
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="list" />;
 
   const docs = data.documents;
   const searching = query.trim().length > 0;

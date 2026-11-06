@@ -70,7 +70,7 @@ export default function DocumentPage({ group, id = null, embedded = false }) {
   }, [slug, id, reloads]);
 
   if (error) return <Message title="That document isn't here" text={error}><Link to={documentsPath(slug)} className="mt-4 inline-block text-sm text-accent hover:underline">Back to documents</Link></Message>;
-  if (!loaded) return <Loading />;
+  if (!loaded) return <Loading variant="document" />;
   const canEdit = loaded.doc ? loaded.doc.can_edit : !!(group.can_keep_records || group.is_site_admin);
   if (!loaded.doc && !canEdit) return <Message title="You can't write documents here" text="Only this group's record keepers can write or upload documents." />;
   const props = { group, initialDoc: loaded.doc, initialHtml: loaded.html, canEdit, embedded };
@@ -82,7 +82,7 @@ export default function DocumentPage({ group, id = null, embedded = false }) {
 // reader opens one nobody has edited live yet, it's the page as it always was.
 function LiveSheet({ onReload, ...props }) {
   const { live, state } = useLiveDocument({ slug: props.group.slug, doc: props.initialDoc, html: props.initialHtml, canEdit: props.canEdit, onReset: onReload });
-  if (state === "loading") return <Loading />;
+  if (state === "loading") return <Loading variant="document" />;
   return <DocumentSheet {...props} live={state === "ready" ? live : null} onReload={onReload} />;
 }
 

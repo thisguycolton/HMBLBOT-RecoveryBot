@@ -8,6 +8,7 @@ import { typeLabel } from "../groups/lib";
 import { buttonClass } from "../topicificator_admin/App";
 import { formatCount } from "./App";
 import { Badge, shortDate } from "./UsersPage";
+import Skeleton from "../ui/Skeleton";
 
 const ZONES = ["America/Phoenix", "America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York", "Pacific/Honolulu", "America/Anchorage"];
 
@@ -63,7 +64,7 @@ export default function MeetingListsPage({ notify }) {
     }
   }
 
-  if (!lists) return <p className="py-16 text-center text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>;
+  if (!lists) return <Skeleton variant="list" className="max-w-3xl" />;
 
   return (
     <Shell className="max-w-5xl">

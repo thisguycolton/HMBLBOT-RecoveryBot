@@ -124,7 +124,7 @@ export default function WeekView({ group, onChanged }) {
     setError(null);
     try { await api(`/groups/${slug}/${path}`, { method }); changed(); } catch (e) { setError(e.message); }
   };
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="schedule" />;
   if (!data.days.some((d) => d.items.length) && !data.my_dates.length && start === null) return null;
 
   const days = data.days.map((d) => ({ ...d, items: onlyGaps ? d.items.filter((i) => !i.past && gap(i)) : d.items })).filter((d) => d.items.length);

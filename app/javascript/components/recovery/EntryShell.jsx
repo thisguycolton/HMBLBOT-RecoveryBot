@@ -93,13 +93,13 @@ export function EntryShell({ base, title, intro, state, summary, reminder, print
       </div>
 
       <ErrorNote error={error} />
-      {entry === undefined ? <Loading /> : children}
+      {entry === undefined ? <Loading variant="form" header={false} /> : children}
 
       <section className="space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
           Past days{list ? ` · ${list.total.toLocaleString()} written` : ""}
         </h2>
-        {!list ? <Loading /> : list.entries.length === 0 ? (
+        {!list ? <Loading variant="rows" /> : list.entries.length === 0 ? (
           <Card className="p-5 text-sm text-slate-500 dark:text-neutral-400">Nothing yet. What you save shows up here.</Card>
         ) : (
           <Card className="divide-y divide-neutral-200/70 dark:divide-neutral-800">

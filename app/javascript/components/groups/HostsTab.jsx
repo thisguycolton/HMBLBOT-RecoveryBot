@@ -304,7 +304,7 @@ export default function HostsTab({ group }) {
   const [open, setOpen] = useState(null); // { slotId, role | "cover" | "sub" | "mine" }
   const load = useCallback(() => api(`/groups/${slug}/meeting_hosts`).then(setData).catch((e) => setError(e.message)), [slug]);
   useEffect(() => { load(); }, [load]);
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="list" />;
 
   const edit = data.can_edit;
   const call = async (path, method, body) => {

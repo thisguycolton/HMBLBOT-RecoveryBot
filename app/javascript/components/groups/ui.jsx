@@ -1,4 +1,5 @@
 import React from "react";
+import Skeleton from "../ui/Skeleton";
 
 // Small pieces shared by the Groups pages
 
@@ -12,7 +13,9 @@ export function Message({ title, text, children }) {
   );
 }
 
-export const Loading = () => <p className="py-16 text-center !font-sans text-sm text-slate-500">Loading…</p>;
+// While a page's data loads: gray shapes in its layout (ui/Skeleton). variant says which
+// layout ("feed", "list", "chat", "document", "form"…; a title over cards by default).
+export const Loading = ({ variant = "page", ...rest }) => <Skeleton variant={variant} {...rest} />;
 
 // !bg: the reader styles give every <button> a gray fill
 export const primaryButton =

@@ -44,7 +44,7 @@ export default function TimeCapsule() {
         </select>
       )}
       <ErrorNote error={error} />
-      {!sessions ? <Loading /> : sessions.length === 0 ? (
+      {!sessions ? <Loading variant="rows" /> : sessions.length === 0 ? (
         <Card className="p-5 text-sm text-slate-600 dark:text-neutral-400">Nothing here yet. Once hosts pick a reading or activity, fill in service or add milestones in HostDeck, the meeting is kept here.</Card>
       ) : (
         <ol className="relative space-y-4 border-l-2 border-neutral-200 pl-5 dark:border-neutral-800">

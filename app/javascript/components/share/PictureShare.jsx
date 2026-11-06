@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Check, Copy, Download, ImageIcon, Link2, Loader2, Send, Share2, X } from "lucide-react";
 import { showToast } from "../../lib/toast";
 import { saveNote, VISIBILITY } from "../notes/lib";
+import { Bone, SkeletonGroup } from "../ui/Skeleton";
 
 // "Share as a picture" for your own highlight or note: pick a look and a size, see it, then
 // share it straight from your phone's share sheet (Instagram, Messages, a story...), save
@@ -132,8 +133,13 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
           <div className="self-start rounded-2xl bg-neutral-100 p-3 dark:bg-neutral-800">
             <div className="relative mx-auto w-full" style={{ maxWidth: size === "story" ? "min(15rem, 26dvh)" : size === "square" ? "min(24rem, 46dvh)" : "100%" }}>
               <img key={src} src={src} alt="Your picture" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setFailed(true); }}
-                className={`block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 transition-opacity ${loading ? "opacity-40" : "opacity-100"}`} style={{ aspectRatio: ratio }} />
-              {loading && <Loader2 className="absolute left-1/2 top-1/2 size-6 -translate-x-1/2 -translate-y-1/2 animate-spin text-slate-500" aria-label="Drawing it" />}
+                className={`block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 transition-opacity ${loading ? "opacity-40 motion-safe:animate-pulse" : "opacity-100"}`} style={{ aspectRatio: ratio }} />
+              {loading && (
+                // The picture's shape pulses while the server draws it (a skeleton, not a spinner)
+                <SkeletonGroup label="Drawing it" className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-2.5 p-[8%]">
+                  <Bone className="h-3 w-3/5" /><Bone className="h-3 w-4/5" /><Bone className="h-3 w-2/5" />
+                </SkeletonGroup>
+              )}
               {failed && <p className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-red-600">Couldn't draw that one. Try another look.</p>}
             </div>
           </div>

@@ -33,7 +33,7 @@ export default function GivePage() {
   const load = useCallback(() => api("/chip_awards").then(setData).catch((e) => setError(e.message)), []);
   useEffect(() => { document.title = "Give a chip | RecoveryBot"; load(); }, [load]);
 
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="form" />;
   if (data.groups.length === 0) {
     return <Card className="mx-auto max-w-xl p-6 text-sm text-slate-600 dark:text-neutral-300">Giving chips is for a group's hosts, host coordinators and admins. When you host for a group, you can give its chips here.</Card>;
   }

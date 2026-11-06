@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Loader2 } from "lucide-react";
 import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
 import { SheetClose } from "../shell/Sheet";
+import Skeleton from "../ui/Skeleton";
 
 const TABS = [
   { key: "followers", label: "Followers" },
@@ -57,7 +57,7 @@ export default function FollowListModal({ person, which, onWhich, onClose }) {
           {error ? (
             <p className="px-3 py-8 text-center text-sm text-rose-600">{error}</p>
           ) : !people ? (
-            <p className="flex items-center justify-center gap-2 px-3 py-8 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" /> Loading…</p>
+            <Skeleton variant="rows" rows={5} />
           ) : people.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-slate-500 dark:text-neutral-400">
               {which === "followers" ? `Nobody follows ${person.name} yet.` : `${person.name} isn't following anyone yet.`}

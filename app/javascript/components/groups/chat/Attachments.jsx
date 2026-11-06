@@ -4,6 +4,7 @@ import { Check, Download, ExternalLink, FileSpreadsheet, FileText, File as FileI
 import { api } from "../lib";
 import { ErrorNote, primaryButton, quietButton } from "../ui";
 import Dialog from "./Dialog";
+import Skeleton from "../../ui/Skeleton";
 
 // What can go on a chat message (ChatMessage::FILE_TYPES), as the file picker takes it
 export const FILES_MAX = 6;
@@ -144,7 +145,7 @@ export function DocumentPicker({ slug, picked, onDone, onClose }) {
           className="w-full rounded-xl border-0 bg-neutral-100 py-2 pl-9 pr-3 text-sm text-slate-900 ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent dark:bg-neutral-800 dark:text-white dark:ring-neutral-700" />
       </label>
       <ErrorNote error={error} />
-      {!sorted ? <p className="py-6 text-center text-slate-500">Loading…</p> : sorted.length === 0 ? (
+      {!sorted ? <Skeleton variant="rows" rows={4} /> : sorted.length === 0 ? (
         <p className="py-6 text-center !font-sans text-slate-500">{query ? "No documents match." : "Your group has no documents you can open yet."}</p>
       ) : (
         <ul className="space-y-1">

@@ -5,6 +5,7 @@ import Avatar from "../groups/Avatar";
 import { soberFor } from "../groups/lib";
 import MeetingPasscode from "../groups/MeetingPasscode";
 import { isOnNow, refreshNav } from "./useShell";
+import Skeleton from "../ui/Skeleton";
 
 const sideTitle = "mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-neutral-400";
 const row = "border-b border-neutral-200/80 py-3 first:pt-0 last:border-0 dark:border-neutral-800";
@@ -162,7 +163,7 @@ function Covers({ covers }) {
 // meetings with their Join buttons, members' sobriety birthdays and events. The home feed's
 // side panel, and the Today sheet from the calendar in the phone bar.
 export default function TodayPanel({ today }) {
-  if (!today) return <p className="text-sm text-slate-500 dark:text-neutral-400">Loading…</p>;
+  if (!today) return <Skeleton variant="aside" />;
   if (!today.has_groups) {
     return (
       <div className="space-y-8 !font-sans">

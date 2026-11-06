@@ -52,7 +52,7 @@ function GroupRoute({ fallback = null, children }) {
   const reload = useCallback(() => api(`/groups/${slug}`).then(setGroup).catch(() => setFailed(true)), [slug]);
   useEffect(() => { setGroup(null); reload(); }, [reload]);
   if (failed) return fallback || <Navigate to={`/${slug}`} replace />;
-  if (!group) return <Layout isAuthenticated><div className="p-6"><Loading /></div></Layout>;
+  if (!group) return <Layout isAuthenticated><div className="p-6"><Loading variant="stats" /></div></Layout>;
   return children(group, setGroup, reload);
 }
 
@@ -170,7 +170,7 @@ function DashboardBody({ group }) {
   const requests = group.requests || [];
   return (
     <GroupFrame group={group} title="Dashboard" error={error}>
-      {!data ? <Loading /> : (
+      {!data ? <Loading variant="stats" header={false} /> : (
         <div className="space-y-6">
           {st && (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">

@@ -1,10 +1,23 @@
 import React from "react";
 import { X } from "lucide-react";
+import { Bone, SkeletonGroup } from "../ui/Skeleton";
 
 // The card for a note's first link: its picture, site, title and description, as our
 // server read them (LinkPreview). With `onRemove` (writing a note) it has an X to drop it.
 export default function LinkCard({ link, onRemove, loading = false }) {
-  if (loading) return <div className="wb-link-card wb-link-card--loading" aria-live="polite">Getting a preview of the link…</div>;
+  if (loading) {
+    // The card's shape while our server reads the page: a picture, then the site and the title
+    return (
+      <SkeletonGroup label="Getting a preview of the link" className="wb-link-card">
+        <Bone rounded="rounded-none" className="aspect-[1.91/1] max-h-48 w-full" />
+        <span className="block space-y-2 px-3.5 py-3">
+          <Bone className="h-2.5 w-20" />
+          <Bone className="h-3.5 w-3/4" />
+          <Bone className="h-3 w-1/2" />
+        </span>
+      </SkeletonGroup>
+    );
+  }
   if (!link) return null;
   return (
     <div className="wb-link-card">

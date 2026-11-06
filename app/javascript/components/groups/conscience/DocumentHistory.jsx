@@ -37,7 +37,7 @@ export function Stats({ stats, className = "" }) {
 
 // The versions, newest first. The working copy (changes not saved as a version yet) leads.
 export function HistoryPane({ versions, dirty, working, selected, onPick, onCompareWorking, canEdit, onRestore, slug, docId }) {
-  if (!versions) return <Loading />;
+  if (!versions) return <Loading variant="rows" />;
   const head = versions[0];
   return (
     <div className="space-y-2">
@@ -157,7 +157,7 @@ export function VersionDiff({ slug, docId, versions, from, to, workingHtml, onFr
         </span>
       </div>
       {error && <p className="text-sm text-rose-700">{error}</p>}
-      {!items ? <Loading /> : (
+      {!items ? <Loading variant="rows" /> : (
         <>
           {toVersion && (toVersion.message || toVersion.kind !== "saved") && <p className="mb-4 rounded-xl bg-neutral-100 px-3 py-2 text-sm text-slate-700 dark:bg-neutral-800 dark:text-neutral-200">“{versionNote(toVersion)}”</p>}
           {changes === 0 && <p className="mb-4 text-sm italic text-slate-500">The text is the same{toVersion?.file || fromVersion?.file ? " (only the attached file or title changed)" : ""}.</p>}

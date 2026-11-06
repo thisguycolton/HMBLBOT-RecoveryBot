@@ -47,7 +47,7 @@ export default function HostingIndex() {
   const byDay = useMemo(() => shown.reduce((days, o) => ({ ...days, [o.on]: [...(days[o.on] || []), o] }), {}), [shown]);
 
   if (error) return <div className="mx-auto max-w-3xl"><ErrorNote error={error} /></div>;
-  if (!data) return <Loading />;
+  if (!data) return <Loading variant="trays" />;
   const today = isoDay(new Date(now));
   const tomorrow = isoDay(new Date(now + 86400000));
 

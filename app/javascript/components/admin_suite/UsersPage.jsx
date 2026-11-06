@@ -6,6 +6,7 @@ import { inputClass } from "../ui/styles";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { formatCount } from "./App";
+import { InlineSkeleton } from "../ui/Skeleton";
 
 const FILTERS = [
   { value: "", label: "Everyone" },
@@ -49,7 +50,7 @@ export default function UsersPage({ notify }) {
 
   return (
     <Shell>
-      <ShellBand icon={Users} title="Members" subtitle={data ? `${formatCount(data.total)} ${data.total === 1 ? "account" : "accounts"}${data.total > data.limit ? `, showing the newest ${data.limit}` : ""}` : "Loading…"} />
+      <ShellBand icon={Users} title="Members" subtitle={data ? `${formatCount(data.total)} ${data.total === 1 ? "account" : "accounts"}${data.total > data.limit ? `, showing the newest ${data.limit}` : ""}` : <InlineSkeleton className="w-40" />} />
       <ShellPanel position="middle" className="p-4 flex flex-wrap items-center gap-3">
         <SegmentedControl options={FILTERS} value={filter} onChange={setFilter} />
         <form className="flex gap-2 flex-1 min-w-[16rem]" onSubmit={(e) => { e.preventDefault(); setSearch(query.trim()); }}>

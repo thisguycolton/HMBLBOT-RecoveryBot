@@ -7,6 +7,7 @@ import { api, topicTitle } from "./api";
 import { buttonClass, selectClass } from "./App";
 import TopicEditor, { DifficultyBadge } from "./TopicEditor";
 import LucideIcon from "../ui/LucideIcon";
+import Skeleton from "../ui/Skeleton";
 
 // Filters live in the query string, so a set or category page can link straight to its topics
 const FILTERS = ["q", "topic_set_id", "category_id", "difficulty", "tag_id", "prompts"];
@@ -107,7 +108,7 @@ export default function TopicsPage({ meta, reloadMeta, notify }) {
         <Shell>
           <ShellPanel position="single" className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {!result ? (
-              <p className="p-6 text-sm text-slate-500 !font-sans">Loading…</p>
+              <Skeleton variant="rows" rows={6} className="p-2" />
             ) : result.topics.length === 0 ? (
               <p className="p-6 text-sm text-slate-500 dark:text-neutral-400 !font-sans">No topics match these filters.</p>
             ) : (

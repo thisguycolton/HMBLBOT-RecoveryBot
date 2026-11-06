@@ -30,7 +30,7 @@ export default function GuestPostings() {
   const { elapsed } = useMeetingClock(page?.starts_at, page?.live?.server_now);
 
   if (error && !page) return <Message title="That link doesn't work" text={error.message} />;
-  if (!page) return <Loading />;
+  if (!page) return <Loading variant="page" />;
 
   const live = page.live;
   const signIn = `/h/${page.code}?sign_in=1`;

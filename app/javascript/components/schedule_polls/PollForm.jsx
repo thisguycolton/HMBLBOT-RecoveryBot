@@ -8,6 +8,7 @@ import { showToast } from "../../lib/toast";
 import WeekGrid from "./WeekGrid";
 import { DAY_MINUTES, VISIBILITY_LABELS, addDays, api, clock, dayParts, daysBetween, makeNow } from "./lib";
 import { Message } from "./PollPage";
+import Skeleton from "../ui/Skeleton";
 
 const DURATIONS = [15, 30, 45, 60, 90, 120, 180];
 const ZONES = [
@@ -93,7 +94,7 @@ export default function PollForm() {
   const now = useMemo(() => makeNow(meta?.now_local || `${todayIn(form?.time_zone || "America/Phoenix")}T00:00`), [meta, form?.time_zone]);
 
   if (error) return <Message title="Can't edit this poll" text={error}><Link to="/" className="mt-4 inline-block text-sm text-accent hover:underline">Back to schedule polls</Link></Message>;
-  if (!form) return <p className="py-16 text-center !font-sans text-sm text-slate-500">Loading…</p>;
+  if (!form) return <Skeleton variant="form" />;
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const days = daysBetween(form.starts_on, form.ends_on);

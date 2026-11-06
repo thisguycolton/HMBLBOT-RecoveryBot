@@ -22,7 +22,7 @@ export default function ProfilePage() {
   useEffect(() => { setPage(null); setError(null); load(); }, [load]);
 
   if (error) return <ErrorNote error={error} />;
-  if (!page) return <Loading />;
+  if (!page) return <Loading variant="profile" />;
 
   const { person, viewer } = page.context;
   const context = { ...page.context, kind: page.kind, note_max: page.note_max, images_max: page.images_max };

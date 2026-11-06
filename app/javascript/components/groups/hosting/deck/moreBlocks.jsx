@@ -8,6 +8,7 @@ import { primaryButton, quietButton } from "../../ui";
 import { documentsPath } from "../../conscience/lib";
 import { label } from "../parts";
 import { fillValues, mmss } from "../lib";
+import Skeleton from "../../../ui/Skeleton";
 
 // HostDeck's blocks for running more than a meeting's script: a queue of who shares next, one of
 // the group's documents to read from, and a list of links
@@ -102,7 +103,7 @@ export function DocumentBlock({ block, size, deck }) {
       </div>
       {!id ? <p className={muted}>Pick a document with the block's settings.</p>
         : error ? <p className={muted}>This document isn't one you can read.</p>
-          : !doc ? <p className={muted}>Loading…</p>
+          : !doc ? <Skeleton variant="text" rows={4} />
             : doc.body ? (
               <div className={`${card} ${size === "main" ? "" : "max-h-80 overflow-y-auto"}`}>
                 {doc.body_format === "markdown" ? <Markdown source={doc.body} className={`doc-prose ${size === "main" ? "" : "doc-prose--small"}`} />
