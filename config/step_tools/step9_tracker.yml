@@ -10,7 +10,9 @@ sections:
   - id: readings
     kind: reference
     title: "Read first"
-    body: "The Big Book, pages 76 to 84. Step Nine in the 12&12."
+    items:
+      - { id: r1, label: "The Big Book, pages 76 to 84" }
+      - { id: r2, label: "Step Nine in the 12&12" }
   - id: amends
     kind: table
     title: "Amends"

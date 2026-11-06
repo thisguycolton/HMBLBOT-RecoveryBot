@@ -7,7 +7,9 @@
 # `kind`, a `title`, optional `help`, and optionally `part` (a heading that starts a new part).
 # What each kind is, and where its answers go (StepWork#answers[section id]):
 #
-#   reference  text to read (`body`), no answers
+#   reference  text to read (`body`) and/or a reading list to tick off: `items` [{id, label, href}]
+#              (`href` a library link; without one, the label links itself when it names a chapter,
+#              step or page); answers { item id => date read }
 #   note       a highlighted box (`tone: sponsor` for things to talk over with a sponsor)
 #   questions  `items` [{id, label, placeholder, rows}], answers { item id => text }
 #   list       one line per thing, answers [text]
@@ -98,6 +100,10 @@ class StepTool
     when "reference", "note"
       out["body"] = text(s["body"], 4000)
       out["tone"] = "sponsor" if s["tone"] == "sponsor"
+      if s["kind"] == "reference"
+        out["items"] = readings(s["items"]).presence
+        return if out["body"].blank? && out["items"].blank?
+      end
     when "questions", "each", "days"
       out["items"] = items(s["items"])
       out["review"] = items(s["review"]) if s["kind"] == "days"
@@ -137,6 +143,17 @@ class StepTool
       type = %w[choice choices].include?(i["type"]) ? i["type"] : nil
       { "id" => i["id"], "label" => text(i["label"], 500), "placeholder" => text(i["placeholder"], 300), "rows" => (i["rows"].to_i.clamp(1, 20) if i["rows"].present?),
         "type" => type, "options" => (strings(i["options"], 30) if type), "role" => (i["role"] if ROLES.include?(i["role"])) }.compact
+    end
+  end
+
+  # A reading list's readings. A link may only go into the library.
+  def self.readings(list)
+    Array(list).first(40).filter_map do |r|
+      r = r.to_h.stringify_keys
+      next unless r["id"].to_s.match?(/\A[\w-]{1,40}\z/) && r["label"].present?
+
+      href = r["href"].to_s.strip
+      { "id" => r["id"], "label" => text(r["label"], 200), "href" => (href if href.match?(%r{\A/library/[\w/?=&%.-]{0,300}\z})) }.compact
     end
   end
 

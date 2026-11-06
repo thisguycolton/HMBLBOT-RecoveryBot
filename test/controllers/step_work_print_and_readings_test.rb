@@ -48,12 +48,42 @@ class StepWorkPrintAndReadingsTest < ActionDispatch::IntegrationTest
     assert_response :gone
   end
 
-  test "every built-in worksheet for a step has readings to start with" do
+  test "every built-in worksheet for a step has a reading list to start with" do
     StepTool.all.each do |t|
       reading = t.definition["sections"].find { |s| s["id"] == "readings" && s["kind"] == "reference" }
       assert reading, "#{t.key} has no Read first"
-      assert_match(/Big Book|12&12/, reading["body"], t.key)
+      assert reading["items"].present?, "#{t.key} has no reading list"
+      reading["items"].each { |r| assert_match(/Big Book|12&12|Doctor/, r["label"], t.key) }
     end
+  end
+
+  test "a reading list keeps its readings, and only library links" do
+    d = StepTool.clean("sections" => [
+      { "id" => "readings", "kind" => "reference", "title" => "Read first",
+        "items" => [{ "id" => "r1", "label" => "Step One in the 12&12" },
+                    { "id" => "r2", "label" => "A pamphlet", "href" => "https://example.com/x" },
+                    { "id" => "r3", "label" => "Page 86", "href" => "/library/go?work=bigbook&page=86" },
+                    { "id" => "bad id!", "label" => "Dropped" }] },
+      { "id" => "empty", "kind" => "reference", "title" => "Nothing in it" },
+    ])
+    reading = d["sections"].sole
+    assert_equal %w[r1 r2 r3], reading["items"].map { |r| r["id"] }
+    assert_nil reading["items"][1]["href"]
+    assert_equal "/library/go?work=bigbook&page=86", reading["items"][2]["href"]
+  end
+
+  test "what was read is saved with the answers, and how they read it in their settings" do
+    sign_in @sam
+    work = @work
+    patch api_step_work_path(work), params: { answers: { readings: { r1: "2026-11-05" } }, settings: { layout: "one_page", at_page: "control", from: "Forged" } }, as: :json
+    assert_response :success
+    work.reload
+    assert_equal({ "r1" => "2026-11-05" }, work.answers["readings"])
+    assert_equal "one_page", work.settings["layout"]
+    assert_equal "control", work.settings["at_page"]
+    assert_nil work.settings["from"]
+    raw = StepWork.connection.select_value("SELECT answers FROM step_works WHERE id = #{work.id}")
+    assert_not_includes raw.to_s, "2026-11-05"
   end
 
   test "a reading goes to that chapter or printed page in the library" do

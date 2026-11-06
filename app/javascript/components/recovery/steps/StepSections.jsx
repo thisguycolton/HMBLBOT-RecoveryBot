@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Columns3, Download, Plus, Rows3, X } from "lucide-react";
+import { BookOpen, Check, ChevronLeft, ChevronRight, Columns3, Download, ExternalLink, Plus, Rows3, X } from "lucide-react";
 import { api } from "../../groups/lib";
 import { Card, quietButton } from "../../groups/ui";
 import { inputClass } from "../../ui/styles";
-import { fill, thingsFor } from "./stepText";
+import { localDate } from "../lib";
+import { fill, isReadingList, readingHref, thingsFor } from "./stepText";
 import { opensInPlace, readingPieces } from "./readingLinks";
 
 // How each kind of step tool section looks and takes answers (StepTool describes the kinds and
@@ -347,6 +348,69 @@ export function Prose({ text, className = "" }) {
   );
 }
 
+const dayLabel = (d) => new Date(`${d}T12:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+// A reading list (a Reading section with `items`): tick each one off as it's read. `value` is
+// { reading id => the day it was ticked }.
+export function ReadingList({ section, value, set }) {
+  const read = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const inPlace = opensInPlace();
+  const toggle = (r) => {
+    const next = { ...read };
+    if (next[r.id]) delete next[r.id];
+    else next[r.id] = localDate();
+    set(next);
+  };
+  return (
+    <ul className="space-y-1.5" aria-label={section.title || "Readings"}>
+      {section.items.map((r) => {
+        const on = !!read[r.id];
+        const href = readingHref(r);
+        return (
+          <li key={r.id} className="flex items-center gap-1 rounded-2xl bg-white p-1 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">
+            <button type="button" role="checkbox" aria-checked={on} onClick={() => toggle(r)}
+              className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl !bg-transparent px-2.5 py-1.5 text-left hover:!bg-neutral-50 dark:hover:!bg-neutral-800/60">
+              <span aria-hidden="true" className={`grid size-[1.375rem] shrink-0 place-items-center rounded-lg ${on ? "bg-accent text-white" : "ring-2 ring-inset ring-neutral-300 dark:ring-neutral-600"}`}>
+                {on && <Check className="size-3.5" strokeWidth={3} />}
+              </span>
+              <span className="min-w-0">
+                <span className="block font-medium text-slate-900 dark:text-white">{r.label}</span>
+                {on && <span className="block text-xs text-slate-500 dark:text-neutral-400">Read {dayLabel(read[r.id])}</span>}
+              </span>
+            </button>
+            {href && (
+              <a href={href} target={inPlace ? undefined : "_blank"} rel={inPlace ? undefined : "noopener"} title="Read it in the library"
+                className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-3 text-sm font-semibold !text-accent hover:!bg-accent/10 dark:!text-accent-light">
+                Open <ExternalLink className="size-3.5" aria-hidden="true" />
+              </a>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// A reading list folded to one line ("Read first: 2 of 3 read. Next: …"), opening to the list:
+// on a worksheet's page, where the full list is on its Welcome page
+export function ReadingStrip({ section, value, set }) {
+  const [open, setOpen] = useState(false);
+  const read = value && typeof value === "object" ? value : {};
+  const done = section.items.filter((r) => read[r.id]).length;
+  const next = section.items.find((r) => !read[r.id]);
+  return (
+    <div className="space-y-2 rounded-2xl bg-accent-tint p-1.5 text-accent-ink dark:bg-accent/15 dark:text-sky-100">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-2.5 rounded-xl !bg-transparent px-2.5 py-2 text-left text-sm">
+        <BookOpen className="size-4 shrink-0" aria-hidden="true" />
+        <span className="min-w-0 flex-1"><strong>{section.title || "Readings"}:</strong> {done} of {section.items.length} read.{next ? ` Next: ${next.label}.` : ""}</span>
+        <span className="shrink-0 font-semibold">{open ? "Hide" : "Show the list"}</span>
+      </button>
+      {open && <ReadingList section={section} value={read} set={set} />}
+    </div>
+  );
+}
+
 const KINDS = { questions: Questions, list: List, table: Table, picker: Picker, each: Each, scale: Scale, days: Days };
 
 export default function StepSection({ section, answers, setAnswer, definition, settings }) {
@@ -363,9 +427,9 @@ export default function StepSection({ section, answers, setAnswer, definition, s
     <section className="space-y-3" aria-labelledby={`h-${section.id}`}>
       {section.title && <h3 id={`h-${section.id}`} className="text-lg font-semibold text-slate-900 dark:text-white">{section.title}</h3>}
       {section.help && <Prose text={section.help} className="text-sm text-slate-600 dark:text-neutral-400" />}
-      {section.kind === "reference"
-        ? <blockquote className="rounded-2xl border-l-4 border-accent/50 bg-neutral-50 px-4 py-3 italic text-slate-700 dark:bg-neutral-950 dark:text-neutral-200"><Prose text={section.body} /></blockquote>
-        : Kind && <Kind section={section} value={answers[section.id]} set={(v) => setAnswer(section.id, v)} definition={definition} answers={answers} settings={settings} />}
+      {section.kind === "reference" && section.body && <blockquote className="rounded-2xl border-l-4 border-accent/50 bg-neutral-50 px-4 py-3 italic text-slate-700 dark:bg-neutral-950 dark:text-neutral-200"><Prose text={section.body} /></blockquote>}
+      {isReadingList(section) && <ReadingList section={section} value={answers[section.id]} set={(v) => setAnswer(section.id, v)} />}
+      {section.kind !== "reference" && Kind && <Kind section={section} value={answers[section.id]} set={(v) => setAnswer(section.id, v)} definition={definition} answers={answers} settings={settings} />}
     </section>
   );
 }

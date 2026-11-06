@@ -10,7 +10,9 @@ sections:
   - id: readings
     kind: reference
     title: "Read first"
-    body: "Chapter 4, We Agnostics, in the Big Book. Step Two in the 12&12."
+    items:
+      - { id: r1, label: "Chapter 4, We Agnostics, in the Big Book" }
+      - { id: r2, label: "Step Two in the 12&12" }
   - id: before
     kind: questions
     title: "Where I'm starting from"

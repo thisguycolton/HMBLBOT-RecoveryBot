@@ -10,7 +10,9 @@ sections:
   - id: readings
     kind: reference
     title: "Read first"
-    body: "Chapter 6, Into Action, in the Big Book, pages 72 to 75. Step Five in the 12&12."
+    items:
+      - { id: r1, label: "Chapter 6, Into Action, in the Big Book, pages 72 to 75" }
+      - { id: r2, label: "Step Five in the 12&12" }
   - id: ready
     kind: questions
     title: "Getting ready"

@@ -1,9 +1,10 @@
 import React from "react";
 import {
-  ArrowDown, ArrowUp, BookOpen, CalendarDays, Gauge, ListChecks, ListOrdered, MessageCircleQuestion, Plus, Repeat, StickyNote, Table2, X,
+  ArrowDown, ArrowUp, BookOpen, CalendarDays, Gauge, Link2, ListChecks, ListOrdered, MessageCircleQuestion, Plus, Repeat, StickyNote, Table2, X,
 } from "lucide-react";
 import { quietButton } from "../../groups/ui";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
+import { readingHref } from "./stepText";
 
 // The fields of the HumbleBot Editor (WorksheetEditor): one section of a worksheet, every
 // setting StepTool understands for its kind. What someone already wrote is kept under each
@@ -17,7 +18,7 @@ export const KINDS = {
   each: { name: "Questions for each one", icon: Repeat, about: "The same questions for every row of a table or every pick." },
   scale: { name: "Rating for each one", icon: Gauge, about: "Rate each pick (for example, how willing) and see it change over time." },
   days: { name: "A question a day", icon: CalendarDays, about: "One question for each day of the week, with an end-of-week look back." },
-  reference: { name: "Reading", icon: BookOpen, about: "A passage to read: a prayer, a page reference, a quote." },
+  reference: { name: "Reading", icon: BookOpen, about: "Readings to tick off as they're read, or a passage to read: a prayer, a quote." },
   note: { name: "Note", icon: StickyNote, about: "A highlighted box, or one to talk over with a sponsor." },
 };
 
@@ -167,6 +168,38 @@ function SectionPick({ id, label, value, onChange, sections, kinds, hint, none }
   );
 }
 
+// A reading list: one line for each reading, which they tick off as they read it. A reading that
+// names a chapter, step or page ("Chapter 5, How It Works, in the Big Book") opens in the library.
+function Readings({ items, set }) {
+  const list = items || [];
+  const change = (n, label) => set(list.map((r, j) => (j === n ? { ...r, label } : r)));
+  return (
+    <Field id="readings" label="Reading list" hint="One reading on each line. They tick each one off as they read it. Name the book with a chapter, step or page (like Big Book, pages 86 to 88, or Step Eleven in the 12&12) and it opens in the library.">
+      <div className="space-y-2">
+        {list.map((r, n) => {
+          const linked = r.label?.trim() && readingHref(r);
+          return (
+            <div key={r.id} className="space-y-1">
+              <div className="flex items-center gap-1">
+                <input id={n === 0 ? "readings" : undefined} className={inputClass} aria-label={`Reading ${n + 1}`} maxLength={200} value={r.label || ""} placeholder="Chapter 5, How It Works, in the Big Book"
+                  onChange={(e) => change(n, e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); set([...list.slice(0, n + 1), { id: newId("r"), label: "" }, ...list.slice(n + 1)]); } }} />
+                <Mover list={list} n={n} set={set} label="this reading" />
+              </div>
+              {r.label?.trim() && (
+                <p className={`flex items-center gap-1 pl-1 text-xs ${linked ? "text-accent dark:text-accent-light" : "text-slate-500 dark:text-neutral-400"}`}>
+                  <Link2 className="size-3.5" aria-hidden="true" /> {linked ? "Opens in the library" : "No library link (fine for a pamphlet or another book)"}
+                </p>
+              )}
+            </div>
+          );
+        })}
+        <button type="button" className={quietButton} onClick={() => set([...list, { id: newId("r"), label: "" }])}><Plus className="size-4" /> Add a reading</button>
+      </div>
+    </Field>
+  );
+}
+
 export function SectionEditor({ section: s, sections, change }) {
   const set = (patch) => change({ ...s, ...patch });
   const others = sections.filter((x) => x.id !== s.id);
@@ -182,10 +215,11 @@ export function SectionEditor({ section: s, sections, change }) {
         </Field>
       )}
       {text && (
-        <Field id={`b-${s.id}`} label={s.kind === "note" ? "The note" : "The reading"} hint="A new line starts a new paragraph. Write {{higher_power}} where their name for their Higher Power should go.">
+        <Field id={`b-${s.id}`} label={s.kind === "note" ? "The note" : "A passage to read (optional)"} hint="A new line starts a new paragraph. Write {{higher_power}} where their name for their Higher Power should go.">
           <textarea id={`b-${s.id}`} className={`${area} min-h-[6rem]`} maxLength={4000} value={s.body || ""} onChange={(e) => set({ body: e.target.value })} />
         </Field>
       )}
+      {s.kind === "reference" && <Readings items={s.items} set={(items) => set({ items: items.length ? items : undefined })} />}
       {s.kind === "note" && (
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={s.tone === "sponsor"} onChange={(e) => set({ tone: e.target.checked ? "sponsor" : undefined })} />
@@ -290,7 +324,7 @@ export function newSection(kind, sections) {
       each: { from: firstOf(["table", "picker"]), items: [{ id: newId("q"), label: "" }] },
       scale: { from: firstOf(["picker", "table"]), options: ["Not yet", "Somewhat", "Ready"] },
       days: { items: Array.from({ length: 7 }, (_, i) => ({ id: `d${i + 1}-${Date.now().toString(36)}`, label: "" })), review: [] },
-      reference: { body: "" },
+      reference: { items: [{ id: newId("r"), label: "" }] },
       note: { body: "", tone: "sponsor" },
     }[kind],
   };
@@ -325,6 +359,7 @@ export function problem(s) {
   if (s.kind === "scale" && !lines((s.options || []).join("\n")).length) return `${name} needs its scale.`;
   if (s.kind === "scale" && !s.from) return `Pick what ${name} rates.`;
   if (s.kind === "each" && !s.from && !lines((s.over || []).join("\n")).length) return `Pick what ${name} goes over.`;
-  if (["reference", "note"].includes(s.kind) && !s.body?.trim()) return `${name} is empty.`;
+  if (s.kind === "note" && !s.body?.trim()) return `${name} is empty.`;
+  if (s.kind === "reference" && !s.body?.trim() && !filled(s.items)) return `${name} needs a reading or a passage.`;
   return null;
 }

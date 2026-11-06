@@ -52,9 +52,16 @@ function Section({ s, definition, answers, settings, blank }) {
       return (
         <section className="break-inside-avoid space-y-1.5">
           {head}
-          <blockquote className="border-l-2 border-slate-400 pl-3 text-[10.5pt] italic text-slate-700">
-            {fill(s.body, settings).trim().split(/\s*\n\s*/).map((p, n) => <p key={n} className="mb-1">{p.replaceAll("**", "")}</p>)}
-          </blockquote>
+          {s.body && (
+            <blockquote className="border-l-2 border-slate-400 pl-3 text-[10.5pt] italic text-slate-700">
+              {fill(s.body, settings).trim().split(/\s*\n\s*/).map((p, n) => <p key={n} className="mb-1">{p.replaceAll("**", "")}</p>)}
+            </blockquote>
+          )}
+          {s.items?.length > 0 && (
+            <ul className="space-y-1 text-[10.5pt]">
+              {s.items.map((r) => <li key={r.id}><Box on={!blank && !!a?.[r.id]} />{r.label}{!blank && a?.[r.id] ? <span className="text-slate-500"> · read {a[r.id]}</span> : null}</li>)}
+            </ul>
+          )}
         </section>
       );
     case "note":

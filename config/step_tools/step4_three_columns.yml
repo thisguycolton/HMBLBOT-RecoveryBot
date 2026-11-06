@@ -9,7 +9,9 @@ sections:
   - id: readings
     kind: reference
     title: "Read first"
-    body: "The Big Book, pages 63 to 71. Step Four in the 12&12."
+    items:
+      - { id: r1, label: "The Big Book, pages 63 to 71" }
+      - { id: r2, label: "Step Four in the 12&12" }
   - id: resentments
     kind: table
     title: "Resentments"

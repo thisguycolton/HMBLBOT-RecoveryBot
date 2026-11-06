@@ -10,7 +10,9 @@ sections:
   - id: readings
     kind: reference
     title: "Read first"
-    body: "Chapter 5, How It Works, in the Big Book, pages 58 to 63. Step Three in the 12&12."
+    items:
+      - { id: r1, label: "Chapter 5, How It Works, in the Big Book, pages 58 to 63" }
+      - { id: r2, label: "Step Three in the 12&12" }
   - id: meaning
     kind: questions
     title: "What it means to me"
