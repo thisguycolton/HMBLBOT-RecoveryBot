@@ -383,8 +383,11 @@ export default function WorksheetEditor({ template = false }) {
   return (
     <div className="mx-auto max-w-[96rem] space-y-4 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
       <div className="sticky top-[var(--nav-h)] z-20 -mx-4 flex flex-wrap items-center gap-2 border-b border-neutral-200/70 bg-white/90 px-4 py-2 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/90">
-        <button type="button" onClick={leave} className="inline-flex items-center gap-1 !bg-transparent p-0 text-sm text-accent"><ChevronLeft className="size-4" /> {template ? "Step worksheets" : "Worksheet"}</button>
-        <div className="min-w-0 flex-1">
+        <button type="button" onClick={leave} aria-label={template ? "Back to Step worksheets" : "Back to the worksheet"} title={template ? "Back to Step worksheets" : "Back to the worksheet"}
+          className="grid size-9 shrink-0 place-items-center rounded-full !bg-neutral-100 text-slate-600 hover:!bg-neutral-200 hover:text-slate-900 dark:!bg-neutral-800 dark:text-neutral-300 dark:hover:!bg-neutral-700 dark:hover:text-white">
+          <ChevronLeft className="size-5" />
+        </button>
+        <div className="min-w-0 flex-1 border-l border-neutral-200 pl-3 dark:border-neutral-800">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent"><PencilRuler className="size-3.5" /> HumbleBot Editor{template && " · Site worksheet"}</div>
           <div className="truncate font-semibold text-slate-900 dark:text-white">{draft.name || "Untitled"}</div>
         </div>
