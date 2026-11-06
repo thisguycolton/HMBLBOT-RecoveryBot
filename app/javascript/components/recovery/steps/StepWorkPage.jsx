@@ -96,7 +96,7 @@ export default function StepWorkPage() {
     navigate(`/steps/${d.work.id}`);
   };
 
-  if (!work) return <div className="mx-auto max-w-3xl">{error ? <ErrorNote error={error} /> : <Loading />}</div>;
+  if (!work) return <div className="mx-auto max-w-3xl">{error ? <ErrorNote error={error} /> : <Loading variant="form" />}</div>;
   const parts = partsOf(work.definition);
   const usesHigherPower = JSON.stringify(work.definition).includes("{{higher_power}}");
 

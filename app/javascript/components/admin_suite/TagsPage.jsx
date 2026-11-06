@@ -5,6 +5,7 @@ import { inputClass, labelClass } from "../ui/styles";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { TAG_ICONS, getTagIcon } from "../ReadingArchiveUtils";
+import Skeleton from "../ui/Skeleton";
 
 // Reading tags and their icons. The picker only offers icons the reading cards can draw
 // (TAG_ICONS); a tag without one gets an icon that fits its name (getTagIcon).
@@ -45,7 +46,7 @@ export default function TagsPage({ notify }) {
     }
   }
 
-  if (!tags) return <p className="py-16 text-center text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>;
+  if (!tags) return <Skeleton variant="list" className="max-w-3xl" />;
 
   return (
     <Shell className="max-w-3xl">

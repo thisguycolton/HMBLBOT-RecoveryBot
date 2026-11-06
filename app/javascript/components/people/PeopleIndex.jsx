@@ -40,7 +40,7 @@ export default function PeopleIndex() {
   }, [data]);
 
   if (error) return <ErrorNote error={error} />;
-  if (!data) return <Loading />;
+  if (!data) return <Loading variant="feed" />;
 
   const replace = (item) => setData((d) => ({ ...d, feed: d.feed.map((i) => (i.kind === item.kind && i.id === item.id ? { ...i, ...item } : i)) }));
   const remove = (kind) => (id) => setData((d) => ({ ...d, feed: d.feed.filter((i) => !(i.kind === kind && i.id === id)) }));

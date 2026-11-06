@@ -12,7 +12,7 @@ export default function TreasuryView({ group }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   useEffect(() => { api(`/groups/${slug}/treasurer_reports`).then(setData).catch((e) => setError(e.message)); }, [slug]);
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="stats" />;
 
   return (
     <div className="space-y-5">

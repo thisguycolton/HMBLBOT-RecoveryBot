@@ -3,6 +3,7 @@ import { Copy, ExternalLink, Plus, RotateCcw } from "lucide-react";
 import { api } from "./lib";
 import { Card, ErrorNote, Tray, copy, primaryButton, quietButton } from "./ui";
 import CourtLetterPreview from "../CourtLetterPreview";
+import Skeleton from "../ui/Skeleton";
 
 // Group admins: this group's court verification form link (not linked anywhere public)
 // and the verifications sent from it
@@ -38,7 +39,7 @@ export default function CourtTab({ group, setGroup }) {
       <ErrorNote error={error} />
       <Tray label="Sent from this group">
         {!rows ? (
-          <Card className="p-4 text-sm text-slate-500">Loading…</Card>
+          <Card><Skeleton variant="rows" /></Card>
         ) : rows.length === 0 ? (
           <Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">None yet.</Card>
         ) : (

@@ -56,7 +56,7 @@ export default function WorksheetEditor() {
   }, [picked]);
 
   const definition = useMemo(() => draft && { intro: draft.intro, credit: draft.credit || undefined, sections: draft.sections }, [draft]);
-  if (!draft) return <div className="mx-auto max-w-3xl">{error ? <ErrorNote error={error} /> : <Loading />}</div>;
+  if (!draft) return <div className="mx-auto max-w-3xl">{error ? <ErrorNote error={error} /> : <Loading variant="form" />}</div>;
 
   const update = (patch) => { setDraft((d) => ({ ...d, ...patch })); setDirty(true); };
   const setSections = (sections) => update({ sections });

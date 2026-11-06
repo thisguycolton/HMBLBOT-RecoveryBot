@@ -46,7 +46,7 @@ export default function ChipsPage() {
     try { setData(await api("/recovery", { method: "PATCH", body: { ...body, today: localDate() } })); } catch (e) { setError(e.message); }
   };
 
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="chips" />;
   const { design, chips, upcoming } = data;
   const tops = chips.filter((c) => c.top);
   const open = openId && chips.find((c) => c.id === openId);

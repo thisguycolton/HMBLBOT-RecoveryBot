@@ -21,7 +21,7 @@ export default function HashtagPage() {
   }, [tag]);
 
   if (error) return <ErrorNote error={error} />;
-  if (!data) return <Loading />;
+  if (!data) return <Loading variant="notes" />;
 
   const replace = (item) => setData((d) => ({ ...d, feed: d.feed.map((i) => (i.kind === item.kind && i.id === item.id ? { ...i, ...item } : i)) }));
   const remove = (id) => setData((d) => ({ ...d, count: d.count - 1, feed: d.feed.filter((i) => i.id !== id) }));

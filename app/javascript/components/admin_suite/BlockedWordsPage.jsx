@@ -4,6 +4,7 @@ import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
+import Skeleton from "../ui/Skeleton";
 
 // The list everything people write is checked against (LanguageRule / BlockedLanguage).
 // Words are blurred until "Show words" so nobody has to read the list to open the page.
@@ -68,7 +69,7 @@ export default function BlockedWordsPage({ notify }) {
     }
   }
 
-  if (!rules) return <p className="py-16 text-center text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>;
+  if (!rules) return <Skeleton variant="list" className="max-w-3xl" />;
 
   return (
     <div className="space-y-6">

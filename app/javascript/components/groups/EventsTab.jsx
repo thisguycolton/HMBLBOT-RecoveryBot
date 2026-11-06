@@ -29,7 +29,7 @@ export default function EventsTab({ group }) {
     }
   };
 
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="cards" header={false} />;
 
   return (
     <div className="space-y-5">

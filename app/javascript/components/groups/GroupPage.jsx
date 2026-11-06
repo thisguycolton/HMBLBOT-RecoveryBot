@@ -67,7 +67,7 @@ export default function GroupPage({ tab: fixedTab }) {
       </Message>
     );
   }
-  if (!group) return <Loading />;
+  if (!group) return <Loading variant="group" />;
 
   const isMember = group.is_member || group.is_site_admin;
   const dashboard = hasGroupRole(group);

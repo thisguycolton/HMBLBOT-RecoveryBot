@@ -10,6 +10,7 @@ import { api } from "../groups/lib";
 import Avatar from "../groups/Avatar";
 import { soberFor } from "../groups/lib";
 import { Card, ErrorNote, Pill, Tray, dangerButton, primaryButton, quietButton } from "../groups/ui";
+import Skeleton from "../ui/Skeleton";
 
 const BIO_MAX = 280;
 const AVATAR_PX = 512;
@@ -64,7 +65,7 @@ export default function ProfilePage() {
     setTimeout(() => document.getElementById(to)?.scrollIntoView(), 300); // the notifications card loads on its own
   }, [loaded]);
 
-  if (!profile) return error ? <ErrorNote error={error} /> : <p className="py-16 text-center !font-sans text-sm text-slate-500">Loading…</p>;
+  if (!profile) return error ? <ErrorNote error={error} /> : <Skeleton variant="form" rows={5} />;
 
   const pick = async (e) => {
     const file = e.target.files?.[0];

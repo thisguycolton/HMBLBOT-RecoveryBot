@@ -7,6 +7,7 @@ import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { formatCount } from "./App";
 import { Badge, shortDate } from "./UsersPage";
+import { InlineSkeleton } from "../ui/Skeleton";
 
 const STATUSES = [
   { value: "open", label: "Open" },
@@ -42,7 +43,7 @@ export default function TextReportsPage({ notify }) {
 
   const subtitle = data
     ? `${formatCount(data.open)} open${data.total > data.limit ? `, showing the ${data.limit} newest` : ""}`
-    : "Loading…";
+    : <InlineSkeleton className="w-40" />;
 
   return (
     <Shell>

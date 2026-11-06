@@ -8,6 +8,7 @@ import Toggle from "../ui/Toggle";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { NoticeCard, NoticeModal } from "../SiteNotices";
+import Skeleton from "../ui/Skeleton";
 
 const TONES = [
   { value: "info", label: "Info" },
@@ -88,7 +89,7 @@ export default function NoticesPage({ notify }) {
     }
   }
 
-  if (!notices) return <p className="py-16 text-center text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>;
+  if (!notices) return <Skeleton variant="list" className="max-w-3xl" />;
 
   const live = notices.filter((n) => n.live).length;
   return (

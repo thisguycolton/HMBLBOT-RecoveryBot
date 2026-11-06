@@ -65,7 +65,7 @@ function SearchResults({ slug, query, keeper }) {
   }, [slug, query]);
 
   if (error) return <ErrorNote error={error} />;
-  if (!found) return <Loading />;
+  if (!found) return <Loading variant="document" />;
   const words = searchWords(found.query);
   const { meetings, documents } = found;
   return (
@@ -166,7 +166,7 @@ export default function MeetingsView({ group }) {
   const load = useCallback(() => api(`/groups/${slug}/business_meetings`).then(setData).catch((e) => setError(e.message)), [slug]);
   useEffect(() => { load(); }, [load]);
 
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="list" />;
   const today = new Date().toLocaleDateString("en-CA");
   const coming = data.meetings.filter((m) => m.status === "planned" && m.held_on >= today).reverse();
   const past = data.meetings.filter((m) => !coming.includes(m));

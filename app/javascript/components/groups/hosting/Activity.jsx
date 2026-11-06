@@ -24,7 +24,7 @@ export function ChapterText({ bookSlug, chapterSlug, size }) {
       .catch((e) => setError(e.message));
   }, [bookSlug, chapterSlug]);
   if (error) return <ErrorNote error={error} />;
-  if (html == null) return <Loading />;
+  if (html == null) return <Loading variant="text" />;
   return <div className="doc-prose hc-script mt-4" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
@@ -348,7 +348,7 @@ function MyReadingPick({ center, onPick }) {
           <button type="button" className={`${primaryButton} mt-[1.375rem]`} disabled={!reading} onClick={() => onPick({ kind: "my_reading", reading_id: reading.id })}>Use it</button>
         </div>
       )}
-      {readings === null && !error && <Loading />}
+      {readings === null && !error && <Loading variant="rows" />}
       {reading && reading.status !== "published" && <p className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-200"><TriangleAlert className="mt-0.5 size-3.5 shrink-0" /> This reading is a {reading.status}. The link in the chat only opens for you until you publish it.</p>}
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <a href="/readings/new" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline"><Plus className="size-3.5" /> Create a new reading <ExternalLink className="size-3" /></a>
@@ -376,7 +376,7 @@ function MyReading({ center, activity, size }) {
         <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-amber-50 p-2.5 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"><TriangleAlert className="mt-0.5 size-4 shrink-0" /> This reading isn't published, so the link in the chat only opens for its owner. Publish it to share the link.</p>
       )}
       {error && <div className="mt-3"><ErrorNote error={error} /></div>}
-      {!reading && !error && <Loading />}
+      {!reading && !error && <Loading variant="text" />}
       {reading && (
         <>
           <div className="doc-prose hc-script mt-4" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: reading.html ?? chapterHtml(reading.tiptap) }} />

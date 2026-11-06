@@ -45,7 +45,7 @@ export default function CreateDeckDialog({ group, doc, onClose }) {
           <button type="button" onClick={onClose} aria-label="Close" className="inline-grid size-9 place-items-center rounded-xl !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:hover:!bg-neutral-800"><X className="size-5" /></button>
         </div>
         <p className="text-sm text-slate-600 dark:text-neutral-300">HostDeck steps through <span className="font-semibold">{doc.title}</span> a section at a time (Insert &gt; Add Section, or its headings), with the blocks around it that you pick.</p>
-        {!data && !error && <Loading />}
+        {!data && !error && <Loading variant="rows" />}
         {using.length > 0 && (
           <div className="rounded-xl bg-neutral-50 p-3 text-sm dark:bg-neutral-800/60">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Already running from it</p>

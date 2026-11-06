@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronRight, FileCheck2, X } from "lucide-react";
+import Skeleton from "../ui/Skeleton";
 
 const ROLE_LABEL = { host: "You host", co_host: "You co-host" };
 
@@ -37,7 +38,7 @@ export default function HostCourtModal({ open, onClose }) {
           <button type="button" aria-label="Close" onClick={onClose} className="grid size-8 place-items-center rounded-full !bg-transparent text-slate-500 hover:!bg-slate-100 dark:hover:!bg-neutral-800"><X className="size-4" /></button>
         </div>
         {error && <p className="text-sm text-rose-700">{error}</p>}
-        {!data && !error && <p className="py-6 text-center text-sm text-slate-500">Loading…</p>}
+        {!data && !error && <Skeleton variant="rows" className="py-2" />}
         {data && (
           <>
             <p className="mb-3 !font-sans text-sm text-slate-600 dark:text-neutral-300">Which meeting is it for?</p>

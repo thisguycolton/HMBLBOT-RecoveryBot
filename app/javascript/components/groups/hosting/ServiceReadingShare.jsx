@@ -25,7 +25,7 @@ export default function ServiceReadingShare() {
     try { localStorage.setItem("hosting-share-size", next); } catch { /* private window */ }
   };
   if (error) return <Message title="That reading isn't here" text={error} />;
-  if (!reading) return <Loading />;
+  if (!reading) return <Loading variant="document" />;
   return (
     <div className={`hc-root min-h-dvh w-full bg-white !font-sans text-slate-900 dark:bg-neutral-950 dark:text-white ${dark ? "doc-dark" : ""}`}>
       <div className="fixed right-3 top-3 z-10 flex items-center rounded-xl bg-white/80 shadow-panel ring-1 ring-neutral-200 backdrop-blur print:hidden dark:bg-neutral-900/80 dark:ring-neutral-800">

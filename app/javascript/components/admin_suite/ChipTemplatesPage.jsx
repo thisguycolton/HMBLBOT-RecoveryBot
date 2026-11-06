@@ -12,6 +12,7 @@ import ArtEditor from "../chips/ArtEditor";
 import MilestoneLooks from "../chips/MilestoneLooks";
 import { applyDefaults, readText, templateDesign } from "../chips/lib";
 import { Card } from "./App";
+import Skeleton from "../ui/Skeleton";
 
 const PREVIEW = { key: "year", years: 1, label: "1 year" };
 
@@ -60,7 +61,7 @@ function TemplateList({ notify }) {
     } catch (e) { notify(e.message, "error"); }
   };
 
-  if (!data) return <p className="py-16 text-center text-sm text-slate-500 !font-sans">Loading…</p>;
+  if (!data) return <Skeleton variant="chips" />;
   return (
     <>
       <Card title="New template" subtitle="Import an SVG made of filled shapes. Each top-level group (Illustrator or Inkscape layer, Figma frame) becomes a layer, and its outlines become metal lines. Only art you own or have the rights to.">
@@ -134,7 +135,7 @@ function TemplateEditor({ id, notify }) {
     }).catch((e) => notify(e.message, "error"));
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!t || !base) return <p className="py-16 text-center text-sm text-slate-500 !font-sans">Loading…</p>;
+  if (!t || !base) return <Skeleton variant="form" />;
   const draft = t.draft;
   const defaults = draft.defaults;
   const setDraft = (patch) => { setT({ ...t, draft: { ...draft, ...patch } }); setDirty(true); };
