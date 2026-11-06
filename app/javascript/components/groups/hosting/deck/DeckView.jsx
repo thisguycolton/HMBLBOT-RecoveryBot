@@ -101,7 +101,7 @@ export default function DeckView({ deck, template: saved, editor = null, canArra
       </div>
     );
   }
-  if (!center || !live) return <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950"><Loading /></div>;
+  if (!center || !live) return <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950"><Loading variant="trays" /></div>;
 
   const { dark, size } = deck;
   const others = live.presences.filter((p) => !p.me && deck.now - new Date(p.last_seen_at).getTime() < AWAY_MS);

@@ -16,7 +16,7 @@ export default function GroupsIndex() {
   }, []);
 
   if (error) return <Message title="Couldn't load your groups" text={error} />;
-  if (!data) return <Loading />;
+  if (!data) return <Loading variant="cards" />;
 
   const mine = data.groups.filter((g) => g.membership_status);
   const others = data.groups.filter((g) => !g.membership_status);

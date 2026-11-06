@@ -351,7 +351,7 @@ export default function DecisionsView({ group }) {
     await load();
   };
 
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="list" />;
   const canEdit = data.can_edit;
   const current = openId ? index.byId.get(openId) : null;
   const currentThread = current ? index.threads.find((t) => t.members.some((x) => x.motion.id === current.id)) : null;

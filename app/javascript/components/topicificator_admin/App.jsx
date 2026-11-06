@@ -7,6 +7,7 @@ import { api } from "./api";
 import TopicsPage from "./TopicsPage";
 import SetsPage from "./SetsPage";
 import CategoriesPage from "./CategoriesPage";
+import Skeleton from "../ui/Skeleton";
 
 export const BASE = "/admin_panel/topicificator";
 
@@ -79,7 +80,7 @@ function AdminShell() {
       </nav>
       <div className="space-y-6">
         {!meta ? (
-          <p className="py-16 text-center text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>
+          <Skeleton variant="list" header={false} rows={6} />
         ) : (
           <Routes>
             <Route path="/" element={<TopicsPage {...page} />} />

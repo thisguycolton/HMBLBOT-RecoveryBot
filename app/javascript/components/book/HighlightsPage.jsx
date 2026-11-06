@@ -6,6 +6,7 @@ import HighlightNote from "./HighlightNote";
 import { highlightCss } from "./HighlightCard";
 import ShareToTimeline from "./ShareToTimeline";
 import { allHighlightsUrl, highlightUrl, shareLink, useToast } from "./highlightSharing";
+import Skeleton from "../ui/Skeleton";
 
 // /library/highlights         every highlight you've made, across books (notes editable)
 // /library/highlights/:token  someone's shared highlights (notes read-only)
@@ -109,7 +110,7 @@ export default function HighlightsPage() {
     );
   }
 
-  if (!data) return <div className="wb wb-hl-page opacity-70">Loading…</div>;
+  if (!data) return <div className="wb wb-hl-page"><Skeleton variant="notes" /></div>;
 
   return (
     <div className="wb wb-hl-page">

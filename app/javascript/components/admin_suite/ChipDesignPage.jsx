@@ -7,6 +7,7 @@ import { SpinningChip } from "../recovery/ChipModal";
 import RoundPartForm from "../chips/RoundPartForm";
 import { storedDesign } from "../chips/lib";
 import { Card } from "./App";
+import Skeleton from "../ui/Skeleton";
 
 const PREVIEWS = [
   { key: "24h", label: "24 hours" }, { key: "30d", label: "30 days" }, { key: "60d", label: "60 days" },
@@ -28,7 +29,7 @@ export default function ChipDesignPage({ notify }) {
   const load = (d) => { setData(d); setDesign(d.design); setTemplates(d.templates || []); setDirty(false); };
   useEffect(() => { api("/chip_design").then(load).catch((e) => notify(e.message, "error")); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!design) return <p className="py-16 text-center text-sm text-slate-500 !font-sans">Loading…</p>;
+  if (!design) return <Skeleton variant="form" />;
   const set = (patch) => { setDesign((d) => ({ ...d, round: { ...d.round, ...patch } })); setDirty(true); };
   const put = async (body, note) => {
     setBusy(true);

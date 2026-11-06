@@ -206,7 +206,7 @@ export default function FindMeeting() {
 
       <ErrorNote error={error} />
 
-      {!data && !error && <Loading />}
+      {!data && !error && <Loading variant="schedule" header={false} />}
       {data && (
         <section className={`space-y-3 transition-opacity ${loading ? "opacity-60" : ""}`} aria-busy={loading}>
           <div className="flex flex-wrap items-center justify-between gap-3">

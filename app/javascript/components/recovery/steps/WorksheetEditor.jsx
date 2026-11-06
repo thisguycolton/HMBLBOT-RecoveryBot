@@ -94,7 +94,7 @@ export default function WorksheetEditor({ template = false }) {
       return { ...p, welcome, label: welcome ? "Welcome page" : `Page ${n}`, of };
     });
   }, [definition]);
-  if (!draft) return <div className="mx-auto max-w-3xl">{error ? <ErrorNote error={error} /> : <Loading />}</div>;
+  if (!draft) return <div className="mx-auto max-w-3xl">{error ? <ErrorNote error={error} /> : <Loading variant="form" />}</div>;
 
   const update = (patch) => { setDraft((d) => ({ ...d, ...patch })); setDirty(true); };
   const setSections = (sections) => update({ sections });

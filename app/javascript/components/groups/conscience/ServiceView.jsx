@@ -79,7 +79,7 @@ export default function ServiceView({ group }) {
   const [placing, setPlacing] = useState(null); // position id
   const load = useCallback(() => api(`/groups/${slug}/service_positions`).then(setData).catch((e) => setError(e.message)), [slug]);
   useEffect(() => { load(); }, [load]);
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="trays" />;
 
   const call = async (path, method, body) => {
     setError(null);

@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { ClipboardCheck, Eye, NotebookPen, Users } from "lucide-react";
 import { api } from "../topicificator_admin/api";
 import { Card, ExternalTool, OTHER_TOOLS, StatTile, formatCount } from "./App";
+import Skeleton from "../ui/Skeleton";
 
 // Admin home, metr-style: metric cards, what's waiting on you, and the other admin tools
 export default function OverviewPage({ notify }) {
@@ -12,7 +13,7 @@ export default function OverviewPage({ notify }) {
     api("/overview").then(setData).catch((e) => notify(e.message, "error"));
   }, []);
 
-  if (!data) return <p className="py-16 text-center text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>;
+  if (!data) return <Skeleton variant="stats" />;
 
   const waiting = [
     { label: "Contact requests to answer", count: data.contact_requests.open, to: "/contact_requests", tone: "bg-sky-600" },

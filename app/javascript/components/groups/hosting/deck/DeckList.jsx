@@ -26,7 +26,7 @@ export function DeckList({ slug }) {
   }, [decks, query]);
 
   if (error) return <ErrorNote error={error} />;
-  if (!decks) return <Loading />;
+  if (!decks) return <Loading variant="list" />;
   return (
     <div className="space-y-5">
       <Card className="flex flex-wrap items-center gap-3 p-4">

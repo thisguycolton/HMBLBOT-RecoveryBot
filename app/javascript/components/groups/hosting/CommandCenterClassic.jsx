@@ -128,7 +128,7 @@ export default function CommandCenterClassic() {
       </div>
     );
   }
-  if (!center || !live) return <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950"><Loading /></div>;
+  if (!center || !live) return <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950"><Loading variant="trays" /></div>;
 
   const changeSize = (step) => {
     const i = Math.min(Math.max(SIZES.indexOf(size) + step, 0), SIZES.length - 1);

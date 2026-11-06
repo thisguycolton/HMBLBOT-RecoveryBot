@@ -9,6 +9,7 @@ import { api } from "../groups/lib";
 import ProfileHero from "./ProfileHero";
 import { PROFILE_BLOCK_GROUPS, PROFILE_BLOCK_INFO, newProfileBlock } from "./lib";
 import { CoverField } from "../groups/page/GroupPageEditor";
+import Skeleton from "../ui/Skeleton";
 
 const PANELS = [
   { key: "page", label: "Page", icon: FileText, note: "The cover across the top" },
@@ -87,7 +88,7 @@ export default function ProfileEditor() {
       </div>
     );
   }
-  if (!draft) return <p className="py-24 text-center text-sm text-slate-500">Loading the editor…</p>;
+  if (!draft) return <Skeleton variant="form" label="Loading the editor" className="mx-auto max-w-3xl py-6" />;
 
   const { person, viewer } = saved.context;
   const context = { ...saved.context, kind: saved.kind, note_max: saved.note_max, images_max: saved.images_max };

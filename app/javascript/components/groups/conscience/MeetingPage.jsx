@@ -180,7 +180,7 @@ export default function MeetingPage({ group, id }) {
   }, [dirty]);
 
   if (error && !meeting) return <Message title="That meeting isn't here" text={error}><Link to={meetingsPath(slug)} className="mt-4 inline-block text-sm text-accent hover:underline">Back to meetings</Link></Message>;
-  if (!meeting) return <Loading />;
+  if (!meeting) return <Loading variant="document" />;
 
   const canEdit = meeting.can_edit;
   const patch = async (attrs, done) => {

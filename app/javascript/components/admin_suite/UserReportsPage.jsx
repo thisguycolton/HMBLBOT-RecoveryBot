@@ -6,6 +6,7 @@ import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { formatCount } from "./App";
 import { Badge, shortDate } from "./UsersPage";
+import { InlineSkeleton } from "../ui/Skeleton";
 
 const STATUSES = [
   { value: "open", label: "To review" },
@@ -38,7 +39,7 @@ export default function UserReportsPage({ notify }) {
     }
   }
 
-  const subtitle = data ? `${formatCount(data.open)} to review${data.total > data.limit ? `, showing the ${data.limit} newest` : ""}` : "Loading…";
+  const subtitle = data ? `${formatCount(data.open)} to review${data.total > data.limit ? `, showing the ${data.limit} newest` : ""}` : <InlineSkeleton className="w-40" />;
 
   return (
     <Shell>

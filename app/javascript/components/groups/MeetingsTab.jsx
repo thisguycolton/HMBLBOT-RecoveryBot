@@ -7,6 +7,7 @@ import { DAYS, ZONES, api, clock, fromTimeValue, localHint, toTimeValue, typeLab
 import { Card, ErrorNote, Pill, Tray, dangerButton, primaryButton, quietButton } from "./ui";
 import MeetingPasscode from "./MeetingPasscode";
 import ShareButton from "../share/ShareButton";
+import Skeleton from "../ui/Skeleton";
 
 // Types offered as checkboxes when adding a meeting by hand
 const COMMON_TYPES = ["O", "C", "D", "SP", "B", "ST", "LIT", "12x12", "MED", "BE", "W", "M", "LGBTQ", "Y"];
@@ -584,7 +585,7 @@ function ImportPanel({ group, onClose, onImported }) {
       </div>
       <ErrorNote error={error} />
       {!results ? (
-        <p className="text-sm text-slate-500 dark:text-neutral-400">Loading…</p>
+        <Skeleton variant="rows" rows={4} />
       ) : series.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-neutral-400">
           {!results.synced_at

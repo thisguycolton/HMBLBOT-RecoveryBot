@@ -37,7 +37,7 @@ export default function OverviewView({ group }) {
   const load = useCallback(() => api(`/groups/${slug}/conscience`).then(setData).catch((e) => setError(e.message)), [slug]);
   useEffect(() => { load(); }, [load]);
 
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="stats" />;
   const next = data.next_meeting;
   const waiting = data.waiting;
   const waitingCount = waiting ? waiting.draft_minutes.length + waiting.suggested_items.length + waiting.draft_documents.length + waiting.draft_reports.length : 0;

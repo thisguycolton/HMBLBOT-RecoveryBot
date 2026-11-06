@@ -34,7 +34,7 @@ export default function IntergroupPage({ template = false }) {
       </Message>
     );
   }
-  if (!page) return <Loading />;
+  if (!page) return <Loading variant="group" />;
 
   // Starting it makes a group here (waiting for a site admin), run by whoever started it
   const onStart = async () => {

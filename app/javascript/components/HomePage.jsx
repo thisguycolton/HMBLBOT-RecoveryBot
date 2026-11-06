@@ -98,8 +98,8 @@ function HomePreview() {
         <div className="mt-10 min-h-[120px]">
           {loading && (
             <div className="space-y-3">
-              <div className="h-8 lg:h-12 w-1/2 rounded bg-slate-100 animate-pulse mx-auto" />
-              <div className="h-6 w-3/4 rounded bg-slate-100 animate-pulse mx-auto" />
+              <div className="h-8 lg:h-12 w-1/2 rounded-full bg-white/30 motion-safe:animate-pulse mx-auto" />
+              <div className="h-6 w-3/4 rounded-full bg-white/30 motion-safe:animate-pulse mx-auto" />
             </div>
           )}
 

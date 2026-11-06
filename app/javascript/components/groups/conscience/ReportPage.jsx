@@ -97,7 +97,7 @@ export default function ReportPage({ group, id = null }) {
 
   const s = useMemo(() => (form ? summarize(form) : null), [form]);
   if (error && !form) return <Message title="That report isn't here" text={error}><Link to={treasuryPath(slug)} className="mt-4 inline-block text-sm text-accent hover:underline">Back to reports</Link></Message>;
-  if (!form) return <Loading />;
+  if (!form) return <Loading variant="form" />;
 
   const change = (patch) => { setForm((f) => ({ ...f, ...patch })); setDirty(true); };
   const setLine = (i, patch) => change({ lines: form.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) });

@@ -111,7 +111,7 @@ export default function DocumentTemplates({ group }) {
   const [error, setError] = useState(null);
   const load = useCallback(() => api(`/groups/${group.slug}/document_templates`).then(setData).catch((e) => setError(e.message)), [group.slug]);
   useEffect(() => { load(); }, [load]);
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="cards" />;
   const onSaved = (t) => setData((d) => ({ ...d, templates: d.templates.map((x) => (x.kind === t.kind ? t : x)) }));
   return (
     <div className="space-y-4">

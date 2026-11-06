@@ -88,7 +88,7 @@ export default function ChipEditions({ group, data, templates, onTemplates }) {
         )}
       </div>
       <ErrorNote error={error} />
-      {!list ? <Loading /> : editing ? (
+      {!list ? <Loading variant="rows" /> : editing ? (
         <EditionForm group={group} data={data} meetings={list.meetings} templates={templates} onTemplates={onTemplates} edition={editing}
           onDone={() => { setEditing(null); load(); }} />
       ) : list.editions.length === 0 ? (

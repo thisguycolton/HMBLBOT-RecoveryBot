@@ -15,7 +15,7 @@ export default function GroupHome({ slug, onJoin }) {
   useEffect(() => { load(); }, [load]);
 
   if (error) return <ErrorNote error={error} />;
-  if (!page) return <Loading />;
+  if (!page) return <Loading variant="trays" header={false} />;
 
   const context = { ...page.context, kind: page.kind, note_max: page.note_max, reload: load, onJoin: async () => { await onJoin(); await load(); } };
   return (

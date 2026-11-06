@@ -7,6 +7,7 @@ import { EventHero } from "./EventLayout";
 import ShareButton from "../share/ShareButton";
 import EventBlocks from "./EventLayout";
 import RsvpCard from "./RsvpCard";
+import Skeleton from "../ui/Skeleton";
 
 // /events/:token — the published event (or a draft, for the people editing it)
 export default function EventPage() {
@@ -30,7 +31,7 @@ export default function EventPage() {
       </div>
     );
   }
-  if (!event) return <p className="py-24 text-center text-sm text-slate-500">Loading…</p>;
+  if (!event) return <Skeleton variant="document" className="mx-auto max-w-3xl py-6" />;
 
   const updates = allUpdates ? event.updates : event.updates.slice(0, 1);
 

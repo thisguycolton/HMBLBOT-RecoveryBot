@@ -217,7 +217,7 @@ export default function StepsPage() {
     } catch (e) { setError(e.message); setBusy(null); }
   };
 
-  if (!data) return error ? <ErrorNote error={error} /> : <Loading />;
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="trays" />;
   const going = data.works.filter((w) => w.status !== "done");
   const done = data.works.filter((w) => w.status === "done");
   const toolsFor = (n) => data.tools.filter((t) => t.steps.includes(n));

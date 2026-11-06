@@ -3,6 +3,7 @@ import { Check, CornerDownRight, RotateCcw, Trash2 } from "lucide-react";
 import { timeAgo } from "../page/lib";
 import Avatar from "../Avatar";
 import { primaryButton, quietButton } from "../ui";
+import Skeleton from "../../ui/Skeleton";
 
 // The comments in a document's margin (GroupDocumentComment): threads about some of its words,
 // with replies, that the thread's writer or the document's editors resolve. Off unless the
@@ -81,7 +82,7 @@ function Thread({ thread, active, located, canResolve, onSelect, onReply, onReso
 // threads: from the API; order: thread ids in the order their words come; located: ids found in the text
 export default function CommentsPane({ threads, order, located, active, pending, canResolve, onSelect, onCreate, onCancelPending, onReply, onResolve, onDelete }) {
   const [showResolved, setShowResolved] = useState(false);
-  if (!threads) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (!threads) return <Skeleton variant="rows" />;
   const rank = (t) => { const i = order.indexOf(t.id); return i === -1 ? Infinity : i; };
   const open = threads.filter((t) => !t.resolved).sort((a, b) => rank(a) - rank(b) || a.id - b.id);
   const resolved = threads.filter((t) => t.resolved);

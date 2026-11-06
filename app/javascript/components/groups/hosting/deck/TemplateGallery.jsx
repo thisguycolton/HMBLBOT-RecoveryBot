@@ -104,7 +104,7 @@ export default function TemplateGallery({ center, draft, setDraft, onClose }) {
 
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
           <ErrorNote error={error} />
-          {!data ? <Loading /> : (
+          {!data ? <Loading variant="cards" header={false} /> : (
             <>
               {data.can_save && (
                 <form onSubmit={save} className="space-y-2 rounded-xl bg-white p-3 shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800">

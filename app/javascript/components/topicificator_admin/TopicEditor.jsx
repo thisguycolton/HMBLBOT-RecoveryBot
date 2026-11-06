@@ -6,6 +6,7 @@ import { inputClass, labelClass } from "../ui/styles";
 import { api, topicTitle } from "./api";
 import { buttonClass, selectClass } from "./App";
 import { CategoryTile } from "./CategoriesPage";
+import Skeleton from "../ui/Skeleton";
 
 const BLANK = { title: "", subtitle: "", searchable_number: "", link: "", topic_category_id: "", difficulty: "", tag_ids: [], prompts: [] };
 
@@ -36,7 +37,7 @@ export default function TopicEditor({ topicId, meta, defaults, onClose, onSaved,
 
   const dirty = useMemo(() => form && topic && (JSON.stringify(fields(form)) !== JSON.stringify(fields(topic)) || newTags.length > 0), [form, topic, newTags]);
 
-  if (!form) return <Shell><ShellPanel className="p-6 text-sm text-slate-500 !font-sans">Loading…</ShellPanel></Shell>;
+  if (!form) return <Shell><ShellPanel className="p-6"><Skeleton variant="form" header={false} /></ShellPanel></Shell>;
 
   const set = (key) => (e) => setForm({ ...form, [key]: e?.target ? e.target.value : e });
 
