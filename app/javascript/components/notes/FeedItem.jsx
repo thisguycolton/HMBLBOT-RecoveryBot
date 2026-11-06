@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Ban, BookOpen, EyeOff, Flag, ImageIcon, MessageSquareOff, MessageSquareText, Pencil, Repeat2, Trash2 } from "lucide-react";
+import { Ban, BookOpen, EyeOff, Flag, ImageIcon, Lock, MessageSquareOff, MessageSquareText, Pencil, Repeat2, Trash2 } from "lucide-react";
 import ReportDialog from "../groups/chat/ReportDialog";
 import Markdown from "../book/Markdown";
 import HighlightNote from "../book/HighlightNote";
@@ -65,7 +65,8 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
     }
   };
   const note = item.kind === "note";
-  const picturable = item.kind === "highlight" || (note && !!item.body?.trim());
+  // A members-only book's words don't go into pictures (they'd go anywhere)
+  const picturable = (item.kind === "highlight" && !item.members_only) || (note && !!item.body?.trim());
   const menu = readOnly || editing ? [] : item.mine ? [
     picturable && { label: "Share as a picture", icon: ImageIcon, onClick: () => setPicturing(true) },
     note && { label: "Edit", icon: Pencil, onClick: () => setEditing(true) },
@@ -217,9 +218,15 @@ function HighlightBody({ item, onChange }) {
   const href = highlightHref(item);
   return (
     <>
-      <blockquote className="wb-hl-quote wb-feed-item__quote">
-        <mark style={{ "--hl": highlightCss(item.color) }}>{item.quote}</mark>
-      </blockquote>
+      {item.locked ? (
+        <p className="wb-feed-item__locked">
+          <Lock size={13} aria-hidden="true" /> This quote is from {item.book_title}, which only members of groups that read it can open.
+        </p>
+      ) : (
+        <blockquote className="wb-hl-quote wb-feed-item__quote">
+          <mark style={{ "--hl": highlightCss(item.color) }}>{item.quote}</mark>
+        </blockquote>
+      )}
       <a href={href} className="wb-feed-item__source"><BookOpen size={13} aria-hidden="true" /> {item.book_title} · {item.chapter_title}</a>
       <HighlightNote highlight={{ ...item, by: item.by === null ? null : item.author?.name?.split(" ")[0] }} onChange={(h) => onChange?.({ ...item, note: h.note, mentions: h.mentions })} />
     </>

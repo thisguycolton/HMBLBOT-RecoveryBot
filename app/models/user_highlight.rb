@@ -78,6 +78,7 @@ class UserHighlight < ApplicationRecord
   def visible_to?(viewer)
     return false unless viewer
     return true if viewer.id == user_id
+    return false if chapter.book.locked_for?(viewer)
     return false unless shared? && User.profiles_open_to?(viewer)
 
     visibility == "public" || (visibility == "followers" && Follow.exists?(follower_id: viewer.id, followed_id: user_id))
@@ -103,10 +104,13 @@ class UserHighlight < ApplicationRecord
   validates :note, length: { maximum: 10_000 }
 
   # As a profile feed shows it: the quote, its note and where it's from
+  # A members-only book's words (Book#locked_for?) are left out for those who can't read it: the
+  # feed says where it's from and that the book is for its groups' members (`locked`).
   def as_feed_json(viewer:)
+    locked = viewer&.id != user_id && chapter.book.locked_for?(viewer)
     {
       kind: "highlight", id: id, created_at: (shared_at || created_at).iso8601, mine: viewer&.id == user_id, author: user.as_person_json,
-      quote: selector.dig("quote", "exact"), note: note, mentions: mentions, mentions_me: mentions?(viewer), color: style["color"], visibility: (visibility if viewer&.id == user_id),
+      quote: (selector.dig("quote", "exact") unless locked), locked: locked, members_only: chapter.book.members_only?, note: note, mentions: mentions, mentions_me: mentions?(viewer), color: style["color"], visibility: (visibility if viewer&.id == user_id),
       book_slug: chapter.book.slug, book_title: chapter.book.title, chapter_slug: chapter.slug, chapter_title: chapter.title,
       share_id: signed_id(purpose: :share),
       repost_count: reposts.size, reposted: reposts.any? { |r| r.user_id == viewer&.id }, can_repost: repostable_by?(viewer),

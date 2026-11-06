@@ -51,7 +51,7 @@ class Api::SearchController < ApplicationController
 
   # One per book: the first chapter that matches, and how many more there are in that book
   def chapters(like)
-    matching = Chapter.joins(:book).merge(Book.visible_to(current_user)).where("chapters.title ILIKE :q OR chapters.label ILIKE :q", q: like)
+    matching = Chapter.joins(:book).merge(Book.readable_by(current_user)).where("chapters.title ILIKE :q OR chapters.label ILIKE :q", q: like)
     counts = matching.group(:book_id).count
     firsts = matching.select("DISTINCT ON (chapters.book_id) chapters.*").reorder("chapters.book_id", "chapters.index")
     Chapter.from(firsts, :chapters).joins(:book).includes(:book).order("books.title").limit(EACH)

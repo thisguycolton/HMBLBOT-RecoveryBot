@@ -46,8 +46,11 @@ class ShareMeta
   # anywhere, and whether to say who they are is up to them. A link handed out from "Share as a
   # picture" carries the look picked there (&look=) and whether the note was left off (&note=0),
   # so the preview matches the picture sent with it.
+  # A members-only book's words stay off link previews and pictures (nil: the site's own card).
   def self.highlight(highlight, look: nil, note: true)
     book = highlight.chapter.book
+    return if book.members_only?
+
     look = QuoteCard::LOOKS.include?(look.to_s) ? look.to_s : nil
     picture = { look: look, note: (note ? nil : "0") }.compact
     new(title: "A highlight from #{book.title}", description: "“#{highlight.quote.squish.truncate(180, separator: ' ')}” · #{highlight.chapter.title}",

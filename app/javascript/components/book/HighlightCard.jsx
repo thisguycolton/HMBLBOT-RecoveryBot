@@ -90,9 +90,11 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
             </div>
             <div className="wb-hl-card__actions" role="group" aria-label="Highlight actions">
               <ShareToTimeline highlight={highlight} onChange={onChange} toast={toast} tile up align="left" />
-              <button type="button" className="wb-btn wb-hl-card__action" onClick={() => setPicturing(true)}>
-                <ImageIcon size={18} aria-hidden="true" /> <span>Picture</span>
-              </button>
+              {!highlight.members_only && (
+                <button type="button" className="wb-btn wb-hl-card__action" onClick={() => setPicturing(true)}>
+                  <ImageIcon size={18} aria-hidden="true" /> <span>Picture</span>
+                </button>
+              )}
               <button type="button" className="wb-btn wb-hl-card__action" onClick={share}>
                 <Link2 size={18} aria-hidden="true" /> <span>Copy link</span>
               </button>

@@ -2514,3 +2514,78 @@ body:has(.wb) {
 .chat-focus { animation: chat-focus 2.5s ease-out; }
 @keyframes chat-focus { 0%, 40% { background: color-mix(in srgb, var(--color-accent, #0b6bcb) 18%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .chat-typing i, .chat-focus { animation: none; } }
+
+/* ---- Members-only book (MembersOnlyPage): how to get access ---- */
+.wb-members-only {
+  display: flex;
+  justify-content: center;
+  padding: calc(var(--nav-h, 3.5rem) + 1.5rem) 1rem 3rem;
+}
+
+.wb-members-only__card {
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-subtle);
+  border-radius: 1.75rem;
+  max-width: 36rem;
+  padding: 2rem 1.75rem;
+  width: 100%;
+}
+
+.wb-members-only__icon {
+  background: var(--wb-subtle-light);
+  border-radius: 999px;
+  color: var(--wb-link);
+  display: inline-grid;
+  height: 3.25rem;
+  place-items: center;
+  width: 3.25rem;
+}
+
+.wb .wb-members-only__title { font-size: 1.45rem; font-weight: 800; line-height: 1.25; margin: 1rem 0 0.5rem; }
+.wb-members-only__lead { color: var(--wb-ink-soft); }
+
+.wb .wb-members-only__label {
+  color: var(--wb-ink-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin: 1.5rem 0 0.5rem;
+  text-transform: uppercase;
+}
+
+.wb-members-only__steps { display: grid; gap: 0.9rem; list-style: decimal; padding-left: 1.25rem; }
+.wb-members-only__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+.wb-members-only__groups { display: grid; gap: 0.35rem; margin-top: 0.5rem; }
+.wb .wb-members-only__groups a { align-items: center; color: var(--wb-link); display: inline-flex; font-weight: 600; gap: 0.35rem; }
+.wb-members-only__more { color: var(--wb-ink-soft); font-size: 0.9rem; }
+
+.wb .wb-members-only__back {
+  align-items: center;
+  color: var(--wb-ink-soft);
+  display: inline-flex;
+  font-size: 0.9rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  margin-top: 1.75rem;
+}
+
+/* A locked book's card in the library, and a feed quote from one */
+.wb-library__lock {
+  align-items: center;
+  color: var(--wb-ink-soft);
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 600;
+  gap: 0.25rem;
+}
+
+.wb-feed-item__locked {
+  align-items: center;
+  color: var(--wb-ink-soft);
+  display: flex;
+  font-size: 0.9rem;
+  font-style: italic;
+  gap: 0.4rem;
+}
+.wb-members-only--embedded { padding-top: 1rem; }
+.wb-library__name .wb-library__lock { align-self: center; justify-content: center; }
