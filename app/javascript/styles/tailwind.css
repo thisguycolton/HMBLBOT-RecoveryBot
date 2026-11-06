@@ -48,6 +48,10 @@
       --nav-h: 64px;
     }
   }
+  /* The screen-share view (components/shell/shareView.js) has no top bar */
+  html.share-view {
+    --nav-h: 0px;
+  }
 
   html {
     color-scheme: light;

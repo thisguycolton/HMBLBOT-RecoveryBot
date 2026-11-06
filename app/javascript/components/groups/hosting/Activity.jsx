@@ -4,6 +4,7 @@ import { api } from "../lib";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import { ErrorNote, Loading, primaryButton, quietButton } from "../ui";
 import FilterPick from "../../ui/FilterPick";
+import { SHARE_WINDOW, shareHref } from "../../shell/shareView";
 import { ACTIVITY_TITLE, activityLabel, chapterHtml, copyText, mmss, readerHref } from "./lib";
 
 const label = "!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
@@ -28,7 +29,8 @@ export function ChapterText({ bookSlug, chapterSlug, size }) {
   return <div className="doc-prose hc-script mt-4" style={{ fontSize: size }} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-export const shareReading = (r) => window.open(readerHref(r), "hosting-reading", "popup,width=1100,height=850");
+// In its own window, with no site menus around it (shell/shareView.js), to share that window in Zoom
+export const shareReading = (r) => window.open(shareHref(readerHref(r)), SHARE_WINDOW, "popup,width=1100,height=850");
 
 // The script's reading / activity spot: the hosts pick what fills it today (it's shared with the
 // other host), then read it from here. The format leaves the choice to the host.

@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { ArrowLeft, Menu, Moon, Sun, X } from "lucide-react";
 import Footer from "./Footer";
 import { RecoveryBotLogo } from "./brand/Logo";
 import BottomBar from "./shell/BottomBar";
 import { ChromeSheets, useChrome } from "./shell/Chrome";
 import { PUSH_WIDTH } from "./shell/Sheet";
 import { pageInfo } from "./shell/pageInfo";
+import { isShareView } from "./shell/shareView";
 import Sidebar from "./shell/Sidebar";
 import TopBar from "./shell/TopBar";
 import { ShellContext, useMedia, usePath, useNav, useTheme } from "./shell/useShell";
@@ -16,7 +17,12 @@ import { forgetPushAfterSignOut, registerServiceWorker } from "../lib/push";
 // rounded panel the page itself sits in. A page can hand the shell a side panel (PageAside):
 // the column beside the stage on wide screens, a sheet from the bottom bar on phones.
 // `fill`: the page takes the stage as it is, with no footer or padding under it (the chat).
-export default function Layout({ children, isAuthenticated, showFooter: footer = true, fill = false }) {
+export default function Layout(props) {
+  const [share] = useState(isShareView);
+  return share ? <ShareLayout>{props.children}</ShareLayout> : <Shell {...props} />;
+}
+
+function Shell({ children, isAuthenticated, showFooter: footer = true, fill = false }) {
   const showFooter = footer && !fill;
   const nav = useNav();
   const theme = useTheme();
@@ -107,6 +113,36 @@ export default function Layout({ children, isAuthenticated, showFooter: footer =
         </aside>
 
         <ChromeSheets chrome={chrome} nav={nav} isAuthenticated={isAuthenticated} theme={theme} path={path} pushed={push?.which ?? null} />
+      </div>
+    </ShellContext.Provider>
+  );
+}
+
+// The screen-share view (shell/shareView.js): the page alone on the whole window, for a host
+// sharing it in Zoom from HostDeck. No sidebar, bars or footer, and a page's side panel isn't
+// shown. A small corner card goes back to HostDeck, switches the theme, or brings the menus back.
+const NO_ASIDE = { asideTarget: null, setAside: () => {} };
+const cornerButton = "inline-grid size-9 shrink-0 place-items-center rounded-xl !bg-transparent text-slate-600 hover:!bg-neutral-100 dark:text-neutral-300 dark:hover:!bg-neutral-800";
+
+function ShareLayout({ children }) {
+  const theme = useTheme();
+  useEffect(() => {
+    document.documentElement.classList.add("share-view");
+    return () => document.documentElement.classList.remove("share-view");
+  }, []);
+  const opener = (() => { try { return window.opener && !window.opener.closed ? window.opener : null; } catch { return null; } })();
+  const back = () => { try { opener.focus(); } catch { /* another site */ } window.close(); };
+  const menus = new URL(window.location.href);
+  menus.searchParams.set("screen", "0");
+  return (
+    <ShellContext.Provider value={NO_ASIDE}>
+      <div className="share-stage min-h-dvh w-full self-stretch bg-white text-slate-900 dark:bg-neutral-900 dark:text-neutral-100">
+        <div className="fixed right-3 top-3 z-[2200] flex items-center rounded-xl bg-white/80 shadow-panel ring-1 ring-neutral-200 backdrop-blur print:!hidden dark:bg-neutral-900/80 dark:ring-neutral-800">
+          {opener && <button type="button" className={cornerButton} onClick={back} title="Back to HostDeck" aria-label="Back to HostDeck"><ArrowLeft className="size-5" /></button>}
+          <button type="button" className={cornerButton} onClick={theme.toggle} title={theme.isDark ? "Light mode" : "Dark mode"} aria-label={theme.isDark ? "Light mode" : "Dark mode"}>{theme.isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}</button>
+          <a className={cornerButton} href={`${menus.pathname}${menus.search}${menus.hash}`} title="Show the site's menus" aria-label="Show the site's menus"><Menu className="size-5" /></a>
+        </div>
+        <main className="pb-10">{children}</main>
       </div>
     </ShellContext.Provider>
   );

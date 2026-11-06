@@ -12,6 +12,7 @@ import HighlightsModal from "../components/HighlightsModal";
 import { ReaderBar, ReaderFooter, ChaptersDialog, ModeSwitch, useChapterHotkeys, chapterHref, tocHref, isAdminViewer } from "./book/ReaderChrome";
 import { SearchDialog, SearchBanner, useInTextSearch, useSearchHotkey } from "./book/BookSearch";
 import { rememberLastRead } from "./book/readingProgress";
+import { isShareView } from "./shell/shareView";
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
@@ -866,10 +867,13 @@ export default function ChapterViewer({ bookSlug, slug }) {
 
   /* ------------------ UI ------------------ */
 
+  // Shared on screen from HostDeck (shell/shareView.js): the text alone, no reader bar or menus
+  const share = isShareView();
+
   return (
-    <div className="wb wb-reader">
+    <div className={`wb wb-reader ${share ? "wb-reader--share" : ""}`}>
       {/* Progress bar */}
-      <div className="fixed top-[var(--nav-h)] left-0 w-full h-0.5 z-50 overflow-hidden pointer-events-none lg:left-72">
+      <div className={`fixed top-[var(--nav-h)] left-0 w-full h-0.5 z-50 overflow-hidden pointer-events-none ${share ? "" : "lg:left-72"}`}>
         <div
           ref={progRef}
           className="h-0.5 bg-[oklch(70%_0.2_44)] origin-left will-change-transform"
@@ -877,7 +881,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
         />
       </div>
 
-      <ReaderBar
+      {!share && <ReaderBar
         bookSlug={bookSlug}
         bookTitle={bookTitle}
         chapterTitle={chapter?.title}
@@ -885,7 +889,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
         next={nextChapter}
         onOpenChapters={() => setOpenChaptersModal(true)}
         onOpenSearch={() => setOpenSearch(true)}
-      />
+      />}
 
       {searchQuery && (
         <SearchBanner
@@ -911,7 +915,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
         </div>
       )}
 
-      {isAdminViewer() && (
+      {isAdminViewer() && !share && (
         <div className="wb-reader__mode">
           <ModeSwitch bookSlug={bookSlug} chapterSlug={slug} editing={false} />
         </div>
@@ -927,10 +931,10 @@ export default function ChapterViewer({ bookSlug, slug }) {
         </div>
       </article>
 
-      {listReady && <ReaderFooter bookSlug={bookSlug} bookTitle={bookTitle} next={nextChapter} />}
+      {listReady && !share && <ReaderFooter bookSlug={bookSlug} bookTitle={bookTitle} next={nextChapter} />}
 
       {/* Reader bubble menu for highlights (out of the way while the docked bar shows) */}
-      {!selectionPop?.docked && <ReaderBubbleMenu
+      {!selectionPop?.docked && !share && <ReaderBubbleMenu
         colors={PALETTE}
         value={cssFromStored(color)}
         onChangeColor={(css) => setColor(css)}
