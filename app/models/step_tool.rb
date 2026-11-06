@@ -1,5 +1,6 @@
-# A worksheet for working a step (/recovery/steps): the built-in ones live in
-# config/step_tools/*.yml. A member starts one as their own StepWork, which keeps a copy of
+# A worksheet for working a step (/recovery/steps): the built-in ones are StepTemplates, made
+# and published in Site Admin > Step worksheets (they started as config/step_tools/*.yml, which
+# are still read while there are no templates, as in tests). A member starts one as their own StepWork, which keeps a copy of
 # the whole definition, so they can change it (Customize) and later changes to the built-in
 # never touch work already started.
 #
@@ -54,7 +55,7 @@ class StepTool
     "Having had a spiritual awakening as the result of these Steps, we tried to carry this message to alcoholics, and to practice these principles in all affairs.",
   ].freeze
 
-  attr_reader :key, :step, :steps, :name, :summary, :credit, :definition
+  attr_reader :key, :step, :steps, :name, :summary, :credit, :definition, :version
 
   def initialize(data)
     @key = data["key"]
@@ -64,19 +65,32 @@ class StepTool
     @summary = data["summary"]
     @credit = data["credit"]
     @default = !!data["default"]
+    @version = data["version"]
     @definition = self.class.clean(data.slice("intro", "sections", "credit", "layout"))
   end
 
   def default? = @default
 
+  # The worksheets members can start: published, not hidden
   def self.all
-    @all = nil if Rails.env.development?
-    @all ||= Dir[Rails.root.join("config/step_tools/*.yml")].sort
-                                                           .map { |f| new(YAML.safe_load_file(f)) }
-                                                           .sort_by { |t| [t.step, t.default? ? 0 : 1, t.name] }
+    tools = StepTemplate.exists? ? StepTemplate.listed.map(&:to_tool) : from_files
+    tools.sort_by { |t| [t.step, t.default? ? 0 : 1, t.name] }
   end
 
-  def self.find(key) = all.find { |t| t.key == key }
+  # One by its key; `hidden` also finds one hidden from members (for "Start over from" in the
+  # editor, and the worksheets already started from it)
+  def self.find(key, hidden: false)
+    return from_files.find { |t| t.key == key } unless StepTemplate.exists?
+
+    t = StepTemplate.where(key: key).where.not(definition: nil)
+    t = t.where(hidden: false) unless hidden
+    t.first&.to_tool
+  end
+
+  def self.from_files
+    @from_files = nil if Rails.env.development?
+    @from_files ||= Dir[Rails.root.join("config/step_tools/*.yml")].sort.map { |f| new(YAML.safe_load_file(f)) }
+  end
 
   def as_api_json = { key: key, step: step, steps: steps, name: name, summary: summary, credit: credit, default: default? }
 

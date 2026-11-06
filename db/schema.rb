@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_01_250000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_06_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1408,6 +1408,39 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_250000) do
     t.index ["sponsorship_id"], name: "index_step_suggestions_on_sponsorship_id"
   end
 
+  create_table "step_template_versions", force: :cascade do |t|
+    t.bigint "step_template_id", null: false
+    t.integer "number", null: false
+    t.string "name", null: false
+    t.jsonb "definition", null: false
+    t.bigint "published_by_id"
+    t.datetime "created_at", null: false
+    t.index ["published_by_id"], name: "index_step_template_versions_on_published_by_id"
+    t.index ["step_template_id", "number"], name: "index_step_template_versions_on_step_template_id_and_number", unique: true
+    t.index ["step_template_id"], name: "index_step_template_versions_on_step_template_id"
+  end
+
+  create_table "step_templates", force: :cascade do |t|
+    t.string "key", null: false
+    t.integer "step", null: false
+    t.integer "steps", default: [], null: false, array: true
+    t.string "name", null: false
+    t.text "summary"
+    t.string "credit"
+    t.boolean "default", default: false, null: false
+    t.boolean "hidden", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.jsonb "definition"
+    t.jsonb "draft", default: {}, null: false
+    t.integer "version", default: 0, null: false
+    t.datetime "published_at"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_step_templates_on_created_by_id"
+    t.index ["key"], name: "index_step_templates_on_key", unique: true
+  end
+
   create_table "step_works", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.integer "step", null: false
@@ -1429,6 +1462,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_250000) do
     t.string "share_password_digest"
     t.datetime "shared_at"
     t.datetime "share_viewed_at"
+    t.integer "tool_version"
     t.index ["remind_at"], name: "index_step_works_on_remind_at", where: "(remind_at IS NOT NULL)"
     t.index ["share_token"], name: "index_step_works_on_share_token", unique: true
     t.index ["user_id", "step", "updated_at"], name: "index_step_works_on_user_id_and_step_and_updated_at"
@@ -1850,6 +1884,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_01_250000) do
   add_foreign_key "sponsorships", "users", column: "sponsor_id", on_delete: :cascade
   add_foreign_key "step_inventories", "users", on_delete: :cascade
   add_foreign_key "step_suggestions", "sponsorships", on_delete: :cascade
+  add_foreign_key "step_template_versions", "step_templates", on_delete: :cascade
+  add_foreign_key "step_template_versions", "users", column: "published_by_id", on_delete: :nullify
+  add_foreign_key "step_templates", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "step_works", "users", on_delete: :cascade
   add_foreign_key "text_report_comments", "text_reports"
   add_foreign_key "text_report_comments", "users"

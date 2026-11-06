@@ -46,6 +46,8 @@ const router = createBrowserRouter(
         { path: "steps", element: <StepsPage /> },
         { path: "steps/:id", element: <StepWorkPage /> },
         { path: "steps/:id/edit", element: <WorksheetEditor /> },
+        // Site Admin > Step worksheets: a site-wide worksheet, in the same editor
+        { path: "steps/templates/:id/edit", element: <WorksheetEditor template /> },
       ],
     },
   ],

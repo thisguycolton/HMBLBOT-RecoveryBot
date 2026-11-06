@@ -46,10 +46,11 @@ class StepWork < ApplicationRecord
   end
 
   def self.start!(user, tool)
-    user.step_works.create!(step: tool.step, tool_key: tool.key, name: tool.name, definition: tool.definition, answers: {}, status: "in_progress")
+    user.step_works.create!(step: tool.step, tool_key: tool.key, tool_version: tool.version, name: tool.name, definition: tool.definition,
+                           answers: {}, status: "in_progress")
   end
 
-  def tool = StepTool.find(tool_key)
+  def tool = StepTool.find(tool_key, hidden: true)
 
   # Turns on its link with this password (a new password keeps the link; `new_link` makes a
   # new one, and the old link stops working)

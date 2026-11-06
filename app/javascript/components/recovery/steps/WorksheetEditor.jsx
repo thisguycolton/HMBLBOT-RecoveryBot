@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, Copy, Eye, FileText, Merge, PencilRuler, Plus, Printer, RotateCcw, Rows3, ScrollText, Scissors, StickyNote, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronLeft, History, Send, ChevronRight, Copy, Eye, FileText, Merge, PencilRuler, Plus, Printer, RotateCcw, Rows3, ScrollText, Scissors, StickyNote, Trash2, X } from "lucide-react";
 import { api } from "../../groups/lib";
 import { Card, ErrorNote, Loading, primaryButton, quietButton } from "../../groups/ui";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
@@ -20,7 +20,11 @@ const STEPS = Array.from({ length: 12 }, (_, i) => i + 1);
 // merged (pageOps), and the preview shows one page with Back and Next. Only their own copy changes; what they've
 // written stays with each section. Saving sends the whole definition (StepTool.clean keeps
 // what it understands).
-export default function WorksheetEditor() {
+//
+// With `template` it edits a site-wide worksheet (StepTemplate, from Site Admin > Step
+// worksheets): Save keeps a draft only admins see, Publish makes it what new worksheets start
+// from, and History can bring back an earlier version as the draft.
+export default function WorksheetEditor({ template = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [work, setWork] = useState(null);
@@ -34,9 +38,27 @@ export default function WorksheetEditor() {
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [tpl, setTpl] = useState(null); // template mode: its settings, versions and status
+  const [history, setHistory] = useState(false);
   const previewRef = useRef(null);
+  const adminPath = `/admin/step_templates/${id}`;
+  const backTo = template ? "/admin_panel/step_templates" : `/steps/${id}`;
+  const goBack = () => (template ? window.location.assign(backTo) : navigate(backTo));
+
+  const loadTemplate = (t) => {
+    setTpl(t);
+    setWork({ id: t.id, name: t.name, step: t.step, settings: {}, answers: {}, definition: t.draft });
+    setOriginal(t.version ? { name: `version ${t.version}, as published`, definition: t.definition } : null);
+    setDraft({ name: t.name, step: t.step, steps: t.steps, summary: t.summary || "", default: t.default, hidden: t.hidden,
+      intro: t.draft.intro || "", credit: t.draft.credit || "", layout: t.draft.layout || "", sections: t.draft.sections });
+    document.title = `Editing ${t.name} | Site Admin`;
+  };
 
   useEffect(() => {
+    if (template) {
+      api(adminPath).then((d) => loadTemplate(d.template)).catch((e) => setError(e.message));
+      return;
+    }
     api(`/step_works/${id}?editor=1`).then((d) => {
       setWork(d.work);
       setOriginal(d.original || null);
@@ -44,7 +66,7 @@ export default function WorksheetEditor() {
       setTried(d.work.answers || {});
       document.title = `Editing ${d.work.name} | RecoveryBot`;
     }).catch((e) => setError(e.message));
-  }, [id]);
+  }, [id, template]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!dirty) return undefined;
@@ -123,15 +145,50 @@ export default function WorksheetEditor() {
     setBusy(true);
     setError(null);
     try {
-      const d = await api(`/step_works/${id}`, { method: "PATCH", body: { name: draft.name.trim(), step: draft.step, definition: tidy(definition) } });
-      setWork(d.work);
+      if (template) {
+        const steps = [...new Set([draft.step, ...(draft.steps || [])])].sort((a, b) => a - b);
+        const d = await api(adminPath, { method: "PATCH", body: { template: {
+          name: draft.name.trim(), step: draft.step, steps, summary: draft.summary, default: draft.default, hidden: draft.hidden, draft: tidy(definition),
+        } } });
+        setTpl(d.template);
+        setOriginal(d.template.version ? { name: `version ${d.template.version}, as published`, definition: d.template.definition } : null);
+      } else {
+        const d = await api(`/step_works/${id}`, { method: "PATCH", body: { name: draft.name.trim(), step: draft.step, definition: tidy(definition) } });
+        setWork(d.work);
+      }
       setDirty(false);
-      showToast("Your worksheet is saved.", { tone: "success" });
-      if (andLeave) navigate(`/steps/${id}`);
+      showToast(template ? "Draft saved. Members see it once you publish." : "Your worksheet is saved.", { tone: "success" });
+      if (andLeave) goBack();
+      setBusy(false);
+      return true;
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+    return false;
+  };
+  const leave = () => { if (!dirty || window.confirm("Leave without saving your changes?")) goBack(); };
+  const publish = async () => {
+    if (!window.confirm(`Publish ${draft.name}? Worksheets started from now on use it. Anyone who already started one keeps theirs.`)) return;
+    if (dirty && !(await save(false))) return;
+    setBusy(true);
+    try {
+      const d = await api(`${adminPath}/publish`, { method: "POST" });
+      setTpl(d.template);
+      setOriginal({ name: `version ${d.template.version}, as published`, definition: d.template.definition });
+      showToast(`Published as version ${d.template.version}.`, { tone: "success" });
     } catch (e) { setError(e.message); }
     setBusy(false);
   };
-  const leave = () => { if (!dirty || window.confirm("Leave without saving your changes?")) navigate(`/steps/${id}`); };
+  const restore = async (number) => {
+    if (!window.confirm(`Make version ${number} the draft? ${dirty ? "Your unsaved changes are lost. " : ""}Nothing changes for members until you publish.`)) return;
+    try {
+      const d = await api(`${adminPath}/restore`, { method: "POST", body: { number } });
+      loadTemplate(d.template);
+      setDirty(false);
+      setHistory(false);
+      setPicked("worksheet");
+      showToast(`Version ${number} is the draft now.`, { tone: "success" });
+    } catch (e) { setError(e.message); }
+  };
 
   const outline = (
     <nav aria-label="Sections" className="space-y-1">
@@ -205,6 +262,35 @@ export default function WorksheetEditor() {
           {STEPS.map((n) => <option key={n} value={n}>Step {n}</option>)}
         </select>
       </div>
+      {template && (
+        <div className="space-y-4 rounded-2xl bg-neutral-50 p-3 ring-1 ring-neutral-200/70 dark:bg-neutral-800/50 dark:ring-neutral-700">
+          <div>
+            <span className={labelClass} id="ed-steps">Also shows under</span>
+            <div role="group" aria-labelledby="ed-steps" className="flex flex-wrap gap-1">
+              {STEPS.filter((n) => n !== draft.step).map((n) => {
+                const on = draft.steps?.includes(n);
+                return (
+                  <button key={n} type="button" aria-pressed={!!on} onClick={() => update({ steps: on ? draft.steps.filter((x) => x !== n) : [...(draft.steps || []), n] })}
+                    className={`size-8 rounded-lg text-sm font-semibold ${on ? "!bg-accent !text-white" : "!bg-white text-slate-700 ring-1 ring-neutral-200 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700"}`}>{n}</button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">For a worksheet that covers more than one step, like Drop the Rock for Steps 6 and 7.</p>
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="ed-summary">Summary on the Steps page</label>
+            <textarea id="ed-summary" className={`${area} min-h-[3.5rem]`} maxLength={500} value={draft.summary} onChange={(e) => update({ summary: e.target.value })} />
+          </div>
+          <label className="flex items-start gap-2 text-sm text-slate-700 dark:text-neutral-200">
+            <input type="checkbox" className="mt-0.5 size-4 accent-accent" checked={!!draft.default} onChange={(e) => update({ default: e.target.checked })} />
+            <span><span className="font-semibold">The default for Step {draft.step}</span><span className="block text-xs text-slate-500 dark:text-neutral-400">The one the Steps page offers first. Only one worksheet is the default for a step.</span></span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-slate-700 dark:text-neutral-200">
+            <input type="checkbox" className="mt-0.5 size-4 accent-accent" checked={!draft.hidden} onChange={(e) => update({ hidden: !e.target.checked })} />
+            <span><span className="font-semibold">Members can start it</span><span className="block text-xs text-slate-500 dark:text-neutral-400">Turn off to take it off the Steps page. Worksheets already started keep working.</span></span>
+          </label>
+        </div>
+      )}
       <div>
         <label className={labelClass} htmlFor="ed-intro">Introduction</label>
         <textarea id="ed-intro" className={`${area} min-h-[6rem]`} maxLength={4000} value={draft.intro} onChange={(e) => update({ intro: e.target.value })} />
@@ -225,6 +311,7 @@ export default function WorksheetEditor() {
       {original && (
         <div className="border-t border-neutral-200/70 pt-4 dark:border-neutral-800">
           <button type="button" className={quietButton} onClick={startOver}><RotateCcw className="size-4" /> Start over from {original.name}</button>
+          {template && <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Puts the published sections back in the draft.</p>}
         </div>
       )}
     </div>
@@ -296,18 +383,29 @@ export default function WorksheetEditor() {
   return (
     <div className="mx-auto max-w-[96rem] space-y-4 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
       <div className="sticky top-[var(--nav-h)] z-20 -mx-4 flex flex-wrap items-center gap-2 border-b border-neutral-200/70 bg-white/90 px-4 py-2 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/90">
-        <button type="button" onClick={leave} className="inline-flex items-center gap-1 !bg-transparent p-0 text-sm text-accent"><ChevronLeft className="size-4" /> Worksheet</button>
+        <button type="button" onClick={leave} className="inline-flex items-center gap-1 !bg-transparent p-0 text-sm text-accent"><ChevronLeft className="size-4" /> {template ? "Step worksheets" : "Worksheet"}</button>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent"><PencilRuler className="size-3.5" /> HumbleBot Editor</div>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent"><PencilRuler className="size-3.5" /> HumbleBot Editor{template && " · Site worksheet"}</div>
           <div className="truncate font-semibold text-slate-900 dark:text-white">{draft.name || "Untitled"}</div>
         </div>
-        <span role="status" className="hidden text-sm text-slate-500 sm:inline">{dirty ? "Not saved yet" : <span className="inline-flex items-center gap-1"><Check className="size-4" /> Saved</span>}</span>
+        <span role="status" className="hidden text-sm text-slate-500 sm:inline">
+          {dirty ? "Not saved yet" : template
+            ? (tpl?.changed ? (tpl.version ? `Draft saved · v${tpl.version} is live` : "Draft saved · never published") : <span className="inline-flex items-center gap-1"><Check className="size-4" /> Published · v{tpl?.version}</span>)
+            : <span className="inline-flex items-center gap-1"><Check className="size-4" /> Saved</span>}
+        </span>
+        {template && <button type="button" className={quietButton} onClick={() => setHistory(true)}><History className="size-4" /> History</button>}
         <button type="button" className={quietButton} disabled={busy || !dirty} onClick={() => save(false)}>Save</button>
-        <button type="button" className={primaryButton} disabled={busy} onClick={() => (dirty ? save(true) : navigate(`/steps/${id}`))}>{busy ? "Saving…" : dirty ? "Save and close" : "Done"}</button>
+        {template ? (
+          <button type="button" className={primaryButton} disabled={busy || (!dirty && !tpl?.changed)} onClick={publish}><Send className="size-4" /> Publish</button>
+        ) : (
+          <button type="button" className={primaryButton} disabled={busy} onClick={() => (dirty ? save(true) : navigate(`/steps/${id}`))}>{busy ? "Saving…" : dirty ? "Save and close" : "Done"}</button>
+        )}
       </div>
       <ErrorNote error={error} />
       <p className="text-sm text-slate-600 dark:text-neutral-400">
-        Change anything: the name, the introduction, every section and question, or build it from nothing. Only your copy changes, and what you've written stays with each section.
+        {template
+          ? "The worksheet members start from on the Steps page. Changes save as a draft only admins see. Publish makes it the version new worksheets start from; anyone who already started one keeps theirs."
+          : "Change anything: the name, the introduction, every section and question, or build it from nothing. Only your copy changes, and what you've written stays with each section."}
       </p>
 
       <div role="group" aria-label="Show" className="inline-flex overflow-hidden rounded-xl text-sm ring-1 ring-neutral-200 lg:hidden dark:ring-neutral-700">
@@ -341,6 +439,7 @@ export default function WorksheetEditor() {
       </div>
 
       {adding && <AddSection onAdd={add} onClose={() => setAdding(false)} />}
+      {history && tpl && <HistorySheet tpl={tpl} onRestore={restore} onClose={() => setHistory(false)} />}
     </div>
   );
 }
@@ -479,6 +578,37 @@ function PagePreview({ page, pages, picked, setPicked, answers, setAnswer, defin
             <StepSection section={s} answers={answers} setAnswer={setAnswer} definition={definition} settings={settings} />
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// Template mode: every published version, newest first, and a way to bring one back as the draft
+function HistorySheet({ tpl, onRestore, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[2600] flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label="History"
+        className="max-h-[90dvh] w-full max-w-lg space-y-3 overflow-y-auto rounded-t-3xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-sm shadow-2xl ring-1 ring-neutral-200 sm:rounded-2xl dark:bg-neutral-900 dark:ring-neutral-700">
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-semibold text-slate-900 dark:text-white">History</p>
+          <button type="button" onClick={onClose} aria-label="Close" className="grid size-8 place-items-center rounded-lg !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:hover:!bg-neutral-800"><X className="size-4" /></button>
+        </div>
+        {tpl.versions.length === 0 ? <p className="text-slate-600 dark:text-neutral-400">Not published yet.</p> : (
+          <ol className="divide-y divide-neutral-200 dark:divide-neutral-800">
+            {tpl.versions.map((v) => (
+              <li key={v.number} className="flex items-center gap-3 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-slate-900 dark:text-white">Version {v.number}{v.number === tpl.version ? " · live" : ""}</div>
+                  <div className="truncate text-xs text-slate-500 dark:text-neutral-400">
+                    {new Date(v.at).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}{v.by ? ` · ${v.by}` : ""}{v.name !== tpl.name ? ` · ${v.name}` : ""}
+                  </div>
+                </div>
+                <button type="button" className={quietButton} onClick={() => onRestore(v.number)}><RotateCcw className="size-4" /> Go back to this</button>
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="text-xs text-slate-500 dark:text-neutral-400">Going back makes that version the draft. Nothing changes for members until you publish, and the history stays as it is.</p>
       </div>
     </div>
   );
