@@ -11,7 +11,9 @@ sections:
   - id: readings
     kind: reference
     title: "Read first"
-    body: "The Big Book, pages 85 to 88. Step Eleven in the 12&12."
+    items:
+      - { id: r1, label: "The Big Book, pages 85 to 88" }
+      - { id: r2, label: "Step Eleven in the 12&12" }
   - id: practice
     kind: questions
     title: "My practice"

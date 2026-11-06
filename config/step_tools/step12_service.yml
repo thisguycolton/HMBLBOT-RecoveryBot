@@ -10,7 +10,9 @@ sections:
   - id: readings
     kind: reference
     title: "Read first"
-    body: "Chapter 7, Working with Others, in the Big Book. Step Twelve in the 12&12."
+    items:
+      - { id: r1, label: "Chapter 7, Working with Others, in the Big Book" }
+      - { id: r2, label: "Step Twelve in the 12&12" }
   - id: awakening
     kind: questions
     title: "My awakening"

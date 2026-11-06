@@ -517,6 +517,13 @@ end
       resources :chip_templates, only: %i[index show create update destroy] do
         post :publish, on: :member
       end
+      # Step worksheets everyone can start (StepTemplate): draft, publish, history
+      resources :step_templates, only: %i[index show create update destroy] do
+        member do
+          post :publish
+          post :restore
+        end
+      end
       # Local meeting lists (an intergroup's in-person meetings) imported next to AA Intergroup's
       resources :meeting_directories, only: %i[index create update destroy] do
         member do

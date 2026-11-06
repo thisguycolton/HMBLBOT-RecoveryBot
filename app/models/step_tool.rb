@@ -1,13 +1,19 @@
-# A worksheet for working a step (/recovery/steps): the built-in ones live in
-# config/step_tools/*.yml. A member starts one as their own StepWork, which keeps a copy of
+# A worksheet for working a step (/recovery/steps): the built-in ones are StepTemplates, made
+# and published in Site Admin > Step worksheets (they started as config/step_tools/*.yml, which
+# are still read while there are no templates, as in tests). A member starts one as their own StepWork, which keeps a copy of
 # the whole definition, so they can change it (Customize) and later changes to the built-in
 # never touch work already started.
 #
 # A definition is an intro (Markdown) and a list of sections. Every section has an `id`, a
 # `kind`, a `title`, optional `help`, and optionally `part` (a heading that starts a new part).
+# Shown a page at a time, a section with `page` (a title) starts a page, with `page_line` a
+# sentence under it; with none, the pages are worked out (stepText.js pagesOf). `layout`
+# "one_page" shows the whole worksheet on one page unless the member picks pages.
 # What each kind is, and where its answers go (StepWork#answers[section id]):
 #
-#   reference  text to read (`body`), no answers
+#   reference  text to read (`body`) and/or a reading list to tick off: `items` [{id, label, href}]
+#              (`href` a library link; without one, the label links itself when it names a chapter,
+#              step or page); answers { item id => date read }
 #   note       a highlighted box (`tone: sponsor` for things to talk over with a sponsor)
 #   questions  `items` [{id, label, placeholder, rows}], answers { item id => text }
 #   list       one line per thing, answers [text]
@@ -49,7 +55,7 @@ class StepTool
     "Having had a spiritual awakening as the result of these Steps, we tried to carry this message to alcoholics, and to practice these principles in all affairs.",
   ].freeze
 
-  attr_reader :key, :step, :steps, :name, :summary, :credit, :definition
+  attr_reader :key, :step, :steps, :name, :summary, :credit, :definition, :version
 
   def initialize(data)
     @key = data["key"]
@@ -59,19 +65,32 @@ class StepTool
     @summary = data["summary"]
     @credit = data["credit"]
     @default = !!data["default"]
-    @definition = self.class.clean(data.slice("intro", "sections", "credit"))
+    @version = data["version"]
+    @definition = self.class.clean(data.slice("intro", "sections", "credit", "layout"))
   end
 
   def default? = @default
 
+  # The worksheets members can start: published, not hidden
   def self.all
-    @all = nil if Rails.env.development?
-    @all ||= Dir[Rails.root.join("config/step_tools/*.yml")].sort
-                                                           .map { |f| new(YAML.safe_load_file(f)) }
-                                                           .sort_by { |t| [t.step, t.default? ? 0 : 1, t.name] }
+    tools = StepTemplate.exists? ? StepTemplate.listed.map(&:to_tool) : from_files
+    tools.sort_by { |t| [t.step, t.default? ? 0 : 1, t.name] }
   end
 
-  def self.find(key) = all.find { |t| t.key == key }
+  # One by its key; `hidden` also finds one hidden from members (for "Start over from" in the
+  # editor, and the worksheets already started from it)
+  def self.find(key, hidden: false)
+    return from_files.find { |t| t.key == key } unless StepTemplate.exists?
+
+    t = StepTemplate.where(key: key).where.not(definition: nil)
+    t = t.where(hidden: false) unless hidden
+    t.first&.to_tool
+  end
+
+  def self.from_files
+    @from_files = nil if Rails.env.development?
+    @from_files ||= Dir[Rails.root.join("config/step_tools/*.yml")].sort.map { |f| new(YAML.safe_load_file(f)) }
+  end
 
   def as_api_json = { key: key, step: step, steps: steps, name: name, summary: summary, credit: credit, default: default? }
 
@@ -86,18 +105,24 @@ class StepTool
     ids = sections.map { |s| s["id"] }
     raise Invalid, "Two sections have the same id." if ids.uniq.size != ids.size
 
-    { "intro" => text(d["intro"], 4000), "credit" => text(d["credit"], 300), "sections" => sections }.compact
+    layout = d["layout"] == "one_page" ? "one_page" : nil
+    { "intro" => text(d["intro"], 4000), "credit" => text(d["credit"], 300), "layout" => layout, "sections" => sections }.compact
   end
 
   def self.clean_section(s)
     s = s.to_h.stringify_keys
     return unless KINDS.include?(s["kind"]) && s["id"].to_s.match?(/\A[\w-]{1,40}\z/)
 
-    out = { "id" => s["id"], "kind" => s["kind"], "title" => text(s["title"], 200), "help" => text(s["help"], 2000), "part" => text(s["part"], 200) }
+    out = { "id" => s["id"], "kind" => s["kind"], "title" => text(s["title"], 200), "help" => text(s["help"], 2000), "part" => text(s["part"], 200),
+            "page" => text(s["page"], 200), "page_line" => text(s["page_line"], 300) }
     case s["kind"]
     when "reference", "note"
       out["body"] = text(s["body"], 4000)
       out["tone"] = "sponsor" if s["tone"] == "sponsor"
+      if s["kind"] == "reference"
+        out["items"] = readings(s["items"]).presence
+        return if out["body"].blank? && out["items"].blank?
+      end
     when "questions", "each", "days"
       out["items"] = items(s["items"])
       out["review"] = items(s["review"]) if s["kind"] == "days"
@@ -137,6 +162,17 @@ class StepTool
       type = %w[choice choices].include?(i["type"]) ? i["type"] : nil
       { "id" => i["id"], "label" => text(i["label"], 500), "placeholder" => text(i["placeholder"], 300), "rows" => (i["rows"].to_i.clamp(1, 20) if i["rows"].present?),
         "type" => type, "options" => (strings(i["options"], 30) if type), "role" => (i["role"] if ROLES.include?(i["role"])) }.compact
+    end
+  end
+
+  # A reading list's readings. A link may only go into the library.
+  def self.readings(list)
+    Array(list).first(40).filter_map do |r|
+      r = r.to_h.stringify_keys
+      next unless r["id"].to_s.match?(/\A[\w-]{1,40}\z/) && r["label"].present?
+
+      href = r["href"].to_s.strip
+      { "id" => r["id"], "label" => text(r["label"], 200), "href" => (href if href.match?(%r{\A/library/[\w/?=&%.-]{0,300}\z})) }.compact
     end
   end
 

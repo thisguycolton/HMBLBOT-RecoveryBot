@@ -15,7 +15,10 @@ sections:
   - id: readings
     kind: reference
     title: "Read first"
-    body: "The Big Book, page 76. Step Six and Step Seven in the 12&12."
+    items:
+      - { id: r1, label: "The Big Book, page 76" }
+      - { id: r2, label: "Step Six in the 12&12" }
+      - { id: r3, label: "Step Seven in the 12&12" }
   # Part I: Identify
   - id: rock
     part: "Part I · Identify: recognizing the rocks"

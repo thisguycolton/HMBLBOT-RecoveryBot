@@ -64,7 +64,7 @@ class Api::StepWorksController < ApplicationController
     @work.answers = params[:answers].respond_to?(:to_unsafe_h) ? params[:answers].to_unsafe_h : {} if params.key?(:answers)
     @work.name = params[:name] if params.key?(:name)
     @work.step = params[:step].to_i if params.key?(:step)
-    @work.settings = @work.settings.merge(params[:settings].to_unsafe_h.slice("higher_power")) if params[:settings].respond_to?(:to_unsafe_h)
+    @work.settings = @work.settings.merge(params[:settings].to_unsafe_h.slice("higher_power", "layout", "at_page")) if params[:settings].respond_to?(:to_unsafe_h)
     @work.definition = StepTool.clean(params[:definition]) if params[:definition].present?
     if params.key?(:status)
       @work.status = params[:status].to_s

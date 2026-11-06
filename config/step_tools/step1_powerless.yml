@@ -10,8 +10,10 @@ sections:
   - id: readings
     kind: reference
     title: "Read first"
-    body: >
-      The Doctor's Opinion, and Chapter 3, More About Alcoholism, in the Big Book. Step One in the 12&12.
+    items:
+      - { id: r1, label: "The Doctor's Opinion, in the Big Book" }
+      - { id: r2, label: "Chapter 3, More About Alcoholism, in the Big Book" }
+      - { id: r3, label: "Step One in the 12&12" }
   - id: control
     kind: table
     title: "Times I couldn't control it once I started"
