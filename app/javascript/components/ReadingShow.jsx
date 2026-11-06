@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import ShareButton from "./share/ShareButton";
+import { isShareView } from "./shell/shareView";
 
 function hasMeaningfulContent(value) {
   if (value == null) return false;
@@ -249,6 +250,9 @@ const topicHtml = renderRichContent(topicSource);
   const signedIn = currentUserId != null;
   const hasTopics = String(topicHtml).replace(/<[^>]*>|&nbsp;/g, "").trim().length > 0;
 
+  // Shared on screen from HostDeck (shell/shareView.js): the reading alone, without its buttons
+  const share = isShareView();
+
   const ghostButton =
     "inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 px-4 py-2.5 text-sm font-semibold !text-white transition hover:bg-white/10 hover:!text-white";
 
@@ -309,7 +313,7 @@ const topicHtml = renderRichContent(topicSource);
             )}
 
             {/* Actions */}
-            <div className="mt-6 flex flex-wrap gap-2">
+            {!share && <div className="mt-6 flex flex-wrap gap-2">
               {reading.meetingUrl && (
                 <a
                   href={reading.meetingUrl}
@@ -371,7 +375,7 @@ const topicHtml = renderRichContent(topicSource);
                   <Trash2 size={18} />
                 </button>
               )}
-            </div>
+            </div>}
           </div>
           </div>
         </section>
@@ -405,7 +409,7 @@ const topicHtml = renderRichContent(topicSource);
           )}
 
           {/* CTA, for visitors without an account */}
-          {!signedIn && (
+          {!signedIn && !share && (
             <section className="mt-10 flex flex-col items-start gap-4 rounded-2xl border border-stone-200 bg-white px-6 py-6 dark:border-neutral-700 dark:bg-neutral-800/60 sm:flex-row sm:items-center">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-800">
                 <MessageSquareQuote size={24} />

@@ -550,6 +550,12 @@ html:has(.wb-reader) {
   --reader-sticky-second-offset: 56px;
 }
 
+/* Shared on screen from HostDeck: no site bar or reader bar above, so the pills stick at the top */
+html.share-view:has(.wb-reader) {
+  --reader-sticky-offset: 12px;
+  --reader-sticky-second-offset: 0px;
+}
+
 .wb-reader__bar {
   align-items: center;
   background: color-mix(in oklab, var(--wb-bg) 88%, transparent);
