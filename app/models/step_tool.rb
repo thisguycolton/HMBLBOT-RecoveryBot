@@ -5,6 +5,9 @@
 #
 # A definition is an intro (Markdown) and a list of sections. Every section has an `id`, a
 # `kind`, a `title`, optional `help`, and optionally `part` (a heading that starts a new part).
+# Shown a page at a time, a section with `page` (a title) starts a page, with `page_line` a
+# sentence under it; with none, the pages are worked out (stepText.js pagesOf). `layout`
+# "one_page" shows the whole worksheet on one page unless the member picks pages.
 # What each kind is, and where its answers go (StepWork#answers[section id]):
 #
 #   reference  text to read (`body`) and/or a reading list to tick off: `items` [{id, label, href}]
@@ -61,7 +64,7 @@ class StepTool
     @summary = data["summary"]
     @credit = data["credit"]
     @default = !!data["default"]
-    @definition = self.class.clean(data.slice("intro", "sections", "credit"))
+    @definition = self.class.clean(data.slice("intro", "sections", "credit", "layout"))
   end
 
   def default? = @default
@@ -88,14 +91,16 @@ class StepTool
     ids = sections.map { |s| s["id"] }
     raise Invalid, "Two sections have the same id." if ids.uniq.size != ids.size
 
-    { "intro" => text(d["intro"], 4000), "credit" => text(d["credit"], 300), "sections" => sections }.compact
+    layout = d["layout"] == "one_page" ? "one_page" : nil
+    { "intro" => text(d["intro"], 4000), "credit" => text(d["credit"], 300), "layout" => layout, "sections" => sections }.compact
   end
 
   def self.clean_section(s)
     s = s.to_h.stringify_keys
     return unless KINDS.include?(s["kind"]) && s["id"].to_s.match?(/\A[\w-]{1,40}\z/)
 
-    out = { "id" => s["id"], "kind" => s["kind"], "title" => text(s["title"], 200), "help" => text(s["help"], 2000), "part" => text(s["part"], 200) }
+    out = { "id" => s["id"], "kind" => s["kind"], "title" => text(s["title"], 200), "help" => text(s["help"], 2000), "part" => text(s["part"], 200),
+            "page" => text(s["page"], 200), "page_line" => text(s["page_line"], 300) }
     case s["kind"]
     when "reference", "note"
       out["body"] = text(s["body"], 4000)

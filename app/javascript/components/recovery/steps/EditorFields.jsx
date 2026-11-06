@@ -32,7 +32,7 @@ let made = 0;
 export const newId = (prefix) => `${prefix}-${Date.now().toString(36)}${(made += 1)}`;
 const lines = (text) => (text || "").split("\n").map((x) => x.trim()).filter(Boolean);
 export const area = `${inputClass} [field-sizing:content] min-h-[3rem]`;
-const iconButton = "inline-flex size-8 items-center justify-center rounded-lg !bg-transparent text-slate-500 hover:!bg-neutral-100 disabled:opacity-30 dark:hover:!bg-neutral-800";
+export const iconButton = "inline-flex size-8 items-center justify-center rounded-lg !bg-transparent text-slate-500 hover:!bg-neutral-100 disabled:opacity-30 dark:hover:!bg-neutral-800";
 
 export function Mover({ list, n, set, label, remove = true }) {
   const move = (d) => { const next = [...list]; [next[n], next[n + d]] = [next[n + d], next[n]]; set(next); };
@@ -345,6 +345,8 @@ export function tidy(definition) {
       ...(s.prompts ? { prompts: lines(s.prompts.join("\n")) } : {}),
       ...(s.over ? { over: lines(s.over.join("\n")) } : {}),
       part: s.part?.trim() || undefined,
+      ...(s.page ? { page: s.page.trim() || s.title || "Page" } : {}),
+      page_line: s.page_line?.trim() || undefined,
     })),
   };
 }

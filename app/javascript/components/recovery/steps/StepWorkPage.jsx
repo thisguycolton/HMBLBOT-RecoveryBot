@@ -102,8 +102,8 @@ export default function StepWorkPage() {
   const parts = partsOf(work.definition);
   const pages = pagesOf(work.definition);
   const usesHigherPower = JSON.stringify(work.definition).includes("{{higher_power}}");
-  // A page at a time (StepWizard) unless they asked for it all on one page
-  const onePage = work.settings?.layout === "one_page";
+  // A page at a time (StepWizard) unless they (or the worksheet, in the editor) picked it all on one page
+  const onePage = (work.settings?.layout || work.definition.layout) === "one_page";
   const setLayout = (layout) => { setSettings({ layout }); window.scrollTo({ top: 0 }); };
 
   // Print: their copy of the worksheet laid out for paper (PrintableWorksheet), with what
@@ -166,7 +166,7 @@ export default function StepWorkPage() {
                 <MenuItem icon={RotateCcw} title="A fresh copy of this worksheet, keeping your changes to it" onClick={() => { close(); again(); }}>Do it again</MenuItem>
                 <div className="my-1 h-px bg-neutral-200 dark:bg-neutral-800" />
                 {onePage
-                  ? <MenuItem icon={Rows3} onClick={() => { close(); setLayout(""); }}>Show a page at a time</MenuItem>
+                  ? <MenuItem icon={Rows3} onClick={() => { close(); setLayout("pages"); }}>Show a page at a time</MenuItem>
                   : <MenuItem icon={ScrollText} onClick={() => { close(); setLayout("one_page"); }}>Show it all on one page</MenuItem>}
                 <div className="my-1 h-px bg-neutral-200 dark:bg-neutral-800" />
                 <MenuItem icon={Trash2} danger onClick={() => { close(); remove(); }}>Delete</MenuItem>

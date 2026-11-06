@@ -115,8 +115,13 @@ export default function StepWizard({ work, pages, label, intro, setAnswer, setSe
             {page && (
               <>
                 {page.part && <div className="text-sm font-semibold uppercase tracking-wide text-accent">{page.part}</div>}
-                {page.title !== (page.sections.find((s) => !["reference", "note"].includes(s.kind)) || page.sections[0])?.title && (
-                  <h2 className="!m-0 !text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{page.title}</h2>
+                {(page.line || page.title !== (page.sections.find((s) => !["reference", "note"].includes(s.kind)) || page.sections[0])?.title) && (
+                  <div className="space-y-1 pb-3">
+                    {page.title !== (page.sections.find((s) => !["reference", "note"].includes(s.kind)) || page.sections[0])?.title && (
+                      <h2 className="!m-0 !text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{page.title}</h2>
+                    )}
+                    {page.line && <p className="!m-0 text-slate-600 dark:text-neutral-400">{page.line}</p>}
+                  </div>
                 )}
                 {page.sections.map((s) => (isReadingList(s) && !s.body
                   ? <ReadingStrip key={s.id} section={s} value={answers[s.id]} set={(v) => setAnswer(s.id, v)} />

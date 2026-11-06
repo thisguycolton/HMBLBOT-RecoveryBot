@@ -72,6 +72,24 @@ class StepWorkPrintAndReadingsTest < ActionDispatch::IntegrationTest
     assert_equal "/library/go?work=bigbook&page=86", reading["items"][2]["href"]
   end
 
+  test "pages keep their titles and lines, and a worksheet can be set to show on one page" do
+    d = StepTool.clean("layout" => "one_page", "sections" => [
+      { "id" => "a", "kind" => "questions", "title" => "A", "page" => "  Looking back  ", "page_line" => "Take your time.", "items" => [{ "id" => "q1", "label" => "What happened?" }] },
+      { "id" => "b", "kind" => "note", "body" => "x", "page" => "y" * 300, "page_line" => "z" * 400 },
+    ])
+    assert_equal "one_page", d["layout"]
+    a, b = d["sections"]
+    assert_equal ["Looking back", "Take your time."], a.values_at("page", "page_line")
+    assert_equal [200, 300], [b["page"].size, b["page_line"].size]
+    assert_nil StepTool.clean("layout" => "sideways", "sections" => [{ "id" => "n", "kind" => "note", "body" => "x" }])["layout"]
+
+    sign_in @sam
+    patch api_step_work_path(@work), params: { definition: d }, as: :json
+    assert_response :success
+    assert_equal "Looking back", @work.reload.definition["sections"].first["page"]
+    assert_equal "one_page", @work.definition["layout"]
+  end
+
   test "what was read is saved with the answers, and how they read it in their settings" do
     sign_in @sam
     work = @work

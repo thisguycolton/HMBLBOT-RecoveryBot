@@ -26,9 +26,12 @@ const takesAnswers = (s) => !["reference", "note"].includes(s.kind);
 // page's first section (so where someone stopped survives pages being moved). A section with
 // `page` (its title) starts a page; when none has one, each section that takes answers starts a
 // page, a reading just before it joins it, a note stays with the page it follows, and a `part`
-// always starts one. Pages that are nothing but reading lists are left out: those show on the
-// Welcome page.
-export function pagesOf(definition) {
+// always starts one. A page's `line` (`page_line`) is a sentence under its title. Pages that are
+// nothing but reading lists are left out (those show on the Welcome page), unless `all`.
+// A page with only reading lists (a note may sit with them) shows on the Welcome page instead
+export const readingsOnly = (p) => p.sections.some(isReadingList) && p.sections.every((s) => isReadingList(s) || s.kind === "note");
+
+export function pagesOf(definition, { all = false } = {}) {
   const sections = definition.sections || [];
   const manual = sections.some((s) => s.page);
   const pages = [];
@@ -42,10 +45,10 @@ export function pagesOf(definition) {
     else if (s.part) fresh = true;
     else if (s.kind === "note") fresh = false;
     else fresh = cur.sections.some(takesAnswers);
-    if (fresh) pages.push({ id: s.id, part, title: s.page || null, sections: [] });
+    if (fresh) pages.push({ id: s.id, part, title: s.page?.trim() || null, line: s.page_line?.trim() || null, sections: [] });
     pages[pages.length - 1].sections.push(s);
   });
-  const kept = pages.length > 1 ? pages.filter((p) => !p.sections.every((s) => isReadingList(s) || s.kind === "note")) : pages;
+  const kept = pages.length > 1 && !all ? pages.filter((p) => !readingsOnly(p)) : pages;
   return kept.map((p, n) => ({ ...p, number: n + 1, title: p.title || (p.sections.find(takesAnswers) || p.sections[0])?.title || `Page ${n + 1}` }));
 }
 
