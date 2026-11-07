@@ -5,6 +5,9 @@
 #   bin/rails "meeting_lists:import[phx,path/to/meetings.csv]"            import new and changed
 #                                                                          meetings (not possible
 #                                                                          duplicates; hides nothing)
+#   bin/rails meeting_lists:refresh                                      the weekly refresh of lists
+#                                                                          due one (the server does
+#                                                                          this hourly on its own)
 # The source is a feed link or a file path; leave it out to use the list's feed link.
 namespace :meeting_lists do
   def meeting_list_import(args)
@@ -30,5 +33,14 @@ namespace :meeting_lists do
     import = meeting_list_import(args)
     keys = import.preview[:rows].select { |r| r[:selected] }.map { |r| r[:key] }
     puts import.apply!(keys: keys).map { |k, v| "#{k}: #{v}" }.join(", ")
+  end
+
+  desc "Refresh the meeting lists whose weekly refresh is due"
+  task refresh: :environment do
+    MeetingListRefresh.due.to_a.each do |directory|
+      MeetingListRefresh.refresh!(directory)
+      directory.reload
+      puts "#{directory.name}: #{directory.refresh_status} #{directory.refresh_error || directory.refresh_result.map { |k, v| "#{k}: #{v}" }.join(', ')}"
+    end
   end
 end

@@ -538,7 +538,9 @@ end
       end
       # Local meeting lists (an intergroup's in-person meetings) imported next to AA Intergroup's
       resources :meeting_directories, only: %i[index create update destroy] do
+        post :bulk, on: :collection
         member do
+          post :refresh
           post :preview
           post :import, action: :import_listings
         end
