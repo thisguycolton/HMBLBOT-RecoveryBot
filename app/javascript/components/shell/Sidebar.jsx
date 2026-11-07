@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, LogIn, MapPinned, UserPlus } from "lucide-react";
 import GroupLogo from "../groups/GroupLogo";
 import { followLink } from "./useShell";
@@ -84,7 +85,9 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
 }
 
 // The rail's tips: an item's name beside it, on the screen itself (the column scrolls, which
-// would clip anything poking out of it). Anything in the rail with a data-tip gets one.
+// would clip anything poking out of it). Anything in the rail with a data-tip gets one. It's
+// put on <body>: inside the column it shares the column's z-40 layer, and the stage's rounded
+// corner (also z-40, later in the page) would paint over it.
 function useRailTips(rail) {
   const [tip, setTip] = useState(null); // { label, top }
   const timer = useRef(null);
@@ -101,11 +104,12 @@ function useRailTips(rail) {
   const hide = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setTip(null), 60); };
   return {
     handlers: { onMouseOver: show, onFocus: show, onMouseLeave: hide, onBlur: hide, onScroll: hide },
-    tip: tip && (
+    tip: tip && createPortal(
       <span role="tooltip" style={{ top: tip.top }}
         className="pointer-events-none fixed left-[calc(var(--side-w)-0.25rem)] z-[2400] -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-sm font-medium text-white shadow-lg dark:bg-neutral-100 dark:text-neutral-900">
         {tip.label}
-      </span>
+      </span>,
+      document.body,
     ),
   };
 }
