@@ -9,7 +9,8 @@ class Api::ProfilesController < ApplicationController
 
   # PATCH /api/profile (multipart when a picture is uploaded)
   # name, bio, avatar, remove_avatar=1, sobriety_date, show_sobriety_date, username,
-  # default_highlight_visibility, default_note_visibility; email or password also need current_password.
+  # default_highlight_visibility, default_note_visibility; email or password also need current_password
+  # (unless the account came from Google and they haven't chosen a password yet: User#password_chosen).
   # gratitude_reminder, gratitude_reminder_at, step_reminder, step_reminder_at ("HH:MM"), time_zone.
   # Hosts (User#host?) also: host_reminders, host_reminder_hours, host_reminder_email
   def update
@@ -24,7 +25,9 @@ class Api::ProfilesController < ApplicationController
                  gratitude_reminder gratitude_reminder_at step_reminder step_reminder_at time_zone]
     profile += %i[host_reminders host_reminder_hours host_reminder_email] if user.host?
     account_change = attrs[:email].present? && attrs[:email].strip.casecmp?(user.email) == false || attrs[:password].present?
-    saved = if account_change
+    saved = if account_change && !user.password_chosen
+              user.update(attrs.slice(*profile, :email, :password, :password_confirmation))
+            elsif account_change
               user.update_with_password(attrs.slice(*profile, :email, :password, :password_confirmation, :current_password))
             else
               user.update(attrs.slice(*profile))
@@ -35,14 +38,19 @@ class Api::ProfilesController < ApplicationController
     render json: profile_json
   end
 
-  # DELETE /api/profile { current_password }
+  # DELETE /api/profile { current_password }, or { confirm_email } (their email address typed
+  # out) for an account from Google that has no password they chose
   # Deletes the account and what's only theirs (profile, notes, highlights, follows, RSVPs,
   # memberships); group records they helped keep stay with the group, without their name
   # attached where the record allows it. Signs them out.
   def destroy
     user = current_user
-    unless user.valid_password?(params[:current_password].to_s)
-      return render(json: { error: "That password isn't right." }, status: :unprocessable_entity)
+    if user.password_chosen
+      unless user.valid_password?(params[:current_password].to_s)
+        return render(json: { error: "That password isn't right." }, status: :unprocessable_entity)
+      end
+    elsif !params[:confirm_email].to_s.strip.casecmp?(user.email)
+      return render(json: { error: "That isn't your account's email address." }, status: :unprocessable_entity)
     end
 
     if user.readings.exists?
@@ -65,6 +73,7 @@ class Api::ProfilesController < ApplicationController
     u = current_user.reload
     {
       name: u.name, email: u.email, unconfirmed_email: u.unconfirmed_email, bio: u.bio, avatar_url: u.avatar_url,
+      password_chosen: u.password_chosen, google: u.google_uid.present?,
       sobriety_date: u.sobriety_date&.iso8601, show_sobriety_date: u.show_sobriety_date,
       groups: u.group_memberships.includes(:group).map { |m| { slug: m.group.slug, title: m.group.title, role: m.role, status: m.status } },
       groups_open: Group.feature_open_to?(u),

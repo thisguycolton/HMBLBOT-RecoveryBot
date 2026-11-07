@@ -477,7 +477,7 @@ end
   resources :topics
   # Your profile (React, app/javascript/entrypoints/profile.jsx) replaces Devise's edit page
   get "/users/edit", to: "profiles#show", as: :edit_profile
-  devise_for :users, controllers: { registrations: "users/registrations" }
+  devise_for :users, controllers: { registrations: "users/registrations", omniauth_callbacks: "users/omniauth_callbacks" }
   devise_scope :user do
     get "users/check_email", to: "users/registrations#check_email", as: :users_check_email
   end

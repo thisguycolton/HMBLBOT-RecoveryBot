@@ -3,6 +3,6 @@ class PrivacyController < ApplicationController
   layout "reader"
 
   def show
-    @props = { turnstile: HumanCheck.turnstile_site_key.present? }
+    @props = { turnstile: HumanCheck.turnstile_site_key.present?, google: GoogleSignIn.enabled? }
   end
 end
