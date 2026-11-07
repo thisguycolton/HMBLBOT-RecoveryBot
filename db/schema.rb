@@ -1807,8 +1807,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_100000) do
     t.string "time_zone"
     t.string "sponsor_invite_token"
     t.jsonb "inventory_questions"
+    t.string "google_uid"
+    t.boolean "password_chosen", default: true, null: false
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["google_uid"], name: "index_users_on_google_uid", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["share_token"], name: "index_users_on_share_token", unique: true
     t.index ["sponsor_invite_token"], name: "index_users_on_sponsor_invite_token", unique: true

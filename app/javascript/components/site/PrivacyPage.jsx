@@ -65,7 +65,7 @@ function Table({ head, rows }) {
   );
 }
 
-export default function PrivacyPage({ turnstile = false }) {
+export default function PrivacyPage({ turnstile = false, google = false }) {
   // The page draws after load, so a link to a section (/privacy#deleting) scrolls once it's there
   useEffect(() => {
     if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
@@ -133,7 +133,7 @@ export default function PrivacyPage({ turnstile = false }) {
           <H2 id="what-we-collect">What we collect</H2>
           <h3>Things you give us</h3>
           <ul>
-            <li><strong>Your account:</strong> name, email address and password. The password is stored only as a one-way hash; nobody can read it. We email you a link to confirm the address before you can sign in.</li>
+            <li><strong>Your account:</strong> name, email address and password. The password is stored only as a one-way hash; nobody can read it. We email you a link to confirm the address before you can sign in.{google && <> If you sign up or log in with Google instead, Google tells us your email address (and that it's confirmed), your name and an id for your Google account. We keep the address, your first name and last initial, and the id, which links the Google account to yours. We don't get your Google password, contacts or anything else, and we don't use your Google picture.</>}</li>
             <li><strong>Your profile:</strong> username, picture, a short bio, an optional sobriety date, and how you lay out your profile page.</li>
             <li><strong>Notes and highlights:</strong> passages you highlight in the library, notes you write on them, and notes on your timeline (with up to six pictures). Each one has its own visibility (see below).</li>
             <li><strong>10th step inventories and gratitude lists:</strong> what you write in the 10th step (your yes or no to each question and your notes) and your gratitude lists, one of each a day, with the day they're for. If you change your 10th step questions, we keep your questions too, and each night keeps the questions it was written with. Only you can read them on the site: not your groups, not the people you follow, and not your sponsor unless you send one to them (see Sponsorship). No admin page shows them; the few people who run RecoveryBot could reach them in the database, like anything stored, but we don't look. <em>Share</em> on a list or a 10th step only makes text on your own device for you to copy or send yourself: we don't send it, keep a copy, or note that you shared. The link at its top is the same for everyone, so it tells whoever opens it nothing about you or what you wrote.</li>
@@ -235,6 +235,7 @@ export default function PrivacyPage({ turnstile = false }) {
               Windows). It's encrypted so only your device can read it: the service sees that RecoveryBot sent your device something and when, not what it says.
             </li>
             <li><strong>ipinfo.io:</strong> looks up the shortened IP address of a visit to get the rough location for visit statistics.</li>
+            {google && <li><strong>Google sign-in:</strong> if you choose “Continue with Google”, you sign in on Google's own page, so Google sees that you're signing in to RecoveryBot, under Google's privacy policy. Nothing goes to Google if you use your email and password.</li>}
             {turnstile && <li><strong>Cloudflare Turnstile:</strong> checks that the sign-up and contact forms are filled in by a person. Cloudflare sees your IP address and browser details when the check runs.</li>}
             <li>
               <strong>Fonts and page code:</strong> some pages load fonts from Google Fonts and code from public content networks

@@ -104,6 +104,11 @@ group :test do
 end
 
 gem "devise", "~> 4.9"
+# Sign up and log in with Google (Users::OmniauthCallbacksController)
+gem "omniauth-google-oauth2", "~> 1.2"
+gem "omniauth-rails_csrf_protection", "~> 1.0"
+# json 3 (pulled in by omniauth-google-oauth2) breaks an older gem here (unknown keyword: quirks_mode)
+gem "json", "~> 2.7"
 gem "bootstrap"
 gem "sassc-rails"
 gem "richer_text"

@@ -86,15 +86,50 @@ function Field({ id, label, aside, hint, ...input }) {
   );
 }
 
+// "Continue with Google" (GoogleSignIn): a plain POST, since OmniAuth only starts a sign-in
+// from a form carrying the page's token. Shown only when the server has Google set up.
+function GoogleButton({ path, authenticity_token, label = "Continue with Google", note }) {
+  const [going, setGoing] = useState(false);
+  if (!path) return null;
+  return (
+    <>
+      <form action={path} method="post" acceptCharset="UTF-8" onSubmit={() => setGoing(true)}>
+        <input type="hidden" name="authenticity_token" value={authenticity_token} />
+        <button type="submit" disabled={going}
+          className="w-full inline-flex items-center justify-center gap-3 rounded-xl border border-slate-300 !bg-white px-4 py-2.5 text-sm font-semibold !text-slate-800 shadow-sm hover:!bg-slate-50 disabled:opacity-60 dark:border-neutral-600">
+          <GoogleMark className="h-[18px] w-[18px]" /> {going ? "Opening Google…" : label}
+        </button>
+        {note && <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">{note}</p>}
+      </form>
+      <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-400 dark:text-neutral-500" aria-hidden="true">
+        <span className="h-px flex-1 bg-slate-200 dark:bg-neutral-700" /> or <span className="h-px flex-1 bg-slate-200 dark:bg-neutral-700" />
+      </div>
+    </>
+  );
+}
+
+// Google's "G", in its own colors as Google's sign-in branding asks
+function GoogleMark({ className }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  );
+}
+
 const passwordHint = (min) => (min ? `At least ${min} characters` : null);
 
-export function LoginPage({ email = "", remember = true, forgot_path, sign_up_path, confirm_path, ...form }) {
+export function LoginPage({ email = "", remember = true, forgot_path, sign_up_path, confirm_path, google_path, ...form }) {
   return (
     <AuthFrame icon={LogIn} title="Welcome back" subtitle="Log in to your RecoveryBot account"
       footer={<>
         {sign_up_path && <>Don't have an account yet? <a href={sign_up_path} className={linkClass}>Sign up</a></>}
         {confirm_path && <><br /><a href={confirm_path} className={linkClass}>Didn't get the confirmation email?</a></>}
       </>}>
+      <GoogleButton path={google_path} authenticity_token={form.authenticity_token} />
       <AuthForm {...form} submitLabel="Log in" busyLabel="Logging in…">
         <Field id="user_email" label="Email" type="email" name="user[email]" defaultValue={email} autoComplete="email" autoFocus required placeholder="you@example.com" />
         <Field id="user_password" label="Password" type="password" name="user[password]" autoComplete="current-password" required placeholder="••••••••"
@@ -111,10 +146,13 @@ export function LoginPage({ email = "", remember = true, forgot_path, sign_up_pa
   );
 }
 
-export function SignUpPage({ name = "", email = "", min_password_length, login_path, human_check, ...form }) {
+export function SignUpPage({ name = "", email = "", min_password_length, login_path, human_check, google_path, ...form }) {
   return (
     <AuthFrame icon={UserPlus} title="Create your account" subtitle="We'll email you a link to confirm your address"
       footer={login_path && <>Already have an account? <a href={login_path} className={linkClass}>Log in</a></>}>
+      <GoogleButton path={google_path} authenticity_token={form.authenticity_token} label="Sign up with Google"
+        note={<>We use only your first name, last initial and email address from Google. By signing up you agree to the{" "}
+          <a href="/terms" className={linkClass}>terms of use</a> and <a href="/privacy" className={linkClass}>privacy policy</a>.</>} />
       <AuthForm {...form} submitLabel="Sign up" busyLabel="Signing up…">
         <Field id="user_name" label="Name" name="user[name]" defaultValue={name} autoComplete="name" autoFocus required placeholder="First name and last initial" />
         <Field id="user_email" label="Email" type="email" name="user[email]" defaultValue={email} autoComplete="email" required placeholder="you@example.com" />

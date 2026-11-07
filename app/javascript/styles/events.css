@@ -37,5 +37,28 @@
 .ev-block[data-selected="true"] .ev-resize { opacity: 1; }
 .ev-block:hover { outline-color: color-mix(in srgb, var(--color-accent) 35%, transparent); }
 .ev-block[data-selected="true"] { outline-color: var(--color-accent); }
-.ev-block[data-dragging="true"] { opacity: 0.35; }
+/* The gap a dragged block leaves: where it'll land, the others already moved aside for it */
+.ev-block[data-dragging="true"] { opacity: 0.35; outline: 2px dashed var(--color-accent); outline-offset: 4px; }
+.ev-block[data-dragging="true"] .ev-tools, .ev-block[data-dragging="true"] .ev-resize { opacity: 0; }
+
+/* The block in hand while dragging: the real thing, lifted, its toolbar tab on top. Tall
+   blocks are cut off at the bottom with a fade so the page underneath stays in view. */
+.ev-drag-preview { position: relative; padding-top: 2.4rem; cursor: grabbing; transform: rotate(0.6deg) scale(1.015); transform-origin: 1rem 1rem; }
+.ev-drag-preview__tab { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.6rem; border-radius: 0.75rem; background: white; color: rgb(15 23 42); font-size: 0.75rem; font-weight: 600; box-shadow: 0 8px 24px -6px rgb(0 0 0 / 0.3); outline: 2px solid var(--color-accent); }
+.ev-drag-preview__body { background: rgb(241 245 249); border-radius: var(--radius-2xl, 1.75rem); outline: 2px solid var(--color-accent); outline-offset: 4px; box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.45), 0 10px 20px -10px rgb(0 0 0 / 0.25); pointer-events: none; }
+.ev-drag-preview__clip { max-height: 22rem; overflow: hidden; border-radius: inherit; }
+.ev-drag-preview__clip[data-cut="true"] { mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent); -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent); }
+.dark .ev-drag-preview__tab { background: rgb(23 23 23); color: white; }
+.dark .ev-drag-preview__body { background: rgb(10 10 10); }
+
+/* Phones and touch screens move blocks with arrows, not by dragging, and get bigger buttons */
+.ev-arrows { display: none; }
+@media (pointer: coarse), (max-width: 767px) {
+  .ev-arrows { display: contents; }
+}
+@media (pointer: coarse) {
+  .ev-block { padding-top: 2.9rem; }
+  .ev-block .ev-grip { display: none; }
+  .ev-block .ev-tools button { width: 2.25rem; height: 2.25rem; }
+}
 .ev-region-empty { min-height: 7rem; }

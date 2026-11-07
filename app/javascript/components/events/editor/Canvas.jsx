@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { ArrowLeftRight, Copy, GripVertical, Trash2 } from "lucide-react";
+import { SortableContext, useSortable } from "@dnd-kit/sortable";
+import { ArrowDown, ArrowLeftRight, ArrowUp, Copy, GripVertical, Settings2, Trash2 } from "lucide-react";
+import useFlip from "../../ui/useFlip";
 import BlockView, { HeadingView, isCompact } from "../BlockView";
 import { LayoutColumns, blockWrapClass } from "../EventLayout";
 import { BLOCK_INFO, SPANS, nearestSpan, tone } from "../lib";
@@ -11,7 +11,14 @@ import { BLOCK_INFO, SPANS, nearestSpan, tone } from "../lib";
 // can be selected, dragged (within or between columns), resized by its right edge, and,
 // for text blocks, typed into right on the page. `context` is a group page's group, for
 // its own blocks; `blockInfo` names the blocks (the event's or a group page's).
-export default function Canvas({ layout, blocks, polls, context, blockInfo = BLOCK_INFO, selected, onSelect, onChange, onRemove, onDuplicate, activeId }) {
+//
+// While a block is dragged the others really do trade places with it (EditorFrame moves it in
+// the list as it goes), so a column lays itself out as it will be, and useFlip slides them
+// there. On a phone (or any touch screen) blocks move with up and down arrows instead.
+export default function Canvas({ layout, blocks, polls, context, blockInfo = BLOCK_INFO, selected, onSelect, onChange, onRemove, onDuplicate, onMove, canMove, onSettings, activeId }) {
+  const anchor = useRef(null);
+  const flip = useFlip(blocks.map((b) => `${b.id}:${b.region}`).join(","), anchor);
+  const move = (id, step) => { anchor.current = id; onMove(id, step); };
   const renderRegion = (region) => {
     const list = blocks.filter((b) => b.region === region);
     return (
@@ -30,13 +37,21 @@ export default function Canvas({ layout, blocks, polls, context, blockInfo = BLO
             onChange={(patch) => onChange(block.id, patch)}
             onRemove={() => onRemove(block.id)}
             onDuplicate={() => onDuplicate(block.id)}
+            onSettings={() => onSettings(block.id)}
+            onUp={canMove(block.id, -1) ? () => move(block.id, -1) : null}
+            onDown={canMove(block.id, 1) ? () => move(block.id, 1) : null}
           />
         ))}
       </Region>
     );
   };
-  return <LayoutColumns layout={layout} renderRegion={renderRegion} />;
+  return <div ref={flip}><LayoutColumns layout={layout} renderRegion={renderRegion} /></div>;
 }
+
+// Blocks aren't shifted with transforms while dragging: the list itself changes order, and the
+// page lays them out (blocks have different widths, which transforms get wrong)
+const stayPut = () => null;
+const keepStill = () => false;
 
 function Region({ region, layout, ids, children }) {
   const { setNodeRef, isOver } = useDroppable({ id: `region:${region}` });
@@ -44,7 +59,7 @@ function Region({ region, layout, ids, children }) {
   return (
     <div className="space-y-2">
       <p className="px-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-neutral-500">{label}</p>
-      <SortableContext items={ids} strategy={rectSortingStrategy}>
+      <SortableContext items={ids} strategy={stayPut}>
         <div
           ref={setNodeRef}
           data-region-grid
@@ -62,8 +77,8 @@ function Region({ region, layout, ids, children }) {
   );
 }
 
-function SortableBlock({ block, layout, polls, context, info, selected, dragging, onSelect, onChange, onRemove, onDuplicate }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition } = useSortable({ id: block.id });
+function SortableBlock({ block, layout, polls, context, info, selected, dragging, onSelect, onChange, onRemove, onDuplicate, onSettings, onUp, onDown }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef } = useSortable({ id: block.id, animateLayoutChanges: keepStill });
   const wrapRef = useRef(null);
   const compact = isCompact(block, layout);
   const otherRegion = block.region === "main" ? "side" : "main";
@@ -95,7 +110,7 @@ function SortableBlock({ block, layout, polls, context, info, selected, dragging
   return (
     <div
       ref={(node) => { setNodeRef(node); wrapRef.current = node; }}
-      style={{ transform: CSS.Translate.toString(transform), transition }}
+      data-flip-id={block.id}
       className={blockWrapClass(block)}
     >
       <div
@@ -105,10 +120,15 @@ function SortableBlock({ block, layout, polls, context, info, selected, dragging
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
       >
         <div className="ev-tools absolute left-0 top-0 z-10 flex items-center gap-0.5 rounded-xl bg-white px-1 py-0.5 shadow-panel ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
-          <button type="button" ref={setActivatorNodeRef} {...attributes} {...listeners} className={`${tool} cursor-grab active:cursor-grabbing`} aria-label={`Move ${info?.label}`} title="Drag to move">
+          <button type="button" ref={setActivatorNodeRef} {...attributes} {...listeners} className={`${tool} ev-grip cursor-grab active:cursor-grabbing`} aria-label={`Move ${info?.label}`} title="Drag to move">
             <GripVertical className="size-4" />
           </button>
           <span className="px-1 text-xs font-semibold text-slate-600 dark:text-neutral-300">{info?.label}</span>
+          <span className="ev-arrows">
+            <button type="button" className={`${tool} disabled:opacity-30`} disabled={!onUp} onClick={(e) => { e.stopPropagation(); onUp?.(); }} title="Move up" aria-label={`Move ${info?.label} up`}><ArrowUp className="size-4" /></button>
+            <button type="button" className={`${tool} disabled:opacity-30`} disabled={!onDown} onClick={(e) => { e.stopPropagation(); onDown?.(); }} title="Move down" aria-label={`Move ${info?.label} down`}><ArrowDown className="size-4" /></button>
+          </span>
+          <button type="button" className={`${tool} xl:hidden`} onClick={(e) => { e.stopPropagation(); onSettings(); }} title="Settings" aria-label={`${info?.label} settings`}><Settings2 className="size-3.5" /></button>
           <button type="button" className={tool} onClick={(e) => { e.stopPropagation(); onChange({ region: otherRegion }); }} title={`Move to the ${otherRegion === "main" ? "main" : "side"} column`} aria-label="Move to the other column">
             <ArrowLeftRight className="size-3.5" />
           </button>
