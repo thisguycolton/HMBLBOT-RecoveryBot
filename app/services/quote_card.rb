@@ -23,7 +23,7 @@
 # its body each on their own, with a little room between), and pages turn between paragraphs
 # where they can.
 class QuoteCard
-  VERSION = 5
+  VERSION = 6
   LOOKS = %w[paper marker night sunrise].freeze
   SIZES = { "wide" => [1200, 630], "square" => [1080, 1080], "story" => [1080, 1920] }.freeze
   ASSETS = ShareCard::ASSETS
@@ -252,7 +252,7 @@ class QuoteCard
   # How tall words come out, each paragraph wrapped on its own and a para_gap between them.
   # `quote: true`: set the way the reading set them (see #parts)
   def measure(value, font:, size:, width:, quote: false)
-    list = parts(value, font: font, size: size, quote: quote).presence || [["", { font: font, size: size, kern: 0 }]]
+    list = pieces(value, font: font, size: size, width: width, quote: quote).presence || [["", { font: font, size: size, kern: 0 }, 0]]
     args = list.flat_map do |p, st|
       ["-font", FONTS[st[:font]], "-pointsize", st[:size].to_s, "-kerning", st[:kern].to_s,
        "-interline-spacing", spacing(st[:font], st[:size]).to_s, caption(italic?(st[:font]) ? "#{p}\u00A0" : p)]
@@ -264,7 +264,30 @@ class QuoteCard
     return TOO_TALL if !status.success? && err.include?("exceeds limit")
     raise ShareCard::Failed, err.to_s.first(500) unless status.success?
 
-    out.split.sum(&:to_i) + ((list.size - 1) * para_gap(size))
+    out.split.sum(&:to_i) + list.sum { |_, _, gap| gap }
+  end
+
+  # The server's ImageMagick (6.9.11, with Debian's 16,000 pixel width limit) won't lay out
+  # a caption whose words would be wider than that on one line, newlines or not: about 300
+  # letters at 53 points. So a paragraph longer than that is wrapped here and drawn in a
+  # few captions of whole lines, stacked one under the other.
+  CAPTION_LIMIT = 11_000
+
+  # #parts with long paragraphs cut into groups of lines: [words, how they're set, the room above]
+  def pieces(value, font:, size:, width:, color: nil, under: nil, quote: false)
+    parts(value, font: font, size: size, color: color, under: under, quote: quote).each_with_index.flat_map do |(p, st), i|
+      ink = st[:size] + st[:kern]
+      groups = if p.length * ink <= CAPTION_LIMIT then [p]
+      else
+        wrap(p, st[:font], st[:size], st[:kern], width).each_with_object([[]]) do |line, acc|
+          acc << [] if acc.last.any? && (acc.last.sum(&:length) + line.length + acc.last.size) * ink > CAPTION_LIMIT
+          acc.last << line
+        end.map { |lines| lines.join("\n") }
+      end
+      m = metrics(st[:font], "")
+      between = [((m[:step] - m[:line]) * st[:size] / 100.0).round, 0].max
+      groups.each_with_index.map { |g, j| [g, st, j.zero? ? (i.zero? ? 0 : para_gap(size)) : between] }
+    end
   end
 
   # Its paragraphs: lines with words on them
@@ -336,20 +359,31 @@ class QuoteCard
   def estimate_one(para, font, size, kern, width)
     m = metrics(font, para)
     scale = size / 100.0
+    lines = wrap(para, font, size, kern, width, count: true)
+    ((m[:line] + ((lines - 1) * m[:step])) * scale).ceil
+  end
+
+  # A paragraph's lines, wrapped a little narrower than ImageMagick would (so it never wraps
+  # them again), or with `count: true` how many lines it takes (a word too long for a line counts as more)
+  def wrap(para, font, size, kern, width, count: false)
+    m = metrics(font, para)
+    scale = size / 100.0
     limit = width * 0.95 / scale
-    lines = 1
+    lines = [[]]
+    extra = 0
     line = nil
     para.split(/ +/).each do |word|
       w = (m[:words][word] || (m[:em] * word.length)) + (kern / scale * word.length)
-      lines += (w / limit).floor if w > limit
+      extra += (w / limit).floor if w > limit
       if line.nil? then line = w
       elsif line + m[:space] + w <= limit then line += m[:space] + w
       else
-        lines += 1
+        lines << []
         line = w
       end
+      lines.last << word
     end
-    ((m[:line] + ((lines - 1) * m[:step])) * scale).ceil
+    count ? lines.size + extra : lines.map { |l| l.join(" ") }
   end
 
   # A font's word widths (at 100 points), its space, and its line heights, measured in one go
@@ -386,8 +420,8 @@ class QuoteCard
   def block(value, font:, size:, color:, width:, height:, x:, y:, under: nil, quote: false)
     args = ["(", "-background", "none"]
     args += wide? ? ["+gravity"] : ["-gravity", "North"]
-    parts(value, font: font, size: size, color: color, under: under, quote: quote).each_with_index do |(p, st), i|
-      args += ["-size", "#{width}x#{para_gap(size)}", "xc:none"] if i.positive?
+    pieces(value, font: font, size: size, width: width, color: color, under: under, quote: quote).each do |p, st, gap|
+      args += ["-size", "#{width}x#{gap}", "xc:none"] if gap.positive?
       args += ["-fill", st[:color] || color, "-font", FONTS[st[:font]], "-pointsize", st[:size].to_s, "-kerning", st[:kern].to_s,
                "-interline-spacing", spacing(st[:font], st[:size]).to_s, "-undercolor", st[:under] || "none",
                "-size", "#{width}x", caption(italic?(st[:font]) ? "#{p}\u00A0" : p)]
