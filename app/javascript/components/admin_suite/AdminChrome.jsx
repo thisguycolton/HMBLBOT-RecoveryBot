@@ -21,7 +21,7 @@ import {
   Sun,
   Tags,
   Users,
-  X, ShieldAlert, ShieldBan } from "lucide-react";
+  X, ShieldAlert, ShieldBan, Vote } from "lucide-react";
 import { api } from "../topicificator_admin/api";
 import NotificationBell from "../NotificationBell";
 import Avatar from "../groups/Avatar";
@@ -71,7 +71,7 @@ export const OTHER_TOOLS = [
   { href: "/service_readings", label: "Service readings", note: "Readings for service positions" },
   { href: "/groups", label: "Groups & meetings", note: "Groups and their meetings" },
   { href: "/hostificators", label: "Hostificators", note: "Host votes" },
-  { href: "/polls", label: "Polls", note: "Polls and options" },
+  { href: "/polls", label: "Polls", note: "Questions with a short link and live results", icon: Vote },
 ];
 
 const inboxCounts = (overview) => ({

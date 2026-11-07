@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "November 1, 2026";
+const UPDATED = "November 7, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -26,7 +26,7 @@ const COOKIES = [
   ["remember_user_token", "Keeps you signed in between visits, only if you tick “Remember me”.", "2 weeks, or until you sign out"],
   ["group_ask, group_invite", "Remembers the group you asked to join or were invited to while you sign in or sign up. Removed once used.", "30 days"],
   ["event_rsvp_…", "Lets you change your RSVP to an event if you answered without an account.", "Until you clear it"],
-  ["hb_voter", "Lets you change your answers to a schedule poll if you voted without an account.", "Until you clear it"],
+  ["hb_voter", "Lets you change your answers to a poll or schedule poll if you voted without an account.", "Until you clear it"],
 ];
 
 const STORAGE = [
@@ -156,7 +156,7 @@ export default function PrivacyPage({ turnstile = false }) {
             <li><strong>Groups:</strong> the groups you join or ask to join, your role (member, admin, record keeper, host scheduler, treasurer), and the meetings you host or cover. While you have a meeting's HostDeck open, the group's other hosts see that you're there and what you're on, and what you did in it (like copying a chat posting) is kept with that meeting's date.</li>
             <li><strong>Group records:</strong> documents, decisions, business meeting agendas and minutes, elected officials, host schedules and treasurer reports that members write for their group.</li>
             <li><strong>Events:</strong> events you create, and RSVPs. If you RSVP without an account we ask for a name and email address so we can send you the event's updates.</li>
-            <li><strong>Schedule polls:</strong> your answers, and a name if you vote without an account. To stop the same person voting twice without an account, we keep a scrambled (hashed) form of your IP address with the vote, not the address itself.</li>
+            <li><strong>Polls and schedule polls:</strong> your answers, and a name if you vote without an account. Polls record who voted for what: the people running a poll (whoever made it, and its group's admins and record keepers) can see your name next to your answer. A poll can also be set to show names to its group's members, or to everyone who can see its results, and a poll open to guests can be set not to ask for a name at all. To stop the same person voting twice without an account, we keep a scrambled (hashed) form of your IP address with the vote, not the address itself.</li>
             <li><strong>Court attendance verifications:</strong> when a group signs one, the name and email of the person who attended, the meeting, its date and topic, and who signed it. A copy is emailed to that person and to the group.</li>
             <li><strong>Readings and reports:</strong> readings you add to the shared archive, and any problems you report in the library's text.</li>
             <li><strong>The Acid Quest:</strong> a screen name and your progress in the game.</li>
@@ -277,7 +277,7 @@ export default function PrivacyPage({ turnstile = false }) {
           </ul>
           <p>
             Some things belong to a group or to everyone, so they stay without your account attached: group documents and minutes you
-            edited, decisions you recorded, events and schedule poll answers. Your name stays where it was typed into a record (for
+            edited, decisions you recorded, events, polls you made, and poll and schedule poll answers. Your name stays where it was typed into a record (for
             example in minutes, or as the host of a meeting). Ask the group's record keepers, or us, if you'd like it taken out. If you've
             added readings to the shared archive, get in touch and we'll delete your account and sort out the readings with you.
           </p>

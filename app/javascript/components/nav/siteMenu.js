@@ -12,6 +12,7 @@ import {
   ScrollText,
   Sparkles,
   Tags,
+  Vote,
 } from "lucide-react";
 
 // The site's tools, grouped for the footer and the home page. The shell's sidebar has its own
@@ -29,6 +30,7 @@ export const NAV_CATEGORIES = [
       { label: "Service Readings", href: "/service_readings", icon: BookHeart, note: "Preamble, Steps and Traditions, ready to read aloud" },
       { label: "Reading Archive", href: "/readings", icon: Bookmark, note: "Past meeting readings and topics" },
       { label: "Host-burger Helper", href: "/host_helper/scratchpaper", icon: ScrollText, note: "Service roles and milestones for the host" },
+      { label: "Polls", href: "/polls", icon: Vote, note: "Ask a question, share a short link, watch answers come in", auth: true },
     ],
   },
   {

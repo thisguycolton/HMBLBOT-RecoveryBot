@@ -24,6 +24,7 @@ class Group < ApplicationRecord
   has_many :events, dependent: :destroy
   has_many :documents, class_name: "GroupDocument", dependent: :destroy
   has_many :motions, dependent: :destroy
+  has_many :polls, dependent: :destroy
   has_many :business_meetings, dependent: :destroy
   has_many :service_positions, dependent: :destroy
   has_many :treasurer_reports, dependent: :destroy

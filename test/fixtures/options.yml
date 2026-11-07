@@ -2,10 +2,10 @@
 
 one:
   poll: one
-  topic: one
-  topic_title: MyString
+  label: Acceptance
+  position: 0
 
 two:
   poll: two
-  topic: one
-  topic_title: MyString
+  label: Coffee
+  position: 0

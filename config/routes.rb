@@ -312,6 +312,17 @@ Rails.application.routes.draw do
       delete :rsvp, action: :unrsvp
     end
   end
+  get "polls/groups", to: "polls#groups"
+  get "polls/subject", to: "polls#subject"
+  resources :polls, only: %i[index show create update destroy], param: :token do
+    member do
+      post :close
+      post :reopen
+      put :ballot, action: :vote
+      delete :ballot, action: :unvote
+      delete "ballots/:id", action: :remove_ballot
+    end
+  end
   get "schedule_polls/people", to: "schedule_polls#people"
   resources :schedule_polls, only: %i[index show create update destroy], param: :token do
     member do
@@ -450,9 +461,10 @@ end
   # A book's own page lives in the library; /books/<slug> used to 404.
   get "/books", to: redirect("/library")
   get "/books/:slug", to: redirect("/library/%{slug}"), constraints: { slug: /(?!new\z)[^\/]+/ }
-  resources :polls do
-    resources :options
-  end
+  # Polls: a React app (app/javascript/entrypoints/polls.jsx); /p/:token is the short link
+  get "/p/:token", to: "polls#app", as: :short_poll
+  get "/polls", to: "polls#app", as: :polls
+  get "/polls/:token(/*path)", to: "polls#app", as: :poll
   mount ActionCable.server => '/cable'
   # AhoyCaptain (Ahoy's own dashboard) isn't mounted: its charts need Groupdate, which needs
   # ActiveRecord.default_timezone = :utc, and this app uses :local. The admin suite's
