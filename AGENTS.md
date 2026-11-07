@@ -79,6 +79,12 @@ An API-driven system for tracking game state, inventories, and player progress.
 - The search box (`shell/SearchBox.jsx`, "/" focuses it) reads `GET /api/search?q=` (`Api::SearchController`: groups, people for members, published readings, library chapters and books) and the hashtags endpoint (`/api/hashtags?q=`, chips that open `/people/tags/:tag`).
 - React Router apps call `registerRouter(router, basename)` so sidebar links into them move without a page load.
 
+### 📖 Docs (help center), About and History
+- `/docs` (`DocsController`, React app `entrypoints/docs.jsx`, `components/docs/`): sections (`DocSection`) of tutorial pages (`DocPage`, Markdown in `body`), docs nav, search (`GET /api/docs/search`, also a "Help" list in the top search box), On this page, Previous/Next. `/about` and `/history` are docs pages with a `path_alias`. Plan: project files `docs/plan.md`.
+- Readers: `DocPage.readable_by(user)` (published + `audience` everyone/members/admins). Editors: `DocPage.editor?` = `User#suite_admin?`; they see drafts and the "not reviewed yet" badges (`reviewed_at`).
+- Editor (`DocEditor.jsx`): Tiptap + `tiptap-markdown` (stores Markdown), "/" menu (`SlashMenu.jsx`), bubble, Markdown tab, autosave; each save keeps the replaced text in `DocPageVersion` (one per editor per 10 minutes). Callouts are quotes starting `[!TIP]`/`[!NOTE]`/`[!WARNING]`/`[!PRIVACY]` (`docMarkdown.js`).
+- Drafts live in `db/docs/<NN-section>/<NN-page>.md` with front matter; the CreateDocs migration imported them once, `bin/rails docs:import` adds new files only (never `db:seed`). Add a draft there when you add a tool. Keep Court verification out of the docs.
+
 ### 🛠 Services
 Business logic for complex operations (e.g., importing literature) is encapsulated in `app/services`.
 

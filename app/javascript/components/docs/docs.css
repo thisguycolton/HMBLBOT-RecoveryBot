@@ -1,0 +1,84 @@
+/* The Docs (components/docs): callouts, checklists and pictures in a page, and the editor's look */
+.doc-body .doc-callout,
+.doc-editor .ProseMirror blockquote.doc-callout {
+  position: relative;
+  margin: 1.5rem 0;
+  padding: 0.9rem 1.1rem 0.9rem 3rem;
+  border: 0;
+  border-radius: 1rem;
+  font-style: normal;
+  quotes: none;
+  background: var(--doc-callout-bg);
+  color: inherit;
+}
+.doc-body .doc-callout::before,
+.doc-editor .ProseMirror blockquote.doc-callout::before {
+  content: var(--doc-callout-icon);
+  position: absolute;
+  left: 1.05rem;
+  top: 0.95rem;
+  font-size: 1.05rem;
+  line-height: 1.5rem;
+}
+.doc-body .doc-callout::after {
+  content: attr(data-label);
+  position: absolute;
+  top: -0.6rem;
+  left: 2.9rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--doc-callout-chip);
+  color: var(--doc-callout-chip-text);
+}
+.doc-body .doc-callout p:first-of-type::before,
+.doc-body .doc-callout p:last-of-type::after { content: none; }
+.doc-body .doc-callout > p { margin: 0.35rem 0; }
+.doc-callout-tip { --doc-callout-bg: rgb(16 185 129 / 0.1); --doc-callout-icon: "💡"; --doc-callout-chip: rgb(16 185 129); --doc-callout-chip-text: white; }
+.doc-callout-note { --doc-callout-bg: rgb(59 130 246 / 0.1); --doc-callout-icon: "📝"; --doc-callout-chip: rgb(59 130 246); --doc-callout-chip-text: white; }
+.doc-callout-warning { --doc-callout-bg: rgb(245 158 11 / 0.14); --doc-callout-icon: "⚠️"; --doc-callout-chip: rgb(217 119 6); --doc-callout-chip-text: white; }
+.doc-callout-privacy { --doc-callout-bg: rgb(139 92 246 / 0.12); --doc-callout-icon: "🔒"; --doc-callout-chip: rgb(124 58 237); --doc-callout-chip-text: white; }
+
+.doc-body ul.doc-checklist { list-style: none; padding-left: 0.25rem; }
+.doc-body li.doc-check { display: flex; gap: 0.6rem; align-items: flex-start; }
+.doc-body li.doc-check > p { margin: 0; }
+.doc-body .doc-checkbox {
+  display: inline-grid; place-items: center; flex: none;
+  width: 1.15rem; height: 1.15rem; margin-top: 0.3rem;
+  border-radius: 0.35rem; border: 2px solid rgb(148 163 184);
+  font-size: 0.75rem; font-weight: 800; line-height: 1; color: white;
+}
+.doc-body li.doc-check-done .doc-checkbox { background: rgb(16 185 129); border-color: rgb(16 185 129); }
+
+.doc-body img.doc-image,
+.doc-editor .ProseMirror img {
+  display: block; max-width: 100%; height: auto; margin: 1.5rem auto;
+  border-radius: 1rem; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.05);
+}
+.doc-body h2, .doc-body h3 { scroll-margin-top: 6rem; }
+
+/* The editor: one writing surface, Notion-style */
+.doc-editor .ProseMirror { outline: none; min-height: 50vh; }
+.doc-editor .ProseMirror p.is-editor-empty:first-child::before,
+.doc-editor .ProseMirror .is-empty::before {
+  content: attr(data-placeholder);
+  float: left; height: 0; pointer-events: none;
+  color: rgb(148 163 184);
+}
+.doc-editor .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.25rem; }
+.doc-editor .ProseMirror ul[data-type="taskList"] li { display: flex; gap: 0.6rem; align-items: flex-start; }
+.doc-editor .ProseMirror ul[data-type="taskList"] li > label { margin-top: 0.3rem; }
+.doc-editor .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
+.doc-editor .ProseMirror ul[data-type="taskList"] li > div > p { margin: 0; }
+.doc-editor .ProseMirror img.ProseMirror-selectednode { outline: 3px solid var(--color-accent, #2563eb); }
+.doc-editor .ProseMirror table { border-collapse: collapse; }
+.doc-editor .ProseMirror td, .doc-editor .ProseMirror th { border: 1px solid rgb(203 213 225); padding: 0.4rem 0.6rem; min-width: 4rem; }
+.dark .doc-editor .ProseMirror td, .dark .doc-editor .ProseMirror th { border-color: rgb(64 64 64); }
+
+/* The site's global h1 size (3.2em) would win over the prose sizes */
+.doc-body h1 { font-size: 1.85rem; line-height: 1.2; margin-top: 2.5rem; }
+.doc-editor .ProseMirror h1, .doc-editor .ProseMirror h2, .doc-editor .ProseMirror h3, .doc-editor .ProseMirror h4 { font-weight: 600; letter-spacing: -0.01em; }
+.doc-editor .ProseMirror li > p { margin: 0.25rem 0; }
