@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Menu, Moon, Sun, X } from "lucide-react";
+import { ArrowLeft, Menu, Moon, PanelLeftClose, PanelLeftOpen, Sun, X } from "lucide-react";
 import Footer from "./Footer";
-import { RecoveryBotLogo } from "./brand/Logo";
+import { RecoveryBotLogo, RecoveryBotMark } from "./brand/Logo";
 import BottomBar from "./shell/BottomBar";
 import { ChromeSheets, useChrome } from "./shell/Chrome";
 import { PUSH_WIDTH } from "./shell/Sheet";
@@ -9,7 +9,7 @@ import { pageInfo } from "./shell/pageInfo";
 import { isShareView } from "./shell/shareView";
 import Sidebar from "./shell/Sidebar";
 import TopBar from "./shell/TopBar";
-import { ShellContext, useMedia, usePath, useNav, useTheme } from "./shell/useShell";
+import { ShellContext, useMedia, usePath, useNav, useRail, useTheme } from "./shell/useShell";
 import { forgetPushAfterSignOut, registerServiceWorker } from "../lib/push";
 
 // The site's shell, around every page: the sidebar on the left (You, Your groups, Explore),
@@ -28,6 +28,7 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
   const theme = useTheme();
   const path = usePath();
   const chrome = useChrome();
+  const [rail, toggleRail] = useRail();
   const [wideAside, setWideAside] = useState(null);
   const [phoneAside, setPhoneAside] = useState(null);
   const wide = useMedia("(min-width: 1280px)");
@@ -58,16 +59,23 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
             aside as one rounded card to show it (usePush) */}
         <div className="shell-page bg-[#ececec] dark:bg-neutral-950" style={pushStyle(push)}>
         {push?.open && <button type="button" aria-label="Close" onClick={closePush} className="absolute inset-0 z-[3000] cursor-default !bg-transparent" />}
-        <aside className="shell-side fixed inset-y-0 left-0 z-40 hidden w-72 flex-col lg:flex print:!hidden">
-          <a href={isAuthenticated ? "/people" : "/"} className="flex h-16 shrink-0 items-center px-7 !text-slate-900 dark:!text-white" aria-label="RecoveryBot home">
-            <RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-xl" />
+        {/* The column folds down to its icons and back (useRail), remembered in this browser */}
+        <aside className={`shell-side fixed inset-y-0 left-0 z-40 hidden w-[var(--side-w)] flex-col overflow-hidden motion-safe:transition-[width] motion-safe:duration-200 lg:flex print:!hidden`}>
+          <a href={isAuthenticated ? "/people" : "/"} className={`flex h-16 shrink-0 items-center !text-slate-900 dark:!text-white ${rail ? "justify-center" : "px-7"}`} aria-label="RecoveryBot home">
+            {rail ? <RecoveryBotMark className="h-7 w-auto" /> : <RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-xl" />}
           </a>
-          <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-8 pt-2">
-            <Sidebar nav={nav} isAuthenticated={isAuthenticated} path={path} />
+          <div className={`no-scrollbar flex-1 overflow-y-auto pb-4 pt-2 ${rail ? "px-2" : "px-4"}`}>
+            <Sidebar nav={nav} isAuthenticated={isAuthenticated} path={path} rail={rail} />
+          </div>
+          <div className={`shrink-0 border-t border-neutral-300/70 py-2 dark:border-neutral-800 ${rail ? "px-2" : "px-4"}`}>
+            <button type="button" onClick={toggleRail} aria-expanded={!rail} aria-label={rail ? "Expand the menu" : undefined} title={rail ? "Show the menu's names" : "Fold the menu down to icons"}
+              className={`flex items-center gap-3 rounded-xl !bg-transparent py-2 text-[0.94rem] text-slate-500 hover:!bg-white/60 hover:text-slate-800 dark:text-neutral-400 dark:hover:!bg-neutral-800/60 dark:hover:text-white ${rail ? "mx-auto size-11 justify-center" : "w-full px-3"}`}>
+              {rail ? <PanelLeftOpen className="size-5" /> : <><PanelLeftClose className="size-[1.15rem]" /> Collapse</>}
+            </button>
           </div>
         </aside>
 
-        <div data-pull-refresh className={`fixed inset-x-0 top-0 z-50 h-[var(--nav-h)] bg-[#ececec] lg:left-72 dark:bg-neutral-950 print:!hidden ${chrome.open ? "z-[2100]" : ""}`}>
+        <div data-pull-refresh className={`fixed inset-x-0 top-0 z-50 h-[var(--nav-h)] bg-[#ececec] lg:left-[var(--side-w)] motion-safe:transition-[left] motion-safe:duration-200 dark:bg-neutral-950 print:!hidden ${chrome.open ? "z-[2100]" : ""}`}>
           <TopBar nav={nav} isAuthenticated={isAuthenticated} theme={theme} bottomMenu
             onMenu={() => chrome.show("menu")} onSearch={() => chrome.show("search")} searching={chrome.open === "search"} onSearchDone={chrome.close} onDonate={() => chrome.show("donate")} onCourt={() => chrome.show("court")}
             onAside={openAside} asideLabel={aside?.title || "Info"} />
@@ -76,9 +84,9 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
         {/* The window scrolls, so the stage's rounded corner would scroll away under the top bar:
             this stays put over that corner, drawn in the shell's color (the bar is solid on wide screens) */}
         <div aria-hidden="true"
-          className="pointer-events-none fixed left-72 top-[var(--nav-h)] z-40 hidden size-8 bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#ececec_32px)] dark:bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,var(--color-neutral-950)_32px)] lg:block print:!hidden" />
+          className="pointer-events-none fixed left-[var(--side-w)] motion-safe:transition-[left] motion-safe:duration-200 top-[var(--nav-h)] z-40 hidden size-8 bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#ececec_32px)] dark:bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,var(--color-neutral-950)_32px)] lg:block print:!hidden" />
 
-        <div className="pt-[var(--nav-h)] lg:pl-72 print:!p-0" style={push ? { marginTop: -push.y } : undefined}>
+        <div className="pt-[var(--nav-h)] lg:pl-[var(--side-w)] motion-safe:transition-[padding] motion-safe:duration-200 print:!p-0" style={push ? { marginTop: -push.y } : undefined}>
           <div className="stage flex min-h-[calc(100dvh-var(--nav-h))] overflow-clip bg-white dark:bg-neutral-900 max-lg:rounded-b-[28px] lg:rounded-l-[32px] print:!rounded-none">
             <main className={`flex min-w-0 flex-1 flex-col ${fill ? "" : showFooter ? "pb-10" : "pb-32 lg:pb-0"}`}>
               <div className="flex-1">{children}</div>
