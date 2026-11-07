@@ -1116,6 +1116,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_000000) do
     t.string "audience", default: "signed_in", null: false
     t.string "results_visibility", default: "always", null: false
     t.string "voters_visibility", default: "managers", null: false
+    t.string "guest_names", default: "optional", null: false
     t.datetime "closes_at"
     t.datetime "closed_at"
     t.string "subject_type"

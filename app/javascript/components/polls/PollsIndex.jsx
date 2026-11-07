@@ -32,7 +32,7 @@ export default function PollsIndex() {
         <ShellPanel position="bottom" className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {data.polls.length === 0 ? (
             <p className="p-4 text-sm text-slate-500 dark:text-neutral-400">
-              {data.can_create ? "No polls yet. Make one with New poll." : "No polls yet. Group admins, record keepers and hosts can make polls for their group."}
+              No polls yet. Make one with New poll.
             </p>
           ) : (
             data.polls.map((poll) => (

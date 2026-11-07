@@ -30,6 +30,7 @@ export const NAV_CATEGORIES = [
       { label: "Service Readings", href: "/service_readings", icon: BookHeart, note: "Preamble, Steps and Traditions, ready to read aloud" },
       { label: "Reading Archive", href: "/readings", icon: Bookmark, note: "Past meeting readings and topics" },
       { label: "Host-burger Helper", href: "/host_helper/scratchpaper", icon: ScrollText, note: "Service roles and milestones for the host" },
+      { label: "Polls", href: "/polls", icon: Vote, note: "Ask a question, share a short link, watch answers come in", auth: true },
     ],
   },
   {
@@ -57,7 +58,6 @@ export const ADMIN_ITEMS = [
   { label: "Admin", href: "/admin_panel", icon: Gauge },
   { label: "Site notices", href: "/admin_panel/notices", icon: Megaphone },
   { label: "Schedule polls", href: "/schedule_polls", icon: CalendarClock },
-  { label: "Polls", href: "/polls", icon: Vote },
   { label: "Topicificator admin", href: "/admin_panel/topicificator", icon: Tags },
 ];
 

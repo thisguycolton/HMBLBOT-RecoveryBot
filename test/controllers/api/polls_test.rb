@@ -29,7 +29,7 @@ class Api::PollsTest < ActionDispatch::IntegrationTest
 
   def option(poll, label) = poll.options.find_by!(label: label)
 
-  test "group record keepers make polls with a short code; plain members and outsiders can't" do
+  test "group record keepers make group polls with a short code; anyone signed in makes their own" do
     poll = make_poll
     assert_match(/\A[a-z2-9]{6}\z/, poll.token)
     assert_equal %w[Acceptance Gratitude Step\ 3], poll.options.map(&:label)
@@ -39,7 +39,35 @@ class Api::PollsTest < ActionDispatch::IntegrationTest
     post "/api/polls", params: { poll: { question: "Q", group_id: @group.id, options: [{ label: "a" }, { label: "b" }] } }, as: :json
     assert_response :forbidden
     post "/api/polls", params: { poll: { question: "Q", options: [{ label: "a" }, { label: "b" }] } }, as: :json
-    assert_response :forbidden
+    assert_response :created
+    mine = Poll.find_by!(token: response.parsed_body["token"])
+    assert_nil mine.group
+    assert mine.manager?(@member)
+    sign_out @member
+    post "/api/polls", params: { poll: { question: "Q", options: [{ label: "a" }, { label: "b" }] } }, as: :json
+    assert_response :unauthorized
+  end
+
+  test "guests' names can be optional, required or not asked" do
+    poll = make_poll(guest_names: "required")
+    put "/api/polls/#{poll.token}/ballot", params: { option_ids: [option(poll, "Gratitude").id] }, as: :json
+    assert_response :unprocessable_entity
+    assert_match(/name/, response.parsed_body["error"])
+    poll.update!(guest_names: "off")
+    put "/api/polls/#{poll.token}/ballot", params: { option_ids: [option(poll, "Gratitude").id], voter_name: "Sam" }, as: :json
+    assert_response :success
+    assert_nil poll.ballots.first.voter_name
+  end
+
+  test "names can be shown to the group's members" do
+    poll = make_poll(audience: "members", voters_visibility: "members")
+    sign_in @member
+    put "/api/polls/#{poll.token}/ballot", params: { option_ids: [option(poll, "Gratitude").id] }, as: :json
+    assert_equal ["Mo M."], response.parsed_body["options"].find { |o| o["label"] == "Gratitude" }["voters"].map { |v| v["name"] }
+    sign_out @member
+    sign_in @outsider
+    get "/api/polls/#{poll.token}", as: :json
+    assert_nil response.parsed_body["options"].first["voters"]
   end
 
   test "a poll needs two different answers" do
@@ -219,7 +247,13 @@ class Api::PollSubjectsTest < ActionDispatch::IntegrationTest
     assert_equal({ "votes_for" => 1, "votes_against" => 0, "abstentions" => 0 }, response.parsed_body.dig("subject", "counts"))
   end
 
-  test "a reading's owner adds a poll to it, even without a group; others can't" do
+  test "only a reading's owner adds a poll to it, even a group's record keeper can't" do
+    group_reading = Reading.create!(title: "Gratitude", user: @member, group: @group, meetingDate: Date.current)
+    sign_in @keeper
+    attach("Reading", group_reading.id, audience: "anyone")
+    assert_response :forbidden
+    sign_out @keeper
+
     sign_in @keeper
     attach("Reading", @reading.id, audience: "anyone")
     assert_response :forbidden

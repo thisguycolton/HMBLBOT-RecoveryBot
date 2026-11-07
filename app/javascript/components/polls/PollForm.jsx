@@ -6,7 +6,7 @@ import { inputClass, labelClass, selectClass } from "../ui/styles";
 import Skeleton from "../ui/Skeleton";
 import { showToast } from "../../lib/toast";
 import { Message } from "./PollPage";
-import { AUDIENCE_LABELS, RESULTS_LABELS, VOTERS_LABELS, api, buttonClass, primaryClass } from "./lib";
+import { AUDIENCE_LABELS, GUEST_NAME_LABELS, RESULTS_LABELS, VOTERS_LABELS, api, buttonClass, primaryClass } from "./lib";
 
 let nextKey = 0;
 const blank = () => ({ key: `n${nextKey++}`, label: "" });
@@ -41,7 +41,7 @@ export default function PollForm() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     question: "", details: "", group_id: "", audience: "signed_in", max_choices: 1,
-    results_visibility: "always", voters_visibility: "managers", closes_at: "",
+    results_visibility: "always", voters_visibility: "managers", guest_names: "optional", closes_at: "",
     options: [blank(), blank()],
   });
   const [ballots, setBallots] = useState(0);
@@ -51,7 +51,6 @@ export default function PollForm() {
   useEffect(() => {
     api("/groups").then((g) => {
       setGroups(g);
-      if (!token && !g.site_admin && g.groups[0]) set({ group_id: String(g.groups[0].id) });
     }).catch((e) => setError(e.message));
     if (subjectType) {
       api(`/subject?type=${subjectType}&id=${encodeURIComponent(subjectId)}`).then((sub) => {
@@ -72,7 +71,7 @@ export default function PollForm() {
         setForm({
           question: p.question, details: p.details || "", group_id: p.group_id ? String(p.group_id) : "",
           audience: p.audience, max_choices: p.max_choices, results_visibility: p.results_visibility,
-          voters_visibility: p.voters_visibility, closes_at: toLocalInput(p.closes_at),
+          voters_visibility: p.voters_visibility, guest_names: p.guest_names, closes_at: toLocalInput(p.closes_at),
           options: p.options.map((o) => ({ key: `o${o.id}`, id: o.id, label: o.label })),
           group: p.group,
         });
@@ -83,9 +82,6 @@ export default function PollForm() {
 
   if (error) return <Message title="Couldn't open this" text={error} />;
   if (!groups || !loaded) return <Skeleton variant="page" />;
-  if (!token && !subject && !groups.site_admin && groups.groups.length === 0) {
-    return <Message title="Polls are made for a group" text="Group admins, record keepers and hosts can make polls for their group." />;
-  }
 
   const options = form.options;
   const setOption = (i, label) => set({ options: options.map((o, j) => (j === i ? { ...o, label } : o)) });
@@ -110,7 +106,7 @@ export default function PollForm() {
         poll: {
           question: form.question, details: form.details, audience: form.audience,
           max_choices: Math.min(Number(form.max_choices) || 1, Math.max(1, filled.length)),
-          results_visibility: form.results_visibility, voters_visibility: form.voters_visibility,
+          results_visibility: form.results_visibility, voters_visibility: form.voters_visibility, guest_names: form.guest_names,
           closes_at: form.closes_at ? new Date(form.closes_at).toISOString() : "",
           options: filled.map((o) => ({ id: o.id, label: o.label })),
           ...(token ? {} : subject ? { subject_type: subject.type, subject_id: subject.id } : { group_id: form.group_id }),
@@ -182,13 +178,18 @@ export default function PollForm() {
             </p>
           ) : token ? (
             form.group && <p className="text-sm text-slate-600 dark:text-neutral-300 sm:col-span-2">For <strong>{form.group.name}</strong></p>
-          ) : (
+          ) : groups.groups.length > 0 && (
             <label className="block sm:col-span-2">
-              <span className={labelClass}>Group</span>
-              <select value={form.group_id} onChange={(e) => set({ group_id: e.target.value, audience: !e.target.value && form.audience === "members" ? "signed_in" : form.audience })} className={selectClass}>
-                {groups.site_admin && <option value="">No group (site-wide)</option>}
+              <span className={labelClass}>Whose poll</span>
+              <select value={form.group_id} className={selectClass} onChange={(e) => set({
+                group_id: e.target.value,
+                audience: !e.target.value && form.audience === "members" ? "signed_in" : form.audience,
+                voters_visibility: !e.target.value && form.voters_visibility === "members" ? "managers" : form.voters_visibility,
+              })}>
+                <option value="">Just mine</option>
                 {groups.groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
+              <span className="mt-1 block text-xs text-slate-500 dark:text-neutral-400">A group's poll can be run by its admins and record keepers, and limited to its members.</span>
             </label>
           )}
 
@@ -198,6 +199,14 @@ export default function PollForm() {
               <Choice key={v} name="audience" value={v} current={form.audience} onChange={(audience) => set({ audience })} label={label}
                 hint={v === "anyone" ? "No account needed. One guest vote per network." : null} />
             ))}
+            {form.audience === "anyone" && (
+              <div className="mt-2 border-t border-neutral-100 pt-2 dark:border-neutral-800">
+                <span className="block px-2 text-xs font-medium text-slate-500 dark:text-neutral-400">Guests' names</span>
+                {Object.entries(GUEST_NAME_LABELS).map(([v, label]) => (
+                  <Choice key={v} name="guest_names" value={v} current={form.guest_names} onChange={(guest_names) => set({ guest_names })} label={label} />
+                ))}
+              </div>
+            )}
           </fieldset>
           <fieldset>
             <legend className={labelClass}>Show results</legend>
@@ -207,9 +216,9 @@ export default function PollForm() {
           </fieldset>
           <fieldset>
             <legend className={labelClass}>Who sees who voted for what</legend>
-            {Object.entries(VOTERS_LABELS).map(([v, label]) => (
+            {Object.entries(VOTERS_LABELS).filter(([v]) => v !== "members" || form.group_id || form.group || subject?.group).map(([v, label]) => (
               <Choice key={v} name="voters" value={v} current={form.voters_visibility} onChange={(voters_visibility) => set({ voters_visibility })} label={label}
-                hint={v === "managers" ? "Whoever made it, and the group's admins and record keepers" : null} />
+                hint={v === "managers" ? (form.group_id || form.group || subject?.group ? "Whoever made it, and the group's admins and record keepers" : "Just you") : v === "members" ? "Members of the group who can see the results" : null} />
             ))}
           </fieldset>
           <label className="block">

@@ -1,5 +1,6 @@
-# Polls (app/models/poll.rb). Site admins, and a group's admins, record keepers and hosts, make
-# them; the people running a poll edit, close and reopen it; whoever its audience allows votes.
+# Polls (app/models/poll.rb). Anyone signed in makes their own; a group's poll takes its admins or
+# record keepers, a reading's its owner, a motion's the group's admins or record keepers. The
+# people running a poll edit, close and reopen it; whoever its audience allows votes.
 class Api::PollsController < ApplicationController
   before_action :authenticate_user!, only: %i[index create update destroy close reopen remove_ballot groups subject]
   before_action :set_poll, except: %i[index create groups subject]
@@ -9,7 +10,7 @@ class Api::PollsController < ApplicationController
   def index
     polls = Poll.made_by(current_user).includes(:group, :ballots).order(created_at: :desc).limit(200)
     render json: {
-      can_create: current_user.suite_admin? || creatable_groups.any?,
+      can_create: true,
       polls: polls.map do |p|
         { token: p.token, question: p.question, closed: p.closed?, closes_at: p.closes_at&.iso8601,
           ballots_count: p.ballots.size, group: p.group&.title, audience: p.audience, created_at: p.created_at.iso8601 }
@@ -52,7 +53,7 @@ class Api::PollsController < ApplicationController
 
     group = params.dig(:poll, :group_id).presence && Group.find_by(id: params[:poll][:group_id])
     unless Poll.creatable_by?(current_user, group)
-      return render(json: { error: group ? "You can't make polls for that group." : "Pick one of your groups for this poll." }, status: :forbidden)
+      return render(json: { error: "Only the group's admins and record keepers can make polls for it." }, status: :forbidden)
     end
 
     @poll = Poll.new(user: current_user, group: group)
@@ -97,7 +98,13 @@ class Api::PollsController < ApplicationController
       ballot = @poll.ballots.new(user: current_user, voter_token: voter_token, ip_digest: ip)
     end
     ballot.option_ids = Array(params[:option_ids]).map(&:to_i)
-    ballot.voter_name = params[:voter_name].to_s.squish.first(60).presence if params.key?(:voter_name) && current_user.nil?
+    if current_user.nil?
+      name = @poll.guest_names == "off" ? nil : params[:voter_name].to_s.squish.first(60).presence
+      if name.nil? && @poll.guest_names == "required"
+        return render(json: { error: "Please give your name to vote." }, status: :unprocessable_entity)
+      end
+      ballot.voter_name = name
+    end
     ballot.save!
     @viewer_ballot = ballot
     render json: poll_json
@@ -174,7 +181,7 @@ class Api::PollsController < ApplicationController
   end
 
   def save_poll(status: :ok)
-    attrs = params.require(:poll).permit(:question, :details, :max_choices, :audience, :results_visibility, :voters_visibility, :closes_at)
+    attrs = params.require(:poll).permit(:question, :details, :max_choices, :audience, :results_visibility, :voters_visibility, :guest_names, :closes_at)
     Poll.transaction do
       @poll.assign_attributes(attrs.except(:closes_at))
       if attrs.key?(:closes_at)

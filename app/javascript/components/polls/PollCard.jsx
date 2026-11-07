@@ -140,13 +140,15 @@ export default function PollCard({ poll, onChange, onRemoveBallot }) {
 
       {choosing && (
         <div className="flex flex-wrap items-end gap-2">
-          {!poll.signed_in && (
+          {!poll.signed_in && poll.guest_names !== "off" && (
             <label className="min-w-[12rem] flex-1">
-              <span className="mb-1 block text-xs text-slate-500 dark:text-neutral-400">Your name (optional, shown to the people running this poll)</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className={inputClass} placeholder="First name and last initial" />
+              <span className="mb-1 block text-xs text-slate-500 dark:text-neutral-400">
+                Your name{poll.guest_names === "required" ? "" : " (optional)"}, shown {poll.voters_visibility === "everyone" ? "with your vote" : "to the people running this poll"}
+              </span>
+              <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className={inputClass} placeholder="First name and last initial" required={poll.guest_names === "required"} />
             </label>
           )}
-          <button type="button" className={primaryClass} disabled={saving || picks.length === 0 || (voted && sameSet(picks, mine) && name === (poll.my_ballot?.voter_name || ""))} onClick={submit}>
+          <button type="button" className={primaryClass} disabled={saving || picks.length === 0 || (!poll.signed_in && poll.guest_names === "required" && !name.trim()) || (voted && sameSet(picks, mine) && name === (poll.my_ballot?.voter_name || ""))} onClick={submit}>
             {saving ? "Saving…" : voted ? "Update my vote" : "Vote"}
           </button>
           {voted && (

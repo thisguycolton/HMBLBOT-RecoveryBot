@@ -31,7 +31,13 @@ export const RESULTS_LABELS = {
 };
 export const VOTERS_LABELS = {
   managers: "Only the people running it",
+  members: "Group members too",
   everyone: "Everyone who can see results",
+};
+export const GUEST_NAME_LABELS = {
+  optional: "Ask for a name (optional)",
+  required: "They must give a name",
+  off: "Don't ask (anonymous)",
 };
 
 export const shortUrl = (poll) => `${window.location.origin}${poll.short_path}`;

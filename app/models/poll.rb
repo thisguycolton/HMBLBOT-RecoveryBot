@@ -9,7 +9,8 @@ class Poll < ApplicationRecord
   moderates_language :question, :details
   AUDIENCES = %w[anyone signed_in members].freeze
   RESULTS = %w[always after_vote after_close].freeze
-  VOTERS = %w[managers everyone].freeze
+  VOTERS = %w[managers members everyone].freeze
+  GUEST_NAMES = %w[optional required off].freeze
   MAX_OPTIONS = 20
 
   belongs_to :user, optional: true
@@ -29,6 +30,7 @@ class Poll < ApplicationRecord
   validates :audience, inclusion: { in: AUDIENCES }
   validates :results_visibility, inclusion: { in: RESULTS }
   validates :voters_visibility, inclusion: { in: VOTERS }
+  validates :guest_names, inclusion: { in: GUEST_NAMES }
   validates :max_choices, numericality: { only_integer: true, in: 1..MAX_OPTIONS }
   validate :sensible_options
   validate :members_need_a_group
@@ -69,25 +71,24 @@ class Poll < ApplicationRecord
   SUBJECT_TYPES = { "Reading" => Reading, "Motion" => Motion }.freeze
   def self.find_subject(type, id) = SUBJECT_TYPES[type.to_s]&.find_by(id: id)
 
-  # Who can put a poll on a reading (its owner, or who can make polls for its group) or a
-  # motion (the group's record keepers)
+  # Who can put a poll on a reading (its owner) or a motion (the group's admins and record keepers)
   def self.attachable_to?(subject, someone)
     return false unless someone && subject
     return true if someone.suite_admin?
 
     case subject
-    when Reading then subject.user_id == someone.id || creatable_by?(someone, subject.group)
+    when Reading then subject.user_id == someone.id
     when Motion then subject.group.records_editable_by?(someone)
     else false
     end
   end
 
-  # Who can make a poll for this group (or with no group: site admins)
+  # Anyone signed in makes their own polls; a group's poll takes its admins or record keepers
   def self.creatable_by?(someone, group)
     return false unless someone
-    return true if someone.suite_admin?
+    return true if group.nil? || someone.suite_admin?
 
-    !!group && (group.records_editable_by?(someone) || group.can_host?(someone))
+    group.records_editable_by?(someone)
   end
 
   # nil when they can vote, else why not
@@ -109,7 +110,10 @@ class Poll < ApplicationRecord
   end
 
   def voters_visible_to?(someone, ballot)
-    manager?(someone) || (voters_visibility == "everyone" && results_visible_to?(someone, ballot))
+    return true if manager?(someone)
+    return false unless results_visible_to?(someone, ballot)
+
+    voters_visibility == "everyone" || (voters_visibility == "members" && !!group&.member?(someone))
   end
 
   # { option_id => count }
@@ -137,7 +141,7 @@ class Poll < ApplicationRecord
     {
       token: token, question: question, details: details, short_path: short_path,
       max_choices: max_choices, audience: audience, results_visibility: results_visibility,
-      voters_visibility: voters_visibility, closes_at: closes_at&.iso8601, closed: closed?,
+      voters_visibility: voters_visibility, guest_names: guest_names, closes_at: closes_at&.iso8601, closed: closed?,
       group: group && { name: group.title, slug: group.slug },
       subject: subject_json(show_results),
       ballots_count: ballots.size, show_results: show_results, show_voters: show_voters,
@@ -171,5 +175,6 @@ class Poll < ApplicationRecord
 
   def members_need_a_group
     errors.add(:audience, "can be members only when the poll belongs to a group") if audience == "members" && group.nil?
+    errors.add(:voters_visibility, "can be members only when the poll belongs to a group") if voters_visibility == "members" && group.nil?
   end
 end

@@ -12,6 +12,8 @@ class UpgradePolls < ActiveRecord::Migration[8.0]
       t.string :audience, null: false, default: "signed_in"
       t.string :results_visibility, null: false, default: "always"
       t.string :voters_visibility, null: false, default: "managers"
+      # Whether guests give a name: optional, required, or off (not asked)
+      t.string :guest_names, null: false, default: "optional"
       t.datetime :closes_at
       t.datetime :closed_at
       # What it's attached to: a Reading, a Motion
@@ -64,6 +66,6 @@ class UpgradePolls < ActiveRecord::Migration[8.0]
     remove_reference :polls, :user, foreign_key: true
     remove_reference :polls, :group, foreign_key: true
     remove_columns :polls, :token, :question, :details, :max_choices, :audience, :results_visibility,
-                   :voters_visibility, :closes_at, :closed_at
+                   :voters_visibility, :guest_names, :closes_at, :closed_at
   end
 end
