@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 # Pictures of highlights and notes to post anywhere (QuoteCard), and a highlight's share link
 # preview (ShareMeta.highlight)
@@ -92,7 +93,7 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     assert_match %r{note=0}, image
     assert_match %r{look=marker}, meta("og:url")
 
-    marker = QuoteCard.highlight(@highlight, look: "marker", note: false)
+    marker = QuoteCard.highlight(@highlight, look: "marker", note: false, still: true)
     assert_includes image, "v=#{marker.key.first(12)}"
     assert_not_includes image, QuoteCard.highlight(@highlight).key.first(12)
 
@@ -102,7 +103,7 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
 
     # A look that isn't one is the usual Paper picture
     get "#{share_path}&look=nope", headers: { "User-Agent" => IMESSAGE }
-    assert_includes meta("og:image"), "v=#{QuoteCard.highlight(@highlight).key.first(12)}"
+    assert_includes meta("og:image"), "v=#{QuoteCard.highlight(@highlight, still: true).key.first(12)}"
     assert_no_match %r{look=}, meta("og:image")
   end
 
@@ -128,5 +129,72 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     repost = @mo.timeline_notes.create!(repost_of: note, body: "", visibility: "public")
     get "/api/timeline_notes/#{repost.id}/card"
     assert_response :unprocessable_entity
+  end
+
+  LONG = "Now about sex. Many of us needed an overhauling there. But above all, we tried to be sensible on this question. " \
+         "It's so easy to get way off the track. Here we find human opinions running to extremes, absurd extremes, perhaps. " \
+         "One set of voices cry that sex is a lust of our lower nature, a base necessity of procreation. Then we have the voices " \
+         "who cry for sex and more sex; who bewail the institution of marriage; who think that most of the troubles of the race " \
+         "are traceable to sex causes. They think we do not have enough of it, or that it isn't the right kind. They see its " \
+         "significance everywhere. One school would allow man no flavor for his fare and the other would have us all on a " \
+         "straight pepper diet. We want to stay out of this controversy. We do not want to be the arbiter of anyone's sex " \
+         "conduct. We all have sex problems. We'd hardly be human if we didn't. What can we do about them?"
+
+  def gif_frames(body) = body.b.scan("\x21\xF9\x04".b).size
+
+  test "a highlight too long for one picture is a GIF that turns its pages, every word on one of them" do
+    @highlight.update!(selector: { "quote" => { "exact" => LONG } })
+    sign_in @lee
+    get "/api/highlights/#{@highlight.id}/card", params: { look: "paper", size: "square" }
+    assert_response :success
+    assert_equal "image/gif", response.media_type
+    pages = response.headers["X-Card-Pages"].to_i
+    assert_operator pages, :>, 1
+    assert_equal pages, gif_frames(response.body)
+    assert_equal [1080, 1080], response.body.b[6, 4].unpack("vv")
+    assert_operator response.body.bytesize, :<, 1.megabyte
+
+    card = QuoteCard.highlight(@highlight, look: "paper", size: "square")
+    assert_equal LONG.squish, card.pages.map(&:quote).join(" ")
+    assert_equal "So true", card.pages.last.note
+    assert card.pages[0...-1].all? { |p| p.note.nil? }
+
+    get "/api/highlights/#{@highlight.id}/card", params: { look: "paper", size: "square", download: "1" }
+    assert_match ".gif", response.headers["Content-Disposition"]
+
+    # A still of it, for clipboards
+    get "/api/highlights/#{@highlight.id}/card", params: { look: "paper", size: "square", still: "1" }
+    assert_equal "image/png", response.media_type
+    assert_equal "1", response.headers["X-Card-Pages"]
+    assert_equal [1080, 1080], png_size(response.body)
+  end
+
+  test "a long highlight's link preview is a still picture" do
+    @highlight.update!(selector: { "quote" => { "exact" => LONG } })
+    get share_path, headers: { "User-Agent" => IMESSAGE }
+    get URI(meta("og:image")).request_uri, headers: { "User-Agent" => IMESSAGE }
+    assert_response :success
+    assert_equal "image/png", response.media_type
+    assert_equal [1200, 630], png_size(response.body)
+  end
+
+  test "a short highlight stays one picture" do
+    card = QuoteCard.highlight(@highlight, size: "story")
+    assert_not card.animated?
+    assert_equal "image/png", card.content_type
+  end
+
+  test "a long quote the server's ImageMagick 6 won't lay out big gets a smaller size, not an error" do
+    card = QuoteCard.new(quote: LONG, look: "paper", size: "story", still: true)
+    real = Open3.method(:capture3)
+    # As Debian's ImageMagick 6.9.11 answers a caption over about 2,000 pixels tall
+    fake = lambda do |*args|
+      size = args[args.index("-pointsize") + 1].to_i if args.include?("-pointsize") && args.any? { |a| a.to_s.start_with?("caption:") && a.size > 200 } && args.include?("info:")
+      next ["", "convert-im6.q16: width or height exceeds limit `...' @ error/caption.c/ReadCAPTIONImage.", Struct.new(:success?).new(false)] if size && size > 60
+
+      real.call(*args)
+    end
+    Open3.stub(:capture3, fake) { assert File.size(card.path).positive? }
+    assert_equal [1080, 1920], png_size(File.binread(card.path))
   end
 end

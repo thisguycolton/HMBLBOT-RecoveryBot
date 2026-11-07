@@ -55,7 +55,7 @@ class ShareMeta
     picture = { look: look, note: (note ? nil : "0") }.compact
     new(title: "A highlight from #{book.title}", description: "“#{highlight.quote.squish.truncate(180, separator: ' ')}” · #{highlight.chapter.title}",
         path: highlight.page_path(**picture), kind: "highlight", id: highlight.signed_id(purpose: :share),
-        card: QuoteCard.highlight(highlight, look: look, note: note), query: picture)
+        card: QuoteCard.highlight(highlight, look: look, note: note, still: true), query: picture)
   end
 
   def self.document(doc)
