@@ -35,10 +35,11 @@ class Api::HighlightsController < ApplicationController
         return render json: []
       end
 
-    rows = scope.joins(chapter: :book).where(chapters: { slug: chapter_slug })
+    # A members-only book's highlights (their quotes are its words) only for its readers
+    rows = scope.joins(chapter: :book).where(chapters: { slug: chapter_slug }).where.not(books: { id: Book.locked_for(current_user).select(:id) })
     rows = rows.where(books: { slug: params[:book_slug] }) if params[:book_slug].present?
 
-    render json: rows.includes(:user).order(:id).map { |h| highlight_json(h) }
+    render json: rows.includes(:user, chapter: :book).order(:id).map { |h| highlight_json(h) }
   rescue ActiveRecord::RecordNotFound => e
     render json: { error: e.message }, status: :not_found
   end
@@ -51,7 +52,9 @@ class Api::HighlightsController < ApplicationController
 
     mine = owner == current_user
     rows = owner.user_highlights.includes(chapter: :book)
-                .sort_by { |h| [h.chapter.book.title.to_s, h.chapter.index.to_i, h.selector.dig("position", "start").to_i] }
+    # Someone else's highlights in a members-only book they can't read stay out
+    rows = rows.joins(chapter: :book).where.not(books: { id: Book.locked_for(current_user).select(:id) }) unless mine
+    rows = rows.sort_by { |h| [h.chapter.book.title.to_s, h.chapter.index.to_i, h.selector.dig("position", "start").to_i] }
 
     render json: {
       owner: { first_name: owner.name.to_s.split.first.presence, mine: mine },
@@ -76,6 +79,7 @@ class Api::HighlightsController < ApplicationController
     chapters = Chapter.where(slug: highlight_params[:chapter_slug])
     chapters = chapters.joins(:book).where(books: { slug: highlight_params[:book_slug] }) if highlight_params[:book_slug].present?
     chapter = chapters.first!
+    return render(json: MembersOnly.json(chapter.book, current_user), status: :forbidden) if chapter.book.locked_for?(current_user)
 
     h = current_user.user_highlights.new(
       chapter:  chapter,
@@ -124,6 +128,11 @@ class Api::HighlightsController < ApplicationController
   # A picture of your own highlight to post anywhere (QuoteCard). Only yours.
   def card
     h = current_user.user_highlights.find(params[:id])
+    # A picture goes anywhere, so a members-only book's words don't go into one
+    if h.chapter.book.members_only?
+      return render(json: { error: "#{h.chapter.book.title} is only for members of groups that read it, so its words can't go in a picture." }, status: :forbidden)
+    end
+
     picture = QuoteCard.highlight(h, look: params[:look], size: params[:size], note: params[:note] != "0", name: params[:name] == "1")
     send_card(picture)
   end
@@ -204,6 +213,8 @@ class Api::HighlightsController < ApplicationController
     json["mentions"] = User.profiles_open_to?(current_user) ? h.mentions : {}
     mine = current_user.present? && h.user_id == current_user.id
     json["mine"] = mine
+    # A members-only book's highlights can't be made into pictures (card)
+    json["members_only"] = h.chapter.book.members_only?
     if mine
       # Only the owner gets the per-highlight share id.
       json["share_id"] = h.signed_id(purpose: :share)

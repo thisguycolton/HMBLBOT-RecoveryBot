@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { showToast } from "../../lib/toast";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Camera, Check, Eye, EyeOff, Link2, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, Check, Eye, EyeOff, Link2, Lock, LockOpen, Trash2 } from "lucide-react";
 import BookCover, { COVER_COLORS, coverColorName } from "./BookCover.jsx";
 import "../../styles/writebook.css";
 
@@ -215,6 +215,31 @@ export default function BookEdit() {
             </button>
           </div>
 
+          <div className="wb-edit__cell wb-edit__row">
+            <span className="wb-edit__icon">
+              {book.members_only ? <Lock size={18} aria-hidden="true" /> : <LockOpen size={18} aria-hidden="true" />}
+            </span>
+            <div className="min-w-0">
+              <strong>Members only</strong>
+              <p className="wb-edit__hint">
+                {book.members_only
+                  ? "Shows in the library, but only signed-in members of a group that added it to its approved literature can open it."
+                  : "Off: anyone who can see the book can read it."}
+              </p>
+            </div>
+            <span className="wb-edit__leader" aria-hidden="true" />
+            <button
+              type="button"
+              role="switch"
+              aria-checked={book.members_only}
+              aria-label="Only members of groups that read it can open this book"
+              className="wb-edit__switch"
+              onClick={() => { setBook({ ...book, members_only: !book.members_only }); setNotice(""); }}
+            >
+              <span />
+            </button>
+          </div>
+
           <label className="wb-edit__cell wb-edit__row">
             <span className="wb-edit__icon"><Link2 size={18} aria-hidden="true" /></span>
             <div className="min-w-0 flex-1">
@@ -241,5 +266,6 @@ function formFrom(data) {
     slug: data.slug || "",
     cover_color: data.cover_color || "",
     publicly_accessible: data.public !== false,
+    members_only: !!data.members_only,
   };
 }

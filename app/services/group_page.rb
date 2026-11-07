@@ -132,7 +132,7 @@ class GroupPage
 
   def literature(group)
     group.group_books.includes(book: { cover_image_attachment: :blob }).order(:created_at).map do |gb|
-      { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color } }
+      { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color, members_only: gb.book.members_only? } }
     end
   end
 

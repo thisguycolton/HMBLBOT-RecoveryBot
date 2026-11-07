@@ -11,6 +11,7 @@ import Footer from "../components/Footer";
 import TopicificatorApp from "../components/TopicificatorApp";
 import ChapterEditor from "../components/ChapterEditor";
 import ChapterViewer from "../components/ChapterViewer";
+import MembersOnlyPage from "../components/book/MembersOnlyPage";
 import ChapterAdmin from "../components/ChapterAdmin";
 import ReadingArchive from "../components/ReadingArchive";
 import ReadingEditor from "../components/ReadingEditor";
@@ -62,6 +63,16 @@ function mountReact(id, renderFn) {
 
 // ---------------- Chapter Viewer ----------------
 mountReact("chapter-viewer", (mount) => {
+  // A members-only book this reader can't open (PagesController#reader): how to get access
+  if (mount.dataset.membersOnly) {
+    const info = JSON.parse(mount.dataset.membersOnly);
+    return (
+      <Layout isAuthenticated={isAuthenticated}>
+        <MembersOnlyPage info={info} backHref={`/library/${info.book_slug}`} />
+      </Layout>
+    );
+  }
+
   let bookSlug = mount.dataset.bookSlug;
   let chapterSlug = mount.dataset.chapterSlug;
 

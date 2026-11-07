@@ -19,6 +19,48 @@ class Book < ApplicationRecord
     public? || user&.admin?
   end
 
+  # Members only (`members_only`, switched on by an admin on the edit page): the book still
+  # shows in the library with its cover and title, so people know it's there and groups can
+  # add it to their literature, but only signed-in members of an approved (active) group that
+  # lists it in its literature (GroupBook) can open it: its chapters, search, highlights and
+  # share pictures. Admins always can. Everyone else gets the members-only page
+  # (pages/members_only), which says how to get in.
+  has_many :group_books, dependent: :destroy
+
+  # The books `user` may read, out of the ones they can see
+  def self.readable_by(user)
+    seen = visible_to(user)
+    return seen if user&.admin?
+
+    open = seen.where(members_only: false)
+    user ? open.or(seen.where(id: GroupBook.where(group_id: Group.reading_groups_of(user)).select(:book_id))) : open
+  end
+
+  # Members-only books `user` can't read (their highlights' quotes stay hidden from them)
+  def self.locked_for(user)
+    return none if user&.admin?
+
+    locked = where(members_only: true)
+    user ? locked.where.not(id: GroupBook.where(group_id: Group.reading_groups_of(user)).select(:book_id)) : locked
+  end
+
+  def readable_by?(user)
+    return false unless visible_to?(user)
+
+    !locked_for?(user)
+  end
+
+  def locked_for?(user)
+    return false unless members_only? && !user&.admin?
+
+    !user || !group_books.where(group_id: Group.reading_groups_of(user)).exists?
+  end
+
+  # The approved groups that read it, for the members-only page (their pages are open to all)
+  def reading_groups
+    Group.active.where(id: group_books.select(:group_id)).order(:title)
+  end
+
   # An uploaded cover wins over a pasted image URL. The cover is proxied through
   # the app rather than redirected to a short-lived signed S3 URL, which Safari
   # showed as a broken image after a reload.

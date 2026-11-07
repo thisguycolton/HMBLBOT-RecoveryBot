@@ -137,6 +137,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_000000) do
     t.string "language", default: "en", null: false
     t.jsonb "meta", default: {}, null: false
     t.string "cover_color"
+    t.boolean "members_only", default: false, null: false
     t.index ["slug"], name: "index_books_on_slug", unique: true
     t.index ["work_key", "edition", "language"], name: "index_books_on_work_key_and_edition_and_language", unique: true
   end

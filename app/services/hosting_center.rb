@@ -194,10 +194,10 @@ class HostingCenter
   # (or the whole library when it has none), and the Topicificator's topic sets
   def activity_options
     slug = "#{Date::MONTHNAMES[@on.month].downcase}-#{@on.day}"
-    daily = Chapter.joins(:book).merge(Book.visible_to(@viewer)).where(slug: slug).includes(:book).order("books.title")
+    daily = Chapter.joins(:book).merge(Book.readable_by(@viewer)).where(slug: slug).includes(:book).order("books.title")
                    .map { |c| { book_slug: c.book.slug, book_title: c.book.title, chapter_slug: c.slug, title: c.title } }
-    books = @group.books.merge(Book.visible_to(@viewer)).order(:title).to_a
-    books = Book.visible_to(@viewer).order(:title).to_a if books.empty?
+    books = @group.books.merge(Book.readable_by(@viewer)).order(:title).to_a
+    books = Book.readable_by(@viewer).order(:title).to_a if books.empty?
     { daily: daily, books: books.map { |b| { slug: b.slug, title: b.title } }, topic_sets: TopicSet.order(:name).map { |t| { id: t.id, name: t.name } } }
   end
 
