@@ -1,7 +1,7 @@
 # The search box at the top of every page (components/shell/SearchBox.jsx): a few of each kind
 # of thing whose name holds what was typed. Groups, the service readings (How It Works, the
 # Preamble: their words too), readings from the archive, and the library's chapters (the first
-# match in each book) and books; people too, for members. (Hashtags come from their own endpoint.)
+# match in each book) and books, and Help pages from the docs (DocPage); people too, for members. (Hashtags come from their own endpoint.)
 class Api::SearchController < ApplicationController
   EACH = 5
 
@@ -17,6 +17,7 @@ class Api::SearchController < ApplicationController
     sections << { key: "service_readings", items: service_readings(like) }
     sections << { key: "readings", items: readings(like) }
     sections << { key: "literature", items: chapters(like) + books(like) }
+    sections << { key: "docs", items: docs(like) }
     render json: { query: q, sections: sections.select { |s| s[:items].any? } }
   end
 
@@ -60,6 +61,12 @@ class Api::SearchController < ApplicationController
              { title: c.title, subtitle: [c.book.title, ("p. #{c.first_page}" if c.first_page), ("#{more} more #{"match".pluralize(more)}" if more.positive?)].compact.join(" · "),
                url: "/books/#{c.book.slug}/chapters/#{c.slug}", kind: "Chapter" }
            end
+  end
+
+  # Docs pages whose title or summary match (the docs' own search reads their words too)
+  def docs(like)
+    DocPage.readable_by(current_user).includes(:section).where("doc_pages.title ILIKE :q OR doc_pages.summary ILIKE :q", q: like)
+           .order(:title).limit(EACH).map { |p| { title: p.title, subtitle: "Help · #{p.section.title}", url: p.path, kind: "Help" } }
   end
 
   def books(like)

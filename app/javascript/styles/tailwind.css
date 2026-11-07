@@ -42,6 +42,11 @@
   /* The height of the shell's top bar (components/shell/TopBar.jsx): sticky things sit under it */
   :root {
     --nav-h: 56px;
+    /* The shell's sidebar on wide screens (Layout.jsx), folded down to its icons (useRail) */
+    --side-w: 18rem;
+  }
+  html.side-rail {
+    --side-w: 4.75rem;
   }
   @media (min-width: 1024px) {
     :root {

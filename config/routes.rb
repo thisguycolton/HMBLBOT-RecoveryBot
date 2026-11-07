@@ -24,6 +24,10 @@ Rails.application.routes.draw do
   get "/topicificator", to: "pages#topicificator"
   get "/privacy", to: "privacy#show", as: :privacy
   get "/terms", to: "terms#show", as: :terms
+  # The Docs: tutorials for every tool (DocsController, entrypoints/docs.jsx); About and History are docs pages too
+  get "/docs(/*path)", to: "docs#app", as: :docs, format: false
+  get "/about", to: "docs#app", defaults: { alias: "about" }, as: :about
+  get "/history", to: "docs#app", defaults: { alias: "history" }, as: :history
   get "/contact", to: "contacts#new", as: :contact
   post "/contact", to: "contacts#create"
   # A reading in a step worksheet ("Chapter 4, We Agnostics, in the Big Book", "page 63"):
@@ -119,6 +123,22 @@ Rails.application.routes.draw do
   # Clearing "Needs your attention" items from Today, and restoring them
   resource :today_dismissals, only: %i[create destroy]
   get "search", to: "search#index"
+  # The Docs (Api::DocsController): reading is public, writing for site admins
+  scope "docs", controller: "docs", as: "docs" do
+    get "/", action: :index
+    get "page", action: :show
+    get "search", action: :search
+    post "pages", action: :create
+    patch "pages/:id", action: :update
+    delete "pages/:id", action: :destroy
+    get "pages/:id/versions", action: :versions
+    get "pages/:id/versions/:version_id", action: :version
+    post "pages/:id/restore", action: :restore
+    post "pages/:id/images", action: :images
+    post "sections", action: :create_section
+    patch "sections/:id", action: :update_section
+    delete "sections/:id", action: :destroy_section
+  end
   get "oiaa/search", to: "oiaa#search"
   get "oiaa/matches", to: "oiaa#matches"
   get "groups/find", to: "groups#find"
@@ -477,7 +497,7 @@ end
   resources :topics
   # Your profile (React, app/javascript/entrypoints/profile.jsx) replaces Devise's edit page
   get "/users/edit", to: "profiles#show", as: :edit_profile
-  devise_for :users, controllers: { registrations: "users/registrations" }
+  devise_for :users, controllers: { registrations: "users/registrations", omniauth_callbacks: "users/omniauth_callbacks" }
   devise_scope :user do
     get "users/check_email", to: "users/registrations#check_email", as: :users_check_email
   end

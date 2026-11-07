@@ -80,8 +80,12 @@ function useKeepOnBottom(ref) {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const away = touch && typing();
-        // Not while zoomed in: then the visible part is meant to be smaller than the page
-        const gap = vv.scale > 1.01 ? 0 : document.documentElement.clientHeight - (vv.offsetTop + vv.height);
+        // Not while zoomed in: then the visible part is meant to be smaller than the page. And
+        // not for the bounce past the top of the page (pulling down, or pull to refresh): iOS
+        // reports that as the viewport moving above the page, which isn't a keyboard gap, and
+        // following it threw the bar up into the middle of the screen
+        const top = Math.max(0, vv.offsetTop);
+        const gap = vv.scale > 1.01 ? 0 : document.documentElement.clientHeight - (top + vv.height);
         // Slides away and back; following the viewport is immediate
         el.style.transition = away !== wasAway ? "transform 200ms ease, opacity 200ms ease" : "none";
         wasAway = away;

@@ -272,6 +272,14 @@ Devise.setup do |config|
   # Add a new OmniAuth provider. Check the wiki for more information on setting
   # up on your models and hooks.
   # config.omniauth :github, 'APP_ID', 'APP_SECRET', scope: 'user,public_repo'
+  #
+  # "Continue with Google" (GoogleSignIn): on only when GOOGLE_CLIENT_ID and
+  # GOOGLE_CLIENT_SECRET are set (a Google Cloud OAuth client; redirect URI
+  # https://<host>/users/auth/google_oauth2/callback). Tests use OmniAuth's test mode.
+  if (ENV["GOOGLE_CLIENT_ID"].present? && ENV["GOOGLE_CLIENT_SECRET"].present?) || Rails.env.test?
+    config.omniauth :google_oauth2, ENV.fetch("GOOGLE_CLIENT_ID", "test"), ENV.fetch("GOOGLE_CLIENT_SECRET", "test"),
+                    scope: "email,profile", prompt: "select_account", access_type: "online"
+  end
 
   # ==> Warden configuration
   # If you want to use other strategies, that are not supported by Devise, or

@@ -50,6 +50,21 @@ export function useNav() {
 
 // Light, dark, or the system's, remembered in localStorage (the layouts read it before
 // anything draws, so the page doesn't flash)
+// The wide-screen sidebar folded down to its icons, remembered in this browser. The shell's
+// column, top bar and stage all line up with --side-w, which html.side-rail narrows (tailwind.css).
+const RAIL_KEY = "hb-nav-rail";
+export function useRail() {
+  const [rail, setRail] = useState(() => {
+    try { return localStorage.getItem(RAIL_KEY) === "1"; } catch { return false; }
+  });
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle("side-rail", rail);
+    try { localStorage.setItem(RAIL_KEY, rail ? "1" : "0"); } catch {}
+  }, [rail]);
+  useEffect(() => () => document.documentElement.classList.remove("side-rail"), []);
+  return [rail, () => setRail((v) => !v)];
+}
+
 export function useTheme() {
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem("theme") || "system"; } catch { return "system"; }

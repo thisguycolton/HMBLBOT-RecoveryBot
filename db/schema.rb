@@ -425,6 +425,50 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_100000) do
     t.index ["share_code"], name: "index_decks_on_share_code", unique: true
   end
 
+  create_table "doc_page_versions", force: :cascade do |t|
+    t.bigint "doc_page_id", null: false
+    t.string "title", null: false
+    t.text "body", default: "", null: false
+    t.bigint "saved_by_id"
+    t.datetime "created_at", null: false
+    t.index ["doc_page_id"], name: "index_doc_page_versions_on_doc_page_id"
+    t.index ["saved_by_id"], name: "index_doc_page_versions_on_saved_by_id"
+  end
+
+  create_table "doc_pages", force: :cascade do |t|
+    t.bigint "doc_section_id", null: false
+    t.string "slug", null: false
+    t.string "title", null: false
+    t.text "summary"
+    t.string "icon"
+    t.text "body", default: "", null: false
+    t.integer "position", default: 0, null: false
+    t.string "status", default: "published", null: false
+    t.string "audience", default: "everyone", null: false
+    t.string "path_alias"
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["doc_section_id", "slug"], name: "index_doc_pages_on_doc_section_id_and_slug", unique: true
+    t.index ["doc_section_id"], name: "index_doc_pages_on_doc_section_id"
+    t.index ["path_alias"], name: "index_doc_pages_on_path_alias", unique: true, where: "(path_alias IS NOT NULL)"
+    t.index ["reviewed_by_id"], name: "index_doc_pages_on_reviewed_by_id"
+    t.index ["updated_by_id"], name: "index_doc_pages_on_updated_by_id"
+  end
+
+  create_table "doc_sections", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "title", null: false
+    t.text "summary"
+    t.string "icon"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["slug"], name: "index_doc_sections_on_slug", unique: true
+  end
+
   create_table "event_collaborators", force: :cascade do |t|
     t.bigint "event_id", null: false
     t.bigint "user_id", null: false
@@ -1769,8 +1813,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_100000) do
     t.string "time_zone"
     t.string "sponsor_invite_token"
     t.jsonb "inventory_questions"
+    t.string "google_uid"
+    t.boolean "password_chosen", default: true, null: false
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["google_uid"], name: "index_users_on_google_uid", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["share_token"], name: "index_users_on_share_token", unique: true
     t.index ["sponsor_invite_token"], name: "index_users_on_sponsor_invite_token", unique: true
@@ -1818,6 +1865,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_100000) do
   add_foreign_key "decks", "group_documents", column: "script_document_id", on_delete: :nullify
   add_foreign_key "decks", "groups", on_delete: :cascade
   add_foreign_key "decks", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "doc_page_versions", "doc_pages", on_delete: :cascade
+  add_foreign_key "doc_page_versions", "users", column: "saved_by_id", on_delete: :nullify
+  add_foreign_key "doc_pages", "doc_sections", on_delete: :cascade
+  add_foreign_key "doc_pages", "users", column: "reviewed_by_id", on_delete: :nullify
+  add_foreign_key "doc_pages", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "event_collaborators", "events"
   add_foreign_key "event_collaborators", "users"
   add_foreign_key "event_collaborators", "users", column: "added_by_id", on_delete: :nullify

@@ -305,11 +305,20 @@ export default function ProfilePage() {
                   onChange={(e) => setAccount({ ...account, password_confirmation: e.target.value })} />
               </div>
             </div>
-            <div>
-              <label htmlFor="p-current" className={labelClass}>Current password</label>
-              <input id="p-current" type="password" autoComplete="current-password" className={inputClass} value={account.current_password}
-                placeholder="Needed to change your email or password" onChange={(e) => setAccount({ ...account, current_password: e.target.value })} />
-            </div>
+            {profile.password_chosen ? (
+              <div>
+                <label htmlFor="p-current" className={labelClass}>Current password</label>
+                <input id="p-current" type="password" autoComplete="current-password" className={inputClass} value={account.current_password}
+                  placeholder="Needed to change your email or password" onChange={(e) => setAccount({ ...account, current_password: e.target.value })} />
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 dark:text-neutral-400">
+                You sign in with Google. Choose a password here if you'd also like to log in with your email.
+              </p>
+            )}
+            {profile.google && profile.password_chosen && (
+              <p className="text-xs text-slate-500 dark:text-neutral-400">You can also sign in with Google.</p>
+            )}
             <ErrorNote error={accountError} />
             <div className="flex items-center justify-end gap-3">
               {saved === "account" && <span className="inline-flex items-center gap-1 text-sm text-emerald-700 dark:text-emerald-300"><Check className="h-4 w-4" /> Saved</span>}
@@ -321,7 +330,7 @@ export default function ProfilePage() {
         </Tray>
       </form>
 
-      <DeleteAccount />
+      <DeleteAccount passwordChosen={profile.password_chosen} />
     </div>
   );
 }
@@ -380,8 +389,9 @@ function HostingSettings({ hosting, save, saved }) {
   );
 }
 
-// Deleting the account takes the current password; afterwards they land on the home page
-function DeleteAccount() {
+// Deleting the account takes the current password (or, for an account from Google with no
+// password of their own, their email typed out); afterwards they land on the home page
+function DeleteAccount({ passwordChosen = true }) {
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -393,7 +403,7 @@ function DeleteAccount() {
     setBusy(true);
     setError(null);
     try {
-      await api("/profile", { method: "DELETE", body: { current_password: password } });
+      await api("/profile", { method: "DELETE", body: passwordChosen ? { current_password: password } : { confirm_email: password } });
       window.location.href = "/";
     } catch (err) {
       setError(err.message);
@@ -411,8 +421,8 @@ function DeleteAccount() {
         {open ? (
           <form onSubmit={remove} className="space-y-3">
             <div>
-              <label htmlFor="p-delete-password" className={labelClass}>Your password</label>
-              <input id="p-delete-password" type="password" required autoComplete="current-password" className={inputClass}
+              <label htmlFor="p-delete-password" className={labelClass}>{passwordChosen ? "Your password" : "Type your email address to confirm"}</label>
+              <input id="p-delete-password" type={passwordChosen ? "password" : "email"} required autoComplete={passwordChosen ? "current-password" : "off"} className={inputClass}
                 value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             <ErrorNote error={error} />
