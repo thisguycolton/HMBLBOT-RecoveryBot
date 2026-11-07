@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { BookHeart, BookOpen, Compass, Hash, Library, Search, UserRound, Users } from "lucide-react";
+import { BookHeart, BookOpen, Compass, Hash, Library, LifeBuoy, Search, UserRound, Users } from "lucide-react";
 import { EXPLORE_ITEMS, EXTRA_ITEMS, YOU_ITEMS } from "./navItems";
 
 const SECTIONS = {
@@ -9,13 +9,14 @@ const SECTIONS = {
   service_readings: { title: "Service readings", icon: BookHeart, kind: "Service reading" },
   readings: { title: "Readings", icon: BookOpen, kind: "Reading" },
   literature: { title: "Literature", icon: BookOpen, kind: "Chapter" },
+  docs: { title: "Help", icon: LifeBuoy, kind: "Help" },
 };
 
 const getJson = (url) => fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
 // The search box at the top of every page. As you type it shows hashtags on notes you can see
 // (from the hashtags endpoint, /api/hashtags), the site's own pages, groups, people, service
-// readings, readings and the library's chapters and books (/api/search). ↑↓ move, Enter opens, Esc closes, and
+// readings, readings, the library's chapters and books, and Help pages from the docs (/api/search). ↑↓ move, Enter opens, Esc closes, and
 // "/" anywhere on the page jumps here. `compact` is the slimmer box that fits the phone's top bar.
 export default function SearchBox({ autoFocus = false, onDone, className = "", compact = false }) {
   const [q, setQ] = useState("");

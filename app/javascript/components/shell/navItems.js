@@ -1,7 +1,7 @@
 import {
   BookHeart, CalendarClock, CalendarRange, Gamepad2, Highlighter, House, LayoutDashboard, Library, MapPinned, MonitorPlay,
   NotebookPen, Pickaxe, Scale, ScrollText, Settings, Sparkles, UserRound, Users, Bookmark, Presentation, Medal, MoonStar,
-  HandHeart, HeartHandshake, Footprints, Gift, FileCheck2, MessagesSquare,
+  HandHeart, HeartHandshake, Footprints, Gift, FileCheck2, MessagesSquare, LifeBuoy,
 } from "lucide-react";
 
 // What the shell's sidebar (Sidebar.jsx) lists. "You" and "Explore" are fixed; "Your groups"
@@ -28,6 +28,7 @@ export const EXPLORE_ITEMS = [
   { key: "topicificator", label: "Topicificator", href: "/topicificator", icon: Sparkles },
   { key: "service", label: "Service Readings", href: "/service_readings", icon: BookHeart },
   { key: "helper", label: "Host-burger Helper", href: "/host_helper/scratchpaper", icon: ScrollText },
+  { key: "docs", label: "Help & docs", href: "/docs", icon: LifeBuoy },
 ];
 
 export const EXTRA_ITEMS = [
