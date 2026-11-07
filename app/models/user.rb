@@ -1,10 +1,12 @@
 class User < ApplicationRecord
   moderates_language :name, :username, :bio, :page_blocks, :inventory_questions
   # Include default devise modules. Others available are:
-  # :lockable, :timeoutable, :trackable and :omniauthable
+  # :lockable, :timeoutable and :trackable
   # :confirmable: new accounts confirm their email address before they can sign in
+  # :omniauthable: "Continue with Google" (GoogleSignIn, Users::OmniauthCallbacksController)
   devise :database_authenticatable, :registerable,
-         :recoverable, :rememberable, :validatable, :confirmable
+         :recoverable, :rememberable, :validatable, :confirmable,
+         :omniauthable, omniauth_providers: [:google_oauth2]
 
   has_one :user_active_group, -> { order(updated_at: :desc) }, dependent: :destroy
   has_many :group_memberships, dependent: :destroy
@@ -104,6 +106,9 @@ class User < ApplicationRecord
   # Set default values for new users
   after_initialize :set_defaults, unless: :persisted?
   before_save :sync_confirmed
+  # A password they typed (sign-up, profile, a reset link) is theirs; the random one an
+  # account gets from Google sign-in isn't (see .from_google)
+  before_save { self.password_chosen = true if will_save_change_to_encrypted_password? && persisted? && !@random_password }
   # Sobriety chips they shared show only while they have them
   after_update_commit -> { TimelineNote.sync_chips(self) }, if: :saved_change_to_sobriety_date?
 
@@ -143,6 +148,57 @@ class User < ApplicationRecord
   def after_confirmation
     super if defined?(super)
     ChipAward.claim_for(self)
+  end
+
+  # "Continue with Google": the account for this Google sign-in (an OmniAuth auth hash), or
+  # nil when Google hasn't verified the address. Already linked: that account, whatever its
+  # email is now. Otherwise an account with the same address is linked (and confirmed, since
+  # Google vouches for the address), or a new one is made, already confirmed, with a random
+  # password they can replace from their profile.
+  def self.from_google(auth)
+    uid = auth.uid.to_s
+    return if uid.blank?
+
+    linked = find_by(google_uid: uid)
+    return linked if linked
+
+    email = auth.info&.email.to_s.strip.downcase
+    return unless email.present? && ActiveModel::Type::Boolean.new.cast(auth.extra&.raw_info&.email_verified)
+
+    user = find_by("lower(email) = ?", email)
+    if user
+      user.google_uid = uid
+      unless user.confirmed?
+        # Someone else could have signed up with this address and never confirmed it, so the
+        # password on it isn't proven to be theirs: it goes, and they can choose one
+        user.random_password!
+        user.skip_confirmation!
+      end
+      user.save!
+      user.after_confirmation if user.saved_change_to_confirmed_at?
+    else
+      user = new(email: email, name: google_name(auth.info), google_uid: uid)
+      user.random_password!
+      user.skip_confirmation!
+      user.save!
+      ChipAward.claim_for(user)
+    end
+    user
+  end
+
+  # First name and last initial, as the sign-up page asks for, not the full name on the Google account
+  def self.google_name(info)
+    first = info&.first_name.to_s.strip
+    last = info&.last_name.to_s.strip
+    return info&.name.to_s.strip.split.first.presence if first.blank?
+
+    [first, ("#{last[0]}." if last.present?)].compact.join(" ")
+  end
+
+  def random_password!
+    @random_password = true
+    self.password = Devise.friendly_token(32)
+    self.password_chosen = false
   end
 
   # Their invite link for someone they're sponsoring (/sponsor/:token), made the first time
