@@ -24,7 +24,10 @@ class Api::GroupMeetingHostsController < ApplicationController
   end
 
   # POST /api/groups/:group_slug/meeting_hosts
-  # { meeting_host: { meeting_id, role, name, user_id, starts_on, ends_on, all_days } }
+  # { meeting_host: { meeting_id, role, name, user_id, starts_on, ends_on, all_days, replace_cover } }
+  # A swap made permanent (from the week view) sends replace_cover: the new person holds the
+  # place from that date on, so a cover on that very date and an open sub request for it are
+  # settled too. Dates before it keep whoever had them.
   def create
     meeting = @group.meetings.weekly.find(params.require(:meeting_host)[:meeting_id])
     return require_scheduler(meeting) unless @group.hosts_editable_by?(current_user, meeting)
@@ -39,7 +42,11 @@ class Api::GroupMeetingHostsController < ApplicationController
 
         m.hosts.where(role: host.role).where("meeting_hosts.starts_on < ? AND (meeting_hosts.ends_on IS NULL OR meeting_hosts.ends_on >= ?)", host.starts_on, host.starts_on)
          .update_all(ends_on: host.starts_on - 1.day)
+        # someone put in from the very same date never held it: they're replaced, not kept
+        # underneath (where they'd come back if the new person stepped down)
+        m.hosts.where(role: host.role, starts_on: host.starts_on).delete_all
         host.save!
+        settle_date(m, host) if replace_cover?
         made << host
       end
     end
@@ -102,6 +109,15 @@ class Api::GroupMeetingHostsController < ApplicationController
   end
 
   def schedule = HostSchedule.new(@group, current_user).as_json
+
+  def replace_cover? = ActiveModel::Type::Boolean.new.cast(params[:meeting_host][:replace_cover])
+
+  # The swap's own date: the new holder is in, not a cover, and a sub asked for is found
+  def settle_date(meeting, host)
+    meeting.host_covers.where(role: host.role, on: host.starts_on).delete_all
+    meeting.host_sub_requests.open.where(role: host.role, on: host.starts_on)
+           .update_all(status: "filled", filled_by_id: host.user_id, updated_at: Time.current)
+  end
 
   # A member can be linked, so they hear they've been put on
   def host_params

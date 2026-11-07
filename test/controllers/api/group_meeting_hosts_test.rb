@@ -221,4 +221,45 @@ class Api::GroupMeetingHostsTest < ActionDispatch::IntegrationTest
     assert body["members"].any?
     assert_empty body["my_dates"]
   end
+
+  test "a swap made permanent holds the place from its date on and settles that date" do
+    sign_in @coordinator
+    post path, params: { meeting_host: { meeting_id: @monday.id, role: "host", name: "Kay K.", starts_on: (@today - 60).to_s } }, as: :json
+    swap = @today + ((1 - @today.wday) % 7) + 7 # a Monday ahead
+    @monday.host_covers.create!(role: "host", on: swap, name: "Tem P.")
+    request = @monday.host_sub_requests.create!(role: "host", on: swap, requested_by: @coordinator)
+
+    post path, params: { meeting_host: { meeting_id: @monday.id, role: "host", name: "Mo", user_id: @member.id, starts_on: swap.to_s, replace_cover: true } }, as: :json
+    assert_response :created
+    @monday.reload
+    assert_equal "Kay K.", @monday.host_on("host", swap - 7).name, "dates before keep whoever had them"
+    assert_equal "Mo", @monday.holder_on("host", swap).name, "the cover on that date is gone"
+    assert_equal "Mo", @monday.host_on("host", swap + 70).name
+    assert_equal "filled", request.reload.status
+    assert_equal [swap - 1], @monday.hosts.where(name: "Kay K.").pluck(:ends_on)
+
+    get path("week"), params: { start: swap.to_s }, as: :json
+    item = body["days"].find { |d| d["on"] == swap.iso8601 }["items"].first
+    assert_equal ["Mo", false, 7], [item["host"]["name"], item["host"]["cover"], item["series_size"]]
+  end
+
+  test "putting someone else in from the same date replaces who was put in, rather than hiding them underneath" do
+    sign_in @coordinator
+    post path, params: { meeting_host: { meeting_id: @monday.id, role: "host", name: "Kay K.", starts_on: @today.to_s } }, as: :json
+    post path, params: { meeting_host: { meeting_id: @monday.id, role: "host", name: "Mo M.", starts_on: @today.to_s } }, as: :json
+    assert_response :created
+    assert_equal ["Mo M."], @monday.hosts.pluck(:name)
+
+    patch path(@monday.hosts.first.id), params: { meeting_host: { ends_on: @today.to_s } }, as: :json
+    assert_nil @monday.reload.host_on("host", @today + 1), "stepping down doesn't bring Kay back"
+  end
+
+  test "a plain change leaves covers alone" do
+    sign_in @coordinator
+    swap = @today + ((1 - @today.wday) % 7) + 7
+    @monday.host_covers.create!(role: "host", on: swap, name: "Tem P.")
+    post path, params: { meeting_host: { meeting_id: @monday.id, role: "host", name: "Mo", starts_on: swap.to_s } }, as: :json
+    assert_response :created
+    assert_equal "Tem P.", @monday.reload.holder_on("host", swap).name
+  end
 end
