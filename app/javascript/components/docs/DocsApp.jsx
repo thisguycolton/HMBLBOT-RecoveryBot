@@ -73,10 +73,13 @@ export function DocsMark({ small = false }) {
   return (
     <Link to="/docs" className="inline-flex min-w-0 items-center gap-2 !text-slate-900 !no-underline dark:!text-white" aria-label="RecoveryBot Docs home">
       <RecoveryBotMark className={small ? "h-6 w-auto shrink-0" : "h-7 w-auto shrink-0"} />
-      <span className={`font-extrabold leading-none tracking-tight ${small ? "text-base" : "text-lg"}`}>
-        Recovery<span className="text-brand dark:text-brand-light">Bot</span>
+      {/* the antennae make the head sit low in the mark's box, so drop the word and tag to the head's middle */}
+      <span className={`relative top-[0.15em] inline-flex items-center gap-2 ${small ? "text-base" : "text-lg"}`}>
+        <span className="font-extrabold leading-none tracking-tight">
+          Recovery<span className="text-brand dark:text-brand-light">Bot</span>
+        </span>
+        <span className="rounded-md bg-accent px-1.5 py-0.5 text-[11px] font-bold uppercase leading-none tracking-wide text-white">Docs</span>
       </span>
-      <span className="rounded-md bg-accent px-1.5 py-0.5 text-[11px] font-bold uppercase leading-none tracking-wide text-white">Docs</span>
     </Link>
   );
 }
