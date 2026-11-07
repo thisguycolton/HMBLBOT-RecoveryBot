@@ -6,8 +6,9 @@ import { api } from "../groups/lib";
 
 // Search the docs (/api/docs/search): titles first, then summaries, then the words of each
 // page, with a line around the match. Results drop down under the box; ↑↓ and Enter pick one.
-// `compact` is the docs nav's small box; otherwise the big one on the Docs home.
-export default function DocSearch({ compact = false, autoFocus = false }) {
+// `compact` is the docs nav's small box (its results as wide as the box with `fullWidth`, in
+// the phone's sheet); otherwise the big one on the Docs home.
+export default function DocSearch({ compact = false, autoFocus = false, fullWidth = false }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState(null);
   const [at, setAt] = useState(0);
@@ -80,7 +81,7 @@ export default function DocSearch({ compact = false, autoFocus = false }) {
           id="doc-search-results"
           role="listbox"
           className={`!m-0 absolute left-0 z-40 mt-2 max-h-[min(28rem,70dvh)] list-none overflow-y-auto rounded-2xl border border-neutral-200 bg-white !p-1.5 shadow-xl dark:border-neutral-700 dark:bg-neutral-900 ${
-            compact ? "w-[min(26rem,85vw)]" : "w-full"
+            compact && !fullWidth ? "w-[min(26rem,85vw)]" : "w-full"
           }`}
         >
           {results.length === 0 && <li className="px-3 py-3 text-sm text-slate-500 dark:text-neutral-400">Nothing in the docs matches “{q.trim()}”.</li>}

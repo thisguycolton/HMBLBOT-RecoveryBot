@@ -69,7 +69,7 @@ export default function DocPageView({ alias }) {
   return (
     <div className="grid gap-10 2xl:grid-cols-[minmax(0,48rem)_13rem]">
       <article className="min-w-0 max-w-3xl">
-        <nav aria-label="Breadcrumb" className="mb-3 flex flex-wrap items-center gap-1 text-sm text-slate-500 dark:text-neutral-400">
+        <nav aria-label="Breadcrumb" className="mb-3 hidden flex-wrap items-center lg:flex gap-1 text-sm text-slate-500 dark:text-neutral-400">
           <Link to="/docs" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-400 dark:hover:!text-white">Docs</Link>
           <ChevronRight size={14} />
           <Link to={page.section.path} className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-400 dark:hover:!text-white">{page.section.title}</Link>
@@ -100,8 +100,9 @@ export default function DocPageView({ alias }) {
 
         {toc && (
           <details className="group mb-8 rounded-2xl border border-neutral-200 px-4 py-3 dark:border-neutral-800 2xl:hidden">
-            <summary className="cursor-pointer list-none text-sm font-semibold text-slate-700 marker:hidden dark:text-neutral-200">
-              <span className="inline-flex items-center gap-1.5"><ChevronRight size={15} className="transition-transform group-open:rotate-90" /> On this page</span>
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-semibold leading-6 text-slate-700 dark:text-neutral-200 [&::-webkit-details-marker]:hidden">
+              <ChevronRight size={15} className="shrink-0 transition-transform group-open:rotate-90" />
+              <span>On this page</span>
             </summary>
             <div className="mt-2">{toc}</div>
           </details>

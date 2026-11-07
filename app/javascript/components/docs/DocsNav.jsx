@@ -9,7 +9,7 @@ import DocSearch from "./DocSearch";
 // The docs' own sidebar: the search box, then every section with its pages. The section of
 // the page you're on is open; any section can be opened or folded. Site admins see drafts
 // (crossed eye), members-only and admins-only pages (marked) and unreviewed ones (a dot).
-export default function DocsNav() {
+export default function DocsNav({ inSheet = false, searchFirst = false }) {
   const { sections, loaded, editor } = useDocs();
   const { pathname } = useLocation();
   const current = sections?.find((s) => pathname === s.path || s.pages.some((p) => pathname === p.path || pathname.startsWith(`${p.docs_path}`)));
@@ -21,7 +21,7 @@ export default function DocsNav() {
       <Link to="/docs" className="mb-3 flex items-center gap-2 !text-slate-900 !no-underline dark:!text-white">
         <span className="text-base font-bold tracking-tight">RecoveryBot Docs</span>
       </Link>
-      <DocSearch compact />
+      <DocSearch compact fullWidth={inSheet} autoFocus={searchFirst} />
       {!loaded ? (
         <SkeletonGroup className="mt-5 space-y-3">
           {[0, 1, 2, 3, 4, 5].map((i) => <Bone key={i} className="h-4 w-4/5" />)}

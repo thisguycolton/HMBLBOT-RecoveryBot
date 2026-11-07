@@ -33,7 +33,7 @@ export default function DocsSectionPage() {
 
   return (
     <div>
-      <nav aria-label="Breadcrumb" className="mb-3 flex items-center gap-1 text-sm text-slate-500 dark:text-neutral-400">
+      <nav aria-label="Breadcrumb" className="mb-3 hidden items-center lg:flex gap-1 text-sm text-slate-500 dark:text-neutral-400">
         <Link to="/docs" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-400 dark:hover:!text-white">Docs</Link>
       </nav>
       {editing ? (
