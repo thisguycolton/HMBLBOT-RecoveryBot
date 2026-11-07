@@ -16,6 +16,10 @@ module OiaaFeed
   MATCH_THRESHOLD = 35
 
   class Error < StandardError; end
+  # The site answers servers with a "verify you're human" page (Cloudflare and the like)
+  # instead of the feed. No server can get past that; the feed has to be saved from a
+  # browser and imported as a file.
+  class Blocked < Error; end
 
   module_function
 
@@ -26,6 +30,7 @@ module OiaaFeed
   def fetch_feed(url = feed_url)
     body = get(url)
     return body if body.lstrip.start_with?("[", "{")
+    raise Blocked, blocked_message(url) if challenge_page?(body)
 
     href = body[/href=["']([^"']+\.json[^"']*)["']/i, 1] or raise Error, "#{url} didn't link to a JSON feed."
     get(URI.join(url, CGI.unescapeHTML(href)).to_s)
@@ -220,6 +225,8 @@ module OiaaFeed
     response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 30, read_timeout: 600) do |http|
       http.request(Net::HTTP::Get.new(uri, "User-Agent" => USER_AGENT, "Accept" => "application/json, text/html"))
     end
+    raise Blocked, blocked_message(url) if bot_challenge?(response)
+
     case response
     when Net::HTTPSuccess then response.body.to_s.force_encoding("UTF-8")
     when Net::HTTPRedirection
@@ -227,5 +234,30 @@ module OiaaFeed
       get(URI.join(url, response["location"]).to_s, redirects: redirects - 1)
     else raise Error, "#{url} answered #{response.code}"
     end
+  end
+
+  # A bot-protection page instead of what was asked for: Cloudflare marks its challenges
+  # with cf-mitigated, and they (and others) say so in the page.
+  def bot_challenge?(response)
+    return true if response["cf-mitigated"].to_s.casecmp?("challenge")
+    return false unless response.code.to_i.in?([403, 429, 503]) || response["content-type"].to_s.include?("html")
+
+    challenge_page?(response.body.to_s)
+  end
+
+  CHALLENGE_MARKERS = [
+    "challenge-platform", "cf-turnstile", "Performing security verification", "Just a moment...",
+    "Checking your browser", "Attention Required! | Cloudflare", "verify you are human", "sgcaptcha", "Incapsula",
+  ].freeze
+
+  def challenge_page?(body)
+    head = body.to_s.first(20_000)
+    CHALLENGE_MARKERS.any? { |marker| head.downcase.include?(marker.downcase) }
+  end
+
+  def blocked_message(url)
+    host = (URI(url).host rescue nil).to_s.delete_prefix("www.").presence || "That site"
+    "#{host} has bot protection that won't let a server read this link (it asks a person to prove they're human). " \
+      "Open the link in your browser, save the page as a .json file, and import it with \"JSON or CSV file\"."
   end
 end

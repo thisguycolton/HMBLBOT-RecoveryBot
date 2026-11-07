@@ -120,4 +120,34 @@ class MeetingListImportTest < ActiveSupport::TestCase
     assert_raises(MeetingListImport::Error) { MeetingListImport.new(@list, text: "[]").preview }
     assert_raises(MeetingListImport::Error) { MeetingListImport.new(@list, text: "{nope").preview }
   end
+
+  # The shape a WordPress 12 Step Meeting List feed (wp-admin/admin-ajax.php?action=meetings)
+  # has, trimmed from a big-city intergroup's: one row per day, days as strings or numbers,
+  # coordinates as strings or numbers (0 for none), extra fields we don't use.
+  test "a 12 Step Meeting List feed previews and imports" do
+    feed = file_fixture("tsml_feed_sample.json").read
+    import = MeetingListImport.new(@list, text: feed)
+    rows = import.preview[:rows]
+    assert_equal %w[new new new skipped], rows.map { |r| r[:status] }
+    assert_equal "Listed as inactive", rows.last[:reason]
+
+    import.apply!(keys: rows.select { |r| r[:selected] }.map { |r| r[:key] })
+    birds = OiaaMeeting.find_by!(slug: "phx-lincoln-park-early-birds")
+    assert_equal [[1, 3], "07:00", "08:00", %w[O D X], "Early Birds Group", "in_person", "North Side > Lincoln Park", "Coffee & donuts"],
+                 [birds.days, birds.start_time, birds.end_time, birds.types, birds.group_name, birds.attendance_option, birds.region, birds.notes]
+    assert_equal [41.9283, -87.6455], [birds.latitude.to_f, birds.longitude.to_f]
+
+    lunch = OiaaMeeting.find_by!(slug: "phx-loop-lunch-bunch")
+    assert_equal ["hybrid", %w[C BE ST LGBTQ], "81234567890", 41.8791], [lunch.attendance_option, lunch.types, lunch.conference_id, lunch.latitude.to_f]
+    owls = OiaaMeeting.find_by!(slug: "phx-night-owls-online")
+    assert_equal ["online", nil], [owls.attendance_option, owls.latitude]
+  end
+
+  test "a feed saved from a browser as a web page still imports" do
+    json = file_fixture("tsml_feed_sample.json").read
+    page = "<html><head><title>admin-ajax.php</title></head><body><pre style=\"word-wrap: break-word\">#{ERB::Util.html_escape(json)}</pre></body></html>"
+    rows = MeetingListImport.new(@list, text: page).preview[:rows]
+    assert_equal %w[new new new skipped], rows.map { |r| r[:status] }
+  end
 end
+

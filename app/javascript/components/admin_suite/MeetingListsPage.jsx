@@ -225,6 +225,7 @@ function ImportPanel({ list, notify, onDone }) {
   const [hide, setHide] = useState(new Set());
   const [tab, setTab] = useState("new");
   const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState(null); // the feed link a site's bot protection turned away
 
   const source = mode === "url" ? { url } : { text: file?.text };
 
@@ -244,6 +245,10 @@ function ImportPanel({ list, notify, onDone }) {
       setHide(new Set());
       setTab(["new", "changed", "missing", "skipped", "same"].find((s) => data.counts[s]) || "new");
     } catch (e) {
+      if (e.data?.blocked && mode === "url") {
+        setBlocked(url);
+        setMode("file");
+      }
       notify(e.message, "error");
     } finally {
       setBusy(false);
@@ -296,13 +301,22 @@ function ImportPanel({ list, notify, onDone }) {
         ) : (
           <label className={`${buttonClass.secondary} cursor-pointer`}>
             <FileUp className="size-4" /> {file ? file.name : "Choose a file"}
-            <input type="file" accept=".json,.csv,application/json,text/csv" className="hidden" onChange={readFile} />
+            <input type="file" accept=".json,.csv,.txt,.html,application/json,text/csv,text/plain,text/html" className="hidden" onChange={readFile} />
           </label>
         )}
         <button type="button" className={buttonClass.secondary} onClick={runPreview} disabled={busy || (mode === "url" ? !url : !file)}>
           {busy && !preview ? "Reading…" : "Preview"}
         </button>
       </div>
+      {blocked && mode === "file" && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200 !font-sans">
+          <AlertTriangle className="inline size-4 mr-1" />
+          That site's bot protection won't let us read the feed link. Open{" "}
+          <a href={blocked} target="_blank" rel="noopener noreferrer" className="underline">the feed in your browser</a>, save the page
+          as a .json file (File, Save Page As), then choose that file here. The weekly refresh can't read it either, so import a fresh
+          file now and then.
+        </div>
+      )}
       <p className="text-xs text-slate-500 dark:text-neutral-400 !font-sans">
         A CSV needs Name, Day and Time columns; it can also have End Time, Location, Address, City, State, Postal Code, Types,
         Notes, Location Notes, Group, Region and Conference URL (the columns 12 Step Meeting List exports). Nothing is saved until you import.

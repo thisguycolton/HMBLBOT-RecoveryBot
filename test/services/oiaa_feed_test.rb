@@ -81,4 +81,38 @@ class OiaaFeedTest < ActiveSupport::TestCase
     assert_equal "Post & Wellesley", OiaaFeed.clean("Post &amp;amp; Wellesley")
     assert_equal "Bill's <3 group", OiaaFeed.clean("<b>Bill&#39;s</b> &lt;3 group")
   end
+
+  # e.g. chicagoaa.org's 12 Step Meeting List feed: Cloudflare answers servers with a
+  # "Verify you are human" page (403, cf-mitigated: challenge) instead of the JSON
+  test "a site's bot protection page says to import the feed as a file" do
+    challenge = Net::HTTPForbidden.new("1.1", "403", "Forbidden")
+    challenge["cf-mitigated"] = "challenge"
+    challenge["content-type"] = "text/html; charset=UTF-8"
+    challenge.instance_variable_set(:@read, true)
+    challenge.instance_variable_set(:@body, "<title>Just a moment...</title><p>Performing security verification</p>")
+    assert OiaaFeed.bot_challenge?(challenge)
+
+    http = Struct.new(:response) { def request(_req) = response }.new(challenge)
+    Net::HTTP.stub(:start, ->(*_args, **_opts, &blk) { blk.call(http) }) do
+      error = assert_raises(OiaaFeed::Blocked) { OiaaFeed.fetch_feed("https://www.chicagoaa.org/wp-admin/admin-ajax.php?action=meetings") }
+      assert_match(/\Achicagoaa\.org has bot protection/, error.message)
+      assert_match "JSON or CSV file", error.message
+    end
+
+    # the same page with a 200 (some protections answer that way)
+    OiaaFeed.stub(:get, "<html><script src=\"/cdn-cgi/challenge-platform/h/b/orchestrate\"></script></html>") do
+      assert_raises(OiaaFeed::Blocked) { OiaaFeed.fetch_feed("https://example.org/feed") }
+    end
+
+    # a plain 403 or a real feed isn't mistaken for one
+    forbidden = Net::HTTPForbidden.new("1.1", "403", "Forbidden")
+    forbidden.instance_variable_set(:@read, true)
+    forbidden.instance_variable_set(:@body, "Forbidden")
+    assert_not OiaaFeed.bot_challenge?(forbidden)
+    ok = Net::HTTPOK.new("1.1", "200", "OK")
+    ok["content-type"] = "application/json"
+    ok.instance_variable_set(:@read, true)
+    ok.instance_variable_set(:@body, "[]")
+    assert_not OiaaFeed.bot_challenge?(ok)
+  end
 end
