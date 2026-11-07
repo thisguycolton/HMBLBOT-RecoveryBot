@@ -82,11 +82,53 @@ function headingIds(md, headings) {
   });
 }
 
+// Every line of the text (paragraph, list item, quote, table) gets an address, #l-<code>, so a
+// link can point at it (DocShare). The code comes from the line's own words, so the link keeps
+// working when other lines change. A paragraph inside a list item or quote shares the item's.
+export const lineCode = (text) => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(36).padStart(6, "0").slice(-6);
+};
+
+const LINES = { paragraph_open: true, list_item_open: true, blockquote_open: true, table_open: true };
+const WRAPS = { list_item_open: 1, list_item_close: -1, blockquote_open: 1, blockquote_close: -1, table_open: 1, table_close: -1 };
+
+function lineIds(md) {
+  md.core.ruler.push("doc_line_ids", (state) => {
+    const { tokens } = state;
+    const used = new Map();
+    let inside = 0;
+    tokens.forEach((token, i) => {
+      if (LINES[token.type] && (inside === 0 || token.type === "list_item_open")) {
+        const close = token.type.replace("_open", "_close");
+        const words = [];
+        for (let j = i + 1; j < tokens.length; j += 1) {
+          if (tokens[j].type === close && tokens[j].level === token.level) break;
+          if (tokens[j].type === "inline") words.push(tokens[j].content);
+        }
+        const text = words.join(" ").replace(/\s+/g, " ").trim();
+        if (text) {
+          let id = `l-${lineCode(text)}`;
+          const n = used.get(id) || 0;
+          used.set(id, n + 1);
+          if (n) id = `${id}-${n + 1}`;
+          token.attrSet("id", id);
+        }
+      }
+      inside += WRAPS[token.type] || 0;
+    });
+  });
+}
+
 // { html, headings: [{ id, text, level }] }
 export function renderDoc(source) {
   const headings = [];
   const md = new MarkdownIt({ html: false, linkify: true, breaks: false, typographer: true }).enable(["table", "strikethrough"]);
-  md.use(callouts).use(checklists).use((m) => headingIds(m, headings));
+  md.use(callouts).use(checklists).use((m) => headingIds(m, headings)).use(lineIds);
   // Links that leave the site open in a new tab
   const defaultLink = md.renderer.rules.link_open || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
   md.renderer.rules.link_open = (tokens, idx, options, env, self) => {

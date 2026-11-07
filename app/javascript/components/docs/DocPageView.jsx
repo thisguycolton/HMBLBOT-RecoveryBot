@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, ChevronRight, EyeOff, Lock, Pencil, Users } from "lucide-react";
 import LucideIcon from "../ui/LucideIcon";
@@ -7,6 +7,7 @@ import { api } from "../groups/lib";
 import { useDocs } from "./DocsApp";
 import { NotFound } from "./DocsSectionPage";
 import { renderDoc } from "./docMarkdown";
+import { flashLine, LineLinks, ShareButton } from "./DocShare";
 
 const longDate = (iso) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
@@ -21,6 +22,7 @@ export default function DocPageView({ alias }) {
   const [data, setData] = useState(null);
   const [missing, setMissing] = useState(false);
   const [active, setActive] = useState(null);
+  const body = useRef(null);
 
   useEffect(() => {
     setData(null);
@@ -36,10 +38,13 @@ export default function DocPageView({ alias }) {
     if (page) document.title = page.path_alias ? `${page.title} | RecoveryBot` : `${page.title} | RecoveryBot Docs`;
   }, [page]);
 
-  // A link to a heading (#hosts) scrolls there once the page is drawn
+  // A link to a heading or a line (#hosts, #l-…) scrolls there once the page is drawn and
+  // lights it up for a moment
   useEffect(() => {
-    if (page && hash) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView();
-  }, [page, hash]);
+    if (!html || !hash) return undefined;
+    const t = setTimeout(() => flashLine(decodeURIComponent(hash.slice(1))), 150);
+    return () => clearTimeout(t);
+  }, [html, hash]);
 
   // The heading you're reading lights up in On this page
   useEffect(() => {
@@ -68,7 +73,7 @@ export default function DocPageView({ alias }) {
 
   return (
     <div className="grid gap-10 2xl:grid-cols-[minmax(0,48rem)_13rem]">
-      <article className="min-w-0 max-w-3xl">
+      <article className="relative min-w-0 max-w-3xl">
         <nav aria-label="Breadcrumb" className="mb-3 hidden flex-wrap items-center lg:flex gap-1 text-sm text-slate-500 dark:text-neutral-400">
           <Link to="/docs" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-400 dark:hover:!text-white">Docs</Link>
           <ChevronRight size={14} />
@@ -90,11 +95,14 @@ export default function DocPageView({ alias }) {
             {page.audience === "admins" && <Badge icon={Lock}>For site admins</Badge>}
             {editor && page.status === "draft" && <Badge icon={EyeOff} tone="slate">Draft: only site admins see it</Badge>}
             {editor && !page.reviewed && <Badge tone="amber">Draft text, not reviewed yet</Badge>}
+            <span className="ml-auto flex items-center gap-2">
+              <ShareButton page={page} headings={headings} />
             {editor && (
-              <Link to={`${page.docs_path}/edit`} className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold !bg-neutral-100 !text-slate-700 !no-underline hover:!bg-neutral-200 dark:!bg-neutral-800 dark:!text-neutral-200">
+              <Link to={`${page.docs_path}/edit`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold !bg-neutral-100 !text-slate-700 !no-underline hover:!bg-neutral-200 dark:!bg-neutral-800 dark:!text-neutral-200">
                 <Pencil size={14} /> Edit
               </Link>
             )}
+            </span>
           </div>
         </header>
 
@@ -108,7 +116,9 @@ export default function DocPageView({ alias }) {
           </details>
         )}
 
+        <LineLinks body={body} title={page.title} />
         <div
+          ref={body}
           className="doc-body prose prose-slate max-w-none dark:prose-invert [&_p]:!text-left [&_li]:!text-left prose-headings:font-semibold prose-headings:tracking-tight prose-h2:mt-10 prose-h2:text-2xl prose-h3:text-lg prose-a:text-accent dark:prose-a:text-accent-light prose-li:my-1 prose-img:rounded-2xl prose-table:text-sm"
           // renderDoc runs markdown-it with raw HTML off: the text can't add tags of its own
           dangerouslySetInnerHTML={{ __html: html }} // eslint-disable-line react/no-danger

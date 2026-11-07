@@ -58,7 +58,23 @@
   display: block; max-width: 100%; height: auto; margin: 1.5rem auto;
   border-radius: 1rem; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.05);
 }
-.doc-body h2, .doc-body h3 { scroll-margin-top: 6rem; }
+.doc-body [id] { scroll-margin-top: 6rem; }
+
+/* A line someone linked to (#l-…) or just shared: it lights up, then fades back */
+.doc-body .doc-flash {
+  border-radius: 0.4rem;
+  animation: doc-flash 3s ease-out;
+}
+@keyframes doc-flash {
+  0%, 35% { background-color: rgb(250 204 21 / 0.35); box-shadow: 0 0 0 0.35rem rgb(250 204 21 / 0.35); }
+  100% { background-color: rgb(250 204 21 / 0); box-shadow: 0 0 0 0.35rem rgb(250 204 21 / 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes doc-flash {
+    0%, 80% { background-color: rgb(250 204 21 / 0.35); box-shadow: 0 0 0 0.35rem rgb(250 204 21 / 0.35); }
+    100% { background-color: transparent; box-shadow: none; }
+  }
+}
 
 /* The editor: one writing surface, Notion-style */
 .doc-editor .ProseMirror { outline: none; min-height: 50vh; }
