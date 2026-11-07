@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BellRing, CalendarClock, CalendarX, Link2, MonitorPlay, Plus, Printer, ScrollText, Trash2, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
 import Avatar from "./Avatar";
 import Toggle from "../ui/Toggle";
+import SegmentedControl from "../ui/SegmentedControl";
 import usePrintable, { printTitled } from "../../lib/usePrintable";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { DAYS, api, clock } from "./lib";
@@ -77,9 +78,10 @@ function LinkForm({ slug, person, members, onDone, onCancel, setData }) {
   );
 }
 
-// Someone covering one date (a swap)
+// Someone covering one date (a swap), or, made permanent, holding the place from that date on
 function CoverForm({ slug, slot, members, onDone, onCancel, setData }) {
   const [form, setForm] = useState({ role: "host", on: slot.next_on || today(), name: "", user_id: "" });
+  const [keep, setKeep] = useState("once");
   const [error, setError] = useState(null);
   const pick = (e) => {
     const m = members.find((x) => String(x.id) === e.target.value);
@@ -89,13 +91,16 @@ function CoverForm({ slug, slot, members, onDone, onCancel, setData }) {
     e.preventDefault();
     setError(null);
     try {
-      setData(await api(`/groups/${slug}/meeting_host_covers`, { method: "POST", body: { cover: { ...form, meeting_id: slot.id } } }));
+      const { on, ...who } = form;
+      setData(keep === "once"
+        ? await api(`/groups/${slug}/meeting_host_covers`, { method: "POST", body: { cover: { ...form, meeting_id: slot.id } } })
+        : await api(`/groups/${slug}/meeting_hosts`, { method: "POST", body: { meeting_host: { ...who, starts_on: on, meeting_id: slot.id, replace_cover: true } } }));
       onDone();
     } catch (err) { setError(err.message); }
   };
   return (
     <form onSubmit={save} className="mt-2 space-y-3 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
-      <p className="text-sm font-medium text-slate-800 dark:text-neutral-100">Cover one date of {slot.name} ({DAYS[slot.day_of_week]}s, {clock(slot.start_minute)})</p>
+      <p className="text-sm font-medium text-slate-800 dark:text-neutral-100">Swap one date of {slot.name} ({DAYS[slot.day_of_week]}s, {clock(slot.start_minute)})</p>
       <ErrorNote error={error} />
       <div className="grid gap-3 sm:grid-cols-2">
         <div><label htmlFor={`c-role-${slot.id}`} className={labelClass}>Covering as</label><select id={`c-role-${slot.id}`} className={selectClass} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>{ROLES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
@@ -103,7 +108,11 @@ function CoverForm({ slug, slot, members, onDone, onCancel, setData }) {
         <div><label htmlFor={`c-user-${slot.id}`} className={labelClass}>A member</label><select id={`c-user-${slot.id}`} className={selectClass} value={form.user_id} onChange={pick}><option value="">Someone else</option>{members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
         <div><label htmlFor={`c-name-${slot.id}`} className={labelClass}>Name on the schedule</label><input id={`c-name-${slot.id}`} required maxLength={80} className={inputClass} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="First name, last initial" /></div>
       </div>
-      <div className="flex justify-end gap-2"><button type="button" className={quietButton} onClick={onCancel}>Cancel</button><button type="submit" className={primaryButton}>Save</button></div>
+      <div className="overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700" role="group" aria-label="How long">
+        <SegmentedControl value={keep} onChange={setKeep} options={[{ value: "once", label: "Just this date" }, { value: "always", label: "Make it permanent" }]} />
+      </div>
+      {keep === "always" && <p className="-mt-1 text-xs text-slate-500 dark:text-neutral-400">They become the regular {SHORT[form.role].toLowerCase()} from that date on. Dates before it stay as they were.</p>}
+      <div className="flex justify-end gap-2"><button type="button" className={quietButton} onClick={onCancel}>Cancel</button><button type="submit" className={primaryButton}>{keep === "once" ? "Save" : "Make them regular"}</button></div>
     </form>
   );
 }

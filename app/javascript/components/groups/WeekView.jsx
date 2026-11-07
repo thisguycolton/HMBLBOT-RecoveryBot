@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { BellRing, CalendarX, ChevronLeft, ChevronRight, UserPlus, X } from "lucide-react";
 import Toggle from "../ui/Toggle";
+import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass } from "../ui/styles";
 import { api, clock } from "./lib";
 import { parseDay } from "./conscience/lib";
@@ -39,24 +40,31 @@ function AskForm({ slug, item, role, mine, onDone, onCancel }) {
 }
 
 // A coordinator putting someone in one place on one date (a cover): a member from the list, or
-// any name typed in
+// any name typed in. Or, made permanent, they hold the place from that date on (every day the
+// meeting runs, if they like); the dates before it keep whoever had them.
 function FillForm({ slug, item, role, members, onDone, onCancel }) {
   const [name, setName] = useState("");
+  const [keep, setKeep] = useState("once");
+  const [allDays, setAllDays] = useState(false);
   const [error, setError] = useState(null);
   const listId = `fill-${item.meeting_id}-${item.on}-${role}`;
+  const place = role === "host" ? "host" : "co-host";
   const save = async (e) => {
     e.preventDefault();
     setError(null);
     const member = members.find((m) => m.name.toLowerCase() === name.trim().toLowerCase());
+    const who = { meeting_id: item.meeting_id, role, name: name.trim(), user_id: member?.id || "" };
     try {
-      await api(`/groups/${slug}/meeting_host_covers`, { method: "POST", body: { cover: { meeting_id: item.meeting_id, role, on: item.on, name: name.trim(), user_id: member?.id || "" } } });
+      if (keep === "once") await api(`/groups/${slug}/meeting_host_covers`, { method: "POST", body: { cover: { ...who, on: item.on } } });
+      else await api(`/groups/${slug}/meeting_hosts`, { method: "POST", body: { meeting_host: { ...who, starts_on: item.on, all_days: allDays, replace_cover: true } } });
       onDone();
     } catch (err) { setError(err.message); }
   };
   const quick = members.filter((m) => m.can_host).slice(0, 8);
+  const weekday = dayName(item.on, { weekday: "long" });
   return (
     <form onSubmit={save} className="mt-2 space-y-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
-      <p className="text-sm font-medium text-slate-800 dark:text-neutral-100">Who's the {role === "host" ? "host" : "co-host"} for {item.name}, {dayName(item.on)}?</p>
+      <p className="text-sm font-medium text-slate-800 dark:text-neutral-100">Who's the {place} for {item.name}, {dayName(item.on)}?</p>
       <ErrorNote error={error} />
       {quick.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -65,10 +73,20 @@ function FillForm({ slug, item, role, members, onDone, onCancel }) {
       )}
       <input className={inputClass} list={listId} required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder="A member, or any name" aria-label="Name" autoFocus />
       <datalist id={listId}>{members.map((m) => <option key={m.id} value={m.name} />)}</datalist>
-      <p className="text-xs text-slate-500 dark:text-neutral-400">Just for this date. A member you pick hears about it; an open sub request for it is marked filled.</p>
+      <div className="overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700" role="group" aria-label="How long">
+        <SegmentedControl value={keep} onChange={setKeep} options={[{ value: "once", label: "Just this date" }, { value: "always", label: "Make it permanent" }]} />
+      </div>
+      {keep === "always" && item.series_size > 1 && (
+        <Toggle checked={allDays} onChange={setAllDays} label={`Every day this meeting runs (${item.series_size} days)`} description={`${item.name} at ${clock(item.start_minute)}, all week`} />
+      )}
+      <p className="text-xs text-slate-500 dark:text-neutral-400">
+        {keep === "once"
+          ? "Just for this date. A member you pick hears about it; an open sub request for it is marked filled."
+          : `They become the regular ${place} from ${dayName(item.on)} on${allDays ? ", every day it runs" : `, ${weekday}s`}. Dates before that stay as they were. A member you pick hears about it.`}
+      </p>
       <div className="flex justify-end gap-2">
         <button type="button" className={quietButton} onClick={onCancel}>Cancel</button>
-        <button type="submit" className={primaryButton} disabled={!name.trim()}><UserPlus className="size-4" /> Put them on</button>
+        <button type="submit" className={primaryButton} disabled={!name.trim()}><UserPlus className="size-4" /> {keep === "once" ? "Put them on" : "Make them regular"}</button>
       </div>
     </form>
   );

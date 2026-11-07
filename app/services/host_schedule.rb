@@ -38,6 +38,7 @@ class HostSchedule
     start = start.clamp(@today - 7 * 26, @today + 7 * WEEKS_AHEAD).beginning_of_week(:sunday)
     days = (start..start + 6).to_a
     meetings = weekly_meetings
+    @series_sizes = meetings.group_by { |m| [m.name, m.start_minute, m.end_minute] }.transform_values(&:size)
     subs = HostSubRequest.open.where(meeting_id: meetings.map(&:id), on: days).includes(:requested_by).to_a.group_by { |r| [r.meeting_id, r.role, r.on] }
     json = {
       start: start.iso8601, today: @today.iso8601, can_edit: @can_edit, can_host: @group.can_host?(@viewer),
@@ -80,7 +81,7 @@ class HostSchedule
       }]
     end
     { meeting_id: meeting.id, name: meeting.name, start_minute: meeting.start_minute, end_minute: meeting.end_minute, on: date.iso8601,
-      past: date < @today, can_edit: edits?(meeting), **places }
+      past: date < @today, can_edit: edits?(meeting), series_size: @series_sizes&.[]([meeting.name, meeting.start_minute, meeting.end_minute]) || 1, **places }
   end
 
   # The coming dates this person hosts or co-hosts (holding the place, or covering that date),
