@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, pointerWithin, rectIntersection, useDraggable, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragOverlay, KeyboardSensor, MeasuringStrategy, MouseSensor, defaultDropAnimationSideEffects, pointerWithin, rectIntersection, useDraggable, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { ArrowLeft, Check, Eye, Menu, PanelRight, Plus, X } from "lucide-react";
+import { ArrowLeft, Check, Eye, GripVertical, Menu, PanelRight, Plus, X } from "lucide-react";
 import { RecoveryBotLogo } from "../../brand/Logo";
 import NotificationBell from "../../NotificationBell";
 import { newId } from "../lib";
+import BlockView, { isCompact } from "../BlockView";
 import Canvas from "./Canvas";
 
 // The HMBLBOT Editor's frame, shared by events (/events/:token/edit) and group pages
@@ -35,11 +36,20 @@ export default function EditorFrame({
   const [drawer, setDrawer] = useState(false);
   const [inspector, setInspector] = useState(false);
   const [activeId, setActiveId] = useState(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const [activeWidth, setActiveWidth] = useState(null);
+  const beforeDrag = useRef(null); // the blocks as they were, to put back if the drag is cancelled
+  const justPassed = useRef(null); // the block the dragged one just swapped with (see onDragOver)
+  const droppingNew = useRef(false);
+  // A mouse drags (and the keyboard: space, arrows, space). Touch doesn't: on a phone a finger
+  // scrolls the page, and blocks move with the arrows on their toolbar instead.
+  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const firstSetting = settings[0].key;
 
   const patchBlock = (id, patch) => setBlocks((list) => list.map((b) => (b.id === id ? { ...b, ...patch } : b)));
   const select = (key) => { setSelected(key); setInspector(true); setDrawer(false); };
+  // Tapping a block on the page picks it (its toolbar shows) without covering the page with the
+  // panel on smaller screens; the toolbar's settings button opens the panel there
+  const pick = (id) => { setSelected(id); setDrawer(false); };
   const removeBlock = (id) => {
     setBlocks((list) => list.filter((b) => b.id !== id));
     if (selected === id) setSelected(firstSetting);
@@ -81,37 +91,84 @@ export default function EditorFrame({
   };
   const isNew = (id) => String(id).startsWith("new:");
 
+  const onDragStart = ({ active }) => {
+    setActiveId(active.id);
+    setActiveWidth(active.rect.current.initial?.width || null);
+    beforeDrag.current = blocks;
+    justPassed.current = null;
+    droppingNew.current = isNew(active.id);
+  };
+  // The blocks make room live: as the dragged block passes over another, they trade places right
+  // away (and slide there, see useFlip), so the page always shows where it'll land. Blocks come
+  // in different widths and heights, so after a trade the pointer can still be over the one it
+  // passed; that one is left alone until the pointer moves onto something else, or they'd flip
+  // back and forth.
   const onDragOver = ({ active, over }) => {
-    if (!over || isNew(active.id)) return;
+    if (!over || isNew(active.id) || over.id === active.id) return;
+    if (over.id === justPassed.current) return;
     const from = regionOf(active.id);
     const to = regionOf(over.id);
-    if (!to || from === to) return;
+    if (!to) return;
+    const overBlock = !String(over.id).startsWith("region:");
+    if (from === to && !overBlock) { justPassed.current = null; return; }
+    justPassed.current = overBlock ? over.id : null;
     setBlocks((list) => {
-      const moving = list.find((b) => b.id === active.id);
-      const rest = list.filter((b) => b.id !== active.id);
-      return insertAt(rest, { ...moving, region: to }, over.id);
+      if (from !== to) {
+        const moving = list.find((b) => b.id === active.id);
+        const rest = list.filter((b) => b.id !== active.id);
+        return insertAt(rest, { ...moving, region: to }, over.id);
+      }
+      const i = list.findIndex((b) => b.id === active.id);
+      const j = list.findIndex((b) => b.id === over.id);
+      return i < 0 || j < 0 ? list : arrayMove(list, i, j);
     });
   };
+  const endDrag = () => { setActiveId(null); beforeDrag.current = null; justPassed.current = null; };
+  // An existing block is already where it was dropped; a new one goes in now
   const onDragEnd = ({ active, over }) => {
-    setActiveId(null);
-    if (!over) return;
-    if (isNew(active.id)) {
-      const block = makeBlock(active.data.current.type, regionOf(over.id) || "main");
-      setBlocks((list) => insertAt(list, block, over.id));
-      select(block.id);
-      return;
+    endDrag();
+    if (!over || !isNew(active.id)) return;
+    const block = makeBlock(active.data.current.type, regionOf(over.id) || "main");
+    setBlocks((list) => insertAt(list, block, over.id));
+    select(block.id);
+  };
+  const onDragCancel = () => {
+    if (beforeDrag.current) setBlocks(beforeDrag.current);
+    endDrag();
+  };
+
+  // The arrows on a block's toolbar: one place up or down in its column; past the top or bottom
+  // it goes on to the other column (the side column comes after the main one on a phone)
+  const REGION_ORDER = ["main", "side"];
+  const moveBlock = (id, step) => setBlocks((list) => {
+    const block = list.find((b) => b.id === id);
+    if (!block) return list;
+    const same = list.filter((b) => b.region === block.region);
+    const at = same.findIndex((b) => b.id === id);
+    const target = same[at + step];
+    if (target) {
+      return arrayMove(list, list.indexOf(block), list.indexOf(target));
     }
-    if (active.id === over.id || String(over.id).startsWith("region:")) return;
-    setBlocks((list) => {
-      const from = list.findIndex((b) => b.id === active.id);
-      const to = list.findIndex((b) => b.id === over.id);
-      return from < 0 || to < 0 ? list : arrayMove(list, from, to);
-    });
+    const region = REGION_ORDER[REGION_ORDER.indexOf(block.region) + step];
+    if (!region) return list;
+    const rest = list.filter((b) => b.id !== id);
+    const moved = { ...block, region };
+    const others = rest.filter((b) => b.region === region);
+    if (!others.length) return [...rest, moved];
+    const edge = step > 0 ? rest.indexOf(others[0]) : rest.indexOf(others[others.length - 1]) + 1;
+    return [...rest.slice(0, edge), moved, ...rest.slice(edge)];
+  });
+  const canMove = (id, step) => {
+    const block = blocks.find((b) => b.id === id);
+    if (!block) return false;
+    const same = blocks.filter((b) => b.region === block.region);
+    return !!same[same.findIndex((b) => b.id === id) + step] || !!REGION_ORDER[REGION_ORDER.indexOf(block.region) + step];
   };
 
   const selectedBlock = blocks.find((b) => b.id === selected);
   const setting = settings.find((p) => p.key === selected) || (!selectedBlock && settings[0]);
-  const activeLabel = activeId && (isNew(activeId) ? blockInfo[String(activeId).slice(4)] : blockInfo[blocks.find((b) => b.id === activeId)?.type]);
+  const activeBlock = activeId && !isNew(activeId) ? blocks.find((b) => b.id === activeId) : null;
+  const activeLabel = activeId && (isNew(activeId) ? blockInfo[String(activeId).slice(4)] : blockInfo[activeBlock?.type]);
   const iconButton = "relative inline-flex size-9 items-center justify-center rounded-full border border-slate-200 !bg-transparent text-slate-700 hover:!bg-slate-100 dark:border-neutral-700 dark:text-neutral-200 dark:hover:!bg-neutral-800";
 
   const sidebar = (
@@ -145,10 +202,11 @@ export default function EditorFrame({
     <DndContext
       sensors={sensors}
       collisionDetection={(args) => { const hits = pointerWithin(args); return hits.length ? hits : rectIntersection(args); }}
-      onDragStart={({ active }) => setActiveId(active.id)}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      onDragCancel={() => setActiveId(null)}
+      onDragCancel={onDragCancel}
     >
       <div className="min-h-screen w-full bg-slate-100 text-slate-900 dark:bg-neutral-950 dark:text-neutral-100">
         <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 lg:block">{sidebar}</aside>
@@ -195,10 +253,13 @@ export default function EditorFrame({
                 blockInfo={blockInfo}
                 selected={selected}
                 activeId={activeId}
-                onSelect={select}
+                onSelect={pick}
+                onSettings={select}
                 onChange={patchBlock}
                 onRemove={removeBlock}
                 onDuplicate={duplicateBlock}
+                onMove={moveBlock}
+                canMove={canMove}
               />
               {blocks.length === 0 && (
                 <button type="button" onClick={() => addBlock("heading")} className="mx-auto flex items-center gap-2 rounded-xl !bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-panel dark:!bg-neutral-900 dark:text-neutral-200">
@@ -217,14 +278,35 @@ export default function EditorFrame({
         </aside>
       </div>
 
-      <DragOverlay dropAnimation={null}>
-        {activeLabel && (
+      {/* What's being dragged: the block itself, as it looks on the page (a new one from the
+          palette is its name). Let go and it settles into the gap the others made for it. */}
+      <DragOverlay dropAnimation={droppingNew.current ? null : { duration: 180, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)", sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0.35" } } }) }}>
+        {activeBlock ? (
+          <DragPreview width={activeWidth} label={activeLabel?.label}>
+            <BlockView block={activeBlock} compact={isCompact(activeBlock, canvas?.layout)} editing polls={canvas?.polls} context={canvas?.context} />
+          </DragPreview>
+        ) : activeLabel && (
           <div className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-2xl ring-2 ring-accent dark:bg-neutral-900 dark:text-white">
             <activeLabel.icon className="size-4 text-accent" /> {activeLabel.label}
           </div>
         )}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+// The block in hand: as wide as it is on the page, cut off (with a fade) when it's very tall
+function DragPreview({ width, label, children }) {
+  const clip = useRef(null);
+  const [cut, setCut] = useState(false);
+  useLayoutEffect(() => { const el = clip.current; if (el) setCut(el.scrollHeight > el.clientHeight + 1); }, []);
+  return (
+    <div className="ev-drag-preview" style={{ width: width || undefined }}>
+      <div className="ev-drag-preview__tab"><GripVertical className="size-4" /> {label}</div>
+      <div className="ev-drag-preview__body">
+        <div ref={clip} className="ev-drag-preview__clip" data-cut={cut}>{children}</div>
+      </div>
+    </div>
   );
 }
 
