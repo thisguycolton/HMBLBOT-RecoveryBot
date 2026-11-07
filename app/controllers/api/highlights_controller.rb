@@ -123,8 +123,8 @@ class Api::HighlightsController < ApplicationController
     head :no_content
   end
 
-  # GET /api/highlights/:id/card.png?look=paper|marker|night|sunrise&size=wide|square|story
-  #   &note=0 (leave the note off) &name=1 (put their first name on it) &download=1
+  # GET /api/highlights/:id/card?look=paper|marker|night|sunrise&size=wide|square|story
+  #   &note=0 (leave the note off) &name=1 (put their first name on it) &still=1 (never a GIF) &download=1
   # A picture of your own highlight to post anywhere (QuoteCard). Only yours.
   def card
     h = current_user.user_highlights.find(params[:id])
@@ -133,7 +133,8 @@ class Api::HighlightsController < ApplicationController
       return render(json: { error: "#{h.chapter.book.title} is only for members of groups that read it, so its words can't go in a picture." }, status: :forbidden)
     end
 
-    picture = QuoteCard.highlight(h, look: params[:look], size: params[:size], note: params[:note] != "0", name: params[:name] == "1")
+    picture = QuoteCard.highlight(h, look: params[:look], size: params[:size], note: params[:note] != "0", name: params[:name] == "1",
+                                    still: params[:still] == "1")
     send_card(picture)
   end
 

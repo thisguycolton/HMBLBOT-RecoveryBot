@@ -11,6 +11,10 @@ import { Bone, SkeletonGroup } from "../ui/Skeleton";
 // (and a line of your own; a highlight's note links back to it in the book). The picture is drawn on our server (QuoteCard), so the
 // page never calls anyone else. It names nobody unless they tick "Add my first name".
 //
+// Words too long for one picture come back as a GIF that turns its pages (the server says how
+// many in X-Card-Pages). Clipboards don't take GIFs, so "Copy picture" copies a still of it
+// (?still=1), and so does Share on a device that can't hand a GIF to another app.
+//
 // `cardUrl` is where the server draws it (/api/highlights/:id/card); `link` is the share
 // link that goes with a highlight (none for notes, which only members see); `hasNote` offers
 // to leave a highlight's note off.
@@ -32,7 +36,8 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   const [withNote, setWithNote] = useState(true);
   const [withName, setWithName] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState(null);
+  const [picture, setPicture] = useState(null); // { url, blob, pages }
   const [busy, setBusy] = useState(null);
   const [copied, setCopied] = useState(null);
   const [posting, setPosting] = useState(false);
@@ -45,7 +50,32 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
     if (withName) q.set("name", "1");
     return `${cardUrl}?${q}`;
   }, [cardUrl, look, size, hasNote, withNote, withName]);
-  useEffect(() => { setLoading(true); setFailed(false); }, [src]);
+  // Fetched once per choice: shown from here, and the same file shared, copied or posted
+  useEffect(() => {
+    const stop = new AbortController();
+    let url;
+    setLoading(true);
+    setFailed(null);
+    (async () => {
+      try {
+        const res = await fetch(src, { credentials: "same-origin", signal: stop.signal });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Couldn't draw that one. Try another look.");
+        }
+        const blob = await res.blob();
+        url = URL.createObjectURL(blob);
+        setPicture({ url, blob, pages: Number(res.headers.get("X-Card-Pages")) || 1 });
+      } catch (e) {
+        if (e?.name === "AbortError") return;
+        setPicture(null);
+        setFailed(e?.message || "Couldn't draw that one. Try another look.");
+        setLoading(false);
+      }
+    })();
+    return () => { stop.abort(); if (url) URL.revokeObjectURL(url); };
+  }, [src]);
+  const moving = (picture?.pages || 1) > 1;
 
   // The link sent with the picture carries its look (and a left-off note), so the preview
   // Messages and the rest draw from it (ShareMeta.highlight) matches the picture
@@ -64,11 +94,16 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
     return () => window.removeEventListener("keydown", esc, true);
   }, [onClose]);
 
-  const fetchFile = async () => {
-    const res = await fetch(src, { credentials: "same-origin" });
+  const asFile = (blob) => {
+    const gif = blob.type === "image/gif";
+    return new File([blob], `recoverybot-${kind}-${size}.${gif ? "gif" : "png"}`, { type: gif ? "image/gif" : "image/png" });
+  };
+  // The picture as shown, or (`still`) one picture of it, never a GIF
+  const fetchFile = async ({ still = false } = {}) => {
+    if (picture?.blob && !(still && moving)) return asFile(picture.blob);
+    const res = await fetch(still ? `${src}&still=1` : src, { credentials: "same-origin" });
     if (!res.ok) throw new Error("Couldn't make that picture.");
-    const blob = await res.blob();
-    return new File([blob], `recoverybot-${kind}-${size}.png`, { type: "image/png" });
+    return asFile(await res.blob());
   };
 
   // Phones (and some computers) can hand the picture itself to another app
@@ -89,13 +124,15 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   };
 
   const share = () => run("share", async () => {
-    const file = await fetchFile();
+    let file = await fetchFile();
+    // Some phones can't hand a GIF to another app: send one picture of it instead
+    if (!navigator.canShare({ files: [file] })) file = await fetchFile({ still: true });
     await navigator.share({ files: [file], title, text: [text, shareLink].filter(Boolean).join("\n") || undefined });
   });
 
   const copyPicture = () => run("copy", async () => {
     // Safari wants the promise handed over right away
-    await navigator.clipboard.write([new window.ClipboardItem({ "image/png": fetchFile().then((f) => f) })]);
+    await navigator.clipboard.write([new window.ClipboardItem({ "image/png": fetchFile({ still: true }).then((f) => f) })]);
     flash("picture");
   });
 
@@ -132,16 +169,26 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
         <div className="grid min-h-0 flex-1 grid-cols-1 content-start gap-4 overflow-y-auto p-4 sm:grid-cols-[minmax(0,1fr)_17rem]">
           <div className="self-start rounded-2xl bg-neutral-100 p-3 dark:bg-neutral-800">
             <div className="relative mx-auto w-full" style={{ maxWidth: size === "story" ? "min(15rem, 26dvh)" : size === "square" ? "min(24rem, 46dvh)" : "100%" }}>
-              <img key={src} src={src} alt="Your picture" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setFailed(true); }}
-                className={`block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 transition-opacity ${loading ? "opacity-40 motion-safe:animate-pulse" : "opacity-100"}`} style={{ aspectRatio: ratio }} />
+              {picture && !failed ? (
+                <img key={picture.url} src={picture.url} alt="Your picture" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setFailed("Couldn't draw that one. Try another look."); }}
+                  className={`block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 transition-opacity ${loading ? "opacity-40 motion-safe:animate-pulse" : "opacity-100"}`} style={{ aspectRatio: ratio }} />
+              ) : (
+                <div className="block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 dark:bg-neutral-700" style={{ aspectRatio: ratio }} />
+              )}
               {loading && (
                 // The picture's shape pulses while the server draws it (a skeleton, not a spinner)
                 <SkeletonGroup label="Drawing it" className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-2.5 p-[8%]">
                   <Bone className="h-3 w-3/5" /><Bone className="h-3 w-4/5" /><Bone className="h-3 w-2/5" />
                 </SkeletonGroup>
               )}
-              {failed && <p className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-red-600">Couldn't draw that one. Try another look.</p>}
+              {failed && <p className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-red-600">{failed}</p>}
             </div>
+            {moving && !loading && !failed && (
+              <p className="mx-auto mt-2.5 max-w-sm text-center text-xs text-slate-500 dark:text-neutral-400">
+                Too long for one picture, so it's a moving picture (a GIF) that turns through {picture.pages} pages.
+                Messages, Facebook and X play it; Instagram only takes still pictures.
+              </p>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -187,13 +234,13 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
               )}
               <a href={`${src}&download=1`} download
                 className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 font-semibold ${canShareFiles ? "bg-neutral-100 !text-slate-800 hover:bg-neutral-200 dark:bg-neutral-800 dark:!text-white" : "!bg-accent !text-white"}`}>
-                <Download className="size-4" /> Save picture
+                <Download className="size-4" /> {moving ? "Save GIF" : "Save picture"}
               </a>
               <div className="grid grid-cols-2 gap-2">
                 {canCopyPicture && (
-                  <button type="button" onClick={copyPicture} disabled={!!busy}
+                  <button type="button" onClick={copyPicture} disabled={!!busy} title={moving ? "A clipboard can't hold a moving picture, so this copies a still one" : undefined}
                     className="flex items-center justify-center gap-1.5 rounded-xl !bg-neutral-100 px-2 py-2 text-xs font-semibold text-slate-800 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:text-white">
-                    {copied === "picture" ? <Check className="size-4" /> : <Copy className="size-4" />} {copied === "picture" ? "Copied" : "Copy picture"}
+                    {copied === "picture" ? <Check className="size-4" /> : <Copy className="size-4" />} {copied === "picture" ? "Copied" : moving ? "Copy still" : "Copy picture"}
                   </button>
                 )}
                 {link && (
@@ -231,7 +278,7 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
               )}
               <p className="text-xs text-slate-500 dark:text-neutral-400">
                 {size === "story" ? "For Instagram or Facebook stories: save it, then add it from your photos." : link
-                  ? `Anyone you send the link to can open this highlight. Its link preview is a wide ${LOOKS.find((l) => l.value === look)?.label} picture, like this one.`
+                  ? `Anyone you send the link to can open this highlight. Its link preview is a wide ${LOOKS.find((l) => l.value === look)?.label} picture${moving ? " that stays still and shows as much as fits" : ", like this one"}.`
                   : "Notes are only for members, so there's no link: share the picture."}
               </p>
             </div>
