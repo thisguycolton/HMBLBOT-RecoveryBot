@@ -63,3 +63,10 @@ on_booted do
 rescue StandardError => e
   warn "[recovery reminders] couldn't start: #{e.message}"
 end
+
+# Local intergroups' meeting lists re-import from their feed links weekly (see MeetingListRefresh)
+on_booted do
+  MeetingListRefresh.start_loop if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[meeting lists] couldn't start the weekly refresh: #{e.message}"
+end

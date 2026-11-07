@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ExternalLink, FileUp, Link2, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, FileUp, Link2, ListPlus, MapPin, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
@@ -24,11 +24,14 @@ const STATUS_LABELS = {
 // Local meeting lists (MeetingListImport): an intergroup's in-person meetings, from its
 // Meeting Guide feed link or a JSON or CSV file, shown in Find a meeting next to AA
 // Intergroup's. Import previews first; nothing is deleted, and listings gone from the
-// source stay listed unless you tick them to take them off.
+// source stay listed unless you tick them to take them off. Lists with a feed link refresh
+// weekly on their own (MeetingListRefresh): new and changed meetings only.
 export default function MeetingListsPage({ notify }) {
   const [lists, setLists] = useState(null);
   const [editing, setEditing] = useState(null); // list id or "new"
   const [importing, setImporting] = useState(null); // list id
+  const [adding, setAdding] = useState(false); // the add-many panel
+  const [refreshing, setRefreshing] = useState(null); // list id
 
   async function load() {
     try {
@@ -53,6 +56,19 @@ export default function MeetingListsPage({ notify }) {
     }
   }
 
+  async function refresh(list) {
+    setRefreshing(list.id);
+    try {
+      const saved = await api(`/meeting_directories/${list.id}/refresh`, { method: "POST" });
+      notify(saved.refresh_status === "error" ? `Couldn't refresh ${list.name}.` : `Refreshed ${list.name}.`, saved.refresh_status === "error" ? "error" : undefined);
+      await load();
+    } catch (e) {
+      notify(e.message, "error");
+    } finally {
+      setRefreshing(null);
+    }
+  }
+
   async function destroy(list) {
     if (!window.confirm(`Remove the list “${list.name}”?`)) return;
     try {
@@ -73,6 +89,21 @@ export default function MeetingListsPage({ notify }) {
         title="Meeting lists"
         subtitle="In-person meetings from local intergroups, shown in Find a meeting next to AA Intergroup's online ones"
       />
+      <ShellPanel position="middle" className="p-4">
+        {adding ? (
+          <BulkAdd notify={notify} onDone={load} onCancel={() => setAdding(false)} />
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="flex-1 min-w-[14rem] text-sm text-slate-600 dark:text-neutral-400 !font-sans">
+              Lists with a feed link refresh every week on their own: new and changed meetings are added, and anything that
+              needs a look (possible duplicates, meetings gone from the feed) waits for you here.
+            </p>
+            <button type="button" className={buttonClass.secondary} onClick={() => setAdding(true)}>
+              <ListPlus className="size-4" /> Add many at once
+            </button>
+          </div>
+        )}
+      </ShellPanel>
       {lists.length === 0 && editing !== "new" && (
         <ShellPanel position="middle" className="p-5">
           <p className="text-sm text-slate-600 dark:text-neutral-400 !font-sans">
@@ -104,7 +135,13 @@ export default function MeetingListsPage({ notify }) {
                     {" · "}
                     {list.imported_at ? `imported ${shortDate(list.imported_at)}${list.imported_by ? ` by ${list.imported_by}` : ""}` : "not imported yet"}
                   </p>
+                  <RefreshLine list={list} onReview={() => setImporting(list.id)} />
                 </div>
+                {list.feed_url && (
+                  <button type="button" className={buttonClass.secondary} onClick={() => refresh(list)} disabled={refreshing === list.id || list.refreshing} aria-label={`Refresh ${list.name} now`} title="Refresh now">
+                    <RefreshCw className={`size-4 ${refreshing === list.id || list.refreshing ? "animate-spin" : ""}`} />
+                  </button>
+                )}
                 <button type="button" className={buttonClass.primary} onClick={() => setImporting(importing === list.id ? null : list.id)}>
                   <FileUp className="size-4" /> {importing === list.id ? "Close import" : "Import"}
                 </button>
@@ -124,7 +161,7 @@ export default function MeetingListsPage({ notify }) {
       ))}
       <ShellPanel position="bottom" className="p-4">
         {editing === "new" ? (
-          <ListForm list={{ name: "", key: "", feed_url: "", website: "", time_zone: "America/Phoenix" }} onSave={(v) => save("new", v)} onCancel={() => setEditing(null)} />
+          <ListForm list={{ name: "", key: "", feed_url: "", website: "", time_zone: "America/Phoenix", auto_refresh: true }} onSave={(v) => save("new", v)} onCancel={() => setEditing(null)} />
         ) : (
           <button type="button" className={buttonClass.secondary} onClick={() => setEditing("new")}>
             <Plus className="size-4" /> Add a meeting list
@@ -165,6 +202,10 @@ function ListForm({ list, onSave, onCancel }) {
         <select className={selectClass} value={values.time_zone} onChange={set("time_zone")}>
           {[...new Set([values.time_zone, ...ZONES])].map((z) => <option key={z} value={z}>{z.replace("_", " ")}</option>)}
         </select>
+      </label>
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-300 !font-sans sm:col-span-2">
+        <input type="checkbox" checked={values.auto_refresh !== false} onChange={(e) => setValues({ ...values, auto_refresh: e.target.checked })} />
+        Refresh from the feed link every week (new and changed meetings only)
       </label>
       <div className="flex gap-2 sm:col-span-2">
         <button type="submit" className={buttonClass.primary}>{isNew ? "Add list" : "Save"}</button>
@@ -343,5 +384,116 @@ function PreviewRow({ row, checked, onToggle }) {
         ))}
       </div>
     </li>
+  );
+}
+
+function plural(n, one, many = `${one}s`) {
+  return `${formatCount(n)} ${n === 1 ? one : many}`;
+}
+
+// How the list's weekly refresh went, and when it runs next
+function RefreshLine({ list, onReview }) {
+  const muted = "text-sm text-slate-500 dark:text-neutral-400 !font-sans";
+  if (!list.feed_url) return <p className={muted}>No feed link, so it only updates when you import.</p>;
+  if (!list.auto_refresh) return <p className={muted}>Weekly refresh is off.</p>;
+  if (list.refreshing) return <p className={muted}>Refreshing now…</p>;
+  if (!list.refreshed_at) return <p className={muted}>First refresh is on its way (within the hour).</p>;
+
+  const r = list.refresh_result || {};
+  const when = `Refreshed ${shortDate(list.refreshed_at)}`;
+  const next = list.next_refresh_at ? `, next ${shortDate(list.next_refresh_at)}` : "";
+  if (list.refresh_status === "error") {
+    return (
+      <p className="text-sm text-red-700 dark:text-red-300 !font-sans">
+        <AlertTriangle className="inline size-3.5 mr-1" />
+        Last refresh failed {shortDate(list.refreshed_at)}: {list.refresh_error}. It tries again daily.
+      </p>
+    );
+  }
+  const added = [r.new ? `${formatCount(r.new)} new` : null, r.changed ? `${formatCount(r.changed)} changed` : null].filter(Boolean).join(", ") || "no changes";
+  const review = [
+    r.duplicates ? `${plural(r.duplicates, "possible duplicate")}` : null,
+    r.missing ? `${plural(r.missing, "meeting")} gone from the feed` : null,
+  ].filter(Boolean).join(" and ");
+  return (
+    <p className={muted}>
+      {list.refresh_status === "review" ? <AlertTriangle className="inline size-3.5 mr-1 text-amber-600" /> : <CheckCircle2 className="inline size-3.5 mr-1 text-emerald-600" />}
+      {when}: {added}{next}.
+      {list.refresh_status === "review" && review && (
+        <>
+          {" "}<span className="text-amber-700 dark:text-amber-300">{review} to look over.</span>{" "}
+          <button type="button" className="!bg-transparent text-accent hover:underline" onClick={onReview}>Review</button>
+        </>
+      )}
+      {list.refresh_status === "reviewed" && " Reviewed since."}
+    </p>
+  );
+}
+
+// Paste many intergroups' feed links at once, one per line
+function BulkAdd({ notify, onDone, onCancel }) {
+  const [text, setText] = useState("");
+  const [zone, setZone] = useState("America/Phoenix");
+  const [busy, setBusy] = useState(false);
+  const [skipped, setSkipped] = useState([]);
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const result = await api("/meeting_directories/bulk", { method: "POST", body: { text, time_zone: zone } });
+      setSkipped(result.skipped);
+      const n = result.added.length;
+      notify(n ? `Added ${plural(n, "list")}. Their meetings import in the background.` : "No lists added.", n ? undefined : "error");
+      if (n) setText(result.skipped.map((s) => s.line).join("\n"));
+      onDone();
+    } catch (err) {
+      notify(err.message, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="space-y-3" onSubmit={submit}>
+      <label className="block">
+        <span className={labelClass}>One intergroup per line: name, then its feed link (the name is optional)</span>
+        <textarea
+          className={`${inputClass} font-mono text-xs min-h-[10rem]`}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={"Phoenix Area Intergroup, https://example.org/wp-admin/admin-ajax.php?action=meetings\nEast Valley Intergroup, https://example.com/meetings.json, America/Phoenix\nhttps://example.net/wp-admin/admin-ajax.php?action=meetings"}
+          required
+        />
+      </label>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="block">
+          <span className={labelClass}>Time zone, for lines that don't say</span>
+          <select className={selectClass} value={zone} onChange={(e) => setZone(e.target.value)}>
+            {ZONES.map((z) => <option key={z} value={z}>{z.replace("_", " ")}</option>)}
+          </select>
+        </label>
+        <button type="submit" className={buttonClass.primary} disabled={busy || !text.trim()}>{busy ? "Adding…" : "Add lists"}</button>
+        <button type="button" className={buttonClass.secondary} onClick={onCancel}>Close</button>
+      </div>
+      <p className="text-xs text-slate-500 dark:text-neutral-400 !font-sans">
+        Commas, tabs or semicolons can separate the columns, so rows copied from a spreadsheet work. Links already added are skipped.
+        Each new list imports its new meetings within a few minutes and then refreshes weekly; possible duplicates are left for you to review.
+      </p>
+      {skipped.length > 0 && (
+        <ul className="text-sm text-amber-700 dark:text-amber-300 !font-sans space-y-1">
+          {skipped.map((s, i) => <li key={i}><AlertTriangle className="inline size-3.5 mr-1" />{s.reason}: <span className="font-mono text-xs">{s.line}</span></li>)}
+        </ul>
+      )}
+      <details className="text-sm text-slate-600 dark:text-neutral-400 !font-sans">
+        <summary className="cursor-pointer font-medium text-slate-800 dark:text-neutral-200">Where to find an intergroup's feed link</summary>
+        <ul className="mt-2 list-disc pl-5 space-y-1">
+          <li>Most intergroup websites run the 12 Step Meeting List plugin for WordPress. Its feed is the site's address followed by <span className="font-mono text-xs">/wp-admin/admin-ajax.php?action=meetings</span>. Open that in a browser: a page full of meeting data means it works.</li>
+          <li>These are Meeting Guide feeds, the same ones the Meeting Guide app reads. If an area's meetings show up in that app, its intergroup has a feed.</li>
+          <li>A page that links to a .json file works too; we follow the link.</li>
+          <li>If a site turns its feed off or needs a key, ask the intergroup's webmaster for the Meeting Guide feed link, or download their meeting list as a CSV and use Import on that list instead.</li>
+        </ul>
+      </details>
+    </form>
   );
 }

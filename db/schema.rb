@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_07_100000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_07_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -911,6 +911,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_100000) do
     t.bigint "imported_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "auto_refresh", default: true, null: false
+    t.datetime "refresh_started_at"
+    t.datetime "refreshed_at"
+    t.string "refresh_status"
+    t.text "refresh_error"
+    t.jsonb "refresh_result", default: {}, null: false
     t.index ["imported_by_id"], name: "index_meeting_directories_on_imported_by_id"
     t.index ["key"], name: "index_meeting_directories_on_key", unique: true
   end
