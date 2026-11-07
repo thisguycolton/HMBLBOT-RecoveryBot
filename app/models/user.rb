@@ -71,6 +71,9 @@ class User < ApplicationRecord
   has_many :schedule_polls, dependent: :destroy
   has_many :schedule_poll_members, dependent: :destroy
   has_many :schedule_poll_ballots, dependent: :nullify
+  # A poll and its votes stay (a group may rely on the count); the account just comes off them
+  has_many :polls, dependent: :nullify
+  has_many :poll_ballots, dependent: :nullify
   has_many :event_collaborators, dependent: :destroy
   has_many :timeline_notes, dependent: :destroy
   has_many :notes_received, class_name: "TimelineNote", foreign_key: :recipient_id, dependent: :destroy, inverse_of: :recipient

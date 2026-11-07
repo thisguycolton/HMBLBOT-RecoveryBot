@@ -12,6 +12,7 @@ import {
   ScrollText,
   Sparkles,
   Tags,
+  Vote,
 } from "lucide-react";
 
 // The site's tools, grouped for the footer and the home page. The shell's sidebar has its own
@@ -56,6 +57,7 @@ export const ADMIN_ITEMS = [
   { label: "Admin", href: "/admin_panel", icon: Gauge },
   { label: "Site notices", href: "/admin_panel/notices", icon: Megaphone },
   { label: "Schedule polls", href: "/schedule_polls", icon: CalendarClock },
+  { label: "Polls", href: "/polls", icon: Vote },
   { label: "Topicificator admin", href: "/admin_panel/topicificator", icon: Tags },
 ];
 

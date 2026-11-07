@@ -1,9 +1,10 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
-  closeDate: 2024-06-26
-  closeTime: 2024-06-26 18:04:41
+  token: abc234
+  question: Which topic should we read?
+  audience: anyone
 
 two:
-  closeDate: 2024-06-26
-  closeTime: 2024-06-26 18:04:41
+  token: xyz789
+  question: Coffee or tea?

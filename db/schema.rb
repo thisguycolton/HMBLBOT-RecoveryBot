@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_06_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_07_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1073,6 +1073,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_06_000000) do
     t.string "topic_title"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "label"
+    t.integer "position", default: 0, null: false
     t.index ["poll_id"], name: "index_options_on_poll_id"
   end
 
@@ -1085,11 +1087,43 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_06_000000) do
     t.index ["book_id"], name: "index_pages_on_book_id"
   end
 
+  create_table "poll_ballots", force: :cascade do |t|
+    t.bigint "poll_id", null: false
+    t.bigint "user_id"
+    t.string "voter_token", null: false
+    t.string "voter_name"
+    t.string "ip_digest"
+    t.bigint "option_ids", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["poll_id", "user_id"], name: "index_poll_ballots_on_poll_id_and_user_id", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["poll_id", "voter_token"], name: "index_poll_ballots_on_poll_id_and_voter_token", unique: true
+    t.index ["poll_id"], name: "index_poll_ballots_on_poll_id"
+    t.index ["user_id"], name: "index_poll_ballots_on_user_id"
+  end
+
   create_table "polls", force: :cascade do |t|
     t.datetime "closeDate"
     t.datetime "closeTime"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "token"
+    t.string "question"
+    t.text "details"
+    t.bigint "user_id"
+    t.bigint "group_id"
+    t.integer "max_choices", default: 1, null: false
+    t.string "audience", default: "signed_in", null: false
+    t.string "results_visibility", default: "always", null: false
+    t.string "voters_visibility", default: "managers", null: false
+    t.datetime "closes_at"
+    t.datetime "closed_at"
+    t.string "subject_type"
+    t.bigint "subject_id"
+    t.index ["group_id"], name: "index_polls_on_group_id"
+    t.index ["subject_type", "subject_id"], name: "index_polls_on_subject"
+    t.index ["token"], name: "index_polls_on_token", unique: true
+    t.index ["user_id"], name: "index_polls_on_user_id"
   end
 
   create_table "push_subscriptions", force: :cascade do |t|
@@ -1855,6 +1889,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_06_000000) do
   add_foreign_key "oiaa_meetings", "meeting_directories"
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
+  add_foreign_key "poll_ballots", "polls"
+  add_foreign_key "poll_ballots", "users"
+  add_foreign_key "polls", "groups"
+  add_foreign_key "polls", "users"
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "quest_inventories", "quest_sessions"
   add_foreign_key "quest_log_entries", "quest_sessions"

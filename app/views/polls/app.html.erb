@@ -1,0 +1,4 @@
+<% content_for(:page_title) { "#{@poll ? @poll.question.truncate(60) : "Polls"} | RecoveryBot" } %>
+<%= vite_javascript_tag "polls.jsx" %>
+<%# w-full: the reader styles make <body> a centring flexbox %>
+<div id="polls-root" class="w-full"></div>
