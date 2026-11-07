@@ -7,6 +7,10 @@
 // chat), a dialog or sheet (anything fixed on the screen, other than the top bar), a text box or
 // editor, a canvas or drawing area, or with text selected. Sideways swipes are let go at once.
 // Anything can opt out with data-no-pull-refresh.
+//
+// Only the little spinner moves: the page itself stays still. iOS's own bounce past the top is
+// turned off in the app (overscroll-behavior), since the two together dragged the page down under
+// the top bar and left a gap, and the bounce threw the bottom bar out of place.
 
 const PULL = 72; // how far, after the drag resistance, counts as a refresh
 const MAX = 120; // how far the indicator follows the finger
@@ -61,6 +65,9 @@ function install() {
   if (window.__pullToRefresh) return;
   window.__pullToRefresh = true;
   if (!isStandalone() || !("ontouchstart" in window)) return;
+  const calm = document.createElement("style");
+  calm.textContent = "html, body { overscroll-behavior-y: none; }";
+  document.head.appendChild(calm);
 
   let indicator = null;
   let start = null; // { x, y } while a touch might become a pull
@@ -98,8 +105,14 @@ function install() {
     const dx = e.touches[0].clientX - start.x;
     const dy = e.touches[0].clientY - start.y;
     if (!pulling) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; // not sure yet
-      if (dy <= 0 || Math.abs(dx) > dy) { reset(); return; } // scrolling down, or a sideways swipe
+      if (dy <= 0 || Math.abs(dx) > dy) { // scrolling down, or a sideways swipe
+        if (Math.abs(dx) >= 8 || dy <= -8) reset();
+        return;
+      }
+      // Heading down from the top: hold the page still from the very first move, or iOS starts
+      // scrolling it itself and won't let go for the rest of the drag
+      if (e.cancelable) e.preventDefault();
+      if (dy < 8) return; // not sure yet
       pulling = true;
     }
     distance = Math.min(MAX, Math.max(0, dy) * 0.5);
