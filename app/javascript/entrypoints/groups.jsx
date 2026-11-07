@@ -33,6 +33,7 @@ import ServiceReadingShare from "../components/groups/hosting/ServiceReadingShar
 import TimeCapsule from "../components/groups/hosting/TimeCapsule";
 import DeckListPage from "../components/groups/hosting/deck/DeckList";
 import ChatPage from "../components/groups/chat/ChatPage";
+import { withScrollManager } from "../components/shell/ScrollManager";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
@@ -47,7 +48,7 @@ function Shell({ children }) {
 }
 
 const router = createBrowserRouter(
-  [
+  withScrollManager([
     // The HMBLBOT Editor takes the whole window
     { path: "/default-page/edit", element: <div className="ev-root w-full"><GroupPageEditor template /></div> },
     { path: "/:slug/page/edit", element: <div className="ev-root w-full"><GroupPageEditor /></div> },
@@ -89,7 +90,7 @@ const router = createBrowserRouter(
         { path: ":slug/edit", element: <GroupForm /> },
       ],
     },
-  ],
+  ]),
   { basename: "/groups" }
 );
 // The sidebar's links into this app move without a load

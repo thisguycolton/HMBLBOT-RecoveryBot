@@ -16,6 +16,7 @@ import HighlightsPage from "../components/book/HighlightsPage";
 
 import "../styles/tailwind.css";
 import "../styles/reader.css";
+import { withScrollManager } from "../components/shell/ScrollManager";
 
 const body = document.body;
 const isAuthenticated = body.dataset.currentUser === "true";
@@ -44,7 +45,7 @@ function LibraryShell() {
 }
 
 const router = createBrowserRouter(
-  [
+  withScrollManager([
     {
       path: "/",
       element: <LibraryShell />,
@@ -57,7 +58,7 @@ const router = createBrowserRouter(
         { path: ":slug/edit", element: <BookEdit /> },
       ],
     },
-  ],
+  ]),
   { basename: "/library" }
 );
 

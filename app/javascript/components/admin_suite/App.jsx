@@ -19,6 +19,7 @@ import ChipTemplatesPage from "./ChipTemplatesPage";
 import ChipDesignPage from "./ChipDesignPage";
 import StepTemplatesPage from "./StepTemplatesPage";
 import MeetingListsPage from "./MeetingListsPage";
+import { ScrollManager } from "../shell/ScrollManager";
 
 export { BASE, OTHER_TOOLS };
 
@@ -28,6 +29,7 @@ export default function AdminSuite() {
   return (
     <BrowserRouter basename={BASE}>
       <ShellStyle.Provider value="card">
+        <ScrollManager />
         <SuiteShell />
       </ShellStyle.Provider>
     </BrowserRouter>

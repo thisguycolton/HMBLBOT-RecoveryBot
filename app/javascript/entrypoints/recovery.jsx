@@ -18,6 +18,7 @@ import SponsorshipPage from "../components/recovery/SponsorshipPage";
 import StepsPage from "../components/recovery/steps/StepsPage";
 import StepWorkPage from "../components/recovery/steps/StepWorkPage";
 import WorksheetEditor from "../components/recovery/steps/WorksheetEditor";
+import { withScrollManager } from "../components/shell/ScrollManager";
 
 function Shell() {
   return (
@@ -30,7 +31,7 @@ function Shell() {
 }
 
 const router = createBrowserRouter(
-  [
+  withScrollManager([
     {
       path: "/",
       element: <Shell />,
@@ -50,7 +51,7 @@ const router = createBrowserRouter(
         { path: "steps/templates/:id/edit", element: <WorksheetEditor template /> },
       ],
     },
-  ],
+  ]),
   { basename: "/recovery" }
 );
 // The sidebar's links into this app move without a load

@@ -11,6 +11,7 @@ import Layout from "../components/Layout";
 import PollsIndex from "../components/polls/PollsIndex";
 import PollForm from "../components/polls/PollForm";
 import PollPage from "../components/polls/PollPage";
+import { withScrollManager } from "../components/shell/ScrollManager";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
@@ -24,7 +25,7 @@ function Shell() {
   );
 }
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(withScrollManager([
   {
     path: "/",
     element: <Shell />,
@@ -36,7 +37,7 @@ const router = createBrowserRouter([
       { path: "p/:token", element: <PollPage /> },
     ],
   },
-]);
+]));
 
 const mount = document.getElementById("polls-root");
 if (mount) createRoot(mount).render(<RouterProvider router={router} />);

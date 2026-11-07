@@ -8,6 +8,7 @@ import TopicsPage from "./TopicsPage";
 import SetsPage from "./SetsPage";
 import CategoriesPage from "./CategoriesPage";
 import Skeleton from "../ui/Skeleton";
+import { ScrollManager } from "../shell/ScrollManager";
 
 export const BASE = "/admin_panel/topicificator";
 
@@ -21,6 +22,7 @@ export default function TopicificatorAdmin() {
   return (
     <BrowserRouter basename={BASE}>
       <ShellStyle.Provider value="card">
+        <ScrollManager />
         <AdminShell />
       </ShellStyle.Provider>
     </BrowserRouter>

@@ -11,6 +11,7 @@ import "../styles/events.css";
 import Layout from "../components/Layout";
 import EventPage from "../components/events/EventPage";
 import EventEditor from "../components/events/editor/EventEditor";
+import { withScrollManager } from "../components/shell/ScrollManager";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
@@ -25,10 +26,10 @@ function PageShell() {
 }
 
 const router = createBrowserRouter(
-  [
+  withScrollManager([
     { path: "/:token/edit", element: <div className="ev-root w-full"><EventEditor /></div> },
     { path: "/:token", element: <PageShell />, children: [{ index: true, element: <EventPage /> }] },
-  ],
+  ]),
   { basename: "/events" }
 );
 
