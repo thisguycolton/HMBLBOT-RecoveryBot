@@ -197,4 +197,45 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     Open3.stub(:capture3, fake) { assert File.size(card.path).positive? }
     assert_equal [1080, 1920], png_size(File.binread(card.path))
   end
+
+  test "a daily reading keeps its paragraphs, and its pages turn between them" do
+    body = "When I let go, I think more clearly and wisely. " * 12
+    reading = "NOVEMBER 7\nLET GO AND LET GOD\n… praying only for knowledge of His will for us.\nTWELVE STEPS AND TWELVE TRADITIONS, p. 96\n#{body.strip}\n#{body.strip}"
+    card = QuoteCard.new(quote: reading, look: "night", size: "square")
+    pages = card.pages
+    assert_operator pages.size, :>, 1
+    assert_equal "NOVEMBER 7\nLET GO AND LET GOD\n… praying only for knowledge of His will for us.\nTWELVE STEPS AND TWELVE TRADITIONS, p. 96", pages.first.quote
+    assert pages.first.whole, "the first page ends where a paragraph does"
+    assert_not pages.second.cont, "so the next one doesn't start with …"
+    # Put back together, the pages are the reading, line breaks and all
+    rejoined = pages.each_with_index.map { |pg, i| i.zero? ? pg.quote : "#{pages[i - 1].whole ? "\n" : ' '}#{pg.quote}" }.join
+    assert_equal reading, rejoined
+    assert_match(/\AGIF/, File.binread(card.path).first(3))
+    assert card.send(:reading?), "a daily reading goes without quote marks"
+    assert_equal "NOVEMBER 7", card.send(:quoted, "NOVEMBER 7", first: true, last: false, whole: true)
+    assert_not QuoteCard.new(quote: "Remember 7 things").send(:reading?)
+  end
+
+  test "a highlight keeps how its chapter set it: headings, italics, a line in capitals" do
+    doc = { "type" => "doc", "content" => [
+      { "type" => "heading", "attrs" => { "level" => 3 }, "content" => [{ "type" => "text", "text" => "NOVEMBER", "marks" => [{ "type" => "bold" }] }, { "type" => "text", "text" => " 7" }] },
+      { "type" => "heading", "attrs" => { "level" => 2 }, "content" => [{ "type" => "text", "text" => "LET GO AND LET GOD" }] },
+      { "type" => "paragraph", "content" => [{ "type" => "text", "text" => "... " }, { "type" => "text", "text" => "praying only for knowledge of His will.", "marks" => [{ "type" => "italic" }] }] },
+      { "type" => "paragraph", "content" => [{ "type" => "text", "text" => "TWELVE STEPS AND TWELVE TRADITIONS, p. 96" }] },
+      { "type" => "paragraph", "content" => [{ "type" => "text", "text" => "When I let go, I think more clearly." }] }
+    ] }
+    chapter = Struct.new(:tiptap_json).new(doc)
+    quote = "LET GO AND LET GOD\n... praying only for knowledge of His will.\nTWELVE STEPS AND TWELVE TRADITIONS, p. 96\nWhen I let go"
+    h = Struct.new(:chapter, :quote, :selector).new(chapter, quote, { "position" => { "start" => 11 } })
+    assert_equal({ "LET GO AND LET GOD" => :title, "... praying only for knowledge of His will." => :italic,
+                   "TWELVE STEPS AND TWELVE TRADITIONS, p. 96" => :caps, "When I let go" => :body }, QuoteCard.formats_for(h))
+
+    # Plain paragraphs keep the usual quote look
+    plain = Struct.new(:chapter, :quote, :selector).new(chapter, "When I let go", { "position" => { "start" => 0 } })
+    assert_equal({}, QuoteCard.formats_for(plain))
+
+    card = QuoteCard.new(quote: quote, formats: QuoteCard.formats_for(h), look: "paper", size: "square")
+    assert_equal "LET GO AND LET GOD", card.send(:quoted, "LET GO AND LET GOD", first: true, last: false, whole: true), "no quote marks around a heading"
+    assert File.exist?(card.path)
+  end
 end

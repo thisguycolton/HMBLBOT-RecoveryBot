@@ -18,14 +18,19 @@
 # GIF) that turns its pages: the quote in a few pages at an easy size, the note and where it's
 # from on the last. `still: true` always makes one picture, cut where it runs out of room
 # (link previews, which show a still, and "Copy picture", since a clipboard takes no GIFs).
+#
+# Its words keep their paragraphs (a daily reading's date, title, quote, where it's from and
+# its body each on their own, with a little room between), and pages turn between paragraphs
+# where they can.
 class QuoteCard
-  VERSION = 2
+  VERSION = 5
   LOOKS = %w[paper marker night sunrise].freeze
   SIZES = { "wide" => [1200, 630], "square" => [1080, 1080], "story" => [1080, 1920] }.freeze
   ASSETS = ShareCard::ASSETS
   FONTS = ShareCard::FONTS.merge(
     serif: ASSETS.join("Lora_500MediumItalic.ttf").to_s,
     serif_bold: ASSETS.join("Lora_600SemiBold.ttf").to_s,
+    serif_upright: ASSETS.join("Lora_400Regular.ttf").to_s,
     hand: ASSETS.join("Caveat_600SemiBold.ttf").to_s
   )
   QUOTE_MAX = 420      # a still picture's words
@@ -42,7 +47,8 @@ class QuoteCard
   attr_reader :look, :size, :quote, :long, :note, :source, :by, :color, :kind, :still
 
   # kind: :highlight (a quote, maybe with its note) or :note (their own words)
-  def initialize(quote:, kind: :highlight, note: nil, source: nil, by: nil, color: nil, look: "paper", size: "wide", still: false)
+  # formats: { paragraph => :title, :subhead, :italic, :caps or :body }, how the reading set them
+  def initialize(quote:, kind: :highlight, note: nil, source: nil, by: nil, color: nil, look: "paper", size: "wide", still: false, formats: nil)
     @kind = kind.to_sym
     @look = LOOKS.include?(look.to_s) ? look.to_s : LOOKS.first
     @size = SIZES.key?(size.to_s) ? size.to_s : "wide"
@@ -53,14 +59,86 @@ class QuoteCard
     @source = clean(source).truncate(90).presence
     @by = clean(by).truncate(40).presence
     @color = HIGHLIGHT_COLORS[color.to_s] || (color.to_s.match?(/\A#\h{6}\z/) ? color.to_s : HIGHLIGHT_COLORS["yellow"])
+    @given_formats = (formats || {}).to_h { |words, f| [clean(words), f.to_sym] }.reject { |words, _| words.empty? }
   end
 
   # A highlight's picture. `note:` false leaves its note out, `name:` true puts their first
   # name on it. A note with blocked words in it (from before the filter) is always left out.
   def self.highlight(h, look: nil, size: nil, note: true, name: false, still: false)
     words = note && h.note.present? && !BlockedLanguage.found?(h.note) ? plain(h.note) : nil
-    new(kind: :highlight, quote: h.quote, note: words, source: "#{h.chapter.book.title} · #{h.chapter.title}",
+    new(kind: :highlight, quote: h.quote, note: words, source: "#{h.chapter.book.title} · #{h.chapter.title}", formats: formats_for(h),
         by: (h.user.display_name.to_s.split.first if name), color: h.style.is_a?(Hash) ? h.style["color"] : nil, look: look, size: size, still: still)
+  end
+
+  # A short line mostly in capitals ("TWELVE STEPS AND TWELVE TRADITIONS, p. 96")
+  def self.caps?(words)
+    letters = words.scan(/[[:alpha:]]/)
+    words.length < 90 && letters.size >= 4 && letters.count { |l| l == l.upcase } >= letters.size * 0.85
+  end
+
+  # How the chapter set the highlighted paragraphs: { paragraph => :title (a big heading),
+  # :subhead (a small one), :italic, :caps (a short line in capitals) or :body }. Empty when
+  # it's all plain paragraphs, which keep the usual quote look. The chapter's words are laid
+  # end to end the way the reader does when it saves a highlight (ProseMirror's textBetween
+  # with "\n" between blocks and for line breaks), so the highlight's offsets point into them.
+  def self.formats_for(h)
+    doc = h.chapter&.tiptap_json
+    return {} unless doc.is_a?(Hash) && doc["content"].is_a?(Array)
+
+    text = +""
+    blocks = [] # [from, to, kind]
+    italics = [] # [from, to]
+    separated = true
+    visit = lambda do |node|
+      next unless node.is_a?(Hash)
+
+      if node["type"] == "text"
+        t = node["text"].to_s
+        italics << [text.length, text.length + t.length] if Array(node["marks"]).any? { |m| m.is_a?(Hash) && m["type"] == "italic" }
+        text << t
+        separated = false
+      elsif %w[hardBreak image horizontalRule].include?(node["type"]) || (!node["content"].is_a?(Array) && !%w[paragraph heading codeBlock].include?(node["type"]))
+        text << "\n"
+        separated = false
+      else
+        unless separated
+          text << "\n"
+          separated = true
+        end
+        from = text.length
+        Array(node["content"]).each { |child| visit.(child) }
+        if %w[heading paragraph].include?(node["type"])
+          level = node.dig("attrs", "level").to_i
+          blocks << [from, text.length, node["type"] == "heading" ? (level <= 2 ? :title : :subhead) : nil]
+        end
+      end
+    end
+    doc["content"].each { |n| visit.(n) }
+
+    exact = h.quote
+    start = h.selector.dig("position", "start")
+    start = text.index(exact) unless start.is_a?(Integer) && text[start, exact.length] == exact
+    return {} if start.nil? || exact.empty?
+
+    stop = start + exact.length
+    formats = {}
+    blocks.each do |from, to, heading|
+      a, b = [from, start].max, [to, stop].min
+      next if a >= b
+
+      italic = italics.sum { |i, j| [[j, b].min - [i, a].max, 0].max }
+      text[a...b].split("\n").each do |line|
+        words = line.gsub(/[^[:print:]]/, " ").squeeze(" ").strip
+        next if words.empty?
+
+        formats[words] = heading ||
+                         if italic > (b - a) * 0.6 then :italic
+                         elsif caps?(words) then :caps
+                         else :body
+                         end
+      end
+    end
+    formats.values.all?(:body) ? {} : formats
   end
 
   # A note's picture: its words (no pictures, links or chips)
@@ -83,7 +161,7 @@ class QuoteCard
   def height = SIZES[size][1]
 
   def key
-    Digest::SHA256.hexdigest(["quote", VERSION, kind, look, size, still ? quote : long, still, note, source, by, color].to_json).first(32)
+    Digest::SHA256.hexdigest(["quote", VERSION, kind, look, size, still ? quote : long, still, note, source, by, color, @given_formats].to_json).first(32)
   end
 
   def filename
@@ -136,8 +214,8 @@ class QuoteCard
   end
 
   # One moving picture's page: part of the quote, or the note on its own (`quote` "")
-  # `cont`: it starts mid-sentence
-  Page = Struct.new(:quote, :note, :first, :last, :cont, keyword_init: true)
+  # `cont`: it starts mid-sentence; `whole`: it ends where a paragraph does
+  Page = Struct.new(:quote, :note, :first, :last, :cont, :whole, keyword_init: true)
 
   # Its pages: the whole quote on one when it fits at a size people can read, otherwise a
   # few at PAGE_SIZE, broken between sentences (or words, for a very long one), the note
@@ -171,40 +249,105 @@ class QuoteCard
                 Dir.glob(ShareCard::DIR.join("#{key}-*.gif").to_s).first&.then { |f| Pathname(f) }
   end
 
-  def measure(value, font:, size:, width:)
-    out, err, status = Open3.capture3(*ShareCard.magick, "-size", "#{width}x", "-font", FONTS[font], "-pointsize", size.to_s,
-                                      "-interline-spacing", spacing(font, size).to_s, caption(italic?(font) ? "#{value}\u00A0" : value), "-format", "%h", "info:")
+  # How tall words come out, each paragraph wrapped on its own and a para_gap between them.
+  # `quote: true`: set the way the reading set them (see #parts)
+  def measure(value, font:, size:, width:, quote: false)
+    list = parts(value, font: font, size: size, quote: quote).presence || [["", { font: font, size: size, kern: 0 }]]
+    args = list.flat_map do |p, st|
+      ["-font", FONTS[st[:font]], "-pointsize", st[:size].to_s, "-kerning", st[:kern].to_s,
+       "-interline-spacing", spacing(st[:font], st[:size]).to_s, caption(italic?(st[:font]) ? "#{p}\u00A0" : p)]
+    end
+    out, err, status = Open3.capture3(*ShareCard.magick, "-size", "#{width}x", *args, "-format", "%h\n", "info:")
     # ImageMagick 6.9.11 (Debian's, on the server) won't lay out a caption that comes out
     # very tall (over about 2,000 pixels) and says "width or height exceeds limit": that's
     # just too big
     return TOO_TALL if !status.success? && err.include?("exceeds limit")
     raise ShareCard::Failed, err.to_s.first(500) unless status.success?
 
-    out.to_i
+    out.split.sum(&:to_i) + ((list.size - 1) * para_gap(size))
+  end
+
+  # Its paragraphs: lines with words on them
+  def paragraphs(value) = value.to_s.split(/\n+/).map(&:strip).reject(&:empty?)
+
+  # The room between two paragraphs: about half a line
+  def para_gap(size) = (size * 0.55).round
+
+  # Each paragraph and how it's set: [words, { font:, size:, color:, kern:, under: }]. The
+  # quote's paragraphs (`quote: true`) keep the reading's own look when we know it: its
+  # headings bigger and bold, its italics in italics, a small capitals line like where it's
+  # from small and spaced out, and the rest upright.
+  def parts(value, font:, size:, color: nil, under: nil, quote: false)
+    paragraphs(value).map do |p|
+      st = { font: font, size: size, color: color, kern: 0, under: under }
+      [p, quote ? st.merge(formatted(format_of(p), size)) : st]
+    end
+  end
+
+  def formatted(kind, q)
+    serif = %w[paper night].include?(look)
+    case kind
+    when :title then { font: serif ? :serif_bold : :bold, size: (q * 1.15).round }
+    when :subhead then { font: :semibold, size: (q * 0.6).round, kern: (q * 0.1).round, color: style[:source_color], under: nil }
+    when :italic then { font: :serif, size: (q * 0.92).round }
+    when :caps then { font: :semibold, size: (q * 0.5).round, kern: (q * 0.06).round, color: style[:source_color], under: nil }
+    when :body then { font: serif ? :serif_upright : style[:quote_font], size: (q * 0.88).round }
+    else {}
+    end
+  end
+
+  # How the reading set this paragraph (or the part of one a page has), or nil when we don't know
+  def format_of(para)
+    return nil if formats.empty?
+
+    words = para.sub(/\A[“…]+/, "").sub(/[”…]+\z/, "")
+    formats[words] || formats.find { |t, _| t.include?(words) }&.last || :body
+  end
+
+  # The reading's paragraphs and how each was set: from the chapter (QuoteCard.highlight), or
+  # for a daily reading we know nothing about, its date and title
+  def formats
+    @formats ||= if @given_formats.present? then @given_formats
+    elsif reading?
+      list = paragraphs(long)
+      list.each_with_index.to_h do |p, i|
+        [p, if i.zero? then :subhead
+            elsif i == 1 && self.class.caps?(p) then :title
+            elsif self.class.caps?(p) then :caps
+            else :body
+            end]
+      end
+    else {}
+    end
   end
 
   # About how tall wrapped words come out, without asking ImageMagick to wrap them (which
   # takes it longer the longer they are): each word's width is measured once, at 100 points,
   # and the lines are wrapped here a little narrower than the real ones, so the guess never
   # comes out shorter than the real thing
-  def estimate(value, font:, size:, width:)
-    m = metrics(font, value)
+  def estimate(value, font:, size:, width:, quote: false)
+    list = parts(value, font: font, size: size, quote: quote)
+    return estimate_one("", font, size, 0, width) if list.empty?
+
+    list.sum { |p, st| estimate_one(p, st[:font], st[:size], st[:kern], width) } + ((list.size - 1) * para_gap(size))
+  end
+
+  # One paragraph's height
+  def estimate_one(para, font, size, kern, width)
+    m = metrics(font, para)
     scale = size / 100.0
     limit = width * 0.95 / scale
-    lines = value.split("\n").sum do |para|
-      count = 1
-      line = nil
-      para.split(/ +/).each do |word|
-        w = m[:words][word] || (m[:em] * word.length)
-        count += (w / limit).floor if w > limit
-        if line.nil? then line = w
-        elsif line + m[:space] + w <= limit then line += m[:space] + w
-        else
-          count += 1
-          line = w
-        end
+    lines = 1
+    line = nil
+    para.split(/ +/).each do |word|
+      w = (m[:words][word] || (m[:em] * word.length)) + (kern / scale * word.length)
+      lines += (w / limit).floor if w > limit
+      if line.nil? then line = w
+      elsif line + m[:space] + w <= limit then line += m[:space] + w
+      else
+        lines += 1
+        line = w
       end
-      count
     end
     ((m[:line] + ((lines - 1) * m[:step])) * scale).ceil
   end
@@ -236,14 +379,22 @@ class QuoteCard
   # Text for label: and caption:, which read "@file" and expand "%x" and "\n" otherwise
   def escape(value) = value.gsub('\\') { '\\\\' }.gsub('%', '%%').sub(/\A@/) { '\\@' }
 
-  # One block of wrapped text laid on the canvas at x,y. `under` paints each line's
+  # One block of wrapped text laid on the canvas at x,y, each paragraph wrapped on its own
+  # and stacked with a para_gap between them, cut to `height`. `under` paints each line's
   # background (a highlighter). Left-aligned text goes without -gravity: with NorthWest,
   # ImageMagick 6 paints each line's background as wide as the line before it.
-  def block(value, font:, size:, color:, width:, height:, x:, y:, under: nil)
-    args = ["(", "-size", "#{width}x#{height}", "-background", "none", "-fill", color, "-font", FONTS[font],
-            "-pointsize", size.to_s, "-interline-spacing", spacing(font, size).to_s, "-undercolor", under || "none"]
+  def block(value, font:, size:, color:, width:, height:, x:, y:, under: nil, quote: false)
+    args = ["(", "-background", "none"]
     args += wide? ? ["+gravity"] : ["-gravity", "North"]
-    args + [caption(italic?(font) ? "#{value}\u00A0" : value), ")", "-gravity", "NorthWest", "-geometry", "+#{x}+#{y}", "-composite"]
+    parts(value, font: font, size: size, color: color, under: under, quote: quote).each_with_index do |(p, st), i|
+      args += ["-size", "#{width}x#{para_gap(size)}", "xc:none"] if i.positive?
+      args += ["-fill", st[:color] || color, "-font", FONTS[st[:font]], "-pointsize", st[:size].to_s, "-kerning", st[:kern].to_s,
+               "-interline-spacing", spacing(st[:font], st[:size]).to_s, "-undercolor", st[:under] || "none",
+               "-size", "#{width}x", caption(italic?(st[:font]) ? "#{p}\u00A0" : p)]
+    end
+    # Settings after the captions are drawn: they shape only the stack
+    args + ["-undercolor", "none", "-gravity", "NorthWest", "-append", "-extent", "#{width}x#{height}",
+            ")", "-gravity", "NorthWest", "-geometry", "+#{x}+#{y}", "-composite"]
   end
 
   # Italics lean past the end of their line; a space after keeps the last letter whole
@@ -281,7 +432,7 @@ class QuoteCard
     q_size = big
     q_h = n_size = n_h = 0
     loop do
-      q_h = estimate(words, font: s[:quote_font], size: q_size, width: text_width)
+      q_h = estimate(words, font: s[:quote_font], size: q_size, width: text_width, quote: true)
       n_size = note_size(q_size)
       n_h = note ? estimate(note, font: s[:note_font], size: n_size, width: text_width) : 0
       break if total(mark_h, q_h, n_h, meta_h) <= room || q_size <= 26
@@ -289,7 +440,7 @@ class QuoteCard
       q_size = (q_size * 0.9).floor
     end
     # The real heights, at the size the guess picked
-    q_h = measure(words, font: s[:quote_font], size: q_size, width: text_width)
+    q_h = measure(words, font: s[:quote_font], size: q_size, width: text_width, quote: true)
     n_h = note ? measure(note, font: s[:note_font], size: n_size, width: text_width) : 0
     # Still too long at the smallest size: cut where the room ends
     q_h = [q_h, room - total(mark_h, 0, n_h, meta_h)].min.clamp(q_size * 2, room)
@@ -300,8 +451,8 @@ class QuoteCard
   def page_command(page, i)
     s = style
     q_size = PAGE_SIZE[size]
-    words = page.quote.empty? ? nil : quoted(page.quote, first: page.first, last: page.last, cont: page.cont)
-    q_h = words ? measure(words, font: s[:quote_font], size: q_size, width: text_width) : 0
+    words = page.quote.empty? ? nil : quoted(page.quote, first: page.first, last: page.last, cont: page.cont, whole: page.whole)
+    q_h = words ? measure(words, font: s[:quote_font], size: q_size, width: text_width, quote: true) : 0
     n_size = note_size(q_size)
     n_h = page.note ? measure(page.note, font: s[:note_font], size: n_size, width: text_width) : 0
     q_h = [q_h, room - total(mark_h, 0, n_h, meta_h)].min if words
@@ -319,7 +470,7 @@ class QuoteCard
     end
     if words
       args += block(words, font: s[:quote_font], size: q_size, color: s[:quote_color], width: text_width, height: q_h,
-                           x: x_for, y: y, under: s[:under])
+                           x: x_for, y: y, under: s[:under], quote: true)
       y += q_h
     end
     if note
@@ -335,13 +486,21 @@ class QuoteCard
   end
 
   # A highlight's words in quote marks. A page that stops mid-sentence ends with "…" and
-  # the next starts with one; between sentences the dots say there's more.
-  def quoted(text, first: true, last: true, cont: !first)
-    open, close = kind == :highlight ? ["“", "”"] : ["", ""]
+  # the next starts with one; between sentences or paragraphs (`whole`) the dots say there's more.
+  def quoted(text, first: true, last: true, cont: !first, whole: false)
+    open, close = kind == :highlight && !reading? && !formats.value?(:title) && !formats.value?(:subhead) ? ["“", "”"] : ["", ""]
     start = first ? open : (cont ? "…" : "")
-    stop = last ? close : (text.match?(/[.!?…]["”’)]?\z/) ? "" : "…")
+    if last then stop = close
+    elsif whole || text.match?(/[.!?…]["”’)]?\z/) then stop = ""
+    else
+      text = text.sub(/[,;:—–]\z/, "")
+      stop = "…"
+    end
     "#{start}#{text}#{stop}"
   end
+
+  # A daily reading (it starts with its date, like "NOVEMBER 7"): shown as it is, no quote marks
+  def reading? = long.match?(/\A(#{Date::MONTHNAMES.compact.join('|')}) \d{1,2}\b/i)
 
   def note_size(q_size) = (q_size * (style[:note_font] == :hand ? 0.8 : 0.58)).round.clamp(26, 64)
   def meta_line = [source, (by && (kind == :highlight ? "Highlighted by #{by}" : "— #{by}"))].compact.join("  ·  ").presence
@@ -352,41 +511,62 @@ class QuoteCard
 
   # Whether these words (and note) fit one picture at this size, with where it's from
   def fits?(text, font_size:, note: nil, first: true, last: true)
-    q_h = text.empty? ? 0 : estimate(quoted(text, first: first, last: last), font: style[:quote_font], size: font_size, width: text_width)
+    q_h = text.empty? ? 0 : estimate(quoted(text, first: first, last: last), font: style[:quote_font], size: font_size, width: text_width, quote: true)
     n_h = note ? estimate(note, font: style[:note_font], size: note_size(font_size), width: text_width) : 0
     total(mark_h, q_h, n_h, meta_h) <= room
   end
 
-  # The long words in pages that each fit at PAGE_SIZE: whole sentences while they fit, a
-  # sentence too long for a page broken between words. Past PAGES_MAX it's cut with "…".
+  # The long words in pages that each fit at PAGE_SIZE. A page ends between paragraphs when
+  # the next one won't fit and the page is already half full; otherwise whole sentences while
+  # they fit (again breaking early only on a half-full page), and a sentence too long for
+  # what's left broken between words. Past PAGES_MAX it's cut with "…".
   def paginate(words)
     font_size = PAGE_SIZE[size]
-    queue = words.split(/(?<=[.!?…;:])\s+/)
+    # [sentence, whether it starts a paragraph, its paragraph]
+    queue = paragraphs(words).flat_map do |para|
+      para.split(/(?<=[.!?…;:])\s+/).each_with_index.map { |sentence, i| [sentence, i.zero?, para] }
+    end
     chunks = []
+    ends = [] # whether each page ends where a paragraph does
+    close = lambda do |text|
+      chunks << text
+      ends << (queue.empty? || queue.first[1])
+    end
     current = nil
+    join = ->(unit) { current ? "#{current}#{unit[1] ? "\n" : " "}#{unit[0]}" : unit[0] }
     while (unit = queue.shift)
       if chunks.size >= PAGES_MAX
         queue.unshift(unit)
         break
       end
-      candidate = [current, unit].compact.join(" ")
-      if fits?(candidate, font_size: font_size, first: chunks.empty?, last: false)
-        current = candidate
-      elsif current
-        chunks << current
-        current = nil
+      first = chunks.empty?
+      # A new paragraph that won't fit here starts the next page, if this one has enough on it
+      if current && unit[1] && !fits?(join.([unit[2], true]), font_size: font_size, first: first, last: false) && half_full?(current, font_size, first: first)
         queue.unshift(unit)
+        close.(current)
+        current = nil
+        next
+      end
+      candidate = join.(unit)
+      if fits?(candidate, font_size: font_size, first: first, last: false)
+        current = candidate
+      elsif current && half_full?(current, font_size, first: first)
+        queue.unshift(unit)
+        close.(current)
+        current = nil
       else
-        head, rest = most_words(unit, font_size, first: chunks.empty?)
-        chunks << head
-        queue.unshift(rest) if rest.present?
+        head, rest = most_words(unit[0], font_size, first: first, before: current && "#{current}#{unit[1] ? "\n" : " "}")
+        queue.unshift([rest, head.empty? && unit[1], unit[2]]) if rest.present?
+        close.(head.empty? ? current : join.([head, unit[1]]))
+        current = nil
       end
     end
-    chunks << current if current && chunks.size < PAGES_MAX
+    close.(current) if current && chunks.size < PAGES_MAX
     chunks[-1] = "#{chunks[-1].sub(/[[:punct:]]*\z/, '')}…" if queue.any? || (current && !chunks.include?(current))
 
     pages = chunks.each_with_index.map do |c, i|
-      Page.new(quote: c, first: i.zero?, last: i == chunks.size - 1, cont: i.positive? && !chunks[i - 1].match?(/[.!?…]["”’)]?\z/))
+      Page.new(quote: c, first: i.zero?, last: i == chunks.size - 1, whole: ends[i],
+               cont: i.positive? && !ends[i - 1] && !chunks[i - 1].match?(/[.!?…]["”’)]?\z/))
     end
     if note
       if fits?(pages.last.quote, font_size: font_size, note: note, first: pages.size == 1, last: true)
@@ -398,15 +578,26 @@ class QuoteCard
     pages
   end
 
-  # As many of a sentence's words as fit a page, and the rest
-  def most_words(sentence, font_size, first:)
+  # As many of a sentence's words as fit a page (after `before`, what's on it already), and
+  # the rest. With nothing before it, at least one word.
+  def most_words(sentence, font_size, first:, before: nil)
     list = sentence.split
-    lo, hi = 1, list.size
+    lo, hi = (before ? 0 : 1), list.size
     while lo < hi
       mid = (lo + hi + 1) / 2
-      fits?(list.first(mid).join(" "), font_size: font_size, first: first, last: false) ? lo = mid : hi = mid - 1
+      fits?("#{before}#{list.first(mid).join(' ')}", font_size: font_size, first: first, last: false) ? lo = mid : hi = mid - 1
+    end
+    # Cut after a comma, when there's one late enough, rather than mid-phrase
+    if lo < list.size && (comma = (lo - 1).downto(lo / 2).find { |i| i.positive? && list[i - 1].match?(/[,;:—–]\z/) })
+      lo = comma
     end
     [list.first(lo).join(" "), list.drop(lo).join(" ")]
+  end
+
+  # Whether a page already has at least half its room filled
+  def half_full?(text, font_size, first:)
+    q_h = estimate(quoted(text, first: first, last: false), font: style[:quote_font], size: font_size, width: text_width, quote: true)
+    total(mark_h, q_h, 0, meta_h) >= room * 0.5
   end
 
   # How long a page shows, in hundredths of a second: time to read it, a little more on the last
