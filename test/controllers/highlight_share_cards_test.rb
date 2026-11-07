@@ -197,4 +197,19 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     Open3.stub(:capture3, fake) { assert File.size(card.path).positive? }
     assert_equal [1080, 1920], png_size(File.binread(card.path))
   end
+
+  test "a daily reading keeps its paragraphs, and its pages turn between them" do
+    body = "When I let go, I think more clearly and wisely. " * 12
+    reading = "NOVEMBER 7\nLET GO AND LET GOD\n… praying only for knowledge of His will for us.\nTWELVE STEPS AND TWELVE TRADITIONS, p. 96\n#{body.strip}\n#{body.strip}"
+    card = QuoteCard.new(quote: reading, look: "night", size: "square")
+    pages = card.pages
+    assert_operator pages.size, :>, 1
+    assert_equal "NOVEMBER 7\nLET GO AND LET GOD\n… praying only for knowledge of His will for us.\nTWELVE STEPS AND TWELVE TRADITIONS, p. 96", pages.first.quote
+    assert pages.first.whole, "the first page ends where a paragraph does"
+    assert_not pages.second.cont, "so the next one doesn't start with …"
+    # Put back together, the pages are the reading, line breaks and all
+    rejoined = pages.each_with_index.map { |pg, i| i.zero? ? pg.quote : "#{pages[i - 1].whole ? "\n" : ' '}#{pg.quote}" }.join
+    assert_equal reading, rejoined
+    assert_match(/\AGIF/, File.binread(card.path).first(3))
+  end
 end
