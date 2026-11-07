@@ -1,8 +1,8 @@
 # Polls (app/models/poll.rb). Site admins, and a group's admins, record keepers and hosts, make
 # them; the people running a poll edit, close and reopen it; whoever its audience allows votes.
 class Api::PollsController < ApplicationController
-  before_action :authenticate_user!, only: %i[index create update destroy close reopen remove_ballot groups]
-  before_action :set_poll, except: %i[index create groups]
+  before_action :authenticate_user!, only: %i[index create update destroy close reopen remove_ballot groups subject]
+  before_action :set_poll, except: %i[index create groups subject]
   before_action :require_manager, only: %i[update destroy close reopen remove_ballot]
 
   # GET /api/polls -> polls you made, or run for a group
@@ -22,6 +22,17 @@ class Api::PollsController < ApplicationController
     render json: { site_admin: current_user.suite_admin?, groups: creatable_groups.map { |g| { id: g.id, name: g.title } } }
   end
 
+  # GET /api/polls/subject?type=Reading&id=12 -> what a new poll would be attached to
+  def subject
+    subject = Poll.find_subject(params[:type], params[:id])
+    return render(json: { error: "That isn't there anymore." }, status: :not_found) unless subject
+    return render(json: { error: "You can't add a poll to that." }, status: :forbidden) unless Poll.attachable_to?(subject, current_user)
+
+    title = subject.is_a?(Reading) ? (subject.title.presence || subject.meetingName) : subject.title
+    render json: { type: subject.class.name, id: subject.id, title: title, group: subject.group && { id: subject.group.id, name: subject.group.title },
+                   path: subject.is_a?(Reading) ? "/readings/#{subject.id}" : "/groups/#{subject.group.slug}/conscience/decisions?open=#{subject.id}" }
+  end
+
   # GET /api/polls/:token
   def show
     render json: poll_json
@@ -29,6 +40,16 @@ class Api::PollsController < ApplicationController
 
   # POST /api/polls
   def create
+    if params.dig(:poll, :subject_type).present?
+      subject = Poll.find_subject(params[:poll][:subject_type], params[:poll][:subject_id])
+      unless Poll.attachable_to?(subject, current_user)
+        return render(json: { error: "You can't add a poll to that." }, status: :forbidden)
+      end
+
+      @poll = Poll.new(user: current_user, group: subject.group, subject: subject)
+      return save_poll(status: :created)
+    end
+
     group = params.dig(:poll, :group_id).presence && Group.find_by(id: params[:poll][:group_id])
     unless Poll.creatable_by?(current_user, group)
       return render(json: { error: group ? "You can't make polls for that group." : "Pick one of your groups for this poll." }, status: :forbidden)

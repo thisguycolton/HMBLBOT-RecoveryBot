@@ -7,6 +7,8 @@ class Reading < ApplicationRecord
   belongs_to :group, optional: true
   has_many :reading_tags, dependent: :destroy
   has_many :tags, -> { order(:title) }, through: :reading_tags
+  # Polls shown with it (Poll#subject); a poll outlives the reading
+  has_many :polls, -> { order(:created_at) }, as: :subject, dependent: :nullify
 
   # Publishing scopes
   # Visibility is computed from published_at at query time, so a scheduled reading

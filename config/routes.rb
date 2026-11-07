@@ -313,6 +313,7 @@ Rails.application.routes.draw do
     end
   end
   get "polls/groups", to: "polls#groups"
+  get "polls/subject", to: "polls#subject"
   resources :polls, only: %i[index show create update destroy], param: :token do
     member do
       post :close

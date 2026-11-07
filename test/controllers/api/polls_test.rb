@@ -172,3 +172,67 @@ class Api::PollsTest < ActionDispatch::IntegrationTest
     assert_redirected_to "/users/sign_in"
   end
 end
+
+class Api::PollSubjectsTest < ActionDispatch::IntegrationTest
+  include Devise::Test::IntegrationHelpers
+
+  self.fixture_table_names = []
+
+  setup do
+    Rails.application.reload_routes_unless_loaded
+    @group = Group.create!(title: "Acid Test", time_zone: "America/Chicago")
+    @keeper = User.create!(email: "keeper@example.com", name: "Kay K.", password: "password123", confirmed: true)
+    @member = User.create!(email: "member@example.com", name: "Mo M.", password: "password123", confirmed: true)
+    @group.memberships.create!(user: @keeper, role: "member", can_keep_records: true)
+    @group.memberships.create!(user: @member, role: "member")
+    @motion = @group.motions.create!(title: "Buy new literature", status: "proposed", created_by: @keeper)
+    @reading = Reading.create!(title: "Acceptance", user: @member, group: nil, meetingDate: Date.current)
+  end
+
+  def attach(type, id, **extra)
+    post "/api/polls", params: { poll: { question: "Q?", subject_type: type, subject_id: id, audience: "members",
+                                         options: [{ label: "Yes" }, { label: "No" }, { label: "Abstain" }] }.merge(extra) }, as: :json
+  end
+
+  test "record keepers take a poll on a motion; it shows with the motion and its counts can go into the record" do
+    sign_in @member
+    attach("Motion", @motion.id)
+    assert_response :forbidden
+    sign_out @member
+
+    sign_in @keeper
+    get "/api/polls/subject", params: { type: "Motion", id: @motion.id }
+    assert_equal "Buy new literature", response.parsed_body["title"]
+    attach("Motion", @motion.id)
+    assert_response :created, response.body
+    poll = Poll.find_by!(token: response.parsed_body["token"])
+    assert_equal @group, poll.group
+    assert_equal @motion, poll.subject
+
+    get "/api/groups/#{@group.slug}/motions", as: :json
+    assert_equal [poll.token], response.parsed_body["motions"].find { |m| m["id"] == @motion.id }["polls"]
+    sign_out @keeper
+
+    sign_in @member
+    put "/api/polls/#{poll.token}/ballot", params: { option_ids: [poll.options.find_by!(label: "Yes").id] }, as: :json
+    assert_response :success
+    assert_equal({ "votes_for" => 1, "votes_against" => 0, "abstentions" => 0 }, response.parsed_body.dig("subject", "counts"))
+  end
+
+  test "a reading's owner adds a poll to it, even without a group; others can't" do
+    sign_in @keeper
+    attach("Reading", @reading.id, audience: "anyone")
+    assert_response :forbidden
+    sign_out @keeper
+
+    sign_in @member
+    attach("Reading", @reading.id, audience: "anyone")
+    assert_response :created, response.body
+    poll = Poll.find_by!(token: response.parsed_body["token"])
+    assert_equal [poll], @reading.polls.to_a
+    assert poll.manager?(@member)
+
+    get "/readings/#{@reading.id}"
+    assert_includes response.body, poll.token
+  end
+end

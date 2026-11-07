@@ -68,6 +68,12 @@ export default function PollPage() {
         </ShellPanel>
       </Shell>
 
+      {poll.subject?.path && (
+        <a href={poll.subject.path} className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline">
+          {poll.subject.type === "Motion" ? "Open the motion" : "Open the reading"}: {poll.subject.title}
+        </a>
+      )}
+
       {poll.can_manage && (
         <div className="flex flex-wrap gap-2">
           <Link to={`/polls/${token}/edit`} className={buttonClass}><Pencil className="size-4" /> Edit</Link>

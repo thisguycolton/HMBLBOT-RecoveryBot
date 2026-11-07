@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ChevronDown, Download, Globe, MessagesSquare, Pencil, Plus, Regex, Search, Trash2, Upload, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, ClipboardCheck, Download, Globe, MessagesSquare, Pencil, Plus, Regex, Search, Trash2, Upload, Vote, X } from "lucide-react";
+import EmbeddedPoll from "../../polls/EmbeddedPoll";
+import { showToast } from "../../../lib/toast";
 import Markdown from "../../book/Markdown";
 import { inputClass, selectClass } from "../../ui/styles";
 import { api } from "../lib";
@@ -120,9 +122,21 @@ const paneLabel = "mb-1 text-xs font-semibold uppercase tracking-wide text-slate
 const inlineLink = "!bg-transparent p-0 text-left text-accent hover:underline";
 
 // The open decision, in the side pane: everything about it, then what else it might be related to
-function DecisionDetail({ slug, motion: m, parent, thread, canEdit, canDelete, onEdit, onDelete, onOpen, onClose, finder }) {
+function DecisionDetail({ slug, motion: m, parent, thread, canEdit, canDelete, onEdit, onDelete, onOpen, onClose, finder, onChanged }) {
   const replaced = isReplaced(m);
   const counts = countLabel(m);
+  // A closed Yes / No / Abstain poll's votes go into the record as the count
+  const recordCounts = async (c) => {
+    const said = `${c.votes_for} for, ${c.votes_against} against${c.abstentions != null ? `, ${c.abstentions} abstaining` : ""}`;
+    if (!window.confirm(`Record the count as ${said}?`)) return;
+    try {
+      await api(`/groups/${slug}/motions/${m.id}`, { method: "PATCH", body: { motion: { votes_for: c.votes_for, votes_against: c.votes_against, ...(c.abstentions != null ? { abstentions: c.abstentions } : {}) } } });
+      showToast("Count recorded.", { tone: "success" });
+      onChanged?.();
+    } catch (e) {
+      showToast(e.message, { tone: "error" });
+    }
+  };
   return (
     <div className="space-y-3">
       <Card className="overflow-hidden">
@@ -164,6 +178,18 @@ function DecisionDetail({ slug, motion: m, parent, thread, canEdit, canDelete, o
             <div className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide">Minority opinion</p>
               <Markdown source={m.minority_opinion} className="ev-md" />
+            </div>
+          )}
+          {(m.polls?.length > 0 || canEdit) && (
+            <div className="space-y-3">
+              {m.polls?.map((token) => (
+                <EmbeddedPoll key={token} token={token} footer={(poll) => canEdit && poll.closed && poll.subject?.counts && (
+                  <button type="button" onClick={() => recordCounts(poll.subject.counts)} className={quietButton}><ClipboardCheck className="size-4" /> Use these counts</button>
+                )} />
+              ))}
+              {canEdit && (
+                <a href={`/polls/new?motion=${m.id}`} className={`${quietButton} !inline-flex`}><Vote className="size-4" /> {m.polls?.length ? "Take another poll" : "Take a poll on this"}</a>
+              )}
             </div>
           )}
           {m.warnings?.length > 0 && (
@@ -486,7 +512,7 @@ export default function DecisionsView({ group }) {
             <DecisionsImport slug={slug} file={importing.file} preview={importing.preview} onDone={importDone} onCancel={() => setImporting(null)} />
           ) : editing ? form(editing === "new" ? null : editing) : current ? (
             <DecisionDetail slug={slug} motion={current} parent={index.byId.get(current.parent_id)} thread={currentThread}
-              canEdit={canEdit} canDelete={data.can_delete} onEdit={setEditing} onDelete={remove} onOpen={open} onClose={close} finder={finder} />
+              canEdit={canEdit} canDelete={data.can_delete} onEdit={setEditing} onDelete={remove} onOpen={open} onClose={close} finder={finder} onChanged={load} />
           ) : (
             <div className="rounded-2xl border-2 border-dashed border-neutral-200 p-10 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
               {openId ? "That decision isn't in the log, or you can't see it." : "Choose a decision to read it, see what it replaced, and find others that might be related."}

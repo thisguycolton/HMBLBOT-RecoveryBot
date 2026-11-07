@@ -61,8 +61,25 @@ class Poll < ApplicationRecord
   def manager?(someone)
     return false unless someone
     return true if someone.suite_admin? || user_id == someone.id
+    return true if subject.is_a?(Reading) && subject.user_id == someone.id
 
     !!group&.records_editable_by?(someone)
+  end
+
+  SUBJECT_TYPES = { "Reading" => Reading, "Motion" => Motion }.freeze
+  def self.find_subject(type, id) = SUBJECT_TYPES[type.to_s]&.find_by(id: id)
+
+  # Who can put a poll on a reading (its owner, or who can make polls for its group) or a
+  # motion (the group's record keepers)
+  def self.attachable_to?(subject, someone)
+    return false unless someone && subject
+    return true if someone.suite_admin?
+
+    case subject
+    when Reading then subject.user_id == someone.id || creatable_by?(someone, subject.group)
+    when Motion then subject.group.records_editable_by?(someone)
+    else false
+    end
   end
 
   # Who can make a poll for this group (or with no group: site admins)
@@ -100,6 +117,16 @@ class Poll < ApplicationRecord
     ballots.pluck(:option_ids).flatten.tally
   end
 
+  # For "Use these counts" on a motion: the Yes / No / Abstain answers' votes, by label
+  def motion_counts
+    tally = counts
+    find = ->(*words) { options.find { |o| words.include?(o.display_label.downcase.delete(".!")) } }
+    yes, no, abstain = find.("yes", "aye", "for", "in favor"), find.("no", "nay", "against", "opposed"), find.("abstain", "abstention", "abstentions")
+    return nil unless yes && no
+
+    { votes_for: tally[yes.id].to_i, votes_against: tally[no.id].to_i, abstentions: abstain ? tally[abstain.id].to_i : nil }
+  end
+
   def broadcast_change = PollChannel.broadcast_to(self, { changed: true })
 
   def as_api_json(viewer:, ballot:)
@@ -112,7 +139,7 @@ class Poll < ApplicationRecord
       max_choices: max_choices, audience: audience, results_visibility: results_visibility,
       voters_visibility: voters_visibility, closes_at: closes_at&.iso8601, closed: closed?,
       group: group && { name: group.title, slug: group.slug },
-      subject: subject_json,
+      subject: subject_json(show_results),
       ballots_count: ballots.size, show_results: show_results, show_voters: show_voters,
       options: options.map do |o|
         { id: o.id, label: o.display_label, count: show_results ? tally[o.id].to_i : nil,
@@ -124,10 +151,12 @@ class Poll < ApplicationRecord
 
   private
 
-  def subject_json
+  def subject_json(show_results)
     case subject
-    when Reading then { type: "Reading", title: subject.title, path: "/readings/#{subject.id}" }
-    when Motion then { type: "Motion", title: subject.title }
+    when Reading then { type: "Reading", id: subject.id, title: subject.title.presence || subject.meetingName, path: "/readings/#{subject.id}" }
+    when Motion
+      { type: "Motion", id: subject.id, title: subject.title, path: "/groups/#{subject.group.slug}/conscience/decisions?open=#{subject.id}",
+        counts: (motion_counts if show_results) }
     end
   end
 

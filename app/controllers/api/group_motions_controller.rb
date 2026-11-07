@@ -18,7 +18,7 @@ class Api::GroupMotionsController < ApplicationController
     scope = Motion.visible_to(@group, current_user)
     visible = scope.pluck(:id)
     @meetings = BusinessMeeting.visible_to(@group, current_user).pluck(:id)
-    motions = (params[:q].present? ? Motion.search(scope, params[:q]) : scope).includes(:supersedes, :parent, business_meeting: :group).newest_first.to_a
+    motions = (params[:q].present? ? Motion.search(scope, params[:q]) : scope).includes(:supersedes, :parent, :polls, business_meeting: :group).newest_first.to_a
     render json: { motions: motions.map { |m| m.as_api_json(replacers: replacers, visible: visible, meetings: @meetings, keeper: keeper?) },
                    can_edit: keeper?, can_delete: @group.manageable_by?(current_user) }.merge(MotionKinds.metadata)
   end

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowDown, ArrowUp, Plus, Vote, X } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
@@ -30,6 +30,11 @@ function Choice({ name, value, current, onChange, label, hint }) {
 // Making or editing a poll
 export default function PollForm() {
   const { token } = useParams();
+  const [search] = useSearchParams();
+  // /polls/new?reading=12 or ?motion=34: a poll that shows with that reading or motion
+  const subjectType = token ? null : search.get("reading") ? "Reading" : search.get("motion") ? "Motion" : null;
+  const subjectId = subjectType && search.get(subjectType.toLowerCase());
+  const [subject, setSubject] = useState(null);
   const navigate = useNavigate();
   const [groups, setGroups] = useState(null);
   const [error, setError] = useState(null);
@@ -40,7 +45,7 @@ export default function PollForm() {
     options: [blank(), blank()],
   });
   const [ballots, setBallots] = useState(0);
-  const [loaded, setLoaded] = useState(!token);
+  const [loaded, setLoaded] = useState(!token && !subjectType);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
   useEffect(() => {
@@ -48,6 +53,18 @@ export default function PollForm() {
       setGroups(g);
       if (!token && !g.site_admin && g.groups[0]) set({ group_id: String(g.groups[0].id) });
     }).catch((e) => setError(e.message));
+    if (subjectType) {
+      api(`/subject?type=${subjectType}&id=${encodeURIComponent(subjectId)}`).then((sub) => {
+        setSubject(sub);
+        set({
+          group_id: sub.group ? String(sub.group.id) : "",
+          ...(sub.type === "Motion"
+            ? { question: sub.title, audience: sub.group ? "members" : "signed_in", options: ["Yes", "No", "Abstain"].map((label) => ({ ...blank(), label })) }
+            : { audience: "anyone" }),
+        });
+        setLoaded(true);
+      }).catch((e) => setError(e.message));
+    }
     if (token) {
       api(`/${token}`).then((p) => {
         if (!p.can_manage) return setError("Only the people running this poll can edit it.");
@@ -66,7 +83,7 @@ export default function PollForm() {
 
   if (error) return <Message title="Couldn't open this" text={error} />;
   if (!groups || !loaded) return <Skeleton variant="page" />;
-  if (!token && !groups.site_admin && groups.groups.length === 0) {
+  if (!token && !subject && !groups.site_admin && groups.groups.length === 0) {
     return <Message title="Polls are made for a group" text="Group admins, record keepers and hosts can make polls for their group." />;
   }
 
@@ -96,12 +113,13 @@ export default function PollForm() {
           results_visibility: form.results_visibility, voters_visibility: form.voters_visibility,
           closes_at: form.closes_at ? new Date(form.closes_at).toISOString() : "",
           options: filled.map((o) => ({ id: o.id, label: o.label })),
-          ...(token ? {} : { group_id: form.group_id }),
+          ...(token ? {} : subject ? { subject_type: subject.type, subject_id: subject.id } : { group_id: form.group_id }),
         },
       };
       const poll = await api(token ? `/${token}` : "", { method: token ? "PATCH" : "POST", body });
       showToast(token ? "Poll saved." : "Poll made. Share the link!", { tone: "success" });
-      navigate(`/p/${poll.token}`);
+      if (subject) window.location.assign(subject.path);
+      else navigate(`/p/${poll.token}`);
     } catch (err) {
       showToast(err.message, { tone: "error" });
     } finally {
@@ -158,7 +176,11 @@ export default function PollForm() {
         </ShellPanel>
 
         <ShellPanel position="bottom" className="grid gap-4 p-4 sm:grid-cols-2">
-          {token ? (
+          {subject ? (
+            <p className="text-sm text-slate-600 dark:text-neutral-300 sm:col-span-2">
+              Shows with the {subject.type === "Motion" ? "motion" : "reading"} <strong>{subject.title}</strong>{subject.group ? <> ({subject.group.name})</> : null}
+            </p>
+          ) : token ? (
             form.group && <p className="text-sm text-slate-600 dark:text-neutral-300 sm:col-span-2">For <strong>{form.group.name}</strong></p>
           ) : (
             <label className="block sm:col-span-2">
@@ -199,7 +221,7 @@ export default function PollForm() {
       </Shell>
 
       <div className="flex justify-end gap-2">
-        <button type="button" className={buttonClass} onClick={() => navigate(token ? `/p/${token}` : "/polls")}>Cancel</button>
+        <button type="button" className={buttonClass} onClick={() => (subject ? window.location.assign(subject.path) : navigate(token ? `/p/${token}` : "/polls"))}>Cancel</button>
         <button type="submit" className={primaryClass} disabled={saving || filled.length < 2 || !form.question.trim()}>{saving ? "Saving…" : token ? "Save" : "Make poll"}</button>
       </div>
     </form>

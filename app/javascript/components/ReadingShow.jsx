@@ -8,9 +8,11 @@ import {
   MessageSquareQuote,
   MonitorPlay,
   Users,
+  Vote,
 } from "lucide-react";
 import ShareButton from "./share/ShareButton";
 import { isShareView } from "./shell/shareView";
+import EmbeddedPoll from "./polls/EmbeddedPoll";
 
 function hasMeaningfulContent(value) {
   if (value == null) return false;
@@ -395,6 +397,19 @@ const topicHtml = renderRichContent(topicSource);
               </div>
             )}
           </article>
+
+          {/* POLLS: voting and live results in place; on screen, with a big QR code */}
+          {(reading.polls?.length > 0 || (reading.can_add_poll && !share)) && (
+            <section className="mt-10 space-y-4">
+              {reading.polls?.map((token) => <EmbeddedPoll key={token} token={token} screen={share} />)}
+              {reading.can_add_poll && !share && (
+                <a href={`/polls/new?reading=${reading.id}`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-dashed border-stone-300 px-4 py-2.5 text-sm font-semibold !text-slate-700 hover:border-sky-500 hover:!text-sky-700 dark:border-neutral-600 dark:!text-neutral-200">
+                  <Vote size={18} /> {reading.polls?.length ? "Add another poll" : "Add a poll"}
+                </a>
+              )}
+            </section>
+          )}
 
           {/* TOPICS */}
           {hasTopics && (
