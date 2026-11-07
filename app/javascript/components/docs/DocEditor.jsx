@@ -304,7 +304,7 @@ function Editor({ initial }) {
           {settings}
         </div>
       </aside>
-      <Sheet open={settingsOpen} onClose={() => setSettingsOpen(false)} side="right" label="Page settings" className="!bg-white dark:!bg-neutral-900">
+      <Sheet open={settingsOpen} onClose={() => setSettingsOpen(false)} side="right" label="Page settings" className="!rounded-none !bg-white dark:!bg-neutral-900">
         <div className="h-full overflow-y-auto p-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
           <p className="mb-4 text-sm font-semibold text-slate-900 dark:text-white">Page settings</p>
           {settings}

@@ -60,7 +60,7 @@ export default function DocsApp({ editor }) {
           )}
         </div>
 
-        <Sheet open={!!browsing} onClose={() => setBrowsing(false)} side="left" label="Docs" className="!bg-neutral-50 dark:!bg-neutral-900">
+        <Sheet open={!!browsing} onClose={() => setBrowsing(false)} side="left" label="Docs" className="!rounded-none !bg-neutral-50 dark:!bg-neutral-900">
           <DocsNav inSheet searchFirst={browsing === "search"} />
         </Sheet>
       </div>
