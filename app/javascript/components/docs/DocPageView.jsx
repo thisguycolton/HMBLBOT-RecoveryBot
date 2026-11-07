@@ -124,7 +124,7 @@ export default function DocPageView({ alias }) {
       </article>
       {toc && (
         <aside className="hidden 2xl:block">
-          <div className="sticky top-[calc(var(--nav-h,4rem)+1.5rem)]">{toc}</div>
+          <div className="sticky top-10">{toc}</div>
         </aside>
       )}
     </div>
