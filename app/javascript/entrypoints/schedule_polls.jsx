@@ -11,6 +11,7 @@ import Layout from "../components/Layout";
 import PollsIndex from "../components/schedule_polls/PollsIndex";
 import PollForm from "../components/schedule_polls/PollForm";
 import PollPage from "../components/schedule_polls/PollPage";
+import { withScrollManager } from "../components/shell/ScrollManager";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
@@ -25,7 +26,7 @@ function Shell() {
 }
 
 const router = createBrowserRouter(
-  [
+  withScrollManager([
     {
       path: "/",
       element: <Shell />,
@@ -36,7 +37,7 @@ const router = createBrowserRouter(
         { path: ":token/edit", element: <PollForm /> },
       ],
     },
-  ],
+  ]),
   { basename: "/schedule_polls" }
 );
 

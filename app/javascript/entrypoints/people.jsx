@@ -17,6 +17,7 @@ import ProfilePage from "../components/people/ProfilePage";
 import ProfileEditor from "../components/people/ProfileEditor";
 import HashtagPage from "../components/people/HashtagPage";
 import HostingPage from "../components/people/HostingPage";
+import { withScrollManager } from "../components/shell/ScrollManager";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
@@ -31,7 +32,7 @@ function Shell() {
 }
 
 const router = createBrowserRouter(
-  [
+  withScrollManager([
     // The HMBLBOT Editor takes the whole window
     { path: "/me/edit", element: <div className="ev-root w-full"><ProfileEditor /></div> },
     {
@@ -44,7 +45,7 @@ const router = createBrowserRouter(
         { path: ":username", element: <ProfilePage /> },
       ],
     },
-  ],
+  ]),
   { basename: "/people" }
 );
 // The sidebar's links into this app move without a load
