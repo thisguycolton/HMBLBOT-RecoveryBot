@@ -23,7 +23,7 @@
 # its body each on their own, with a little room between), and pages turn between paragraphs
 # where they can.
 class QuoteCard
-  VERSION = 3
+  VERSION = 4
   LOOKS = %w[paper marker night sunrise].freeze
   SIZES = { "wide" => [1200, 630], "square" => [1080, 1080], "story" => [1080, 1920] }.freeze
   ASSETS = ShareCard::ASSETS
@@ -366,7 +366,7 @@ class QuoteCard
   # A highlight's words in quote marks. A page that stops mid-sentence ends with "…" and
   # the next starts with one; between sentences or paragraphs (`whole`) the dots say there's more.
   def quoted(text, first: true, last: true, cont: !first, whole: false)
-    open, close = kind == :highlight ? ["“", "”"] : ["", ""]
+    open, close = kind == :highlight && !reading? ? ["“", "”"] : ["", ""]
     start = first ? open : (cont ? "…" : "")
     if last then stop = close
     elsif whole || text.match?(/[.!?…]["”’)]?\z/) then stop = ""
@@ -376,6 +376,9 @@ class QuoteCard
     end
     "#{start}#{text}#{stop}"
   end
+
+  # A daily reading (it starts with its date, like "NOVEMBER 7"): shown as it is, no quote marks
+  def reading? = long.match?(/\A(#{Date::MONTHNAMES.compact.join('|')}) \d{1,2}\b/i)
 
   def note_size(q_size) = (q_size * (style[:note_font] == :hand ? 0.8 : 0.58)).round.clamp(26, 64)
   def meta_line = [source, (by && (kind == :highlight ? "Highlighted by #{by}" : "— #{by}"))].compact.join("  ·  ").presence

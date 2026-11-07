@@ -211,5 +211,8 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     rejoined = pages.each_with_index.map { |pg, i| i.zero? ? pg.quote : "#{pages[i - 1].whole ? "\n" : ' '}#{pg.quote}" }.join
     assert_equal reading, rejoined
     assert_match(/\AGIF/, File.binread(card.path).first(3))
+    assert card.send(:reading?), "a daily reading goes without quote marks"
+    assert_equal "NOVEMBER 7", card.send(:quoted, "NOVEMBER 7", first: true, last: false, whole: true)
+    assert_not QuoteCard.new(quote: "Remember 7 things").send(:reading?)
   end
 end
