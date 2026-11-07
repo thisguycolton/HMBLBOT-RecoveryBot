@@ -98,6 +98,12 @@ class Group < ApplicationRecord
     feature_open_to?(user) ? scope.or(active) : scope
   end
 
+  # The approved groups `user` is an active member of: their literature is what a members-only
+  # book's readers come from (Book.readable_by)
+  def self.reading_groups_of(user)
+    active.where(id: GroupMembership.active.where(user: user).select(:group_id)).select(:id)
+  end
+
   def to_param = slug
   def zone = ActiveSupport::TimeZone[time_zone]
   def pending? = status == "pending"

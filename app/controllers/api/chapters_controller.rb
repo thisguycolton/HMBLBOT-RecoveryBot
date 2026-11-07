@@ -478,7 +478,10 @@ end
 
   def set_book
     @book = Book.find_by!(slug: params[:book_slug])
-    head :not_found unless @book.visible_to?(current_user)
+    return head(:not_found) unless @book.visible_to?(current_user)
+
+    # A members-only book's chapters (even their list, which carries previews) are for its readers
+    render json: MembersOnly.json(@book, current_user), status: :forbidden if @book.locked_for?(current_user)
   end
 
   def set_chapter

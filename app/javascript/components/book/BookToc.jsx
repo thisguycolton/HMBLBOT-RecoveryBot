@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, LayoutGrid, List, BookOpen, Pencil } from "lucide-react";
+import { ArrowLeft, LayoutGrid, List, BookOpen, Lock, Pencil } from "lucide-react";
 import BookCover from "./BookCover.jsx";
 import { lastReadFor } from "./readingProgress.js";
 import { SearchButton, SearchDialog, useSearchHotkey } from "./BookSearch.jsx";
 import GoToPage from "./GoToPage.jsx";
+import MembersOnlyPage from "./MembersOnlyPage.jsx";
 import "../../styles/writebook.css";
 
 const VIEW_KEY = "hb:toc-view-v2"; // v2: cards became the default
@@ -100,6 +101,8 @@ export default function BookToc() {
   }
 
   if (!book || !chapters) return <div className="wb" />;
+  // A members-only book they can't open: how to get access, in place of its chapters
+  if (book.locked) return <MembersOnlyPage info={book} embedded />;
 
   const resume = lastRead && chapters.find((c) => c.slug === lastRead);
   const startWith = resume || chapters[0];
@@ -155,6 +158,9 @@ export default function BookToc() {
             {book.author && <span className="wb-book__byline">{book.author}</span>}
           </h1>
           {book.description && <p className="wb-book__description">{book.description}</p>}
+          {book.members_only && (
+            <p className="wb-library__lock"><Lock size={13} aria-hidden="true" /> Members only: open to members of groups that read it</p>
+          )}
           {chapters.length > 1 && <GoToPage bookSlug={slug} chapters={chapters} />}
 
           <div className="wb-toolbar">

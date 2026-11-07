@@ -15,6 +15,14 @@ class PagesController < ApplicationController
     @book_slug = params[:book_slug]
     @chapter_slug = params[:chapter_slug]
     @share = shared_highlight_meta
+    # A members-only book someone can't open (Book#locked_for?): the reader says how to get in
+    # (MembersOnlyPage) in place of the chapter. HostDeck's ?screen=1 window lands here too.
+    book = Book.find_by(slug: @book_slug)
+    return unless book&.visible_to?(current_user) && book.locked_for?(current_user)
+
+    store_location_for(:user, request.fullpath) unless user_signed_in?
+    @members_only = MembersOnly.json(book, current_user)
+    render :reader, status: :forbidden
   end
   def library; end
 

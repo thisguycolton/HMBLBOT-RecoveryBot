@@ -1,4 +1,4 @@
 <%= vite_javascript_tag "topicificator.jsx" %>
 
   <div id="chapter-viewer" data-book-slug="<%= params[:book_slug] || params[:slug] %>"
-    data-chapter-slug="<%= params[:chapter_slug] || params[:id] %>"></div>
+    data-chapter-slug="<%= params[:chapter_slug] || params[:id] %>"<% if @members_only %> data-members-only="<%= @members_only.to_json %>"<% end %>></div>

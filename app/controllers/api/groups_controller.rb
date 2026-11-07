@@ -236,7 +236,7 @@ class Api::GroupsController < ApplicationController
       json[:members] = @group.active_memberships.includes(user: { avatar_attachment: :blob }).sort_by { |m| [m.admin? ? 0 : 1, m.user.display_name.downcase] }
                              .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records, can_schedule_hosts: m.can_schedule_hosts, can_keep_treasury: m.can_keep_treasury, can_host: m.can_host, host_slots_only: m.host_slots_only, host_slot_count: m.host_meeting_ids.size, can_sponsor: sponsoring.include?(m.user_id)) }
       json[:books] = @group.group_books.includes(book: { cover_image_attachment: :blob }).order(:created_at).map do |gb|
-        { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color } }
+        { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color, members_only: gb.book.members_only? } }
       end
       json[:readings] = @group.shared_readings.includes(user: { avatar_attachment: :blob }).limit(50).map do |r|
         { id: r.id, title: r.title, meeting_date: r.meetingDate&.iso8601, published_at: r.published_at&.iso8601, author: r.user&.as_member_json }
