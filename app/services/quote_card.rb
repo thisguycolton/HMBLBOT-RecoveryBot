@@ -57,8 +57,8 @@ class QuoteCard
     # A video's two speeds (slow, normal or fast): how its lines fade in, and how its pages
     # turn (how long each stays and how slowly it crossfades to the next); and whether it
     # comes as a GIF instead of an MP4
-    @fade = SPEEDS.key?(fade.to_s) ? fade.to_s : "normal"
-    @turn = SPEEDS.key?(turn.to_s) ? turn.to_s : "normal"
+    @fade = SPEEDS.key?(fade.to_s) ? fade.to_s : "fast"
+    @turn = SPEEDS.key?(turn.to_s) ? turn.to_s : "fast"
     @gif = @video && !!gif
     @long = clean(quote).truncate(LONG_MAX, separator: " ", omission: "…")
     @quote = @long.truncate(QUOTE_MAX, separator: " ", omission: "…")
@@ -261,6 +261,37 @@ class QuoteCard
         paginate(words)
       end
     end
+  end
+
+  # Facebook and Instagram Stories take a video of 3 to 60 seconds: a little under, so
+  # rounding never tips a clip over
+  STORY_MAX = 58.0
+
+  # The video as Story clips (MP4s in dir, in order): cut between pages so none runs past
+  # STORY_MAX, each with a silent sound track (Meta's Stories ask for AAC audio) and a
+  # keyframe every two seconds. A day that fits in one comes out as one.
+  def story_clips(dir)
+    raise ArgumentError, "story clips are videos" unless video && !@gif
+
+    VIDEO_LOCK.synchronize do
+      segments = video_segments(dir)
+      crossfade = CROSSFADES[@turn]
+      groups = segments.each_with_object([[]]) do |seg, acc|
+        trial = acc.last + [seg]
+        acc << [] if acc.last.any? && self.class.clip_length(trial, crossfade) > STORY_MAX
+        acc.last << seg
+      end
+      groups.each_with_index.map do |group, i|
+        out = File.join(dir, "story-#{i + 1}.mp4")
+        encode_video(group, out, story: true)
+        out
+      end
+    end
+  end
+
+  # How long pages played one into the next last
+  def self.clip_length(segments, crossfade)
+    segments.sum { |s| s[:length] } - (crossfade * [segments.size - 1, 0].max)
   end
 
   private
@@ -510,6 +541,15 @@ class QuoteCard
   def render_video(dir) = VIDEO_LOCK.synchronize { draw_video(dir) }
 
   def draw_video(dir)
+    segments = video_segments(dir)
+    out = File.join(dir, @gif ? "card.gif" : "card.mp4")
+    encode_video(segments, out)
+    out
+  end
+
+  # Each page drawn (with and without its words) and timed: when each line fades in, how
+  # long the page stays
+  def video_segments(dir)
     pace = SPEEDS[@fade]
     turn = SPEEDS[@turn]
     crossfade = CROSSFADES[@turn]
@@ -550,7 +590,13 @@ class QuoteCard
       { full: full, empty: empty, plain: plain, bands: bands, starts: starts, sweeps: sweeps, sweep: sweep,
         length: [(starts.last || 0) + (FADE * pace), (sweeps.last || 0) + sweep].max + hold }
     end
+  end
 
+  # The pages played one into the next, written to out (a GIF when it's one, otherwise an
+  # MP4; `story: true` adds the silent sound track and regular keyframes Stories want)
+  def encode_video(segments, out, story: false)
+    pace = SPEEDS[@fade]
+    crossfade = CROSSFADES[@turn]
     # Each picture read once and repeated (the loop filter), not decoded again for every frame
     inputs = []
     graph = []
@@ -608,16 +654,21 @@ class QuoteCard
       graph << "[#{final}][s#{k}]xfade=transition=fade:duration=#{crossfade}:offset=#{format('%.2f', offset)}[x#{k}]"
       final = "x#{k}"
     end
-    if @gif
+    if @gif && !story
       # Half size, fewer frames, one palette made from the frames' changes and only the
       # changed part of each frame stored, so a day stays a few megabytes
       graph << "[#{final}]fps=#{GIF_FPS},scale=#{width / 2}:-2:flags=lanczos,split[ga][gb]"
       graph << "[ga]palettegen=max_colors=160:stats_mode=full[gp]"
       graph << "[gb][gp]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle[gif]"
-      out = File.join(dir, "card.gif")
       encode = ["-map", "[gif]", "-loop", "0", out]
+    elsif story
+      seconds = format("%.3f", self.class.clip_length(segments, crossfade))
+      inputs.push("-f", "lavfi", "-t", seconds, "-i", "anullsrc=channel_layout=stereo:sample_rate=48000")
+      silence = (inputs.count("-i") - 1).to_s
+      encode = ["-map", "[#{final}]", "-map", "#{silence}:a", "-r", FPS.to_s, "-c:v", "libx264", "-preset", "superfast", "-tune", "stillimage",
+                "-crf", "22", "-pix_fmt", "yuv420p", "-g", (FPS * 2).to_s, "-keyint_min", (FPS * 2).to_s, "-sc_threshold", "0", "-flags", "+cgop",
+                "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2", "-shortest", "-movflags", "+faststart", out]
     else
-      out = File.join(dir, "card.mp4")
       encode = ["-map", "[#{final}]", "-r", FPS.to_s, "-c:v", "libx264", "-preset", "superfast", "-tune", "stillimage", "-crf", "22",
                 "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", out]
     end

@@ -40,8 +40,8 @@ class Notification < ApplicationRecord
                        kinds: %w[sponsorship.request sponsorship.accepted sponsorship.share sponsorship.reply sponsorship.suggestion sponsorship.step sponsorship.nudge] },
     "recovery_reminders" => { label: "Gratitude, 10th step and worksheet reminders", description: "The reminders you turned on under Reminders, or on a step worksheet.",
                               kinds: %w[recovery.gratitude_reminder recovery.step_reminder recovery.step_work_reminder] },
-    "site_admin" => { label: "Site admin", description: "New groups waiting for approval, text reports and reports about people.",
-                      kinds: %w[group.pending text_report.created user_report.created], admin_only: true },
+    "site_admin" => { label: "Site admin", description: "New groups waiting for approval, text reports, reports about people, and a daily Facebook story that didn't post.",
+                      kinds: %w[group.pending text_report.created user_report.created daily_story.failed], admin_only: true },
   }.freeze
   PUSH_CATEGORY_BY_KIND = PUSH_CATEGORIES.flat_map { |key, c| c[:kinds].map { |k| [k, key] } }.to_h.freeze
 

@@ -38,8 +38,8 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   const [look, setLook] = useState("paper");
   const [size, setSize] = useState(canVideo ? "story" : "square");
   const [asVideo, setAsVideo] = useState(false);
-  const [fade, setFade] = useState("normal"); // how fast a video's lines fade in
-  const [turn, setTurn] = useState("normal"); // how fast its pages turn
+  const [fade, setFade] = useState("fast"); // how fast a video's lines fade in
+  const [turn, setTurn] = useState("fast"); // how fast its pages turn
   const [withNote, setWithNote] = useState(true);
   const [withName, setWithName] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -57,8 +57,8 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
     if (withName) q.set("name", "1");
     if (canVideo && asVideo) {
       q.set("video", "1");
-      if (fade !== "normal") q.set("fade", fade);
-      if (turn !== "normal") q.set("turn", turn);
+      if (fade !== "fast") q.set("fade", fade);
+      if (turn !== "fast") q.set("turn", turn);
     }
     return `${cardUrl}?${q}`;
   }, [cardUrl, look, size, hasNote, withNote, withName, canVideo, asVideo, fade, turn]);

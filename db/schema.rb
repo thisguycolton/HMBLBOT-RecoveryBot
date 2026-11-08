@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_07_110000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_08_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -388,6 +388,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_110000) do
     t.index ["respondent_email"], name: "index_court_verifications_on_respondent_email"
   end
 
+  create_table "daily_story_posts", force: :cascade do |t|
+    t.date "on", null: false
+    t.string "status", null: false
+    t.string "chapter_title"
+    t.integer "clips", default: 0, null: false
+    t.jsonb "facebook_ids", default: [], null: false
+    t.jsonb "instagram_ids", default: [], null: false
+    t.text "error"
+    t.string "triggered_by", null: false
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["on"], name: "index_daily_story_posts_on_on"
+    t.index ["user_id"], name: "index_daily_story_posts_on_user_id"
+  end
+
   create_table "deck_templates", force: :cascade do |t|
     t.bigint "group_id", null: false
     t.string "name", null: false
@@ -530,6 +546,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_110000) do
     t.index ["created_by_id"], name: "index_events_on_created_by_id"
     t.index ["group_id"], name: "index_events_on_group_id"
     t.index ["token"], name: "index_events_on_token", unique: true
+  end
+
+  create_table "facebook_page_connections", force: :cascade do |t|
+    t.string "page_id"
+    t.string "page_name"
+    t.text "page_token"
+    t.string "instagram_id"
+    t.string "instagram_username"
+    t.text "page_choices"
+    t.bigint "connected_by_id"
+    t.datetime "connected_at"
+    t.boolean "enabled", default: false, null: false
+    t.boolean "instagram_enabled", default: false, null: false
+    t.string "post_at", default: "06:00", null: false
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.string "look", default: "night", null: false
+    t.date "posted_on"
+    t.datetime "posting_started_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connected_by_id"], name: "index_facebook_page_connections_on_connected_by_id"
   end
 
   create_table "follows", force: :cascade do |t|
@@ -1859,6 +1896,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_110000) do
   add_foreign_key "contact_requests", "users", on_delete: :nullify
   add_foreign_key "court_verifications", "groups"
   add_foreign_key "court_verifications", "meetings", on_delete: :nullify
+  add_foreign_key "daily_story_posts", "users", on_delete: :nullify
   add_foreign_key "deck_templates", "groups", on_delete: :cascade
   add_foreign_key "deck_templates", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "deck_templates", "users", column: "reviewed_by_id", on_delete: :nullify
@@ -1879,6 +1917,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_07_110000) do
   add_foreign_key "event_updates", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "events", "groups"
   add_foreign_key "events", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "facebook_page_connections", "users", column: "connected_by_id", on_delete: :nullify
   add_foreign_key "follows", "users", column: "followed_id"
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "gratitude_lists", "users", on_delete: :cascade
