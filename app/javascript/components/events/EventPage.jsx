@@ -39,7 +39,7 @@ export default function EventPage() {
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:py-8">
       {(event.status !== "published" || event.can_edit) && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-100 dark:ring-amber-900/60">
-          <span className="flex-1">{event.status === "published" ? "You can edit this event." : "This is a draft. Only the people editing it can see it."}</span>
+          <span className="min-w-0 flex-1 basis-56">{event.status === "published" ? "You can edit this event." : "This is a draft. Only the people editing it can see it."}</span>
           <Link to={`/${token}/edit`} className="inline-flex items-center gap-1.5 rounded-xl !bg-accent px-3 py-1.5 font-semibold !text-white"><Pencil className="size-4" /> Open in the editor</Link>
         </div>
       )}
