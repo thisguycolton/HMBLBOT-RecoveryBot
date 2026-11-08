@@ -275,7 +275,7 @@ export default function MeetingPage({ group, id }) {
         ) : (
           <Card className="p-5">
             <div className="flex flex-wrap items-start gap-3">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-56">
                 <h2 className="!text-xl font-semibold text-slate-900 dark:text-white">Business meeting, {meeting.starts_at ? meeting.when_label : longDate(meeting.held_on)}</h2>
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-neutral-300">
                   {meeting.status === "planned" && <Pill tone="accent">Planned</Pill>}
@@ -347,7 +347,7 @@ export default function MeetingPage({ group, id }) {
                 <div className="space-y-1.5">
                   {meeting.unfinished.map((u) => (
                     <Card key={u.id} className="flex flex-wrap items-center gap-3 p-3">
-                      <span className="min-w-0 flex-1">
+                      <span className="min-w-0 flex-1 basis-56">
                         <span className="block font-medium text-slate-900 dark:text-white">{u.title}</span>
                         <span className="block text-xs text-slate-500 dark:text-neutral-400">
                           {MOTION_STATUS_LABELS[u.status]}{u.meeting_held_on ? ` on ${dateLabel(u.meeting_held_on)}` : u.decided_on ? ` on ${dateLabel(u.decided_on)}` : ""}{u.committee ? ` · committee: ${u.committee}` : ""}{u.postponed_to ? ` · until ${u.postponed_to}` : ""}

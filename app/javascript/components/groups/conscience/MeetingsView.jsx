@@ -24,7 +24,7 @@ function Row({ slug, m, keeper, words }) {
   const minutes = m.minutes_status === "draft" ? (keeper && m.status === "held" ? <Pill tone="amber">Minutes in draft</Pill> : null) : <Pill tone="green"><FileCheck2 className="size-3" /> Minutes {m.minutes_status}</Pill>;
   return (
     <Link to={meetingsPath(slug, m.id)} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900">
-      <span className="min-w-0 flex-1">
+      <span className="min-w-0 flex-1 basis-56">
         <span className="block font-medium text-slate-900 dark:text-white">{m.starts_at ? m.when_label : longDate(m.held_on)}</span>
         <span className="block text-xs text-slate-500 dark:text-neutral-400">
           {[m.meeting && `After ${m.meeting.name}`, `${m.agenda_count} on the agenda`, m.motions_count ? `${m.motions_count} ${m.motions_count === 1 ? "decision" : "decisions"}` : null, m.attendance_count != null ? `${m.attendance_count} came` : null].filter(Boolean).join(" · ")}
@@ -114,7 +114,7 @@ function QuorumCard({ group, quorum, canSet, onSaved }) {
   };
   return (
     <Card className="flex flex-wrap items-center gap-3 p-3">
-      <p className="min-w-0 flex-1 text-sm text-slate-700 dark:text-neutral-200">
+      <p className="min-w-0 flex-1 text-sm text-slate-700 dark:text-neutral-200 basis-56">
         <span className="font-medium text-slate-900 dark:text-white">Quorum:</span>{" "}
         {quorum.needed ? `${quorum.needed} ${quorum.needed === 1 ? "person" : "people"}${quorum.percent ? ` (${quorum.percent}% of the members)` : ""}` : "not set"}
         <span className="text-xs text-slate-500 dark:text-neutral-400"> · what the bylaws ask for; business needs one</span>
@@ -174,7 +174,7 @@ export default function MeetingsView({ group }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300">Each business meeting has an agenda anyone in the group can add to, and minutes once they're posted.</p>
+        <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300 basis-56">Each business meeting has an agenda anyone in the group can add to, and minutes once they're posted.</p>
         {data.can_edit && !importing && <button type="button" onClick={() => setImporting(true)} className={quietButton}><FileUp className="size-4" /> Import old minutes</button>}
         {data.can_edit && !scheduling && <button type="button" onClick={() => setScheduling(true)} className={primaryButton}><CalendarPlus className="size-4" /> Schedule a meeting</button>}
       </div>

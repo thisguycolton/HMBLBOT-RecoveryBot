@@ -219,7 +219,7 @@ function HostCoordinators({ slug, coordinators, slots, reload }) {
           <Card key={c.membership_id} className="space-y-3 p-3">
             <div className="flex flex-wrap items-center gap-3">
               <Avatar person={{ name: c.name, avatar_url: c.avatar_url }} size={40} />
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-56">
                 <p className="font-medium text-slate-900 dark:text-white">{c.name}</p>
                 <p className="text-xs text-slate-500 dark:text-neutral-400">Host coordinator</p>
               </div>

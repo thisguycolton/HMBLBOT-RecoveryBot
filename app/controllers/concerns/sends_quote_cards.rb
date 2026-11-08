@@ -6,7 +6,9 @@ module SendsQuoteCards
 
   private
 
+  # ?progress=<token>: note how far along drawing it is, for GET /api/card_progress/:token
   def send_card(picture)
+    picture.progress = CardProgress.for(params[:progress], current_user&.id)
     file = picture.path
     response.headers["Cache-Control"] = "private, max-age=3600"
     response.headers["X-Card-Pages"] = picture.page_count.to_s

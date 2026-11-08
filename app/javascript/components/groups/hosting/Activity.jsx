@@ -342,7 +342,7 @@ function MyReadingPick({ center, onPick }) {
       {readings && readings.length === 0 && <p className="text-sm text-slate-600 dark:text-neutral-300">You haven't saved a reading yet. Make one, then come back here.</p>}
       {readings && readings.length > 0 && (
         <div className="flex flex-wrap items-start gap-2">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 basis-56">
             <label htmlFor="act-my-reading" className={labelClass}>Your readings</label>
             <FilterPick id="act-my-reading" value={id} onChange={(v) => setId(String(v))} placeholder="Type to find a reading" empty="None of your readings match"
               options={readings.map((r) => ({ value: String(r.id), label: `${r.title || "Untitled"}${r.status !== "published" ? ` (${r.status})` : ""}`, hint: r.meeting_name }))} />
@@ -425,7 +425,7 @@ function TopicSetPick({ sets, onPick }) {
   const set = sets.find((s) => String(s.id) === id);
   return (
     <div className="mt-3 flex flex-wrap items-end gap-2">
-      <div className="min-w-0 flex-1"><label htmlFor="act-set" className={labelClass}>Topic set</label><select id="act-set" className={selectClass} value={id} onChange={(e) => setId(e.target.value)}>{sets.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+      <div className="min-w-0 flex-1 basis-56"><label htmlFor="act-set" className={labelClass}>Topic set</label><select id="act-set" className={selectClass} value={id} onChange={(e) => setId(e.target.value)}>{sets.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
       <button type="button" className={primaryButton} disabled={!set} onClick={() => onPick({ kind: "topics", topic_set_id: set.id, topic_set_name: set.name })}>Use it</button>
     </div>
   );

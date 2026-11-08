@@ -49,7 +49,7 @@ export default function HostingPage() {
           <Card className="divide-y divide-neutral-200/70 dark:divide-neutral-800">
             {data.open_requests.map((r) => (
               <div key={r.id} className="flex flex-wrap items-center gap-3 p-4">
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-56">
                   <div className="font-semibold text-slate-900 dark:text-white">{r.name} <Pill tone="amber">{r.place.replace(/^./, (c) => c.toUpperCase())}</Pill></div>
                   <div className="text-sm text-slate-500 dark:text-neutral-400">{day(r.on)} at {r.at} · {r.group_title}</div>
                   {r.note && <p className="mt-1 text-sm text-slate-600 dark:text-neutral-300">“{r.note}”{r.requested_by && ` — ${r.requested_by}`}</p>}
@@ -69,7 +69,7 @@ export default function HostingPage() {
           <Card className="divide-y divide-neutral-200/70 dark:divide-neutral-800">
             {data.upcoming.map((c) => (
               <div key={`${c.meeting_id}-${c.role}-${c.starts_at}`} className="flex flex-wrap items-center gap-3 p-4">
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-56">
                   <div className="font-semibold text-slate-900 dark:text-white">{c.name} <Pill tone="accent">{c.role_label}</Pill>{c.cover && <Pill>Covering</Pill>}</div>
                   <div className="text-sm text-slate-500 dark:text-neutral-400">{when(c.starts_at)} · {c.group_title}</div>
                 </div>

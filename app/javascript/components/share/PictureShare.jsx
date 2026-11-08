@@ -4,6 +4,7 @@ import { Check, Clapperboard, Copy, Download, ImageIcon, Link2, Loader2, Send, S
 import { showToast } from "../../lib/toast";
 import { saveNote, VISIBILITY } from "../notes/lib";
 import { Bone, SkeletonGroup } from "../ui/Skeleton";
+import { newProgressToken, ProgressRing, progressLabel, timeLeft, useCardProgress } from "./cardProgress";
 
 // "Share as a picture" for your own highlight or note: pick a look and a size, see it, then
 // share it straight from your phone's share sheet (Instagram, Messages, a story...), save
@@ -21,7 +22,8 @@ import { Bone, SkeletonGroup } from "../ui/Skeleton";
 //
 // `canVideo` ("Share this day") also offers a video: an MP4 whose lines fade in one after
 // another, drawn by the server (QuoteCard, ffmpeg) in 15 to 30 seconds. Copy and Post use a
-// still picture of it, since clipboards and posts take pictures.
+// still picture of it, since clipboards and posts take pictures. While a video (or a long
+// GIF) is drawn, a ring fills with how far along the server says it is (cardProgress).
 export const LOOKS = [
   { value: "paper", label: "Paper", swatch: "linear-gradient(135deg,#fdfaf3,#f4ecdc)" },
   { value: "marker", label: "Marker", swatch: "linear-gradient(135deg,#fff 0 45%,#fef08a 45% 75%,#fff 75%)" },
@@ -50,6 +52,8 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   const [posting, setPosting] = useState(false);
   const [caption, setCaption] = useState("");
   const [visibility, setVisibility] = useState("followers");
+  const [token, setToken] = useState(null); // asks the server how far along the preview is
+  const [gifToken, setGifToken] = useState(null); // ...and the "Save as GIF" one
 
   const src = useMemo(() => {
     const q = new URLSearchParams({ look, size });
@@ -66,11 +70,13 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   useEffect(() => {
     const stop = new AbortController();
     let url;
+    const progress = newProgressToken();
     setLoading(true);
     setFailed(null);
+    setToken(progress);
     (async () => {
       try {
-        const res = await fetch(src, { credentials: "same-origin", signal: stop.signal });
+        const res = await fetch(`${src}&progress=${progress}`, { credentials: "same-origin", signal: stop.signal });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error || "Couldn't draw that one. Try another look.");
@@ -89,6 +95,10 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   }, [src]);
   const video = canVideo && asVideo;
   const moving = !video && (picture?.pages || 1) > 1;
+  const progress = useCardProgress(loading ? token : null);
+  const gifProgress = useCardProgress(gifToken);
+  // A ring for a video, or for a picture slow enough that the server's said how far along it is
+  const ringing = loading && !failed && (video || progress);
 
   // The link sent with the picture carries its look (and a left-off note), so the preview
   // Messages and the rest draw from it (ShareMeta.highlight) matches the picture
@@ -152,9 +162,17 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   // The same video as a GIF (smaller and quieter, for places that don't take videos): made
   // when asked, since it takes the server as long as the video did
   const saveGif = () => run("gif", async () => {
-    const res = await fetch(`${src}&as=gif`, { credentials: "same-origin" });
-    if (!res.ok) throw new Error("Couldn't make the GIF.");
-    const url = URL.createObjectURL(await res.blob());
+    const progressToken = newProgressToken();
+    setGifToken(progressToken);
+    let blob;
+    try {
+      const res = await fetch(`${src}&as=gif&progress=${progressToken}`, { credentials: "same-origin" });
+      if (!res.ok) throw new Error("Couldn't make the GIF.");
+      blob = await res.blob();
+    } finally {
+      setGifToken(null);
+    }
+    const url = URL.createObjectURL(blob);
     const a = Object.assign(document.createElement("a"), { href: url, download: `recoverybot-${kind}-${size}.gif` });
     document.body.appendChild(a);
     a.click();
@@ -206,14 +224,21 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
               ) : (
                 <div className="block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 dark:bg-neutral-700" style={{ aspectRatio: ratio }} />
               )}
-              {loading && (
+              {loading && !ringing && (
                 // The picture's shape pulses while the server draws it (a skeleton, not a spinner)
                 <SkeletonGroup label={video ? "Making the video" : "Drawing it"} className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-2.5 p-[8%]">
                   <Bone className="h-3 w-3/5" /><Bone className="h-3 w-4/5" /><Bone className="h-3 w-2/5" />
                 </SkeletonGroup>
               )}
-              {loading && video && (
-                <p className="pointer-events-none absolute inset-x-0 top-1/3 px-4 text-center text-xs font-medium text-slate-500 dark:text-neutral-300">Making your video. It takes 15 to 30 seconds.</p>
+              {ringing && (
+                // A video takes the server 15 to 30 seconds: a ring fills as it goes, with what it's doing and about how long is left
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-white/75 px-4 text-center backdrop-blur-sm dark:bg-neutral-800/80" aria-live="polite">
+                  <ProgressRing percent={progress?.percent ?? null} label={video ? "Making your video" : "Drawing your picture"} />
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-neutral-100">{progressLabel(progress, video ? "video" : "picture")}</p>
+                    <p className="text-[11px] text-slate-500 dark:text-neutral-400">{timeLeft(progress) || (video ? "It takes 15 to 30 seconds." : "\u00a0")}</p>
+                  </div>
+                </div>
               )}
               {failed && <p className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-red-600">{failed}</p>}
             </div>
@@ -298,7 +323,7 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
               {video && (
                 <button type="button" onClick={saveGif} disabled={!!busy}
                   className="flex items-center justify-center gap-2 rounded-xl !bg-neutral-100 px-3 py-2.5 font-semibold text-slate-800 hover:!bg-neutral-200 disabled:opacity-60 dark:!bg-neutral-800 dark:text-white">
-                  {busy === "gif" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" />} {busy === "gif" ? "Making the GIF…" : "Save as GIF"}
+                  {busy === "gif" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" />} {busy === "gif" ? `Making the GIF…${gifProgress ? ` ${gifProgress.percent}%` : ""}` : "Save as GIF"}
                 </button>
               )}
               <div className="grid grid-cols-2 gap-2">

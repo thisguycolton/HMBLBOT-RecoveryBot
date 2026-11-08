@@ -263,10 +263,19 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     assert_equal "NOVEMBER 7", card.send(:quoted, "NOVEMBER 7", first: true, last: false, whole: true), "no quote marks on a day"
 
     if system("ffmpeg", "-version", out: File::NULL, err: File::NULL)
-      get path, params: { look: "paper", size: "wide", video: "1" }, headers: { "User-Agent" => BROWSER }
+      token = "progress-token-123"
+      get "/api/card_progress/#{token}", headers: { "User-Agent" => BROWSER }
+      assert_response :no_content, "nothing noted before it starts"
+      get path, params: { look: "paper", size: "wide", video: "1", progress: token }, headers: { "User-Agent" => BROWSER }
       assert_response :success
       assert_equal "video/mp4", response.media_type
       assert_equal "ftyp", response.body.b[4, 4]
+      get "/api/card_progress/#{token}", headers: { "User-Agent" => BROWSER }
+      assert_equal({ "stage" => "done", "percent" => 100 }, response.parsed_body, "the ring ends full")
+
+      sign_in @lee
+      get "/api/card_progress/#{token}", headers: { "User-Agent" => BROWSER }
+      assert_response :no_content, "someone else's progress isn't theirs to see"
     end
 
     # Other books' chapters aren't days

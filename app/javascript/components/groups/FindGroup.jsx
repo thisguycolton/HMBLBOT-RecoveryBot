@@ -144,7 +144,7 @@ export default function FindGroup() {
               <div className="space-y-1.5">
                 {results.groups.map((g) => (
                   <Card key={g.slug} className="flex flex-wrap items-center gap-3 p-3">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 basis-56">
                       <p className="font-medium text-slate-900 dark:text-white">{g.title}</p>
                       <p className="text-xs text-slate-500 dark:text-neutral-400">{g.next_meeting ? g.next_meeting.schedule_label : "No meetings listed"}</p>
                     </div>
@@ -164,7 +164,7 @@ export default function FindGroup() {
               <div className="space-y-1.5">
                 {results.oiaa.map((m) => (
                   <Card key={m.slug} className="flex flex-wrap items-center gap-3 p-3">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 basis-56">
                       <p className="font-medium text-slate-900 dark:text-white">
                         {m.name}{m.group_name && m.group_name !== m.name ? <span className="font-normal text-slate-500"> · {m.group_name}</span> : null}
                       </p>

@@ -155,7 +155,7 @@ export default function ReportPage({ group, id = null }) {
         <ErrorNote error={error} />
         <Card className="space-y-5 p-4 sm:p-6">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="min-w-0 flex-1 !text-xl font-semibold text-slate-900 dark:text-white">{title}</h2>
+            <h2 className="min-w-0 flex-1 !text-xl font-semibold text-slate-900 dark:text-white basis-56">{title}</h2>
             {form.status === "draft" && <Pill tone="amber">Draft</Pill>}
             <button type="button" className={quietButton} onClick={() => printTitled(title)}><Printer className="size-4" /> Print</button>
             {canEdit && <button type="button" onClick={save} disabled={saving || (!dirty && !!report)} className={primaryButton}><Save className="size-4" /> {saving ? "Saving…" : "Save"}</button>}

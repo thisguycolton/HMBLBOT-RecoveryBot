@@ -57,6 +57,8 @@ Rails.application.routes.draw do
             resources :court_verifications, only: :create
 
   resources :text_reports, only: :create
+  # How far along a share picture or video being drawn is (CardProgress), for its progress ring
+  get "card_progress/:token", to: "card_progress#show", format: false
   get "hosting_links/:code", to: "hosting_links#show"
   # A shared HostDeck of its own, followed without an account; the live Topicificator window
   get "deck_links/:code", to: "deck_links#show"

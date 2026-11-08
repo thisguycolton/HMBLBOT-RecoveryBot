@@ -293,7 +293,7 @@ export default function StepsPage() {
           <div className="space-y-1.5">
             {data.group_tools.map((t) => (
               <Card key={t.id} className="flex flex-wrap items-center justify-between gap-2 p-4">
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-56">
                   <div className="text-xs font-semibold uppercase tracking-wide text-accent">Step {t.step} · {t.group.title}</div>
                   <div className="font-medium text-slate-900 dark:text-white">{t.name}</div>
                   {t.summary && <div className="text-sm text-slate-500 dark:text-neutral-400">{t.summary}</div>}
