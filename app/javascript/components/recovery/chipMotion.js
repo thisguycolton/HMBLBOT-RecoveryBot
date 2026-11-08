@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { roundedTriangle, shade } from "./Chip";
 import font600 from "../../../../lib/share_cards/PublicSans_600SemiBold.ttf?url";
 import font800 from "../../../../lib/share_cards/PublicSans_800ExtraBold.ttf?url";
+import markDark from "../../../../lib/share_cards/recoverybot-mark-dark.png";
+import markLight from "../../../../lib/share_cards/recoverybot-mark-light.png";
 
 // Pictures, GIFs and videos of a chip (ChipPictureShare.jsx), drawn and encoded right here in
 // the browser, so nothing about the chip goes to our server or anyone else's. The chip is the
@@ -118,8 +120,41 @@ async function sidePicture(element, width) {
 // Everything the drawing needs about one chip: { shape, color, metal, front, back } (canvases)
 export async function prepareChip(faces) {
   await canvasFont();
-  const [front, back] = await Promise.all([sidePicture(faces.front, RASTER), sidePicture(faces.back, RASTER)]);
-  return { shape: faces.shape, color: faces.color, metal: faces.metal, front, back };
+  const [front, back, dark, light] = await Promise.all([sidePicture(faces.front, RASTER), sidePicture(faces.back, RASTER), picture(markDark), picture(markLight)]);
+  return { shape: faces.shape, color: faces.color, metal: faces.metal, front, back, marks: { dark, light } };
+}
+
+async function picture(src) {
+  const img = new Image();
+  img.src = src;
+  await img.decode();
+  return img;
+}
+
+// RecoveryBot at the bottom, the same pill as the highlight pictures' (QuoteCard#badge): the
+// mark and the name, white on dark backgrounds and dark on light ones, in the middle, or at
+// the right on wide pictures. Sized as QuoteCard draws it on a 1080 (1200 wide) picture.
+function badge(ctx, W, H, marks, onLight) {
+  const wide = W > H * 1.3;
+  const u = W / (wide ? 1200 : 1080);
+  const w = 300 * u;
+  const h = 64 * u;
+  const x = wide ? W - w - 36 * u : (W - w) / 2;
+  const y = H - h - (wide ? 32 : 64) * u - (H > W * 1.3 ? 160 * u : 0);
+  ctx.fillStyle = onLight ? "#17191c" : "#ffffff";
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, h / 2); else ctx.rect(x, y, w, h);
+  ctx.fill();
+  const mark = onLight ? marks.light : marks.dark;
+  const mh = 34 * u;
+  const mw = (mh * mark.naturalWidth) / mark.naturalHeight;
+  ctx.drawImage(mark, x + 24 * u, y + (h - mh) / 2, mw, mh);
+  ctx.fillStyle = onLight ? "#ffffff" : "#17191c";
+  ctx.font = `800 ${30 * u}px ChipShareSans, "Public Sans", system-ui, sans-serif`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("RecoveryBot", x + 84 * u, y + h / 2 + u);
+  return y;
 }
 
 // ---- Drawing ---------------------------------------------------------------------------------
@@ -249,10 +284,10 @@ function layout(W, H, { pair, lines }) {
   if (pair) {
     if (H > W * 1.3) { // story: one above the other
       const w = Math.min(W * 0.56, H * 0.3);
-      return { chips: [{ cx: W / 2, cy: H * (words ? 0.27 : 0.3), w }, { cx: W / 2, cy: H * (words ? 0.63 : 0.68), w }], textY: H * 0.84 };
+      return { chips: [{ cx: W / 2, cy: H * (words ? 0.27 : 0.3), w }, { cx: W / 2, cy: H * (words ? 0.63 : 0.68), w }], textY: H * 0.8 };
     }
     const w = Math.min(W * 0.36, H * (words ? 0.52 : 0.62));
-    return { chips: [{ cx: W * 0.29, cy: H * (words ? 0.42 : 0.47), w }, { cx: W * 0.71, cy: H * (words ? 0.42 : 0.47), w }], textY: H * 0.8 };
+    return { chips: [{ cx: W * 0.29, cy: H * (words ? 0.42 : 0.47), w }, { cx: W * 0.71, cy: H * (words ? 0.42 : 0.47), w }], textY: H * (W > H * 1.3 ? 0.8 : 0.77) };
   }
   if (H > W * 1.3) {
     const w = W * 0.7;
@@ -263,7 +298,7 @@ function layout(W, H, { pair, lines }) {
     return { chips: [{ cx: W / 2, cy: H * (words ? 0.42 : 0.46), w }], textY: H * 0.83 };
   }
   const w = W * (words ? 0.52 : 0.58);
-  return { chips: [{ cx: W / 2, cy: H * (words ? 0.43 : 0.47), w }], textY: H * 0.82 };
+  return { chips: [{ cx: W / 2, cy: H * (words ? 0.42 : 0.46), w }], textY: H * 0.77 };
 }
 
 // One whole frame: the background, the chip at `angle` (or both sides, `pair`), and the words
@@ -295,11 +330,9 @@ export function drawScene(ctx, W, H, chip, { background, angle = 0, pair = false
     const size = unit * (i === 0 ? 0.06 : 0.04);
     ctx.font = `${i === 0 ? 800 : 600} ${size}px ChipShareSans, "Public Sans", system-ui, sans-serif`;
     ctx.fillStyle = i === 0 ? ink : light ? "rgba(15,23,42,0.7)" : "rgba(255,255,255,0.78)";
-    ctx.fillText(line, W / 2, spot.textY + i * unit * 0.065, W * 0.9);
+    ctx.fillText(line, W / 2, spot.textY + i * unit * 0.065, W > H * 1.3 ? W * 0.5 : W * 0.9);
   });
-  ctx.font = `600 ${unit * 0.026}px ChipShareSans, "Public Sans", system-ui, sans-serif`;
-  ctx.fillStyle = light ? "rgba(15,23,42,0.45)" : "rgba(255,255,255,0.55)";
-  ctx.fillText("RecoveryBot", W / 2, H - unit * 0.045);
+  if (chip.marks) badge(ctx, W, H, chip.marks, light);
 }
 
 // A frame at time `t` of the loop, blurred while it spins fast (several moments laid together),
