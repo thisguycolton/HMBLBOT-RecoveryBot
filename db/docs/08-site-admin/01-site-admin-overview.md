@@ -6,6 +6,8 @@ audience: admins
 ---
 **Site Admin** (`/admin_panel`) is for the people who run RecoveryBot. It needs an admin account whose email is on the site's admin list.
 
+![The Site Admin dashboard](/docs-images/site-admin/dashboard.webp)
+
 ## What's there
 
 - **Dashboard**: what needs attention today.

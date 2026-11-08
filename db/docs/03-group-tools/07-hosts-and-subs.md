@@ -9,11 +9,23 @@ Every weekly meeting has a **host** and a **co-host** spot. The host schedule li
 
 - **Your dates** lists the meetings you're hosting soon.
 - Can't make one? Choose **I can't make it**. That posts a **Need a sub** request, and people who can host see it in their Hosting badge and Today.
-- You can get a reminder before each meeting you host (24 hours before by default). Turn it on in your hosting settings.
+- You can get a reminder before each meeting you host (24 hours before by default). Turn it on in **Settings > Hosting**.
 
 ## Covering for someone
 
 Open **Hosting** in the sidebar (or Today) to see open sub requests you could take, and choose **I'll cover it**. The original host and the host coordinators are told.
+
+![The Hosting page: a sub needed, and your next two weeks](/docs-images/group-tools/hosting.webp)
+
+## Example: Morgan's trip
+
+Morgan T. hosts the Thursday Night Step Meeting, but will be traveling on Nov 26.
+
+1. On the group's Meetings page, Morgan chooses **I can't make it** on that date and adds a note: "Traveling for work."
+2. Everyone in the group who can host now sees **Subs needed** on their Hosting page, with a **1** next to Hosting in the sidebar. Sam (a host coordinator) also sees "No host yet" on Today.
+3. Jamie chooses **I'll cover it**. Morgan and the host coordinators are told, and the week view shows Jamie for that date only.
+
+Below the sub requests, **Your next two weeks** lists your own dates. Sam's shows the Saturday Speaker Meeting as **Co-host, Covering**, with a **HostDeck** button.
 
 ## Swaps and permanent changes (host coordinators)
 

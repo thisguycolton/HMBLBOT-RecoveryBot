@@ -16,15 +16,19 @@
 class DocsImport
   ROOT = Rails.root.join("db/docs")
 
-  def self.run(root: ROOT, log: nil) = new(root, log).run
+  def self.run(root: ROOT, log: nil, refresh: false) = new(root, log, refresh).run
 
-  def initialize(root, log)
+  # With refresh, a page that's already here also takes the file's newer text, but only while
+  # nobody has touched it: not reviewed, never saved in the editor and no History. Anything a
+  # person edited or ticked stays exactly as it is. (`bin/rails docs:refresh`)
+  def initialize(root, log, refresh = false)
     @root = Pathname(root)
     @log = log
+    @refresh = refresh
   end
 
   def run
-    added = { sections: 0, pages: 0 }
+    added = { sections: 0, pages: 0, refreshed: 0 }
     Dir[@root.join("*")].select { |d| File.directory?(d) }.sort.each do |dir|
       position, slug = split(File.basename(dir))
       meta, body = read(File.join(dir, "_section.md"))
@@ -38,9 +42,12 @@ class DocsImport
 
       Dir[File.join(dir, "*.md")].reject { |f| File.basename(f).start_with?("_") }.sort.each do |file|
         page_position, page_slug = split(File.basename(file, ".md"))
-        next if section.pages.exists?(slug: page_slug)
-
         meta, body = read(file)
+        if (existing = section.pages.find_by(slug: page_slug))
+          added[:refreshed] += 1 if @refresh && refresh(existing, meta, body)
+          next
+        end
+
         next if meta["alias"].present? && DocPage.exists?(path_alias: meta["alias"])
 
         section.pages.create!(slug: page_slug, title: meta["title"] || page_slug.titleize, summary: meta["summary"], icon: meta["icon"],
@@ -54,6 +61,18 @@ class DocsImport
   end
 
   private
+
+  def refresh(page, meta, body)
+    return false if page.reviewed_at || page.updated_by_id || page.versions.exists?
+
+    attrs = { title: meta["title"] || page.title, summary: meta["summary"], icon: meta["icon"], body: body.strip + "\n" }
+    page.assign_attributes(attrs)
+    return false unless page.changed?
+
+    page.save!
+    @log&.call("Refreshed page #{page.section.slug}/#{page.slug}")
+    true
+  end
 
   # "03-group-tools" -> [3, "group-tools"]
   def split(name)

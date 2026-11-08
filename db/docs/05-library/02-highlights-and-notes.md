@@ -6,12 +6,30 @@ icon: highlighter
 ## Highlight
 
 1. Select words while reading a chapter.
-2. Choose a color in the bar that appears (on a phone, it docks at the bottom of the screen).
-3. Add a **note** if you like. Notes take Markdown: **bold**, _italic_, lists and links.
+2. Choose a color in the bar that appears: yellow, lime, cyan, pink or orange. On a phone, the bar docks at the bottom of the screen.
+3. Choose **Note** to add a note if you like. Notes take Markdown: **bold**, _italic_, lists and links.
+
+![Selecting words brings up the highlight bar](/docs-images/library/highlight-bar.webp)
+
+The ⚠ button in the bar reports a typo or a problem with the book's text to the site admins.
 
 ## Find them again
 
-**Highlights** in the sidebar lists every highlight and note you've made, newest first, by book.
+**Highlights** in the sidebar lists every highlight and note you've made, by book and chapter. **Share all** shares the whole list with a link.
+
+![Your highlights](/docs-images/library/highlights.webp)
+
+## Example
+
+Sam has three highlights in the Big Book:
+
+| Quote | Color | Note |
+| --- | --- | --- |
+| "Those who do not recover are people who cannot or will not completely give themselves to this simple program" | Yellow | **Thoroughly.** That's the word I keep coming back to. |
+| "Half measures availed us nothing" | Cyan | Read this one at Thursday's meeting. #step3 @Riley M. this is the line you told me about. |
+| "We will not regret the past nor wish to shut the door on it" | Lime | My favorite promise. #promises |
+
+The second note has a hashtag and mentions Riley, who gets a notification once Sam shares it. See [Hashtags and mentions](/docs/library/hashtags-and-mentions).
 
 ## Who sees them
 

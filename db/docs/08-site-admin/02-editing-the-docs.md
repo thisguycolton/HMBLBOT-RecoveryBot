@@ -8,6 +8,8 @@ Every page of these docs, including [About](/about) and [History](/history), is 
 
 ## Edit a page
 
+![Editing a docs page](/docs-images/site-admin/docs-editor.webp)
+
 1. Open the page and choose **Edit** at the top right.
 2. Change the title and the one-line summary at the top.
 3. Write in the big area below. It saves by itself about a second after you stop typing ("Saved" in the top bar).
@@ -16,7 +18,9 @@ Every page of these docs, including [About](/about) and [History](/history), is 
 ## Writing, Notion-style
 
 - **Type Markdown** and it turns into what it means: `# ` heading, `- ` list, `1. ` numbered list, `[ ] ` checklist, `> ` quote, ` ``` ` code, `---` divider, `**bold**`, `_italic_`.
-- **Type `/`** for the insert menu: headings, lists, checklists, Tip / Note / Heads up / Privacy callouts, quotes, dividers, code, tables and pictures. Keep typing to filter, ↑↓ and Enter to pick.
+- **Type `/`** for the insert menu (pictured below): headings, lists, checklists, Tip / Note / Heads up / Privacy callouts, quotes, dividers, code, tables and pictures. Keep typing to filter, ↑↓ and Enter to pick.
+![The / insert menu](/docs-images/site-admin/docs-slash-menu.webp)
+
 - **Select text** for the bubble: bold, italic, strikethrough, code and link.
 - **Paste or drop a picture** to upload it. Screenshots make tutorials much easier to follow.
 - **Markdown** (top bar) shows the raw Markdown. Both views edit the same text.
@@ -37,9 +41,17 @@ The side panel (the panel button on a phone) has:
 
 ## New pages and sections
 
+![The Docs home for a site admin, with the pages still to review](/docs-images/site-admin/docs-home.webp)
+
 - In a section, choose **New page**. It starts as a draft with a simple outline.
 - On the Docs home, **New section** adds one. In a section, **Rename section** changes its name, summary, icon, address and order.
 
+## Screenshots
+
+The pictures in these pages live in the code, in `public/docs-images/`, and the Markdown points at them like `![Group chat](/docs-images/group-tools/chat.webp)`. You can keep them, delete them, or replace one by pasting your own picture (which uploads it to the page). Files whose name ends in `-phone` show phone-sized.
+
+They were taken from a made-up demo group (the Lantern Street Group). To take them again after the app changes, a developer runs `script/docs_demo/seed.rb` on a throwaway development database, then `node script/docs_demo/shoot.js`.
+
 ## Drafts for new tools
 
-Draft pages also live in the code (`db/docs/`). `bin/rails docs:import` adds any that aren't on the site yet and never changes a page that's already there.
+Draft pages also live in the code (`db/docs/`). `bin/rails docs:import` adds any that aren't on the site yet and never changes a page that's already there. `bin/rails docs:refresh` also brings newer draft text to pages nobody has touched yet (not reviewed, never edited, no History).

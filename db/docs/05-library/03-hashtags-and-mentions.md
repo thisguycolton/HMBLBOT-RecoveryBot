@@ -9,6 +9,12 @@ Type **#** in a note (on your timeline or on a highlight) to add a tag like `#gr
 
 Choose a tag anywhere to see every note with it that you're allowed to see. Tags also show in the top search box.
 
+![The #promises tag page](/docs-images/library/tag.webp)
+
+## Example
+
+Sam and Riley both highlighted "We will not regret the past nor wish to shut the door on it" and tagged their notes `#promises`. Choosing **#promises** on either note opens the tag's page, which lists both, newest first ("2 notes you can see"). Someone who doesn't follow Sam would only see the notes shared with Members.
+
 ## Mentions
 
 Type **@** and a name to mention someone. They get a notification. In group chat you can also mention roles and service positions; see [Group chat](/docs/group-tools/group-chat).
