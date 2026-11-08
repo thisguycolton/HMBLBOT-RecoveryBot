@@ -238,4 +238,39 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     assert_equal "LET GO AND LET GOD", card.send(:quoted, "LET GO AND LET GOD", first: true, last: false, whole: true), "no quote marks around a heading"
     assert File.exist?(card.path)
   end
+
+  test "share this day: a daily reading as a picture or a video, for anyone signed in" do
+    doc = { "type" => "doc", "content" => [
+      { "type" => "heading", "attrs" => { "level" => 3 }, "content" => [{ "type" => "text", "text" => "NOVEMBER 7" }] },
+      { "type" => "heading", "attrs" => { "level" => 2 }, "content" => [{ "type" => "text", "text" => "LET GO AND LET GOD" }] },
+      { "type" => "paragraph", "content" => [{ "type" => "text", "text" => "praying only for knowledge of His will.", "marks" => [{ "type" => "italic" }] }] },
+      { "type" => "paragraph", "content" => [{ "type" => "text", "text" => "When I let go, I think more clearly. " * 6 }] }
+    ] }
+    daily = Book.create!(title: "Daily Reflections", slug: "daily-reflections", work_key: "daily-reflections")
+    daily.chapters.create!(title: "November 7: Let Go and Let God", slug: "november-7", index: 1, tiptap_json: doc)
+    path = "/api/books/daily-reflections/chapters/november-7/card"
+
+    get path, headers: { "User-Agent" => BROWSER }
+    assert_redirected_to "/users/sign_in", "signed out, it asks you to sign in"
+
+    sign_in @mo
+    get path, params: { look: "night", size: "square" }, headers: { "User-Agent" => BROWSER }
+    assert_response :success
+    assert_includes %w[image/png image/gif], response.media_type
+
+    card = QuoteCard.chapter(daily.chapters.first, look: "night", size: "square")
+    assert_equal :title, card.send(:formats)["LET GO AND LET GOD"]
+    assert_equal "NOVEMBER 7", card.send(:quoted, "NOVEMBER 7", first: true, last: false, whole: true), "no quote marks on a day"
+
+    if system("ffmpeg", "-version", out: File::NULL, err: File::NULL)
+      get path, params: { look: "paper", size: "wide", video: "1" }, headers: { "User-Agent" => BROWSER }
+      assert_response :success
+      assert_equal "video/mp4", response.media_type
+      assert_equal "ftyp", response.body.b[4, 4]
+    end
+
+    # Other books' chapters aren't days
+    get "/api/books/big-book/chapters/how-it-works/card", headers: { "User-Agent" => BROWSER }
+    assert_response :unprocessable_entity
+  end
 end

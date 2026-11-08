@@ -9,7 +9,8 @@ import { PageBreak } from "../tiptap/PageBreak";
 import TextAlign from '@tiptap/extension-text-align';
 import ReaderBubbleMenu from "../components/ReaderBubbleMenu";
 import HighlightsModal from "../components/HighlightsModal";
-import { ReaderBar, ReaderFooter, ChaptersDialog, ModeSwitch, useChapterHotkeys, chapterHref, tocHref, isAdminViewer } from "./book/ReaderChrome";
+import { ReaderBar, ReaderFooter, ChaptersDialog, ModeSwitch, useChapterHotkeys, chapterHref, tocHref, isAdminViewer, DAILY_BOOKS } from "./book/ReaderChrome";
+import PictureShare from "./share/PictureShare";
 import { SearchDialog, SearchBanner, useInTextSearch, useSearchHotkey } from "./book/BookSearch";
 import { rememberLastRead } from "./book/readingProgress";
 import { isShareView } from "./shell/shareView";
@@ -302,6 +303,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const [chapter, setChapter] = useState(null);
   const [highlights, setHighlights] = useState([]);
   const [color, setColor] = useState("yellow");
+  const [sharingDay, setSharingDay] = useState(false);
   const [toast, toastNode] = useToast();
   const signedIn = document.body.dataset.currentUser === "true";
 
@@ -931,7 +933,16 @@ export default function ChapterViewer({ bookSlug, slug }) {
         </div>
       </article>
 
-      {listReady && !share && <ReaderFooter bookSlug={bookSlug} bookTitle={bookTitle} next={nextChapter} />}
+      {listReady && !share && <ReaderFooter bookSlug={bookSlug} bookTitle={bookTitle} next={nextChapter}
+        onShareDay={DAILY_BOOKS.includes(bookSlug) ? () => (signedIn ? setSharingDay(true) : toast("Sign in to share this day")) : null} />}
+
+      {/* "Share this day": the whole reading as a picture, or a video whose lines fade in */}
+      {sharingDay && (
+        <PictureShare onClose={() => setSharingDay(false)} kind="day" canVideo heading="Share this day"
+          cardUrl={`/api/books/${encodeURIComponent(bookSlug)}/chapters/${encodeURIComponent(slug)}/card`}
+          link={`${window.location.origin}${chapterHref(bookSlug, { slug })}`}
+          title={[chapter?.title, bookTitle].filter(Boolean).join(" · ")} />
+      )}
 
       {/* Reader bubble menu for highlights (out of the way while the docked bar shows) */}
       {!selectionPop?.docked && !share && <ReaderBubbleMenu

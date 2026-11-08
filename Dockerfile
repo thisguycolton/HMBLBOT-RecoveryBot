@@ -7,7 +7,8 @@ RUN apt-get update -qq && apt-get install -y \
   curl \
   git \
   gnupg \
-  imagemagick
+  imagemagick \
+  ffmpeg
 
 # Install Node.js 20.x and Yarn
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \

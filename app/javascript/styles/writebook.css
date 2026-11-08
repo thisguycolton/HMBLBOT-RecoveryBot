@@ -695,6 +695,17 @@ html.share-view:has(.wb-reader) {
   max-width: 100%;
 }
 
+/* A day's reading: "Share this day" above Next */
+.wb-reader__footer--day {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.wb-reader__footer .wb-btn--share-day {
+  gap: 0.5em;
+}
+
 /* Writebook pages sit on plain white (or near-black in dark mode), and the
    app's global flex body would otherwise shrink-wrap them. */
 body:has(.wb) {
