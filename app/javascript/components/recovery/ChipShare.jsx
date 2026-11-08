@@ -1,16 +1,18 @@
 import React, { useState } from "react";
-import { Check, Share2 } from "lucide-react";
+import { Check, ImageIcon, Share2 } from "lucide-react";
 import { api } from "../groups/lib";
 import { primaryButton, quietButton } from "../groups/ui";
 import { showToast } from "../../lib/toast";
 import { VISIBILITY } from "../notes/lib";
 import { localDate } from "./lib";
+import ChipPictureShare from "./ChipPictureShare";
 
 // Share to timeline, under a chip in its modal: never automatic. Opens to who sees it
 // (Followers or Members), a few words, and the groups to share it to as well, then posts it
 // as a note with the chip on it (Api::TimelineNotesController#create, chip_id). `options` is
-// what /api/recovery says (share_groups, shared, profile_path); without it, it asks.
-export default function ChipShare({ chip, options: given, startOpen = false }) {
+// what /api/recovery says (share_groups, shared, profile_path, first_name); without it, it asks.
+// Next to it, "Picture or video" makes one of the chip to share anywhere (ChipPictureShare).
+export default function ChipShare({ chip, design, options: given, startOpen = false }) {
   const [options, setOptions] = useState(given || null);
   const [open, setOpen] = useState(startOpen);
   const [visibility, setVisibility] = useState("followers");
@@ -18,13 +20,14 @@ export default function ChipShare({ chip, options: given, startOpen = false }) {
   const [groups, setGroups] = useState([]);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [picture, setPicture] = useState(false);
 
-  const start = async () => {
-    setOpen(true);
+  const load = async () => {
     if (options) return;
     try { setOptions(await api(`/recovery?today=${localDate()}`)); } catch { setOptions({ share_groups: [], shared: [] }); }
   };
-  if (options && !options.profile_path) return null; // profiles aren't open to them yet
+  const start = () => { setOpen(true); load(); };
+  const canPost = !options || !!options.profile_path; // profiles may not be open to them yet
   const shared = done || options?.shared?.includes(chip.id);
 
   const share = async () => {
@@ -41,13 +44,20 @@ export default function ChipShare({ chip, options: given, startOpen = false }) {
     }
   };
 
-  if (!open) {
+  const pictureSheet = picture && <ChipPictureShare chip={chip} design={design} firstName={options?.first_name} onClose={() => setPicture(false)} />;
+  if (!open || !canPost) {
     return (
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <button type="button" className={quietButton} onClick={start}>
-          {shared ? <Check className="size-4" /> : <Share2 className="size-4" />} {shared ? "Shared · share again" : "Share to timeline"}
+        {canPost && (
+          <button type="button" className={quietButton} onClick={start}>
+            {shared ? <Check className="size-4" /> : <Share2 className="size-4" />} {shared ? "Shared · share again" : "Share to timeline"}
+          </button>
+        )}
+        <button type="button" className={quietButton} onClick={() => { setPicture(true); load(); }}>
+          <ImageIcon className="size-4" /> Picture or video
         </button>
         {shared && options?.profile_path && <a href={options.profile_path} className="text-sm font-medium text-accent hover:underline">See your timeline</a>}
+        {pictureSheet}
       </div>
     );
   }

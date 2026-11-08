@@ -23,6 +23,8 @@ class Api::RecoveryController < ApplicationController
       # Sharing a chip to their timeline: the groups they can share it to too, and the chips they already shared
       share_groups: current_user.groups.order(:title).map { |g| { slug: g.slug, title: g.title } },
       shared: current_user.timeline_notes.where.not(chip_id: nil).pluck(:chip_id).uniq,
+      # Only drawn on a chip picture if they tick "Add my first name" (ChipPictureShare)
+      first_name: current_user.name.to_s.split.first.presence,
       can_give: current_user.groups.any? { |g| g.can_host?(current_user) },
       today: {
         inventory: current_user.step_inventories.exists?(on: today),
