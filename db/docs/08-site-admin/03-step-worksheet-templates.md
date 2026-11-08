@@ -6,6 +6,8 @@ audience: admins
 ---
 **Site Admin > Step worksheets** lists the worksheets members can start on the Steps page.
 
+![Site Admin > Step worksheets](/docs-images/site-admin/step-worksheets.webp)
+
 ## Edit a worksheet
 
 1. Choose a worksheet. It opens in the HumbleBot Editor, in template mode.

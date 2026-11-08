@@ -27,10 +27,52 @@ class DocsTest < ActionDispatch::IntegrationTest
     about = DocPage.find_by!(path_alias: "about")
     assert_equal "About RecoveryBot", about.title
     about.update!(body: "Edited")
-    assert_equal({ sections: 0, pages: 0 }, DocsImport.run)
+    assert_equal({ sections: 0, pages: 0, refreshed: 0 }, DocsImport.run)
     assert_equal "Edited", about.reload.body
     assert DocPage.where(audience: "admins").joins(:section).where(doc_sections: { slug: "site-admin" }).count.positive?
     assert_not DocPage.where("body ILIKE ?", "%court%").exists?, "Court verification stays out of the docs"
+  end
+
+  test "refresh brings newer draft text only to pages nobody has touched" do
+    DocSection.destroy_all
+    DocsImport.run
+    untouched = DocPage.find_by!(path_alias: "history")
+    reviewed = DocPage.joins(:section).find_by!(doc_sections: { slug: "group-tools" }, slug: "group-chat")
+    edited = DocPage.find_by!(path_alias: "about")
+    [untouched, reviewed, edited].each { |p| p.update_columns(body: "Old draft") }
+    reviewed.update!(reviewed_at: Time.current, reviewed_by: @admin)
+    edited.save_edit({ body: "Colton's words" }, @admin)
+
+    result = DocsImport.run(refresh: true)
+    assert_operator result[:refreshed], :>=, 1
+    assert_not_equal "Old draft", untouched.reload.body
+    assert_equal "Old draft", reviewed.reload.body
+    assert_equal "Colton's words", edited.reload.body
+  end
+
+  test "refresh[reviewed] also updates reviewed pages whose words nobody changed, keeping the old text" do
+    DocSection.destroy_all
+    DocsImport.run
+    reviewed = DocPage.joins(:section).find_by!(doc_sections: { slug: "group-tools" }, slug: "group-chat")
+    edited = DocPage.find_by!(path_alias: "about")
+    reviewed.update_columns(body: "Old draft")
+    reviewed.mark_reviewed!(true, @admin)
+    reviewed.save_edit({ status: "published" }, @admin) # ticking Reviewed saves the page too, without changing its words
+    edited.save_edit({ body: "Colton's words" }, @admin)
+
+    DocsImport.run(refresh: :reviewed)
+    reviewed.reload
+    assert_not_equal "Old draft", reviewed.body
+    assert_nil reviewed.reviewed_at, "it goes back on the review list"
+    assert_equal "Old draft", reviewed.versions.first.body, "History keeps what was there, so Put back restores it"
+    assert_equal "Colton's words", edited.reload.body
+  end
+
+  test "every picture the drafts point to is in public/docs-images" do
+    missing = Dir[Rails.root.join("db/docs/**/*.md")].flat_map do |file|
+      File.read(file).scan(%r{\]\((/docs-images/[^) ]+)}).flatten.reject { |src| Rails.root.join("public#{src}").exist? }.map { |src| "#{src} (#{File.basename(file)})" }
+    end
+    assert_empty missing
   end
 
   test "the app's pages render for anyone, with the page's own title" do

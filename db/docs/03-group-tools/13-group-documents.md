@@ -5,13 +5,32 @@ icon: file-text
 ---
 **Documents** hold your group's writing: bylaws, meeting formats, the host script, reports. Write them here or upload a file (PDF, Word, Excel or a picture, up to 20 MB).
 
+![The Documents tab: pinned documents and folders](/docs-images/group-tools/documents.webp)
+
 ## Folders and who sees them
 
-Each document sits in a folder by kind, and has a **visibility**: public, members, or record keepers only. Mark one **Current**, keep it as a **Draft**, or **Archive** it.
+Each document sits in a folder by kind: **Format & scripts**, **Guidelines & policies**, **Treasury**, **Service positions**, **Outreach** and **Other**. Each has a **visibility**: public, members, hosts, or record keepers only. Mark one **Current**, keep it as a **Draft**, or **Archive** it. Pin the ones people need most.
+
+## Example: Lantern Street's documents
+
+| Document | Folder | Who sees it | Status |
+| --- | --- | --- | --- |
+| Thursday meeting format (pinned) | Format & scripts | Members | Current |
+| Group guidelines | Guidelines & policies | Public | Current |
+| Host checklist | Service positions | Hosts | Current |
+| Bylaws (draft) | Other | Record keepers | Draft |
+
+## Start a document
+
+- **New document** starts a blank one, or pick a starting point from **Templates**.
+- **Import Word / RTF / Markdown / JSON** turns a file into an editable document.
+- **Upload a file** keeps a PDF, spreadsheet or picture as it is.
 
 ## Writing together
 
 Several people can edit at once. You'll see each other's cursors, and **Jump to** someone's cursor. If you lose your connection, your edits wait and sync when you're back.
+
+![Editing the Thursday meeting format](/docs-images/group-tools/document.webp)
 
 ## Versions
 
@@ -25,4 +44,4 @@ Select text and choose **Comment** to start a discussion beside it.
 
 Long documents can fold sections open and shut. Use **Insert > Collapsible section**.
 
-> [!TIP] The host script for the [Hosting Command Center](/docs/group-tools/hosting-command-center) is a group document. Its top headings become the sections hosts step through.
+> [!TIP] The host script for the [Hosting Command Center](/docs/group-tools/hosting-command-center) is a group document. Its top headings become the sections hosts step through, and placeholders like `{{ host }}` and `{{ service_hiw }}` fill in with tonight's names.

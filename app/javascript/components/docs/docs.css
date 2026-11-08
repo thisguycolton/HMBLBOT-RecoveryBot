@@ -58,6 +58,9 @@
   display: block; max-width: 100%; height: auto; margin: 1.5rem auto;
   border-radius: 1rem; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.05);
 }
+/* Phone screenshots (a file name ending in -phone) stay phone-sized instead of filling the column */
+.doc-body img.doc-image[src*="-phone."],
+.doc-editor .ProseMirror img[src*="-phone."] { max-width: min(100%, 20rem); border-radius: 1.75rem; }
 .doc-body [id] { scroll-margin-top: 6rem; }
 
 /* A line someone linked to (#l-…) or just shared: it lights up, then fades back */

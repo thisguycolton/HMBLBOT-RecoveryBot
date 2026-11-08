@@ -8,20 +8,29 @@ Anonymity matters here. This page sums up who sees what; the full [privacy polic
 ## Only you
 
 - Your **10th step inventories**, **gratitude lists** and **step worksheets**. Your step work answers are encrypted where they're stored.
+- Your **chips page**, unless you put favorites on your profile.
 - Your highlights and notes, unless you choose otherwise.
 - Your sobriety date, unless you choose to show it.
 
-You can send any of these to your sponsor, or copy them to share yourself. Nothing is sent without you choosing to.
+You can send any of these to your sponsor, or copy them to share yourself. Nothing is sent without you choosing to. Each of these pages says so at the top, with a small lock.
 
 ## Who can see what you post
 
 Notes and highlights each have a setting:
 
-- **Only me**
+- **Only me**: nobody else sees it on your profile.
 - **Followers**: people who follow you.
-- **Members**: anyone signed in who can see profiles.
+- **Members**: everyone signed in to RecoveryBot.
 
-New ones start with your defaults from **Settings**. Profiles are never public on the web; you have to be signed in to see them.
+New notes start with your default from **Settings > Privacy**. You can still change each note on its own.
+
+![The privacy default in Settings](/docs-images/getting-started/privacy-defaults.webp)
+
+Highlights stay with you unless you open one and choose **Share to timeline**. Profiles are never public on the web; you have to be signed in to see them.
+
+## An example
+
+Sam highlights "Half measures availed us nothing" in Chapter 5 and writes a note. On its own, that highlight is Sam's alone. When Sam chooses **Share to timeline** with **Members**, it shows in the feeds of people who follow Sam and on Sam's page for anyone signed in, and Riley (mentioned in the note) gets a notification. If Sam later sets it back to **Only me**, it leaves every timeline, reposts included.
 
 ## Groups
 

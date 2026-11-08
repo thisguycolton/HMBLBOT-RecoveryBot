@@ -7,9 +7,23 @@ icon: heart-handshake
 
 ## Ask someone to be your sponsor
 
-1. Open **Sponsorship** and choose **Ask a sponsor**.
-2. Enter their username, or send them an **invite link** (there's a QR code to show in person).
+1. Open **Sponsorship** and choose **Ask someone** under **Your sponsors**.
+2. Enter their username, or open the invite link they gave you.
 3. When they accept, you're connected. If they decline, it's quiet: nobody is told.
+
+**Find a sponsor** lists people in your groups who've said they're available to sponsor.
+
+## Example: Riley and Jordan
+
+Riley M. sponsors Jordan K. and Casey L. On Riley's Sponsorship page, **People you sponsor** lists both, with when it started and which step each is on (Jordan on Step 4, Casey on Step 1):
+
+![Sponsorship, as Riley (a sponsor) sees it](/docs-images/step-work/sponsorship.webp)
+
+On Jordan's page, **Your sponsors** shows Riley ("You're on Step 4"):
+
+![Sponsorship, as Jordan (a sponsee) sees it](/docs-images/step-work/sponsorship-sponsee.webp)
+
+When Jordan writes a 10th step, Jordan chooses **Send to my sponsor**. Riley sees a copy of it as it was sent, and can leave one short note back: "Good catch on the emails. Call me Thursday?"
 
 ## Send your work
 
@@ -22,6 +36,7 @@ You can have a worksheet send itself when you mark it done, or set a reminder to
 - See what each sponsee sent, and which **step** they're on (either of you can set it).
 - **Nudge** a sponsee who's gone quiet (once a day at most).
 - **Share a blank copy** of a worksheet you like to a sponsee.
+- **Get my invite link**: give it to someone by text, or show its QR code after a meeting. When they open it and say yes, you're linked.
 
 ## Available to sponsor
 
@@ -29,4 +44,4 @@ Turn on **Available to sponsor** to show a green check next to your name in your
 
 ## Ending a sponsorship
 
-Either of you can end it at any time, quietly. Everything you sent disappears from your sponsor's view.
+Either of you can end it at any time with **End**, quietly. Everything you sent disappears from your sponsor's view.

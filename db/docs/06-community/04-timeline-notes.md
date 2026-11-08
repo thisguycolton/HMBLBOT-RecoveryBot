@@ -19,3 +19,9 @@ Choose **Comment** to reply. Comments take Markdown and can have their own react
 ## The ••• menu
 
 On your own notes: **Edit**, **Turn comments off**, **Delete**. On a note on your page: **Take off my page**. On anyone's: **Report** or **Block**.
+
+## Example
+
+Under Jordan's note "92 days. Didn't think I'd see 9 days, let alone 90. Thank you, Lantern Street. #milestone", Sam chooses **Hugs** and comments "So glad you're here." Jordan gets a notification for each. Because Jordan shared the note with **Members**, Sam could also **Repost** it to Sam's own timeline, linked back to Jordan's.
+
+![Notes in the home feed, with Like, Love, Hugs, Comment and Repost](/docs-images/community/home-feed.webp)

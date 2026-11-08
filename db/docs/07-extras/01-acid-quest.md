@@ -5,6 +5,8 @@ icon: gamepad-2
 ---
 **The Acid Quest** turns the Topicificator into a 16-bit group journey. Your group travels a map together; each stop is a topic to talk about, with choices that shape the road ahead.
 
+![The Acid Quest's start screen](/docs-images/extras/acid-quest.webp)
+
 ## Play
 
 1. Open **The Acid Quest** from the sidebar's extras.
