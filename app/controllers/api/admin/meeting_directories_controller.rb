@@ -5,7 +5,9 @@ class Api::Admin::MeetingDirectoriesController < Api::Admin::SuiteController
   FETCH_ERRORS = [OiaaFeed::Error, MeetingListImport::Error, SocketError, SystemCallError, Net::OpenTimeout, Net::ReadTimeout,
                   OpenSSL::SSL::SSLError, URI::InvalidURIError, ArgumentError].freeze
 
-  rescue_from(*FETCH_ERRORS) { |e| render json: { error: e.message }, status: :unprocessable_entity }
+  rescue_from(*FETCH_ERRORS) do |e|
+    render json: { error: e.message, blocked: e.is_a?(OiaaFeed::Blocked) }, status: :unprocessable_entity
+  end
 
   def index
     render json: MeetingDirectory.includes(:imported_by).order(:name).map(&:as_admin_json)

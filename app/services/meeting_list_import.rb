@@ -16,7 +16,7 @@ require "csv"
 class MeetingListImport
   class Error < StandardError; end
 
-  MAX_ROWS = 5000
+  MAX_ROWS = 10_000
   # What a listing's preview compares, and shows when it changed
   FIELDS = %i[name group_name days start_time end_time time_zone types notes location location_notes
               formatted_address region attendance_option conference_url conference_url_notes conference_phone url
@@ -117,6 +117,12 @@ class MeetingListImport
       body = @text.presence || (@url && OiaaFeed.fetch_feed(@url)) or raise Error, "Give a feed link or a file."
       body = body.dup.force_encoding("UTF-8").delete_prefix("﻿")
       raise Error, "That isn't text we can read." unless body.valid_encoding?
+
+      # a feed saved from a browser as a web page: the JSON is the page's text
+      if body.lstrip.start_with?("<")
+        text = CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(body[%r{<body[^>]*>(.*)</body>}mi, 1] || body)).strip
+        body = text if text.start_with?("[", "{")
+      end
 
       rows = body.lstrip.start_with?("[", "{") ? json_rows(body) : csv_rows(body)
       raise Error, "There are no meetings in it." if rows.empty?

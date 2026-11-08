@@ -57,6 +57,14 @@ class Api::Admin::MeetingDirectoriesTest < ActionDispatch::IntegrationTest
     post "/api/admin/meeting_directories/#{list.id}/preview", params: { text: "nope,nope\n" }, as: :json
     assert_response :unprocessable_entity
     assert_match "Name, Day and Time", response.parsed_body["error"]
+    assert_equal false, response.parsed_body["blocked"]
+
+    # a feed link behind bot protection: the page offers to import a saved file instead
+    OiaaFeed.stub(:fetch_feed, ->(_url) { raise OiaaFeed::Blocked, "example.org has bot protection" }) do
+      post "/api/admin/meeting_directories/#{list.id}/preview", params: { url: "https://example.org/feed" }, as: :json
+    end
+    assert_response :unprocessable_entity
+    assert_equal true, response.parsed_body["blocked"]
   end
 
   test "add many lists at once, and refresh one now" do
