@@ -20,7 +20,7 @@ import { newProgressToken, ProgressRing, progressLabel, timeLeft, useCardProgres
 // link that goes with a highlight (none for notes, which only members see); `hasNote` offers
 // to leave a highlight's note off.
 //
-// `canVideo` ("Share this day") also offers a video: an MP4 whose lines fade in one after
+// `canVideo` ("Share this day", and your own highlights) also offers a video: an MP4 whose lines fade in one after
 // another, drawn by the server (QuoteCard, ffmpeg) in 15 to 30 seconds. Copy and Post use a
 // still picture of it, since clipboards and posts take pictures. While a video (or a long
 // GIF) is drawn, a ring fills with how far along the server says it is (cardProgress).
@@ -38,7 +38,7 @@ export const SIZES = [
 
 export default function PictureShare({ cardUrl, link, kind = "highlight", hasNote = false, canVideo = false, heading = "Share as a picture", title, text, onClose }) {
   const [look, setLook] = useState("paper");
-  const [size, setSize] = useState(canVideo ? "story" : "square");
+  const [size, setSize] = useState(kind === "day" ? "story" : "square");
   const [asVideo, setAsVideo] = useState(false);
   const [fade, setFade] = useState("normal"); // how fast a video's lines fade in
   const [turn, setTurn] = useState("normal"); // how fast its pages turn

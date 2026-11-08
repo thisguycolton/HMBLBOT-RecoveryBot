@@ -73,10 +73,11 @@ class QuoteCard
 
   # A highlight's picture. `note:` false leaves its note out, `name:` true puts their first
   # name on it. A note with blocked words in it (from before the filter) is always left out.
-  def self.highlight(h, look: nil, size: nil, note: true, name: false, still: false)
+  def self.highlight(h, look: nil, size: nil, note: true, name: false, still: false, video: false, fade: nil, turn: nil, gif: false)
     words = note && h.note.present? && !BlockedLanguage.found?(h.note) ? plain(h.note) : nil
     new(kind: :highlight, quote: h.quote, note: words, source: "#{h.chapter.book.title} · #{h.chapter.title}", formats: formats_for(h),
-        by: (h.user.display_name.to_s.split.first if name), color: h.style.is_a?(Hash) ? h.style["color"] : nil, look: look, size: size, still: still)
+        by: (h.user.display_name.to_s.split.first if name), color: h.style.is_a?(Hash) ? h.style["color"] : nil, look: look, size: size, still: still,
+        video: video, fade: fade, turn: turn, gif: gif)
   end
 
   # A short line mostly in capitals ("TWELVE STEPS AND TWELVE TRADITIONS, p. 96")

@@ -68,7 +68,7 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
   // A members-only book's words don't go into pictures (they'd go anywhere)
   const picturable = (item.kind === "highlight" && !item.members_only) || (note && !!item.body?.trim());
   const menu = readOnly || editing ? [] : item.mine ? [
-    picturable && { label: "Share as a picture", icon: ImageIcon, onClick: () => setPicturing(true) },
+    picturable && { label: item.kind === "highlight" ? "Share as a picture or video" : "Share as a picture", icon: ImageIcon, onClick: () => setPicturing(true) },
     note && { label: "Edit", icon: Pencil, onClick: () => setEditing(true) },
     note && { label: item.comments_off ? "Turn comments on" : "Turn comments off", icon: item.comments_off ? MessageSquareText : MessageSquareOff, onClick: toggleComments },
     note && { label: "Delete", icon: Trash2, danger: true, onClick: destroy },
@@ -95,7 +95,7 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
 function pictureProps(item) {
   if (item.kind !== "highlight") return { cardUrl: `/api/timeline_notes/${item.id}/card`, kind: "note", title: "A note" };
   return {
-    cardUrl: `/api/highlights/${item.id}/card`, kind: "highlight", hasNote: !!item.note?.trim(), title: `A highlight from ${item.book_title}`,
+    cardUrl: `/api/highlights/${item.id}/card`, kind: "highlight", canVideo: true, heading: "Share as a picture or video", hasNote: !!item.note?.trim(), title: `A highlight from ${item.book_title}`,
     link: `${location.origin}${highlightHref(item)}`,
   };
 }
