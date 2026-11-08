@@ -133,8 +133,10 @@ class Api::HighlightsController < ApplicationController
       return render(json: { error: "#{h.chapter.book.title} is only for members of groups that read it, so its words can't go in a picture." }, status: :forbidden)
     end
 
+    # video=1: an MP4 whose lines fade in (fade= and turn= set how fast; as=gif makes it a GIF), like "Share this day"
     picture = QuoteCard.highlight(h, look: params[:look], size: params[:size], note: params[:note] != "0", name: params[:name] == "1",
-                                    still: params[:still] == "1")
+                                    still: params[:still] == "1", video: params[:video] == "1", fade: params[:fade], turn: params[:turn],
+                                    gif: params[:as] == "gif")
     send_card(picture)
   end
 

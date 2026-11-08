@@ -73,7 +73,7 @@ export default function ChipEditions({ group, data, templates, onTemplates }) {
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-56">
           <h2 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white"><Sparkles className="size-4" /> Special Editions</h2>
           <p className="text-sm text-slate-500 dark:text-neutral-400">
             Limited chips for a year, a month, a week or a holiday. Milestone editions are for milestones members reach while it runs: they claim it with a tap, any time after, and hosts can give it too.

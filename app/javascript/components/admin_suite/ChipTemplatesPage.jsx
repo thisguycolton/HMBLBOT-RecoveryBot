@@ -66,7 +66,7 @@ function TemplateList({ notify }) {
     <>
       <Card title="New template" subtitle="Import an SVG made of filled shapes. Each top-level group (Illustrator or Inkscape layer, Figma frame) becomes a layer, and its outlines become metal lines. Only art you own or have the rights to.">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="min-w-0 flex-1">
+          <label className="min-w-0 flex-1 basis-56">
             <span className={labelClass}>Name</span>
             <input id="tpl-new-title" className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Sunflower" />
           </label>

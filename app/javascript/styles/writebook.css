@@ -2600,3 +2600,19 @@ body:has(.wb) {
 }
 .wb-members-only--embedded { padding-top: 1rem; }
 .wb-library__name .wb-library__lock { align-self: center; justify-content: center; }
+
+/* Your highlights on a phone: the buttons go under the words, so the words get the whole width */
+@media (max-width: 639px) {
+  .wb-hl-item {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .wb-hl-item > .flex-1 {
+    width: 100%;
+  }
+
+  .wb-hl-item > .wb-hl-actions {
+    align-self: flex-end;
+  }
+}

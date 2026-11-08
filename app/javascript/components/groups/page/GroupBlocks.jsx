@@ -167,7 +167,7 @@ function MeetingsBlock({ block, compact, editing, context, title }) {
       <ul className={compact ? "space-y-3" : "divide-y divide-neutral-200/70 dark:divide-neutral-700/60"}>
         {rows.map((m) => (
           <li key={m.id} className={compact ? "" : "flex flex-wrap items-center gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0"}>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 basis-56">
               <p className="font-semibold text-slate-900 dark:text-white">{m.name}</p>
               <p className="text-sm text-slate-600 dark:text-neutral-300">{m.label}</p>
               {!shared && <MeetingPlace meeting={m} editing={editing} />}

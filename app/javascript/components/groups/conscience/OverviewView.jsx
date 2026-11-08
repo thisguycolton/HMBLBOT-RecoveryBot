@@ -75,7 +75,7 @@ export default function OverviewView({ group }) {
             </>
           ) : (
             <div className="flex flex-wrap items-center gap-3">
-              <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300">No business meeting is scheduled.</p>
+              <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300 basis-56">No business meeting is scheduled.</p>
               {data.can_edit && <Link to={meetingsPath(slug)} className={primaryButton}><CalendarPlus className="size-4" /> Schedule one</Link>}
             </div>
           )}

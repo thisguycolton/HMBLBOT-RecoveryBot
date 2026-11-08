@@ -54,7 +54,7 @@ export default function HostingIndex() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 !font-sans [&_*]:!font-sans">
       <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-56">
           <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> HostDeck</h1>
           <p className="mt-1 !text-left text-sm text-slate-600 dark:text-neutral-300">Pick the meeting you're hosting. Each date opens on its own, so you can get one ready ahead of time.</p>
         </div>

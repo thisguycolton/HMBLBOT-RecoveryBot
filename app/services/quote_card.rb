@@ -45,6 +45,8 @@ class QuoteCard
   HIGHLIGHT_COLORS = { "yellow" => "#fef08a", "lime" => "#bef264", "cyan" => "#a5f3fc", "pink" => "#fbcfe8", "orange" => "#fed7aa" }.freeze
 
   attr_reader :look, :size, :quote, :long, :note, :source, :by, :color, :kind, :still, :video
+  # A CardProgress to note how far along drawing it is (for the page's progress ring), or nil
+  attr_accessor :progress
 
   # kind: :highlight (a quote, maybe with its note) or :note (their own words)
   # formats: { paragraph => :title, :subhead, :italic, :caps or :body }, how the reading set them
@@ -71,10 +73,11 @@ class QuoteCard
 
   # A highlight's picture. `note:` false leaves its note out, `name:` true puts their first
   # name on it. A note with blocked words in it (from before the filter) is always left out.
-  def self.highlight(h, look: nil, size: nil, note: true, name: false, still: false)
+  def self.highlight(h, look: nil, size: nil, note: true, name: false, still: false, video: false, fade: nil, turn: nil, gif: false)
     words = note && h.note.present? && !BlockedLanguage.found?(h.note) ? plain(h.note) : nil
     new(kind: :highlight, quote: h.quote, note: words, source: "#{h.chapter.book.title} · #{h.chapter.title}", formats: formats_for(h),
-        by: (h.user.display_name.to_s.split.first if name), color: h.style.is_a?(Hash) ? h.style["color"] : nil, look: look, size: size, still: still)
+        by: (h.user.display_name.to_s.split.first if name), color: h.style.is_a?(Hash) ? h.style["color"] : nil, look: look, size: size, still: still,
+        video: video, fade: fade, turn: turn, gif: gif)
   end
 
   # A short line mostly in capitals ("TWELVE STEPS AND TWELVE TRADITIONS, p. 96")
@@ -224,13 +227,18 @@ class QuoteCard
       elsif pages.size > 1
         file = ShareCard::DIR.join("#{key}-#{pages.size}.gif")
         meta_h # measured once, before the pages are drawn side by side
+        drawn = 0
+        counting = Mutex.new
+        progress&.update(:drawing, 0.05)
         frames = pages.each_with_index.map do |page, i|
           Thread.new do
             out = File.join(dir, "page-#{i}.png")
             run(page_command(page, i) + ["-strip", "PNG24:#{out}"])
+            counting.synchronize { progress&.update(:drawing, 0.05 + (0.8 * (drawn += 1) / pages.size)) }
             ["-delay", delay(page, last: i == pages.size - 1).to_s, out]
           end
         end.map(&:value)
+        progress&.update(:encoding, 0.85)
         out = File.join(dir, "card.gif")
         # One palette for every page, and no dithering, so the pages only differ where the
         # words do and the GIF stays small
@@ -241,6 +249,7 @@ class QuoteCard
         run(command + ["-strip", "PNG24:#{out}"])
       end
       FileUtils.mv(out, file)
+      progress&.update(:done, 1)
       @cached = file
     end
   end
@@ -538,7 +547,13 @@ class QuoteCard
   # One video drawn at a time: ffmpeg takes every core it can for a few seconds
   VIDEO_LOCK = Mutex.new
 
-  def render_video(dir) = VIDEO_LOCK.synchronize { draw_video(dir) }
+  # How much of the wait goes to drawing the pages (ImageMagick); ffmpeg takes the rest
+  DRAWING_SHARE = 0.3
+
+  def render_video(dir)
+    progress&.update(:waiting) if VIDEO_LOCK.locked?
+    VIDEO_LOCK.synchronize { draw_video(dir) }
+  end
 
   def draw_video(dir)
     segments = video_segments(dir)
@@ -553,6 +568,10 @@ class QuoteCard
     pace = SPEEDS[@fade]
     turn = SPEEDS[@turn]
     crossfade = CROSSFADES[@turn]
+    renders = pages.size * (highlighter? ? 3 : 2)
+    rendered = 0
+    drew = -> { progress&.update(:drawing, DRAWING_SHARE * (rendered += 1) / renders) }
+    progress&.update(:drawing, 0.02)
     segments = pages.each_with_index.map do |page, i|
       full = File.join(dir, "full-#{i}.png")
       empty = File.join(dir, "empty-#{i}.png")
@@ -561,15 +580,18 @@ class QuoteCard
         @lines_mode = true
         @bands = []
         run(frame_command(page, i) + ["-strip", "PNG24:#{full}"])
+        drew.()
         bands = @bands
         @bands = nil
         if plain
           @no_under = true
           run(frame_command(page, i) + ["-strip", "PNG24:#{plain}"])
+          drew.()
           @no_under = false
         end
         @no_text = true
         run(frame_command(page, i) + ["-strip", "PNG24:#{empty}"])
+        drew.()
       ensure
         @lines_mode = @no_text = @no_under = false
         @bands = nil
@@ -672,10 +694,29 @@ class QuoteCard
       encode = ["-map", "[#{final}]", "-r", FPS.to_s, "-c:v", "libx264", "-preset", "superfast", "-tune", "stillimage", "-crf", "22",
                 "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", out]
     end
-    _o, err, status = Open3.capture3("ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *inputs, "-filter_complex", graph.join(";"), *encode)
+    length = segments.sum { |seg| seg[:length] } - (crossfade * (segments.size - 1))
+    err, status = ffmpeg(inputs, graph, encode, length)
     raise ShareCard::Failed, "ffmpeg: #{err.to_s.first(500)}" unless status.success?
 
     out
+  end
+
+  # Runs ffmpeg, noting how far through the video (`length` seconds) it has got as it goes
+  def ffmpeg(inputs, graph, encode, length)
+    command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostats", "-y", *inputs, "-filter_complex", graph.join(";")]
+    return Open3.capture3(*command, *encode).values_at(1, 2) unless progress
+
+    progress.update(:encoding, DRAWING_SHARE)
+    Open3.popen3(*command, "-progress", "pipe:1", *encode) do |stdin, stdout, stderr, wait|
+      stdin.close
+      errors = Thread.new { stderr.read }
+      stdout.each_line do |line|
+        next unless (us = line[/\Aout_time_us=(\d+)/, 1])
+
+        progress.update(:encoding, DRAWING_SHARE + ((1 - DRAWING_SHARE) * (us.to_i / 1_000_000.0 / length).clamp(0, 0.99)))
+      end
+      [errors.value, wait.value]
+    end
   end
 
   # The Marker look's video draws its highlighter across each line

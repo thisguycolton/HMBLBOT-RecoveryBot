@@ -112,7 +112,7 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
         )}
       </div>
       {picturing && (
-        <PictureShare onClose={() => setPicturing(false)} cardUrl={`/api/highlights/${highlight.id}/card`} kind="highlight"
+        <PictureShare onClose={() => setPicturing(false)} cardUrl={`/api/highlights/${highlight.id}/card`} kind="highlight" canVideo heading="Share as a picture or video"
           hasNote={!!highlight.note?.trim()} link={highlightUrl(bookSlug, chapterSlug, highlight)} title="A highlight" />
       )}
     </div>

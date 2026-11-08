@@ -348,7 +348,8 @@ export function Prose({ text, className = "" }) {
   );
 }
 
-const dayLabel = (d) => new Date(`${d}T12:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+// "Nov 8", or nothing for a tick saved without its day
+const dayLabel = (d) => (/^\d{4}-\d\d-\d\d$/.test(String(d)) ? ` ${new Date(`${d}T12:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : "");
 
 // A reading list (a Reading section with `items`): tick each one off as it's read. `value` is
 // { reading id => the day it was ticked }.
@@ -375,7 +376,7 @@ export function ReadingList({ section, value, set }) {
               </span>
               <span className="min-w-0">
                 <span className="block font-medium text-slate-900 dark:text-white">{r.label}</span>
-                {on && <span className="block text-xs text-slate-500 dark:text-neutral-400">Read {dayLabel(read[r.id])}</span>}
+                {on && <span className="block text-xs text-slate-500 dark:text-neutral-400">Read{dayLabel(read[r.id])}</span>}
               </span>
             </button>
             {href && (

@@ -119,7 +119,7 @@ export default function MeetingListsPage({ notify }) {
           ) : (
             <>
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 basis-56">
                   <p className="text-sm font-semibold text-slate-900 dark:text-white !font-sans">
                     {list.name}
                     {list.website && (

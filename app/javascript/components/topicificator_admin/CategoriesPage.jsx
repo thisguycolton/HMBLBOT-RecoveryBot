@@ -46,7 +46,7 @@ export default function CategoriesPage({ meta, reloadMeta, notify }) {
           ) : (
             <div className="flex flex-wrap items-center gap-3">
               <CategoryTile iconName={cat.icon_name} />
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 basis-56">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white !font-sans">{cat.title}</p>
                 {cat.cat && <p className="text-xs text-slate-500 dark:text-neutral-400 tabular-nums !font-sans">{cat.cat}</p>}
               </div>

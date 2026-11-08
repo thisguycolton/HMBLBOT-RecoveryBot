@@ -38,7 +38,7 @@ export function Pill({ children, tone = "slate" }) {
     amber: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
     green: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
   };
-  return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>{children}</span>;
+  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>{children}</span>;
 }
 
 // The open Writebook-style section: an uppercase label over a soft gray tray

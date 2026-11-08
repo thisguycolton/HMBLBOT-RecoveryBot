@@ -93,7 +93,7 @@ export default function ServiceView({ group }) {
     editing === p.id ? <PositionForm key={p.id} slug={slug} position={p} onSaved={done} onCancel={() => setEditing(null)} /> : (
       <Card key={p.id} className="p-4">
         <div className="flex flex-wrap items-start gap-2">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 basis-56">
             <h3 className="flex flex-wrap items-center gap-2 !text-base font-semibold text-slate-900 dark:text-white">
               {p.title}
               {p.rotation === "vacant" && <Pill tone="amber">Needs someone</Pill>}
@@ -136,7 +136,7 @@ export default function ServiceView({ group }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300">The group's elected officials and how long each serves. Record keepers and the person serving hear when a term is nearly up. Meeting hosts are on the Meetings page.</p>
+        <p className="min-w-0 flex-1 text-sm text-slate-600 dark:text-neutral-300 basis-56">The group's elected officials and how long each serves. Record keepers and the person serving hear when a term is nearly up. Meeting hosts are on the Meetings page.</p>
         {data.can_edit && editing !== "new" && <button type="button" onClick={() => setEditing("new")} className={primaryButton}><Plus className="size-4" /> Add an office</button>}
       </div>
       <ErrorNote error={error} />

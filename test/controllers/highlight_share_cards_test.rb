@@ -239,6 +239,21 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     assert File.exist?(card.path)
   end
 
+  test "a highlight from any book can be a video (or a GIF of one), with its note" do
+    skip "no ffmpeg" unless system("ffmpeg", "-version", out: File::NULL, err: File::NULL)
+    sign_in @lee
+    get "/api/highlights/#{@highlight.id}/card", params: { look: "marker", size: "square", video: "1", turn: "fast" }
+    assert_response :success
+    assert_equal "video/mp4", response.media_type
+    assert_equal "ftyp", response.body.b[4, 4]
+    get "/api/highlights/#{@highlight.id}/card", params: { look: "night", size: "square", video: "1", as: "gif" }
+    assert_equal "image/gif", response.media_type
+
+    sign_in @mo
+    get "/api/highlights/#{@highlight.id}/card", params: { video: "1" }
+    assert_response :not_found
+  end
+
   test "share this day: a daily reading as a picture or a video, for anyone signed in" do
     doc = { "type" => "doc", "content" => [
       { "type" => "heading", "attrs" => { "level" => 3 }, "content" => [{ "type" => "text", "text" => "NOVEMBER 7" }] },
@@ -263,10 +278,19 @@ class HighlightShareCardsTest < ActionDispatch::IntegrationTest
     assert_equal "NOVEMBER 7", card.send(:quoted, "NOVEMBER 7", first: true, last: false, whole: true), "no quote marks on a day"
 
     if system("ffmpeg", "-version", out: File::NULL, err: File::NULL)
-      get path, params: { look: "paper", size: "wide", video: "1" }, headers: { "User-Agent" => BROWSER }
+      token = "progress-token-123"
+      get "/api/card_progress/#{token}", headers: { "User-Agent" => BROWSER }
+      assert_response :no_content, "nothing noted before it starts"
+      get path, params: { look: "paper", size: "wide", video: "1", progress: token }, headers: { "User-Agent" => BROWSER }
       assert_response :success
       assert_equal "video/mp4", response.media_type
       assert_equal "ftyp", response.body.b[4, 4]
+      get "/api/card_progress/#{token}", headers: { "User-Agent" => BROWSER }
+      assert_equal({ "stage" => "done", "percent" => 100 }, response.parsed_body, "the ring ends full")
+
+      sign_in @lee
+      get "/api/card_progress/#{token}", headers: { "User-Agent" => BROWSER }
+      assert_response :no_content, "someone else's progress isn't theirs to see"
     end
 
     # Other books' chapters aren't days

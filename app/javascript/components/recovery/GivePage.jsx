@@ -145,7 +145,7 @@ export default function GivePage() {
           <Card className="divide-y divide-neutral-200/70 dark:divide-neutral-800">
             {data.given.map((a) => (
               <div key={a.id} className="flex flex-wrap items-center gap-3 p-4">
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-56">
                   <div className="font-semibold text-slate-900 dark:text-white">{a.edition && `${a.edition.name} `}{a.label} for {a.to} {!a.claimed && <Pill tone="amber">Not claimed yet</Pill>}</div>
                   <div className="text-sm text-slate-500 dark:text-neutral-400">{dayLabel(a.on, { month: "short", day: "numeric", year: "numeric" })} · {a.group_title}{a.given_by && ` · given by ${a.given_by}`}</div>
                 </div>

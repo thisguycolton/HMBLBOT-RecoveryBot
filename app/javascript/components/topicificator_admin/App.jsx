@@ -52,7 +52,7 @@ function AdminShell() {
   return (
     <AdminChrome>
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 basis-56">
           <h1 className="!text-2xl font-bold !font-sans text-slate-900 dark:text-white">Topicificator admin</h1>
           <p className="!text-left text-sm text-slate-500 dark:text-neutral-400 !font-sans">Topics, sets and categories, and how ACID QUEST offers each topic.</p>
         </div>
