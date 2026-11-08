@@ -20,7 +20,7 @@ import { Bone, SkeletonGroup } from "../ui/Skeleton";
 // to leave a highlight's note off.
 //
 // `canVideo` ("Share this day") also offers a video: an MP4 whose lines fade in one after
-// another, drawn by the server (QuoteCard, ffmpeg) in about 15 seconds. Copy and Post use a
+// another, drawn by the server (QuoteCard, ffmpeg) in 15 to 30 seconds. Copy and Post use a
 // still picture of it, since clipboards and posts take pictures.
 export const LOOKS = [
   { value: "paper", label: "Paper", swatch: "linear-gradient(135deg,#fdfaf3,#f4ecdc)" },
@@ -38,6 +38,8 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   const [look, setLook] = useState("paper");
   const [size, setSize] = useState(canVideo ? "story" : "square");
   const [asVideo, setAsVideo] = useState(false);
+  const [fade, setFade] = useState("normal"); // how fast a video's lines fade in
+  const [turn, setTurn] = useState("normal"); // how fast its pages turn
   const [withNote, setWithNote] = useState(true);
   const [withName, setWithName] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -53,9 +55,13 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
     const q = new URLSearchParams({ look, size });
     if (hasNote && !withNote) q.set("note", "0");
     if (withName) q.set("name", "1");
-    if (canVideo && asVideo) q.set("video", "1");
+    if (canVideo && asVideo) {
+      q.set("video", "1");
+      if (fade !== "normal") q.set("fade", fade);
+      if (turn !== "normal") q.set("turn", turn);
+    }
     return `${cardUrl}?${q}`;
-  }, [cardUrl, look, size, hasNote, withNote, withName, canVideo, asVideo]);
+  }, [cardUrl, look, size, hasNote, withNote, withName, canVideo, asVideo, fade, turn]);
   // Fetched once per choice: shown from here, and the same file shared, copied or posted
   useEffect(() => {
     const stop = new AbortController();
@@ -143,6 +149,19 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
     flash("picture");
   });
 
+  // The same video as a GIF (smaller and quieter, for places that don't take videos): made
+  // when asked, since it takes the server as long as the video did
+  const saveGif = () => run("gif", async () => {
+    const res = await fetch(`${src}&as=gif`, { credentials: "same-origin" });
+    if (!res.ok) throw new Error("Couldn't make the GIF.");
+    const url = URL.createObjectURL(await res.blob());
+    const a = Object.assign(document.createElement("a"), { href: url, download: `recoverybot-${kind}-${size}.gif` });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  });
+
   const copyLink = () => run("link", async () => {
     try {
       await navigator.clipboard.writeText(shareLink);
@@ -194,7 +213,7 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
                 </SkeletonGroup>
               )}
               {loading && video && (
-                <p className="pointer-events-none absolute inset-x-0 top-1/3 px-4 text-center text-xs font-medium text-slate-500 dark:text-neutral-300">Making your video. It takes about 15 seconds.</p>
+                <p className="pointer-events-none absolute inset-x-0 top-1/3 px-4 text-center text-xs font-medium text-slate-500 dark:text-neutral-300">Making your video. It takes 15 to 30 seconds.</p>
               )}
               {failed && <p className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-red-600">{failed}</p>}
             </div>
@@ -243,6 +262,20 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
               </div>
             </fieldset>
 
+            {video && [["Lines fade in", fade, setFade], ["Pages turn", turn, setTurn]].map(([label, value, set]) => (
+              <fieldset key={label}>
+                <legend className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">{label}</legend>
+                <div className="grid grid-cols-3 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800">
+                  {["slow", "normal", "fast"].map((v) => (
+                    <button key={v} type="button" aria-pressed={value === v} onClick={() => set(v)}
+                      className={`rounded-lg px-2 py-1.5 text-xs font-semibold capitalize ${value === v ? "!bg-white text-slate-900 shadow-sm dark:!bg-neutral-950 dark:text-white" : "!bg-transparent text-slate-500 dark:text-neutral-400"}`}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            ))}
+
             {kind !== "day" && <div className="space-y-2">
               {hasNote && (
                 <label className="flex items-center gap-2"><input type="checkbox" checked={withNote} onChange={(e) => setWithNote(e.target.checked)} /> Include my note</label>
@@ -262,6 +295,12 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
                 className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 font-semibold ${canShareFiles ? "bg-neutral-100 !text-slate-800 hover:bg-neutral-200 dark:bg-neutral-800 dark:!text-white" : "!bg-accent !text-white"}`}>
                 <Download className="size-4" /> {video ? "Save video" : moving ? "Save GIF" : "Save picture"}
               </a>
+              {video && (
+                <button type="button" onClick={saveGif} disabled={!!busy}
+                  className="flex items-center justify-center gap-2 rounded-xl !bg-neutral-100 px-3 py-2.5 font-semibold text-slate-800 hover:!bg-neutral-200 disabled:opacity-60 dark:!bg-neutral-800 dark:text-white">
+                  {busy === "gif" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" />} {busy === "gif" ? "Making the GIF…" : "Save as GIF"}
+                </button>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 {canCopyPicture && (
                   <button type="button" onClick={copyPicture} disabled={!!busy} title={moving || video ? "A clipboard can't hold a moving picture, so this copies a still one" : undefined}

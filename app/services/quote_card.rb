@@ -48,12 +48,18 @@ class QuoteCard
 
   # kind: :highlight (a quote, maybe with its note) or :note (their own words)
   # formats: { paragraph => :title, :subhead, :italic, :caps or :body }, how the reading set them
-  def initialize(quote:, kind: :highlight, note: nil, source: nil, by: nil, color: nil, look: "paper", size: "wide", still: false, formats: nil, video: false)
+  def initialize(quote:, kind: :highlight, note: nil, source: nil, by: nil, color: nil, look: "paper", size: "wide", still: false, formats: nil, video: false, fade: nil, turn: nil, gif: false)
     @kind = kind.to_sym
     @look = LOOKS.include?(look.to_s) ? look.to_s : LOOKS.first
     @size = SIZES.key?(size.to_s) ? size.to_s : "wide"
     @still = !!still
     @video = !!video && !@still
+    # A video's two speeds (slow, normal or fast): how its lines fade in, and how its pages
+    # turn (how long each stays and how slowly it crossfades to the next); and whether it
+    # comes as a GIF instead of an MP4
+    @fade = SPEEDS.key?(fade.to_s) ? fade.to_s : "normal"
+    @turn = SPEEDS.key?(turn.to_s) ? turn.to_s : "normal"
+    @gif = @video && !!gif
     @long = clean(quote).truncate(LONG_MAX, separator: " ", omission: "…")
     @quote = @long.truncate(QUOTE_MAX, separator: " ", omission: "…")
     @note = clean(note).truncate(NOTE_MAX, separator: " ", omission: "…").presence
@@ -157,11 +163,11 @@ class QuoteCard
   # A whole day's reading (a Daily Reflection): every word of the chapter set the way the
   # book sets it, from the book's name. `video: true` makes it an MP4 whose lines fade in
   # one after another.
-  def self.chapter(ch, look: nil, size: nil, still: false, video: false)
+  def self.chapter(ch, look: nil, size: nil, still: false, video: false, fade: nil, turn: nil, gif: false)
     text, blocks, italics = flatten(ch.tiptap_json)
     text = text.to_s.strip
     formats = text.empty? ? {} : formats_in(text, blocks, italics, 0, text.length)
-    new(kind: :reading, quote: text, source: ch.book.title, formats: formats, look: look, size: size, still: still, video: video)
+    new(kind: :reading, quote: text, source: ch.book.title, formats: formats, look: look, size: size, still: still, video: video, fade: fade, turn: turn, gif: gif)
   end
 
   # A note's picture: its words (no pictures, links or chips)
@@ -184,15 +190,15 @@ class QuoteCard
   def height = SIZES[size][1]
 
   def key
-    Digest::SHA256.hexdigest(["quote", VERSION, kind, look, size, still ? quote : long, still, note, source, by, color, @given_formats, video].to_json).first(32)
+    Digest::SHA256.hexdigest(["quote", VERSION, kind, look, size, still ? quote : long, still, note, source, by, color, @given_formats, video, (video ? [@fade, @turn] : nil), @gif].to_json).first(32)
   end
 
   def filename
     words = quote.parameterize.split("-").first(5).join("-").presence || "recoverybot"
-    "#{words}-#{size}.#{video ? 'mp4' : (animated? ? 'gif' : 'png')}"
+    "#{words}-#{size}.#{video ? (@gif ? 'gif' : 'mp4') : (animated? ? 'gif' : 'png')}"
   end
 
-  def content_type = video ? "video/mp4" : (animated? ? "image/gif" : "image/png")
+  def content_type = video ? (@gif ? "image/gif" : "video/mp4") : (animated? ? "image/gif" : "image/png")
 
   # A moving picture: words too long for one still (and not asked for one)
   def animated? = !video && page_count > 1
@@ -213,7 +219,7 @@ class QuoteCard
     FileUtils.mkdir_p(ShareCard::DIR)
     Dir.mktmpdir("quote-card") do |dir|
       if video
-        file = ShareCard::DIR.join("#{key}-#{pages.size}.mp4")
+        file = ShareCard::DIR.join("#{key}-#{pages.size}.#{@gif ? 'gif' : 'mp4'}")
         out = render_video(dir)
       elsif pages.size > 1
         file = ShareCard::DIR.join("#{key}-#{pages.size}.gif")
@@ -448,13 +454,13 @@ class QuoteCard
   def block(value, font:, size:, color:, width:, height:, x:, y:, under: nil, quote: false)
     return [] if @no_text
 
-    record_bands(value, font: font, size: size, width: width, quote: quote, y: y, height: height) if @bands
+    record_bands(value, font: font, size: size, width: width, quote: quote, x: x, y: y, height: height) if @bands
     args = ["(", "-background", "none"]
     args += wide? ? ["+gravity"] : ["-gravity", "North"]
     pieces(value, font: font, size: size, width: width, color: color, under: under, quote: quote).each do |p, st, gap|
       args += ["-size", "#{width}x#{gap}", "xc:none"] if gap.positive?
       args += ["-fill", st[:color] || color, "-font", FONTS[st[:font]], "-pointsize", st[:size].to_s, "-kerning", st[:kern].to_s,
-               "-interline-spacing", spacing(st[:font], st[:size]).to_s, "-undercolor", st[:under] || "none",
+               "-interline-spacing", spacing(st[:font], st[:size]).to_s, "-undercolor", (!@no_under && st[:under]) || "none",
                "-size", "#{width}x", caption(italic?(st[:font]) ? "#{p}\u00A0" : p)]
     end
     # Settings after the captions are drawn: they shape only the stack
@@ -463,19 +469,25 @@ class QuoteCard
   end
 
   # A video's bands: where each line of this block lands, [top, height, starts a paragraph]
-  def record_bands(value, font:, size:, width:, quote:, y:, height:)
+  # (and across, where its letters start and end, for the highlighter to sweep)
+  def record_bands(value, font:, size:, width:, quote:, x:, y:, height:)
     list = pieces(value, font: font, size: size, width: width, quote: quote)
     args = list.flat_map do |p, st|
       ["-font", FONTS[st[:font]], "-pointsize", st[:size].to_s, "-kerning", st[:kern].to_s,
        "-interline-spacing", spacing(st[:font], st[:size]).to_s, caption(italic?(st[:font]) ? "#{p}\u00A0" : p)]
     end
-    heights = magick("-size", "#{width}x", *args, "-format", "%h\n", "info:").split.map(&:to_i)
+    gravity = wide? ? ["+gravity"] : ["-gravity", "North"]
+    sizes = magick("-background", "none", *gravity, "-size", "#{width}x", *args, "-format", "%h %@\n", "info:").lines.map do |l|
+      h, box = l.split
+      w, _, left = box.to_s.match(/\A(\d+)x(\d+)\+(-?\d+)/)&.captures&.map(&:to_i)
+      [h.to_i, w ? x + left : x, w ? x + left + w : x + width]
+    end
     top = y
-    list.zip(heights).each_with_index do |((_, _, gap), h), i|
+    list.zip(sizes).each_with_index do |((_, _, gap), (h, left, right)), i|
       top += gap
       break if top >= y + height
 
-      @bands << [top, [h, y + height - top].min, i.zero? || gap >= para_gap(size)]
+      @bands << [top, [h, y + height - top].min, i.zero? || gap >= para_gap(size), left, right]
       top += h
     end
   end
@@ -486,7 +498,11 @@ class QuoteCard
   FPS = 24
   FADE = 0.8     # how long a line takes to fade in
   STAGGER = 0.38 # between one line starting and the next
-  CROSSFADE = 0.7
+  CROSSFADES = { "slow" => 1.6, "normal" => 0.8, "fast" => 0.35 }.freeze # one page into the next
+  # How much longer (or shorter) a fade or a page turn takes at each speed
+  SPEEDS = { "slow" => 1.5, "normal" => 1.0, "fast" => 0.6 }.freeze
+  # A GIF of the video: half size and fewer frames, or it comes out far too big to send
+  GIF_FPS = 12
 
   # One video drawn at a time: ffmpeg takes every core it can for a few seconds
   VIDEO_LOCK = Mutex.new
@@ -494,42 +510,61 @@ class QuoteCard
   def render_video(dir) = VIDEO_LOCK.synchronize { draw_video(dir) }
 
   def draw_video(dir)
+    pace = SPEEDS[@fade]
+    turn = SPEEDS[@turn]
+    crossfade = CROSSFADES[@turn]
     segments = pages.each_with_index.map do |page, i|
       full = File.join(dir, "full-#{i}.png")
       empty = File.join(dir, "empty-#{i}.png")
+      plain = (File.join(dir, "plain-#{i}.png") if highlighter?)
       begin
         @lines_mode = true
         @bands = []
         run(frame_command(page, i) + ["-strip", "PNG24:#{full}"])
         bands = @bands
         @bands = nil
+        if plain
+          @no_under = true
+          run(frame_command(page, i) + ["-strip", "PNG24:#{plain}"])
+          @no_under = false
+        end
         @no_text = true
         run(frame_command(page, i) + ["-strip", "PNG24:#{empty}"])
       ensure
-        @lines_mode = @no_text = false
+        @lines_mode = @no_text = @no_under = false
         @bands = nil
       end
       t = 0.5
       starts = bands.each_with_index.map do |(_, _, para), j|
-        t += 0.3 if para && j.positive?
+        t += 0.3 * pace if para && j.positive?
         at = t
-        t += STAGGER
+        t += STAGGER * pace
         at
       end
       words = "#{page.quote} #{page.note}".split.size
-      hold = (words / 4.5).clamp(2.5, 6.0) + (i == pages.size - 1 ? 1.5 : 0)
-      { full: full, empty: empty, bands: bands, starts: starts, length: (starts.last || 0) + FADE + hold }
+      hold = ((words / 4.5).clamp(2.5, 6.0) * turn) + (i == pages.size - 1 ? 1.5 : 0)
+      # The highlighter crosses each line once its words are half in, quicker than the next
+      # line starts, so only one line is ever being highlighted
+      sweep = (STAGGER * pace * 0.95).round(3)
+      sweeps = starts.map { |at| (at + (FADE * pace * 0.5)).round(3) }
+      { full: full, empty: empty, plain: plain, bands: bands, starts: starts, sweeps: sweeps, sweep: sweep,
+        length: [(starts.last || 0) + (FADE * pace), (sweeps.last || 0) + sweep].max + hold }
     end
 
     # Each picture read once and repeated (the loop filter), not decoded again for every frame
-    inputs = segments.flat_map { |seg| ["-i", seg[:empty], "-i", seg[:full]] }
+    inputs = []
     graph = []
     segments.each_with_index do |seg, k|
       n = seg[:bands].size
       frames = (seg[:length] * FPS).ceil
       repeat = "loop=loop=#{frames - 1}:size=1:start=0,setpts=N/#{FPS}/TB"
+      strip = ->(dims) { "color=c=black:s=#{dims}:r=#{FPS}:d=#{format('%.4f', frames.to_f / FPS)},format=gray" }
+      stream = lambda do |file|
+        inputs.push("-i", file)
+        "#{(inputs.size / 2) - 1}:v"
+      end
       base = "e#{k}"
-      graph << "[#{2 * k}:v]format=yuv420p,#{repeat}[#{base}]"
+      graph << "[#{stream.(seg[:empty])}]format=yuv420p,#{repeat}[#{base}]"
       if n.zero?
         graph << "[#{base}]setsar=1[s#{k}]"
         next
@@ -538,28 +573,62 @@ class QuoteCard
       # across: the page with its words shows through it onto the empty page. One mask and
       # one overlay a frame, however many lines.
       alpha = seg[:bands].each_with_index.map do |(top, h, _), j|
-        "between(Y,#{top},#{top + h - 1})*clip((T-#{format('%.2f', seg[:starts][j])})/#{FADE},0,1)"
+        "between(Y,#{top},#{top + h - 1})*clip((T-#{format('%.2f', seg[:starts][j])})/#{format('%.2f', FADE * pace)},0,1)"
       end.join("+")
-      graph << "color=c=black:s=1x#{height}:r=#{FPS}:d=#{format('%.4f', frames.to_f / FPS)},format=gray,geq=lum='255*min(1,#{alpha})',scale=#{width}:#{height}:flags=neighbor[m#{k}]"
-      graph << "[#{(2 * k) + 1}:v]format=yuv420p,#{repeat}[f#{k}]"
+      graph << "#{strip.("1x#{height}")},geq=lum='255*min(1,#{alpha})',scale=#{width}:#{height}:flags=neighbor[m#{k}]"
+      graph << "[#{stream.(seg[:plain] || seg[:full])}]format=yuv420p,#{repeat}[f#{k}]"
       graph << "[f#{k}][m#{k}]alphamerge[a#{k}]"
-      graph << "[#{base}][a#{k}]overlay=0:0:format=yuv420,setsar=1[s#{k}]"
+      unless seg[:plain]
+        graph << "[#{base}][a#{k}]overlay=0:0:format=yuv420,setsar=1[s#{k}]"
+        next
+      end
+
+      # The highlighter: the highlighted page shows through where each line has been swept.
+      # Rows already done (one strip down the side), and the row being swept times how far
+      # across it the pen has got (a strip along the top), stretched and put together.
+      graph << "[#{base}][a#{k}]overlay=0:0:format=yuv420[w#{k}]"
+      done = seg[:bands].each_with_index.map { |(top, h, _), j| "between(Y,#{top},#{top + h - 1})*gte(T,#{seg[:sweeps][j] + seg[:sweep]})" }.join("+")
+      now = seg[:bands].each_with_index.map { |(top, h, _), j| "between(Y,#{top},#{top + h - 1})*between(T,#{seg[:sweeps][j]},#{seg[:sweeps][j] + seg[:sweep]})" }.join("+")
+      pen = seg[:bands].each_with_index.map do |(_, _, _, left, right), j|
+        "between(T,#{seg[:sweeps][j]},#{seg[:sweeps][j] + seg[:sweep]})*(#{left - 6}+(T-#{seg[:sweeps][j]})/#{seg[:sweep]}*#{right - left + 18})"
+      end.join("+")
+      graph << "#{strip.("1x#{height}")},geq=lum='255*min(1,#{done})',scale=#{width}:#{height}:flags=neighbor[hd#{k}]"
+      graph << "#{strip.("1x#{height}")},geq=lum='255*min(1,#{now})',scale=#{width}:#{height}:flags=neighbor[hn#{k}]"
+      graph << "#{strip.("#{width}x1")},geq=lum='255*clip((#{pen}-X)/10,0,1)',scale=#{width}:#{height}:flags=neighbor[hp#{k}]"
+      graph << "[hn#{k}][hp#{k}]blend=all_mode=multiply[hx#{k}]"
+      graph << "[hd#{k}][hx#{k}]blend=all_mode=lighten[hm#{k}]"
+      graph << "[#{stream.(seg[:full])}]format=yuv420p,#{repeat}[hf#{k}]"
+      graph << "[hf#{k}][hm#{k}]alphamerge[ha#{k}]"
+      graph << "[w#{k}][ha#{k}]overlay=0:0:format=yuv420,setsar=1[s#{k}]"
     end
     offset = 0
     final = "s0"
     segments.each_with_index.drop(1).each do |seg, k|
-      offset += segments[k - 1][:length] - CROSSFADE
-      graph << "[#{final}][s#{k}]xfade=transition=fade:duration=#{CROSSFADE}:offset=#{format('%.2f', offset)}[x#{k}]"
+      offset += segments[k - 1][:length] - crossfade
+      graph << "[#{final}][s#{k}]xfade=transition=fade:duration=#{crossfade}:offset=#{format('%.2f', offset)}[x#{k}]"
       final = "x#{k}"
     end
-    out = File.join(dir, "card.mp4")
-    _o, err, status = Open3.capture3("ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *inputs, "-filter_complex", graph.join(";"),
-                                     "-map", "[#{final}]", "-r", FPS.to_s, "-c:v", "libx264", "-preset", "superfast", "-tune", "stillimage", "-crf", "22",
-                                     "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", out)
+    if @gif
+      # Half size, fewer frames, one palette made from the frames' changes and only the
+      # changed part of each frame stored, so a day stays a few megabytes
+      graph << "[#{final}]fps=#{GIF_FPS},scale=#{width / 2}:-2:flags=lanczos,split[ga][gb]"
+      graph << "[ga]palettegen=max_colors=160:stats_mode=full[gp]"
+      graph << "[gb][gp]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle[gif]"
+      out = File.join(dir, "card.gif")
+      encode = ["-map", "[gif]", "-loop", "0", out]
+    else
+      out = File.join(dir, "card.mp4")
+      encode = ["-map", "[#{final}]", "-r", FPS.to_s, "-c:v", "libx264", "-preset", "superfast", "-tune", "stillimage", "-crf", "22",
+                "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", out]
+    end
+    _o, err, status = Open3.capture3("ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *inputs, "-filter_complex", graph.join(";"), *encode)
     raise ShareCard::Failed, "ffmpeg: #{err.to_s.first(500)}" unless status.success?
 
     out
   end
+
+  # The Marker look's video draws its highlighter across each line
+  def highlighter? = look == "marker"
 
   # One page as a picture: the page of a moving picture, or the one picture
   def frame_command(page, i) = pages.size > 1 ? page_command(page, i) : command

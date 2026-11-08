@@ -13,9 +13,10 @@ class Api::ChaptersController < ApplicationController
   # Books whose chapters are each a day's reading, offered as "Share this day"
   DAILY_BOOKS = %w[daily-reflections].freeze
 
-  # GET /api/books/:book_slug/chapters/:slug/card?look=&size=&video=1&still=1&download=1
+  # GET /api/books/:book_slug/chapters/:slug/card?look=&size=&video=1&fade=&turn=&as=gif&still=1&download=1
   # "Share this day": the whole day's reading as a picture (a GIF when it takes pages), or
-  # with video=1 an MP4 whose lines fade in. A members-only book's words don't go in one.
+  # with video=1 an MP4 whose lines fade in (fade= and turn= slow|normal|fast set how fast
+  # lines fade in and pages turn; as=gif makes it a GIF). A members-only book's words don't go in one.
   def card
     unless DAILY_BOOKS.include?(@book.slug)
       return render(json: { error: "Only a day's reading can be shared like this." }, status: :unprocessable_entity)
@@ -24,7 +25,8 @@ class Api::ChaptersController < ApplicationController
       return render(json: { error: "#{@book.title} is only for members of groups that read it, so its words can't go in a picture." }, status: :forbidden)
     end
 
-    send_card(QuoteCard.chapter(@chapter, look: params[:look], size: params[:size], still: params[:still] == "1", video: params[:video] == "1"))
+    send_card(QuoteCard.chapter(@chapter, look: params[:look], size: params[:size], still: params[:still] == "1", video: params[:video] == "1",
+                                          fade: params[:fade], turn: params[:turn], gif: params[:as] == "gif"))
   end
 
   # --------------------------------------------------------------------------
