@@ -115,7 +115,7 @@ export function EntryShell({ base, title, intro, state, summary, reminder, print
         {list?.more && <button type="button" className={linkButton} onClick={() => loadList(list.entries[list.entries.length - 1].on)}>Show older days</button>}
       </section>
 
-      {earned && <ChipModal {...earned} onClose={closeEarned}><ChipShare chip={earned.chip} /></ChipModal>}
+      {earned && <ChipModal {...earned} onClose={closeEarned}><ChipShare chip={earned.chip} design={earned.design} /></ChipModal>}
     </div>
     {printable && <div className="hidden print:block">{printable}</div>}
     </>

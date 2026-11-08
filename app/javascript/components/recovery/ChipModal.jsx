@@ -9,23 +9,30 @@ import "../../styles/day-count.css";
 // design?, group? }) in 3D you can spin, both sides drawn. Chips without a design of their own
 // are RecoveryBot's (`design`, ChipDesign::DEFAULT); a given chip carries its group's.
 export function SpinningChip({ chip, design, size = 220, spinIn = true }) {
+  const { shape, color, metal, front, back } = chipFaces(chip, design);
+  return <Chip3D shape={shape} color={color} metal={metal} size={size} spinIn={spinIn} label={`${chip.label} chip`} front={front} back={back} />;
+}
+
+// A chip's two sides (SVG elements, flat, `bare`) and its edge's color, for Chip3D and for the
+// pictures and videos ChipPictureShare makes of it
+export function chipFaces(chip, design) {
   const { d, milestone } = look(chip, design);
   const mark = chip.edition?.mark;
   if (chip.shape === "round") {
     const { color, metal } = roundLook(d, milestone);
-    return (
-      <Chip3D shape="round" color={color} metal={metal} size={size} spinIn={spinIn} label={`${chip.label} chip`}
-        front={<RoundChip design={d} milestone={milestone} logoUrl={chip.group?.logo_url} bare />}
-        back={<RoundChipBack design={d} milestone={milestone} groupTitle={chip.group?.title || chip.meeting?.group_title} earnedOn={chip.on} mark={mark} />} />
-    );
+    return {
+      shape: "round", color, metal,
+      front: <RoundChip design={d} milestone={milestone} logoUrl={chip.group?.logo_url} bare />,
+      back: <RoundChipBack design={d} milestone={milestone} groupTitle={chip.group?.title || chip.meeting?.group_title} earnedOn={chip.on} mark={mark} />,
+    };
   }
   const at = atMilestone(d, { kind: chip.kind, count: chip.count });
   const { color, metal } = isScene(at.triangle) ? sceneBody(at.triangle, chip.kind) : triangleLook(at, chip.kind);
-  return (
-    <Chip3D shape="triangle" color={color} metal={metal} size={size} spinIn={spinIn} label={`${chip.label} chip`}
-      front={<TriangleChip design={d} kind={chip.kind} count={chip.count} bare />}
-      back={<TriangleChipBack design={d} kind={chip.kind} count={chip.count} earnedOn={chip.on} mark={mark} />} />
-  );
+  return {
+    shape: "triangle", color, metal,
+    front: <TriangleChip design={d} kind={chip.kind} count={chip.count} bare />,
+    back: <TriangleChipBack design={d} kind={chip.kind} count={chip.count} earnedOn={chip.on} mark={mark} />,
+  };
 }
 
 // The design a chip is drawn in (its own, else `design`), with a Meeting Maker chip's design

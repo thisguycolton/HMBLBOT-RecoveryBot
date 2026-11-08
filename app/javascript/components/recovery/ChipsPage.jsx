@@ -153,7 +153,7 @@ export default function ChipsPage() {
               <Star className={`size-4 ${favorite(open.id) ? "fill-current" : ""}`} /> {favorite(open.id) ? "A favorite" : "Favorite"}
             </button>
           </div>
-          <ChipShare key={open.id} chip={open} options={data} startOpen={sharing} />
+          <ChipShare key={open.id} chip={open} design={design} options={data} startOpen={sharing} />
           <Duplicates chip={open} chips={chips} design={design} onPick={(c) => { save({ top: { slot: c.slot, id: c.id } }); setOpenId(c.id); }} />
         </ChipModal>
       )}
