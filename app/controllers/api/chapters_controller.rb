@@ -2,11 +2,30 @@
 class Api::ChaptersController < ApplicationController
   include KeepsRobotsOut
   keep_robots_out
+  include SendsQuoteCards
   before_action :set_book
-  before_action :set_chapter, only: [:show, :update, :destroy]
-  # Reading is public; changing a book's chapters is for admins only.
+  before_action :set_chapter, only: [:show, :update, :destroy, :card]
+  # Reading is public; changing a book's chapters is for admins only. Sharing a day as a
+  # picture or video is for anyone signed in.
   before_action :authenticate_user!, except: [:index, :show]
-  before_action :require_admin!, except: [:index, :show]
+  before_action :require_admin!, except: [:index, :show, :card]
+
+  # Books whose chapters are each a day's reading, offered as "Share this day"
+  DAILY_BOOKS = %w[daily-reflections].freeze
+
+  # GET /api/books/:book_slug/chapters/:slug/card?look=&size=&video=1&still=1&download=1
+  # "Share this day": the whole day's reading as a picture (a GIF when it takes pages), or
+  # with video=1 an MP4 whose lines fade in. A members-only book's words don't go in one.
+  def card
+    unless DAILY_BOOKS.include?(@book.slug)
+      return render(json: { error: "Only a day's reading can be shared like this." }, status: :unprocessable_entity)
+    end
+    if @book.members_only?
+      return render(json: { error: "#{@book.title} is only for members of groups that read it, so its words can't go in a picture." }, status: :forbidden)
+    end
+
+    send_card(QuoteCard.chapter(@chapter, look: params[:look], size: params[:size], still: params[:still] == "1", video: params[:video] == "1"))
+  end
 
   # --------------------------------------------------------------------------
   # DELETE /api/books/:book_slug/chapters/:slug

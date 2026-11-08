@@ -44,15 +44,16 @@ class QuoteCard
   NOTE_MAX = 280
   HIGHLIGHT_COLORS = { "yellow" => "#fef08a", "lime" => "#bef264", "cyan" => "#a5f3fc", "pink" => "#fbcfe8", "orange" => "#fed7aa" }.freeze
 
-  attr_reader :look, :size, :quote, :long, :note, :source, :by, :color, :kind, :still
+  attr_reader :look, :size, :quote, :long, :note, :source, :by, :color, :kind, :still, :video
 
   # kind: :highlight (a quote, maybe with its note) or :note (their own words)
   # formats: { paragraph => :title, :subhead, :italic, :caps or :body }, how the reading set them
-  def initialize(quote:, kind: :highlight, note: nil, source: nil, by: nil, color: nil, look: "paper", size: "wide", still: false, formats: nil)
+  def initialize(quote:, kind: :highlight, note: nil, source: nil, by: nil, color: nil, look: "paper", size: "wide", still: false, formats: nil, video: false)
     @kind = kind.to_sym
     @look = LOOKS.include?(look.to_s) ? look.to_s : LOOKS.first
     @size = SIZES.key?(size.to_s) ? size.to_s : "wide"
     @still = !!still
+    @video = !!video && !@still
     @long = clean(quote).truncate(LONG_MAX, separator: " ", omission: "…")
     @quote = @long.truncate(QUOTE_MAX, separator: " ", omission: "…")
     @note = clean(note).truncate(NOTE_MAX, separator: " ", omission: "…").presence
@@ -82,8 +83,22 @@ class QuoteCard
   # end to end the way the reader does when it saves a highlight (ProseMirror's textBetween
   # with "\n" between blocks and for line breaks), so the highlight's offsets point into them.
   def self.formats_for(h)
-    doc = h.chapter&.tiptap_json
-    return {} unless doc.is_a?(Hash) && doc["content"].is_a?(Array)
+    text, blocks, italics = flatten(h.chapter&.tiptap_json)
+    return {} if text.nil?
+
+    exact = h.quote
+    start = h.selector.dig("position", "start")
+    start = text.index(exact) unless start.is_a?(Integer) && text[start, exact.length] == exact
+    return {} if start.nil? || exact.empty?
+
+    formats_in(text, blocks, italics, start, start + exact.length)
+  end
+
+  # A chapter's words laid end to end like the reader's textBetween, with where each heading
+  # or paragraph is ([from, to, :title, :subhead or nil]) and which stretches are italic.
+  # nil when there's no document.
+  def self.flatten(doc)
+    return nil unless doc.is_a?(Hash) && doc["content"].is_a?(Array)
 
     text = +""
     blocks = [] # [from, to, kind]
@@ -114,13 +129,11 @@ class QuoteCard
       end
     end
     doc["content"].each { |n| visit.(n) }
+    [text, blocks, italics]
+  end
 
-    exact = h.quote
-    start = h.selector.dig("position", "start")
-    start = text.index(exact) unless start.is_a?(Integer) && text[start, exact.length] == exact
-    return {} if start.nil? || exact.empty?
-
-    stop = start + exact.length
+  # How the paragraphs between start and stop were set
+  def self.formats_in(text, blocks, italics, start, stop)
     formats = {}
     blocks.each do |from, to, heading|
       a, b = [from, start].max, [to, stop].min
@@ -139,6 +152,16 @@ class QuoteCard
       end
     end
     formats.values.all?(:body) ? {} : formats
+  end
+
+  # A whole day's reading (a Daily Reflection): every word of the chapter set the way the
+  # book sets it, from the book's name. `video: true` makes it an MP4 whose lines fade in
+  # one after another.
+  def self.chapter(ch, look: nil, size: nil, still: false, video: false)
+    text, blocks, italics = flatten(ch.tiptap_json)
+    text = text.to_s.strip
+    formats = text.empty? ? {} : formats_in(text, blocks, italics, 0, text.length)
+    new(kind: :reading, quote: text, source: ch.book.title, formats: formats, look: look, size: size, still: still, video: video)
   end
 
   # A note's picture: its words (no pictures, links or chips)
@@ -161,23 +184,23 @@ class QuoteCard
   def height = SIZES[size][1]
 
   def key
-    Digest::SHA256.hexdigest(["quote", VERSION, kind, look, size, still ? quote : long, still, note, source, by, color, @given_formats].to_json).first(32)
+    Digest::SHA256.hexdigest(["quote", VERSION, kind, look, size, still ? quote : long, still, note, source, by, color, @given_formats, video].to_json).first(32)
   end
 
   def filename
     words = quote.parameterize.split("-").first(5).join("-").presence || "recoverybot"
-    "#{words}-#{size}.#{animated? ? 'gif' : 'png'}"
+    "#{words}-#{size}.#{video ? 'mp4' : (animated? ? 'gif' : 'png')}"
   end
 
-  def content_type = animated? ? "image/gif" : "image/png"
+  def content_type = video ? "video/mp4" : (animated? ? "image/gif" : "image/png")
 
   # A moving picture: words too long for one still (and not asked for one)
-  def animated? = page_count > 1
+  def animated? = !video && page_count > 1
 
   # How many pages it turns through (1: a still picture)
   def page_count
     @page_count ||= if (drawn = cached)
-      drawn.basename.to_s[/-(\d+)\.gif\z/, 1]&.to_i || 1
+      drawn.basename.to_s[/-(\d+)\.(gif|mp4)\z/, 1]&.to_i || 1
     else
       pages.size
     end
@@ -189,7 +212,10 @@ class QuoteCard
 
     FileUtils.mkdir_p(ShareCard::DIR)
     Dir.mktmpdir("quote-card") do |dir|
-      if pages.size > 1
+      if video
+        file = ShareCard::DIR.join("#{key}-#{pages.size}.mp4")
+        out = render_video(dir)
+      elsif pages.size > 1
         file = ShareCard::DIR.join("#{key}-#{pages.size}.gif")
         meta_h # measured once, before the pages are drawn side by side
         frames = pages.each_with_index.map do |page, i|
@@ -246,7 +272,7 @@ class QuoteCard
 
   def cached
     @cached ||= ShareCard::DIR.join("#{key}.png").then { |f| f.exist? ? f : nil } ||
-                Dir.glob(ShareCard::DIR.join("#{key}-*.gif").to_s).first&.then { |f| Pathname(f) }
+                Dir.glob(ShareCard::DIR.join("#{key}-*.{gif,mp4}").to_s).first&.then { |f| Pathname(f) }
   end
 
   # How tall words come out, each paragraph wrapped on its own and a para_gap between them.
@@ -277,7 +303,8 @@ class QuoteCard
   def pieces(value, font:, size:, width:, color: nil, under: nil, quote: false)
     parts(value, font: font, size: size, color: color, under: under, quote: quote).each_with_index.flat_map do |(p, st), i|
       ink = st[:size] + st[:kern]
-      groups = if p.length * ink <= CAPTION_LIMIT then [p]
+      groups = if @lines_mode then wrap(p, st[:font], st[:size], st[:kern], width)
+      elsif p.length * ink <= CAPTION_LIMIT then [p]
       else
         wrap(p, st[:font], st[:size], st[:kern], width).each_with_object([[]]) do |line, acc|
           acc << [] if acc.last.any? && (acc.last.sum(&:length) + line.length + acc.last.size) * ink > CAPTION_LIMIT
@@ -368,7 +395,8 @@ class QuoteCard
   def wrap(para, font, size, kern, width, count: false)
     m = metrics(font, para)
     scale = size / 100.0
-    limit = width * 0.95 / scale
+    limit = width * (kern.positive? ? 0.9 : 0.95) / scale
+    space = m[:space] + (kern / scale)
     lines = [[]]
     extra = 0
     line = nil
@@ -376,7 +404,7 @@ class QuoteCard
       w = (m[:words][word] || (m[:em] * word.length)) + (kern / scale * word.length)
       extra += (w / limit).floor if w > limit
       if line.nil? then line = w
-      elsif line + m[:space] + w <= limit then line += m[:space] + w
+      elsif line + space + w <= limit then line += space + w
       else
         lines << []
         line = w
@@ -418,6 +446,9 @@ class QuoteCard
   # background (a highlighter). Left-aligned text goes without -gravity: with NorthWest,
   # ImageMagick 6 paints each line's background as wide as the line before it.
   def block(value, font:, size:, color:, width:, height:, x:, y:, under: nil, quote: false)
+    return [] if @no_text
+
+    record_bands(value, font: font, size: size, width: width, quote: quote, y: y, height: height) if @bands
     args = ["(", "-background", "none"]
     args += wide? ? ["+gravity"] : ["-gravity", "North"]
     pieces(value, font: font, size: size, width: width, color: color, under: under, quote: quote).each do |p, st, gap|
@@ -430,6 +461,108 @@ class QuoteCard
     args + ["-undercolor", "none", "-gravity", "NorthWest", "-append", "-extent", "#{width}x#{height}",
             ")", "-gravity", "NorthWest", "-geometry", "+#{x}+#{y}", "-composite"]
   end
+
+  # A video's bands: where each line of this block lands, [top, height, starts a paragraph]
+  def record_bands(value, font:, size:, width:, quote:, y:, height:)
+    list = pieces(value, font: font, size: size, width: width, quote: quote)
+    args = list.flat_map do |p, st|
+      ["-font", FONTS[st[:font]], "-pointsize", st[:size].to_s, "-kerning", st[:kern].to_s,
+       "-interline-spacing", spacing(st[:font], st[:size]).to_s, caption(italic?(st[:font]) ? "#{p}\u00A0" : p)]
+    end
+    heights = magick("-size", "#{width}x", *args, "-format", "%h\n", "info:").split.map(&:to_i)
+    top = y
+    list.zip(heights).each_with_index do |((_, _, gap), h), i|
+      top += gap
+      break if top >= y + height
+
+      @bands << [top, [h, y + height - top].min, i.zero? || gap >= para_gap(size)]
+      top += h
+    end
+  end
+
+  # A video, MP4: each page drawn twice, without its words and with them a line per caption
+  # (so we know where each line is), then ffmpeg fades the lines in one after another over
+  # the empty page, holds it long enough to read, and crossfades to the next page.
+  FPS = 24
+  FADE = 0.8     # how long a line takes to fade in
+  STAGGER = 0.38 # between one line starting and the next
+  CROSSFADE = 0.7
+
+  # One video drawn at a time: ffmpeg takes every core it can for a few seconds
+  VIDEO_LOCK = Mutex.new
+
+  def render_video(dir) = VIDEO_LOCK.synchronize { draw_video(dir) }
+
+  def draw_video(dir)
+    segments = pages.each_with_index.map do |page, i|
+      full = File.join(dir, "full-#{i}.png")
+      empty = File.join(dir, "empty-#{i}.png")
+      begin
+        @lines_mode = true
+        @bands = []
+        run(frame_command(page, i) + ["-strip", "PNG24:#{full}"])
+        bands = @bands
+        @bands = nil
+        @no_text = true
+        run(frame_command(page, i) + ["-strip", "PNG24:#{empty}"])
+      ensure
+        @lines_mode = @no_text = false
+        @bands = nil
+      end
+      t = 0.5
+      starts = bands.each_with_index.map do |(_, _, para), j|
+        t += 0.3 if para && j.positive?
+        at = t
+        t += STAGGER
+        at
+      end
+      words = "#{page.quote} #{page.note}".split.size
+      hold = (words / 4.5).clamp(2.5, 6.0) + (i == pages.size - 1 ? 1.5 : 0)
+      { full: full, empty: empty, bands: bands, starts: starts, length: (starts.last || 0) + FADE + hold }
+    end
+
+    # Each picture read once and repeated (the loop filter), not decoded again for every frame
+    inputs = segments.flat_map { |seg| ["-i", seg[:empty], "-i", seg[:full]] }
+    graph = []
+    segments.each_with_index do |seg, k|
+      n = seg[:bands].size
+      frames = (seg[:length] * FPS).ceil
+      repeat = "loop=loop=#{frames - 1}:size=1:start=0,setpts=N/#{FPS}/TB"
+      base = "e#{k}"
+      graph << "[#{2 * k}:v]format=yuv420p,#{repeat}[#{base}]"
+      if n.zero?
+        graph << "[#{base}]setsar=1[s#{k}]"
+        next
+      end
+      # A mask one pixel wide, each band's rows as clear as its line has faded in, stretched
+      # across: the page with its words shows through it onto the empty page. One mask and
+      # one overlay a frame, however many lines.
+      alpha = seg[:bands].each_with_index.map do |(top, h, _), j|
+        "between(Y,#{top},#{top + h - 1})*clip((T-#{format('%.2f', seg[:starts][j])})/#{FADE},0,1)"
+      end.join("+")
+      graph << "color=c=black:s=1x#{height}:r=#{FPS}:d=#{format('%.4f', frames.to_f / FPS)},format=gray,geq=lum='255*min(1,#{alpha})',scale=#{width}:#{height}:flags=neighbor[m#{k}]"
+      graph << "[#{(2 * k) + 1}:v]format=yuv420p,#{repeat}[f#{k}]"
+      graph << "[f#{k}][m#{k}]alphamerge[a#{k}]"
+      graph << "[#{base}][a#{k}]overlay=0:0:format=yuv420,setsar=1[s#{k}]"
+    end
+    offset = 0
+    final = "s0"
+    segments.each_with_index.drop(1).each do |seg, k|
+      offset += segments[k - 1][:length] - CROSSFADE
+      graph << "[#{final}][s#{k}]xfade=transition=fade:duration=#{CROSSFADE}:offset=#{format('%.2f', offset)}[x#{k}]"
+      final = "x#{k}"
+    end
+    out = File.join(dir, "card.mp4")
+    _o, err, status = Open3.capture3("ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *inputs, "-filter_complex", graph.join(";"),
+                                     "-map", "[#{final}]", "-r", FPS.to_s, "-c:v", "libx264", "-preset", "superfast", "-tune", "stillimage", "-crf", "22",
+                                     "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", out)
+    raise ShareCard::Failed, "ffmpeg: #{err.to_s.first(500)}" unless status.success?
+
+    out
+  end
+
+  # One page as a picture: the page of a moving picture, or the one picture
+  def frame_command(page, i) = pages.size > 1 ? page_command(page, i) : command
 
   # Italics lean past the end of their line; a space after keeps the last letter whole
   def italic?(font) = %i[serif hand].include?(font)

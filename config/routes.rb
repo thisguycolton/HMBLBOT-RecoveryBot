@@ -395,6 +395,9 @@ Rails.application.routes.draw do
         post :merge
         post :reorder
       end
+      member do
+        get :card # => GET /api/books/:book_slug/chapters/:slug/card ("Share this day")
+      end
     end
 
   end

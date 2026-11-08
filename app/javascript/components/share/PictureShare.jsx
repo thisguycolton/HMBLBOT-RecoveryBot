@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Copy, Download, ImageIcon, Link2, Loader2, Send, Share2, X } from "lucide-react";
+import { Check, Clapperboard, Copy, Download, ImageIcon, Link2, Loader2, Send, Share2, X } from "lucide-react";
 import { showToast } from "../../lib/toast";
 import { saveNote, VISIBILITY } from "../notes/lib";
 import { Bone, SkeletonGroup } from "../ui/Skeleton";
@@ -18,6 +18,10 @@ import { Bone, SkeletonGroup } from "../ui/Skeleton";
 // `cardUrl` is where the server draws it (/api/highlights/:id/card); `link` is the share
 // link that goes with a highlight (none for notes, which only members see); `hasNote` offers
 // to leave a highlight's note off.
+//
+// `canVideo` ("Share this day") also offers a video: an MP4 whose lines fade in one after
+// another, drawn by the server (QuoteCard, ffmpeg) in about 15 seconds. Copy and Post use a
+// still picture of it, since clipboards and posts take pictures.
 export const LOOKS = [
   { value: "paper", label: "Paper", swatch: "linear-gradient(135deg,#fdfaf3,#f4ecdc)" },
   { value: "marker", label: "Marker", swatch: "linear-gradient(135deg,#fff 0 45%,#fef08a 45% 75%,#fff 75%)" },
@@ -30,9 +34,10 @@ export const SIZES = [
   { value: "wide", label: "Wide", hint: "Like a link preview", ratio: "1200 / 630" },
 ];
 
-export default function PictureShare({ cardUrl, link, kind = "highlight", hasNote = false, title, text, onClose }) {
+export default function PictureShare({ cardUrl, link, kind = "highlight", hasNote = false, canVideo = false, heading = "Share as a picture", title, text, onClose }) {
   const [look, setLook] = useState("paper");
-  const [size, setSize] = useState("square");
+  const [size, setSize] = useState(canVideo ? "story" : "square");
+  const [asVideo, setAsVideo] = useState(false);
   const [withNote, setWithNote] = useState(true);
   const [withName, setWithName] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -48,8 +53,9 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
     const q = new URLSearchParams({ look, size });
     if (hasNote && !withNote) q.set("note", "0");
     if (withName) q.set("name", "1");
+    if (canVideo && asVideo) q.set("video", "1");
     return `${cardUrl}?${q}`;
-  }, [cardUrl, look, size, hasNote, withNote, withName]);
+  }, [cardUrl, look, size, hasNote, withNote, withName, canVideo, asVideo]);
   // Fetched once per choice: shown from here, and the same file shared, copied or posted
   useEffect(() => {
     const stop = new AbortController();
@@ -75,7 +81,8 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
     })();
     return () => { stop.abort(); if (url) URL.revokeObjectURL(url); };
   }, [src]);
-  const moving = (picture?.pages || 1) > 1;
+  const video = canVideo && asVideo;
+  const moving = !video && (picture?.pages || 1) > 1;
 
   // The link sent with the picture carries its look (and a left-off note), so the preview
   // Messages and the rest draw from it (ShareMeta.highlight) matches the picture
@@ -95,12 +102,12 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   }, [onClose]);
 
   const asFile = (blob) => {
-    const gif = blob.type === "image/gif";
-    return new File([blob], `recoverybot-${kind}-${size}.${gif ? "gif" : "png"}`, { type: gif ? "image/gif" : "image/png" });
+    const type = ["image/gif", "video/mp4"].includes(blob.type) ? blob.type : "image/png";
+    return new File([blob], `recoverybot-${kind}-${size}.${{ "image/gif": "gif", "video/mp4": "mp4" }[type] || "png"}`, { type });
   };
-  // The picture as shown, or (`still`) one picture of it, never a GIF
+  // The picture (or video) as shown, or (`still`) one picture of it, never a GIF or a video
   const fetchFile = async ({ still = false } = {}) => {
-    if (picture?.blob && !(still && moving)) return asFile(picture.blob);
+    if (picture?.blob && !(still && (moving || video))) return asFile(picture.blob);
     const res = await fetch(still ? `${src}&still=1` : src, { credentials: "same-origin" });
     if (!res.ok) throw new Error("Couldn't make that picture.");
     return asFile(await res.blob());
@@ -125,7 +132,7 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
 
   const share = () => run("share", async () => {
     let file = await fetchFile();
-    // Some phones can't hand a GIF to another app: send one picture of it instead
+    // Some phones can't hand a GIF (or a video) to another app: send one picture of it instead
     if (!navigator.canShare({ files: [file] })) file = await fetchFile({ still: true });
     await navigator.share({ files: [file], title, text: [text, shareLink].filter(Boolean).join("\n") || undefined });
   });
@@ -146,7 +153,7 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   });
 
   const post = () => run("post", async () => {
-    const file = await fetchFile();
+    const file = await fetchFile({ still: video });
     const body = [caption.trim(), shareLink && `[Read it in the book](${shareLink})`].filter(Boolean).join("\n\n");
     await saveNote(null, { body, visibility, images: [file] });
     showToast(visibility === "private" ? "Posted to your timeline, just for you." : "Posted to your timeline.");
@@ -158,18 +165,23 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   const ratio = SIZES.find((s) => s.value === size)?.ratio;
 
   return createPortal(
-    <div className="picture-share fixed inset-0 z-[2600] flex items-end justify-center !font-sans sm:items-center sm:p-4 [&_*]:!font-sans" role="dialog" aria-modal="true" aria-label="Share as a picture">
+    <div className="picture-share fixed inset-0 z-[2600] flex items-end justify-center !font-sans sm:items-center sm:p-4 [&_*]:!font-sans" role="dialog" aria-modal="true" aria-label={heading}>
       <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
       <div className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white text-sm text-slate-700 shadow-2xl ring-1 ring-neutral-200 sm:max-w-3xl sm:rounded-3xl dark:bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
         <div className="flex items-center justify-between gap-2 border-b border-neutral-100 px-4 py-3 dark:border-neutral-800">
-          <p className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white"><ImageIcon className="size-4" /> Share as a picture</p>
+          <p className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">{canVideo ? <Clapperboard className="size-4" /> : <ImageIcon className="size-4" />} {heading}</p>
           <button type="button" onClick={onClose} aria-label="Close" className="grid size-8 place-items-center rounded-lg !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800"><X className="size-4" /></button>
         </div>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 content-start gap-4 overflow-y-auto p-4 sm:grid-cols-[minmax(0,1fr)_17rem]">
           <div className="self-start rounded-2xl bg-neutral-100 p-3 dark:bg-neutral-800">
             <div className="relative mx-auto w-full" style={{ maxWidth: size === "story" ? "min(15rem, 26dvh)" : size === "square" ? "min(24rem, 46dvh)" : "100%" }}>
-              {picture && !failed ? (
+              {/* Which player goes by what came back, so the last picture never lands in the video player while a video is on its way */}
+              {picture && !failed && picture.blob.type.startsWith("video/") ? (
+                <video key={picture.url} src={picture.url} autoPlay loop muted playsInline aria-label="Your video" onLoadedData={() => setLoading(false)}
+                  onError={() => { setLoading(false); setFailed("Couldn't make that video. Try another look."); }}
+                  className={`block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 transition-opacity ${loading ? "opacity-40" : "opacity-100"}`} style={{ aspectRatio: ratio }} />
+              ) : picture && !failed ? (
                 <img key={picture.url} src={picture.url} alt="Your picture" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setFailed("Couldn't draw that one. Try another look."); }}
                   className={`block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 transition-opacity ${loading ? "opacity-40 motion-safe:animate-pulse" : "opacity-100"}`} style={{ aspectRatio: ratio }} />
               ) : (
@@ -177,9 +189,12 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
               )}
               {loading && (
                 // The picture's shape pulses while the server draws it (a skeleton, not a spinner)
-                <SkeletonGroup label="Drawing it" className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-2.5 p-[8%]">
+                <SkeletonGroup label={video ? "Making the video" : "Drawing it"} className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-2.5 p-[8%]">
                   <Bone className="h-3 w-3/5" /><Bone className="h-3 w-4/5" /><Bone className="h-3 w-2/5" />
                 </SkeletonGroup>
+              )}
+              {loading && video && (
+                <p className="pointer-events-none absolute inset-x-0 top-1/3 px-4 text-center text-xs font-medium text-slate-500 dark:text-neutral-300">Making your video. It takes about 15 seconds.</p>
               )}
               {failed && <p className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-red-600">{failed}</p>}
             </div>
@@ -192,6 +207,17 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
           </div>
 
           <div className="space-y-4">
+            {canVideo && (
+              <div className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800" role="group" aria-label="Picture or video">
+                {[[false, "Picture", ImageIcon], [true, "Video", Clapperboard]].map(([v, label, Icon]) => (
+                  <button key={label} type="button" aria-pressed={asVideo === v} onClick={() => setAsVideo(v)}
+                    className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold ${asVideo === v ? "!bg-white text-slate-900 shadow-sm dark:!bg-neutral-950 dark:text-white" : "!bg-transparent text-slate-500 dark:text-neutral-400"}`}>
+                    <Icon className="size-3.5" /> {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <fieldset>
               <legend className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Look</legend>
               <div className="grid grid-cols-4 gap-1.5">
@@ -217,30 +243,30 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
               </div>
             </fieldset>
 
-            <div className="space-y-2">
+            {kind !== "day" && <div className="space-y-2">
               {hasNote && (
                 <label className="flex items-center gap-2"><input type="checkbox" checked={withNote} onChange={(e) => setWithNote(e.target.checked)} /> Include my note</label>
               )}
               <label className="flex items-center gap-2"><input type="checkbox" checked={withName} onChange={(e) => setWithName(e.target.checked)} /> Add my first name</label>
               <p className="text-xs text-slate-500 dark:text-neutral-400">Your name stays off unless you add it.</p>
-            </div>
+            </div>}
 
             <div className="grid gap-2">
               {canShareFiles && (
                 <button type="button" onClick={share} disabled={!!busy}
                   className="flex items-center justify-center gap-2 rounded-xl !bg-accent px-3 py-2.5 font-semibold !text-white disabled:opacity-60">
-                  {busy === "share" ? <Loader2 className="size-4 animate-spin" /> : <Share2 className="size-4" />} Share picture…
+                  {busy === "share" ? <Loader2 className="size-4 animate-spin" /> : <Share2 className="size-4" />} {video ? "Share video…" : "Share picture…"}
                 </button>
               )}
               <a href={`${src}&download=1`} download
                 className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 font-semibold ${canShareFiles ? "bg-neutral-100 !text-slate-800 hover:bg-neutral-200 dark:bg-neutral-800 dark:!text-white" : "!bg-accent !text-white"}`}>
-                <Download className="size-4" /> {moving ? "Save GIF" : "Save picture"}
+                <Download className="size-4" /> {video ? "Save video" : moving ? "Save GIF" : "Save picture"}
               </a>
               <div className="grid grid-cols-2 gap-2">
                 {canCopyPicture && (
-                  <button type="button" onClick={copyPicture} disabled={!!busy} title={moving ? "A clipboard can't hold a moving picture, so this copies a still one" : undefined}
+                  <button type="button" onClick={copyPicture} disabled={!!busy} title={moving || video ? "A clipboard can't hold a moving picture, so this copies a still one" : undefined}
                     className="flex items-center justify-center gap-1.5 rounded-xl !bg-neutral-100 px-2 py-2 text-xs font-semibold text-slate-800 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:text-white">
-                    {copied === "picture" ? <Check className="size-4" /> : <Copy className="size-4" />} {copied === "picture" ? "Copied" : moving ? "Copy still" : "Copy picture"}
+                    {copied === "picture" ? <Check className="size-4" /> : <Copy className="size-4" />} {copied === "picture" ? "Copied" : moving || video ? "Copy still" : "Copy picture"}
                   </button>
                 )}
                 {link && (
@@ -277,7 +303,8 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
                 </div>
               )}
               <p className="text-xs text-slate-500 dark:text-neutral-400">
-                {size === "story" ? "For Instagram or Facebook stories: save it, then add it from your photos." : link
+                {video ? "Instagram, Facebook and TikTok take the video: save it, then add it from your photos. Posting to your timeline uses a still picture."
+                  : size === "story" ? "For Instagram or Facebook stories: save it, then add it from your photos." : kind === "day" ? "Anyone you send the link to can read this day." : link
                   ? `Anyone you send the link to can open this highlight. Its link preview is a wide ${LOOKS.find((l) => l.value === look)?.label} picture${moving ? " that stays still and shows as much as fits" : ", like this one"}.`
                   : "Notes are only for members, so there's no link: share the picture."}
               </p>

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { ArrowLeft, ArrowRight, Eye, ListOrdered, Pencil, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clapperboard, Eye, ListOrdered, Pencil, RotateCcw, X } from "lucide-react";
 import { SearchButton } from "./BookSearch.jsx";
 import "../../styles/writebook.css";
 
@@ -103,9 +103,19 @@ export function ReaderBar({ bookSlug, bookTitle, chapterTitle, prev, next, onOpe
   );
 }
 
-export function ReaderFooter({ bookSlug, bookTitle, next }) {
+// Books whose chapters are each a day's reading (Api::ChaptersController::DAILY_BOOKS)
+export const DAILY_BOOKS = ["daily-reflections"];
+
+// `onShareDay`: a day's reading offers "Share this day" (a picture or video of it) above Next
+export function ReaderFooter({ bookSlug, bookTitle, next, onShareDay }) {
   return (
-    <nav className="wb-reader__footer" aria-label="Next chapter">
+    <nav className={`wb-reader__footer ${onShareDay ? "wb-reader__footer--day" : ""}`} aria-label="Next chapter">
+      {onShareDay && (
+        <button type="button" className="wb-btn wb-btn--share-day" onClick={onShareDay}>
+          <Clapperboard size={20} aria-hidden="true" />
+          <span>Share this day</span>
+        </button>
+      )}
       {next ? (
         <a className="wb-btn" href={chapterHref(bookSlug, next)}>
           <span className="wb-ellipsis">Next: {next.title}</span>
