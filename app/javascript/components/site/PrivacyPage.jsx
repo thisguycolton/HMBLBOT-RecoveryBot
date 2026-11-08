@@ -44,18 +44,21 @@ function H2({ id, children }) {
   return <h2 id={id} className="scroll-mt-24">{children}</h2>;
 }
 
+// On phones each row becomes its own small card (name on top, the rest labeled
+// under it), since three columns leave the middle one a few words wide.
 function Table({ head, rows }) {
   return (
     <div className="not-prose my-4 overflow-x-auto rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-800">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
+      <table className="w-full text-left text-sm max-sm:block">
+        <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-slate-500 max-sm:hidden dark:bg-neutral-900 dark:text-neutral-400">
           <tr>{head.map((h) => <th key={h} className="px-3 py-2 font-semibold">{h}</th>)}</tr>
         </thead>
-        <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+        <tbody className="divide-y divide-neutral-200 max-sm:block dark:divide-neutral-800">
           {rows.map((row) => (
-            <tr key={row[0]} className="align-top">
+            <tr key={row[0]} className="align-top max-sm:block max-sm:py-2">
               {row.map((cell, i) => (
-                <td key={i} className={`px-3 py-2 ${i === 0 ? "whitespace-nowrap font-mono text-xs text-slate-800 dark:text-neutral-200" : "text-slate-600 dark:text-neutral-300"}`}>{cell}</td>
+                <td key={i} data-label={i > 0 ? head[i] : undefined}
+                  className={`px-3 py-2 max-sm:block max-sm:!border-0 max-sm:py-1 ${i === 0 ? "whitespace-nowrap font-mono text-xs text-slate-800 max-sm:whitespace-normal max-sm:break-all max-sm:font-semibold dark:text-neutral-200" : "text-slate-600 max-sm:before:mr-1.5 max-sm:before:text-xs max-sm:before:font-semibold max-sm:before:uppercase max-sm:before:tracking-wide max-sm:before:text-slate-400 max-sm:before:content-[attr(data-label)] dark:text-neutral-300"}`}>{cell}</td>
               ))}
             </tr>
           ))}

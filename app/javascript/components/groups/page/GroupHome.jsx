@@ -22,7 +22,7 @@ export default function GroupHome({ slug, onJoin }) {
     <div className="space-y-6">
       {page.can_edit && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-accent/5 px-4 py-3 text-sm text-slate-700 ring-1 ring-accent/20 dark:bg-accent/10 dark:text-neutral-200">
-          <span className="flex-1">
+          <span className="min-w-0 flex-1 basis-56">
             {page.custom ? "You can change this page in the HMBLBOT Editor." : "This is the default group page. Make it your group's own in the HMBLBOT Editor."}
           </span>
           <Link to={`/${slug}/page/edit`} className="inline-flex items-center gap-1.5 rounded-xl !bg-accent px-3 py-1.5 font-semibold !text-white"><Pencil className="size-4" /> Edit the page</Link>
