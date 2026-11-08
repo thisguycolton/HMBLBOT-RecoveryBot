@@ -50,6 +50,24 @@ class DocsTest < ActionDispatch::IntegrationTest
     assert_equal "Colton's words", edited.reload.body
   end
 
+  test "refresh[reviewed] also updates reviewed pages whose words nobody changed, keeping the old text" do
+    DocSection.destroy_all
+    DocsImport.run
+    reviewed = DocPage.joins(:section).find_by!(doc_sections: { slug: "group-tools" }, slug: "group-chat")
+    edited = DocPage.find_by!(path_alias: "about")
+    reviewed.update_columns(body: "Old draft")
+    reviewed.mark_reviewed!(true, @admin)
+    reviewed.save_edit({ status: "published" }, @admin) # ticking Reviewed saves the page too, without changing its words
+    edited.save_edit({ body: "Colton's words" }, @admin)
+
+    DocsImport.run(refresh: :reviewed)
+    reviewed.reload
+    assert_not_equal "Old draft", reviewed.body
+    assert_nil reviewed.reviewed_at, "it goes back on the review list"
+    assert_equal "Old draft", reviewed.versions.first.body, "History keeps what was there, so Put back restores it"
+    assert_equal "Colton's words", edited.reload.body
+  end
+
   test "every picture the drafts point to is in public/docs-images" do
     missing = Dir[Rails.root.join("db/docs/**/*.md")].flat_map do |file|
       File.read(file).scan(%r{\]\((/docs-images/[^) ]+)}).flatten.reject { |src| Rails.root.join("public#{src}").exist? }.map { |src| "#{src} (#{File.basename(file)})" }

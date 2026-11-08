@@ -21,6 +21,12 @@ class DocsImport
   # With refresh, a page that's already here also takes the file's newer text, but only while
   # nobody has touched it: not reviewed, never saved in the editor and no History. Anything a
   # person edited or ticked stays exactly as it is. (`bin/rails docs:refresh`)
+  #
+  # refresh: :reviewed goes one step further for pages that were read and ticked Reviewed but whose
+  # words were never changed in the editor (no History): they take the new text too, the text they
+  # had is kept in History (Put back restores it), and Reviewed is cleared so they show up on the
+  # review list again. A page whose title or text anyone changed is never touched.
+  # (`bin/rails "docs:refresh[reviewed]"`)
   def initialize(root, log, refresh = false)
     @root = Pathname(root)
     @log = log
@@ -63,13 +69,20 @@ class DocsImport
   private
 
   def refresh(page, meta, body)
-    return false if page.reviewed_at || page.updated_by_id || page.versions.exists?
+    return false if page.versions.exists?
+    return false if @refresh != :reviewed && (page.reviewed_at || page.updated_by_id)
 
-    attrs = { title: meta["title"] || page.title, summary: meta["summary"], icon: meta["icon"], body: body.strip + "\n" }
-    page.assign_attributes(attrs)
+    old_title, old_body = page.title, page.body
+    page.assign_attributes(title: meta["title"] || page.title, summary: meta["summary"], icon: meta["icon"], body: body.strip + "\n")
     return false unless page.changed?
 
-    page.save!
+    page.transaction do
+      if page.will_save_change_to_body? || page.will_save_change_to_title?
+        page.versions.create!(title: old_title, body: old_body) if page.reviewed_at || page.updated_by_id
+        page.assign_attributes(reviewed_at: nil, reviewed_by: nil)
+      end
+      page.save!
+    end
     @log&.call("Refreshed page #{page.section.slug}/#{page.slug}")
     true
   end
