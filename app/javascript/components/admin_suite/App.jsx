@@ -19,6 +19,7 @@ import ChipTemplatesPage from "./ChipTemplatesPage";
 import ChipDesignPage from "./ChipDesignPage";
 import StepTemplatesPage from "./StepTemplatesPage";
 import MeetingListsPage from "./MeetingListsPage";
+import DailyStoryPage from "./DailyStoryPage";
 import { ScrollManager } from "../shell/ScrollManager";
 
 export { BASE, OTHER_TOOLS };
@@ -62,6 +63,7 @@ function SuiteShell() {
           <Route path="/blocked_words" element={<BlockedWordsPage notify={notify} />} />
           <Route path="/notices" element={<NoticesPage notify={notify} />} />
           <Route path="/meeting_lists" element={<MeetingListsPage notify={notify} />} />
+          <Route path="/daily_story" element={<DailyStoryPage notify={notify} />} />
           <Route path="/chip_design" element={<ChipDesignPage notify={notify} />} />
           <Route path="/chip_templates" element={<ChipTemplatesPage notify={notify} />} />
           <Route path="/chip_templates/:id" element={<ChipTemplatesPage notify={notify} />} />

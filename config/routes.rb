@@ -511,6 +511,9 @@ end
     resources :court_verifications, only: [] do
       get :print, on: :collection
     end
+    # Site Admin > Daily story's "Connect Facebook Page" (Facebook's sign-in and back)
+    get "facebook/connect", to: "facebook#connect", as: :facebook_connect
+    get "facebook/callback", to: "facebook#callback", as: :facebook_callback
     # The admin suite, another React app: everything else under /admin_panel
     root "suite#show"
     get "*path", to: "suite#show", as: :suite, format: false
@@ -567,6 +570,12 @@ end
           post :preview
           post :import, action: :import_listings
         end
+      end
+      # The day's Daily Reflection as a Facebook (and Instagram) Story every morning (DailyStory)
+      resource :daily_story, only: %i[show update destroy] do
+        post :token
+        post :choose
+        post :post_now
       end
       resource :chip_design, only: %i[show update] do
         post :relief

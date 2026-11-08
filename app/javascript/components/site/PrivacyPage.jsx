@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "November 7, 2026";
+const UPDATED = "November 8, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -243,6 +243,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
               address, as with any website you visit.
             </li>
             <li><strong>Buy Me a Coffee:</strong> older pages show a donate button loaded from Buy Me a Coffee. If you donate, that happens on their site under their privacy policy.</li>
+            <li><strong>Facebook and Instagram (Meta):</strong> each morning RecoveryBot posts the day's Daily Reflection to its own Facebook Page, and its Instagram, as a Story. It sends Meta only that day's reading as a video, never anything about you. Seeing or sharing the Story on Facebook or Instagram happens under Meta's privacy policy.</li>
             <li><strong>AI storyteller:</strong> The Acid Quest can ask an AI service (Google Gemini or OpenRouter) to write story text. It sends only game facts and topic titles, never anything about you.</li>
           </ul>
           <p>Links to other sites, such as Zoom meetings or our Discord, follow those sites' own policies once you leave RecoveryBot.</p>

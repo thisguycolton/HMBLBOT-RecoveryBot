@@ -70,3 +70,10 @@ on_booted do
 rescue StandardError => e
   warn "[meeting lists] couldn't start the weekly refresh: #{e.message}"
 end
+
+# The day's Daily Reflection posted to the Facebook Page as a Story (see DailyStory)
+on_booted do
+  DailyStory.start_loop if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[daily story] couldn't start: #{e.message}"
+end
