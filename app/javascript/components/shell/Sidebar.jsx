@@ -151,7 +151,7 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
       {panel && (mode === "rail" ? createPortal(<FloatingCloser onClose={() => close(false)}>{panel}</FloatingCloser>, document.body) : panelTarget && createPortal(
         <>
           {/* A lighter backdrop behind the sub menu, fading in (it doesn't slide); Layout.jsx draws the stage's corner beside it in the same color */}
-          <div aria-hidden="true" className={`absolute inset-0 rounded-tl-2xl bg-[#f6f6f6] transition-opacity ease-out dark:bg-[#151515] ${shown.visible ? "opacity-100 duration-200" : "opacity-0 duration-150"}`} />
+          <div aria-hidden="true" className={`absolute inset-0 rounded-tl-2xl bg-[#f6f6f6] transition-opacity ease-out dark:bg-[#101010] ${shown.visible ? "opacity-100 duration-200" : "opacity-0 duration-150"}`} />
           {panel}
         </>,
         panelTarget,
