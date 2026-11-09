@@ -7,6 +7,7 @@ class PeopleHome
   MEETINGS_MAX = 3
   BIRTHDAYS_DAYS = 30
   EVENTS_MAX = 5
+  ADMIN_TASKS_MAX = 5
 
   def initialize(viewer)
     @viewer = viewer
@@ -16,9 +17,19 @@ class PeopleHome
   def json
     { me: me, meetings: meetings, birthdays: birthdays, events: events, has_groups: @groups.any? }
       .merge(TodayDuties.new(@viewer).json)
+      .merge(admin_tasks: admin_tasks)
   end
 
   private
+
+  # Site admins' "Your admin tasks" (AdminTask.today_for): theirs and those for all admins
+  # nobody took, most pressing first; nil for everyone else
+  def admin_tasks
+    return nil unless @viewer.suite_admin?
+
+    tasks = AdminTask.by_urgency(AdminTask.today_for(@viewer).includes(:assignee).to_a)
+    { tasks: tasks.first(ADMIN_TASKS_MAX).map(&:as_api_json), total: tasks.size, me: @viewer.id }
+  end
 
   # The greeting at the top ("Good morning, Colton") and their own day count, whether or not
   # they show their sobriety date to others
