@@ -99,7 +99,7 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
     <SubMenu menu={menu(shown.key)} here={here} onBack={() => close()}
       className={mode === "rail"
         ? `fixed left-[calc(var(--side-w)+0.5rem)] top-16 z-[2300] max-h-[calc(100dvh-5rem)] w-64 overflow-y-auto rounded-2xl bg-white p-2 shadow-xl ring-1 ring-black/5 dark:bg-neutral-900 dark:ring-white/10 ${slide(shown.visible)}`
-        : `absolute inset-y-0 left-0 w-[13.25rem] overflow-y-auto border-l border-neutral-300/70 pb-4 pl-2 pr-3 pt-2 dark:border-neutral-800 ${slide(shown.visible)}`} />
+        : `absolute inset-y-0 left-0 w-[13.25rem] overflow-y-auto pb-4 pl-2 pr-3 pt-2 ${slide(shown.visible)}`} />
   );
 
   // The phone menu: the sub menu instead of the list, sliding in from the right
@@ -148,7 +148,14 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
         </section>
         {tips.tip}
       </nav>
-      {panel && (mode === "rail" ? createPortal(<FloatingCloser onClose={() => close(false)}>{panel}</FloatingCloser>, document.body) : panelTarget && createPortal(panel, panelTarget))}
+      {panel && (mode === "rail" ? createPortal(<FloatingCloser onClose={() => close(false)}>{panel}</FloatingCloser>, document.body) : panelTarget && createPortal(
+        <>
+          {/* A lighter backdrop behind the sub menu, fading in (it doesn't slide) */}
+          <div aria-hidden="true" className={`absolute inset-0 rounded-tl-2xl bg-white/55 transition-opacity ease-out dark:bg-white/[0.04] ${shown.visible ? "opacity-100 duration-200" : "opacity-0 duration-150"}`} />
+          {panel}
+        </>,
+        panelTarget,
+      ))}
     </>
   );
 }
