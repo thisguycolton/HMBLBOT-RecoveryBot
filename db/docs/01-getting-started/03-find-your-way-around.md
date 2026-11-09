@@ -9,11 +9,16 @@ Every page sits in the same frame: a sidebar on the left, a top bar with the sea
 
 ## The sidebar
 
-- **You**: your home feed, your page, highlights, readings, hosting, chips, 10th step, gratitude, steps and sponsorship.
-- **Your groups**: a folder for each group you're in, with its Home, Meetings, Chat, Events, Conscience, Members and HostDeck pages. If you hold a role in a group (admin, record keeper, host coordinator, treasurer), you'll also see its **Dashboard**.
-- **Explore**: Find a meeting, the Library, Readings, the Topicificator, Service Readings, the Host-burger Helper and these docs.
+The sidebar is a short list. Most items open a **sub menu** of their pages: choose one and the list folds down to its icons while the sub menu slides in beside it. The back arrow, the same icon again, or **Esc** closes it. On a page that belongs to a sub menu, that sub menu is already open, so you can see where you are.
 
-Numbers next to an item tell you something is waiting: in the picture above, **Hosting 1** means one meeting needs a sub, and the group's **Chat** shows unread messages. Choose **Collapse** at the bottom to shrink the sidebar to icons.
+- **Home**: your home feed.
+- **Recovery**: Chips, Steps, 10th step, Gratitude and Sponsorship.
+- **Read**: the Library, Readings, My readings and your Highlights.
+- **Meetings**: Find a meeting, Hosting, the Topicificator, Service Readings and the Host-burger Helper.
+- **Your groups**: each group's logo opens its pages: Home, Meetings, Chat, Events, Conscience, Members and HostDeck. If you hold a role in a group (admin, record keeper, host coordinator, treasurer), you'll also see its **Dashboard**.
+- At the bottom: **Help & docs** (these pages), **Extras**, and your picture for **My page**.
+
+Numbers tell you something is waiting: **Hosting 1** means one meeting needs a sub, and a group's **Chat** shows unread messages. While the words are hidden, a dot on the icon says the same. Choose **Collapse** at the bottom to keep the sidebar as icons; sub menus then open as a card over the page.
 
 ## Search
 
@@ -46,6 +51,6 @@ A floating bar at the bottom holds: **Menu**, **Home**, the **robot** (quick act
 
 ![The home feed on a phone](/docs-images/getting-started/home-phone.webp)
 
-**Menu** opens the whole sidebar as a sheet, with your account, search, Donate, the theme and the bell at the bottom:
+**Menu** opens the whole sidebar as a sheet, with your account, search, Donate, the theme and the bell at the bottom. Tap an item to slide into its sub menu, and the back arrow to come out again:
 
 ![The menu sheet on a phone](/docs-images/getting-started/menu-phone.webp)

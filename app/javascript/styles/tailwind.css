@@ -345,3 +345,18 @@ button:focus-visible {
 /* Scroll areas like tab bars and the sidebar nav still scroll (wheel, trackpad, touch) without drawing a scroll bar. */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* The sidebar's sub menus (components/shell/Sidebar.jsx): the phone menu slides into one and back
+   out, and switching between them on wide screens fades the new pages in */
+@keyframes side-from-right {
+  from { opacity: 0; transform: translateX(2rem); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes side-from-left {
+  from { opacity: 0; transform: translateX(-2rem); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes side-fade {
+  from { opacity: 0; transform: translateY(0.25rem); }
+  to { opacity: 1; transform: none; }
+}
