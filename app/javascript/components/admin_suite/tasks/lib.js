@@ -1,5 +1,6 @@
 // Site Admin > Task board (internally SCRUMBLBOT): shared bits for the board, the task detail,
 // the Dashboard's "Tasks that need you" and the Today panel's "Your admin tasks".
+import { useEffect, useState } from "react";
 import { api } from "../../topicificator_admin/api";
 
 export const tasksApi = (path = "", options) => api(`/tasks${path}`, options);
@@ -46,4 +47,30 @@ export function holder(task, me) {
   if (task.assignee) return task.assignee.id === me ? "You" : `${task.assignee.name.split(" ")[0]} has it`;
   if (task.for_all_admins) return "For all site admins";
   return null;
+}
+
+// The standard kanban tags (AdminTask::TAGS), in the order the picker shows them
+export const TAGS = [
+  ["bug", "Bug", "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200"],
+  ["feature", "Feature", "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200"],
+  ["improvement", "Improvement", "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200"],
+  ["content", "Content", "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200"],
+  ["design", "Design", "bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-200"],
+  ["research", "Research", "bg-lime-100 text-lime-800 dark:bg-lime-900/40 dark:text-lime-200"],
+  ["support", "Support", "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200"],
+  ["blocked", "Blocked", "bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900"],
+];
+export const TAG = Object.fromEntries(TAGS.map(([key, text, tone]) => [key, { text, tone }]));
+
+// "(max-width: 767px)", "(pointer: coarse)"..., kept current
+export function useMedia(query) {
+  const [on, setOn] = useState(() => window.matchMedia?.(query).matches ?? false);
+  useEffect(() => {
+    const list = window.matchMedia?.(query);
+    if (!list) return undefined;
+    const change = () => setOn(list.matches);
+    list.addEventListener("change", change);
+    return () => list.removeEventListener("change", change);
+  }, [query]);
+  return on;
 }

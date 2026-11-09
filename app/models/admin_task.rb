@@ -14,6 +14,8 @@ class AdminTask < ApplicationRecord
   ARCHIVE_AFTER = 30.days
   ZONE = CourtVerification::TIME_ZONE
   CHECKLIST_MAX = 50
+  # The kanban tags a task can carry, shown as colored pills (labels and colors in tasks/lib.js)
+  TAGS = %w[bug feature improvement content design research support blocked].freeze
 
   moderates_language :title, :notes, :checklist
 
@@ -162,7 +164,7 @@ class AdminTask < ApplicationRecord
       due_on: due_on&.iso8601, due_state: due_state(today), urgent: urgent?(today), link_path: link_path,
       assignee: assignee&.as_person_json, for_all_admins: for_all_admins, creator: creator&.as_person_json,
       completed_at: completed_at&.iso8601, completed_by: completed_by&.as_person_json,
-      checklist_counts: checklist_counts, comments: comments, created_at: created_at.iso8601,
+      checklist_counts: checklist_counts, comments: comments, tags: Array(tags), created_at: created_at.iso8601,
     }
     return json unless full
 
@@ -207,6 +209,7 @@ class AdminTask < ApplicationRecord
     self.title = title.to_s.squish
     self.priority = "normal" if priority.blank?
     self.link_path = link_path.to_s.strip.presence
+    self.tags = TAGS & Array(tags).map { |t| t.to_s.downcase.strip }
     self.checklist = Array(checklist).first(CHECKLIST_MAX).filter_map do |item|
       item = item.to_h.stringify_keys
       text = item["text"].to_s.squish.first(200)

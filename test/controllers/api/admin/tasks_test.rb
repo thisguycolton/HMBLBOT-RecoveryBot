@@ -109,6 +109,21 @@ class Api::Admin::TasksTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.parsed_body["comments"]
   end
 
+  test "tags are the standard kanban ones, and can be changed and cleared" do
+    sign_in @colton
+    post "/api/admin/tasks", params: { title: "Broken link", tags: %w[Bug blocked made-up bug] }, as: :json
+    assert_response :created
+    assert_equal %w[bug blocked], response.parsed_body["tags"]
+    id = response.parsed_body["id"]
+    patch "/api/admin/tasks/#{id}", params: { tags: %w[feature] }, as: :json
+    assert_equal %w[feature], response.parsed_body["tags"]
+    assert_equal %w[tags], AdminTask.find(id).activities.find_by(kind: "edited").data["fields"]
+    patch "/api/admin/tasks/#{id}", params: { tags: [] }, as: :json
+    assert_equal [], response.parsed_body["tags"]
+    patch "/api/admin/tasks/#{id}", params: { title: "Still no tags" }, as: :json
+    assert_equal [], AdminTask.find(id).tags
+  end
+
   test "links stay on this site, and only the maker deletes" do
     sign_in @colton
     post "/api/admin/tasks", params: { title: "Bad link", link_path: "https://evil.example" }, as: :json

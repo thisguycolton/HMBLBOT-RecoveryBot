@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_09_120000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_09_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -97,6 +97,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_09_120000) do
     t.date "overdue_reminded_on"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "tags", default: [], null: false, array: true
     t.index ["admin_task_column_id", "position"], name: "index_admin_tasks_on_admin_task_column_id_and_position"
     t.index ["admin_task_column_id"], name: "index_admin_tasks_on_admin_task_column_id"
     t.index ["assignee_id"], name: "index_admin_tasks_on_assignee_id"
