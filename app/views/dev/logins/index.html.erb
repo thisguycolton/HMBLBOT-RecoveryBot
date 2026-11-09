@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Be someone · RecoveryBot dev</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f6f7f9; --card:#fff; --ink:#14181f; --mute:#657080; --line:#e1e5ea; --accent:#0b72e7; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --card:#181b21; --ink:#eef1f5; --mute:#97a1b0; --line:#2a2f38; --accent:#5aa2ff; } }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 system-ui, sans-serif; }
+    main { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
+    h1 { margin:0 0 4px; font-size:26px; } p.sub { margin:0 0 24px; color:var(--mute); }
+    section { background:var(--card); border:1px solid var(--line); border-radius:14px; margin:0 0 20px; overflow:hidden; }
+    header { padding:12px 16px; font-weight:650; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:center; }
+    header small { color:var(--mute); font-weight:400; }
+    ul { list-style:none; margin:0; padding:8px; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:4px; }
+    li form { margin:0; } button { all:unset; box-sizing:border-box; width:100%; cursor:pointer; display:flex; gap:12px; align-items:center; padding:8px; border-radius:10px; }
+    button:hover, button:focus-visible { background:color-mix(in srgb, var(--accent) 12%, transparent); }
+    img, .ph { width:44px; height:44px; border-radius:50%; object-fit:cover; flex:none; background:var(--line); }
+    .who { min-width:0; } .who b { display:block; } .tags { color:var(--mute); font-size:12.5px; }
+    .tag { display:inline-block; padding:0 7px; border-radius:99px; background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); margin:0 4px 0 0; }
+    form.out { margin-top:8px; } form.out button { width:auto; display:inline-flex; color:var(--mute); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Be someone</h1>
+  <p class="sub">
+    Development only. Signed in as <b><%= current_user ? "#{current_user.display_name} (#{current_user.email})" : "nobody" %></b>.
+    <% if ENV["ADMIN_EMAILS"].blank? %> Start the server with <code>ADMIN_EMAILS=sam.okafor@demo.example.com</code> to make Sam a site admin.<% end %>
+  </p>
+
+  <% flag_names = { "can_keep_records" => "records", "can_keep_treasury" => "treasury", "can_schedule_hosts" => "schedules hosts", "can_host" => "hosts" } %>
+  <% @groups.each do |group| %>
+    <section>
+      <header><%= group.title %> <small><%= group.time_zone.split("/").last.tr("_", " ") %> · <%= group.meetings.size %> weekly meetings</small></header>
+      <ul>
+        <% group.memberships.sort_by { |m| [m.role == "admin" ? 0 : 1, m.user.name.to_s] }.each do |m| %>
+          <li>
+            <%= button_to "/dev/login/#{m.user.username}", params: { to: "/groups/#{group.slug}" }, form: { data: { turbo: false } } do %>
+              <% if m.user.avatar.attached? %><img src="<%= m.user.avatar_url %>" alt=""><% else %><span class="ph"></span><% end %>
+              <span class="who">
+                <b><%= m.user.display_name %></b>
+                <span class="tags">
+                  <% if m.status == "requested" %><span class="tag">asked to join</span><% else %>
+                    <span class="tag"><%= m.role == "admin" ? "admin" : "member" %></span>
+                    <% flag_names.each { |col, label| next if col == "can_host" && m.role == "admin"; %><% if m[col] %><span class="tag"><%= label %></span><% end %><% } %>
+                    <% if m.user.suite_admin? %><span class="tag">site admin</span><% end %>
+                  <% end %>
+                </span>
+              </span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% if @others.any? %>
+    <section>
+      <header>In no group</header>
+      <ul>
+        <% @others.each do |u| %>
+          <li><%= button_to "/dev/login/#{u.username}", form: { data: { turbo: false } } do %>
+            <% if u.avatar.attached? %><img src="<%= u.avatar_url %>" alt=""><% else %><span class="ph"></span><% end %>
+            <span class="who"><b><%= u.display_name %></b><span class="tags"><%= u.email %><%= " · site admin" if u.suite_admin? %></span></span>
+          <% end %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% if current_user %>
+    <%= button_to "Sign out", "/dev/logout", method: :delete, class: "out", form: { class: "out" } %>
+  <% end %>
+</main>
+</body>
+</html>

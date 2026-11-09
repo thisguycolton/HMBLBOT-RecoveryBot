@@ -84,6 +84,10 @@ A few features are behind environment variables:
 | `GROUPS_FOR_EVERYONE=1` | Opens Groups to every account |
 | `AA_INTERGROUP_FEED_URL` | Overrides the AA Intergroup meeting feed |
 
+## Demo data
+
+For demo videos and screenshots, `bin/rails demo:seed` (development only) makes 8 fake groups, each with a logo, a cover and believable meeting times, and 33 fake people with cartoon pictures and the roles a group needs. The pictures are drawn by `script/demo/make_images.py`, so Python 3 with Pillow is needed. Start the server with `ADMIN_EMAILS=sam.okafor@demo.example.com bin/rails s`, then open `/dev/users` to become any of them in one click (the password for all is in the task's output). `bin/rails demo:reset` removes it all.
+
 ## Tests
 
 ```sh

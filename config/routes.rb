@@ -1,4 +1,11 @@
 Rails.application.routes.draw do
+  # Be anyone in one click, for demo videos: only exists in development (see Dev::LoginsController)
+  if Rails.env.development?
+    get "/dev/users", to: "dev/logins#index"
+    post "/dev/login/:username", to: "dev/logins#create"
+    delete "/dev/logout", to: "dev/logins#destroy"
+  end
+
   get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # The service worker (app/views/pwa/service-worker.js.erb) shows Web Push notifications; it
   # has to live at the root so it covers the whole site
