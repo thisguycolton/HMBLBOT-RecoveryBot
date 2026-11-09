@@ -116,7 +116,7 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
   return (
     <>
       <nav ref={navRef} aria-label="Site" {...tips.handlers}
-        className={`space-y-3 !font-sans ${mode === "sheet" && cameBack ? "motion-safe:animate-[side-from-left_240ms_cubic-bezier(0.32,0.72,0,1)]" : ""}`}
+        className={`space-y-4 !font-sans ${mode === "sheet" && cameBack ? "motion-safe:animate-[side-from-left_240ms_cubic-bezier(0.32,0.72,0,1)]" : ""}`}
         onClick={(e) => { if (e.target.closest("a")) { followLink(e); onNavigate?.(); } }}>
         {!isAuthenticated && mode === "sheet" && <SignInCard />}
         <List>
@@ -127,7 +127,7 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
         </List>
 
         {isAuthenticated && (groups.length > 0 || hasGroups()) && (
-          <section aria-label="Your groups" className="border-t border-neutral-300/70 pt-3 dark:border-neutral-800">
+          <section aria-label="Your groups" className="border-t border-neutral-300/70 pt-4 dark:border-neutral-800">
             <h2 className={`mb-1 h-5 overflow-hidden whitespace-nowrap px-3 text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-slate-500 transition-opacity duration-150 dark:text-neutral-500`} style={{ opacity: compact ? 0 : 1 }} aria-hidden="true">Your groups</h2>
             <List>
               {groups.length === 0 && <Row cat={{ key: "findgroup", label: "Find your group", href: "/groups/find", icon: MapPinned }} active={false} compact={compact} />}
@@ -139,7 +139,7 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
           </section>
         )}
 
-        <section className="border-t border-neutral-300/70 pt-3 dark:border-neutral-800">
+        <section className="border-t border-neutral-300/70 pt-4 dark:border-neutral-800">
           <List>
             {bottom.map((c) => (
               <Row key={c.key} cat={c} active={c.href ? c.href === here : c.items.some((i) => i.href === here)} {...rowProps(c.key)} />
@@ -189,10 +189,10 @@ function FloatingCloser({ onClose, children }) {
 }
 
 function List({ children }) {
-  return <ul className="space-y-0.5">{React.Children.map(children, (c) => c && <li>{c}</li>)}</ul>;
+  return <ul className="space-y-1.5">{React.Children.map(children, (c) => c && <li>{c}</li>)}</ul>;
 }
 
-const rowClass = (active, open) => `relative flex w-full items-center gap-3 overflow-hidden whitespace-nowrap rounded-xl px-3 py-2 text-left text-[0.98rem] transition-colors ${
+const rowClass = (active, open) => `relative flex w-full items-center gap-3 overflow-hidden whitespace-nowrap rounded-xl px-3 py-2.5 text-left text-[0.98rem] transition-colors ${
   active
     ? "!bg-white font-semibold !text-accent shadow-sm dark:!bg-neutral-800 dark:!text-sky-300"
     : open
@@ -232,7 +232,7 @@ function GroupRow({ group, current, expanded, compact, onClick, waiting }) {
   return (
     <button type="button" onClick={onClick} aria-expanded={expanded} aria-controls={expanded ? PANEL_ID : undefined} data-menu={`g:${group.slug}`}
       data-tip={compact ? group.title : undefined}
-      className={`${rowClass(false, expanded)} !px-1.5`}>
+      className={`${rowClass(false, expanded)} !px-1.5 !py-1.5`}>
       <GroupLogo group={group} className={`size-8 shrink-0 text-[0.6rem] ${current && !expanded ? "ring-2 ring-accent ring-offset-2 ring-offset-[#ececec] dark:ring-offset-neutral-950" : ""}`} />
       {waiting > 0 && <span className="absolute left-8 top-1 size-2.5 rounded-full bg-accent ring-2 ring-[#ececec] dark:ring-neutral-950" />}
       <span className={`${fade(compact)} ${current ? "font-semibold" : ""}`}>{group.title}</span>
