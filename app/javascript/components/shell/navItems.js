@@ -1,7 +1,7 @@
 import {
   BookHeart, CalendarClock, CalendarRange, Gamepad2, Highlighter, House, LayoutDashboard, Library, MapPinned, MonitorPlay,
   NotebookPen, Pickaxe, Scale, ScrollText, Settings, Sparkles, UserRound, Users, Bookmark, Presentation, Medal, MoonStar,
-  HandHeart, HeartHandshake, Footprints, Gift, FileCheck2, MessagesSquare, LifeBuoy,
+  HandHeart, HeartHandshake, Footprints, Gift, FileCheck2, MessagesSquare, LifeBuoy, Sprout, BookOpen, Coffee,
 } from "lucide-react";
 
 // What the shell's sidebar (Sidebar.jsx) lists. "You" and "Explore" are fixed; "Your groups"
@@ -35,6 +35,28 @@ export const EXTRA_ITEMS = [
   { key: "quest", label: "The Acid Quest", href: "/game/game", icon: Gamepad2 },
   { key: "minecraft", label: "Minecraft Server", href: "/game_server/getting_started", icon: Pickaxe },
 ];
+
+// The sidebar's categories (Sidebar.jsx): one icon each, most opening a sub menu of their items
+// (the keys above). A category with an `href` and no items is a plain link. `auth`: only signed in;
+// `groups`: only with a group; `host`: only hosts (or with sub requests open to you).
+// Your groups come between the main categories and BOTTOM_CATEGORIES.
+const ALL_ITEMS = Object.fromEntries([...YOU_ITEMS, ...EXPLORE_ITEMS, ...EXTRA_ITEMS].map((i) => [i.key, i]));
+const pick = (...keys) => keys.map((k) => ALL_ITEMS[k]);
+
+export const CATEGORIES = [
+  { key: "home", label: "Home", href: "/people", icon: House, auth: true, groups: true },
+  { key: "recovery", label: "Recovery", icon: Sprout, auth: true, items: pick("chips", "steps", "inventory", "gratitude", "sponsorship") },
+  { key: "read", label: "Read", icon: BookOpen, items: [...pick("library", "archive"), { ...ALL_ITEMS.readings, auth: true }, { ...ALL_ITEMS.highlights, auth: true }] },
+  { key: "meetings", label: "Meetings", icon: Coffee, items: [ALL_ITEMS.find, { ...ALL_ITEMS.hosting, auth: true }, ...pick("topicificator", "service", "helper")] },
+];
+
+export const BOTTOM_CATEGORIES = [
+  { key: "docs", label: "Help & docs", href: "/docs", icon: LifeBuoy },
+  { key: "extras", label: "Extras", icon: Gamepad2, items: EXTRA_ITEMS },
+];
+
+// Whether an item or category shows for this member. `who`: { auth, groups, host }
+export const shows = (item, who) => (!item.auth || who.auth) && (!item.groups || who.groups) && (!item.host || who.host);
 
 // A group's pages in its folder: the same pages for everyone in it, a role deciding what they
 // can change there (so no page of its own per role), plus Court verification (the group's form,
