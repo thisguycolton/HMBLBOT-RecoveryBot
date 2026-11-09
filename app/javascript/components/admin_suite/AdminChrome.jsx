@@ -19,6 +19,7 @@ import {
   Moon,
   NotebookPen,
   PencilRuler,
+  SquareKanban,
   Sun,
   Tags,
   Users,
@@ -37,7 +38,14 @@ export const BASE = "/admin_panel";
 // The sidebar: sections of the suite's pages, with a count where something waits on you.
 // `count` names a number from /api/admin/overview (see inboxCounts).
 export const SECTIONS = [
-  { title: "Menu", items: [{ to: "/", label: "Dashboard", icon: LayoutDashboard, end: true }] },
+  {
+    title: "Menu",
+    items: [
+      { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+      // Site Admin > Task board (internally SCRUMBLBOT); the count is your urgent tasks
+      { to: "/tasks", label: "Task board", icon: SquareKanban, count: "tasks", countTone: "warn" },
+    ],
+  },
   {
     title: "Review",
     items: [
@@ -81,6 +89,7 @@ const inboxCounts = (overview) => ({
   contact_requests: overview?.contact_requests?.open ?? 0,
   user_reports: overview?.user_reports?.open ?? 0,
   notices: overview?.notices?.live ?? 0,
+  tasks: overview?.tasks?.urgent_count ?? 0,
 });
 
 const itemClass = (active) =>
@@ -118,7 +127,7 @@ export default function AdminChrome({ inSuite = false, children }) {
         <Icon className={`size-5 ${active ? "text-accent dark:text-sky-300" : "opacity-70"}`} />
         <span className="flex-1">{item.label}</span>
         {n > 0 && (
-          <span className={`min-w-5 rounded-full px-1.5 text-center text-xs font-semibold !text-white ${item.countTone === "info" ? "bg-emerald-600" : "bg-accent"}`}>
+          <span className={`min-w-5 rounded-full px-1.5 text-center text-xs font-semibold !text-white ${item.countTone === "info" ? "bg-emerald-600" : item.countTone === "warn" ? "bg-amber-500" : "bg-accent"}`}>
             {n}
           </span>
         )}

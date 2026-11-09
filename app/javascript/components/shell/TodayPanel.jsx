@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { BellRing, CalendarClock, CalendarDays, ChevronRight, Repeat, RotateCcw, Sparkles, Video, X } from "lucide-react";
+import { BellRing, CalendarClock, CalendarDays, ChevronRight, Hand, Repeat, RotateCcw, SquareKanban, Sparkles, Video, X } from "lucide-react";
 import { milestoneStatus } from "../../lib/milestones";
 import Avatar from "../groups/Avatar";
 import { soberFor } from "../groups/lib";
@@ -136,6 +136,75 @@ function Attention({ items, cleared, anyRoles }) {
   );
 }
 
+// Site admins' "Your admin tasks" (PeopleHome#admin_tasks, from Site Admin > Task board): the
+// tasks they have, ticked off right here, and those given to all site admins that nobody took
+// yet, with I'll take it. Urgent ones (High, overdue, due within 3 days) get the amber dot.
+function AdminTasks({ data }) {
+  const [tasks, setTasks] = useState(data?.tasks || []);
+  const [gone, setGone] = useState(0);
+  useEffect(() => { setTasks(data?.tasks || []); setGone(0); }, [data]);
+  if (!data || (!data.total && !tasks.length)) return null;
+
+  const post = (task, action) =>
+    fetch(`/api/admin/tasks/${task.id}/${action}`, {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": csrf() },
+    }).then((r) => { if (!r.ok) throw new Error(); return r.json(); });
+  const complete = (task) => {
+    setTasks((list) => list.filter((t) => t.id !== task.id));
+    setGone((n) => n + 1);
+    post(task, "complete").then(() => refreshNav()).catch(() => { setTasks((list) => [task, ...list]); setGone((n) => n - 1); });
+  };
+  const take = (task) => post(task, "take").then((saved) => setTasks((list) => list.map((t) => (t.id === task.id ? saved : t)))).catch(() => {});
+  const more = data.total - gone - tasks.length;
+  const due = (t) => {
+    if (!t.due_on) return null;
+    const days = Math.round((new Date(`${t.due_on}T00:00:00`) - new Date(new Date().toDateString())) / 86400000);
+    if (days < 0) return "Overdue";
+    return days < 2 ? `Due ${dayLabel(t.due_on).toLowerCase()}` : `Due ${dayLabel(t.due_on)}`;
+  };
+
+  return (
+    <section>
+      <h2 className={sideTitle}><SquareKanban className="size-4" /> Your admin tasks</h2>
+      {!tasks.length && <p className="text-sm text-slate-500">All done. Nice work.</p>}
+      <ul>
+        {tasks.map((t) => {
+          const mine = t.assignee?.id === data.me;
+          return (
+            <li key={t.id} className={`${row} flex items-start gap-3`}>
+              {mine ? (
+                <button type="button" onClick={() => complete(t)} aria-label={`Mark done: ${t.title}`} title="Mark done"
+                  className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border-2 border-slate-300 !bg-transparent hover:border-accent dark:border-neutral-600">
+                </button>
+              ) : (
+                <span className={`mt-2 size-2 shrink-0 rounded-full ${t.urgent ? "bg-amber-500" : "bg-accent/60"}`} aria-hidden="true" />
+              )}
+              <span className="min-w-0 flex-1">
+                <a href={`/admin_panel/tasks?task=${t.id}`} className="block font-semibold leading-snug !text-slate-900 hover:!text-accent dark:!text-white">
+                  {t.priority === "high" && <span className="mr-1 font-extrabold text-red-600">!</span>}{t.title}
+                </a>
+                <span className={`block text-sm ${t.due_state === "overdue" ? "font-medium text-red-600 dark:text-red-400" : "text-slate-500 dark:text-neutral-400"}`}>
+                  {[due(t), t.priority === "high" && "High", mine ? null : "For all site admins"].filter(Boolean).join(" · ") || "No due date"}
+                </span>
+                {!mine && (
+                  <button type="button" onClick={() => take(t)} className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-slate-200 !bg-white px-2.5 py-1 text-xs font-semibold !text-slate-700 hover:!bg-slate-50 dark:border-neutral-700 dark:!bg-neutral-900 dark:!text-neutral-200">
+                    <Hand className="size-3.5" /> I'll take it
+                  </button>
+                )}
+              </span>
+              {mine && t.urgent && <span className="mt-2 size-2 shrink-0 rounded-full bg-amber-500" aria-label="Urgent" />}
+            </li>
+          );
+        })}
+      </ul>
+      <a href="/admin_panel/tasks" className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">
+        {more > 0 ? `${more} more on the task board` : "Open the task board"} <ChevronRight className="size-4" />
+      </a>
+    </section>
+  );
+}
+
 // Who is filling in at the coming meetings they host, fill in at, or coordinate
 function Covers({ covers }) {
   if (!covers?.length) return null;
@@ -168,6 +237,7 @@ export default function TodayPanel({ today }) {
     return (
       <div className="space-y-8 !font-sans">
         <Greeting me={today.me} />
+        <AdminTasks data={today.admin_tasks} />
         <div className="text-sm text-slate-600 dark:text-neutral-300">
           Join a group to see its next meetings, members' birthdays and events here.
           <a href="/groups/find" className="mt-2 block font-semibold text-accent hover:underline">Find your group</a>
@@ -178,6 +248,7 @@ export default function TodayPanel({ today }) {
   return (
     <div className="space-y-8 !font-sans">
       <Greeting me={today.me} />
+      <AdminTasks data={today.admin_tasks} />
       <Attention items={today.attention} cleared={today.cleared} anyRoles={today.any_roles} />
       <Covers covers={today.covers} />
       <section>

@@ -4,14 +4,14 @@ import { ClipboardCheck, Eye, NotebookPen, Users } from "lucide-react";
 import { api } from "../topicificator_admin/api";
 import { Card, ExternalTool, OTHER_TOOLS, StatTile, formatCount } from "./App";
 import Skeleton from "../ui/Skeleton";
+import UrgentTasks from "./tasks/UrgentTasks";
 
 // Admin home, metr-style: metric cards, what's waiting on you, and the other admin tools
 export default function OverviewPage({ notify }) {
   const [data, setData] = useState(null);
 
-  useEffect(() => {
-    api("/overview").then(setData).catch((e) => notify(e.message, "error"));
-  }, []);
+  const load = () => api("/overview").then(setData).catch((e) => notify(e.message, "error"));
+  useEffect(() => { load(); }, []);
 
   if (!data) return <Skeleton variant="stats" />;
 
@@ -23,6 +23,8 @@ export default function OverviewPage({ notify }) {
 
   return (
     <>
+      <UrgentTasks data={data.tasks} notify={notify} onChanged={load} />
+
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile to="/analytics" icon={Eye} label="Visits today" value={formatCount(data.visits.today)}
           detail={`${formatCount(data.visits.last_7_days)} visits, ${formatCount(data.visits.visitors_7_days)} visitors in 7 days`} />
