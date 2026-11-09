@@ -96,6 +96,9 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
             this stays put over that corner, drawn in the shell's color (the bar is solid on wide screens) */}
         <div aria-hidden="true"
           className="pointer-events-none fixed left-[var(--side-w)] motion-safe:transition-[left] motion-safe:duration-200 top-[var(--nav-h)] z-40 hidden size-8 bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#ececec_32px)] dark:bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,var(--color-neutral-950)_32px)] lg:block print:!hidden" />
+        {/* The same corner in the open sub menu's lighter backdrop (Sidebar.jsx), fading with it */}
+        <div aria-hidden="true"
+          className={`pointer-events-none fixed left-[var(--side-w)] top-[var(--nav-h)] z-40 hidden size-8 bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#f6f6f6_32px)] transition-opacity ease-out dark:bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#151515_32px)] lg:block print:!hidden ${submenu && !rail ? "opacity-100 duration-200" : "opacity-0 duration-150"}`} />
 
         <div className="pt-[var(--nav-h)] lg:pl-[var(--side-w)] motion-safe:transition-[padding] motion-safe:duration-200 print:!p-0" style={push ? { marginTop: -push.y } : undefined}>
           <div className="stage flex min-h-[calc(100dvh-var(--nav-h))] overflow-clip bg-white dark:bg-neutral-900 max-lg:rounded-b-[28px] lg:rounded-l-[32px] print:!rounded-none">
