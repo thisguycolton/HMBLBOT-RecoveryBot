@@ -130,6 +130,36 @@ module DemoKit
                              ["Gloria Okonkwo", "member", :host], ["Hannah Lindqvist", "member"], ["Jordan Ellis", "member", :host]],
   }.freeze
 
+  # The two books the readings come from, imported with the app's own importer from files already in the repo
+  BOOKS = [
+    { file: "db/imports/bigbook-4e.json", work_key: "bigbook", cover_color: "blue" },
+    { file: "db/imports/twelve-twelve.json", work_key: "twelve_and_twelve", cover_color: "violet" },
+  ].freeze
+
+  # Each reading is cut from a chapter: [opening words of a paragraph, how many paragraphs from there]
+  READINGS = [
+    { title: "How It Works", book: "bigbook", chapter: "how-it-works", source: "Alcoholics Anonymous (the Big Book), chapter 5",
+      cut: [["Rarely have we seen", 3], ["Here are the steps we took", 14]], group: "sunrise-serenity", by: "Maya Brooks", meeting: "Early Birds", tags: ["Big Book", "The Steps"] },
+    { title: "We Agnostics: Your Own Conception of God", book: "bigbook", chapter: "we-agnostics", source: "Alcoholics Anonymous (the Big Book), chapter 4",
+      cut: [["Much to our relief", 3]], group: "lakeside-big-book-study", by: "Hannah Lindqvist", meeting: "Lakeside Big Book Study", tags: ["Big Book", "Step 2", "Step 3"] },
+    { title: "A Vision for You", book: "bigbook", chapter: "a-vision-for-you", source: "Alcoholics Anonymous (the Big Book), chapter 11",
+      cut: [["Yes, there is a substitute", 4]], group: "sunday-night-lights", by: "Linda Kowalski", meeting: "Sunday Night Lights", tags: ["Big Book", "Fellowship"] },
+    { title: "The Promises", book: "bigbook", chapter: "into-action", source: "Alcoholics Anonymous (the Big Book), chapter 6",
+      cut: [["If we are painstaking", 3]], group: "sunrise-serenity", by: "Maya Brooks", meeting: "Back Porch Big Book", tags: ["Big Book", "Step 9"] },
+    { title: "Step One", book: "twelve_and_twelve", chapter: "step-one", source: "Twelve Steps and Twelve Traditions, Step One",
+      cut: [["“We admitted we were powerless", 1], ["WHO cares to admit", 3]], group: "second-chances-young-people", by: "Imani Carter", meeting: "Newcomer Night", tags: ["Twelve and Twelve", "Step 1"] },
+    { title: "Step Three", book: "twelve_and_twelve", chapter: "step-three", source: "Twelve Steps and Twelve Traditions, Step Three",
+      cut: [["“Made a decision to turn", 1], ["PRACTICING Step Three", 2]], group: "hilltop-step-study", by: "Walter Greene", meeting: "Hilltop Step Study", tags: ["Twelve and Twelve", "Step 3"] },
+    { title: "Step Seven: Humility", book: "twelve_and_twelve", chapter: "step-seven", source: "Twelve Steps and Twelve Traditions, Step Seven",
+      cut: [["SINCE this Step so specifically", 3]], group: "lakeside-big-book-study", by: "Hannah Lindqvist", meeting: "Saturday Coffee & Steps", tags: ["Twelve and Twelve", "Step 7"] },
+    { title: "Step Eleven: The Prayer of St. Francis", book: "twelve_and_twelve", chapter: "step-eleven", source: "Twelve Steps and Twelve Traditions, Step Eleven",
+      cut: [["Well, we might start like this", 4]], group: "harbor-light-online", by: "Zoe Chen", meeting: "Lighthouse Early Watch", tags: ["Twelve and Twelve", "Step 11", "Meditation"] },
+    { title: "Step Twelve: The Joy of Living", book: "twelve_and_twelve", chapter: "step-twelve", source: "Twelve Steps and Twelve Traditions, Step Twelve",
+      cut: [["THE joy of living", 2]], group: "desert-rose-womens-group", by: "Rosa Delgado", meeting: "Desert Rose Morning", tags: ["Twelve and Twelve", "Step 12"] },
+    { title: "Tradition Five: One Primary Purpose", book: "twelve_and_twelve", chapter: "tradition-five", source: "Twelve Steps and Twelve Traditions, Tradition Five",
+      cut: [["Alcoholics Anonymous can be likened", 2]], group: "pine-ridge-stag", by: "Frank Dubois", meeting: "Pine Ridge Stag", tags: ["Twelve and Twelve", "Traditions"] },
+  ].freeze
+
   module_function
 
   def email(name) = "#{name.parameterize(separator: '.')}@#{DOMAIN}"
@@ -220,6 +250,49 @@ module DemoKit
     end
   end
 
+  def import_books
+    BOOKS.map do |b|
+      book = Book.find_by(work_key: b[:work_key])
+      book ||= LiteratureJsonImporter.import!(Rails.root.join(b[:file]).to_s).book
+      book.update!(publicly_accessible: true, members_only: false, cover_color: book.cover_color || b[:cover_color])
+      book
+    end
+  end
+
+  # The chapter's paragraphs as plain text, with the PDF's stray one-character lines dropped
+  def paragraphs(chapter) = chapter.content.to_s.split("\n\n").map(&:squish).reject { |p| p.length < 4 }
+
+  def excerpt(chapter, cut)
+    paras = paragraphs(chapter)
+    cut.flat_map do |phrase, count|
+      i = paras.index { |p| p.start_with?(phrase) } or raise "no paragraph starting #{phrase.inspect} in #{chapter.slug}"
+      paras[i, count]
+    end
+  end
+
+  def make_readings(users, groups, books)
+    by_key = books.index_by(&:work_key)
+    READINGS.each_with_index do |r, i|
+      chapter = by_key.fetch(r[:book]).chapters.find_by!(slug: r[:chapter])
+      group = groups.fetch(r[:group])
+      reading = Reading.find_or_initialize_by(title: r[:title], group: group)
+      next if reading.persisted?
+
+      html = excerpt(chapter, r[:cut]).map { |t| "<p>#{ERB::Util.html_escape(t)}</p>" }.join
+      reading.assign_attributes(user: users.fetch(r[:by]), source: r[:source], meetingName: r[:meeting], host: r[:by],
+                                content: html, published_at: Time.current - (i + 1).days)
+      reading.tags = r[:tags].map { |t| Tag.find_or_create_by!(title: t) }
+      reading.save!
+    end
+  end
+
+  # Every group has both books in its literature
+  def make_group_books(groups, books)
+    groups.each_value do |group|
+      books.each { |book| GroupBook.find_or_create_by!(group: group, book: book) { |gb| gb.note = "Approved by our group conscience" } }
+    end
+  end
+
   def make_follows(users)
     MEMBERS.each_value do |rows|
       names = rows.reject { |r| r.include?(:requested) }.map(&:first)
@@ -240,14 +313,19 @@ namespace :demo do
     DemoKit.guard!
     DemoKit.draw_images
     users = DemoKit::PEOPLE.keys.index_with { |n| DemoKit.make_user(n) }
+    groups = {}
     DemoKit::GROUPS.each do |spec|
-      group = DemoKit.make_group(spec, users)
+      group = groups[spec[:slug]] = DemoKit.make_group(spec, users)
       DemoKit.make_members(group, users)
       DemoKit.make_meetings(group, spec)
       DemoKit.make_hosts(group, users)
       puts "  #{group.title}: #{group.meetings.count} weekly meetings, #{group.active_memberships.count} members"
     end
     DemoKit.make_follows(users)
+    books = DemoKit.import_books
+    DemoKit.make_group_books(groups, books)
+    DemoKit.make_readings(users, groups, books)
+    puts "  #{books.map(&:title).join(' and ')} imported; #{Reading.where(group: groups.values).count} readings"
     puts "\n#{users.size} people, password for all: #{DemoKit::PASSWORD}"
     puts "Start the server as:  ADMIN_EMAILS=#{DemoKit.email('Sam Okafor')} bin/rails s"
     puts "Then open /dev/users to become any of them."
@@ -256,8 +334,9 @@ namespace :demo do
   desc "Remove everything demo:seed made (development only)"
   task reset: :environment do
     DemoKit.guard!
+    Reading.where(user_id: User.where("email LIKE ?", "%@#{DemoKit::DOMAIN}").select(:id)).destroy_all
     Group.where(slug: DemoKit::GROUPS.map { |g| g[:slug] }).destroy_all
     User.where("email LIKE ?", "%@#{DemoKit::DOMAIN}").destroy_all
-    puts "demo data removed"
+    puts "demo data removed (the imported books stay; delete them in the library if you want)"
   end
 end

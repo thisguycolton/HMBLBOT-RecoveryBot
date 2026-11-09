@@ -86,7 +86,7 @@ A few features are behind environment variables:
 
 ## Demo data
 
-For demo videos and screenshots, `bin/rails demo:seed` (development only) makes 8 fake groups, each with a logo, a cover and believable meeting times, and 33 fake people with cartoon pictures and the roles a group needs. The pictures are drawn by `script/demo/make_images.py`, so Python 3 with Pillow is needed. Start the server with `ADMIN_EMAILS=sam.okafor@demo.example.com bin/rails s`, then open `/dev/users` to become any of them in one click (the password for all is in the task's output). `bin/rails demo:reset` removes it all.
+For demo videos and screenshots, `bin/rails demo:seed` (development only) makes 8 fake groups, each with a logo, a cover and believable meeting times, and 33 fake people with cartoon pictures and the roles a group needs. It also imports the Big Book and the Twelve and Twelve from `db/imports/` into the library, adds both to every group's literature, and writes 10 readings cut from them, shared with the groups under their record keepers' names. The pictures are drawn by `script/demo/make_images.py`, so Python 3 with Pillow is needed. Start the server with `ADMIN_EMAILS=sam.okafor@demo.example.com bin/rails s`, then open `/dev/users` to become any of them in one click (the password for all is in the task's output). `bin/rails demo:reset` removes it all.
 
 ## Tests
 
