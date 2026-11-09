@@ -239,6 +239,57 @@ def avatar(seed, path, hair_style, beard, glasses):
     img.resize((512, 512), Image.LANCZOS).save(path, quality=90)
 
 
+# ---------- life-update pictures: simple cartoon scenes ----------
+
+def photo(name, path):
+    W, H = 1200 * SS, 800 * SS
+    sky = {"finish-line": ("#8fd3ff", "#e6f6ff"), "keys": ("#ffd6a5", "#fff1e0"), "cake": ("#ffc6ff", "#fff0fb"),
+           "hike": ("#ff9a8b", "#ffe5b4"), "potluck": ("#bde0fe", "#f1f8ff"), "coffee": ("#e9d8c4", "#fff7ee")}[name]
+    img = gradient(W, H, hexrgb(sky[0]), hexrgb(sky[1]), diagonal=False)
+    d = ImageDraw.Draw(img)
+    u = W / 1200
+    def R(x0, y0, x1, y1, **k): d.rectangle([x0 * u, y0 * u, x1 * u, y1 * u], **k)
+    def E(x0, y0, x1, y1, **k): d.ellipse([x0 * u, y0 * u, x1 * u, y1 * u], **k)
+    def P(pts, **k): d.polygon([(x * u, y * u) for x, y in pts], **k)
+    if name == "finish-line":
+        R(0, 560, 1200, 800, fill=hexrgb("#7a8794"))
+        for i in range(0, 1200, 120): R(i, 660, i + 60, 676, fill=(255, 255, 255))
+        R(180, 180, 200, 600, fill=(60, 60, 70)); R(1000, 180, 1020, 600, fill=(60, 60, 70))
+        for i in range(12):
+            for j in range(2): R(200 + i * 66.7, 180 + j * 40, 200 + (i + 1) * 66.7, 220 + j * 40 - (0 if (i + j) % 2 == 0 else 0), fill=(20, 20, 20) if (i + j) % 2 == 0 else (255, 255, 255))
+        E(560, 400, 680, 520, fill=hexrgb("#e8b48a")); R(580, 520, 660, 640, fill=hexrgb("#e76f51"))
+        d.line([(590 * u, 640 * u), (540 * u, 720 * u)], fill=hexrgb("#264653"), width=int(28 * u)); d.line([(650 * u, 640 * u), (720 * u, 700 * u)], fill=hexrgb("#264653"), width=int(28 * u))
+        d.line([(580 * u, 540 * u), (500 * u, 470 * u)], fill=hexrgb("#e8b48a"), width=int(22 * u)); d.line([(660 * u, 540 * u), (740 * u, 470 * u)], fill=hexrgb("#e8b48a"), width=int(22 * u))
+    elif name == "keys":
+        R(0, 620, 1200, 800, fill=hexrgb("#8ecf8a"))
+        P([(300, 320), (600, 140), (900, 320)], fill=hexrgb("#c4553b")); R(340, 320, 860, 620, fill=hexrgb("#f4e3c3"))
+        R(540, 440, 660, 620, fill=hexrgb("#7a4b2a")); R(380, 380, 480, 480, fill=hexrgb("#9bd1ff")); R(720, 380, 820, 480, fill=hexrgb("#9bd1ff"))
+        E(980, 330, 1100, 450, outline=hexrgb("#d4a017"), width=int(22 * u)); R(940, 380, 1040, 400, fill=hexrgb("#d4a017")); R(940, 380, 960, 440, fill=hexrgb("#d4a017"))
+    elif name == "cake":
+        R(0, 640, 1200, 800, fill=hexrgb("#b5838d"))
+        R(330, 400, 870, 640, fill=hexrgb("#ffb3c6")); R(330, 400, 870, 450, fill=(255, 255, 255))
+        R(400, 300, 800, 400, fill=hexrgb("#ffe0ac"))
+        for x in (440, 540, 640, 740): R(x, 220, x + 16, 300, fill=hexrgb("#4cc9f0")); P([(x - 6, 220), (x + 8, 160), (x + 22, 220)], fill=hexrgb("#ffd60a"))
+        for i, c in enumerate(("#ff6b6b", "#ffd93d", "#6bcB77", "#4d96ff")): E(120 + i * 270, 90 + (i % 2) * 70, 180 + i * 270, 150 + (i % 2) * 70, fill=hexrgb(c))
+    elif name == "hike":
+        E(840, 160, 1040, 360, fill=hexrgb("#fff3b0"))
+        P([(0, 800), (0, 520), (300, 300), (560, 520), (820, 360), (1200, 560), (1200, 800)], fill=hexrgb("#6a4c93"))
+        P([(0, 800), (0, 640), (380, 520), (760, 660), (1200, 600), (1200, 800)], fill=hexrgb("#355070"))
+        d.line([(600 * u, 800 * u), (700 * u, 700 * u), (560 * u, 640 * u), (660 * u, 590 * u)], fill=hexrgb("#e5989b"), width=int(26 * u))
+        E(630, 540, 670, 580, fill=hexrgb("#e8b48a")); R(634, 580, 666, 630, fill=hexrgb("#e76f51"))
+    elif name == "potluck":
+        R(0, 600, 1200, 800, fill=hexrgb("#c08552")); R(120, 520, 1080, 580, fill=hexrgb("#f7ede2"))
+        for i, c in enumerate(("#e63946", "#f4a261", "#2a9d8f", "#e9c46a", "#8338ec")):
+            x = 180 + i * 190; E(x, 400, x + 150, 520, fill=hexrgb(c)); R(x - 10, 505, x + 160, 525, fill=hexrgb("#f1faee"))
+        for i in range(5): E(100 + i * 240, 120, 150 + i * 240, 170, fill=hexrgb(("#ffadad", "#ffd6a5", "#caffbf", "#9bf6ff", "#bdb2ff")[i]))
+    elif name == "coffee":
+        R(0, 600, 1200, 800, fill=hexrgb("#8d6e63"))
+        for x in (330, 650):
+            R(x, 380, x + 220, 600, fill=hexrgb("#ffffff")); E(x + 190, 430, x + 310, 540, outline=(255, 255, 255), width=int(26 * u)); R(x + 20, 400, x + 200, 440, fill=hexrgb("#6f4e37"))
+            for k in range(3): d.arc([(x + 40 + k * 55) * u, 250 * u, (x + 100 + k * 55) * u, 360 * u], 200, 340, fill=(255, 255, 255), width=int(10 * u))
+    img.resize((1200, 800), Image.LANCZOS).save(path, quality=88)
+
+
 def main(out):
     spec = json.load(open(os.path.join(out, "spec.json")))
     for g in spec["groups"]:
@@ -246,7 +297,9 @@ def main(out):
         cover(g, os.path.join(out, f"cover-{g['slug']}.jpg"))
     for u in spec["people"]:
         avatar(u["username"], os.path.join(out, f"avatar-{u['username']}.jpg"), u["hair"], u["beard"], u["glasses"])
-    print(f"drew {len(spec['groups'])} logos + covers and {len(spec['people'])} avatars in {out}")
+    for name in spec.get("photos", []):
+        photo(name, os.path.join(out, f"photo-{name}.jpg"))
+    print(f"drew {len(spec['groups'])} logos + covers and {len(spec['people'])} avatars and {len(spec.get('photos', []))} pictures in {out}")
 
 
 if __name__ == "__main__":

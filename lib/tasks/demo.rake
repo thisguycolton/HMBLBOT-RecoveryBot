@@ -160,6 +160,97 @@ module DemoKit
       cut: [["Alcoholics Anonymous can be likened", 2]], group: "pine-ridge-stag", by: "Frank Dubois", meeting: "Pine Ridge Stag", tags: ["Twelve and Twelve", "Traditions"] },
   ].freeze
 
+  # What earns chips: 10th step inventories and gratitude lists (triangles), meeting joins
+  # (Meeting Maker) and round chips a group's hosts gave (claimed at once)
+  ENTRIES = { "Maya Brooks" => { gratitude: 35, inventory: 8 }, "Dev Patel" => { gratitude: 9 }, "Linda Kowalski" => { inventory: 31 }, "Tom Nguyen" => { gratitude: 7 },
+              "Hannah Lindqvist" => { inventory: 12, gratitude: 30 }, "Jordan Ellis" => { gratitude: 8 } }.freeze
+  JOINS = { "Tom Nguyen" => ["sunrise-serenity", "Early Birds", 12], "Luis Ortega" => ["harbor-light-online", "Harbor Night Watch", 6],
+            "Marcus Johnson" => ["sunrise-serenity", "Noon Reflections", 26], "Walter Greene" => ["hilltop-step-study", "Hilltop Step Study", 5] }.freeze
+  AWARDS = [["sunrise-serenity", "Maya Brooks", "Tom Nguyen", "year", 1, "One year. We're proud of you."], ["sunday-night-lights", "Linda Kowalski", "Carlos Mendoza", "year", 7, "Seven years of cookies and courage."],
+            ["hilltop-step-study", "Walter Greene", "Jordan Ellis", "9m", nil, "Nine months! Keep coming back."], ["second-chances-young-people", "Imani Carter", "Kai Morales", "year", 1, "A year at twenty-two. Wow."],
+            ["desert-rose-womens-group", "Rosa Delgado", "Yuki Tanaka", "year", 2, "Two years of Wednesdays."], ["harbor-light-online", "Zoe Chen", "Luis Ortega", "year", 2, "Two years, one night watch at a time."]].freeze
+
+  # Timeline posts. key lets reposts point at one; chip is a chip id (or "award", "meeting:25"); to is whose page it is on.
+  # vis: public (shown as Members), followers or private. ago: days. react: name => like/love/hugs. say: [[name, comment]].
+  NOTES = [
+    { key: :chairs, by: "Tom Nguyen", vis: "public", groups: %w[sunrise-serenity], ago: 2.1, react: { "Maya Brooks" => "love", "Dev Patel" => "like", "Priya Raman" => "hugs", "Linda Kowalski" => "love" },
+      say: [["Maya Brooks", "Look at you. Proud of you, Tom. See you at Early Birds."], ["Marcus Johnson", "Chairs AND coffee? You're getting promoted to secretary."]],
+      body: "A year and change ago I couldn't sit through a whole meeting. Tonight I set up the chairs, made the coffee, and read the Steps. #grateful #oneday" },
+    { key: :coffee, by: "Maya Brooks", vis: "public", groups: %w[sunrise-serenity sunday-night-lights], images: %w[coffee], ago: 3.4, react: { "Linda Kowalski" => "like", "Dev Patel" => "like", "Carlos Mendoza" => "love" },
+      body: "Secretary's report: the coffee maker survived another week. Minutes are posted, and come hungry on Sunday. @linda-kowalski @dev-patel #fellowship" },
+    { key: :hike, by: "Hannah Lindqvist", vis: "public", groups: %w[lakeside-big-book-study], images: %w[hike], ago: 4.2, react: { "Eddie Washington" => "love", "Ben Katz" => "like", "Tom Nguyen" => "hugs" },
+      say: [["Eddie Washington", "Nobody talked about Step Four for a whole hour. A record."]],
+      body: "Saturday sunrise hike with the Lakeside crowd. Nobody mentioned Step Four for a full hour, which may be a record. #oneday #fellowship" },
+    { key: :potluck, by: "Rosa Delgado", vis: "public", groups: %w[desert-rose-womens-group], images: %w[potluck], ago: 5.3, react: { "Betty Sullivan" => "love", "Yuki Tanaka" => "like", "Tessa Bloom" => "love", "Nina Petrov" => "like" },
+      say: [["Betty Sullivan", "The green chile casserole is now officially a Desert Rose tradition."]],
+      body: "Potluck after Wednesday morning. The casserole table went three deep. #fellowship #grateful" },
+    { key: :cake, by: "Jordan Ellis", vis: "public", groups: %w[hilltop-step-study second-chances-young-people], images: %w[cake], ago: 6.0, react: { "Walter Greene" => "love", "Kai Morales" => "hugs", "Ben Katz" => "like" },
+      body: "Nine months today! My sponsor made a cake shaped like a chip and I ate the chip first. #9months #grateful" },
+    { key: :five_k, by: "Kai Morales", vis: "public", groups: %w[second-chances-young-people], images: %w[finish-line], ago: 1.2, react: { "Imani Carter" => "love", "Dana Fischer" => "love", "Jordan Ellis" => "hugs", "Pete Novak" => "like" },
+      say: [["Imani Carter", "Last place with a huge grin is the best place. Pizza on me."], ["Pete Novak", "Proud of you, kid."]],
+      body: "Ran my first 5K this morning. Last place, huge grin. A year ago I couldn't climb the stairs without stopping. #oneday" },
+    { key: :job, by: "Dana Fischer", vis: "public", groups: %w[second-chances-young-people harbor-light-online], ago: 7.5, react: { "Zoe Chen" => "love", "Luis Ortega" => "love", "Imani Carter" => "hugs" },
+      body: "New job starts Monday. First time in six years I'm excited about a Monday. Thank you for the rides, the phone calls and the pep talks. #grateful" },
+    { key: :urn, by: "Frank Dubois", vis: "followers", groups: %w[pine-ridge-stag], ago: 8.0, react: { "Omar Haddad" => "like", "Pete Novak" => "like" },
+      body: "Pine Ridge Stag has a new coffee urn. Closed meeting, strong coffee, no crosstalk. The urn did not need a motion." },
+    { key: :keys, by: "Luis Ortega", vis: "public", groups: %w[harbor-light-online second-chances-young-people], images: %w[keys], ago: 4.8, react: { "Zoe Chen" => "love", "Raj Malhotra" => "love", "Dana Fischer" => "hugs", "Imani Carter" => "love" },
+      say: [["Zoe Chen", "Housewarming at Harbor Night Watch. Everyone bring a plant."]],
+      body: "Got the keys to my own place today. Two years ago I was on a friend's couch counting days on my fingers. #2years #grateful" },
+    { key: :birthday, by: "Pete Novak", vis: "followers", groups: %w[pine-ridge-stag second-chances-young-people], ago: 9.1, react: { "Frank Dubois" => "like", "Kai Morales" => "love" },
+      body: "Eight years on Friday. I'm throwing a very small party: me, a cake, and whoever shows up to the Stag. #8years" },
+    { key: :coffee_date, by: "Aisha Bello", vis: "private", groups: %w[sunday-night-lights], ago: 10.0, react: { "Linda Kowalski" => "like" },
+      body: "Reminder for Sunday Night Lights: treasurer's report is in the binder, and the basket total was up this month. #fellowship" },
+    # chips
+    { key: :six_years, by: "Maya Brooks", vis: "public", groups: %w[sunrise-serenity sunday-night-lights], chip: "round:year-6", ago: 0.6, react: { "Tom Nguyen" => "love", "Linda Kowalski" => "love", "Dev Patel" => "love", "Sofia Alvarez" => "hugs", "Priya Raman" => "love" },
+      say: [["Tom Nguyen", "Six years! You're why I came back the second time."], ["Linda Kowalski", "Proud of you, sister."]], body: "Six years. Still one day at a time." },
+    { key: :one_year, by: "Tom Nguyen", vis: "public", groups: %w[sunrise-serenity], chip: "award", ago: 12.0, react: { "Maya Brooks" => "hugs", "Marcus Johnson" => "love", "Sofia Alvarez" => "love" },
+      body: "My group gave me my one-year chip. I didn't cry. I cried. #1year" },
+    { key: :streak, by: "Hannah Lindqvist", vis: "public", groups: %w[lakeside-big-book-study], chip: "gratitude-streak:30", ago: 2.6, react: { "Ben Katz" => "like", "Eddie Washington" => "love" },
+      body: "Thirty days of gratitude lists in a row. Some days it was just coffee, the dog and a green light. It counts. #grateful" },
+    { key: :tenth, by: "Linda Kowalski", vis: "public", groups: %w[sunday-night-lights sunrise-serenity], chip: "inventory-streak:30", ago: 3.0, react: { "Maya Brooks" => "love", "Jack O'Malley" => "like", "Carlos Mendoza" => "like" },
+      body: "Thirty nights in a row of 10th step. It isn't glamorous. It's maintenance, and it works. #step10" },
+    { key: :meeting_maker, by: "Marcus Johnson", vis: "public", groups: %w[sunrise-serenity], chip: "meeting:25", ago: 5.0, react: { "Sofia Alvarez" => "like", "Tom Nguyen" => "like", "Dev Patel" => "love" },
+      body: "25 times through the door at Noon Reflections. Showing up is the whole program." },
+    { key: :luis_two, by: "Luis Ortega", vis: "public", groups: %w[harbor-light-online], chip: "award", ago: 11.0, react: { "Zoe Chen" => "love", "Raj Malhotra" => "love", "Nina Petrov" => "hugs" },
+      body: "Two years from Harbor Light. Thank you, Zoe. #2years" },
+    { key: :kai_year, by: "Kai Morales", vis: "public", groups: %w[second-chances-young-people], chip: "award", ago: 13.0, react: { "Imani Carter" => "love", "Dana Fischer" => "love", "Jordan Ellis" => "love" },
+      body: "One year. @imani-carter gave it to me at Newcomer Night. It lives in my pocket now. #1year" },
+    { key: :seven, by: "Carlos Mendoza", vis: "public", groups: %w[sunday-night-lights], chip: "award", ago: 14.0, react: { "Linda Kowalski" => "love", "Jack O'Malley" => "love" },
+      body: "Seven years, and the cookies are still free. #7years" },
+    { key: :twenty_five, by: "Walter Greene", vis: "public", groups: %w[hilltop-step-study lakeside-big-book-study], chip: "round:year-25", ago: 15.0, react: { "Ben Katz" => "love", "Hannah Lindqvist" => "love", "Betty Sullivan" => "love", "Jordan Ellis" => "hugs", "Gloria Okonkwo" => "love" },
+      say: [["Hannah Lindqvist", "A man in a Wednesday step study once told you it would work. He was right."]],
+      body: "Twenty-five years. I don't say it to brag. A man in a Wednesday step study told me it would work if I let it. It did. Keep coming back. #25years" },
+  ].freeze
+
+  # Notes written on someone else's page (they follow each other)
+  PAGE_NOTES = [
+    { by: "Maya Brooks", to: "Tom Nguyen", vis: "followers", ago: 1.9, body: "Proud of you for the chairs AND the Steps, Tom. Coffee Tuesday? #fellowship" },
+    { by: "Imani Carter", to: "Kai Morales", vis: "public", ago: 12.5, body: "Happy one year, Kai! Pizza is on me Saturday. #1year" },
+    { by: "Walter Greene", to: "Jordan Ellis", vis: "public", ago: 5.8, body: "Nine months already? You earned that chip, Jordan." },
+    { by: "Zoe Chen", to: "Luis Ortega", vis: "public", ago: 4.5, body: "Congratulations on the keys, Luis. Housewarming at Harbor Night Watch? Bring snacks." },
+    { by: "Rosa Delgado", to: "Yuki Tanaka", vis: "private", ago: 6.2, body: "Thank you for covering Saturday. You make the schedule look easy." },
+  ].freeze
+
+  NOTE_REPOSTS = [["Dev Patel", :chairs, 1.8], ["Priya Raman", :coffee, 3.0], ["Marcus Johnson", :keys, 4.0], ["Sofia Alvarez", :six_years, 0.4], ["Ben Katz", :twenty_five, 14.0]].freeze
+
+  # Highlights shared to the timeline: the quote is the paragraph's opening sentence(s)
+  HIGHLIGHTS = [
+    { key: :h_rarely, by: "Maya Brooks", book: "bigbook", chapter: "how-it-works", starts: "Rarely have we seen", sentences: 1, color: "yellow", vis: "public", ago: 3.2,
+      note: "Read this at Early Birds today and it still lands. #bigbook", react: { "Dev Patel" => "love", "Tom Nguyen" => "like", "Linda Kowalski" => "love" } },
+    { key: :h_relief, by: "Hannah Lindqvist", book: "bigbook", chapter: "we-agnostics", starts: "Much to our relief", sentences: 1, color: "lime", vis: "public", ago: 4.6,
+      note: "For anyone stuck on the God part: your own conception. That's the whole deal. #step3", react: { "Ben Katz" => "love", "Rosa Delgado" => "like" } },
+    { key: :h_door, by: "Walter Greene", book: "twelve_and_twelve", chapter: "step-three", starts: "PRACTICING Step Three", sentences: 1, color: "cyan", vis: "public", ago: 5.6,
+      note: "Hilltop tonight: this paragraph. A door that looks closed and isn't. #step3", react: { "Jordan Ellis" => "love", "Betty Sullivan" => "like" } },
+    { key: :h_defeat, by: "Imani Carter", book: "twelve_and_twelve", chapter: "step-one", starts: "WHO cares to admit", sentences: 2, color: "pink", vis: "public", ago: 2.4,
+      note: "Newcomer Night opener. Nobody wants to admit defeat, and that's exactly why it works. #step1", react: { "Kai Morales" => "love", "Dana Fischer" => "hugs", "Jordan Ellis" => "like" } },
+    { key: :h_prayer, by: "Zoe Chen", book: "twelve_and_twelve", chapter: "step-eleven", starts: "PRAYER and meditation are our principal", sentences: 1, color: "orange", vis: "public", ago: 6.6,
+      note: "Early watch reading. Eleven minutes of quiet beats eleven hours of noise. #step11 #meditation", react: { "Luis Ortega" => "love", "Nina Petrov" => "love" } },
+    { key: :h_substitute, by: "Kai Morales", book: "bigbook", chapter: "a-vision-for-you", starts: "Yes, there is a substitute", sentences: 2, color: "yellow", vis: "public", ago: 8.4,
+      note: "This is what showed up for me: a fellowship. #bigbook", react: { "Imani Carter" => "love", "Pete Novak" => "like" } },
+  ].freeze
+
+  HIGHLIGHT_REPOSTS = [["Dev Patel", :h_rarely, 3.0], ["Tom Nguyen", :h_relief, 4.0], ["Luis Ortega", :h_prayer, 6.0], ["Jordan Ellis", :h_defeat, 2.0]].freeze
+
   module_function
 
   def email(name) = "#{name.parameterize(separator: '.')}@#{DOMAIN}"
@@ -174,6 +265,7 @@ module DemoKit
     spec = {
       groups: GROUPS.map { |g| g.slice(:slug, :short, :a, :b, :symbol, :scene) },
       people: PEOPLE.map { |n, p| { username: username(n), hair: p[:hair], beard: !!p[:beard], glasses: !!p[:glasses] } },
+      photos: %w[finish-line keys cake hike potluck coffee],
     }
     File.write(ASSETS.join("spec.json"), JSON.pretty_generate(spec))
     system("python3", Rails.root.join("script/demo/make_images.py").to_s, ASSETS.to_s) || abort("could not draw the pictures (python3 + Pillow needed)")
@@ -293,6 +385,129 @@ module DemoKit
     end
   end
 
+  def make_chip_fuel(users, groups)
+    ENTRIES.each do |name, kinds|
+      user = users.fetch(name)
+      kinds.each do |kind, n|
+        model = kind == :inventory ? StepInventory : GratitudeList
+        next if model.where(user: user).count >= n
+
+        n.times do |i|
+          day = Date.current - 1 - i
+          if kind == :inventory then model.find_or_create_by!(user: user, on: day) { |e| e.notes = "" }
+          else model.find_or_create_by!(user: user, on: day) { |e| e.items = ["my sponsor", "coffee", "a quiet morning"] }
+          end
+        end
+      end
+    end
+    JOINS.each do |name, (slug, meeting_name, n)|
+      user = users.fetch(name)
+      meeting = groups.fetch(slug).meetings.weekly.find_by!(name: meeting_name)
+      next if MeetingJoin.where(user: user, meeting: meeting).count >= n
+
+      n.times { |i| MeetingJoin.find_or_create_by!(user: user, meeting: meeting, starts_at: (Time.current - (i + 1).days).change(hour: 12)) }
+    end
+    AWARDS.each do |slug, by, to, key, years, note|
+      next if ChipAward.exists?(group: groups.fetch(slug), user: users.fetch(to), milestone_key: key, years: years)
+
+      ChipAward.create!(group: groups.fetch(slug), given_by: users.fetch(by), user: users.fetch(to), email: users.fetch(to).email, milestone_key: key, years: years,
+                        on: Date.current - 20, note: note, claimed_at: Time.current - 19.days)
+    end
+    # already celebrated, so nobody gets the confetti popup the first time they sign in
+    ChipAward.where(group_id: groups.values.map(&:id), celebrated_at: nil).update_all(celebrated_at: Time.current - 18.days)
+  end
+
+  def backdate(record, days)
+    t = Time.current - days.days
+    record.update_columns(created_at: t, updated_at: t)
+  end
+
+  def chip_id_for(user, want)
+    ids = Chips.catalog(user)[:chips].map { |c| c[:id].to_s }
+    case want
+    when "award" then ids.find { |id| id.start_with?("award:") }
+    when /\Ameeting:(\d+)\z/ then ids.find { |id| id.match?(/\Ameeting-\d+:#{Regexp.last_match(1)}\z/) }
+    else want
+    end
+  end
+
+  def react_and_comment(record, users, react, say = [], comments_on: record)
+    (react || {}).each { |name, kind| NoteReaction.find_or_create_by!(reactable: record, user: users.fetch(name)) { |r| r.kind = kind } }
+    say.each do |name, text|
+      comment = NoteComment.find_or_create_by!(timeline_note: comments_on, user: users.fetch(name), body: text)
+      # dated after the post, and never "edited"
+      comment.update_columns(created_at: record.created_at + 2.hours, updated_at: record.created_at + 2.hours)
+    end
+  end
+
+  def make_notes(users, groups)
+    made = {}
+    NOTES.each do |n|
+      author = users.fetch(n[:by])
+      existing = TimelineNote.find_by(user: author, body: n[:body])
+      note = existing || TimelineNote.new(user: author, body: n[:body], visibility: n[:vis])
+      if note.new_record?
+        if n[:chip]
+          id = chip_id_for(author, n[:chip]) or raise "#{n[:by]} has no chip like #{n[:chip]}"
+          note.chip = TimelineNote.chip_for(author, id, Date.current) or raise "no chip #{id} for #{n[:by]}"
+          note.chip_id = note.chip["id"]
+        end
+        note.mentions = Mentions.resolve(n[:body], groups: [], everyone: nil)[:map]
+        Array(n[:images]).each { |img| note.images.attach(io: File.open(ASSETS.join("photo-#{img}.jpg")), filename: "#{img}.jpg", content_type: "image/jpeg") }
+        note.save!
+        n[:groups].each { |slug| note.shares.create!(group: groups.fetch(slug)) }
+        backdate(note, n[:ago])
+      end
+      react_and_comment(note, users, n[:react], n[:say] || [])
+      made[n[:key]] = note
+    end
+
+    PAGE_NOTES.each do |n|
+      author, to = users.fetch(n[:by]), users.fetch(n[:to])
+      Follow.find_or_create_by!(follower: author, followed: to)
+      next if TimelineNote.exists?(user: author, recipient: to, body: n[:body])
+
+      note = TimelineNote.create!(user: author, recipient: to, body: n[:body], visibility: n[:vis])
+      backdate(note, n[:ago])
+    end
+
+    NOTE_REPOSTS.each do |name, key, ago|
+      original = made.fetch(key)
+      next if TimelineNote.exists?(user: users.fetch(name), repost_of: original)
+
+      backdate(TimelineNote.create!(user: users.fetch(name), repost_of: original, body: "", visibility: "public"), ago)
+    end
+    made
+  end
+
+  def make_highlights(users, books)
+    by_key = books.index_by(&:work_key)
+    made = {}
+    HIGHLIGHTS.each do |h|
+      author = users.fetch(h[:by])
+      chapter = by_key.fetch(h[:book]).chapters.find_by!(slug: h[:chapter])
+      para = chapter.content.to_s.split("\n\n").find { |p| p.strip.start_with?(h[:starts]) } or raise "no #{h[:starts].inspect} in #{chapter.slug}"
+      quote = para.strip.split(/(?<=[.?!])\s+/).first(h[:sentences]).join(" ")
+      start = chapter.content.index(quote) or raise "quote not found in #{chapter.slug}"
+      highlight = UserHighlight.find_or_initialize_by(user: author, chapter: chapter, note: h[:note])
+      if highlight.new_record?
+        highlight.assign_attributes(style: { "color" => h[:color] }, visibility: h[:vis],
+                                    selector: { "quote" => { "exact" => quote, "prefix" => "", "suffix" => "" }, "position" => { "start" => start, "end" => start + quote.length } })
+        highlight.mentions = Mentions.resolve(h[:note], groups: [], everyone: nil)[:map]
+        highlight.save!
+        highlight.update_columns(created_at: Time.current - h[:ago].days, updated_at: Time.current - h[:ago].days, shared_at: Time.current - h[:ago].days)
+      end
+      react_and_comment(highlight, users, h[:react], [], comments_on: nil)
+      made[h[:key]] = highlight
+    end
+    HIGHLIGHT_REPOSTS.each do |name, key, ago|
+      original = made.fetch(key)
+      next if TimelineNote.exists?(user: users.fetch(name), repost_of_highlight: original)
+
+      backdate(TimelineNote.create!(user: users.fetch(name), repost_of_highlight: original, body: "", visibility: "public"), ago)
+    end
+  end
+
   def make_follows(users)
     MEMBERS.each_value do |rows|
       names = rows.reject { |r| r.include?(:requested) }.map(&:first)
@@ -322,9 +537,13 @@ namespace :demo do
       puts "  #{group.title}: #{group.meetings.count} weekly meetings, #{group.active_memberships.count} members"
     end
     DemoKit.make_follows(users)
+    DemoKit.make_chip_fuel(users, groups)
     books = DemoKit.import_books
     DemoKit.make_group_books(groups, books)
     DemoKit.make_readings(users, groups, books)
+    DemoKit.make_notes(users, groups)
+    DemoKit.make_highlights(users, books)
+    puts "  #{TimelineNote.count} timeline posts, #{UserHighlight.on_timeline.count} shared highlights"
     puts "  #{books.map(&:title).join(' and ')} imported; #{Reading.where(group: groups.values).count} readings"
     puts "\n#{users.size} people, password for all: #{DemoKit::PASSWORD}"
     puts "Start the server as:  ADMIN_EMAILS=#{DemoKit.email('Sam Okafor')} bin/rails s"
@@ -334,6 +553,9 @@ namespace :demo do
   desc "Remove everything demo:seed made (development only)"
   task reset: :environment do
     DemoKit.guard!
+    demo = User.where("email LIKE ?", "%@#{DemoKit::DOMAIN}").select(:id)
+    TimelineNote.where(user_id: demo).destroy_all
+    UserHighlight.where(user_id: demo).destroy_all
     Reading.where(user_id: User.where("email LIKE ?", "%@#{DemoKit::DOMAIN}").select(:id)).destroy_all
     Group.where(slug: DemoKit::GROUPS.map { |g| g[:slug] }).destroy_all
     User.where("email LIKE ?", "%@#{DemoKit::DOMAIN}").destroy_all
