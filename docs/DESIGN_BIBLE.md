@@ -1,140 +1,140 @@
 # RecoveryBot Design Bible
 
-For Claude and other agents building UI in this repo. It is based on the four screenshots in `docs/screenshots/` (group home, group conscience, host scheduling, meeting finder) and the CSS tokens in `app/javascript`. Where a value is read off a screenshot rather than from code, it is marked **~** (approximate). Check the token in code before hard-coding anything.
+For Claude and other agents building UI in this repo. Written from the current docs screenshots (`public/docs-images/**`, also served at https://recoverybot.hmblbot.com/docs-images) and the tokens in `app/javascript/styles/tailwind.css` and `writebook.css`. Values marked **~** are read off a screenshot, so confirm the token in code before hard-coding anything. The older `docs/screenshots/*.png` show a previous top-bar layout and are out of date.
+
+Screens reviewed: home page (logged out), home feed (phone), group page, Hosting, HostDeck, Group conscience > Treasury, profile page, Library chapter reader, Chips, 10th step (phone), Admin dashboard.
 
 ## 1. Personality
 
-Calm, warm and plain-spoken. The audience is people in recovery, often on a phone and often new. The app should feel safe and unhurried.
+Calm, warm, plain-spoken. People in recovery, often on a phone, often new. Safe and unhurried.
 
-- Lots of white space, soft corners, soft shadows. No harsh borders and no dense data tables.
-- One accent blue. Colour is used for state and meaning, not decoration.
-- Copy is short and human: "Come as you are", "Put someone on", "No business meeting is scheduled." Avoid jargon and shouting.
-- Never block or shame. The app records and suggests (see the Robert's Rules note in AGENTS.md).
+- Generous white space, big rounded corners, soft shadows, almost no hard borders.
+- One accent blue. Colour carries state and meaning, not decoration.
+- Short human copy: "Come as you are", "Keep it going today", "I'll cover it". No jargon, no shouting, no shaming. The app records and suggests; it doesn't block.
+- Privacy is stated plainly where it matters ("Only you can see your chips", "Private. Only you can ever read this here…") with a small lock icon.
 
-## 2. Color
+## 2. The shell (every page sits inside it)
+
+- **Sidebar** (left, ~18rem, `--side-w`; collapsible to ~4.75rem with "Collapse" at the bottom): light grey (~`#ececec`). Small uppercase eyebrow groups (YOU, YOUR GROUPS, EXPLORE; Admin has MENU / REVIEW / CONTENT / INSIGHTS). Items are icon + label, ~15px. The active item is a pill: white with accent text (member shell) or pale-blue fill with accent text (admin). Count badges are small accent-blue circles (Hosting "1"). Groups show a small rounded-square avatar with initials.
+- **Top bar**: the logo (robot mark + "RecoveryBot" with "Bot" in brand blue `--color-brand`), then a wide rounded search field with a "/" shortcut chip, Donate (outline pill with heart), theme toggle, bell, and the account chip (avatar + name + chevron). Logged out: Log in (ghost) and Sign up (solid accent). Admin shows an accent "Admin" badge next to the logo.
+- **The stage**: the rounded white panel the page sits in (`--radius-panel`, top-left corner visibly curved against the grey shell). Page content is a centred column inside it; reading and form pages use a narrower column (~760–900px).
+- **Phone**: the sidebar goes away. A grey top bar (logo, search, bell) and a floating rounded **bottom bar**: menu, home, a large centred accent circle with the robot mark, calendar/Today, and settings or info. Floating page buttons sit at `bottom: calc(var(--shell-bottom,0px) + …)`.
+- Full-window tools (HostDeck, Topicificator, chapter and reading editors) use a slim app bar instead: back arrow, group avatar + title + subtitle, then tool buttons on the right.
+- Wide screens may show `PageAside` as a side panel beside the stage; on phones it becomes a sheet.
+
+## 3. Color
 
 | Role | Value | Use |
 |---|---|---|
-| Accent | `--color-accent` `#0b6ede` | Primary buttons, active tab/pill, links, icons on cards |
-| Accent tint | `--color-accent-tint` (16% accent on white) | Info banners, "Join us" card, icon chips |
+| Accent | `--color-accent` `#0b6ede` (`--wb-accent`) | Primary buttons, links, active tab/pill, icons, count badges |
+| Accent tint | `--color-accent-tint` (16% accent on white) | Icon chips, "Join us" card, info banner, selected step |
 | Accent ink | `--color-accent-ink` | Text on tinted accent surfaces |
-| Accent light | `--color-accent-light` `oklch(76% 0.13 250)` | Links and accents in dark mode |
-| Brand | `--color-brand` `#4c7ba6` | Logo / secondary brand touches |
-| Hero gradient | blue `#0b6ede` ~ to indigo/violet ~`#4527d8`, diagonal (~135deg) | Group hero, meeting-card headers (darkened toward navy at the bottom) |
-| Page background | light grey ~`#f5f5f4` | Behind cards |
-| Surface | white | Cards, top bar |
+| Accent light | `--color-accent-light` `oklch(76% 0.13 250)` | Links/accents in dark mode |
+| Brand | `--color-brand` `#4c7ba6` | "Bot" in the wordmark |
+| Hero gradient | blue `#0b6ede` ~ to violet ~`#4527d8`, diagonal | Group and profile heroes, meeting-card headers; the logged-out home hero is a deeper blue with an orange feature card |
+| Shell grey | ~`#ececec` sidebar, ~`#f5f5f4` page behind cards | Behind and around the stage |
+| Surface | white | Stage, cards, inputs |
 | Dark surface | `--color-surface-dark` `#0d0d0f` | Dark-mode surface |
-| Ink | near-black navy ~`#0f172a` | Headings and body |
-| Muted ink | slate ~`#475569`, lighter ~`#64748b` | Subtitles, helper text, section labels |
-| Donate | rose/crimson on a pale rose pill | The only warm accent in the chrome |
-| Status "Open" | amber chip: pale yellow background `~#fef3c7`, brown text | Unfilled host places |
-| Highlight marks | `--hl-yellow/pink/lime/cyan/orange` | Highlights and notes only |
+| Ink | navy-black ~`#0f172a` | Headings and body |
+| Muted ink | slate ~`#475569` / `#64748b` | Subtitles, helper text, eyebrow labels |
+| Warm notice | pale amber `~#fef3c7` fill, brown/orange text | "Open" and "Host" chips, streak banner, "Choose your reading" panel, nudges that need attention |
+| Success | green dot/avatar ~`#16a34a` | Presence ("On Before we begin"), avatars |
+| Highlights | `--hl-yellow/pink/lime/cyan/orange` | Highlighted reading text, notes (yellow is the default) |
+| Chips (sobriety) | bronze, teal, purple, blue, green, gold, red, silver | Only on the chip artwork; locked/future chips are greyed |
+| Avatars | solid colours (green, orange, indigo, blue) with white initials | People with no photo |
 
 Rules:
-- Use CSS variables, not literals. The app has a dark theme toggle (moon icon in the top bar), so every colour must come from a token that has a dark value. The `--calendar-*`, `--hb-*` and `--wb-*` families already do.
-- On the blue hero, controls are translucent white (glass): `rgba(255,255,255,.15–.25)` fill with white text. The one primary action there (Edit page) is solid near-white with dark text.
-- Contrast: white on the hero blue is fine. Do not put muted grey text on the tinted blue surfaces; use accent ink.
+- Use CSS variables, not literals. Dark mode exists (theme toggle), so every surface and text colour must come from a token that has a dark value (the `--calendar-*`, `--hb-*`, `--wb-*` families do).
+- On gradient heroes, controls are translucent white glass (`rgba(255,255,255,.15–.25)` with white text); the single primary action is solid near-white with dark text.
+- Red is only for Donate's heart, chips and destructive actions.
 
-## 3. Typography
+## 4. Typography
 
-- Family: **Inter-style neutral sans** in the screenshots. The code names `"Public Sans", system-ui, sans-serif` (`--wb-font-reading`), so use `font-family: inherit` and let the app set it. Do not introduce a new font.
-- Page title (H1): very bold, tight, big. ~44–48px desktop, e.g. "Find a meeting". The hero title is bigger, ~52px, white.
-- Section heading inside a page: ~28px bold ("Welcome to Sunrise Group").
-- Card title: ~17–20px, medium/semibold.
-- Body: 16px, line-height ~1.5.
-- Meta / helper: 13–14px muted.
-- **Eyebrow labels**: 12px, UPPERCASE, letter-spaced, semibold, muted slate ("NEXT BUSINESS MEETING", "HOSTS", "SUNDAY", "TIME OF DAY"). They label sections and sit above cards or fields, outside the card.
+- Neutral sans (Inter look; the code names `"Public Sans", system-ui, sans-serif` via `--wb-font-reading`). Use `font-family: inherit`; never add a font.
+- Page title (H1): very bold, tight tracking, large: ~44–52px desktop, ~56px on phone ("Notes", "10th step"). Hero titles are white and bigger.
+- Subtitle under a title: 16–18px, muted, one sentence ("Where you're serving, and where your groups need a hand.").
+- Section/card title: 17–22px, semibold.
+- Body 16px / 1.5. Meta 13–14px muted.
+- **Eyebrow labels**: 12px, UPPERCASE, letter-spaced, semibold, muted. They head sections outside cards (SUBS NEEDED, SOBRIETY, MEETING FLOW) and label form fields (MONTH, STATUS, HOST). Often preceded by a small outline icon. Type them in sentence case and uppercase in CSS.
+- **Reading text** (library chapter): very large bold serif-free sans, justified, centred column; chapter title italic bold, chapter name uppercase. Highlights are marker-yellow with a small orange dot for a note.
 
-## 4. Shape, elevation, spacing
+## 5. Shape, elevation, spacing
 
-- Radii (tokens): `--radius` 0.375rem (inputs' inner bits), `--radius-md` 0.5rem, `--radius-lg` 0.875rem (cards), `--radius-xl` 1.125rem, `--radius-2xl` / `--radius-panel` 1.75rem (hero, big panels). Pills and chips are fully round (999px).
-- Shadow: `--shadow-panel: 0 4px 12px rgb(0 0 0 / .1)`. Cards use a very soft version of this with no visible border. Selected or tinted surfaces get a 1px pale-blue border instead of a shadow.
-- Content width: ~1150px centred (screenshot 1280 wide, ~64px gutters). The page top bar is full width; content below it is a centred column.
-- Vertical rhythm: ~16px between small items, ~24px between sections, ~32px under hero. Cards have ~20–24px padding.
-- Two-column pages: main column ~2/3, side column ~1/3 (group home). Collapse to one column on phones; side content folds into `PageAside` or a sheet.
-
-## 5. Layout anatomy (what every page is made of)
-
-1. **Top bar** (white, 1px bottom border, `--nav-h`): logo + "BETA" chip, nav dropdowns (Meetings / Library / Extras, with chevrons), then on the right the Donate pill, theme toggle, bell, Account menu. The active nav item turns accent blue.
-2. **Back link**: "← Groups", small muted, above the page title.
-3. **Page header**: either the plain title + one-line muted subtitle (Find a meeting), or the **gradient hero** (group pages).
-4. **Tabs**: underline tabs with an icon and label, with the active one in accent blue with a 2px underline and a hairline under the whole row.
-5. **Sub-pills** (second level, e.g. Overview / Meetings / Decisions…): rounded white pills with a hairline border, active one filled accent with white text.
-6. **Body**: eyebrow label, card(s), repeat.
-
-In the real shell (`components/Layout.jsx`) a sidebar and "stage" panel wrap React pages (see AGENTS.md "The shell"). The screenshots show the simpler top-bar layout. Use whatever the page's own entrypoint already uses.
+- Radii: `--radius` 0.375rem, `--radius-md` 0.5rem, `--radius-lg` 0.875rem, `--radius-xl` 1.125rem, `--radius-2xl`/`--radius-panel` 1.75rem. Cards in screenshots look like ~20–28px; inputs, chips and buttons are fully round (pill).
+- Shadow: `--shadow-panel: 0 4px 12px rgb(0 0 0 / .1)`; cards use a softer version, and often a faint 1px border instead. Tinted cards use a 1px pale-blue border.
+- Spacing: ~8/12/16/24/32. Cards pad 20–28px. Sections are ~24px apart.
+- Layouts: hero (full width of column) then tabs; two columns at about 2/3 + 1/3 (group home, profile: Timeline left, About / Groups / Following cards right); HostDeck is three columns (flow, current section, chat postings); stat tiles are three across; forms put two fields per row.
 
 ## 6. Components
 
-**Gradient hero (group header)**
-Big rounded panel (`--radius-panel`), blue to violet diagonal gradient, white text. Order: group name, one-line description, small glass chips (time zone, member count), a darker "Next meeting in 13h 41m · Today, 2:00 PM" capsule with a glass Join button, then a row of action pills (role badge, Edit page, Details, Leave). Chips are 12–13px with icon. Action pills ~36px high, translucent.
+**Gradient hero** (groups, profiles): `--radius-panel`, diagonal blue to violet. Group: name, description, glass chips (time zone, members, Website), darker "Next meeting in 1 day 10h · Mon, Nov 9, 6:30 AM MST" capsule with Join and a Passcode copy chip, then action pills (role badge, Dashboard, Edit page in solid light, Settings, Leave, Share). Profile: ring-bordered avatar, name, @handle, chips (followers, following, joined), Edit your page, Settings.
 
-**Cards**
-White, `--radius-lg`, soft shadow, no border, 20–24px padding. Optional small icon chip (rounded square, accent-tint background, accent icon) beside a semibold title ("Join us", "Meetings"). Empty states are one muted sentence with the action on the right ("No business meeting is scheduled." + Schedule one).
+**Tabs**: icon + label, active in accent with a 2px underline under a hairline. Second-level tabs are **pills**: white with hairline border, active = solid accent with white text (Overview, Meetings, Decisions, Documents, HostDecks, Elected officials, Treasury, Templates). Always show a breadcrumb-style context above: group avatar chip + group name, then the H1, then a "‹ Treasurer's reports" back link in accent.
 
-**Tinted info banner**
-Pale blue surface with 1px pale-blue border, `--radius-lg`, text left, a small primary button right. Used for admin hints ("This is the default group page…").
+**Cards**: white, soft shadow, large radius. Optional leading **icon chip** (small rounded square, accent-tint fill, accent outline icon) next to a semibold title ("Timeline", "About", "Groups", "Following" with a count at the right). Empty state: one muted sentence, action on the right.
 
-**Buttons**
-- Primary: solid accent, white text, icon left, ~36–40px high, radius ~10px (or pill in tight rows). Example: Edit the page, Schedule one.
-- Secondary: white, hairline border, dark text, optional icon (Print, "Put someone on", "Cover a date"). In dense rows they are small (~28px) and pill-shaped.
-- Glass: translucent white on the hero only.
-- Donate: pale rose fill, rose border, heart icon, rose text.
-- Icons are Lucide, outline, ~16px, stroke inherits text colour. Pair every action with an icon and a text label.
+**Info banner**: pale-blue surface, pale-blue border, text left, small primary button right.
 
-**Pills / chips**
-- Filter pills (Coming week, Live now, Today, Tomorrow): white with border; selected = solid accent with white text. "Live now" carries a broadcast icon.
-- Status chips: "Open" amber; countdown chips ("in 13h 41m") are a dark navy translucent capsule on the top-right of a hero image.
-- Tag chips (time zone, "1 member"): glass on hero, grey elsewhere.
+**List rows** (Hosting, admin "Waiting on you"): rounded row card; title with inline chip, muted date · group line, optional quote; action button right-aligned. Admin rows are bordered with a small grey count pill.
 
-**Search / filter panel (meeting finder)**
-A light grey rounded tray, containing a white panel. It has an accent-blue header strip with a search icon and the title "What are you looking for?", a full-width search input (white, hairline border, muted placeholder, leading icon), the filter pills, then a row of labelled selects (eyebrow label above each, rounded inputs with chevron or leading icon). Four columns on desktop, stacked on phones.
+**Buttons**: Primary = solid accent pill, white text, icon left ("I'll cover it", Edit the page, Sign up). Secondary = white pill, hairline border, icon + dark text (Copy, Print, Give a chip, HostDeck). Disabled primary = washed-out blue (Save with nothing to save). Dark pill is for the second CTA on a coloured hero ("See how it works"). Icons: Lucide outline, ~16–20px, always paired with a label except in toolbars (give those an `aria-label`).
 
-**Result cards (meeting grid)**
-Three across on desktop. Top: gradient image band (~130px) with countdown chip at the top-right and group name + member count in white bottom-left over a navy fade. Below on white: meeting name (medium), then icon rows (accent calendar icon + "Today, 2:00 PM", grey video icon + "Online"). Grid / List toggle is a segmented control at the right of the result count; the active segment has a pale blue fill and accent text.
+**Chips/pills**: "Host" amber, "Co-host" blue-tint, "Covering" grey; count badges accent circles; topic chips are white outline pills with icon ("Find a meeting", "HostDeck"); "New: …" announcement is a small tinted pill above a hero title.
 
-**Schedule rows (hosts)**
-Day eyebrow ("SUNDAY"), then a white card per meeting: time and name on the left with a small "Cover a date" secondary pill; two columns "HOST" and "CO-HOST" with an eyebrow label, "Open" chip and a "Put someone on" button. Top of the page has a summary line (**bold number** of N places open), a toggle ("Only meetings with an open place") and a Print button.
+**Form fields**: eyebrow label above, pill-shaped inputs (fully round) with a white fill and hairline border, muted placeholder; numeric amounts right-aligned; remove "x" is a muted icon; "+ Add a line" is a small outline pill. Selects have a chevron; date inputs use the native picker.
 
-**Toggle**: small iOS-style switch, grey off, accent on, label to its right.
+**Summary panel** (treasury): soft grey rounded panel, label left and amount right, bold totals, hairline dividers, small eyebrow for sub-groups (SHARED).
+
+**Stat tiles** (admin): white card, icon chip top-left, muted label, big bold number, small muted detail line.
+
+**Feed notes**: avatar (initials) + bold name + "Note · 5h ago" muted, "…" menu top-right, body, hashtags in accent, hairline, then action icons (like, love, hugs on the left; comment, repost on the right). Highlight notes show the marker-yellow quote, the source line with a book icon, a grey "YOUR NOTE" inset, and a visibility pill (Followers, Members) with chevron. The composer is a rounded box: placeholder, Photo pill, visibility pill, "Also share to" picker, Post note (disabled until text).
+
+**HostDeck panels**: left = numbered steps (selected step is pale-blue with an accent number, others grey numbers); centre = eyebrow "CURRENTLY" + huge H1, a pale-amber callout when something still needs picking, white option cards in a two-column grid with icon chips, and a form card ("People doing service today"); right = chat posting cards (time, icon, title, Copy), share-with-co-host card with mono link, presence list with green dot. Section eyebrows throughout.
+
+**Chips page**: a white card with a 4-column grid of round chip art, bold label and muted date; upcoming chip is greyed with "In 365 days".
+
+**Streak/encouragement banner**: pale amber rounded bar, flame icon, bold line then encouraging text, small muted stats right.
+
+**Sign-in-required sidebar card**: white rounded card with a short sentence and Log in / Sign up side by side.
+
+**Toggle**: iOS-style, grey off, accent on, label to the right ("Remind me to do my 10th step").
+
+**Yes/No segmented pill** (10th step): outline pill with two words; the chosen side fills.
 
 ## 7. Content and voice
 
-- Sentence case everywhere except eyebrow labels (CSS uppercase, not typed caps).
-- Buttons are verbs: Join, Leave, Edit page, Schedule one, Put someone on, Cover a date.
-- Counts are plain: "1 member", "8 host places are open", "4 meetings, soonest first".
-- Times show relative first ("in 13h 41m") and absolute second ("Today, 2:00 PM"), in the viewer's zone, and say which zone when it could confuse.
-- Name the product "RecoveryBot" and the page editor "HMBLBOT Editor". AA Intergroup is called "AA Intergroup" everywhere users see it (see AGENTS.md).
+- Sentence case everywhere; uppercase only on eyebrow labels (via CSS).
+- Buttons are verbs: Join, Leave, Copy, Give a chip, Put someone on, I'll cover it.
+- Plain counts and relative times first, absolute second: "Next meeting in 1 day 10h · Mon, Nov 9, 6:30 AM MST"; "5h ago".
+- Say what's private and what's shared, right where the control is.
+- Names: "RecoveryBot", "HMBLBOT Editor", "HostDeck", "Group conscience", "AA Intergroup" (see AGENTS.md). Keep Court verification out of the docs.
 
 ## 8. Responsive and accessibility
 
-- Mobile first. Below ~768px: single column, tabs scroll horizontally, filter grid stacks, result grid is one column, side panel becomes a sheet. Floating buttons sit at `bottom: calc(var(--shell-bottom,0px) + …)`; the top bar height is `--nav-h`.
-- Touch targets at least 40px, even where the desktop version looks smaller.
-- Never convey state by colour alone: "Open" has a word, the active tab has an underline, selected pills have a fill and a label.
-- Visible focus ring in accent on every interactive element. Icons that stand alone need an `aria-label`.
-- Respect dark mode via the tokens above and test every new surface in both themes.
+- Mobile first. Below ~768px: sidebar becomes the menu, single column, tabs scroll horizontally, two-column forms stack, side cards fold under the main column, bottom bar appears.
+- Touch targets ≥ 40px; phone type is larger (titles ~56px, body 17–18px, big pill inputs).
+- Never use colour alone: chips carry words, active tabs have an underline or fill, locked chips say when they unlock.
+- Visible accent focus ring; icon-only buttons need `aria-label`.
+- Test every new surface in light and dark.
 
 ## 9. Do and don't
 
 Do
-- Reuse existing components in `components/` (shell, groups, notes, share) before writing new ones.
+- Reuse components in `components/` (`shell/`, `groups/`, `notes/`, `share/`) and wrap new pages in `components/Layout.jsx`.
 - Use tokens (`--color-accent`, `--radius-*`, `--shadow-panel`) and Lucide icons.
-- Keep one primary action per card or region.
-- Use the eyebrow label + card pattern for any new section.
+- One primary action per card or region.
+- Pattern: eyebrow label, then card; icon chip + title inside the card.
 
 Don't
-- Add new colours, fonts, shadows heavier than `--shadow-panel`, or border-heavy boxes.
-- Use red for anything except Donate and destructive confirmations.
-- Put walls of text in cards; one short paragraph, then the action.
-- Add cookies, trackers or outside services without updating `/privacy` (see AGENTS.md).
+- Add colours, fonts, hard dividers, or shadows heavier than `--shadow-panel`.
+- Put long text in cards; one short paragraph, then the action.
+- Add cookies, trackers or outside services without updating `/privacy` and its date.
+- Rebuild a page with its own header and nav; the shell provides them.
 
-## 10. Quick prompt for agents
+## 10. Prompt snippet for agents
 
-> Build this in RecoveryBot's style: light grey page, white `--radius-lg` cards with a soft shadow and no border, accent `#0b6ede` for the one primary action, UPPERCASE 12px muted eyebrow labels above sections, Lucide outline icons with text labels, pill filters (selected = solid accent), amber "Open" chips for unfilled places, and a blue-to-violet gradient hero with glass chips for group pages. Use CSS variables so dark mode works, keep copy short and friendly, and make it single-column and touch-friendly on phones.
+> Build in RecoveryBot's style: it lives inside the shell (grey sidebar, search top bar, rounded white stage; bottom bar on phones). Page = bold H1 + one muted sentence, UPPERCASE 12px muted eyebrow labels, white large-radius cards with soft shadow and an accent-tint icon chip beside the title, pill-shaped inputs and buttons, one solid accent `#0b6ede` primary action, Lucide outline icons with labels, pale-amber for things needing attention, blue-to-violet gradient hero with glass chips for groups and profiles. Use CSS variables so dark mode works, keep copy short and kind, and be single-column and touch-friendly on phones.
 
-## Reference screenshots
+## Reference images
 
-- `docs/screenshots/group-home.png`: gradient hero, tabs, info banner, two-column cards.
-- `docs/screenshots/group-conscience.png`: sub-pills, eyebrow-labelled cards, empty state with action.
-- `docs/screenshots/host-scheduling.png`: day groups, host/co-host columns, Open chips, toggle, Print.
-- `docs/screenshots/meeting-finder.png`: page title, search tray, filter pills and selects, meeting card grid.
+`public/docs-images/`: `getting-started/home-page`, `home-phone`; `group-tools/group-page`, `hostdeck`, `treasury-report`, `conscience`; `community/my-page`, `home-feed`; `library/chapter`; `step-work/chips`, `inventory-phone`; `site-admin/dashboard`. The rest of that folder shows every other screen in the same style.
