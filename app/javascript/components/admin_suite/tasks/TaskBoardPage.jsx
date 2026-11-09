@@ -12,7 +12,7 @@ import TaskCard from "./TaskCard";
 import TaskDrawer from "./TaskDrawer";
 import ColumnsDialog from "./ColumnsDialog";
 import useTaskBoard from "./useTaskBoard";
-import { act, button, primary, small } from "./lib";
+import { act, button, primary, small, useMedia } from "./lib";
 
 const FILTERS = [
   ["all", "All"],
@@ -28,19 +28,6 @@ const matches = (filter, task, me) => {
   if (filter === "urgent") return task.urgent;
   return true;
 };
-
-// "(max-width: 767px)" etc., kept current
-function useMedia(query) {
-  const [on, setOn] = useState(() => window.matchMedia?.(query).matches ?? false);
-  useEffect(() => {
-    const list = window.matchMedia?.(query);
-    if (!list) return undefined;
-    const change = () => setOn(list.matches);
-    list.addEventListener("change", change);
-    return () => list.removeEventListener("change", change);
-  }, [query]);
-  return on;
-}
 
 // Site Admin > Task board (internally SCRUMBLBOT). On a computer the columns sit side by side
 // and cards drag between them, the others making room as one passes (like the HMBLBOT

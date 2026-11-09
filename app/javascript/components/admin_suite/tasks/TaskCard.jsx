@@ -1,10 +1,10 @@
 import React from "react";
 import { CheckSquare, Diamond, Link2, MessageSquare } from "lucide-react";
 import Avatar from "../../groups/Avatar";
-import { chip, chipTone, dueLabel, holder, shortDate } from "./lib";
+import { TAG, chip, chipTone, dueLabel, holder, shortDate } from "./lib";
 
-// What a task shows on the board and on the Dashboard: title (a red ! when it's High), its
-// badges (High, due or overdue, for all admins, checklist, comments, link) and who has it.
+// What a task shows on the board, the Dashboard and in Today: title (a red ! when it's High),
+// its tags as colored pills, its badges (High, due or overdue, for all admins, checklist, comments, link) and who has it.
 // `children` go in a row at the bottom (the Dashboard's buttons, the phone's arrows).
 export default function TaskCard({ task, me, onOpen, outline = false, className = "", children, ...rest }) {
   const done = !!task.completed_at;
@@ -23,6 +23,11 @@ export default function TaskCard({ task, me, onOpen, outline = false, className 
           {task.priority === "high" && !done && <span className="mr-1 font-extrabold text-red-600" aria-label="High priority">!</span>}
           {task.title}
         </span>
+        {task.tags?.length > 0 && (
+          <span className="mt-2 flex flex-wrap gap-1">
+            {task.tags.map((t) => TAG[t] && <span key={t} className={`${chip} ${TAG[t].tone}`}>{TAG[t].text}</span>)}
+          </span>
+        )}
         <span className="mt-2 flex flex-wrap items-center gap-1.5">
           {done && <span className={`${chip} ${chipTone.done}`}>✓ {shortDate(task.completed_at)}</span>}
           {!done && task.priority === "high" && <span className={`${chip} ${chipTone.high}`}>High</span>}

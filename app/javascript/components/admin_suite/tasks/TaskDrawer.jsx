@@ -4,14 +4,15 @@ import { Archive, Check, CheckSquare, Hand, Link2, RotateCcw, Send, Trash2, Undo
 import Avatar from "../../groups/Avatar";
 import Markdown from "../../book/Markdown";
 import { inputClass, selectClass } from "../../ui/styles";
-import { act, button, chip, chipTone, dueLabel, longDate, primary, small, tasksApi } from "./lib";
+import { TAGS, act, button, chip, chipTone, dueLabel, longDate, primary, small, tasksApi } from "./lib";
+import Checklist from "./Checklist";
 
 const label = "w-20 shrink-0 sm:w-24 pt-2 text-xs font-medium text-slate-500 dark:text-neutral-400";
 const field = "flex items-start gap-3 border-b border-slate-100 py-2 dark:border-neutral-800";
 const heading = "mb-2 mt-5 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-neutral-400";
 
 const giveValue = (t) => (t.assignee ? String(t.assignee.id) : t.for_all_admins ? "all" : "");
-const blank = { title: "", notes: "", priority: "normal", due_on: "", link_path: "", checklist: [], assignee: null, for_all_admins: false };
+const blank = { title: "", notes: "", priority: "normal", due_on: "", link_path: "", checklist: [], tags: [], assignee: null, for_all_admins: false };
 
 // One task, opened from the board or the Dashboard: on a computer a panel from the right, on a
 // phone a sheet from the bottom. Everything saves as it's changed. With `taskId` "new" it's
@@ -158,6 +159,21 @@ export default function TaskDrawer({ taskId, columnId, board, onClose, onSaved, 
             </div>
           </div>
           <div className={field}>
+            <span className={label}>Tags</span>
+            <div className="flex flex-1 flex-wrap gap-1.5 pt-1">
+              {TAGS.map(([key, text, tone]) => {
+                const on = (task.tags || []).includes(key);
+                return (
+                  <button key={key} type="button" aria-pressed={on}
+                    onClick={() => save({ tags: on ? task.tags.filter((t) => t !== key) : TAGS.map(([k]) => k).filter((k) => k === key || (task.tags || []).includes(k)) })}
+                    className={`${chip} !px-2.5 !py-1 !text-xs ${on ? `${tone} ring-1 ring-black/10 dark:ring-white/20` : "!bg-transparent text-slate-500 ring-1 ring-slate-200 hover:text-slate-800 dark:ring-neutral-700 dark:hover:text-neutral-200"}`}>
+                    {on ? "✓ " : ""}{text}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className={field}>
             <span className={label}>Given to</span>
             <div className="flex flex-1 items-center gap-2">
               {task.assignee && <Avatar person={task.assignee} size={24} />}
@@ -203,17 +219,7 @@ export default function TaskDrawer({ taskId, columnId, board, onClose, onSaved, 
         <div className={heading}>
           <CheckSquare className="mr-1 inline size-3.5" /> Checklist{task.checklist?.length ? ` · ${task.checklist.filter((i) => i.done).length}/${task.checklist.length}` : ""}
         </div>
-        <ul className="space-y-1">
-          {(task.checklist || []).map((item) => (
-            <li key={item.id} className="group flex items-center gap-2.5 text-sm">
-              <input type="checkbox" checked={!!item.done} className="size-4 rounded accent-[var(--color-accent)]"
-                onChange={() => setChecklist(task.checklist.map((i) => (i.id === item.id ? { ...i, done: !i.done } : i)))} />
-              <span className={`flex-1 ${item.done ? "text-slate-400 line-through" : "text-slate-800 dark:text-neutral-200"}`}>{item.text}</span>
-              <button type="button" aria-label={`Remove ${item.text}`} onClick={() => setChecklist(task.checklist.filter((i) => i.id !== item.id))}
-                className="grid size-7 place-items-center rounded-full !bg-transparent text-slate-400 opacity-60 hover:!bg-slate-100 hover:text-rose-600 group-hover:opacity-100 dark:hover:!bg-neutral-800"><X className="size-3.5" /></button>
-            </li>
-          ))}
-        </ul>
+        <Checklist items={task.checklist || []} onChange={setChecklist} />
         <form onSubmit={addItem} className="mt-2"><input value={newItem} onChange={(e) => setNewItem(e.target.value)} placeholder="Add an item and press Enter" className={inputClass} /></form>
 
         {creating ? (

@@ -23,7 +23,7 @@ class Api::Admin::TasksController < Api::Admin::SuiteController
     render json: full(@task)
   end
 
-  # POST { title, notes, priority, due_on, link_path, checklist, column_id, assignee_id, for_all_admins }
+  # POST { title, notes, priority, due_on, link_path, checklist, tags, column_id, assignee_id, for_all_admins }
   def create
     column = AdminTaskColumn.find_by(id: params[:column_id]) || AdminTaskColumn.first_start
     task = AdminTask.new(task_params.merge(column: column, creator: current_user, position: 0))
@@ -41,11 +41,11 @@ class Api::Admin::TasksController < Api::Admin::SuiteController
     render_errors(task)
   end
 
-  # PATCH { title, notes, priority, due_on, link_path, checklist, archived }
+  # PATCH { title, notes, priority, due_on, link_path, checklist, tags, archived }
   def update
     @task.assign_attributes(task_params)
     @task.archived_at = (ActiveModel::Type::Boolean.new.cast(params[:archived]) ? Time.current : nil) if params.key?(:archived)
-    changed = @task.changed & %w[title notes priority due_on link_path]
+    changed = @task.changed & %w[title notes priority due_on link_path tags]
     archiving = @task.will_save_change_to_archived_at?
     return render_errors(@task) unless @task.save
 
@@ -110,9 +110,8 @@ class Api::Admin::TasksController < Api::Admin::SuiteController
   end
 
   def task_params
-    params.permit(:title, :notes, :priority, :due_on, :link_path, checklist: %i[id text done]).to_h.tap do |p|
-      p[:checklist] = Array(p[:checklist]) if params.key?(:checklist)
-      p.delete(:checklist) unless params.key?(:checklist)
+    params.permit(:title, :notes, :priority, :due_on, :link_path, checklist: %i[id text done], tags: []).to_h.tap do |p|
+      %i[checklist tags].each { |key| params.key?(key) ? p[key] = Array(p[key]) : p.delete(key) }
     end
   end
 end
