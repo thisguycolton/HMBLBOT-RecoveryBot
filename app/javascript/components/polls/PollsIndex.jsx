@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, Lock, Plus, Users, Vote } from "lucide-react";
+import { Skeleton } from "skullet/react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
-import Skeleton from "../ui/Skeleton";
 import { Message } from "./PollPage";
 import { AUDIENCE_LABELS, api, primaryClass, when } from "./lib";
 
@@ -15,8 +15,25 @@ export default function PollsIndex() {
   }, []);
 
   if (error) return <Message title="Couldn't load your polls" text={error} />;
-  if (!data) return <Skeleton variant="list" />;
+  // While it loads, Skullet draws the page itself, from made-up polls, as a skeleton
+  return (
+    <Skeleton data={data} sample={SAMPLE} label="Loading your polls">
+      {(loaded) => <Polls data={loaded} />}
+    </Skeleton>
+  );
+}
 
+// Stands in for the list while it loads: the skeleton's shape, never shown as text
+const SAMPLE = {
+  can_create: false,
+  polls: [
+    { token: "a", question: "Should we move the business meeting to the second Sunday?", group: "Lantern Street Group", ballots_count: 12, audience: "members", closed: false, closes_at: null },
+    { token: "b", question: "Which reading for the anniversary night?", group: null, ballots_count: 5, audience: "anyone", closed: true, closes_at: null },
+    { token: "c", question: "Coffee or tea at the Tuesday meeting?", group: "Early Risers", ballots_count: 8, audience: "members", closed: false, closes_at: null },
+  ],
+};
+
+function Polls({ data }) {
   return (
     <div className="mx-auto max-w-3xl space-y-4 !font-sans [&_*]:!font-sans">
       <div className="flex items-center justify-between gap-3">

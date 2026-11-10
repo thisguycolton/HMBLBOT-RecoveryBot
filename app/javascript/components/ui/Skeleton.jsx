@@ -1,35 +1,51 @@
 import React from "react";
+import { SkeletonBox } from "skullet/react";
 
 // Skeleton placeholders: gray shapes in the layout of what's coming, shown while it loads,
-// in place of "Loading…" text or a spinner.
+// in place of "Loading…" text or a spinner. Drawn with Skullet (skullet.lochie.me):
 //
-// The pulse (Tailwind's animate-pulse) goes on the group around the shapes, not on each one,
-// so a whole page breathes together. motion-safe: with "reduce motion" on, the shapes hold
-// still. Screen readers hear "Loading…" once, from the group, and skip the shapes.
+//   - Where the real content can be rendered from sample data, wrap it in Skullet's own
+//     <Skeleton data={…} sample={…}> (import { Skeleton } from "skullet/react"). Skullet lays the
+//     content out unseen and draws a bar for each line and a block for each picture, exactly the
+//     space it will take, then brings the content in over it. See GroupsIndex and PollsIndex.
+//   - Everywhere else, the hand-drawn shapes below. Each shape is a Skullet SkeletonBox, so it
+//     joins the page's one shimmer, in step with every other skeleton however late it mounts,
+//     takes the colors set in tailwind.css (--skullet-base / --skullet-highlight, light and dark),
+//     and holds still under "reduce motion". Screen readers hear "Loading…" once, from the group.
 //
 //   <Skeleton variant="feed" />            a whole placeholder, by the kind of page
 //   <SkeletonGroup><Bone className="h-4 w-1/2" /></SkeletonGroup>   one of your own
 
+// The bar's color, for shapes on something other than the page's white
 const TONES = {
-  default: "bg-neutral-200/90 dark:bg-neutral-800",
+  default: null,
   // on a card that sits in a gray tray, or on the gray tray itself
-  soft: "bg-neutral-200/70 dark:bg-neutral-700/60",
+  soft: "var(--skeleton-soft)",
   // on the accent-blue bands
-  onAccent: "bg-white/30",
+  onAccent: "rgb(255 255 255 / 0.3)",
 };
+
+// SkeletonBox sets its size inline; ours comes from the Tailwind classes instead
+const SIZED_BY_CLASS = { width: undefined, height: undefined, borderRadius: undefined };
 
 // One shape. A span, so it can sit inside a <p>, a <button> or a heading.
 export function Bone({ className = "", tone = "default", rounded = "rounded-full", style }) {
-  return <span aria-hidden="true" style={style} className={`block ${rounded} ${TONES[tone] || TONES.default} ${className}`} />;
+  const base = TONES[tone];
+  return (
+    <SkeletonBox
+      className={`${rounded} ${className}`}
+      style={{ ...SIZED_BY_CLASS, ...(base ? { "--skullet-base": base } : null), ...style }}
+    />
+  );
 }
 
-// The pulsing, announced wrapper. inline: a span for a line of text (a subtitle, a count).
+// The announced wrapper. inline: a span for a line of text (a subtitle, a count).
 export function SkeletonGroup({ label = "Loading", inline = false, className = "", children }) {
   const Tag = inline ? "span" : "div";
   return (
-    <Tag role="status" aria-live="polite" aria-busy="true" className={`motion-safe:animate-pulse ${inline ? "inline-block align-middle" : "block"} ${className}`}>
+    <Tag role="status" aria-live="polite" aria-busy="true" className={`${inline ? "inline-block align-middle" : "block"} ${className}`}>
       <span className="sr-only">{label}…</span>
-      {children}
+      <Tag aria-hidden="true" className="contents">{children}</Tag>
     </Tag>
   );
 }

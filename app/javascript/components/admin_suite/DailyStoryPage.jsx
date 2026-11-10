@@ -5,7 +5,7 @@ import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { Badge, shortDate } from "./UsersPage";
-import Skeleton from "../ui/Skeleton";
+import Skeleton, { Bone, SkeletonGroup } from "../ui/Skeleton";
 
 const ZONES = ["America/Phoenix", "America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York", "Pacific/Honolulu", "America/Anchorage"];
 const LOOK_LABELS = { paper: "Paper", marker: "Marker", night: "Night", sunrise: "Sunrise" };
@@ -73,7 +73,7 @@ export default function DailyStoryPage({ notify }) {
     return (
       <Shell>
         <ShellBand icon={Clapperboard} title="Daily story" subtitle="Loading…" />
-        <ShellPanel position="bottom" className="p-5 space-y-3"><Skeleton className="h-6 w-1/2" /><Skeleton className="h-24" /></ShellPanel>
+        <ShellPanel position="bottom" className="p-5 space-y-3"><SkeletonGroup className="space-y-3"><Bone className="h-6 w-1/2" /><Bone rounded="rounded-xl" className="h-24 w-full" /></SkeletonGroup></ShellPanel>
       </Shell>
     );
   }

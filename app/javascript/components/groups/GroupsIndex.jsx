@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarClock, ChevronRight, LayoutTemplate, MessagesSquare, Plus, Search, Users } from "lucide-react";
+import { Skeleton } from "skullet/react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { api } from "./lib";
-import { Loading, Message, Pill, primaryButton, quietButton } from "./ui";
+import { Message, Pill, primaryButton, quietButton } from "./ui";
 import { GroupLogo } from "./GroupSettings";
 
 // /groups: the groups you're in (and waiting on), then every other group for site admins
@@ -16,8 +17,25 @@ export default function GroupsIndex() {
   }, []);
 
   if (error) return <Message title="Couldn't load your groups" text={error} />;
-  if (!data) return <Loading variant="cards" />;
+  // While it loads, Skullet draws the page itself, from made-up groups, as a skeleton
+  return (
+    <Skeleton data={data} sample={SAMPLE} label="Loading your groups">
+      {(loaded) => <Groups data={loaded} />}
+    </Skeleton>
+  );
+}
 
+// Stands in for /groups while it loads: the skeleton's shape, never shown as text
+const SAMPLE = {
+  can_create: false,
+  groups: [
+    { slug: "a", title: "Lantern Street Group", membership_status: "active", role: "member", status: "active", meetings_count: 4, next_meeting: { schedule_label: "Tuesday 7:00 PM" } },
+    { slug: "b", title: "Thursday Night Big Book", membership_status: "active", role: "member", status: "active", meetings_count: 1, next_meeting: { schedule_label: "Thursday 8:00 PM" } },
+    { slug: "c", title: "Early Risers", membership_status: "active", role: "member", status: "active", meetings_count: 7, next_meeting: { schedule_label: "Monday 6:30 AM" } },
+  ],
+};
+
+function Groups({ data }) {
   const mine = data.groups.filter((g) => g.membership_status);
   const others = data.groups.filter((g) => !g.membership_status);
 
