@@ -208,7 +208,7 @@ export default function WorksheetEditor({ template = false }) {
                 <div key={s.id} className="group flex items-center gap-0.5">
                   <OutlineButton on={picked === s.id} onClick={() => setPicked(s.id)} icon={KINDS[s.kind]?.icon || FileText}
                     title={s.title || s.body?.slice(0, 50) || KINDS[s.kind]?.name} sub={bad ? "Needs something" : KINDS[s.kind]?.name} warn={!!bad} />
-                  <div className={`flex shrink-0 ${picked === s.id ? "" : "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"}`}>
+                  <div className={`flex shrink-0 ${picked === s.id ? "" : "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"}`}>
                     <button type="button" aria-label={`Move ${s.title || "this section"} up`} disabled={i === 0} onClick={() => setSections(moveInPage(draft.sections, s.id, -1))} className={iconButton}><ArrowUp className="size-4" /></button>
                     <button type="button" aria-label={`Move ${s.title || "this section"} down`} disabled={i === p.sections.length - 1} onClick={() => setSections(moveInPage(draft.sections, s.id, 1))} className={iconButton}><ArrowDown className="size-4" /></button>
                   </div>
@@ -228,7 +228,7 @@ export default function WorksheetEditor({ template = false }) {
               <div key={s.id} className="group flex items-center gap-0.5">
                 <OutlineButton on={picked === s.id} onClick={() => setPicked(s.id)} icon={KINDS[s.kind]?.icon || FileText}
                   title={s.title || s.body?.slice(0, 50) || KINDS[s.kind]?.name} sub={bad ? "Needs something" : KINDS[s.kind]?.name} warn={!!bad} />
-                <div className={picked === s.id ? "" : "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"}>
+                <div className={picked === s.id ? "" : "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"}>
                   <Mover list={draft.sections} n={n} set={setSections} label={s.title || "this section"} remove={false} />
                 </div>
               </div>

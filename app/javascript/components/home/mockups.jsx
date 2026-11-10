@@ -71,7 +71,7 @@ function Spot({ on, tap = false, className = "", children }) {
 // Fades in what only shows on some steps
 function Show({ when, className = "", children }) {
   return (
-    // opacity as a style: the site's built CSS has a broken .opacity-0
+    // opacity as a style, so it fades with the transform
     <div
       className={`transition-all duration-300 ${when ? "translate-y-0" : "pointer-events-none translate-y-1"} ${className}`}
       style={{ opacity: when ? 1 : 0 }}

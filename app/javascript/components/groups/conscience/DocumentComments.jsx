@@ -44,7 +44,7 @@ function Said({ comment, onDelete }) {
         <span className="text-xs text-slate-500 dark:text-neutral-400" title={new Date(comment.created_at).toLocaleString()}>{timeAgo(comment.created_at)}</span>
         {comment.can_delete && (
           <button type="button" onClick={() => onDelete(comment)} title="Delete" aria-label="Delete this comment"
-            className="ml-auto grid size-6 place-items-center rounded-md !bg-transparent text-slate-400 opacity-0 hover:text-rose-600 focus:opacity-100 group-hover/said:opacity-100"><Trash2 className="size-3.5" /></button>
+            className="ml-auto grid size-6 place-items-center rounded-md !bg-transparent text-slate-400 opacity-0 hover:text-rose-600 focus:opacity-100 group-hover/said:opacity-100 pointer-coarse:opacity-100"><Trash2 className="size-3.5" /></button>
         )}
       </div>
       <p className="mt-1 whitespace-pre-line break-words text-sm text-slate-800 dark:text-neutral-200">{comment.body}</p>
