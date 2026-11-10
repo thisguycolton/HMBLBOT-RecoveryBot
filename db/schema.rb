@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_10_230000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_10_230100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -824,6 +824,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_10_230000) do
     t.string "chat_creator_roles", default: [], null: false, array: true
     t.bigint "chat_creator_user_ids", default: [], null: false, array: true
     t.boolean "show_sponsors", default: true, null: false
+    t.boolean "search_listed", default: true, null: false
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true

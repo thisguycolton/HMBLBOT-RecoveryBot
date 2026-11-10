@@ -38,7 +38,8 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
     assert group.admin?(@admin)
     get "/groups/#{group.slug}"
     assert_response :success
-    assert_equal "noindex, nofollow", response.headers["X-Robots-Tag"]
+    # An approved group's page may be listed by search engines (SearchEnginesTest)
+    assert_nil response.headers["X-Robots-Tag"]
   end
 
   test "the invite link puts people in the group, even if they sign up first" do

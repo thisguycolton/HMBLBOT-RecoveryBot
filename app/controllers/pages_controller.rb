@@ -6,6 +6,8 @@ class PagesController < ApplicationController
   before_action :answer_robots, only: :reader
   after_action :tag_noindex, only: :reader
   before_action :set_page, only: %i[ edit update destroy ]
+  # The home page and the Topicificator say nothing about anyone: search engines may list them
+  allow_search_engines only: %i[home topicificator]
   layout "reader", only: %i[topicificator library home reader]
 
   # GET /pages or /pages.json

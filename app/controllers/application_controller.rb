@@ -1,4 +1,6 @@
 class ApplicationController < ActionController::Base
+    # Every page is noindex unless it opts in (SearchEngines)
+    include SearchEngines
 	 #before_action :authenticate_user!
 	  after_action :track_action
     before_action :read_notifications_here

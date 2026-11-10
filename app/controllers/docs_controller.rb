@@ -6,6 +6,8 @@ class DocsController < ApplicationController
 
   def app
     page = find_page
+    # The Docs home and pages anyone may read can be found on Google; members' and admins' pages can't
+    list_in_search_engines if (params[:path].blank? && params[:alias].blank?) || (page&.audience == "everyone" && page.published?)
     @page_title = page ? "#{page.title} | RecoveryBot Docs" : "Docs | RecoveryBot"
     @page_title = "#{page.title} | RecoveryBot" if page&.path_alias
     @share = ShareMeta.safely do

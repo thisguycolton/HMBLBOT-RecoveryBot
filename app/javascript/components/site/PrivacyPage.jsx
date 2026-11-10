@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "November 8, 2026";
+const UPDATED = "November 10, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -211,7 +211,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
             <li><strong>Site admins:</strong> reports about people, with the copy of what was reported.</li>
             <li><strong>Site admins:</strong> the few people who run RecoveryBot can see what's stored, to fix problems and answer requests. We don't browse your things without a reason.</li>
           </ul>
-          <p>Search engines can't reach anything behind sign-in and are asked to stay out of the library and readings. AI crawlers are turned away from the whole site.</p>
+          <p><strong>Search engines</strong> (Google, Bing and the like) may list only a few pages: the home page, About, the Docs, Find a meeting, and an approved group's public page and meetings (its name, description, and when and where it meets), unless the group's admins turn "Show this group in search engines" off. Every other page tells them not to list it. That includes the library and readings, profiles, notes and highlights, polls, chat, and anything you write. What we let them read about a group never names a member or a host. They can't reach anything behind sign-in, and AI crawlers are turned away from the whole site.</p>
 
           <H2 id="cookies">Cookies and browser storage</H2>
           <p>

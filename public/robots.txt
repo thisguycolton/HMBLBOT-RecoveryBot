@@ -1,4 +1,7 @@
 # See https://www.robotstxt.org/robotstxt.html
+# Search engines may list the home page, About, the Docs, Find a meeting and approved groups'
+# public pages (they're in the sitemap). Every other page answers "noindex" (SearchEngines),
+# so it stays crawlable here on purpose: a page blocked below can't tell Google not to list it.
 # Meeting readings and the library's books are for people. Crawlers that ignore this are
 # turned away by the app anyway (app/controllers/concerns/keeps_robots_out.rb).
 
@@ -44,11 +47,15 @@ Disallow: /service_readings
 Disallow: /api/
 Disallow: /admin_panel
 
-# Everyone else: the home page and tools are fine, the texts are not
+# Everyone else: the home page and tools are fine, the texts are not. The Docs pages fill in
+# from /api/docs (only pages anyone may read), so search engines may read that part of the API.
 User-agent: *
+Allow: /api/docs
 Disallow: /library
 Disallow: /books
 Disallow: /readings
 Disallow: /service_readings
 Disallow: /api/
 Disallow: /admin_panel
+
+Sitemap: https://recoverybot.hmblbot.com/sitemap.xml

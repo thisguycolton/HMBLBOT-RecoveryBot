@@ -9,15 +9,32 @@ class GroupsController < ApplicationController
   PUBLIC_PATHS = %r{\A(meetings|find/[^/]+|[a-z0-9-]+/(chat|view)/[A-Za-z0-9]+|(?!(new|find|default-page)\z)[a-z0-9-]+(/(home|meetings|events)|/meetings/\d+|/conscience(/documents(/\d+)?|/decisions)?)?)\z}
 
   before_action :authenticate_user!, except: %i[app join ask]
-  after_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }
+
+  # The pages search engines may list (SearchEngines): Find a meeting, and an approved group's
+  # page, meetings and events, unless the group turned "Show this group in search engines" off.
+  # Everything else here (chat, documents, decisions, Intergroup listings, invites) stays noindex.
+  SEARCH_PATHS = %r{\A([a-z0-9-]+)(?:/(home|events|meetings(?:/(\d+))?))?\z}
 
   def app
     @share = ShareMeta.safely { share_for(params[:path].to_s) }
+    find_search_listing(params[:path].to_s)
     return if user_signed_in? && (Group.feature_open_to?(current_user) || current_user.group_memberships.exists?)
     return if PUBLIC_PATHS.match?(params[:path].to_s)
     return authenticate_user! unless user_signed_in?
 
     redirect_to root_path, alert: "Groups isn't open yet."
+  end
+
+  def find_search_listing(path)
+    return list_in_search_engines if path == "meetings"
+    return unless (match = SEARCH_PATHS.match(path)) && !%w[new find default-page timeline join].include?(match[1])
+
+    group = Group.find_by(slug: match[1])
+    return unless group&.search_listed?
+    return if match[3] && !group.meetings.exists?(id: match[3])
+
+    @search_group = group
+    list_in_search_engines
   end
 
   # The link preview (ShareMeta) for a page anyone may open: a group, one of its meetings, a
