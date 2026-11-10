@@ -148,7 +148,11 @@ function StepTile({ step, text, tools, works, busy, start, build, tonight }) {
           <button type="button" className="inline-flex items-center gap-1 !bg-transparent p-0 text-xs font-medium text-accent hover:underline disabled:opacity-50" disabled={busy === `build${step}`} onClick={() => build(step)}
             title="Start a blank worksheet for this step and make it yours in the HumbleBot Editor"><PencilRuler className="size-3.5" /> Build your own</button>
         </div>
-        {elsewhere.length > 0 && <p className="text-xs text-slate-500 dark:text-neutral-400">{elsewhere.map((t) => t.name).join(", ")} (Step {elsewhere[0].step}) covers this step too.</p>}
+        {elsewhere.length > 0 && (
+          <p className="text-xs text-slate-500 dark:text-neutral-400">
+            {elsewhere.length === 1 ? `${elsewhere[0].name} (Step ${elsewhere[0].step}) covers this step too.` : <>{elsewhere.length} worksheets under <a href={`#step-${elsewhere[0].step}`}>Step {elsewhere[0].step}</a> cover this step too.</>}
+          </p>
+        )}
         {step === 10 && <p className="text-xs text-slate-500 dark:text-neutral-400">The Big Book's nightly questions, or your own.</p>}
         {step !== 10 && tools.length === 0 && <p className="text-xs text-slate-400">No built-in worksheet for this step yet: build your own.</p>}
       </div>

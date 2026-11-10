@@ -16,7 +16,7 @@ import { pagesOf, partsOf, workText } from "./stepText";
 const ORDINAL = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
 // Added to the home screen on an iPhone or iPad (navigator.standalone is only set there)
 const IOS_APP = typeof window !== "undefined" && window.navigator.standalone === true;
-export const stepLabel = (w) => (w.tool_key === "drop-the-rock" ? "Steps 6 and 7" : `Step ${w.step}`);
+export const stepLabel = (w) => (w.tool_key === "drop-the-rock" || w.tool_key?.startsWith("step6-7-") ? "Steps 6 and 7" : `Step ${w.step}`);
 
 // One worksheet a member is working (/recovery/steps/:id, Api::StepWorksController): their copy
 // of the step tool, a page at a time (StepWizard) or all on one page (their choice, in the •••
