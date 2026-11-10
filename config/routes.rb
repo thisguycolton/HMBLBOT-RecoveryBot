@@ -22,6 +22,7 @@ Rails.application.routes.draw do
   end
 
   get "/topicificator", to: "pages#topicificator"
+  get "/sitemap.xml", to: "sitemaps#show", as: :sitemap, format: false
   get "/privacy", to: "privacy#show", as: :privacy
   get "/terms", to: "terms#show", as: :terms
   # The Docs: tutorials for every tool (DocsController, entrypoints/docs.jsx); About and History are docs pages too

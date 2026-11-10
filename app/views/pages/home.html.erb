@@ -1,3 +1,11 @@
+<% content_for(:page_title) { "RecoveryBot | Meetings, readings and tools for recovery groups" } %>
+<% content_for(:head) do %>
+  <% base = Rails.env.production? ? "https://#{request.host}" : request.base_url %>
+  <script type="application/ld+json"><%= raw json_escape([
+    { "@context": "https://schema.org", "@type": "WebSite", name: "RecoveryBot", url: "#{base}/", description: ShareMeta::SITE_DESCRIPTION },
+    { "@context": "https://schema.org", "@type": "Organization", name: "RecoveryBot", url: "#{base}/", logo: "#{base}/apple-touch-icon.png" },
+  ].to_json) %></script>
+<% end %>
 <script type="module">
   import RefreshRuntime from "/vite-dev/@react-refresh";
   RefreshRuntime.injectIntoGlobalHook(window);

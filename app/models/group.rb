@@ -185,6 +185,9 @@ class Group < ApplicationRecord
   def visible_to?(user) = !!user && (user.suite_admin? || member?(user) || (active? && self.class.feature_open_to?(user)))
   def active? = status == "active"
   def page_visible_to?(user) = active? || visible_to?(user)
+  # Search engines may list the group's public page and meetings (groups.search_listed, on by default)
+  def search_listed? = active? && search_listed
+  scope :listed_in_search, -> { active.where(search_listed: true) }
   def admins = members.merge(GroupMembership.admins)
   def custom_page? = !page_blocks.nil?
 

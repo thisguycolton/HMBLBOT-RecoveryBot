@@ -3,6 +3,7 @@
 # front of it.
 class ContactsController < ApplicationController
   layout "reader"
+  allow_search_engines only: :new
   rate_limit to: 5, within: 1.hour, only: :create, with: -> { show_form("You've sent a few messages already. Please try again in a little while.", status: :too_many_requests) }
 
   # GET /contact

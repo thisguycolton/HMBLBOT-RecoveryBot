@@ -47,7 +47,7 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
       sync
       get "/groups/meetings"
       assert_response :success
-      assert_equal "noindex, nofollow", response.headers["X-Robots-Tag"]
+      assert_nil response.headers["X-Robots-Tag"] # Find a meeting may be listed by search engines
       assert_equal 4, find["total"]
 
       group = groups(:one)

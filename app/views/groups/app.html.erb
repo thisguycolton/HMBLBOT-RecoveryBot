@@ -1,4 +1,28 @@
 <% content_for(:page_title) { @share ? "#{@share.title} | RecoveryBot" : "Groups | RecoveryBot" } %>
+<% if @search_group %>
+  <% content_for(:head) do %>
+    <script type="application/ld+json"><%= raw json_escape(group_search_markup(@search_group).to_json) %></script>
+  <% end %>
+<% end %>
 <%= vite_javascript_tag "groups.jsx" %>
 <%# w-full: the reader styles make <body> a centring flexbox %>
 <div id="groups-root" class="w-full self-start"></div>
+<% if @search_group %>
+  <%# What a search engine reads about a listed group (the page itself fills in from /api, which
+      robots.txt keeps them out of): its name, description and meetings, never people %>
+  <section class="sr-only">
+    <h1><%= @search_group.title %></h1>
+    <% if @search_group.description.present? %><p><%= @search_group.description %></p><% end %>
+    <ul>
+      <% @search_group.meetings.ordered.each do |meeting| %>
+        <li><%= meeting_search_line(meeting) %></li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
+<% if params[:path] == "meetings" %>
+  <section class="sr-only">
+    <h1>Find an AA meeting</h1>
+    <p>Online and in-person AA meetings from AA Intergroup, local intergroups and RecoveryBot's groups, shown at times in your time zone. No account needed.</p>
+  </section>
+<% end %>
