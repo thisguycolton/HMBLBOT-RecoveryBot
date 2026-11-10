@@ -20,6 +20,7 @@ import ChipDesignPage from "./ChipDesignPage";
 import StepTemplatesPage from "./StepTemplatesPage";
 import MeetingListsPage from "./MeetingListsPage";
 import DailyStoryPage from "./DailyStoryPage";
+import TaskBoardPage from "./tasks/TaskBoardPage";
 import { ScrollManager } from "../shell/ScrollManager";
 
 export { BASE, OTHER_TOOLS };
@@ -56,6 +57,7 @@ function SuiteShell() {
       <div className="space-y-6">
         <Routes>
           <Route path="/" element={<OverviewPage notify={notify} />} />
+          <Route path="/tasks" element={<TaskBoardPage notify={notify} />} />
           <Route path="/analytics" element={<AnalyticsPage notify={notify} />} />
           <Route path="/users" element={<UsersPage notify={notify} />} />
           <Route path="/readings" element={<ReadingsPage notify={notify} />} />

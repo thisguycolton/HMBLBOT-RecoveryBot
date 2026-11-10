@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { BellRing, CalendarClock, CalendarDays, ChevronRight, Repeat, RotateCcw, Sparkles, Video, X } from "lucide-react";
+import { BellRing, CalendarClock, CalendarDays, Check, ChevronRight, Hand, Repeat, RotateCcw, SquareKanban, Sparkles, Video, X } from "lucide-react";
 import { milestoneStatus } from "../../lib/milestones";
 import Avatar from "../groups/Avatar";
 import { soberFor } from "../groups/lib";
 import MeetingPasscode from "../groups/MeetingPasscode";
 import { isOnNow, refreshNav } from "./useShell";
 import Skeleton from "../ui/Skeleton";
+import TaskCard from "../admin_suite/tasks/TaskCard";
+import { button as taskButton, primary as taskPrimary, small as taskSmall } from "../admin_suite/tasks/lib";
 
 const sideTitle = "mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-neutral-400";
 const row = "border-b border-neutral-200/80 py-3 first:pt-0 last:border-0 dark:border-neutral-800";
@@ -136,6 +138,57 @@ function Attention({ items, cleared, anyRoles }) {
   );
 }
 
+// Site admins' "Your admin tasks" (PeopleHome#admin_tasks, from Site Admin > Task board): the
+// tasks they have (Done right here) and those given to all site admins that nobody took yet
+// (I'll take it), as the same cards as on the board (TaskCard).
+function AdminTasks({ data }) {
+  const [tasks, setTasks] = useState(data?.tasks || []);
+  const [gone, setGone] = useState(0);
+  useEffect(() => { setTasks(data?.tasks || []); setGone(0); }, [data]);
+  if (!data || (!data.total && !tasks.length)) return null;
+
+  const post = (task, action) =>
+    fetch(`/api/admin/tasks/${task.id}/${action}`, {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": csrf() },
+    }).then((r) => { if (!r.ok) throw new Error(); return r.json(); });
+  const complete = (task) => {
+    setTasks((list) => list.filter((t) => t.id !== task.id));
+    setGone((n) => n + 1);
+    post(task, "complete").then(() => refreshNav()).catch(() => { setTasks((list) => [task, ...list]); setGone((n) => n - 1); });
+  };
+  const take = (task) => post(task, "take").then((saved) => setTasks((list) => list.map((t) => (t.id === task.id ? saved : t)))).catch(() => {});
+  const more = data.total - gone - tasks.length;
+
+  return (
+    <section>
+      <h2 className={sideTitle}><SquareKanban className="size-4" /> Your admin tasks</h2>
+      {!tasks.length && <p className="text-sm text-slate-500">All done. Nice work.</p>}
+      <div className="space-y-2">
+        {tasks.map((t) => {
+          const mine = t.assignee?.id === data.me;
+          return (
+            <TaskCard key={t.id} task={t} me={data.me} outline onOpen={() => { window.location.href = `/admin_panel/tasks?task=${t.id}`; }}>
+              {mine ? (
+                <button type="button" onClick={() => complete(t)} className={`${taskButton} ${taskSmall}`}>
+                  <Check className="size-3.5" /> Done
+                </button>
+              ) : (
+                <button type="button" onClick={() => take(t)} className={`${taskPrimary} ${taskSmall}`}>
+                  <Hand className="size-3.5" /> I'll take it
+                </button>
+              )}
+            </TaskCard>
+          );
+        })}
+      </div>
+      <a href="/admin_panel/tasks" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">
+        {more > 0 ? `${more} more on the task board` : "Open the task board"} <ChevronRight className="size-4" />
+      </a>
+    </section>
+  );
+}
+
 // Who is filling in at the coming meetings they host, fill in at, or coordinate
 function Covers({ covers }) {
   if (!covers?.length) return null;
@@ -168,6 +221,7 @@ export default function TodayPanel({ today }) {
     return (
       <div className="space-y-8 !font-sans">
         <Greeting me={today.me} />
+        <AdminTasks data={today.admin_tasks} />
         <div className="text-sm text-slate-600 dark:text-neutral-300">
           Join a group to see its next meetings, members' birthdays and events here.
           <a href="/groups/find" className="mt-2 block font-semibold text-accent hover:underline">Find your group</a>
@@ -178,6 +232,7 @@ export default function TodayPanel({ today }) {
   return (
     <div className="space-y-8 !font-sans">
       <Greeting me={today.me} />
+      <AdminTasks data={today.admin_tasks} />
       <Attention items={today.attention} cleared={today.cleared} anyRoles={today.any_roles} />
       <Covers covers={today.covers} />
       <section>

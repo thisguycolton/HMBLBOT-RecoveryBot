@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_08_090000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_09_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -56,6 +56,54 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_08_090000) do
     t.string "icon"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "admin_task_activities", force: :cascade do |t|
+    t.bigint "admin_task_id", null: false
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.text "body"
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["admin_task_id"], name: "index_admin_task_activities_on_admin_task_id"
+    t.index ["user_id"], name: "index_admin_task_activities_on_user_id"
+  end
+
+  create_table "admin_task_columns", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "kind", default: "doing", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "admin_tasks", force: :cascade do |t|
+    t.bigint "admin_task_column_id", null: false
+    t.integer "position", default: 0, null: false
+    t.string "title", null: false
+    t.text "notes"
+    t.jsonb "checklist", default: [], null: false
+    t.string "priority", default: "normal", null: false
+    t.date "due_on"
+    t.string "link_path"
+    t.bigint "creator_id"
+    t.bigint "assignee_id"
+    t.boolean "for_all_admins", default: false, null: false
+    t.datetime "completed_at"
+    t.bigint "completed_by_id"
+    t.datetime "archived_at"
+    t.date "due_reminded_on"
+    t.date "overdue_reminded_on"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "tags", default: [], null: false, array: true
+    t.index ["admin_task_column_id", "position"], name: "index_admin_tasks_on_admin_task_column_id_and_position"
+    t.index ["admin_task_column_id"], name: "index_admin_tasks_on_admin_task_column_id"
+    t.index ["assignee_id"], name: "index_admin_tasks_on_assignee_id"
+    t.index ["completed_by_id"], name: "index_admin_tasks_on_completed_by_id"
+    t.index ["creator_id"], name: "index_admin_tasks_on_creator_id"
+    t.index ["due_on"], name: "index_admin_tasks_on_due_on", where: "(completed_at IS NULL)"
   end
 
   create_table "agenda_items", force: :cascade do |t|
@@ -1863,6 +1911,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_08_090000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "admin_task_activities", "admin_tasks", on_delete: :cascade
+  add_foreign_key "admin_task_activities", "users", on_delete: :nullify
+  add_foreign_key "admin_tasks", "admin_task_columns"
+  add_foreign_key "admin_tasks", "users", column: "assignee_id", on_delete: :nullify
+  add_foreign_key "admin_tasks", "users", column: "completed_by_id", on_delete: :nullify
+  add_foreign_key "admin_tasks", "users", column: "creator_id", on_delete: :nullify
   add_foreign_key "agenda_items", "business_meetings", on_delete: :cascade
   add_foreign_key "agenda_items", "motions", on_delete: :nullify
   add_foreign_key "agenda_items", "users", column: "submitted_by_id", on_delete: :nullify

@@ -64,6 +64,13 @@ rescue StandardError => e
   warn "[recovery reminders] couldn't start: #{e.message}"
 end
 
+# Site Admin > Task board's due and overdue reminders (see AdminTaskReminders)
+on_booted do
+  AdminTaskReminders.start_loop if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[admin task reminders] couldn't start: #{e.message}"
+end
+
 # Local intergroups' meeting lists re-import from their feed links weekly (see MeetingListRefresh)
 on_booted do
   MeetingListRefresh.start_loop if ENV["RAILS_ENV"] == "production"

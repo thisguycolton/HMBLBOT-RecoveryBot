@@ -9,7 +9,7 @@ icon: map-pinned
 
 ## Search
 
-1. Open **Find a meeting** from the sidebar (Explore).
+1. Open **Find a meeting** from the sidebar (Meetings).
 2. Type a meeting or group name in the box, or paste a Zoom link or meeting ID to find which meeting it belongs to.
 3. Pick when: **Coming week** (the default), **Live now**, **Today**, **Tomorrow**, or **Pick a date**.
 4. Narrow it down with the filters: **Time of day**, **Where** (online or in person), **Location** (a city, region or time zone) and **Type** (open, closed, speaker, Big Book…).

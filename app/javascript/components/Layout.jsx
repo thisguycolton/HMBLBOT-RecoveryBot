@@ -12,7 +12,7 @@ import TopBar from "./shell/TopBar";
 import { ShellContext, useMedia, usePath, useNav, useRail, useTheme } from "./shell/useShell";
 import { forgetPushAfterSignOut, registerServiceWorker } from "../lib/push";
 
-// The site's shell, around every page: the sidebar on the left (You, Your groups, Explore),
+// The site's shell, around every page: the sidebar on the left (categories with sub menus),
 // the bar along the top (search, Donate, theme, notifications, account), and the stage, the
 // rounded panel the page itself sits in. A page can hand the shell a side panel (PageAside):
 // the column beside the stage on wide screens, a sheet from the bottom bar on phones.
@@ -29,6 +29,8 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
   const path = usePath();
   const chrome = useChrome();
   const [rail, toggleRail] = useRail();
+  const [submenu, setSubmenu] = useState(false);
+  const [panelTarget, setPanelTarget] = useState(null);
   const [wideAside, setWideAside] = useState(null);
   const [phoneAside, setPhoneAside] = useState(null);
   const wide = useMedia("(min-width: 1280px)");
@@ -59,19 +61,28 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
             aside as one rounded card to show it (usePush) */}
         <div className="shell-page bg-[#ececec] dark:bg-neutral-950" style={pushStyle(push)}>
         {push?.open && <button type="button" aria-label="Close" onClick={closePush} className="absolute inset-0 z-[3000] cursor-default !bg-transparent" />}
-        {/* The column folds down to its icons and back (useRail), remembered in this browser */}
+        {/* The column folds down to its icons and back (useRail), remembered in this browser. Opening
+            one of its sub menus folds the list down to its icons too, and the sub menu slides into
+            the room that leaves (Sidebar.jsx), so the column keeps its width and the page doesn't move */}
         <aside className={`shell-side fixed inset-y-0 left-0 z-40 hidden w-[var(--side-w)] flex-col overflow-hidden motion-safe:transition-[width] motion-safe:duration-200 lg:flex print:!hidden`}>
           <a href={isAuthenticated ? "/people" : "/"} className={`flex h-16 shrink-0 items-center !text-slate-900 dark:!text-white ${rail ? "justify-center" : "px-7"}`} aria-label="RecoveryBot home">
             {rail ? <RecoveryBotMark className="h-7 w-auto" /> : <RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-xl" />}
           </a>
-          <div className={`no-scrollbar flex-1 overflow-y-auto pb-4 pt-2 ${rail ? "px-2" : "px-4"}`}>
-            <Sidebar nav={nav} isAuthenticated={isAuthenticated} path={path} rail={rail} />
-          </div>
-          <div className={`shrink-0 border-t border-neutral-300/70 py-2 dark:border-neutral-800 ${rail ? "px-2" : "px-4"}`}>
-            <button type="button" onClick={toggleRail} aria-expanded={!rail} aria-label={rail ? "Expand the menu" : undefined} title={rail ? "Show the menu's names" : "Fold the menu down to icons"}
-              className={`flex items-center gap-3 rounded-xl !bg-transparent py-2 text-[0.94rem] text-slate-500 hover:!bg-white/60 hover:text-slate-800 dark:text-neutral-400 dark:hover:!bg-neutral-800/60 dark:hover:text-white ${rail ? "mx-auto size-11 justify-center" : "w-full px-3"}`}>
-              {rail ? <PanelLeftOpen className="size-5" /> : <><PanelLeftClose className="size-[1.15rem]" /> Collapse</>}
-            </button>
+          <div className="flex min-h-0 flex-1">
+            <div className={`flex shrink-0 flex-col ${submenu && !rail ? "w-[4.75rem]" : "w-full"} ease-out motion-safe:transition-[width] motion-safe:duration-[220ms]`}>
+              <div className="no-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 pt-2">
+                <Sidebar nav={nav} isAuthenticated={isAuthenticated} path={path} mode={rail ? "rail" : "column"} panelTarget={panelTarget} onSubmenu={setSubmenu} />
+              </div>
+              <div className="shrink-0 border-t border-neutral-300/70 px-4 py-2 dark:border-neutral-800">
+                <button type="button" onClick={toggleRail} aria-expanded={!rail} aria-label={rail ? "Expand the menu" : "Collapse the menu"} title={rail ? "Show the menu's names" : "Fold the menu down to icons"}
+                  className="flex w-full items-center gap-3 overflow-hidden whitespace-nowrap rounded-xl !bg-transparent px-3 py-2 text-[0.94rem] text-slate-500 hover:!bg-white/60 hover:text-slate-800 dark:text-neutral-400 dark:hover:!bg-neutral-800/60 dark:hover:text-white">
+                  {rail ? <PanelLeftOpen className="size-5 shrink-0" /> : <PanelLeftClose className="size-5 shrink-0" />}
+                  <span className={`transition-opacity duration-150 ${rail || submenu ? "opacity-0" : ""}`} aria-hidden="true">Collapse</span>
+                </button>
+              </div>
+            </div>
+            {/* Where an open sub menu goes */}
+            <div ref={setPanelTarget} className="relative min-w-0 flex-1" />
           </div>
         </aside>
 
@@ -85,6 +96,9 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
             this stays put over that corner, drawn in the shell's color (the bar is solid on wide screens) */}
         <div aria-hidden="true"
           className="pointer-events-none fixed left-[var(--side-w)] motion-safe:transition-[left] motion-safe:duration-200 top-[var(--nav-h)] z-40 hidden size-8 bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#ececec_32px)] dark:bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,var(--color-neutral-950)_32px)] lg:block print:!hidden" />
+        {/* The same corner in the open sub menu's lighter backdrop (Sidebar.jsx), fading with it */}
+        <div aria-hidden="true"
+          className={`pointer-events-none fixed left-[var(--side-w)] top-[var(--nav-h)] z-40 hidden size-8 bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#f6f6f6_32px)] transition-opacity ease-out dark:bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#101010_32px)] lg:block print:!hidden ${submenu && !rail ? "opacity-100 duration-200" : "opacity-0 duration-150"}`} />
 
         <div className="pt-[var(--nav-h)] lg:pl-[var(--side-w)] motion-safe:transition-[padding] motion-safe:duration-200 print:!p-0" style={push ? { marginTop: -push.y } : undefined}>
           <div className="stage flex min-h-[calc(100dvh-var(--nav-h))] overflow-clip bg-white dark:bg-neutral-900 max-lg:rounded-b-[28px] lg:rounded-l-[32px] print:!rounded-none">

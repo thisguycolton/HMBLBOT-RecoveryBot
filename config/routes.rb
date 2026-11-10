@@ -545,6 +545,19 @@ end
       end
       # the admin suite (Api::Admin::SuiteController)
       resource :overview, only: :show, controller: "overview"
+      # Site Admin > Task board (SCRUMBLBOT)
+      resources :tasks, only: %i[index show create update destroy] do
+        member do
+          post :take
+          post :let_go
+          post :give
+          post :move
+          post :complete
+          post :reopen
+          post :comment
+        end
+      end
+      resources :task_columns, only: %i[create update destroy]
       resource :analytics, only: :show
       resources :users, only: %i[index update] do
         patch :confirm, on: :member
