@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+import React, { useEffect, useId, useState } from "react";
 import { Skeleton, SkeletonBox } from "skullet/react";
 
 // The mark's shapes, shared by the drawn mark and its skeleton
@@ -96,12 +96,42 @@ export function RecoveryBotLogo({ className = "", markClassName = "h-7 w-auto", 
 }
 RecoveryBotLogo.Skeleton = (props) => <RecoveryBotLogo {...props} loading />;
 
+// How long the robot outline stays up at least, once it has shown. The menus usually come back
+// in well under that, and Skullet waits a moment before drawing a skeleton, so without it the
+// outline was a flicker nobody could read. Only the logo waits: the menus and the page draw as
+// soon as they are here.
+export const SHELL_LOGO_MIN_MS = 900;
+// One clock for the page, so the sidebar's logo and the top bar's swap at the same moment
+let outlineSince = null;
+
+// loading, held on until the outline has been up SHELL_LOGO_MIN_MS. Only when it starts out
+// loading (the first page of a visit): later pages read the menus from this tab's cache and
+// draw the real logo straight away.
+export function useShellLogoLoading(loading) {
+  const [holding, setHolding] = useState(() => {
+    if (loading && outlineSince == null) outlineSince = performance.now();
+    return loading;
+  });
+  useEffect(() => {
+    if (loading) { setHolding(true); return undefined; }
+    const left = outlineSince == null ? 0 : SHELL_LOGO_MIN_MS - (performance.now() - outlineSince);
+    if (left <= 0) { setHolding(false); return undefined; }
+    const timer = setTimeout(() => setHolding(false), left);
+    return () => clearTimeout(timer);
+  }, [loading]);
+  return loading || holding;
+}
+
 // The logo in the shell (sidebar, top bar): the robot outline while the menus are still on their
 // way (first page of a visit; after that they come from this tab's cache), then Skullet brings
-// the real logo in over it. mark: just the robot, as in the folded sidebar.
+// the real logo in over it. mark: just the robot, as in the folded sidebar. The shimmer runs
+// across the logo itself (group-shimmer), so a sweep crosses the robot while it is up rather
+// than whenever the page-wide band happens to pass, and .shell-logo-skeleton brightens it on
+// the dark band.
 export function ShellLogo({ loading = false, mark = false, markClassName = "h-7 w-auto", textClassName = "text-xl" }) {
+  const showing = useShellLogoLoading(loading);
   return (
-    <Skeleton loading={loading} className="inline-block">
+    <Skeleton loading={showing} className="shell-logo-skeleton inline-block">
       {mark ? <RecoveryBotMark className={markClassName} /> : <RecoveryBotLogo markClassName={markClassName} textClassName={textClassName} />}
     </Skeleton>
   );
