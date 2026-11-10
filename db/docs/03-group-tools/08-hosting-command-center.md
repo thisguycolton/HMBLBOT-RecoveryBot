@@ -37,4 +37,14 @@ Three chat postings are set for this meeting: **Welcome** at minute 0, **7th Tra
 
 Choose the gear to set up a meeting's **kit**: which group document is the script, the chat postings (title, icon, minute, text) and the readings. A group can have one default kit, with changes for single meetings.
 
+### Start from a template
+
+No script yet? Under **Script**, choose **Start from a template** and pick one, like the **Online meeting host format** (welcome, readings, newcomers and milestones, the day's activity, sharing and closing, with its sections, reminders and dynamic values already in place).
+
+1. Give the group's copy a name and choose **Copy into the group's documents**. It goes in the **Format** folder, seen by hosts, and becomes the script.
+2. Choose **Edit the document** and change the parts in parentheses, like your meeting times and announcements, to fit your group.
+3. Save the kit.
+
+The copy is your group's own: changing it doesn't change the template, and later changes to the template don't change it.
+
 > [!NOTE] The Command Center is the built-in **Host a meeting** layout of a [HostDeck](/docs/group-tools/hostdeck), so you can rearrange it too.

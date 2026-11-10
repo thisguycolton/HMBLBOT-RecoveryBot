@@ -12,7 +12,7 @@ audience: admins
 
 - **Dashboard**: what needs attention today.
 - **People**: members, contact requests, text reports from the library, and reports about people.
-- **Content**: site notices, readings, tags, blocked words, meeting lists, sobriety chips, chip templates and step worksheets.
+- **Content**: site notices, readings, tags, blocked words, meeting lists, sobriety chips, chip templates, step worksheets and HostDeck scripts.
 - **Insights**: visit analytics (counted without cookies).
 - **Other tools**: the Topicificator admin, the Library, schedule polls, service readings, groups and polls.
 

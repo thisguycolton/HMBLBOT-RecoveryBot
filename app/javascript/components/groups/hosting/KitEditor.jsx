@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, BookOpen, ChevronDown, ExternalLink, Link2, MessageSquare, Plus, Save, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, ChevronDown, ExternalLink, LayoutTemplate, Link2, MessageSquare, Plus, Save, Trash2, X } from "lucide-react";
 import { api } from "../lib";
 import IconPicker from "../../ui/IconPicker";
 import LucideIcon from "../../ui/LucideIcon";
@@ -31,6 +31,8 @@ export default function KitEditor({ center, onClose, onSaved, only = null }) {
   const { kit, editor, meeting, group } = center;
   const [scope, setScope] = useState(kit.own || !editor.has_default ? "meeting" : "default");
   const [scriptId, setScriptId] = useState(editor.script_document_id ? String(editor.script_document_id) : "");
+  // the group's documents to pick from, with any copied from a template just now
+  const [documents, setDocuments] = useState(editor.documents);
   const [anchor, setAnchor] = useState(kit.activity_anchor || "");
   const [intro, setIntro] = useState(kit.intro_title || "");
   const [publicPostings, setPublicPostings] = useState(center.link?.public_postings !== false);
@@ -115,7 +117,8 @@ export default function KitEditor({ center, onClose, onSaved, only = null }) {
             </p>
           </div>
 
-          {shows("script") && <ScriptPicker documents={editor.documents} value={scriptId} onChange={setScriptId} current={kit.script} anchor={anchor} setAnchor={setAnchor} intro={intro} setIntro={setIntro} slug={group.slug} />}
+          {shows("script") && <ScriptPicker documents={documents} value={scriptId} onChange={setScriptId}
+            onCopied={(d) => { setDocuments((list) => [d, ...list]); setScriptId(String(d.id)); }} current={kit.script} anchor={anchor} setAnchor={setAnchor} intro={intro} setIntro={setIntro} slug={group.slug} />}
 
           {shows("script") && <ValuesPicker allowed={allowed} setAllowed={setAllowed} />}
 
@@ -170,7 +173,8 @@ export function IntroTitle({ id, value, onChange }) {
   );
 }
 
-function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor, intro, setIntro, slug }) {
+function ScriptPicker({ documents, value, onChange, onCopied, current, anchor, setAnchor, intro, setIntro, slug }) {
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [sections, setSections] = useState([]);
   const [paragraphs, setParagraphs] = useState([]);
   const shown = current && String(current.id) === value;
@@ -188,7 +192,13 @@ function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor, 
   const count = (n) => (n == null ? "" : ` · ${n} ${n === 1 ? "section" : "sections"}`);
   return (
     <section>
-      <label htmlFor="kit-script" className={labelClass}>Script</label>
+      <div className="flex items-center justify-between gap-2">
+        <label htmlFor="kit-script" className={labelClass}>Script</label>
+        <button type="button" className={`${smallButton} mb-1.5`} onClick={() => setTemplatesOpen((v) => !v)} aria-expanded={templatesOpen}>
+          <LayoutTemplate className="size-3.5" /> Start from a template
+        </button>
+      </div>
+      {templatesOpen && <TemplatePicker slug={slug} onCopied={(d) => { onCopied(d); setTemplatesOpen(false); }} onClose={() => setTemplatesOpen(false)} />}
       <select id="kit-script" className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">No script</option>
         {documents.map((d) => <option key={d.id} value={d.id}>{d.title}{d.kind === "format" ? "" : ` (${d.kind})`}{count(d.sections)}</option>)}
@@ -220,6 +230,65 @@ function ScriptPicker({ documents, value, onChange, current, anchor, setAnchor, 
         </ol>
       )}
     </section>
+  );
+}
+
+// Site Admin's HostDeck scripts (Site Admin > HostDeck scripts). Picking one copies it into the
+// group's documents (Format folder, for the hosts) and makes it this meeting's script; it's the
+// group's own from then on, to change like any document.
+function TemplatePicker({ slug, onCopied, onClose }) {
+  const [templates, setTemplates] = useState(null);
+  const [picked, setPicked] = useState(null);
+  const [title, setTitle] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    api(`/groups/${slug}/hosting/script_templates`).then((d) => {
+      setTemplates(d.templates);
+      if (d.templates[0]) { setPicked(d.templates[0]); setTitle(d.templates[0].name); }
+    }).catch((e) => setError(e.message));
+  }, [slug]);
+  const pick = (t) => { setPicked(t); setTitle(t.name); };
+  const copy = async () => {
+    setBusy(true);
+    setError(null);
+    try { onCopied((await api(`/groups/${slug}/hosting/script_templates`, { method: "POST", body: { template_id: picked.id, title } })).document); } catch (e) { setError(e.message); setBusy(false); }
+  };
+  return (
+    <div className="mb-3 space-y-3 rounded-xl bg-white p-3 ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700">
+      <ErrorNote error={error} />
+      {!templates ? <p className="text-sm text-slate-500 dark:text-neutral-400">Loading templates…</p> : templates.length === 0 ? <p className="text-sm text-slate-500 dark:text-neutral-400">No templates yet.</p> : (
+        <>
+          <ul className="space-y-1.5" role="radiogroup" aria-label="Templates">
+            {templates.map((t) => (
+              <li key={t.id}>
+                <button type="button" role="radio" aria-checked={picked?.id === t.id} onClick={() => pick(t)}
+                  className={`w-full rounded-lg px-3 py-2 text-left ring-1 ${picked?.id === t.id ? "!bg-accent/10 ring-accent/50 dark:!bg-accent/20" : "!bg-transparent ring-neutral-200 hover:ring-accent/40 dark:ring-neutral-700"}`}>
+                  <span className="block text-sm font-semibold">{t.name}</span>
+                  {t.description && <span className="block text-xs text-slate-500 dark:text-neutral-400">{t.description}</span>}
+                  {picked?.id === t.id && t.sections.length > 0 && (
+                    <span className="mt-1.5 flex flex-wrap gap-1">
+                      {t.sections.map((s, i) => <span key={i} className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] text-slate-700 dark:bg-neutral-800 dark:text-neutral-300">{i + 1}. {s}</span>)}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div>
+            <label htmlFor="kit-template-title" className={labelClass}>Name of the group's copy</label>
+            <input id="kit-template-title" className={inputClass} maxLength={160} value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <p className="text-xs text-slate-500 dark:text-neutral-400">
+            A copy goes in the group's documents (Format folder, seen by hosts) and becomes the script here. Change the parts in parentheses to fit your group with Edit the document; the copy is the group's own.
+          </p>
+        </>
+      )}
+      <div className="flex justify-end gap-2">
+        <button type="button" className={smallButton} onClick={onClose}>Cancel</button>
+        {templates?.length > 0 && <button type="button" className={`${primaryButton} !px-3 !py-1.5 !text-xs`} disabled={!picked || busy} onClick={copy}>{busy ? "Copying…" : "Copy into the group's documents"}</button>}
+      </div>
+    </div>
   );
 }
 

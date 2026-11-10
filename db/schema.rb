@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_10_230100) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_11_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -849,6 +849,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_10_230100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["hostificator_id"], name: "index_host_props_on_hostificator_id"
+  end
+
+  create_table "host_script_templates", force: :cascade do |t|
+    t.string "key"
+    t.string "name", null: false
+    t.string "description"
+    t.text "body"
+    t.boolean "hidden", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_host_script_templates_on_key", unique: true, where: "(key IS NOT NULL)"
+    t.index ["updated_by_id"], name: "index_host_script_templates_on_updated_by_id"
   end
 
   create_table "host_sub_requests", force: :cascade do |t|
@@ -2003,6 +2017,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_10_230100) do
   add_foreign_key "groups", "users", column: "created_by_id"
   add_foreign_key "host_chat_postings", "hosting_kits", on_delete: :cascade
   add_foreign_key "host_props", "hostificators"
+  add_foreign_key "host_script_templates", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "host_sub_requests", "meetings"
   add_foreign_key "host_sub_requests", "users", column: "filled_by_id"
   add_foreign_key "host_sub_requests", "users", column: "requested_by_id"

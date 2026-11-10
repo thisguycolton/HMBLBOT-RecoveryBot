@@ -7,7 +7,8 @@ class Api::GroupHostingController < ApplicationController
 
   before_action :set_group
   before_action :require_host
-  before_action :set_meeting, except: %i[index capsule service_readings service_reading values]
+  before_action :set_meeting, except: %i[index capsule service_readings service_reading values script_templates copy_script_template]
+  before_action :require_any_coordinator, only: %i[script_templates copy_script_template]
   before_action :require_coordinator, only: %i[kit reset_kit script]
   before_action :require_deck_editor, only: %i[arrangement reset_arrangement]
 
@@ -45,6 +46,22 @@ class Api::GroupHostingController < ApplicationController
     allowed = kits.any? && kits.all?(&:allowed_values) ? kits.flat_map(&:allowed_values).uniq : nil
     roles = (kits.presence || [HostingKit.new]).flat_map(&:roles).uniq { |r| r["key"] }
     render json: { allowed: allowed, roles: roles }
+  end
+
+  # GET /api/groups/:group_slug/hosting/script_templates: the meeting scripts Site Admin offers
+  def script_templates
+    render json: { templates: HostScriptTemplate.offered.map(&:as_offer_json) }
+  end
+
+  # POST /api/groups/:group_slug/hosting/script_templates { template_id, title }: a copy of one in
+  # the group's documents (Format folder, for the hosts), to pick as a meeting's script. It's the
+  # group's own from then on; the template changing later doesn't change it.
+  def copy_script_template
+    template = HostScriptTemplate.offered.find(params[:template_id])
+    doc = template.copy_to(@group, current_user, title: params[:title].to_s.squish.first(160))
+    return render_errors(doc) unless doc.persisted?
+
+    render json: { document: { id: doc.id, title: doc.title, kind: doc.kind, visibility: doc.visibility, sections: HostingKit.section_count(doc) } }, status: :created
   end
 
   # GET /api/groups/:group_slug/hosting/:meeting_id
@@ -193,6 +210,13 @@ class Api::GroupHostingController < ApplicationController
       default&.postings&.each { |p| kit.postings.create!(p.attributes.slice("title", "icon", "minute", "body", "position")) }
       kit
     end
+  end
+
+  # Someone who coordinates hosts for at least some of the group's meetings
+  def require_any_coordinator
+    return if @group.hosts_editable_by?(current_user)
+
+    render json: { error: "Only host coordinators can add a script from a template." }, status: :forbidden
   end
 
   # A coordinator of this meeting; the group's default kit is for those who coordinate every meeting

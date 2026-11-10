@@ -208,6 +208,9 @@ Rails.application.routes.draw do
       collection do
         get :capsule
         get :values
+        # Site Admin's HostDeck scripts, to copy into the group's documents
+        get :script_templates
+        post :script_templates, action: :copy_script_template
         get :service_readings
         get "service_readings/:reading_id", action: :service_reading, as: :service_reading
       end
@@ -577,6 +580,10 @@ end
           post :publish
           post :restore
         end
+      end
+      # HostDeck meeting scripts groups can start from (HostScriptTemplate)
+      resources :host_script_templates, only: %i[index show create update destroy] do
+        post :reset, on: :member
       end
       # Local meeting lists (an intergroup's in-person meetings) imported next to AA Intergroup's
       resources :meeting_directories, only: %i[index create update destroy] do

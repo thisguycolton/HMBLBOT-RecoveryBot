@@ -4,6 +4,8 @@ import { createRoot } from "react-dom/client";
 
 import "../styles/tailwind.css";
 import "../styles/reader.css";
+// the document editor (Site Admin > HostDeck scripts)
+import "../styles/documents.css";
 
 import AdminSuite from "../components/admin_suite/App";
 
