@@ -181,6 +181,20 @@ button:focus-visible {
   --skullet-highlight: rgb(255 255 255 / 0.07);
   --skeleton-soft: color-mix(in oklab, var(--color-neutral-700) 60%, transparent);
 }
+/* The robot outline in the shell (brand/Logo.jsx ShellLogo): its own sweep, at the slow pace,
+   so one crosses the robot in the second or so it is up; and a brighter highlight on the dark
+   band, where the page's 7% white barely shows on a shape this small. In light mode the page's
+   gray is nearly the shell's own #ececec, so the outline gets a step darker. */
+.shell-logo-skeleton {
+  --skullet-animation: group-shimmer;
+  --skullet-speed: slow;
+  --skullet-base: var(--color-neutral-300);
+  --skullet-highlight: rgb(255 255 255 / 0.8);
+}
+.dark .shell-logo-skeleton {
+  --skullet-base: rgb(255 255 255 / 0.12);
+  --skullet-highlight: rgb(255 255 255 / 0.32);
+}
 
 /* Space where the sticky title sits; will be set at runtime */
 :root {
