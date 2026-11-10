@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Menu, Moon, PanelLeftClose, PanelLeftOpen, Sun, X } from "lucide-react";
 import Footer from "./Footer";
-import { RecoveryBotLogo, RecoveryBotMark } from "./brand/Logo";
+import { ShellLogo } from "./brand/Logo";
 import BottomBar from "./shell/BottomBar";
 import { ChromeSheets, useChrome } from "./shell/Chrome";
 import { PUSH_WIDTH } from "./shell/Sheet";
@@ -66,7 +66,7 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
             the room that leaves (Sidebar.jsx), so the column keeps its width and the page doesn't move */}
         <aside className={`shell-side fixed inset-y-0 left-0 z-40 hidden w-[var(--side-w)] flex-col overflow-hidden motion-safe:transition-[width] motion-safe:duration-200 lg:flex print:!hidden`}>
           <a href={isAuthenticated ? "/people" : "/"} className={`flex h-16 shrink-0 items-center !text-slate-900 dark:!text-white ${rail ? "justify-center" : "px-7"}`} aria-label="RecoveryBot home">
-            {rail ? <RecoveryBotMark className="h-7 w-auto" /> : <RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-xl" />}
+            <ShellLogo mark={rail} loading={isAuthenticated && !nav} />
           </a>
           <div className="flex min-h-0 flex-1">
             <div className={`flex shrink-0 flex-col ${submenu && !rail ? "w-[4.75rem]" : "w-full"} ease-out motion-safe:transition-[width] motion-safe:duration-[220ms]`}>

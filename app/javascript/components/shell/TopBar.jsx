@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown, FileCheck2, Heart, LogIn, LogOut, Info, Menu, Moon, Plus, Search, Settings, Smartphone, Sun, UserPlus, UserRound } from "lucide-react";
 import NotificationBell from "../NotificationBell";
 import Avatar from "../groups/Avatar";
-import { RecoveryBotLogo } from "../brand/Logo";
+import { ShellLogo } from "../brand/Logo";
 import SearchBox from "./SearchBox";
 import { ADMIN_ITEMS } from "../nav/siteMenu";
 
@@ -27,7 +27,7 @@ export default function TopBar({ nav, isAuthenticated, theme, onMenu, onDonate, 
       className={`shell-top h-full items-center gap-2 px-3 !font-sans sm:px-4 lg:gap-3 lg:px-6 ${searching ? "hidden lg:flex" : "flex"}`}>
       {!bottomMenu && <button type="button" onClick={onMenu} className={`${iconButton} inline-grid ${alwaysMenu ? "" : "lg:hidden"}`} aria-label="Open the menu"><Menu className="size-5" /></button>}
       <a href="/" className={`${withLogo ? "" : "lg:hidden"} inline-flex items-center !text-slate-900 dark:!text-white`} aria-label="RecoveryBot home">
-        <RecoveryBotLogo markClassName="h-7 w-auto" textClassName="text-xl" />
+        <ShellLogo loading={isAuthenticated && !nav} />
       </a>
 
       <SearchBox className={`hidden max-w-[44rem] flex-1 ${withLogo ? "lg:ml-6 lg:block" : "lg:block"}`} />
