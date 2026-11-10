@@ -23,7 +23,7 @@ import {
   Sun,
   Tags,
   Users,
-  X, ShieldAlert, ShieldBan, Vote } from "lucide-react";
+  X, ShieldAlert, ShieldBan, Vote, ScrollText } from "lucide-react";
 import { api } from "../topicificator_admin/api";
 import NotificationBell from "../NotificationBell";
 import Avatar from "../groups/Avatar";
@@ -68,6 +68,8 @@ export const SECTIONS = [
       { to: "/chip_design", label: "Sobriety chips", icon: Medal },
       { to: "/chip_templates", label: "Chip templates", icon: Medal },
       { to: "/step_templates", label: "Step worksheets", icon: PencilRuler },
+      // HostDeck meeting scripts groups can start from (HostScriptTemplate)
+      { to: "/host_scripts", label: "HostDeck scripts", icon: ScrollText },
     ],
   },
   { title: "Insights", items: [{ to: "/analytics", label: "Analytics", icon: Activity }] },

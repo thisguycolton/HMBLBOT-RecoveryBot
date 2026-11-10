@@ -223,13 +223,15 @@ export const ValueTokens = Extension.create({
 
 // Insert > Dynamic Values: a row of the values the group's Command Center settings allow, under
 // the toolbar. Clicking one puts it where the cursor is.
-export function DynamicValuesBar({ editor, slug, documentId, onClose }) {
-  const [values, setValues] = useState(null);
+// `offered`: the values to show instead of asking the group (Site Admin's HostDeck scripts)
+export function DynamicValuesBar({ editor, slug, documentId, onClose, offered = null }) {
+  const [values, setValues] = useState(offered);
   useEffect(() => {
+    if (offered) return;
     api(`/groups/${slug}/hosting/values${documentId ? `?document_id=${documentId}` : ""}`)
       .then((d) => setValues(offeredValues(d.allowed, d.roles)))
       .catch(() => setValues(offeredValues(null, [])));
-  }, [slug, documentId]);
+  }, [slug, documentId, offered]);
   if (!editor) return null;
   return (
     <div role="toolbar" aria-label="Dynamic values" className="flex items-center gap-1.5 overflow-x-auto border-t border-neutral-200 px-2 py-1.5 dark:border-neutral-800">
