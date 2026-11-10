@@ -77,7 +77,10 @@ class StepWork < ApplicationRecord
   end
 
   def stop_sharing! = update!(share_token: nil, share_password_digest: nil, shared_at: nil, share_viewed_at: nil)
-  def label = tool_key == "drop-the-rock" ? "Steps 6 and 7" : "Step #{step}"
+  # The Steps 6 and 7 built-ins (Drop the Rock, and the step6-7-* ones) cover both steps
+  def self.steps_6_and_7?(key) = key == "drop-the-rock" || key.to_s.start_with?("step6-7-")
+
+  def label = self.class.steps_6_and_7?(tool_key) ? "Steps 6 and 7" : "Step #{step}"
 
   # Values from this member's work on `step` that carry `role` (names, my part), newest work
   # first, for a later step to pull in (StepTool `rows_from`, `suggest_from`)

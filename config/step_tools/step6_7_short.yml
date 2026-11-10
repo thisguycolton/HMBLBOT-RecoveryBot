@@ -1,0 +1,59 @@
+key: step6-7-short
+step: 6
+steps: [6, 7]
+name: "Short version: Steps 6 and 7"
+summary: "A shorter Steps 6 and 7: up to three defects, how ready I am for each, a prayer, and a week of asking. Good for a first pass or for coming back to the steps."
+intro: >
+  A lighter way through Steps Six and Seven: pick a few defects to start with, be honest about how ready you are,
+  ask for help, and practice for a week. You can always come back and do a longer version.
+sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    items:
+      - { id: r1, label: "The Big Book, page 76" }
+      - { id: r2, label: "Step Six in the 12&12" }
+      - { id: r3, label: "Step Seven in the 12&12" }
+  - id: defects
+    kind: picker
+    title: "Up to three defects to start with"
+    help: "The ones getting in the way most right now."
+    suggest_from: { step: 4, role: my_part, label: "From my 4th step" }
+    max: 3
+    groups:
+      - { label: "Common ones", options: ["Selfishness", "Dishonesty", "Resentment", "Fear", "Pride", "Self-pity", "Impatience", "Controlling behavior", "People-pleasing", "Anger"] }
+  - id: each-one
+    kind: each
+    title: "For each one"
+    from: defects
+    items:
+      - { id: how, label: "How does it show up?" }
+      - { id: instead, label: "What would I do instead?" }
+  - id: ready
+    kind: scale
+    title: "Step Six: how ready am I?"
+    from: defects
+    options: ["Not yet", "Becoming willing", "Ready"]
+  - id: prayer
+    kind: questions
+    title: "Step Seven: asking"
+    help: "The Seventh Step Prayer is on page 76 of the Big Book. Use it, or your own words."
+    items:
+      - { id: prayer, label: "My prayer", placeholder: "{{higher_power}}, please help me let go of…", rows: 5 }
+  - id: daily
+    kind: days
+    title: "A week of asking"
+    items:
+      - { id: d1, label: "Which one showed up today, and did I ask for help?" }
+      - { id: d2, label: "Which one showed up today, and did I ask for help?" }
+      - { id: d3, label: "Which one showed up today, and did I ask for help?" }
+      - { id: d4, label: "Which one showed up today, and did I ask for help?" }
+      - { id: d5, label: "Which one showed up today, and did I ask for help?" }
+      - { id: d6, label: "Which one showed up today, and did I ask for help?" }
+      - { id: d7, label: "Which one showed up today, and did I ask for help?" }
+    review:
+      - { id: noticed, label: "What changed this week, even a little?" }
+  - id: sponsor
+    kind: note
+    tone: sponsor
+    body: "Share the week with your sponsor, and decide together whether to add more defects or move on to Step 8."

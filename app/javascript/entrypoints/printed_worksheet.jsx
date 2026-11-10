@@ -11,7 +11,7 @@ import "../styles/reader.css";
 import { primaryButton } from "../components/groups/ui";
 import PrintableWorksheet from "../components/recovery/steps/PrintableWorksheet";
 
-const label = (w) => (w.tool_key === "drop-the-rock" ? "Steps 6 and 7" : `Step ${w.step}`);
+const label = (w) => (w.tool_key === "drop-the-rock" || w.tool_key?.startsWith("step6-7-") ? "Steps 6 and 7" : `Step ${w.step}`);
 
 function PrintedWorksheet({ work, blank }) {
   useEffect(() => {
