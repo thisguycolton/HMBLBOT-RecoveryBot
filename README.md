@@ -21,7 +21,7 @@ The screenshots show the app running locally with made-up demo data.
 - Profile pages laid out in the page editor, follows, and per-item visibility (private, followers, members)
 - A sidebar grouped into Home, Recovery, Read, Meetings and your groups, with sliding sub menus, a collapsible icon rail on desktop, and a bottom bar on phones
 - Site-wide search (press `/`), including hashtags, people, groups, readings and help pages
-- Notifications with Web Push, an installable home-screen app (`/install`), pull to refresh, and skeleton placeholders while pages load
+- Notifications with Web Push, an installable home-screen app (`/install`), pull to refresh, and shimmering Skullet skeletons (including a robot-logo skeleton) while pages load
 - Sign up with email (confirmed by link) or Google, behind a built-in "I'm not a robot" check
 
 ### Library and readings
@@ -70,7 +70,7 @@ The screenshots show the app running locally with made-up demo data.
 ## Tech stack
 
 - **Backend:** Ruby 3.2.3, Ruby on Rails 8, PostgreSQL, Devise (with Google sign-in through OmniAuth), Action Cable, Active Storage, Active Record encryption, Ahoy for analytics, Sentry for error reporting
-- **Frontend:** React 19 with Stimulus and Turbo, bundled by Vite (`vite_rails`), styled with Tailwind CSS 4
+- **Frontend:** React 19 with Stimulus and Turbo, bundled by Vite (`vite_rails`), styled with Tailwind CSS 4, with loading skeletons drawn by Skullet
 - **Editors:** Tiptap (with Yjs for live co-editing) and Lexical
 - **Media:** ImageMagick for share cards, maps and quote pictures; ffmpeg for videos; gifenc and mp4-muxer for GIFs and videos drawn in the browser; three.js for the 3D chips
 - **Documents:** pdf.js and mammoth (browser-side PDF reading and Word import)
