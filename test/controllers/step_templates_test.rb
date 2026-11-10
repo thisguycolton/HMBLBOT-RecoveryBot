@@ -36,6 +36,20 @@ class StepTemplatesTest < ActionDispatch::IntegrationTest
     assert StepTool.find("step4-instincts", hidden: true)
   end
 
+  test "Steps 6 and 7 have the Big Book, 12&12 and short versions beside Drop the Rock, which stays the default" do
+    keys = %w[drop-the-rock step6-7-big-book step6-7-12-and-12 step6-7-short]
+    [-> {}, -> { import_built_ins }].each do |setup|
+      setup.call
+      six = StepTool.all.select { |t| t.steps.include?(7) }
+      assert_equal keys.sort, six.map(&:key).sort
+      assert_equal ["drop-the-rock"], six.select(&:default?).map(&:key)
+      six.each { |t| assert_equal [6, 7], t.steps }
+    end
+    work = StepWork.start!(@sam, StepTool.find("step6-7-12-and-12"))
+    assert_equal "Steps 6 and 7", work.label
+    assert_includes work.definition["sections"].find { |s| s["id"] == "defects" }["suggest_from"].values, "my_part"
+  end
+
   test "only site admins can use it" do
     sign_in @sam
     get "/api/admin/step_templates", as: :json

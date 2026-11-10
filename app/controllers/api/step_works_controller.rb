@@ -121,7 +121,7 @@ class Api::StepWorksController < ApplicationController
   # The worksheet sent to every sponsor as text, in place of the copy they haven't opened yet.
   # A sponsor is told once, when a new copy reaches them, not on every save.
   def auto_send!(text)
-    title = "#{@work.step == 6 && @work.tool_key == 'drop-the-rock' ? 'Steps 6 and 7' : "Step #{@work.step}"}: #{@work.name}".first(200)
+    title = "#{@work.label}: #{@work.name}".first(200)
     sponsorships = Sponsorship.active.where(sponsee_id: current_user.id).includes(:sponsor).to_a
     sponsorships.each do |s|
       share = s.shares.where(kind: "step_work", title: title, seen_at: nil).first_or_initialize
