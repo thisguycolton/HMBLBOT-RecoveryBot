@@ -2034,7 +2034,7 @@ body:has(.wb) {
   position: relative;
 }
 
-.wb-note-editor__images img { height: 100%; object-fit: cover; width: 100%; }
+.wb-note-editor__images img, .wb-note-editor__images video { height: 100%; object-fit: cover; width: 100%; }
 
 .wb .wb-note-editor__images button {
   align-items: center;
@@ -2214,6 +2214,9 @@ body:has(.wb) {
 .wb-feed-item__images--1 button { max-height: 30rem; }
 .wb-feed-item__images:not(.wb-feed-item__images--1) button { aspect-ratio: 4 / 3; }
 .wb-feed-item__images--3 > :first-child { aspect-ratio: auto !important; }
+
+.wb-feed-item__images video { background: #000; display: block; max-height: 34rem; width: 100%; }
+.wb-feed-item__images:not(.wb-feed-item__images--1) video { aspect-ratio: 4 / 3; height: 100%; object-fit: contain; }
 
 .wb-feed-item__images img { display: block; height: 100%; max-height: inherit; object-fit: cover; width: 100%; }
 

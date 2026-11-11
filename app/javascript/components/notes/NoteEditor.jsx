@@ -128,8 +128,8 @@ export default function NoteEditor({
         <ul className="wb-note-editor__images">
           {kept.map((image) => (
             <li key={image.id}>
-              <img src={image.url} alt="" />
-              <button type="button" onClick={() => setRemoved((r) => [...r, image.id])} aria-label="Remove this picture"><X size={14} /></button>
+              {image.video ? <video src={`${image.url}#t=0.001`} muted playsInline preload="metadata" /> : <img src={image.url} alt="" />}
+              <button type="button" onClick={() => setRemoved((r) => [...r, image.id])} aria-label={image.video ? "Remove this video" : "Remove this picture"}><X size={14} /></button>
             </li>
           ))}
           {previews.map((p) => (

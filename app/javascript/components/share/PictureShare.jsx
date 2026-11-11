@@ -190,7 +190,9 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
   });
 
   const post = () => run("post", async () => {
-    const file = await fetchFile({ still: video });
+    // What's picked is what's posted: the video as a video (it plays on the timeline), a
+    // paged GIF as its GIF
+    const file = await fetchFile();
     const body = [caption.trim(), shareLink && `[Read it in the book](${shareLink})`].filter(Boolean).join("\n\n");
     await saveNote(null, { body, visibility, images: [file] });
     showToast(visibility === "private" ? "Posted to your timeline, just for you." : "Posted to your timeline.");
@@ -367,7 +369,7 @@ export default function PictureShare({ cardUrl, link, kind = "highlight", hasNot
                 </div>
               )}
               <p className="text-xs text-slate-500 dark:text-neutral-400">
-                {video ? "Instagram, Facebook and TikTok take the video: save it, then add it from your photos. Posting to your timeline uses a still picture."
+                {video ? "Instagram, Facebook and TikTok take the video: save it, then add it from your photos. Posting to your timeline posts the video."
                   : size === "story" ? "For Instagram or Facebook stories: save it, then add it from your photos." : kind === "day" ? "Anyone you send the link to can read this day." : link
                   ? `Anyone you send the link to can open this highlight. Its link preview is a wide ${LOOKS.find((l) => l.value === look)?.label} picture${moving ? " that stays still and shows as much as fits" : ", like this one"}.`
                   : "Notes are only for members, so there's no link: share the picture."}

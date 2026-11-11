@@ -46,10 +46,77 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 // MARK: - The app's own screen and plugins
 // Kept in this file so the Xcode project needs no new file entries.
 
+// The app's one screen: the web view sits below the status bar, and the strip behind the status
+// bar takes the page's theme-color (the top bar's color, set by the site), so pages never show
+// through behind the clock. The web view's height is left alone once set, since the Keyboard
+// plugin shrinks it while the keyboard is up.
+class AppShellViewController: UIViewController {
+    let main = MainViewController()
+    private var themeObservation: NSKeyValueObservation?
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = UIColor(red: 0xf5 / 255, green: 0xf5 / 255, blue: 0xf4 / 255, alpha: 1)
+        addChild(main)
+        main.view.frame = view.bounds
+        view.addSubview(main.view)
+        main.didMove(toParent: self)
+        if let webView = main.webView {
+            themeObservation = webView.observe(\.themeColor, options: [.initial, .new]) { [weak self] webView, _ in
+                DispatchQueue.main.async {
+                    if let color = webView.themeColor { self?.view.backgroundColor = color }
+                }
+            }
+        }
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        let top = view.safeAreaInsets.top
+        let frame = main.view.frame
+        if frame.origin.y != top || frame.width != view.bounds.width {
+            main.view.frame = CGRect(x: 0, y: top, width: view.bounds.width, height: view.bounds.height - top)
+        }
+    }
+
+    override var childForStatusBarStyle: UIViewController? { main }
+    override var childForStatusBarHidden: UIViewController? { main }
+}
+
 // The web view that shows recoverybot.hmblbot.com, with the app's own plugins added
 class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(PrinterPlugin())
+        bridge?.registerPluginInstance(AppClipboardPlugin())
+    }
+
+    // Status bar style changes (StatusBar plugin) reach the screen through AppShellViewController
+    override open func setStatusBarStyle(_ statusBarStyle: UIStatusBarStyle) {
+        super.setStatusBarStyle(statusBarStyle)
+        parent?.setNeedsStatusBarAppearanceUpdate()
+    }
+}
+
+// Copy buttons: the web clipboard (navigator.clipboard) doesn't reliably write from an iPhone web
+// view, so the site calls this instead (entrypoints/native_app.js). Keeps formatting (HTML) when
+// it's given, for pasting into Zoom chat or notes, with plain text beside it.
+@objc(AppClipboardPlugin)
+public class AppClipboardPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "AppClipboardPlugin"
+    public let jsName = "AppClipboard"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "write", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func write(_ call: CAPPluginCall) {
+        let text = call.getString("text") ?? ""
+        let html = call.getString("html")
+        DispatchQueue.main.async {
+            var item: [String: Any] = ["public.utf8-plain-text": text]
+            if let html = html, !html.isEmpty { item["public.html"] = html }
+            UIPasteboard.general.setItems([item], options: [:])
+            call.resolve()
+        }
     }
 }
 

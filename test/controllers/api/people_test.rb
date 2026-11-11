@@ -120,6 +120,23 @@ class Api::PeopleTest < ActionDispatch::IntegrationTest
     assert_empty response.parsed_body["feed"]
   end
 
+  test "a note can hold a video made here, which the feed marks as one" do
+    sign_in @mo
+    clip = Tempfile.new(["clip", ".mp4"], binmode: true)
+    clip.write("\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom".b + ("\x00".b * 64))
+    clip.rewind
+    post "/api/timeline_notes", params: { note: { body: "", images: [Rack::Test::UploadedFile.new(clip.path, "video/mp4")] } }
+    assert_response :created
+    image = response.parsed_body["images"].first
+    assert image["video"]
+    assert_equal "video/mp4", TimelineNote.find(response.parsed_body["id"]).images.first.content_type
+
+    post "/api/timeline_notes", params: { note: { body: "**Day 30**", images: [fixture_file_upload("avatar.png", "image/png")] } }
+    assert_nil response.parsed_body["images"].first["video"]
+  ensure
+    clip&.close!
+  end
+
   test "new notes take your default, and notes hold pictures" do
     @mo.update!(default_note_visibility: "followers")
     sign_in @mo

@@ -5,6 +5,7 @@
 // - links to other sites open in an in-app browser sheet instead of replacing the app
 // - Share sheets, Save and Download use the phone's own share sheet (web views can't share
 //   files or download them)
+// - Copy buttons use the phone's clipboard directly (the web clipboard is unreliable in a web view)
 // - Print uses the phone's own print screen (window.print does nothing in a web view)
 // Every plugin call checks the app has that plugin, so an older install just skips it.
 import { callPlugin, hasPlugin, nativePlatform, onPlugin } from "../lib/nativeApp";
@@ -15,6 +16,7 @@ if (platform && !window.__nativeApp) {
   window.__nativeApp = true;
   document.documentElement.classList.add("native-app", `native-${platform}`);
   installShare();
+  installClipboard();
   installDownloads();
   installPrint();
   installExternalLinks();
@@ -84,6 +86,31 @@ function installShare() {
     return Boolean(data.url || data.text || data.title);
   });
   define("share", (data = {}) => shareSheet({ ...data, files: canFiles ? Array.from(data.files || []) : [] }));
+}
+
+// --- Copying --------------------------------------------------------------------------------
+
+// navigator.clipboard.writeText and .write, backed by the phone's clipboard (the app's own
+// AppClipboard plugin). Formatted copies (text/html) keep their formatting.
+function installClipboard() {
+  if (!hasPlugin("AppClipboard")) return;
+  const writeText = (text) => callPlugin("AppClipboard", "write", { text: String(text ?? "") });
+  const write = async (items) => {
+    const item = Array.from(items || [])[0];
+    if (!item) return;
+    const read = async (type) => (item.types?.includes(type) ? (await item.getType(type)).text() : null);
+    const html = await read("text/html");
+    const text = (await read("text/plain")) ?? (html ? new DOMParser().parseFromString(html, "text/html").body.textContent : "");
+    await callPlugin("AppClipboard", "write", html ? { text: text || "", html } : { text: text || "" });
+  };
+  try {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText = writeText;
+      navigator.clipboard.write = write;
+    } else {
+      Object.defineProperty(navigator, "clipboard", { value: { writeText, write }, configurable: true });
+    }
+  } catch { /* left as is */ }
 }
 
 // --- Downloads ------------------------------------------------------------------------------

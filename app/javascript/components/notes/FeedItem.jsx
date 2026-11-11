@@ -244,22 +244,26 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
   }
 
   const images = item.images || [];
+  // Videos play where they are; only pictures open in the viewer
+  const photos = images.filter((image) => !image.video);
   return (
     <>
       {item.chip && <SharedChip chip={item.chip} hidden={item.chip_hidden} />}
       {item.body?.trim() && <Markdown source={item.body} hashtags mentions={item.mentions} mine={item.mentions_me} className={`wb-feed-item__body ${compact ? "wb-feed-item__body--compact" : ""}`} />}
       {images.length > 0 && (
         <div className={`wb-feed-item__images wb-feed-item__images--${Math.min(images.length, 4)}`}>
-          {images.slice(0, 4).map((image, i) => (
-            <button key={image.id} type="button" onClick={() => setOpen(i)} aria-label="See the picture">
+          {images.slice(0, 4).map((image, i) => (image.video ? (
+            <video key={image.id} src={`${image.url}#t=0.001`} controls playsInline preload="metadata" data-no-pull-refresh />
+          ) : (
+            <button key={image.id} type="button" onClick={() => setOpen(photos.indexOf(image))} aria-label="See the picture">
               <img src={image.url} alt="" loading="lazy" />
               {i === 3 && images.length > 4 && <span>+{images.length - 4}</span>}
             </button>
-          ))}
+          )))}
         </div>
       )}
       {item.link && <LinkCard link={item.link} />}
-      {open != null && <Lightbox photos={images.map((p) => ({ url: p.url }))} index={open} onClose={() => setOpen(null)} />}
+      {open != null && <Lightbox photos={photos.map((p) => ({ url: p.url }))} index={open} onClose={() => setOpen(null)} />}
       {item.mine && item.groups?.length > 0 && (
         <div className="wb-feed-item__foot">
           <span className="wb-feed-item__shared">Shared to {item.groups.map((g) => g.title).join(", ")}</span>
