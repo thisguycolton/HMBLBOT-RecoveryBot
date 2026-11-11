@@ -12,8 +12,10 @@
   position: fixed;
   right: 0;
   top: 4rem;
-  /* above the day count and chip pop-ups (2300), which used to dim them */
-  z-index: 2400;
+  /* Above every pop-up that can raise one: the day count and chip pop-ups (2300), the share,
+     picture and worksheet sheets (2600) and the QR code (2700), which used to dim them.
+     Lightboxes (3000) still cover them. */
+  z-index: 2800;
 }
 
 @media (min-width: 640px) {
