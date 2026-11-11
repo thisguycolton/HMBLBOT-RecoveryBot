@@ -90,18 +90,32 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the coming week, soonest first, with what's on now" do
+  test "the coming week, soonest first, from 15 minutes out" do
     at_monday_evening do
       sync
       sign_in @admin
       body = find
-      assert_equal %w[oiaa-mon-530pm oiaa-mon-7pm oiaa-tue-hybrid oiaa-wed-9pm-et], keys(body)
-      happy = body["meetings"].first
-      assert happy["live"], "5:30–6:30 is on at 6:00"
-      assert_equal Time.find_zone(PHOENIX).parse("2026-10-19 17:30"), Time.zone.parse(happy["starts_at"])
-      assert_equal({ "title" => "Happy Hour", "here" => false, "href" => "/find/mon-530pm" }, happy["group"].slice("title", "here", "href"))
+      # 5:30–6:30 is already on at 6:00: it's in Live now, and here only as next Monday's
+      assert_equal %w[oiaa-mon-7pm oiaa-tue-hybrid oiaa-wed-9pm-et oiaa-mon-530pm], keys(body)
+      speaker = body["meetings"].first
+      refute speaker["live"]
+      assert_equal Time.find_zone(PHOENIX).parse("2026-10-19 19:00"), Time.zone.parse(speaker["starts_at"])
       assert_equal 4, body["total"]
-      assert_equal "Desert Light", body["meetings"].second.dig("group", "title")
+      assert_equal Time.find_zone(PHOENIX).parse("2026-10-26 17:30"), Time.zone.parse(body["meetings"].last["starts_at"])
+      assert_equal "Desert Light", speaker.dig("group", "title")
+
+      happy = find(live: "1")["meetings"].first
+      assert happy["live"], "5:30–6:30 is on at 6:00"
+      assert_equal({ "title" => "Happy Hour", "here" => false, "href" => "/find/mon-530pm" }, happy["group"].slice("title", "here", "href"))
+    end
+
+    # 6:50: the 7:00 meeting is 10 minutes off, too soon to get there early, so the list starts with the next one
+    travel_to(Time.find_zone(PHOENIX).parse("2026-10-19 18:50")) do
+      assert_equal %w[oiaa-tue-hybrid oiaa-wed-9pm-et oiaa-mon-530pm], keys(find)
+    end
+    # 6:45 is exactly 15 minutes before: it still shows
+    travel_to(Time.find_zone(PHOENIX).parse("2026-10-19 18:45")) do
+      assert_equal "oiaa-mon-7pm", keys(find).first
     end
   end
 
@@ -115,7 +129,7 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
       assert_empty keys(find(date: "2026-10-18")), "a past day finds nothing"
 
       # Evening in Phoenix (5–9 PM): Night Owls' 9:00 PM Eastern is 6:00 PM here
-      assert_equal %w[oiaa-mon-530pm oiaa-mon-7pm oiaa-wed-9pm-et], keys(find(from: 1020, to: 1260))
+      assert_equal %w[oiaa-mon-7pm oiaa-wed-9pm-et oiaa-mon-530pm], keys(find(from: 1020, to: 1260))
       # ...and in New York the same filter is a different set
       get "/api/meeting_search", params: { time_zone: "America/New_York", from: 1260, to: 1320 }, as: :json
       assert_equal %w[oiaa-wed-9pm-et], keys(response.parsed_body)

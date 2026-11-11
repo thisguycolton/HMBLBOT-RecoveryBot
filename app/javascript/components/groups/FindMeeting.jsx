@@ -214,7 +214,7 @@ export default function FindMeeting() {
         <section className={`space-y-3 transition-opacity ${loading ? "opacity-60" : ""}`} aria-busy={loading}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-slate-600 dark:text-neutral-400">
-              {data.total === 0 ? "No meetings match." : `${data.total.toLocaleString()} ${data.total === 1 ? "meeting" : "meetings"}${live ? " on now" : ""}, soonest first`}
+              {data.total === 0 ? "No meetings match." : `${data.total.toLocaleString()} ${data.total === 1 ? "meeting" : "meetings"}${live ? " on now" : dayKey === "week" ? " starting 15 minutes from now or later" : ""}, soonest first`}
               {filtersOn > 0 && (
                 <button type="button" onClick={() => { setQ(""); setPlace(""); setParams(new URLSearchParams()); }}
                   className={`ml-2 inline-flex items-center gap-1 !bg-transparent p-0 font-medium text-accent hover:underline ${focusRing}`}>
