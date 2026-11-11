@@ -38,6 +38,7 @@ const STORAGE = [
   ["questScreenName, questChime", "Your screen name and sound setting in The Acid Quest"],
   ["installNudge.dismissed", "That you closed the “Add RecoveryBot to your home screen” card"],
   ["hb-day-count-seen", "The day your day count last popped up, so a milestone celebration shows once that day"],
+  ["hb-widget-key", "In the iPhone and Android apps: what the home-screen widgets were last given, so they're only redrawn when your sobriety date or favorite chip changes"],
 ];
 
 function H2({ id, children }) {
@@ -148,6 +149,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
             <li><strong>Follows:</strong> who you follow and who follows you.</li>
             <li><strong>Reminders:</strong> if you turn on the daily gratitude or 10th step reminder, we keep whether each is on, the time you picked, the day it last went out, and your time zone as your browser reports it (like “America/Phoenix”), so the reminder comes at your time. Turning a reminder off stops it.</li>
             <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. Turning them off, removing the device in your settings, or signing out on that device deletes it.</li>
+            <li><strong>Widgets in the iPhone and Android apps:</strong> if you add the day count or chip widget, the app keeps your sobriety date and a picture of your favorite chip on your phone for it. They stay on the phone, and signing out of the app clears them. A widget on your Home Screen or Lock Screen can be seen by anyone who looks at your phone.</li>
             <li><strong>Reactions, comments and reposts:</strong> the Like, Love or Hugs you give a note or comment, comments you write on notes, and notes and highlights you repost to your timeline.</li>
             <li><strong>Pictures to share:</strong> <em>Share as a picture</em> on your own highlight or note draws a picture of its words on our server, with the fonts we host; nothing is sent to another company to make it. We keep the drawn picture for a while so it's quick next time, and it only has your name on it if you tick <em>Add my first name</em>. Where it goes after that (Instagram, Messages, your photos) is up to you.</li>
             <li><strong>Notes on someone's page:</strong> a note you write on the profile of someone you follow (or who follows you) is kept like your other notes, and also says whose page it's on. They're told, and they can take it off their page.</li>

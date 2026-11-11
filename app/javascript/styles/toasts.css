@@ -27,6 +27,10 @@
   }
 }
 
+/* Holds one toast so a finger can swipe it away (SwipeAway in Toasts.jsx). The page under it
+   doesn't scroll while a toast is being dragged. */
+.hb-toast-swipe { touch-action: none; }
+
 .hb-toast {
   --hb-toast-bg: #fff;
   --hb-toast-ink: #0f172a;

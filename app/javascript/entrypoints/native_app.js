@@ -7,6 +7,7 @@
 //   files or download them)
 // - Copy buttons use the phone's clipboard directly (the web clipboard is unreliable in a web view)
 // - Print uses the phone's own print screen (window.print does nothing in a web view)
+// - the Home Screen widgets get the day count and favorite chip (lib/appWidgets.js)
 // Every plugin call checks the app has that plugin, so an older install just skips it.
 import { callPlugin, hasPlugin, nativePlatform, onPlugin } from "../lib/nativeApp";
 
@@ -23,6 +24,7 @@ if (platform && !window.__nativeApp) {
   installBackButton();
   installStatusBar();
   installAppLinks();
+  installWidgets();
   onPlugin("App", "resume", () => window.dispatchEvent(new Event("app:resume")));
   const ready = () => hasPlugin("SplashScreen") && callPlugin("SplashScreen", "hide").catch(() => {});
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready, { once: true });
@@ -227,15 +229,43 @@ function installStatusBar() {
   new MutationObserver(apply).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 }
 
+// --- Widgets --------------------------------------------------------------------------------
+
+// Once the page has settled (drawing a chip takes a moment), and again when the app comes back
+// or a page says what they show changed (a favorite chip picked)
+function installWidgets() {
+  if (!hasPlugin("WidgetBridge")) return;
+  const run = (options) => import("../lib/appWidgets").then((m) => m.refreshWidgets(options)).catch(() => {});
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+  const later = () => idle(() => run(), { timeout: 4000 });
+  if (document.readyState === "complete") later();
+  else window.addEventListener("load", later, { once: true });
+  window.addEventListener("app:resume", () => run());
+  window.addEventListener("widgets:refresh", () => run({ force: true }));
+}
+
 // --- Links that open the app ----------------------------------------------------------------
 
 // A recoverybot.hmblbot.com link tapped in Messages or Mail (once Universal Links / App Links
-// are set up) opens the app; this goes to that page
+// are set up) opens the app; this goes to that page. A widget opens the app with
+// recoverybot://open/<path> (the day count goes to /recovery).
 function installAppLinks() {
-  onPlugin("App", "appUrlOpen", ({ url }) => {
+  const go = (url) => {
     try {
       const target = new URL(url);
-      if (target.host === window.location.host) window.location.href = target.pathname + target.search + target.hash;
+      const ours = target.host === window.location.host || (target.protocol === "recoverybot:" && target.host === "open");
+      const path = target.pathname.startsWith("/") ? target.pathname : `/${target.pathname}`;
+      if (ours && path + target.search !== window.location.pathname + window.location.search) window.location.href = path + target.search + target.hash;
     } catch { /* not a link we know */ }
-  });
+  };
+  onPlugin("App", "appUrlOpen", ({ url }) => go(url));
+  // Opened from nothing by a widget or link: the app keeps that address for as long as it runs,
+  // so it's followed once
+  if (!sessionStorage.getItem("hb-launch-url")) {
+    callPlugin("App", "getLaunchUrl").then((r) => {
+      if (!r?.url) return;
+      sessionStorage.setItem("hb-launch-url", "1");
+      go(r.url);
+    }).catch(() => {});
+  }
 }

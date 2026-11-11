@@ -60,8 +60,19 @@ Made from `assets/` (the robot mark on the brand blue). After changing those pic
 `npx @capacitor/assets generate --iconBackgroundColor '#4c7ba6' --splashBackgroundColor '#f5f5f4' --splashBackgroundColorDark '#292524'`
 and delete the `icons/` folder and `www/manifest.json` it also makes.
 
+## Widgets
+
+Two Home Screen widgets: **Day count** (also on the iPhone Lock Screen) and **Favorite chip**.
+The site hands them their data once it's deployed (`app/javascript/lib/appWidgets.js`), so they
+show a "sign in" note until you open the app signed in.
+
+- iPhone: the `RecoveryBotWidgets` extension shares an App Group (`group.com.hmblbot.recoverybot`)
+  with the app. In Xcode, pick your team for both the App and RecoveryBotWidgets targets
+  (Signing & Capabilities). Long-press the Home Screen, tap Edit > Add Widget, find RecoveryBot.
+- Android: long-press the home screen, Widgets, RecoveryBot.
+
 ## Not in the app yet
 
 Native push notifications, Google and Apple sign-in, links that open the app (Universal Links /
-App Links), Face ID lock and the day-count widget. See the plan:
+App Links) and Face ID lock. See the plan:
 https://claude.ai/artifact/D8Aft6jCHPzgLJTwj8kmEj

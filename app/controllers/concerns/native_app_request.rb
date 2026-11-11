@@ -8,7 +8,7 @@ module NativeAppRequest
   AGENT = %r{RecoveryBotApp/[\d.]+ \((iOS|Android)\)}
 
   included do
-    helper_method :native_app?, :native_platform
+    helper_method :native_app?, :native_platform, :native_widget_key
   end
 
   # "ios", "android", or nil in a browser
@@ -19,5 +19,15 @@ module NativeAppRequest
 
   def native_app?
     native_platform.present?
+  end
+
+  # What the app's home-screen widgets show (the day count and a favorite chip) changes when this
+  # does: who's signed in, their sobriety date and their first favorite chip. The app's script
+  # (lib/appWidgets.js) refreshes the widgets when it changes, and clears them when it's blank,
+  # signed out.
+  def native_widget_key
+    return "" unless native_app? && user_signed_in?
+
+    [current_user.id, current_user.sobriety_date&.iso8601, current_user.chip_favorites.first].join("|")
   end
 end

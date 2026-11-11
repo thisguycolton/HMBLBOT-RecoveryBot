@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(PrinterPlugin.class);
         registerPlugin(AppClipboardPlugin.class);
+        registerPlugin(WidgetBridgePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

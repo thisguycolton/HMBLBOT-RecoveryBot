@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WidgetKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -88,6 +89,7 @@ class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(PrinterPlugin())
         bridge?.registerPluginInstance(AppClipboardPlugin())
+        bridge?.registerPluginInstance(WidgetBridgePlugin())
     }
 
     // Status bar style changes (StatusBar plugin) reach the screen through AppShellViewController
@@ -150,5 +152,54 @@ public class PrinterPlugin: CAPPlugin, CAPBridgedPlugin {
                 }
             }
         }
+    }
+}
+
+// The Home Screen and Lock Screen widgets (RecoveryBotWidgets): the site hands them what they
+// show (lib/appWidgets.js), and this keeps it in the App Group both share, then has them redraw.
+// soberSince "YYYY-MM-DD" (the widget counts the days itself), the chip as a PNG, its name.
+@objc(WidgetBridgePlugin)
+public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "WidgetBridgePlugin"
+    public let jsName = "WidgetBridge"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "update", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clear", returnType: CAPPluginReturnPromise)
+    ]
+    static let group = "group.com.hmblbot.recoverybot"
+
+    private func shared() -> (UserDefaults, URL)? {
+        guard let defaults = UserDefaults(suiteName: Self.group),
+              let folder = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Self.group) else { return nil }
+        return (defaults, folder.appendingPathComponent("chip.png"))
+    }
+
+    @objc func update(_ call: CAPPluginCall) {
+        guard let (defaults, chipFile) = shared() else {
+            call.reject("This build of the app has no widgets")
+            return
+        }
+        defaults.set(true, forKey: "signedIn")
+        defaults.set(call.getString("soberSince") ?? "", forKey: "soberSince")
+        defaults.set(call.getString("chipLabel") ?? "", forKey: "chipLabel")
+        defaults.set(call.getString("chipId") ?? "", forKey: "chipId")
+        if let base64 = call.getString("chipImage"), !base64.isEmpty, let data = Data(base64Encoded: base64) {
+            try? data.write(to: chipFile, options: .atomic)
+            defaults.set(true, forKey: "hasChip")
+        } else {
+            try? FileManager.default.removeItem(at: chipFile)
+            defaults.set(false, forKey: "hasChip")
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+        call.resolve()
+    }
+
+    @objc func clear(_ call: CAPPluginCall) {
+        if let (defaults, chipFile) = shared() {
+            ["signedIn", "soberSince", "chipLabel", "chipId", "hasChip"].forEach { defaults.removeObject(forKey: $0) }
+            try? FileManager.default.removeItem(at: chipFile)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        call.resolve()
     }
 }

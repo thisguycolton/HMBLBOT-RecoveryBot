@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_day_bg"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/day_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-black"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:text="127"
+        android:textColor="#FFFFFF"
+        android:textSize="44sp" />
+
+    <TextView
+        android:id="@+id/day_unit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:text="days"
+        android:textColor="#E6FFFFFF"
+        android:textSize="16sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/day_next"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="3"
+        android:text="6 months in 55 days"
+        android:textColor="#E6FFFFFF"
+        android:textSize="13sp" />
+
+    <ProgressBar
+        android:id="@+id/day_progress"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="6dp"
+        android:max="100"
+        android:progress="60"
+        android:progressTint="#FFFFFF"
+        android:progressBackgroundTint="#55FFFFFF" />
+</LinearLayout>

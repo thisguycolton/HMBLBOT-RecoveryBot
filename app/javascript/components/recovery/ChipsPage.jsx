@@ -43,7 +43,10 @@ export default function ChipsPage() {
 
   const save = async (body) => {
     setError(null);
-    try { setData(await api("/recovery", { method: "PATCH", body: { ...body, today: localDate() } })); } catch (e) { setError(e.message); }
+    try {
+      setData(await api("/recovery", { method: "PATCH", body: { ...body, today: localDate() } }));
+      window.dispatchEvent(new Event("widgets:refresh")); // the app's chip widget shows the first favorite
+    } catch (e) { setError(e.message); }
   };
 
   if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="chips" />;

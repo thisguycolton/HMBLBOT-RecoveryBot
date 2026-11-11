@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_chip_bg"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <ImageView
+        android:id="@+id/chip_image"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:adjustViewBounds="true"
+        android:contentDescription="Favorite chip"
+        android:scaleType="fitCenter"
+        android:src="@mipmap/ic_launcher_foreground" />
+
+    <TextView
+        android:id="@+id/chip_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="1"
+        android:text="1 year"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/chip_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Star a chip on your Chips page to show it here."
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:visibility="gone" />
+</LinearLayout>

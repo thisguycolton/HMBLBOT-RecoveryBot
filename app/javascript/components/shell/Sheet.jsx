@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { swipeToDismiss } from "../../lib/swipe";
 
 const SIDES = {
   left: "inset-y-0 left-0 w-[min(22rem,88vw)] rounded-r-[28px]",
@@ -12,9 +13,26 @@ const SIDES = {
 export const PUSH_WIDTH = { left: "min(22rem, 85vw)", right: "min(24rem, 85vw)" };
 
 // A panel that slides over the page on phones: the menu (left), Today or the page's side panel
-// (right) and quick actions (bottom). Escape or the backdrop closes it. A `push` sheet lies
+// (right) and quick actions (bottom). Escape, the backdrop or swiping it back the way it came
+// closes it. A `push` sheet lies
 // under the stage instead, and the shell slides the stage aside to show it (Layout.jsx).
 export default function Sheet({ open, onClose, side = "left", label, push = false, children, className = "" }) {
+  const root = useRef(null);
+  const panel = useRef(null);
+  const backdrop = useRef(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+  // A pushed sheet is swiped closed by the shell, which moves the page over it (Layout.jsx)
+  useEffect(() => {
+    if (!open || push) return undefined;
+    return swipeToDismiss(root.current, {
+      directions: [{ left: "left", right: "right", bottom: "down" }[side]],
+      targets: () => [panel.current],
+      flyOut: true,
+      onDrag: (p) => { if (backdrop.current) backdrop.current.style.opacity = p ? String(1 - p) : ""; },
+      onDismiss: () => close.current(),
+    });
+  }, [open, push, side]);
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -36,9 +54,9 @@ export default function Sheet({ open, onClose, side = "left", label, push = fals
   }
 
   return createPortal(
-    <div className="shell-sheet fixed inset-0 z-[2200] !font-sans" role="dialog" aria-modal="true" aria-label={label}>
-      <button type="button" aria-label="Close" className="absolute inset-0 !bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className={`absolute flex flex-col overflow-hidden bg-[#ececec] shadow-2xl dark:bg-neutral-950 ${SIDES[side]} ${className}`}>
+    <div ref={root} className="shell-sheet fixed inset-0 z-[2200] !font-sans" role="dialog" aria-modal="true" aria-label={label}>
+      <button ref={backdrop} type="button" aria-label="Close" className="absolute inset-0 !bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+      <div ref={panel} className={`absolute flex flex-col overflow-hidden bg-[#ececec] shadow-2xl dark:bg-neutral-950 ${SIDES[side]} ${className}`}>
         {children}
       </div>
     </div>,
