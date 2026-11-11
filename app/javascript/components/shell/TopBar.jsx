@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { donationsShown, isNativeApp } from "../../lib/nativeApp";
 import { ChevronDown, FileCheck2, Heart, LogIn, LogOut, Info, Menu, Moon, Plus, Search, Settings, Smartphone, Sun, UserPlus, UserRound } from "lucide-react";
 import NotificationBell from "../NotificationBell";
 import Avatar from "../groups/Avatar";
@@ -39,10 +40,12 @@ export default function TopBar({ nav, isAuthenticated, theme, onMenu, onDonate, 
             <Info className="size-5" />
           </button>
         )}
-        <button type="button" onClick={onDonate}
-          className="hidden items-center gap-2 rounded-2xl border border-neutral-300/80 !bg-white px-4 py-2 font-medium text-slate-800 hover:!bg-rose-50 hover:text-rose-700 dark:border-neutral-700 dark:!bg-neutral-900 dark:text-neutral-100 lg:inline-flex">
-          <Heart className="size-5" /> Donate
-        </button>
+        {donationsShown() && (
+          <button type="button" onClick={onDonate}
+            className="hidden items-center gap-2 rounded-2xl border border-neutral-300/80 !bg-white px-4 py-2 font-medium text-slate-800 hover:!bg-rose-50 hover:text-rose-700 dark:border-neutral-700 dark:!bg-neutral-900 dark:text-neutral-100 lg:inline-flex">
+            <Heart className="size-5" /> Donate
+          </button>
+        )}
         <button type="button" onClick={theme.toggle} className={`${iconButton} hidden lg:inline-grid`} aria-label={theme.isDark ? "Switch to light mode" : "Switch to dark mode"} title={theme.isDark ? "Light mode" : "Dark mode"}>
           {theme.isDark ? <Moon className="size-5" /> : <Sun className="size-5" />}
         </button>
@@ -69,7 +72,7 @@ export const ACCOUNT_LINKS = [
   { label: "Your profile", href: "/people/me", icon: UserRound, groups: true },
   { label: "New reading", href: "/readings/new", icon: Plus },
   { label: "Profile & account", href: "/users/edit", icon: Settings },
-  { label: "Get the app", href: "/install", icon: Smartphone },
+  { label: "Get the app", href: "/install", icon: Smartphone, web: true },
 ];
 
 function AccountMenu({ nav, onCourt }) {
@@ -109,7 +112,7 @@ export function AccountLinks({ onCourt }) {
   const row = "flex w-full items-center gap-3 rounded-xl !bg-transparent px-3 py-2 text-left text-sm !text-slate-800 hover:!bg-neutral-100 dark:!text-neutral-100 dark:hover:!bg-neutral-800";
   return (
     <>
-      {ACCOUNT_LINKS.filter((i) => !i.groups || groups).map(({ label, href, icon: Icon }) => (
+      {ACCOUNT_LINKS.filter((i) => (!i.groups || groups) && !(i.web && isNativeApp())).map(({ label, href, icon: Icon }) => (
         <a key={href} href={href} className={row}><Icon className="size-4 opacity-70" /> {label}</a>
       ))}
       {isHost() && <button type="button" onClick={onCourt} className={row}><FileCheck2 className="size-4 opacity-70" /> Court verification</button>}

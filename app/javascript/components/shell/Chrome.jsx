@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronRight, Heart, MapPinned, Moon, NotebookPen, Search, Sparkles, Sun, Library } from "lucide-react";
 import DonationModal from "../DonationModal";
+import { donationsShown } from "../../lib/nativeApp";
 import HostCourtModal from "../nav/HostCourtModal";
 import NotificationBell from "../NotificationBell";
 import Avatar from "../groups/Avatar";
@@ -38,9 +39,11 @@ export function ChromeSheets({ chrome, nav, isAuthenticated, theme, path, pushed
           )}
         </div>
         <div className="flex items-center gap-2 border-t border-neutral-300/70 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-neutral-800">
-          <button type="button" onClick={() => show("donate")} className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl !bg-white px-3 py-2.5 font-medium text-slate-800 ring-1 ring-neutral-300/80 dark:!bg-neutral-900 dark:text-white dark:ring-neutral-700">
-            <Heart className="size-5" /> Donate
-          </button>
+          {donationsShown() && (
+            <button type="button" onClick={() => show("donate")} className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl !bg-white px-3 py-2.5 font-medium text-slate-800 ring-1 ring-neutral-300/80 dark:!bg-neutral-900 dark:text-white dark:ring-neutral-700">
+              <Heart className="size-5" /> Donate
+            </button>
+          )}
           <button type="button" onClick={theme.toggle} className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl !bg-white px-3 py-2.5 font-medium text-slate-800 ring-1 ring-neutral-300/80 dark:!bg-neutral-900 dark:text-white dark:ring-neutral-700">
             {theme.isDark ? <Moon className="size-5" /> : <Sun className="size-5" />} Theme
           </button>

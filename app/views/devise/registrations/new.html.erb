@@ -5,5 +5,5 @@
       min_password_length: @minimum_password_length,
       login_path: new_session_path(resource_name),
       human_check: HumanCheck.fields,
-      google_path: GoogleSignIn.path,
+      google_path: (GoogleSignIn.path unless native_app?), # Google blocks its sign-in page inside apps
     } %>

@@ -1,6 +1,8 @@
 class ApplicationController < ActionController::Base
     # Every page is noindex unless it opts in (SearchEngines)
     include SearchEngines
+    # The iPhone and Android apps (native_app?)
+    include NativeAppRequest
 	 #before_action :authenticate_user!
 	  after_action :track_action
     before_action :read_notifications_here
