@@ -35,6 +35,9 @@ const tomorrowValue = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+// Keyboard focus: an instant accent outline, the same on every control here
+const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:focus-visible:outline-accent-light";
+
 const loadView = () => {
   try { return localStorage.getItem("findMeeting.view") || "grid"; } catch { return "grid"; }
 };
@@ -115,9 +118,9 @@ export default function FindMeeting() {
 
   const dayChip = (key, label, changes) => (
     <button key={key} type="button" aria-pressed={dayKey === key} onClick={() => update(changes)}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition-[background-color,color,box-shadow] ${focusRing} ${
         dayKey === key
-          ? "!bg-accent !text-white ring-accent"
+          ? "!bg-accent-tint !text-accent-ink ring-accent/40 dark:!bg-accent/25 dark:!text-white dark:ring-accent/60"
           : "!bg-white text-slate-700 ring-neutral-200 hover:!bg-neutral-50 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700 dark:hover:!bg-neutral-800"
       }`}>
       {label}
@@ -214,7 +217,7 @@ export default function FindMeeting() {
               {data.total === 0 ? "No meetings match." : `${data.total.toLocaleString()} ${data.total === 1 ? "meeting" : "meetings"}${live ? " on now" : ""}, soonest first`}
               {filtersOn > 0 && (
                 <button type="button" onClick={() => { setQ(""); setPlace(""); setParams(new URLSearchParams()); }}
-                  className="ml-2 inline-flex items-center gap-1 !bg-transparent p-0 font-medium text-accent hover:underline">
+                  className={`ml-2 inline-flex items-center gap-1 !bg-transparent p-0 font-medium text-accent hover:underline ${focusRing}`}>
                   <X className="h-3.5 w-3.5" /> Clear filters
                 </button>
               )}
@@ -222,7 +225,7 @@ export default function FindMeeting() {
             <div className="inline-flex overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700" role="group" aria-label="Show as">
               {[["grid", LayoutGrid, "Grid"], ["list", List, "List"]].map(([key, Icon, label]) => (
                 <button key={key} type="button" aria-pressed={view === key} onClick={() => chooseView(key)} title={label}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium ${focusRing} ${
                     view === key ? "!bg-accent-tint text-accent-ink dark:!bg-accent/35 dark:text-white" : "!bg-white text-slate-600 dark:!bg-neutral-900 dark:text-neutral-300"
                   }`}>
                   <Icon className="h-4 w-4" /> {label}
@@ -255,7 +258,7 @@ export default function FindMeeting() {
 // The group's cover (or the site's blue), like the top of its page
 function Cover({ group, className = "", children }) {
   return (
-    <div className={`relative overflow-hidden ${group.cover_url ? "bg-neutral-900" : "bg-gradient-to-br from-accent via-sky-600 to-indigo-700"} ${className}`}>
+    <div className={`relative overflow-hidden ${group.cover_url ? "bg-neutral-900" : "cover-default"} ${className}`}>
       {group.cover_url && <img src={group.cover_url} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" />}
       {children}
     </div>
@@ -296,11 +299,11 @@ function MeetingCard({ meeting: m, now }) {
   return (
     <div className="relative flex flex-col">
     <Link to={group.href}
-      className="group flex flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-panel ring-1 ring-neutral-200 transition hover:-translate-y-0.5 hover:ring-accent/60 dark:bg-neutral-900 dark:ring-neutral-800">
+      className={`group flex flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-panel ring-1 ring-neutral-200 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:ring-accent/60 dark:bg-neutral-900 dark:ring-neutral-800 ${focusRing}`}>
       <Cover group={group} className="h-32">
-        <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/25 to-transparent p-4">
-          <p className="ev-heading line-clamp-2 text-xl font-extrabold leading-tight tracking-tight text-white">{group.title}</p>
-          <p className="mt-1 flex items-center gap-1 text-xs font-medium text-white/80">
+        <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 via-black/15 to-transparent p-4">
+          <p className="ev-heading line-clamp-2 min-w-0 text-lg font-semibold leading-snug text-white">{group.title}</p>
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-white/75">
             {group.here ? <><Users className="h-3 w-3" /> {group.members_count} {group.members_count === 1 ? "member" : "members"}</> : group.source || "AA Intergroup"}
           </p>
         </div>
@@ -320,7 +323,7 @@ function MeetingCard({ meeting: m, now }) {
         <p className="mt-auto pt-1 text-[11px] text-slate-400 dark:text-neutral-500">{m.schedule_label}</p>
       </div>
     </Link>
-    <MeetingShare meeting={m} className="absolute left-3 top-3 grid size-8 place-items-center rounded-full !bg-black/35 !text-white backdrop-blur hover:!bg-black/55" />
+    <MeetingShare meeting={m} className={`absolute left-3 top-3 grid size-8 place-items-center rounded-full !bg-black/45 !text-white hover:!bg-black/65 ${focusRing}`} />
     </div>
   );
 }
@@ -341,9 +344,9 @@ function MeetingRow({ meeting: m, now }) {
   return (
     <div className="flex items-center gap-1 rounded-xl bg-white pr-1.5 shadow-panel hover:ring-1 hover:ring-accent/50 dark:bg-neutral-900">
     <Link to={group.href}
-      className="group flex min-w-0 flex-1 items-center gap-3 p-2.5">
+      className={`group flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2.5 ${focusRing}`}>
       <div className="w-20 shrink-0 text-center">
-        <p className="!text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
+        <p className="!text-center text-xs font-medium text-slate-500 dark:text-neutral-400">
           {whenLabel(m.starts_at, now).split(",")[0]}
         </p>
         <p className="!text-center text-sm font-semibold tabular-nums text-slate-900 dark:text-white">
@@ -354,7 +357,7 @@ function MeetingRow({ meeting: m, now }) {
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold text-slate-900 group-hover:text-accent dark:text-white">
           {m.name}
-          {m.name.trim().toLowerCase() !== group.title.trim().toLowerCase() && <span className="font-normal text-slate-500 dark:text-neutral-400"> · {group.title}</span>}
+          {m.name.trim().toLowerCase() !== group.title.trim().toLowerCase() && <span className="ml-2 font-normal text-slate-500 dark:text-neutral-400">{group.title}</span>}
         </p>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
           <Where meeting={m} />
@@ -365,7 +368,7 @@ function MeetingRow({ meeting: m, now }) {
       <LiveBadge start={start(m)} end={end(m)} now={now} className={start(m) <= now ? "" : "!bg-neutral-100 !text-slate-700 dark:!bg-neutral-800 dark:!text-neutral-200"} />
       <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 dark:text-neutral-600" />
     </Link>
-    <MeetingShare meeting={m} className="grid size-8 shrink-0 place-items-center rounded-lg !bg-transparent text-slate-400 hover:!bg-neutral-100 hover:text-accent dark:text-neutral-500 dark:hover:!bg-neutral-800" />
+    <MeetingShare meeting={m} className={`grid size-8 shrink-0 place-items-center rounded-lg !bg-transparent text-slate-400 hover:!bg-neutral-100 hover:text-accent dark:text-neutral-500 dark:hover:!bg-neutral-800 ${focusRing}`} />
     </div>
   );
 }
@@ -375,7 +378,7 @@ function Pagination({ page, pages, onPage }) {
   if (pages <= 1) return null;
   const shown = [...new Set([1, page - 1, page, page + 1, pages])].filter((p) => p >= 1 && p <= pages).sort((a, b) => a - b);
   const button = (active) =>
-    `inline-flex min-w-9 items-center justify-center gap-1 rounded-xl px-3 py-1.5 text-sm font-medium ring-1 disabled:opacity-40 ${
+    `inline-flex min-w-9 items-center justify-center gap-1 rounded-xl px-3 py-1.5 text-sm font-medium ring-1 disabled:opacity-40 ${focusRing} ${
       active ? "!bg-accent !text-white ring-accent" : "!bg-white text-slate-700 ring-neutral-200 hover:!bg-neutral-50 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700"
     }`;
   return (

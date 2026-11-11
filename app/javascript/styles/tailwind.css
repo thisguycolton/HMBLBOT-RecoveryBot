@@ -19,6 +19,9 @@
   --shadow-panel: 0 4px 12px rgb(0 0 0 / 0.1);
   /* Links and accent text on dark backgrounds: the accent blue is too dark to read there */
   --color-accent-light: oklch(76% 0.13 250);
+  /* Default cover when a group or event has no photo: the accent, deepened toward navy (one hue, no glow) */
+  --color-cover-from: color-mix(in oklab, #0b6ede 72%, #0b1220);
+  --color-cover-to: color-mix(in oklab, #0b6ede 30%, #0b1220);
 
   /* Corners. Rounder than Tailwind's defaults (the note composer's look), and stepped so a box
      sitting inside another with a little padding looks nested in its curve:
@@ -101,6 +104,11 @@
 
 /* A gray tray of cards or rows (rounded-3xl p-1.5, like ui.jsx's Tray): what sits in it, or in a
    plain list/grid wrapper in it, follows its curve, whatever radius the row was given. */
+/* The site's default cover (see --color-cover-from/to) */
+@utility cover-default {
+  background-image: linear-gradient(160deg, var(--color-cover-from), var(--color-cover-to));
+}
+
 .nest-tray > :where([class*="rounded-lg"], [class*="rounded-xl"], [class*="rounded-2xl"]),
 .nest-tray > :not([class*="rounded"]) > :where([class*="rounded-lg"], [class*="rounded-xl"], [class*="rounded-2xl"]) {
   border-radius: calc(var(--radius-3xl) - 0.375rem);

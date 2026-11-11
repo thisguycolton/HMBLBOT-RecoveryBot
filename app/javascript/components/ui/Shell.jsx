@@ -17,7 +17,7 @@ export function Shell({ as: Tag = "section", className = "", children }) {
     );
   }
   return (
-    <Tag className={`bg-neutral-200 dark:bg-neutral-800 rounded-4xl p-3 shadow-lg flex flex-col gap-2 [&>:first-child]:rounded-t-panel [&>:last-child]:rounded-b-panel ${className}`}>
+    <Tag className={`bg-neutral-200 dark:bg-neutral-800 rounded-4xl p-3 shadow-sm flex flex-col gap-2 [&>:first-child]:rounded-t-panel [&>:last-child]:rounded-b-panel ${className}`}>
       {children}
     </Tag>
   );
@@ -42,7 +42,7 @@ export function ShellPanel({ position = "single", className = "", children }) {
   );
 }
 
-// Blue header band, like the month bar on the calendar.
+// Header band: a soft accent tint with the accent on the icon, quieter than a solid blue bar.
 export function ShellBand({ icon: Icon, title, subtitle, position = "top" }) {
   if (useContext(ShellStyle) === "card") {
     return (
@@ -60,11 +60,11 @@ export function ShellBand({ icon: Icon, title, subtitle, position = "top" }) {
     );
   }
   return (
-    <div className={`bg-accent text-white shadow-panel px-4 py-3 flex items-center gap-2 ${PANEL_RADIUS[position]}`}>
-      {Icon && <Icon className="w-4 h-4 shrink-0" strokeWidth={2.5} />}
+    <div className={`bg-accent-tint text-accent-ink dark:bg-accent/15 dark:text-white px-4 py-3 flex items-center gap-2.5 ${PANEL_RADIUS[position]}`}>
+      {Icon && <Icon className="w-4 h-4 shrink-0 text-accent dark:text-accent-light" strokeWidth={2.25} />}
       <div className="min-w-0">
         <h2 className="text-base font-semibold leading-tight !font-sans">{title}</h2>
-        {subtitle && <p className="text-xs text-white/75 mt-0.5 !font-sans">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-accent-ink/75 dark:text-white/65 mt-0.5 !font-sans">{subtitle}</p>}
       </div>
     </div>
   );
