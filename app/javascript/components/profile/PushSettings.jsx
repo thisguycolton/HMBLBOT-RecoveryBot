@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { isNativeApp } from "../../lib/nativeApp";
 import { BellOff, BellRing, Check, Laptop, Send, Smartphone, X } from "lucide-react";
 import Toggle from "../ui/Toggle";
 import { api } from "../groups/lib";
@@ -37,6 +38,8 @@ export default function PushSettings({ bare = false }) {
     })().catch((e) => setError(e.message));
   }, []);
 
+  // Web Push doesn't reach inside the iPhone and Android apps; they'll get their own notifications
+  if (isNativeApp()) return null;
   if (!state) return error ? <ErrorNote error={error} /> : null;
   if (!state.available) return null;
 

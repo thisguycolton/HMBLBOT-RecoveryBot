@@ -16,8 +16,10 @@ const PULL = 72; // how far, after the drag resistance, counts as a refresh
 const MAX = 120; // how far the indicator follows the finger
 const SIZE = 40;
 
+// The home-screen app, or the iPhone/Android app (mobile/), which has no reload button either
 const isStandalone = () =>
-  window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true ||
+  /RecoveryBotApp\/[\d.]+ \((iOS|Android)\)/.test(navigator.userAgent);
 
 function blocked(target) {
   if (!(target instanceof Element)) return true;

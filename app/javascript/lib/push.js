@@ -1,13 +1,14 @@
 // Web Push in the browser: the service worker (/service-worker.js), this device's subscription,
 // and what kind of device it is, for the install instructions (/install) and account settings.
 import { api } from "../components/groups/lib";
+import { isNativeApp } from "./nativeApp";
 
 export const pushSupported = () =>
   typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 
-// Opened from the home screen rather than in a browser tab
+// Opened from the home screen rather than in a browser tab, or in the iPhone/Android app
 export const isStandalone = () =>
-  window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true || isNativeApp();
 
 // "ios" (iPhone and iPad, which reports itself as a Mac), "android", "mac", "windows" or "other"
 export function platform() {

@@ -12,7 +12,8 @@
   position: fixed;
   right: 0;
   top: 4rem;
-  z-index: 2000;
+  /* above the day count and chip pop-ups (2300), which used to dim them */
+  z-index: 2400;
 }
 
 @media (min-width: 640px) {

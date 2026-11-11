@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { showToast } from "../lib/toast";
 import LavaOverlay from "./LavaOverlay";
 import axios from "axios";
 import { Copy, Hash, Shuffle, History, UserCheck, Settings } from 'lucide-react';
@@ -75,15 +76,36 @@ const handleCopyTopics = () => {
   // Strip the HTML for plain-text fallback
   const contentText = contentHTML.replace(/<\/?[^>]+(>|$)/g, "");
 
-  navigator.clipboard
-    .write([
+  // Formatted where the browser allows it; phones that refuse get the plain words, and old
+  // ones the hidden-textarea way, so the button always copies something
+  const plain = () => {
+    if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(contentText);
+    const box = document.createElement("textarea");
+    box.value = contentText;
+    box.setAttribute("readonly", "");
+    box.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(box);
+    box.select();
+    const ok = document.execCommand("copy");
+    box.remove();
+    return ok ? Promise.resolve() : Promise.reject(new Error("copy refused"));
+  };
+  const rich = () =>
+    navigator.clipboard.write([
       new ClipboardItem({
         "text/html": new Blob([contentHTML], { type: "text/html" }),
         "text/plain": new Blob([contentText], { type: "text/plain" }),
       }),
-    ])
-    .then(() => {})
-    .catch((err) => {});
+    ]);
+  let copying;
+  try {
+    copying = typeof ClipboardItem === "function" && navigator.clipboard?.write ? rich().catch(plain) : plain();
+  } catch {
+    copying = Promise.resolve().then(plain);
+  }
+  copying
+    .then(() => showToast("Topics copied.", { tone: "success" }))
+    .catch(() => showToast("Couldn't copy the topics on this device.", { tone: "error" }));
 };
 
   useEffect(() => {

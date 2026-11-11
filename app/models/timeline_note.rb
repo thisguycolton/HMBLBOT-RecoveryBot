@@ -42,6 +42,10 @@ class TimelineNote < ApplicationRecord
 
   BODY_MAX = 10_000
   IMAGES_MAX = 6
+  # A note's pictures can include a video made here (Share > Video on a highlight or a day's
+  # reading, then Post to my timeline): MP4 only, shown with a player
+  VIDEO_TYPES = %w[video/mp4].freeze
+  VIDEO_MAX_BYTES = 40.megabytes
 
   belongs_to :user
   has_many :shares, class_name: "TimelineNoteShare", dependent: :destroy
@@ -209,8 +213,11 @@ class TimelineNote < ApplicationRecord
   # What's wrong with these pictures (uploaded files or blobs), with `already` on the note, if anything
   def self.upload_problem(files, already: 0)
     return "A note can have up to #{IMAGES_MAX} pictures." if files.size + already > IMAGES_MAX
-    return "Pictures need to be JPEG, PNG, WebP or GIF." unless files.all? { |f| Event::IMAGE_TYPES.include?(f.content_type) }
-    return "Pictures need to be under 10 MB each." if files.any? { |f| (f.respond_to?(:byte_size) ? f.byte_size : f.size) > 10.megabytes }
+    size = ->(f) { f.respond_to?(:byte_size) ? f.byte_size : f.size }
+    videos, pictures = files.partition { |f| VIDEO_TYPES.include?(f.content_type) }
+    return "Pictures need to be JPEG, PNG, WebP or GIF." unless pictures.all? { |f| Event::IMAGE_TYPES.include?(f.content_type) }
+    return "Pictures need to be under 10 MB each." if pictures.any? { |f| size.(f) > 10.megabytes }
+    return "Videos need to be under #{VIDEO_MAX_BYTES / 1.megabyte} MB each." if videos.any? { |f| size.(f) > VIDEO_MAX_BYTES }
   end
 
   def edited? = updated_at - created_at > 1.minute
@@ -233,7 +240,11 @@ class TimelineNote < ApplicationRecord
   end
 
   def image_urls
-    images.map { |i| { id: i.id, url: Rails.application.routes.url_helpers.rails_storage_proxy_path(i, only_path: true) } }
+    images.map do |i|
+      entry = { id: i.id, url: Rails.application.routes.url_helpers.rails_storage_proxy_path(i, only_path: true) }
+      entry[:video] = true if VIDEO_TYPES.include?(i.content_type)
+      entry
+    end
   end
 
   # With `group`, as that group's timeline shows it (can_remove: its author, or the

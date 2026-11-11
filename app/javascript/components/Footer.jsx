@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Heart } from "lucide-react";
 import { RecoveryBotLogo } from "./brand/Logo";
 import DonationModal from "./DonationModal";
+import { donationsShown, isNativeApp } from "../lib/nativeApp";
 import { NAV_CATEGORIES, showItem } from "./nav/siteMenu";
 
 const REPO = "https://github.com/thisguycolton/HMBLBOT-RecoveryBot";
@@ -25,13 +26,15 @@ export default function Footer() {
             <div className="mt-3 max-w-xs text-sm leading-relaxed text-slate-600 dark:text-neutral-400">
               Free tools for people in recovery, built to make meetings, readings and service a little easier.
             </div>
-            <button
-              type="button"
-              onClick={() => setDonating(true)}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold !bg-rose-500/10 !text-rose-700 ring-1 ring-rose-400/40 hover:!bg-rose-500/20 dark:!bg-rose-500/15 dark:!text-rose-300 dark:ring-rose-400/30 dark:hover:!bg-rose-500/25"
-            >
-              <Heart size={15} className="fill-current" /> Help keep it running
-            </button>
+            {donationsShown() && (
+              <button
+                type="button"
+                onClick={() => setDonating(true)}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold !bg-rose-500/10 !text-rose-700 ring-1 ring-rose-400/40 hover:!bg-rose-500/20 dark:!bg-rose-500/15 dark:!text-rose-300 dark:ring-rose-400/30 dark:hover:!bg-rose-500/25"
+              >
+                <Heart size={15} className="fill-current" /> Help keep it running
+              </button>
+            )}
           </div>
 
           {NAV_CATEGORIES.map((category) => (
@@ -56,7 +59,7 @@ export default function Footer() {
             <a href="/docs" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">Help &amp; docs</a>
             <a href="/about" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">About</a>
             <a href="/history" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">History</a>
-            <a href="/install" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">Get the app</a>
+            {!isNativeApp() && <a href="/install" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">Get the app</a>}
             <a href="/privacy" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">Privacy</a>
             <a href="/terms" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">Terms</a>
             <a href="/contact" className="!text-slate-500 !no-underline hover:!text-slate-900 dark:!text-neutral-500 dark:hover:!text-white">Contact</a>
