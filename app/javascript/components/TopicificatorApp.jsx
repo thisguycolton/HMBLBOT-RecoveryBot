@@ -345,14 +345,19 @@ const fetchTopicByNumber = async () => {
           <button
             onClick={() => !liveCode && startTimer(mode)}
             title={liveCode ? "The host runs the timer from HostDeck" : "Restart Timer"}
-            className="!text-2xl fw-bold !rounded-none !rounded-bl-lg !md:rounded-tr-lg shadow-md absolute top-0 end-0 w-30 text-center ttSans !bg-cyan-950/70 !p-3 hover:bg-cyan-950/90 transition"
+            className="!text-2xl fw-bold !rounded-none !rounded-bl-lg !md:rounded-tr-lg shadow-md absolute top-0 end-0 z-10 w-30 text-center ttSans !bg-cyan-950/70 !p-3 hover:bg-cyan-950/90 transition"
           >
             {formatTime(timer)}
           </button>
         )}
-        <div className="text-2xl fw-bold rounded-br-lg shadow-md absolute top-0 start-0 w-20 text-center ttSans bg-cyan-950/70 p-0">
+        {/* z-10 here and on the timer: on phones the topic below fills the whole stage (z-3) and
+            took every tap meant for these two */}
+        <div className="text-2xl fw-bold rounded-br-lg shadow-md absolute top-0 start-0 z-10 w-20 text-center ttSans bg-cyan-950/70 p-0">
           <button
+            type="button"
             onClick={handleCopyTopics}
+            aria-label="Copy the topics covered"
+            title="Copy the topics covered"
             className="!bg-transparent text-white px-4 py-3 rounded-none rounded-br-lg md:rounded-tl-lg hover:text-gray-200 transition-colors duration-300"
           >
             <Copy className="w-5 h-5" />
