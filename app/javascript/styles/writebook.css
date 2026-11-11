@@ -1211,9 +1211,48 @@ body:has(.wb) {
   width: fit-content;
 }
 
-.wb-shared-banner a {
+.wb-shared-banner a,
+.wb-shared-banner__btn {
   color: var(--wb-link);
   font-weight: 600;
+}
+
+.wb-shared-banner__btn {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+}
+
+/* "Adopted from Sam's highlight" on a highlight you adopted */
+.wb-hl-card__from {
+  align-items: center;
+  display: flex;
+  font-size: 0.85rem;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  opacity: 0.85;
+}
+
+.wb-hl-card__from a,
+.wb-hl-item__from a {
+  color: var(--wb-link);
+}
+
+.wb-hl-card__adopted {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.wb-hl-item__from {
+  align-items: center;
+  display: flex;
+  font-size: 0.8rem;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+  opacity: 0.75;
 }
 
 /* Highlights list (modal and the collection page) */

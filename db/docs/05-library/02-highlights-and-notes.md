@@ -38,3 +38,14 @@ Each highlight has a setting: **Only me** (the default), **Followers** or **Memb
 ## Reactions and reposts
 
 People who can see your highlight can react to it (Like, Love, Hugs) and, if it's shared with Members, repost it to their own timeline.
+
+## Adopt someone's highlight
+
+When someone sends you a link to one of their highlights, you can still highlight anything else on that page, and your own highlights show beside theirs.
+
+1. Tap their highlight to open it.
+2. Choose **Adopt this highlight** (or **Adopt it** in the bar at the top of the page).
+
+It's copied into your own highlights: the same words and color, kept to **Only me**, without their note. You can add your own note. A small line on it says **Adopted from Riley's highlight** and links back to theirs while it's still there. If they delete theirs, yours stays and just says it was adopted.
+
+Adopting is private: Riley isn't told, and only you see where it came from.

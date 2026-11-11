@@ -545,15 +545,18 @@ export default function ChapterViewer({ bookSlug, slug }) {
         if (isMounted) setChapter(ch.data);
 
         const { hl, share } = sharedParams;
-        const hls = await axios.get(`/api/highlights`, {
-          params: {
-            chapter_slug: slug,
-            book_slug: bookSlug,
-            ...(hl ? { hl } : share ? { share } : {}),
-          }
-        });
+        const base = { chapter_slug: slug, book_slug: bookSlug };
+        const list = (r) => (Array.isArray(r?.data) ? r.data : []);
+        // A shared link shows that highlight (or reader's highlights) and, signed in, your own
+        // too, so you can keep highlighting the page and see what you already marked.
+        const [shared, own] = await Promise.all([
+          axios.get(`/api/highlights`, { params: { ...base, ...(hl ? { hl } : share ? { share } : {}) } }),
+          sharedView && signedIn ? axios.get(`/api/highlights`, { params: base }).catch(() => null) : null,
+        ]);
+        const seen = new Set(list(shared).map((h) => String(h.id)));
+        const merged = [...list(shared), ...list(own).filter((h) => !seen.has(String(h.id)))];
 
-        if (isMounted) setHighlights(Array.isArray(hls.data) ? hls.data : []);
+        if (isMounted) setHighlights(merged);
       } catch (e) {
         console.error("Failed to load chapter", e);
       }
@@ -575,7 +578,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const popPressRef = useRef(false);
 
   useEffect(() => {
-    if (!editor || sharedView) return;
+    if (!editor) return;
     let raf = 0;
     const onSelectionChange = () => {
       cancelAnimationFrame(raf);
@@ -616,7 +619,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
       cancelAnimationFrame(raf);
       document.removeEventListener("selectionchange", onSelectionChange);
     };
-  }, [editor, sharedView]);
+  }, [editor]);
 
   // The current selection as a W3C-style selector (text offsets + quote), or null.
   function selectionSelector() {
@@ -709,6 +712,31 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const updateHighlight = useCallback((next) => {
     setHighlights((prev) => prev.map((h) => (String(h.id) === String(next.id) ? { ...h, ...next, id: h.id } : h)));
   }, []);
+
+  // Your copy of someone else's highlight, if you adopted it
+  const adoptedCopyOf = useCallback(
+    (h) => (h && !h.mine ? highlights.find((x) => x.mine && x.adopted_from?.id != null && String(x.adopted_from.id) === String(h.id)) || null : null),
+    [highlights]
+  );
+
+  // Adopt someone else's highlight: a private copy, same words and color, in your highlights.
+  async function adoptHighlight(h) {
+    if (!signedIn) {
+      toast("Sign in to adopt highlights", { tone: "error" });
+      return;
+    }
+    const params = sharedParams.hl ? { hl: sharedParams.hl } : sharedParams.share ? { share: sharedParams.share, id: h.id } : { id: h.id };
+    try {
+      const { data } = await axios.post("/api/highlights/adopt", params);
+      const copy = { ...data, id: String(data.id) };
+      setHighlights((prev) => (prev.some((x) => String(x.id) === copy.id) ? prev : [...prev, copy]));
+      openCard(copy.id);
+      toast(`Added to your highlights`);
+    } catch (error) {
+      if (error?.response?.status === 401) toast("Sign in to adopt highlights", { tone: "error" });
+      else toast(error?.response?.data?.error || "Couldn't adopt that highlight", { tone: "error" });
+    }
+  }
 
   async function shareOne(h) {
     const quote = h.selector?.quote?.exact || "";
@@ -910,8 +938,16 @@ export default function ChapterViewer({ bookSlug, slug }) {
             {sharedMine
               ? `You're viewing your shared ${sharedParams.hl ? "highlight" : "highlights"}.`
               : `You're viewing ${sharedBy ? `${sharedBy}'s` : "a shared"} ${sharedParams.hl ? "highlight" : "highlights"}.`}
-            {sharedParams.hl && highlights.some((h) => h.note) && " Tap it to read the note."}
+            {sharedParams.hl && highlights.some((h) => !h.mine && h.note && !adoptedCopyOf(h)) && " Tap it to read the note."}
           </span>
+          {sharedParams.hl && signedIn && !sharedMine && (() => {
+            const theirs = highlights.find((h) => !h.mine);
+            if (!theirs) return null;
+            const copy = adoptedCopyOf(theirs);
+            return copy
+              ? <button type="button" className="wb-shared-banner__btn" onClick={() => openCard(copy.id)}>In your highlights</button>
+              : <button type="button" className="wb-shared-banner__btn" onClick={() => adoptHighlight(theirs)}>Adopt it</button>;
+          })()}
           {signedIn && <a href={location.pathname}>Show mine</a>}
           {sharedParams.share && <a href={`/library/highlights/${encodeURIComponent(sharedParams.share)}`}>See them all</a>}
         </div>
@@ -1029,6 +1065,9 @@ export default function ChapterViewer({ bookSlug, slug }) {
         chapterSlug={slug}
         onChange={updateHighlight}
         onDelete={deleteHighlight}
+        onAdopt={signedIn ? adoptHighlight : null}
+        adoptedCopy={adoptedCopyOf(cardHighlight)}
+        onOpen={openCard}
         toast={toast}
       />
 

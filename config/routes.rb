@@ -371,6 +371,8 @@ Rails.application.routes.draw do
     collection do
       post :share
       get :collection
+      # Copy someone else's highlight you can see into your own highlights
+      post :adopt
     end
     member do
       # Like, Love or Hugs on a highlight shared to a timeline
