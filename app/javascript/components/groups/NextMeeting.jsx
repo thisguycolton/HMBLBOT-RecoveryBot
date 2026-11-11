@@ -70,7 +70,7 @@ export function LiveBadge({ start, end, now, className = "" }) {
     return (
       <span className={`inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm ${className}`}>
         <span className="relative flex size-2">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/80" />
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/80 motion-reduce:hidden" />
           <span className="relative inline-flex size-2 rounded-full bg-white" />
         </span>
         Live now

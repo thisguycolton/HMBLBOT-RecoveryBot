@@ -4,7 +4,7 @@
 #
 #   q          words in the meeting's or group's name, or a Zoom link or meeting ID
 #   time_zone  the viewer's zone; dates and times of day are theirs
-#   date       "2026-10-20": meetings that day (else the coming week)
+#   date       "2026-10-20": meetings that day (else the coming week, from LEAD_TIME out)
 #   live       "1": meetings going on right now
 #   from, to   minutes after midnight: starting in that part of the day (to < from wraps)
 #   attendance online | in_person (hybrid meetings are both)
@@ -15,6 +15,9 @@
 # page; the rest link to their default page (/groups/find/:oiaa_slug).
 class MeetingFinder
   PER_PAGE = 24
+  # The coming week starts this far out, so every meeting it lists leaves time to get there
+  # early (to set up, greet, make coffee). Live now and a chosen day still show what's on.
+  LEAD_TIME = 15.minutes
   NOTES_MAX = 180
 
   # starts_at and ends_at are Unix times: there can be thousands of these
@@ -56,7 +59,7 @@ class MeetingFinder
   private
 
   # [from, to) as Unix times: when a meeting may start, or nil when the date is past.
-  # Meetings going on now count too, unless the date is another day.
+  # On a chosen day, meetings going on now count too; the coming week starts LEAD_TIME out.
   def window
     if live?
       [@now, @now]
@@ -65,7 +68,7 @@ class MeetingFinder
       to = (from + 1.day).to_i
       to > @now ? [from.to_i, to] : nil
     else
-      [@now, @now + 7.days.to_i]
+      [@now + LEAD_TIME.to_i, @now + 7.days.to_i]
     end
   end
 

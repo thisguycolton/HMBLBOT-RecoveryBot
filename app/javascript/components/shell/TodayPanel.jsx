@@ -291,7 +291,7 @@ export default function TodayPanel({ today }) {
           {today.events.map((e) => (
             <li key={e.token} className={row}>
               <a href={`/events/${e.token}`} className="flex items-start gap-3">
-                <span className={`size-12 shrink-0 overflow-hidden rounded-xl ${e.cover_url ? "" : "bg-gradient-to-br from-accent via-sky-600 to-indigo-700"}`}>
+                <span className={`size-12 shrink-0 overflow-hidden rounded-xl ${e.cover_url ? "" : "cover-default"}`}>
                   {e.cover_url && <img src={e.cover_url} alt="" className="size-full object-cover" />}
                 </span>
                 <span className="min-w-0">

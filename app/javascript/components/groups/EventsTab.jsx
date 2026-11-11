@@ -71,7 +71,7 @@ export default function EventsTab({ group }) {
 function EventCard({ event }) {
   return (
     <a href={`/events/${event.token}`} className={`group block overflow-hidden rounded-xl bg-white shadow-panel hover:ring-2 hover:ring-accent/40 dark:bg-neutral-900 ${event.past ? "opacity-80 hover:opacity-100" : ""}`}>
-      <div className={`h-28 ${event.cover_url ? "" : "bg-gradient-to-br from-accent via-sky-600 to-indigo-700"} ${event.past ? "grayscale" : ""}`}>
+      <div className={`h-28 ${event.cover_url ? "" : "cover-default"} ${event.past ? "grayscale" : ""}`}>
         {event.cover_url && <img src={event.cover_url} alt="" className="size-full object-cover" />}
       </div>
       <div className="space-y-1 p-3">

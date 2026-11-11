@@ -205,7 +205,7 @@ function EventsBlock({ block, compact, editing, context, title }) {
         {events.map((e) => (
           <a key={e.token} href={`/events/${e.token}`} onClick={(ev) => editing && ev.preventDefault()}
             className={`group flex overflow-hidden rounded-xl bg-white ring-1 ring-neutral-200 hover:ring-accent/50 dark:bg-neutral-900 dark:ring-neutral-700 ${compact ? "items-center gap-3 p-2" : "flex-col"}`}>
-            <div className={`${compact ? "size-12 shrink-0 rounded-lg" : "h-24"} overflow-hidden ${e.cover_url ? "" : "bg-gradient-to-br from-accent via-sky-600 to-indigo-700"}`}>
+            <div className={`${compact ? "size-12 shrink-0 rounded-lg" : "h-24"} overflow-hidden ${e.cover_url ? "" : "cover-default"}`}>
               {e.cover_url && <img src={e.cover_url} alt="" className="size-full object-cover" />}
             </div>
             <div className={`min-w-0 ${compact ? "" : "p-3"}`}>

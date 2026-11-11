@@ -253,7 +253,7 @@ export function CoverField({ cover, setCover }) {
   return (
     <Field label="Cover photo" hint="Across the top of the page. Without one it's the site's blue.">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => input.current?.click()} className="relative grid h-16 w-28 shrink-0 place-items-center overflow-hidden rounded-xl !bg-gradient-to-br from-accent via-sky-600 to-indigo-700 !p-0 text-white/80 ring-1 ring-neutral-200 dark:ring-neutral-700" aria-label="Upload a cover photo">
+        <button type="button" onClick={() => input.current?.click()} className="relative grid h-16 w-28 shrink-0 place-items-center overflow-hidden rounded-xl !cover-default !p-0 text-white/80 ring-1 ring-neutral-200 dark:ring-neutral-700" aria-label="Upload a cover photo">
           {cover.url && <img src={cover.url} alt="" className="absolute inset-0 size-full object-cover" />}
         </button>
         <div className="flex flex-col items-start gap-1">

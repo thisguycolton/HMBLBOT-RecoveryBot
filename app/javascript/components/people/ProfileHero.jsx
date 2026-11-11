@@ -48,7 +48,7 @@ export default function ProfileHero({ person, viewer, coverUrl, actions, onFollo
   const stat = "flex flex-1 flex-col items-center justify-center gap-0.5 !bg-transparent px-2 py-2 text-white hover:!bg-white/10";
 
   return (
-    <header className={`relative overflow-hidden rounded-3xl ${bleed ? heroBleed : ""} ${coverUrl ? "bg-neutral-900" : "bg-gradient-to-br from-accent via-sky-600 to-indigo-700"}`}>
+    <header className={`relative overflow-hidden rounded-3xl ${bleed ? heroBleed : ""} ${coverUrl ? "bg-neutral-900" : "cover-default"}`}>
       {coverUrl && <img src={coverUrl} alt="" className="absolute inset-0 size-full object-cover" />}
       <div className={`relative flex min-h-[13rem] flex-col justify-end gap-4 p-5 sm:min-h-[15rem] sm:p-10 ${coverUrl ? "bg-gradient-to-t from-black/80 via-black/35 to-transparent" : ""}`}>
         <div className="flex items-center gap-4 sm:flex-wrap sm:items-end sm:gap-5">
