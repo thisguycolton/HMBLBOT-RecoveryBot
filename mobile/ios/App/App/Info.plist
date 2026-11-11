@@ -72,6 +72,17 @@
 	<string>Pick photos to send in chat or add to your profile.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save highlight, chip and daily reading pictures to your photos.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.hmblbot.recoverybot</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>recoverybot</string>
+			</array>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>

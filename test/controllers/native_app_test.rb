@@ -43,6 +43,20 @@ class NativeAppTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the widgets' key says who's signed in, their sobriety date and first favorite chip" do
+    get "/users/sign_in", headers: { "User-Agent" => IPHONE_APP }
+    assert_includes response.body, %(data-widget="") # signed out: the app clears the widgets
+
+    user = users(:one)
+    user.update_columns(sobriety_date: Date.new(2024, 3, 1), chip_favorites: ["round:year-1"])
+    sign_in user
+    get "/recovery", headers: { "User-Agent" => IPHONE_APP }
+    assert_includes response.body, %(data-widget="#{user.id}|2024-03-01|round:year-1")
+
+    get "/recovery", headers: { "User-Agent" => IPHONE_SAFARI }
+    assert_not_includes response.body, "data-widget"
+  end
+
   test "the app's user agent isn't taken for a robot" do
     assert_no_match KeepsRobotsOut::ROBOT_AGENT, IPHONE_APP
     assert_no_match KeepsRobotsOut::ROBOT_AGENT, ANDROID_APP

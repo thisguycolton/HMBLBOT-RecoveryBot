@@ -10,7 +10,8 @@ import { isShareView } from "./shell/shareView";
 import Sidebar from "./shell/Sidebar";
 import TopBar from "./shell/TopBar";
 import { ShellContext, useMedia, usePath, useNav, useRail, useTheme } from "./shell/useShell";
-import { forgetPushAfterSignOut, registerServiceWorker } from "../lib/push";
+import { forgetPushAfterSignOut, isStandalone, registerServiceWorker } from "../lib/push";
+import { edgeSwipe, swipeToDismiss } from "../lib/swipe";
 
 // The site's shell, around every page: the sidebar on the left (categories with sub menus),
 // the bar along the top (search, Donate, theme, notifications, account), and the stage, the
@@ -53,13 +54,31 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
   const homeActive = path === "/people" || path === "/";
   const push = usePush(asideOpen && !wide ? "aside" : chrome.open === "menu" || chrome.open === "today" ? chrome.open : null);
   const closePush = () => (push?.which === "aside" ? setAsideOpen(false) : chrome.close());
+  const page = useRef(null);
+  const closeRef = useRef(closePush);
+  closeRef.current = closePush;
+  // While a side sheet shows, swiping the page back over it (from anywhere) closes it: the page
+  // follows the finger, then slides home or back aside
+  const pushedSide = push?.open ? push.side : null;
+  useEffect(() => {
+    if (!pushedSide) return undefined;
+    return swipeToDismiss(document, {
+      directions: [pushedSide === "left" ? "left" : "right"],
+      targets: () => [page.current],
+      onDismiss: () => closeRef.current(),
+    });
+  }, [pushedSide]);
+  // In the app (and the home-screen app), a swipe in from the left edge opens the menu on phones
+  const showMenu = useRef(null);
+  showMenu.current = () => { if (!chrome.open && window.innerWidth < 1024) chrome.show("menu"); };
+  useEffect(() => (isStandalone() ? edgeSwipe(() => showMenu.current()) : undefined), []);
 
   return (
     <ShellContext.Provider value={context}>
       <div className="shell min-h-dvh w-full self-stretch bg-[#ececec] text-slate-900 dark:bg-neutral-950 dark:text-neutral-100 [&_.shell-side_p]:!font-sans [&_.shell-side_p]:!text-left">
         {/* The page layer: everything but the sheets. A side sheet lies under it, and it slides
             aside as one rounded card to show it (usePush) */}
-        <div className="shell-page bg-[#ececec] dark:bg-neutral-950" style={pushStyle(push)}>
+        <div ref={page} className="shell-page bg-[#ececec] dark:bg-neutral-950" style={pushStyle(push)}>
         {push?.open && <button type="button" aria-label="Close" onClick={closePush} className="absolute inset-0 z-[3000] cursor-default !bg-transparent" />}
         {/* The column folds down to its icons and back (useRail), remembered in this browser. Opening
             one of its sub menus folds the list down to its icons too, and the sub menu slides into
