@@ -483,12 +483,20 @@ export async function makeVideo(chip, opts, onProgress = () => {}) {
   const [W, H] = SIZES[opts.size].video;
   const picked = await pickCodec(W, H);
   if (!picked) return recordVideo(chip, opts, W, H, onProgress);
-  const { Muxer, ArrayBufferTarget } = await import("mp4-muxer");
-  const target = new ArrayBufferTarget();
-  const muxer = new Muxer({ target, video: { codec: picked.muxer, width: W, height: H, frameRate: VIDEO_FPS }, fastStart: "in-memory" });
+  // Mediabunny writes the MP4 around the encoder's packets (it took over from mp4-muxer)
+  const { Output, Mp4OutputFormat, BufferTarget, EncodedVideoPacketSource, EncodedPacket } = await import("mediabunny");
+  const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target: new BufferTarget() });
+  const source = new EncodedVideoPacketSource(picked.muxer);
+  output.addVideoTrack(source, { frameRate: VIDEO_FPS });
+  await output.start();
   let failure = null;
+  let writing = Promise.resolve();
   const encoder = new window.VideoEncoder({
-    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    // packets go in one after another, in the order the encoder hands them over
+    output: (chunk, meta) => {
+      const packet = EncodedPacket.fromEncodedChunk(chunk);
+      writing = writing.then(() => source.add(packet, meta)).catch((e) => { failure ||= e; });
+    },
     error: (e) => { failure = e; },
   });
   encoder.configure(picked.config);
@@ -511,9 +519,11 @@ export async function makeVideo(chip, opts, onProgress = () => {}) {
   }
   await encoder.flush();
   encoder.close();
+  await writing;
   if (failure) throw failure;
-  muxer.finalize();
-  return new Blob([target.buffer], { type: "video/mp4" });
+  source.close();
+  await output.finalize();
+  return new Blob([output.target.buffer], { type: "video/mp4" });
 }
 
 async function recordVideo(chip, opts, W, H, onProgress) {
