@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { Link2, NotebookText, X } from "lucide-react";
 import Markdown from "./book/Markdown";
+import { AdoptedFrom } from "./book/HighlightCard";
 
 // The highlights in this chapter. Tapping one jumps to it in the text; the
 // reader who made them can also share one, or every highlight they've made.
@@ -51,6 +52,8 @@ export default function HighlightsModal({
                 >
                   <mark style={{ "--hl": swatchOf(h) }}>{h.selector?.quote?.exact || "…"}</mark>
                 </a>
+                {h.mine ? <AdoptedFrom from={h.adopted_from} className="wb-hl-item__from" />
+                  : mine && <p className="wb-hl-item__from">{h.by ? `${h.by}'s highlight` : "Shared highlight"}</p>}
                 {h.note && <Markdown source={h.note} className="wb-hl-item__note" />}
               </div>
               {h.mine && onShare && (

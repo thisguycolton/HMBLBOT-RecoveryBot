@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { ImageIcon, Link2, Trash2, X } from "lucide-react";
+import { BookmarkPlus, ImageIcon, Link2, Trash2, X } from "lucide-react";
 import HighlightNote from "./HighlightNote";
 import ShareToTimeline from "./ShareToTimeline";
 import { highlightUrl, shareLink } from "./highlightSharing";
@@ -16,11 +16,25 @@ export const HIGHLIGHT_PALETTE = {
 
 export const highlightCss = (stored) => HIGHLIGHT_PALETTE[stored] || stored || HIGHLIGHT_PALETTE.yellow;
 
+// "Adopted from Sam's highlight", linking to theirs while it's still there
+export function AdoptedFrom({ from, className = "wb-hl-card__from" }) {
+  if (!from) return null;
+  const label = `Adopted from ${from.by ? `${from.by}'s` : "a shared"} highlight`;
+  return (
+    <p className={className}>
+      <BookmarkPlus size={14} aria-hidden="true" />
+      {from.url ? <a href={from.url}>{label}</a> : <span>{label}</span>}
+    </p>
+  );
+}
+
 // One highlight, opened by tapping it in the text: the quote, its note, and
 // (for the reader who made it) color, share to timeline, share as a picture (PictureShare),
 // share link and delete.
 // Highlights stay with their reader until they pick Share to timeline.
-export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlug, onChange, onDelete, toast, startEditing = false }) {
+// Someone else's highlight can be adopted (onAdopt): a copy in your own highlights, which then
+// says whose it came from.
+export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlug, onChange, onDelete, onAdopt, adoptedCopy, onOpen, toast, startEditing = false }) {
   const [picturing, setPicturing] = useState(false);
   useEffect(() => {
     if (!highlight || picturing) return;
@@ -64,6 +78,8 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
           </button>
         </div>
 
+        {mine && <AdoptedFrom from={highlight.adopted_from} />}
+
         {quote && (
           <blockquote className="wb-hl-quote wb-hl-card__quote">
             <mark style={{ "--hl": highlightCss(highlight.style?.color) }}>{quote}</mark>
@@ -71,6 +87,26 @@ export default function HighlightCard({ highlight, onClose, bookSlug, chapterSlu
         )}
 
         <HighlightNote highlight={highlight} onChange={onChange} startEditing={startEditing} />
+
+        {!mine && onAdopt && (
+          <div className="wb-hl-card__foot">
+            {adoptedCopy ? (
+              <>
+                <span className="wb-hl-card__adopted">It's in your highlights.</span>
+                <span className="flex-1" />
+                <button type="button" className="wb-btn" onClick={() => onOpen?.(adoptedCopy.id)}>Open yours</button>
+              </>
+            ) : (
+              <>
+                <span className="wb-hl-card__adopted">Keep this one in your own highlights, with a note of where it came from.</span>
+                <span className="flex-1" />
+                <button type="button" className="wb-btn wb-btn--reversed" onClick={() => onAdopt(highlight)}>
+                  <BookmarkPlus size={16} aria-hidden="true" /> Adopt this highlight
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {mine && (
           // Pinned to the bottom of the sheet, so the actions stay in reach under a long note

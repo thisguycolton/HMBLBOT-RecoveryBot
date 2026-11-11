@@ -22,12 +22,19 @@ class UserHighlight < ApplicationRecord
   # Its owner can make a picture of it to post anywhere (ShareCard.highlight: a few looks and
   # sizes, with or without the note), and its share link (?hl=) shows that picture in link
   # previews. Only someone holding that link gets the picture, as only they get the highlight.
+  #
+  # Someone who opens another reader's highlight (its ?hl= link, their ?share= link, or on a
+  # timeline) can adopt it: a private copy of the same words and color, without the note, in
+  # their own highlights. `adopted_from` points back to the original (cleared if it's deleted)
+  # and `adopted_at` keeps saying it was adopted after that.
   include Visibility
   include Mentionable
   include Reactable
 
   belongs_to :user
   belongs_to :chapter
+  belongs_to :adopted_from, class_name: "UserHighlight", optional: true
+  has_many :adoptions, class_name: "UserHighlight", foreign_key: :adopted_from_id, inverse_of: :adopted_from, dependent: :nullify
   has_many :reposts, class_name: "TimelineNote", foreign_key: :repost_of_highlight_id, inverse_of: :repost_of_highlight, dependent: :destroy
 
   scope :for_chapter_slug, ->(slug) { joins(:chapter).where(chapters: { slug: slug }) }

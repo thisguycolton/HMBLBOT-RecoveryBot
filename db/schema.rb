@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_11_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_11_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1844,6 +1844,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_11_000000) do
     t.string "hashtags", default: [], null: false, array: true
     t.jsonb "mentions", default: {}, null: false
     t.bigint "mentioned_user_ids", default: [], null: false, array: true
+    t.bigint "adopted_from_id"
+    t.datetime "adopted_at"
+    t.index ["adopted_from_id"], name: "index_user_highlights_on_adopted_from_id"
     t.index ["chapter_id"], name: "index_user_highlights_on_chapter_id"
     t.index ["hashtags"], name: "index_user_highlights_on_hashtags", using: :gin
     t.index ["user_id", "chapter_id"], name: "index_user_highlights_on_user_id_and_chapter_id"
@@ -2120,6 +2123,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_11_000000) do
   add_foreign_key "user_blocks", "users", column: "blocked_id", on_delete: :cascade
   add_foreign_key "user_blocks", "users", column: "blocker_id", on_delete: :cascade
   add_foreign_key "user_highlights", "chapters"
+  add_foreign_key "user_highlights", "user_highlights", column: "adopted_from_id", on_delete: :nullify
   add_foreign_key "user_highlights", "users"
   add_foreign_key "user_reports", "groups", on_delete: :nullify
   add_foreign_key "user_reports", "users", column: "reporter_id", on_delete: :cascade

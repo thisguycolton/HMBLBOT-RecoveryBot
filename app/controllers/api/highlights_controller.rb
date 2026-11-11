@@ -10,6 +10,9 @@
 # Others who see a highlight on a timeline can repost it to theirs when it's shared with
 # Members (UserHighlight#repostable_by?), and take the repost back. Anyone who sees it on a
 # timeline can react to it (Like, Love or Hugs), as with notes.
+#
+# Anyone signed in who can see someone else's highlight (by either share link, or on a
+# timeline) can adopt it: a private copy in their own highlights that says whose it came from.
 class Api::HighlightsController < ApplicationController
   include KeepsRobotsOut
   include SendsQuoteCards
@@ -39,7 +42,7 @@ class Api::HighlightsController < ApplicationController
     rows = scope.joins(chapter: :book).where(chapters: { slug: chapter_slug }).where.not(books: { id: Book.locked_for(current_user).select(:id) })
     rows = rows.where(books: { slug: params[:book_slug] }) if params[:book_slug].present?
 
-    render json: rows.includes(:user, chapter: :book).order(:id).map { |h| highlight_json(h) }
+    render json: rows.includes(:user, chapter: :book, adopted_from: [:user, { chapter: :book }]).order(:id).map { |h| highlight_json(h) }
   rescue ActiveRecord::RecordNotFound => e
     render json: { error: e.message }, status: :not_found
   end
@@ -51,7 +54,7 @@ class Api::HighlightsController < ApplicationController
     return head :unauthorized unless owner
 
     mine = owner == current_user
-    rows = owner.user_highlights.includes(chapter: :book)
+    rows = owner.user_highlights.includes(chapter: :book, adopted_from: [:user, { chapter: :book }])
     # Someone else's highlights in a members-only book they can't read stay out
     rows = rows.joins(chapter: :book).where.not(books: { id: Book.locked_for(current_user).select(:id) }) unless mine
     rows = rows.sort_by { |h| [h.chapter.book.title.to_s, h.chapter.index.to_i, h.selector.dig("position", "start").to_i] }
@@ -181,6 +184,24 @@ class Api::HighlightsController < ApplicationController
     render json: feed_json(h)
   end
 
+  # POST /api/highlights/adopt  hl=SHARE_ID | share=TOKEN&id=ID | id=ID (seen on a timeline)
+  # -> your copy of it: the same words and color, without their note, kept private.
+  # Adopting the same one again gives back the copy you already have.
+  def adopt
+    original = adoptable_highlight
+    return render(json: { error: "That highlight isn't here anymore." }, status: :not_found) unless original
+    return render(json: highlight_json(original)) if original.user_id == current_user.id
+    return render(json: MembersOnly.json(original.chapter.book, current_user), status: :forbidden) if original.chapter.book.locked_for?(current_user)
+
+    copy = current_user.user_highlights.find_by(adopted_from: original) ||
+           current_user.user_highlights.create!(chapter: original.chapter, selector: original.selector,
+                                                style: original.style.slice("color").presence || original.style, visibility: "private",
+                                                adopted_from: original, adopted_at: Time.current)
+    render json: highlight_json(copy), status: copy.previously_new_record? ? :created : :ok
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+
   # POST /api/highlights/share -> { share_token: "..." }
   def share
     current_user.update!(share_token: SecureRandom.urlsafe_base64(16)) if current_user.share_token.blank?
@@ -200,6 +221,18 @@ class Api::HighlightsController < ApplicationController
 
     render json: { error: "That highlight isn't here anymore." }, status: :not_found
     nil
+  end
+
+  # The highlight they're adopting, if the link or timeline they found it through lets them see it
+  def adoptable_highlight
+    if params[:hl].present?
+      UserHighlight.find_signed(params[:hl], purpose: :share)
+    elsif params[:share].present?
+      User.find_by(share_token: params[:share])&.user_highlights&.find_by(id: params[:id])
+    elsif params[:id].present?
+      h = UserHighlight.find_by(id: params[:id])
+      h if h&.visible_to?(current_user) && !current_user.blocked_ids.include?(h.user_id)
+    end
   end
 
   # Who sees a new repost: as asked, or your followers unless you share notes with Members by default
@@ -224,11 +257,23 @@ class Api::HighlightsController < ApplicationController
       json["visibility"] = h.visibility
       json["shared_at"] = h.shared_at&.iso8601
       json["profiles"] = User.profiles_open_to?(current_user)
+      json["adopted_from"] = adopted_from_json(h) if h.adopted_at || h.adopted_from_id
     else
       # First name only: enough to say whose highlight this is.
       json["by"] = h.user.name.to_s.split.first.presence
     end
     json
+  end
+
+  # Where your adopted highlight came from: their first name and a link to theirs, while it's
+  # still there (and its book is one you can read); just "adopted" once it's gone.
+  def adopted_from_json(h)
+    original = h.adopted_from
+    return { id: nil, by: nil, url: nil } if original.nil? || original.chapter.book.locked_for?(current_user)
+
+    chapter = original.chapter
+    { id: original.id, by: original.user.name.to_s.split.first.presence,
+      url: "/books/#{chapter.book.slug}/chapters/#{chapter.slug}?hl=#{CGI.escape(original.signed_id(purpose: :share))}#hl-#{original.id}" }
   end
 
   def highlight_params
