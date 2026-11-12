@@ -69,6 +69,7 @@ class User < ApplicationRecord
   has_many :notifications, dependent: :destroy
   has_many :today_dismissals, dependent: :delete_all
   has_many :push_subscriptions, dependent: :delete_all
+  has_many :device_tokens, dependent: :delete_all # the apps' notification tokens (FcmSender)
   has_many :text_report_comments, dependent: :destroy
   has_many :resolved_text_reports, class_name: "TextReport", foreign_key: :resolved_by_id, dependent: :nullify
   has_many :schedule_polls, dependent: :destroy

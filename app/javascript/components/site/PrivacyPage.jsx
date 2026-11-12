@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "November 10, 2026";
+const UPDATED = "November 12, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -39,6 +39,7 @@ const STORAGE = [
   ["questScreenName, questChime", "Your screen name and sound setting in The Acid Quest"],
   ["installNudge.dismissed", "That you closed the “Add RecoveryBot to your home screen” card"],
   ["hb-day-count-seen", "The day your day count last popped up, so a milestone celebration shows once that day"],
+  ["hb-device-token", "In the iPhone and Android apps, once you turn on notifications: the address Firebase gave this install, so turning them off or logging out can tell us which phone to stop"],
   ["hb-widget-key", "In the iPhone and Android apps: what the home-screen widgets were last given, so they're only redrawn when your sobriety date or favorite chip changes"],
 ];
 
@@ -149,7 +150,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
             <li><strong>Available to sponsor:</strong> if you turn on <em>Offer to sponsor</em>, we keep that it's on, your note, the picks you chose (who you'll sponsor and how you work), the languages you list, how many sponsees you'll take, and whether to show your time sober (worked out from your sobriety date; off unless you turn it on). Your offer is only shown to people signed in who are in one of your groups, in groups that list sponsors (a group's admins can turn this off), and never to anyone you've blocked or who has blocked you. It shows under Find a sponsor and on the Members tab of those groups, where a green check by your name says you're available. It stops showing when you turn it off or have as many sponsees as you said. Anyone who can see it can report it, and a site admin can stop you offering; we keep when and who did.</li>
             <li><strong>Follows:</strong> who you follow and who follows you.</li>
             <li><strong>Reminders:</strong> if you turn on the daily gratitude or 10th step reminder, we keep whether each is on, the time you picked, the day it last went out, and your time zone as your browser reports it (like “America/Phoenix”), so the reminder comes at your time. Turning a reminder off stops it.</li>
-            <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. Turning them off, removing the device in your settings, or signing out on that device deletes it.</li>
+            <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. In the iPhone and Android apps we keep the address Firebase gives that install instead, with whether it's an iPhone or Android phone and the app's version. Turning them off, removing the device in your settings, or logging out on that device deletes it.</li>
             <li><strong>Widgets in the iPhone and Android apps:</strong> if you add the day count or chip widget, the app keeps your sobriety date and a picture of your favorite chip on your phone for it. They stay on the phone, and signing out of the app clears them. A widget on your Home Screen or Lock Screen can be seen by anyone who looks at your phone.</li>
             <li><strong>Reactions, comments and reposts:</strong> the Like, Love or Hugs you give a note or comment, comments you write on notes, and notes and highlights you repost to your timeline.</li>
             <li><strong>Pictures to share:</strong> <em>Share as a picture</em> on your own highlight or note draws a picture of its words on our server, with the fonts we host; nothing is sent to another company to make it. We keep the drawn picture for a while so it's quick next time, and it only has your name on it if you tick <em>Add my first name</em>. Where it goes after that (Instagram, Messages, your photos) is up to you.</li>
@@ -239,6 +240,12 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
               <strong>Browser push services:</strong> if you turn on notifications, each one goes through the push service of the company that
               makes your browser (Apple for Safari, iPhone and iPad; Google for Chrome and Android; Mozilla for Firefox; Microsoft for Edge on
               Windows). It's encrypted so only your device can read it: the service sees that RecoveryBot sent your device something and when, not what it says.
+            </li>
+            <li>
+              <strong>Firebase Cloud Messaging (Google):</strong> if you turn on notifications in the iPhone or Android app, each one goes
+              through Google's Firebase, which passes it to Apple (for iPhone) or to your Android phone. Unlike browser notifications, Firebase
+              and Apple can read what a notification says: its title and the short line under it, the same words the bell shows. We don't send
+              anything else, and Firebase Analytics is off.
             </li>
             <li><strong>ipinfo.io:</strong> looks up the shortened IP address of a visit to get the rough location for visit statistics.</li>
             {google && <li><strong>Google sign-in:</strong> if you choose “Continue with Google”, you sign in on Google's own page, so Google sees that you're signing in to RecoveryBot, under Google's privacy policy. Nothing goes to Google if you use your email and password.</li>}

@@ -8,8 +8,10 @@
 // - Copy buttons use the phone's clipboard directly (the web clipboard is unreliable in a web view)
 // - Print uses the phone's own print screen (window.print does nothing in a web view)
 // - the Home Screen widgets get the day count and favorite chip (lib/appWidgets.js)
+// - notifications: a tap opens its page, logging out stops them (lib/nativePush.js)
 // Every plugin call checks the app has that plugin, so an older install just skips it.
 import { callPlugin, hasPlugin, nativePlatform, onPlugin } from "../lib/nativeApp";
+import { showToast } from "../lib/toast";
 
 const platform = nativePlatform();
 
@@ -25,6 +27,7 @@ if (platform && !window.__nativeApp) {
   installStatusBar();
   installAppLinks();
   installWidgets();
+  installPush();
   onPlugin("App", "resume", () => window.dispatchEvent(new Event("app:resume")));
   const ready = () => hasPlugin("SplashScreen") && callPlugin("SplashScreen", "hide").catch(() => {});
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready, { once: true });
@@ -227,6 +230,31 @@ function installStatusBar() {
   };
   apply();
   new MutationObserver(apply).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+}
+
+// --- Notifications --------------------------------------------------------------------------
+
+// Firebase Cloud Messaging (FcmSender on the server). A tap on a notification opens its page
+// (data.url, /notifications/:id/open, which marks it read). One that arrives while the app is
+// open shows as a toast on Android (the iPhone shows its own banner).
+function installPush() {
+  if (!hasPlugin("FirebaseMessaging")) return;
+  const push = () => import("../lib/nativePush");
+  push().then(async (m) => {
+    await m.forgetNativePushAfterSignOut();
+    await m.refreshNativeToken();
+  }).catch(() => {});
+  onPlugin("FirebaseMessaging", "tokenReceived", ({ token }) => push().then((m) => m.refreshNativeToken(token)).catch(() => {}));
+  onPlugin("FirebaseMessaging", "notificationActionPerformed", ({ notification }) => {
+    const url = notification?.data?.url;
+    if (typeof url === "string" && url.startsWith("/") && !url.startsWith("//")) window.location.href = url;
+  });
+  if (platform === "android") {
+    onPlugin("FirebaseMessaging", "notificationReceived", ({ notification }) => {
+      const url = notification?.data?.url;
+      if (notification?.title || notification?.body) showToast(notification.title || notification.body, { href: typeof url === "string" && url.startsWith("/") ? url : undefined });
+    });
+  }
 }
 
 // --- Widgets --------------------------------------------------------------------------------

@@ -10,6 +10,7 @@
     "local": "CAP_SERVER_URL=http://localhost:3000 cap sync"
   },
   "dependencies": {
+    "@capacitor-firebase/messaging": "^8.6.0",
     "@capacitor/android": "^8.6.0",
     "@capacitor/app": "^8.1.2",
     "@capacitor/browser": "^8.0.5",

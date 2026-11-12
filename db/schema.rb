@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_12_010000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_12_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -487,6 +487,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_010000) do
     t.index ["group_id"], name: "index_decks_on_group_id"
     t.index ["script_document_id"], name: "index_decks_on_script_document_id"
     t.index ["share_code"], name: "index_decks_on_share_code", unique: true
+  end
+
+  create_table "device_tokens", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "token", null: false
+    t.string "platform", null: false
+    t.string "app_version"
+    t.datetime "last_sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token"], name: "index_device_tokens_on_token", unique: true
+    t.index ["user_id"], name: "index_device_tokens_on_user_id"
   end
 
   create_table "doc_page_versions", force: :cascade do |t|
@@ -1977,6 +1989,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_010000) do
   add_foreign_key "decks", "group_documents", column: "script_document_id", on_delete: :nullify
   add_foreign_key "decks", "groups", on_delete: :cascade
   add_foreign_key "decks", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "device_tokens", "users"
   add_foreign_key "doc_page_versions", "doc_pages", on_delete: :cascade
   add_foreign_key "doc_page_versions", "users", column: "saved_by_id", on_delete: :nullify
   add_foreign_key "doc_pages", "doc_sections", on_delete: :cascade

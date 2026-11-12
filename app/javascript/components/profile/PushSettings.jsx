@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { isNativeApp } from "../../lib/nativeApp";
+import { isNativeApp, nativePlatform } from "../../lib/nativeApp";
 import { BellOff, BellRing, Check, Laptop, Send, Smartphone, X } from "lucide-react";
 import Toggle from "../ui/Toggle";
 import { api } from "../groups/lib";
 import { Card, ErrorNote, Pill, Tray, quietButton } from "../groups/ui";
 import { currentSubscription, needsInstallForPush, platform, pushSupported, turnOffPush, turnOnPush } from "../../lib/push";
+import { nativePermission, nativePushSupported, storedToken, turnOffNativePush, turnOnNativePush } from "../../lib/nativePush";
 
 // Where to unblock notifications once they've been turned down
 const UNBLOCK = {
@@ -15,21 +16,41 @@ const UNBLOCK = {
   other: "Open this site's settings in your browser (usually the icon left of the address) and allow notifications.",
 };
 
+// The same, inside the iPhone and Android apps
+const UNBLOCK_APP = {
+  ios: "Open the Settings app, tap Apps, then RecoveryBot, then Notifications, and turn on Allow Notifications.",
+  android: "Long-press the RecoveryBot icon, tap App info, open Notifications and turn them on.",
+};
+
 const DeviceIcon = ({ label }) => (/iPhone|iPad|Android/.test(label) ? <Smartphone className="h-4 w-4 shrink-0 text-slate-400" /> : <Laptop className="h-4 w-4 shrink-0 text-slate-400" />);
 
 // Account settings > Notifications on this device (also on /install once the app is on the
 // home screen): turn Web Push on or off for this browser, send a test, pick which kinds of
 // notification are pushed (to all their devices), and remove other devices.
 // Hidden when the server has no VAPID keys (WebPushSender.configured?).
+// In the iPhone and Android apps the switch is the app's own notifications instead (Firebase,
+// lib/nativePush.js), shown once the server can send them (FcmSender.configured?) and the app
+// has the FirebaseMessaging plugin.
 export default function PushSettings({ bare = false }) {
-  const [state, setState] = useState(null); // { available, public_key, devices }
+  const inApp = isNativeApp();
+  const [state, setState] = useState(null); // { available, app_available, public_key, devices, categories }
   const [endpoint, setEndpoint] = useState(null);
+  const [token, setToken] = useState(() => (inApp ? storedToken() : null));
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
   const [tested, setTested] = useState(false);
   const [permission, setPermission] = useState(() => (typeof Notification !== "undefined" ? Notification.permission : "default"));
 
   useEffect(() => {
+    if (inApp) {
+      if (!nativePushSupported()) return;
+      (async () => {
+        setPermission(await nativePermission());
+        const t = storedToken();
+        setState(await api(`/push_subscriptions${t ? `?token=${encodeURIComponent(t)}` : ""}`));
+      })().catch((e) => setError(e.message));
+      return;
+    }
     (async () => {
       const sub = await currentSubscription().catch(() => null);
       setEndpoint(sub?.endpoint || null);
@@ -38,10 +59,13 @@ export default function PushSettings({ bare = false }) {
     })().catch((e) => setError(e.message));
   }, []);
 
-  // Web Push doesn't reach inside the iPhone and Android apps; they'll get their own notifications
-  if (isNativeApp()) return null;
+  // Web Push doesn't reach inside the apps; they have their own notifications
+  if (inApp && !nativePushSupported()) return null;
   if (!state) return error ? <ErrorNote error={error} /> : null;
-  if (!state.available) return null;
+  if (inApp ? !state.app_available : !state.available) return null;
+
+  // Which device this is, for the server: this browser's endpoint or this app's token
+  const thisDevice = (current) => (inApp ? (token ? `?${current ? "current_" : ""}token=${encodeURIComponent(token)}` : "") : (endpoint ? `?${current ? "current_" : ""}endpoint=${encodeURIComponent(endpoint)}` : ""));
 
   const here = state.devices.find((d) => d.this_device);
   const others = state.devices.filter((d) => !d.this_device);
@@ -51,7 +75,12 @@ export default function PushSettings({ bare = false }) {
     setError(null);
     setTested(false);
     try {
-      if (on) {
+      if (inApp) {
+        const next = on ? await turnOnNativePush() : await turnOffNativePush();
+        setToken(storedToken());
+        if (next) setState(next);
+        if (on) setPermission("granted");
+      } else if (on) {
         const next = await turnOnPush(state.public_key);
         const sub = await currentSubscription();
         setEndpoint(sub?.endpoint || null);
@@ -69,7 +98,7 @@ export default function PushSettings({ bare = false }) {
       else setError(e.message);
     } finally {
       setBusy(null);
-      if (typeof Notification !== "undefined") setPermission(Notification.permission);
+      if (!inApp && typeof Notification !== "undefined") setPermission(Notification.permission);
     }
   };
 
@@ -77,7 +106,7 @@ export default function PushSettings({ bare = false }) {
     setBusy("test");
     setError(null);
     try {
-      await api("/push_subscriptions/test", { method: "POST", body: { endpoint } });
+      await api("/push_subscriptions/test", { method: "POST", body: inApp ? { token } : { endpoint } });
       setTested(true);
     } catch (e) {
       setError(e.message);
@@ -91,7 +120,7 @@ export default function PushSettings({ bare = false }) {
     setError(null);
     setState((s) => ({ ...s, categories: s.categories.map((c) => (c.key === key ? { ...c, on } : c)) }));
     try {
-      setState(await api(`/push_subscriptions/categories${endpoint ? `?endpoint=${encodeURIComponent(endpoint)}` : ""}`, { method: "PATCH", body: { key, on } }));
+      setState(await api(`/push_subscriptions/categories${thisDevice()}`, { method: "PATCH", body: { key, on } }));
     } catch (e) {
       setState((s) => ({ ...s, categories: s.categories.map((c) => (c.key === key ? { ...c, on: !on } : c)) }));
       setError(e.message);
@@ -101,7 +130,7 @@ export default function PushSettings({ bare = false }) {
   const remove = async (id) => {
     setBusy(`remove-${id}`);
     try {
-      setState(await api(`/push_subscriptions/${id}${endpoint ? `?current_endpoint=${encodeURIComponent(endpoint)}` : ""}`, { method: "DELETE" }));
+      setState(await api(`/push_subscriptions/${id}${thisDevice(true)}`, { method: "DELETE" }));
     } catch (e) {
       setError(e.message);
     } finally {
@@ -110,7 +139,17 @@ export default function PushSettings({ bare = false }) {
   };
 
   let body;
-  if (needsInstallForPush()) {
+  if (inApp && permission === "denied" && !here) {
+    body = (
+      <div className="flex items-start gap-3">
+        <BellOff className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+        <div className="text-sm text-slate-700 dark:text-neutral-300">
+          <p className="font-medium">Notifications are turned off for RecoveryBot on this phone.</p>
+          <p className="mt-1 text-slate-600 dark:text-neutral-400">{UNBLOCK_APP[nativePlatform()] || UNBLOCK_APP.ios} Then come back and turn them on here.</p>
+        </div>
+      </div>
+    );
+  } else if (!inApp && needsInstallForPush()) {
     body = (
       <div className="flex items-start gap-3">
         <Smartphone className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
@@ -120,9 +159,9 @@ export default function PushSettings({ bare = false }) {
         </p>
       </div>
     );
-  } else if (!pushSupported()) {
+  } else if (!inApp && !pushSupported()) {
     body = <p className="text-sm text-slate-600 dark:text-neutral-400">This browser can't show notifications. Chrome, Edge, Firefox and Safari can.</p>;
-  } else if (permission === "denied" && !here) {
+  } else if (!inApp && permission === "denied" && !here) {
     body = (
       <div className="flex items-start gap-3">
         <BellOff className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
@@ -136,7 +175,7 @@ export default function PushSettings({ bare = false }) {
     body = (
       <div className="space-y-3">
         <Toggle checked={Boolean(here)} disabled={busy === "toggle"} onChange={toggle}
-          label={<span className="inline-flex items-center gap-2">Send notifications to this device {busy === "toggle" && <span className="text-xs text-slate-400">…</span>}</span>}
+          label={<span className="inline-flex items-center gap-2">Send notifications to this {inApp ? "phone" : "device"} {busy === "toggle" && <span className="text-xs text-slate-400">…</span>}</span>}
           description="What shows in the bell (group news, replies to your notes, host reminders) pops up here too, even with RecoveryBot closed." />
         {here && (
           <div className="flex flex-wrap items-center gap-3 pl-12">

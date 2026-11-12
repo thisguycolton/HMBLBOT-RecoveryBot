@@ -73,6 +73,9 @@ Rails.application.routes.draw do
       post :test
       post :renew
       patch :categories
+      # The iPhone and Android apps' Firebase tokens (FcmSender)
+      post :app, action: :app_create
+      delete :app, action: :app_destroy
     end
   end
   resource :hosting, controller: "hosting", only: :show
