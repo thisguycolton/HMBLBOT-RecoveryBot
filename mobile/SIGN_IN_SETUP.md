@@ -5,8 +5,14 @@ Until then the website and apps just don't show that button, and links keep open
 browser.
 
 You need the **paid Apple Developer account** for everything Apple below. A free Apple ID
-can't sign builds that use Sign in with Apple, Associated Domains (Universal Links) or App
-Groups (widgets). Simulator builds still work.
+can't sign builds that use Sign in with Apple or Associated Domains (Universal Links).
+
+So that a free Apple ID can still put the app on your iPhone, **Debug** builds (what Xcode's
+Run button makes) use `App/App-Personal.entitlements`, which leaves those two out: in them, the
+Apple button and app links don't work, but everything else, widgets included, does. **Release**
+builds (Archive, TestFlight, the App Store) use `App/App.entitlements` with everything. Once
+the paid account is set up, point Debug at the full file too: App target > Build Settings >
+Code Signing Entitlements > Debug: `App/App.entitlements`.
 
 ## 1. Apple Developer account (developer.apple.com > Certificates, Identifiers & Profiles)
 
