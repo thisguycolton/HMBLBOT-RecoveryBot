@@ -6,4 +6,6 @@
       login_path: new_session_path(resource_name),
       human_check: HumanCheck.fields,
       google_path: (GoogleSignIn.path unless native_app?), # Google blocks its sign-in page inside apps
+      apple_path: (AppleSignIn.path unless native_platform == "ios"), # the iPhone app uses Apple's own sheet
+      native_sign_in: (NativeSignIn.options(native_platform) if native_app?), # the apps' own Google and Apple sheets
     } %>

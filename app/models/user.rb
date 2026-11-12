@@ -3,7 +3,8 @@ class User < ApplicationRecord
   # Include default devise modules. Others available are:
   # :lockable, :timeoutable and :trackable
   # :confirmable: new accounts confirm their email address before they can sign in
-  # :omniauthable: "Continue with Google" (GoogleSignIn, Users::OmniauthCallbacksController)
+  # :omniauthable: "Continue with Google" (GoogleSignIn, Users::OmniauthCallbacksController);
+  #   Sign in with Apple and the apps' native sheets sign in through User.from_identity
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable, :confirmable,
          :omniauthable, omniauth_providers: [:google_oauth2]
@@ -150,24 +151,35 @@ class User < ApplicationRecord
     ChipAward.claim_for(self)
   end
 
-  # "Continue with Google": the account for this Google sign-in (an OmniAuth auth hash), or
-  # nil when Google hasn't verified the address. Already linked: that account, whatever its
-  # email is now. Otherwise an account with the same address is linked (and confirmed, since
-  # Google vouches for the address), or a new one is made, already confirmed, with a random
-  # password they can replace from their profile.
+  # "Continue with Google": the account for this Google sign-in (an OmniAuth auth hash), or nil
+  # when Google hasn't verified the address (User.from_identity)
   def self.from_google(auth)
-    uid = auth.uid.to_s
+    from_identity(:google, uid: auth.uid, email: auth.info&.email, email_verified: auth.extra&.raw_info&.email_verified,
+                           name: google_name(auth.info))
+  end
+
+  IDENTITY_COLUMNS = { google: :google_uid, apple: :apple_uid }.freeze
+
+  # A Google or Apple sign-in (the web's OmniAuth, Sign in with Apple, or the apps' native
+  # sheets): the account for it, or nil when the provider hasn't verified the address. Already
+  # linked: that account, whatever its email is now. Otherwise an account with the same address
+  # is linked (and confirmed, since the provider vouches for the address), or a new one is made,
+  # already confirmed, with a random password they can replace from their profile. Apple may
+  # give a private relay address (…@privaterelay.appleid.com) and, after the first time, no name.
+  def self.from_identity(provider, uid:, email:, email_verified:, name: nil)
+    column = IDENTITY_COLUMNS.fetch(provider)
+    uid = uid.to_s
     return if uid.blank?
 
-    linked = find_by(google_uid: uid)
+    linked = find_by(column => uid)
     return linked if linked
 
-    email = auth.info&.email.to_s.strip.downcase
-    return unless email.present? && ActiveModel::Type::Boolean.new.cast(auth.extra&.raw_info&.email_verified)
+    email = email.to_s.strip.downcase
+    return unless email.present? && ActiveModel::Type::Boolean.new.cast(email_verified)
 
     user = find_by("lower(email) = ?", email)
     if user
-      user.google_uid = uid
+      user[column] = uid
       unless user.confirmed?
         # Someone else could have signed up with this address and never confirmed it, so the
         # password on it isn't proven to be theirs: it goes, and they can choose one
@@ -177,13 +189,22 @@ class User < ApplicationRecord
       user.save!
       user.after_confirmation if user.saved_change_to_confirmed_at?
     else
-      user = new(email: email, name: google_name(auth.info), google_uid: uid)
+      user = new(email: email, name: name.to_s.strip.presence, column => uid)
       user.random_password!
       user.skip_confirmation!
       user.save!
       ChipAward.claim_for(user)
     end
     user
+  end
+
+  # First name and last initial, as the sign-up page asks for, from a first and last name
+  def self.short_name(first, last)
+    first = first.to_s.strip
+    last = last.to_s.strip
+    return if first.blank?
+
+    [first, ("#{last[0]}." if last.present?)].compact.join(" ")
   end
 
   # First name and last initial, as the sign-up page asks for, not the full name on the Google account

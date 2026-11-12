@@ -73,6 +73,6 @@ show a "sign in" note until you open the app signed in.
 
 ## Not in the app yet
 
-Native push notifications, Google and Apple sign-in, links that open the app (Universal Links /
-App Links) and Face ID lock. See the plan:
+Native push notifications and Face ID lock. Google and Apple sign-in and links that open the
+app are built, and need the console setup in [SIGN_IN_SETUP.md](SIGN_IN_SETUP.md). See the plan:
 https://claude.ai/artifact/D8Aft6jCHPzgLJTwj8kmEj

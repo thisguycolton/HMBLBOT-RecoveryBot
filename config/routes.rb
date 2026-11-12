@@ -511,7 +511,16 @@ end
   devise_for :users, controllers: { registrations: "users/registrations", omniauth_callbacks: "users/omniauth_callbacks" }
   devise_scope :user do
     get "users/check_email", to: "users/registrations#check_email", as: :users_check_email
+    # Sign in with Apple on the website (AppleSignIn), and the apps' native sign-in sheets (NativeSignIn)
+    post "users/auth/apple", to: "users/apple_sign_ins#start", as: :user_apple_sign_in
+    post "users/auth/apple/callback", to: "users/apple_sign_ins#callback"
+    get "users/auth/native/nonce", to: "users/native_sign_ins#nonce"
+    post "users/auth/native", to: "users/native_sign_ins#create"
   end
+  # Links to the site open the iPhone and Android apps when they're installed (WellKnownController)
+  get "/.well-known/apple-app-site-association", to: "well_known#apple_app_site_association", format: false
+  get "/apple-app-site-association", to: "well_known#apple_app_site_association", format: false
+  get "/.well-known/assetlinks.json", to: "well_known#assetlinks", format: false
 
   namespace :admin_panel do
     # React app; every path below it routes on the client

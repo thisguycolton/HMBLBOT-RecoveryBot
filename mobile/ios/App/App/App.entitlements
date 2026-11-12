@@ -6,5 +6,14 @@
 	<array>
 		<string>group.com.hmblbot.recoverybot</string>
 	</array>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:recoverybot.hmblbot.com</string>
+		<string>webcredentials:recoverybot.hmblbot.com</string>
+	</array>
 </dict>
 </plist>

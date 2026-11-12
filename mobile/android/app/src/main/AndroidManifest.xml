@@ -18,6 +18,14 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Links to the site open the app (App Links; the site's /.well-known/assetlinks.json
+                 names this app), except sign-in callbacks and downloads (native_app.js sends those on) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="recoverybot.hmblbot.com" />
+            </intent-filter>
             <!-- The widgets open the app on a page: recoverybot://open/recovery -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

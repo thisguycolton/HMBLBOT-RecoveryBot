@@ -4,6 +4,7 @@ import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
 import { RecoveryBotLogo } from "../brand/Logo";
 import HumanCheckFields from "../site/HumanCheckFields";
+import { callPlugin, hasPlugin } from "../../lib/nativeApp";
 
 // Devise's pages in the house panel style. Each posts a plain HTML form, so Devise
 // handles the session, redirects and flash (shown as toasts) exactly as before.
@@ -86,25 +87,100 @@ function Field({ id, label, aside, hint, ...input }) {
   );
 }
 
-// "Continue with Google" (GoogleSignIn): a plain POST, since OmniAuth only starts a sign-in
-// from a form carrying the page's token. Shown only when the server has Google set up.
-function GoogleButton({ path, authenticity_token, label = "Continue with Google", note }) {
+const providerButton = "w-full inline-flex items-center justify-center gap-3 rounded-xl border px-4 py-2.5 text-sm font-semibold shadow-sm disabled:opacity-60";
+const googleLook = `${providerButton} border-slate-300 !bg-white !text-slate-800 hover:!bg-slate-50 dark:border-neutral-600`;
+// Apple's own look for its button: black with white, or white with black in dark mode
+const appleLook = `${providerButton} border-black !bg-black !text-white hover:opacity-90 dark:border-white dark:!bg-white dark:!text-black`;
+
+// A plain POST, since OmniAuth (Google) and Sign in with Apple only start from a form carrying
+// the page's token
+function PostButton({ path, authenticity_token, className, busy, children }) {
   const [going, setGoing] = useState(false);
-  if (!path) return null;
+  return (
+    <form action={path} method="post" acceptCharset="UTF-8" onSubmit={() => setGoing(true)}>
+      <input type="hidden" name="authenticity_token" value={authenticity_token} />
+      <button type="submit" disabled={going} className={className}>{going ? busy : children}</button>
+    </form>
+  );
+}
+
+// The apps' own sign-in sheets (NativeSignIn): the page asks the server for a nonce, the app's
+// NativeAuth plugin signs in with Google or Apple and returns an ID token, and the server checks
+// it and signs them in
+async function nativeSignIn(provider, options, authenticityToken) {
+  const { nonce } = await fetch("/users/auth/native/nonce", { credentials: "same-origin", headers: { Accept: "application/json" } }).then((r) => r.json());
+  const args = provider === "google" ? { clientId: options.google_client_id, nonce } : { nonce };
+  const result = await callPlugin("NativeAuth", provider, args);
+  const res = await fetch("/users/auth/native", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": authenticityToken },
+    body: JSON.stringify({ provider, id_token: result.idToken, given_name: result.givenName, family_name: result.familyName }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "We couldn't sign you in. Please try again.");
+  window.location.href = data.redirect || "/";
+}
+
+function NativeButton({ provider, options, authenticity_token, className, busy, children }) {
+  const [going, setGoing] = useState(false);
+  const [error, setError] = useState(null);
+  const go = async () => {
+    setGoing(true);
+    setError(null);
+    try {
+      await nativeSignIn(provider, options, authenticity_token);
+    } catch (e) {
+      const message = String(e?.message || e);
+      if (!/cancel/i.test(message)) setError(message);
+      setGoing(false);
+    }
+  };
+  return (
+    <div>
+      <button type="button" onClick={go} disabled={going} className={className}>{going ? busy : children}</button>
+      {error && <p role="alert" className="mt-2 text-xs text-red-700 dark:text-red-300">{error}</p>}
+    </div>
+  );
+}
+
+// "Continue with Google" and "Sign in with Apple", above the email form. In a browser they're
+// the website's own (GoogleSignIn, AppleSignIn), each shown only when the server has it set
+// up; in the apps, Google (and Apple on iPhone) use the phone's own sheet, since Google blocks
+// its page inside apps. Nothing shows when none is set up.
+function ProviderButtons({ google_path, apple_path, native_sign_in, authenticity_token, verb = "Continue", note }) {
+  const native = native_sign_in && hasPlugin("NativeAuth") ? native_sign_in : null;
+  const googleLabel = <><GoogleMark className="h-[18px] w-[18px]" /> {verb} with Google</>;
+  const appleLabel = <><AppleMark className="h-[18px] w-[18px]" /> {verb === "Continue" ? "Sign in" : verb} with Apple</>;
+  const buttons = [];
+  if (native?.google_client_id) {
+    buttons.push(<NativeButton key="g" provider="google" options={native} authenticity_token={authenticity_token} className={googleLook} busy="Opening Google…">{googleLabel}</NativeButton>);
+  } else if (google_path) {
+    buttons.push(<PostButton key="g" path={google_path} authenticity_token={authenticity_token} className={googleLook} busy="Opening Google…">{googleLabel}</PostButton>);
+  }
+  if (native?.apple) {
+    buttons.push(<NativeButton key="a" provider="apple" options={native} authenticity_token={authenticity_token} className={appleLook} busy="Opening Apple…">{appleLabel}</NativeButton>);
+  } else if (apple_path || native?.apple_path) {
+    buttons.push(<PostButton key="a" path={apple_path || native.apple_path} authenticity_token={authenticity_token} className={appleLook} busy="Opening Apple…">{appleLabel}</PostButton>);
+  }
+  if (!buttons.length) return null;
   return (
     <>
-      <form action={path} method="post" acceptCharset="UTF-8" onSubmit={() => setGoing(true)}>
-        <input type="hidden" name="authenticity_token" value={authenticity_token} />
-        <button type="submit" disabled={going}
-          className="w-full inline-flex items-center justify-center gap-3 rounded-xl border border-slate-300 !bg-white px-4 py-2.5 text-sm font-semibold !text-slate-800 shadow-sm hover:!bg-slate-50 disabled:opacity-60 dark:border-neutral-600">
-          <GoogleMark className="h-[18px] w-[18px]" /> {going ? "Opening Google…" : label}
-        </button>
-        {note && <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">{note}</p>}
-      </form>
+      <div className="space-y-3">{buttons}</div>
+      {note && <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">{note}</p>}
       <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-400 dark:text-neutral-500" aria-hidden="true">
         <span className="h-px flex-1 bg-slate-200 dark:bg-neutral-700" /> or <span className="h-px flex-1 bg-slate-200 dark:bg-neutral-700" />
       </div>
     </>
+  );
+}
+
+// Apple's logo for the Sign in with Apple button (the outline from Font Awesome Free, CC BY 4.0)
+function AppleMark({ className }) {
+  return (
+    <svg viewBox="0 0 384 512" className={className} aria-hidden="true" fill="currentColor">
+      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+    </svg>
   );
 }
 
@@ -122,18 +198,19 @@ function GoogleMark({ className }) {
 
 const passwordHint = (min) => (min ? `At least ${min} characters` : null);
 
-export function LoginPage({ email = "", remember = true, forgot_path, sign_up_path, confirm_path, google_path, ...form }) {
+export function LoginPage({ email = "", remember = true, always_remember = false, forgot_path, sign_up_path, confirm_path, google_path, apple_path, native_sign_in, ...form }) {
   return (
     <AuthFrame icon={LogIn} title="Welcome back" subtitle="Log in to your RecoveryBot account"
       footer={<>
         {sign_up_path && <>Don't have an account yet? <a href={sign_up_path} className={linkClass}>Sign up</a></>}
         {confirm_path && <><br /><a href={confirm_path} className={linkClass}>Didn't get the confirmation email?</a></>}
       </>}>
-      <GoogleButton path={google_path} authenticity_token={form.authenticity_token} />
+      <ProviderButtons google_path={google_path} apple_path={apple_path} native_sign_in={native_sign_in} authenticity_token={form.authenticity_token} />
       <AuthForm {...form} submitLabel="Log in" busyLabel="Logging in…">
         <Field id="user_email" label="Email" type="email" name="user[email]" defaultValue={email} autoComplete="email" autoFocus required placeholder="you@example.com" />
         <Field id="user_password" label="Password" type="password" name="user[password]" autoComplete="current-password" required placeholder="••••••••"
           aside={forgot_path && <a href={forgot_path} className={`text-xs ${linkClass}`}>Forgot password?</a>} />
+        {always_remember && <input type="hidden" name="user[remember_me]" value="1" />}
         {remember && (
           <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-300">
             <input type="hidden" name="user[remember_me]" value="0" />
@@ -146,12 +223,12 @@ export function LoginPage({ email = "", remember = true, forgot_path, sign_up_pa
   );
 }
 
-export function SignUpPage({ name = "", email = "", min_password_length, login_path, human_check, google_path, ...form }) {
+export function SignUpPage({ name = "", email = "", min_password_length, login_path, human_check, google_path, apple_path, native_sign_in, ...form }) {
   return (
     <AuthFrame icon={UserPlus} title="Create your account" subtitle="We'll email you a link to confirm your address"
       footer={login_path && <>Already have an account? <a href={login_path} className={linkClass}>Log in</a></>}>
-      <GoogleButton path={google_path} authenticity_token={form.authenticity_token} label="Sign up with Google"
-        note={<>We use only your first name, last initial and email address from Google. By signing up you agree to the{" "}
+      <ProviderButtons google_path={google_path} apple_path={apple_path} native_sign_in={native_sign_in} authenticity_token={form.authenticity_token} verb="Sign up"
+        note={<>We use only your first name, last initial and email address from Google or Apple (Apple can hide your address from us). By signing up you agree to the{" "}
           <a href="/terms" className={linkClass}>terms of use</a> and <a href="/privacy" className={linkClass}>privacy policy</a>.</>} />
       <AuthForm {...form} submitLabel="Sign up" busyLabel="Signing up…">
         <Field id="user_name" label="Name" name="user[name]" defaultValue={name} autoComplete="name" autoFocus required placeholder="First name and last initial" />

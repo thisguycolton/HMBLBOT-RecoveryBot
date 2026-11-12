@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(PrinterPlugin.class);
         registerPlugin(AppClipboardPlugin.class);
         registerPlugin(WidgetBridgePlugin.class);
+        registerPlugin(NativeAuthPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

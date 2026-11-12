@@ -246,8 +246,8 @@ function installWidgets() {
 
 // --- Links that open the app ----------------------------------------------------------------
 
-// A recoverybot.hmblbot.com link tapped in Messages or Mail (once Universal Links / App Links
-// are set up) opens the app; this goes to that page. A widget opens the app with
+// A recoverybot.hmblbot.com link tapped in Messages, Mail or a browser opens the app
+// (Universal Links / App Links, WellKnownController); this goes to that page. A widget opens the app with
 // recoverybot://open/<path> (the day count goes to /recovery).
 function installAppLinks() {
   const go = (url) => {
@@ -255,7 +255,10 @@ function installAppLinks() {
       const target = new URL(url);
       const ours = target.host === window.location.host || (target.protocol === "recoverybot:" && target.host === "open");
       const path = target.pathname.startsWith("/") ? target.pathname : `/${target.pathname}`;
-      if (ours && path + target.search !== window.location.pathname + window.location.search) window.location.href = path + target.search + target.hash;
+      // A sign-in callback belongs to the browser that started it (Android can't leave it out
+      // of the app's links), so the app stays where it is
+      if (!ours || path.startsWith("/users/auth/")) return;
+      if (path + target.search !== window.location.pathname + window.location.search) window.location.href = path + target.search + target.hash;
     } catch { /* not a link we know */ }
   };
   onPlugin("App", "appUrlOpen", ({ url }) => go(url));
