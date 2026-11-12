@@ -40,8 +40,10 @@ This is one key for the whole team. It never expires, and you can only download 
    - Package name: `com.hmblbot.recoverybot`. App nickname: `RecoveryBot Android`.
    - Download **google-services.json**. Skip the remaining steps.
 4. **Give Firebase the Apple Push Key**: the gear > Project settings > **Cloud Messaging** tab >
-   Apple app configuration > APNs Authentication Key > **Upload**. Pick the `.p8` file and fill in
-   the Key ID and Team ID from step 1.
+   Apple app configuration. It has two slots, **Development** and **Production** APNs auth key:
+   upload the same `.p8` file to both, with the Key ID and Team ID from step 1 each time (the key
+   is Sandbox & Production, so it covers both: Development for builds run from Xcode, Production
+   for TestFlight and the App Store).
 5. **A key for the server**: Project settings > **Service accounts** tab > **Generate new private
    key** > Generate key. A JSON file downloads. This is a secret: it lets anyone send
    notifications as RecoveryBot.
