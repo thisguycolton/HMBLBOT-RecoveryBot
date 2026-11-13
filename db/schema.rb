@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_13_050000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_13_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1688,6 +1688,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_13_050000) do
     t.bigint "handled_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "platform", default: "ios", null: false
     t.index ["email"], name: "index_testflight_requests_on_email"
     t.index ["handled_by_id"], name: "index_testflight_requests_on_handled_by_id"
     t.index ["status", "created_at"], name: "index_testflight_requests_on_status_and_created_at"

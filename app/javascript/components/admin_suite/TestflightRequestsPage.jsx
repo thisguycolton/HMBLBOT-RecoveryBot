@@ -15,21 +15,29 @@ const STATUSES = [
   { value: "all", label: "All" },
 ];
 const LABELS = { new: "New", invited: "Invited", done: "Done" };
+const PLATFORMS = [
+  { value: "ios", label: "iPhone" },
+  { value: "android", label: "Android" },
+];
+const PLATFORM_LABELS = { ios: "iPhone", android: "Android" };
 
-// People who asked to try the iPhone app (/testflight). Copy the emails into App Store Connect
-// (TestFlight > testers), then mark them invited; done is for once they're in.
+// People who asked to try the app before it's in the stores (/testflight), for iPhone or Android.
+// iPhone: copy the emails into App Store Connect (TestFlight > testers). Android: paste them into
+// the Play Console's closed-test email list, then send each person the test's opt-in link. Mark
+// them invited after that; done is for once they're in.
 export default function TestflightRequestsPage({ notify }) {
   const [status, setStatus] = useState("new");
+  const [platform, setPlatform] = useState("ios");
   const [data, setData] = useState(null);
 
   async function load() {
     try {
-      setData(await api(`/testflight_requests?${new URLSearchParams({ status })}`));
+      setData(await api(`/testflight_requests?${new URLSearchParams({ status, platform })}`));
     } catch (e) {
       notify(e.message, "error");
     }
   }
-  useEffect(() => { load(); }, [status]);
+  useEffect(() => { setData(null); load(); }, [status, platform]);
 
   async function act(path, options, message) {
     try {
@@ -44,8 +52,9 @@ export default function TestflightRequestsPage({ notify }) {
   const rows = data?.testflight_requests || [];
 
   async function copyEmails() {
-    // One per line pastes straight into App Store Connect's "add testers" box and a spreadsheet
-    const text = rows.map((r) => r.email).join("\n");
+    // One per line pastes straight into App Store Connect's "add testers" box; the Play Console's
+    // email list takes them comma separated
+    const text = rows.map((r) => r.email).join(platform === "android" ? ", " : "\n");
     try {
       await navigator.clipboard.writeText(text);
       notify(`Copied ${rows.length} email${rows.length === 1 ? "" : "s"}.`);
@@ -62,7 +71,7 @@ export default function TestflightRequestsPage({ notify }) {
       return [first, rest.join(" "), r.email].map(cell).join(",");
     });
     const blob = new Blob([`${lines.join("\n")}\n`], { type: "text/csv" });
-    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `testflight-${status}.csv` });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `testflight-${platform}-${status}.csv` });
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -74,17 +83,24 @@ export default function TestflightRequestsPage({ notify }) {
 
   return (
     <Shell>
-      <ShellBand icon={Smartphone} title="TestFlight requests" subtitle={subtitle} />
+      <ShellBand icon={Smartphone} title="Tester requests" subtitle={subtitle} />
       <ShellPanel position="middle" className="p-4 space-y-3">
-        <SegmentedControl options={STATUSES} value={status} onChange={setStatus} />
+        <div className="flex flex-wrap gap-2">
+          <SegmentedControl options={PLATFORMS} value={platform} onChange={setPlatform} />
+          <SegmentedControl options={STATUSES} value={status} onChange={setStatus} />
+        </div>
         <p className="text-sm text-slate-500 dark:text-neutral-400 !font-sans">
-          People ask at <a href="/testflight" target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">/testflight</a>.
-          To show the form to everyone, add a site notice with the link <code>/testflight</code>.
+          People ask at <a href="/testflight" target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">/testflight</a>
+          {" "}(<code>/testflight?platform=android</code> starts on Android, and so does an Android phone).
+          To show the form to everyone, add a site notice with the link.{" "}
+          {platform === "android"
+            ? "Android: paste the emails into Play Console > Test and release > Closed testing > Testers (email list), then tell each person they can join at https://play.google.com/apps/testing/com.hmblbot.recoverybot (the form's thank-you page shows it too)."
+            : "iPhone: add the emails in App Store Connect > TestFlight > testers, and Apple emails the invite."}
         </p>
         {rows.length > 0 && (
           <div className="flex flex-wrap gap-2">
             <button type="button" className={buttonClass.secondary} onClick={copyEmails}><Copy className="w-4 h-4" /> Copy {rows.length} email{rows.length === 1 ? "" : "s"}</button>
-            <button type="button" className={buttonClass.secondary} onClick={downloadCsv}>Download CSV for App Store Connect</button>
+            {platform === "ios" && <button type="button" className={buttonClass.secondary} onClick={downloadCsv}>Download CSV for App Store Connect</button>}
             {status === "new" && (
               <button type="button" className={buttonClass.primary}
                 onClick={() => act("/testflight_requests/bulk", { method: "PATCH", body: { ids: rows.map((r) => r.id), status: "invited" } }, "Marked invited.")}>
@@ -118,6 +134,7 @@ function Request({ request: r, act, showStatus }) {
           <p className="text-slate-500 dark:text-neutral-400">
             {showStatus && <Badge tone={r.status === "new" ? "warn" : undefined}>{LABELS[r.status]}</Badge>}
             {shortDate(r.created_at)}
+            {` · ${PLATFORM_LABELS[r.platform] || "iPhone"}`}
             {r.account ? ` · signed in as @${r.account.username}` : " · not signed in"}
             {r.status !== "new" && r.invited_at && <> · Invited {shortDate(r.invited_at)}{r.handled_by ? ` by ${r.handled_by}` : ""}</>}
           </p>

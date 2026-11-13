@@ -49,6 +49,34 @@ class TestflightRequestsTest < ActionDispatch::IntegrationTest
     assert_redirected_to "/testflight?sent=1"
   end
 
+  test "Android testers: chosen on the form, from ?platform= or from an Android phone" do
+    get "/testflight?platform=android"
+    assert_equal "android", JSON.parse(Nokogiri::HTML(response.body).at("#site-page")["data-props"]).dig("values", "platform")
+    get "/testflight", headers: { "User-Agent" => "Mozilla/5.0 (Linux; Android 15; Pixel 9)" }
+    assert_equal "android", JSON.parse(Nokogiri::HTML(response.body).at("#site-page")["data-props"]).dig("values", "platform")
+    get "/testflight"
+    assert_equal "ios", JSON.parse(Nokogiri::HTML(response.body).at("#site-page")["data-props"]).dig("values", "platform")
+
+    post "/testflight", params: ask(platform: "android").merge(human_check_params)
+    assert_redirected_to "/testflight?platform=android&sent=1"
+    assert_equal "android", TestflightRequest.last.platform
+    assert_includes Notification.find_by!(user: @admin, kind: "testflight.requested").title, "Android app"
+
+    # The same person can ask for both phones, but not the same one twice
+    assert_difference -> { TestflightRequest.count }, 1 do
+      post "/testflight", params: ask(platform: "ios").merge(human_check_params)
+      post "/testflight", params: ask(platform: "android").merge(human_check_params)
+    end
+
+    post "/testflight", params: ask(platform: "android", email: "nope").merge(human_check_params)
+    assert_includes response.body, "Google account"
+
+    sign_in @admin
+    get "/api/admin/testflight_requests?platform=android", as: :json
+    assert_equal ["android"], response.parsed_body["testflight_requests"].map { _1["platform"] }
+    assert_equal 1, response.parsed_body.dig("counts", "new")
+  end
+
   test "bots and bad input are turned away" do
     post "/testflight", params: ask.merge(human_check_params).merge(website: "http://spam.example")
     assert_response :unprocessable_entity
