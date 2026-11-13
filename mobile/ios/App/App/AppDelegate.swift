@@ -111,18 +111,98 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(AppClipboardPlugin())
         bridge?.registerPluginInstance(WidgetBridgePlugin())
         bridge?.registerPluginInstance(NativeAuthPlugin())
+        let curtainPlugin = PageCurtainPlugin()
+        bridge?.registerPluginInstance(curtainPlugin)
         // Runs before the first page loads, so even the first one is covered
         if let webView, let inner = webView.navigationDelegate as? (NSObject & WKNavigationDelegate) {
             let guardDelegate = ServerErrorGuard(inner: inner, errorURL: bridge?.config.errorPathURL)
+            guardDelegate.curtain = curtain
             serverErrorGuard = guardDelegate
             webView.navigationDelegate = guardDelegate
         }
+        curtainPlugin.curtain = curtain
     }
+    private let curtain = PageCurtain()
 
     // Status bar style changes (StatusBar plugin) reach the screen through AppShellViewController
     override open func setStatusBarStyle(_ statusBarStyle: UIStatusBarStyle) {
         super.setStatusBarStyle(statusBarStyle)
         parent?.setNeedsStatusBarAppearanceUpdate()
+    }
+}
+
+// Moving between pages in the app. A web view clears the screen as each page starts and then
+// draws it in pieces (blank, then skeletons, then the page), which is what makes a site feel like
+// a site. So as a page starts loading, a picture of the one they're leaving is laid over the web
+// view, and once the new page says it has drawn (PageCurtainPlugin, from native_app.js) the
+// picture fades away to show it. Pages that never say so are shown after a few seconds anyway.
+// The first page of a run has the site's own loading screen instead.
+final class PageCurtain {
+    private var cover: UIView?
+    private var isCommitted = false
+    private var giveUp: DispatchWorkItem?
+    // Only once the site has said "ready" (a site from before this would never say it, and every
+    // page would sit behind the picture until the time runs out)
+    private var siteSaysReady = false
+
+    func drop(over webView: WKWebView) {
+        guard siteSaysReady, cover == nil, webView.url?.scheme?.hasPrefix("http") == true, let host = webView.superview,
+              let picture = webView.snapshotView(afterScreenUpdates: false) else { return }
+        picture.frame = webView.frame
+        picture.isUserInteractionEnabled = true // taps on the old page do nothing while the new one loads
+        host.insertSubview(picture, aboveSubview: webView)
+        cover = picture
+        isCommitted = false
+        wait(8) // a slow connection: the page comes through as it is
+    }
+
+    // The new page has replaced the old one in the web view; from here its "ready" counts
+    func committed() {
+        guard cover != nil else { return }
+        isCommitted = true
+        wait(3)
+    }
+
+    func ready() {
+        siteSaysReady = true
+        guard isCommitted else { return }
+        lift(animated: true)
+    }
+
+    func lift(animated: Bool) {
+        giveUp?.cancel()
+        guard let picture = cover else { return }
+        cover = nil
+        guard animated, !UIAccessibility.isReduceMotionEnabled else {
+            picture.removeFromSuperview()
+            return
+        }
+        UIView.animate(withDuration: 0.22, delay: 0, options: [.curveEaseOut, .allowUserInteraction], animations: {
+            picture.alpha = 0
+        }, completion: { _ in picture.removeFromSuperview() })
+    }
+
+    private func wait(_ seconds: Double) {
+        giveUp?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.lift(animated: true) }
+        giveUp = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: work)
+    }
+}
+
+// The page saying it has drawn (native_app.js, installPageReady)
+@objc(PageCurtainPlugin)
+public class PageCurtainPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "PageCurtainPlugin"
+    public let jsName = "PageCurtain"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "ready", returnType: CAPPluginReturnPromise)
+    ]
+    weak var curtain: PageCurtain?
+
+    @objc func ready(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { self.curtain?.ready() }
+        call.resolve()
     }
 }
 
@@ -168,11 +248,34 @@ final class ServerErrorGuard: NSObject, WKNavigationDelegate {
     // the plain offline page over ours; that one report is dropped
     // swiftlint:disable:next implicitly_unwrapped_optional
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        curtain?.lift(animated: false)
         if let at = redirectedAt, Date().timeIntervalSince(at) < 3 {
             redirectedAt = nil
             return
         }
         inner.webView?(webView, didFailProvisionalNavigation: navigation, withError: error)
+    }
+
+    // Moving between pages (PageCurtain): a picture of the page they were on stays up until the
+    // new one has drawn
+    weak var curtain: PageCurtain?
+
+    // swiftlint:disable:next implicitly_unwrapped_optional
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        curtain?.drop(over: webView)
+        inner.webView?(webView, didStartProvisionalNavigation: navigation)
+    }
+
+    // swiftlint:disable:next implicitly_unwrapped_optional
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        curtain?.committed()
+        inner.webView?(webView, didCommit: navigation)
+    }
+
+    // swiftlint:disable:next implicitly_unwrapped_optional
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        curtain?.lift(animated: false)
+        inner.webView?(webView, didFail: navigation, withError: error)
     }
 }
 

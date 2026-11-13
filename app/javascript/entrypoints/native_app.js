@@ -33,6 +33,7 @@ if (platform && !window.__nativeApp) {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready, { once: true });
   else ready();
   finishLaunch();
+  installPageReady();
   installShellGhost();
   installHidingTopBar();
 }
@@ -94,6 +95,31 @@ function installShellGhost() {
       sessionStorage.setItem("hb-shell", parts.map((el) => el.outerHTML).join(""));
     } catch { /* storage full or private mode: the next page just draws without it */ }
   });
+}
+
+// Moving between pages in the iPhone app: the app keeps a picture of the last page over this one
+// (PageCurtain in AppDelegate.swift) until this says it has drawn: the shell is up (the copy of
+// the last one, #shell-ghost, is gone) and nothing is still loading behind a skeleton (Skullet
+// marks those aria-busy), or 1.5 seconds after the page's scripts ran at most. A page brought back
+// whole from the browser's cache (going back) is drawn already. Older app builds don't have the
+// plugin, so nothing happens there.
+function installPageReady() {
+  if (!hasPlugin("PageCurtain")) return;
+  const send = () => callPlugin("PageCurtain", "ready").catch(() => {});
+  const watch = () => {
+    const start = performance.now();
+    const check = () => {
+      const waited = performance.now() - start;
+      const drawn = !document.getElementById("shell-ghost") && !document.querySelector('[aria-busy="true"]');
+      // two frames on, so what was just drawn is on screen before the picture fades
+      if ((drawn && waited > 50) || waited > 1500) requestAnimationFrame(() => requestAnimationFrame(send));
+      else requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch, { once: true });
+  else watch();
+  window.addEventListener("pageshow", (e) => { if (e.persisted) send(); });
 }
 
 // The loading screen on the first page after the app opens (layouts/_app_launch_head.html.erb):
