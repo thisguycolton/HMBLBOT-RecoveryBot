@@ -3,7 +3,8 @@
 # as `context`, the group data its own blocks list (EventBlocks::GROUP_TYPES).
 #
 # An AA Intergroup group that isn't here yet gets the default page filled in from its
-# listings (#intergroup_json), and the default page's editor shows it with a made-up group
+# listings (#intergroup_json), with the group's own description from its listing in place
+# of the default page's welcome notes, and the default page's editor shows it with a made-up group
 # (#template_json). Members' things (members, readings, the timeline) are only there for
 # members; everyone else gets nil for those and a count of members.
 class GroupPage
@@ -51,10 +52,11 @@ class GroupPage
   def intergroup_json(listings, slug:)
     template = GroupPageTemplate.current
     first = listings.first
+    description = listings.filter_map { |r| r.group_notes.presence }.first
     page(
       kind: "intergroup",
       layout: template.layout,
-      blocks: template.blocks,
+      blocks: with_description(template.blocks, description),
       custom: false,
       cover_url: image_path(template.cover),
       can_edit: false,
@@ -97,6 +99,18 @@ class GroupPage
   end
 
   private
+
+  # The default page's blocks with its first notes block (the welcome text) saying what the
+  # group says about itself, when its listing has that. It's shown as Markdown, which
+  # renders as React elements, so the listing's text can't add markup.
+  def with_description(blocks, description)
+    return blocks if description.blank?
+
+    index = blocks.index { |b| b["type"] == "notes" && b["region"] != "side" } || blocks.index { |b| b["type"] == "notes" }
+    return blocks unless index
+
+    blocks.dup.tap { |list| list[index] = list[index].merge("markdown" => description) }
+  end
 
   def page(**json)
     json.merge(signed_in: @viewer.present?, can_edit_default: !!@viewer&.suite_admin?, timeline_max: TIMELINE_MAX,

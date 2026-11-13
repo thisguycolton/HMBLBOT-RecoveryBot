@@ -36,6 +36,24 @@ class OiaaFeedTest < ActiveSupport::TestCase
     assert_equal ["Sunrise, renamed again", 450], [linked.reload.name, linked.start_minute]
   end
 
+  test "a listing's group description is kept, paragraphs and all, and fills in a linked group's blank one" do
+    feed = [{ slug: "cm1", name: "Crazy Monkey AA Group", group: "Crazy Monkey AA Group", day: 0, time: "03:00", timezone: "America/Los_Angeles",
+              group_notes: "We are a zoom only meeting.\nWe read from AA literature &amp;amp; talk.\n\n\nWe invite all.<script>x</script>\n\n" },
+            { slug: "p2", name: "Paragraphs", day: 1, time: "07:00", group_notes: "<p>First <b>one</b></p><p>Second<br>line</p>" }]
+    OiaaFeed.sync!(feed.to_json)
+    assert_equal "We are a zoom only meeting.\nWe read from AA literature & talk.\n\nWe invite all.", OiaaMeeting.find_by!(slug: "cm1").group_notes
+    assert_equal "First one\nSecond\nline", OiaaMeeting.find_by!(slug: "p2").group_notes
+
+    blank = groups(:one).tap { |g| g.update_columns(description: nil) }
+    own = groups(:two).tap { |g| g.update_columns(description: "Our own words") }
+    [blank, own].each { |g| g.meetings.new.apply_oiaa(OiaaMeeting.find_by!(slug: "cm1")).save! }
+    travel 1.minute do
+      OiaaFeed.sync!(feed.to_json)
+    end
+    assert_match(/\AWe are a zoom only meeting/, blank.reload.description)
+    assert_equal "Our own words", own.reload.description
+  end
+
   test "Zoom IDs match however they're written" do
     assert_equal "81234567890", OiaaFeed.conference_id("https://zoom.us/j/81234567890")
     assert_equal "81234567890", OiaaFeed.conference_id("812 3456 7890")

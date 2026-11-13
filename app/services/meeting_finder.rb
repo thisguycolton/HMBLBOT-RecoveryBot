@@ -258,7 +258,8 @@ class MeetingFinder
   end
 
   def intergroup_json(record, cover)
-    { title: record.group_name.presence || record.name, cover_url: cover, members_count: 0,
+    { title: record.group_name.presence || record.name, description: record.group_notes&.squish&.truncate(NOTES_MAX),
+      cover_url: cover, members_count: 0,
       href: "/find/#{ERB::Util.url_encode(record.slug)}", here: false, source: record.source_name }
   end
 

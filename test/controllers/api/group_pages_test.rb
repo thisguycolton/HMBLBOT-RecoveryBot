@@ -145,6 +145,16 @@ class Api::GroupPagesTest < ActionDispatch::IntegrationTest
     assert_equal "Desert Dawn Group", body.dig("context", "group", "title")
     assert_equal 2, body.dig("context", "meetings").size
 
+    notes = body["blocks"].find { |b| b["type"] == "notes" }
+    assert_match "share our experience", notes["markdown"]
+
+    # its listing's own description takes the welcome text's place
+    OiaaMeeting.find_by!(slug: "desert-dawn-sat").update!(group_notes: "We meet at dawn.\nAll are welcome.")
+    get "/api/intergroup_pages/desert-dawn", as: :json
+    notes = response.parsed_body["blocks"].select { |b| b["type"] == "notes" }
+    assert_equal "We meet at dawn.\nAll are welcome.", notes.first["markdown"]
+    assert_match "share our experience", GroupPageTemplate.current.blocks.find { |b| b["type"] == "notes" }["markdown"]
+
     here = Group.create!(title: "Desert Dawn Group", time_zone: "America/Phoenix")
     get "/api/intergroup_pages/desert-dawn", as: :json
     assert_equal here.slug, response.parsed_body["group_slug"]

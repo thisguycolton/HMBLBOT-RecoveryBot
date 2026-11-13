@@ -113,6 +113,21 @@ class Group < ApplicationRecord
   def member?(user) = !!membership_for(user)&.active?
   def admin?(user) = !!membership_for(user)&.then { |m| m.active? && m.admin? }
   def manageable_by?(user) = !!user && (user.suite_admin? || admin?(user))
+
+  # Takes its description from a linked listing (AA Intergroup's or an imported list's
+  # group notes) while it has none of its own, so a description a group admin wrote is never
+  # replaced. Saves only the description; text the blocked-language check refuses is skipped.
+  def adopt_listing_description(record)
+    text = record&.group_notes.to_s.strip
+    return false if text.empty? || description.present?
+
+    self.description = text.truncate(1000, separator: " ")
+    return true if new_record?
+
+    saved = save
+    restore_attributes([:description]) unless saved
+    saved
+  end
   # Who schedules the hosts of its meetings: group admins, and members an admin marked in the
   # Members tab (the person doing that needn't keep the records). A coordinator an admin limited
   # to some time slots (GroupMembership#host_slots_only) schedules only those meetings, so given
