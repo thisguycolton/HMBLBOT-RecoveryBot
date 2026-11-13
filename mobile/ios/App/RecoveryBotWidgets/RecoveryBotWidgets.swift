@@ -386,7 +386,7 @@ struct ChipSettings: WidgetConfigurationIntent {
 }
 
 // Tapping the chip turns it over. The widget runs this itself (the app doesn't open), and
-// WidgetKit then redraws the widget, which animates the turn (chipTurnDegrees).
+// WidgetKit then redraws the widget, fading from one face to the other.
 struct FlipChipIntent: AppIntent {
     static let title: LocalizedStringResource = "Turn the chip over"
     static let isDiscoverable = false
@@ -397,11 +397,6 @@ struct FlipChipIntent: AppIntent {
     }
 }
 
-// The turn when the chip is tapped: a turn and a half about its upright axis, so it lands on its
-// other face. Widgets only animate changes to the same view (a swap of views just fades), so the
-// chip stays one view whose angle changes, and the back is drawn mirrored, which reads the right
-// way round once it has turned half a turn more.
-let chipTurnDegrees = 540.0
 struct ChipProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> ChipEntry { ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", sample: true) }
 
@@ -454,9 +449,12 @@ struct ChipView: View {
     @ViewBuilder var chip: some View {
         if let image = entry.image, let back = entry.back {
             Button(intent: FlipChipIntent()) {
-                coin(entry.flipped ? back.withHorizontallyFlippedOrientation() : image)
-                    .rotation3DEffect(.degrees(entry.flipped ? chipTurnDegrees : 0), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
-                    .animation(.easeOut(duration: 1.1), value: entry.flipped)
+                // A smooth fade between the faces. (A widget can't spin a coin convincingly: it
+                // only turns a flat picture, or shows a few frames of a flipbook.)
+                coin(entry.flipped ? back : image)
+                    .id(entry.flipped)
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.45), value: entry.flipped)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(entry.flipped ? "Chip, back. Tap to turn it over." : "Chip. Tap to turn it over.")
