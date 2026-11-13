@@ -8,15 +8,33 @@
     android:orientation="vertical"
     android:padding="12dp">
 
-    <ImageView
-        android:id="@+id/chip_image"
+    <!-- The front and back; tapping turns it over (ChipWidget) -->
+    <ViewFlipper
+        android:id="@+id/chip_flipper"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:adjustViewBounds="true"
-        android:contentDescription="Favorite chip"
-        android:scaleType="fitCenter"
-        android:src="@mipmap/ic_launcher_foreground" />
+        android:animateFirstView="false"
+        android:inAnimation="@anim/chip_flip_in"
+        android:outAnimation="@anim/chip_flip_out">
+
+        <ImageView
+            android:id="@+id/chip_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:contentDescription="Favorite chip"
+            android:scaleType="fitCenter"
+            android:src="@mipmap/ic_launcher_foreground" />
+
+        <ImageView
+            android:id="@+id/chip_back_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:contentDescription="Favorite chip, back"
+            android:scaleType="fitCenter" />
+    </ViewFlipper>
 
     <TextView
         android:id="@+id/chip_label"

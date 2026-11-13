@@ -8,6 +8,7 @@
   font-family: "Public Sans", system-ui, sans-serif;
   inset: 0;
   justify-content: center;
+  overscroll-behavior: contain;
   padding: 1rem;
   position: fixed;
   z-index: 2300;
@@ -27,6 +28,7 @@
   max-height: calc(100dvh - 2rem);
   max-width: 28rem;
   overflow: hidden auto;
+  overscroll-behavior: contain;
   position: relative;
   width: 100%;
 }

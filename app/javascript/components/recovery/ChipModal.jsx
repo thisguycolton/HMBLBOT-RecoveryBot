@@ -64,7 +64,10 @@ export default function ChipModal({ chip, design, title, text, celebrate = false
     const timer = celebrate ? setTimeout(() => confetti(), 900) : null;
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
-    return () => { clearTimeout(timer); window.removeEventListener("keydown", onKey); };
+    // The page behind stays put while the chip is open
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { clearTimeout(timer); window.removeEventListener("keydown", onKey); document.body.style.overflow = overflow; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return createPortal(

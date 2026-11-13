@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 import UIKit
 import WidgetKit
@@ -8,7 +9,8 @@ import WidgetKit
 //   number ("127 days"), never what the days are of, so it's discreet on a Lock Screen.
 // - Favorite chip: their first favorite chip (else their newest sobriety chip), drawn by the site.
 // The app (WidgetBridgePlugin in AppDelegate.swift) keeps what they show in the App Group both
-// share; signing out of the app clears it. Tapping either opens the Chips page.
+// share; signing out of the app clears it. Tapping either opens the Chips page, except the chip
+// itself, which turns over (FlipChipIntent) to show its back.
 
 enum Shared {
     static let group = "group.com.hmblbot.recoverybot"
@@ -23,6 +25,15 @@ enum Shared {
         else { return nil }
         return UIImage(contentsOfFile: url.path)
     }
+
+    // The back, drawn by the site beside the front (lib/appWidgets.js); older app builds have none
+    static func chipBackImage() -> UIImage? {
+        guard let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)?.appendingPathComponent("chip-back.png")
+        else { return nil }
+        return UIImage(contentsOfFile: url.path)
+    }
+
+    static var chipFlipped: Bool { defaults?.bool(forKey: "chipFlipped") ?? false }
 
     static let chipsPage = URL(string: "recoverybot://open/recovery")!
 }
@@ -232,8 +243,39 @@ struct ChipEntry: TimelineEntry {
     let date: Date
     let signedIn: Bool
     let image: UIImage?
+    var back: UIImage? = nil
+    var flipped = false
     let label: String
     var sample = false
+}
+
+// Tapping the chip turns it over. The widget runs this itself (the app doesn't open), and
+// WidgetKit then redraws the widget, which animates the turn (ChipTurn).
+struct FlipChipIntent: AppIntent {
+    static let title: LocalizedStringResource = "Turn the chip over"
+    static let isDiscoverable = false
+
+    func perform() async throws -> some IntentResult {
+        Shared.defaults?.set(!Shared.chipFlipped, forKey: "chipFlipped")
+        return .result()
+    }
+}
+
+// Half a coin flip: the face turns edge-on, then the other face turns in from its edge
+struct ChipTurn: ViewModifier {
+    let degrees: Double
+    func body(content: Content) -> some View {
+        content.rotation3DEffect(.degrees(degrees), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
+    }
+}
+
+extension AnyTransition {
+    static var chipFlip: AnyTransition {
+        .asymmetric(
+            insertion: .modifier(active: ChipTurn(degrees: -90), identity: ChipTurn(degrees: 0)).animation(.easeOut(duration: 0.25).delay(0.25)),
+            removal: .modifier(active: ChipTurn(degrees: 90), identity: ChipTurn(degrees: 0)).animation(.easeIn(duration: 0.25))
+        )
+    }
 }
 
 struct ChipProvider: TimelineProvider {
@@ -250,7 +292,9 @@ struct ChipProvider: TimelineProvider {
     }
 
     private func current() -> ChipEntry {
-        ChipEntry(date: Date(), signedIn: Shared.signedIn, image: Shared.signedIn ? Shared.chipImage() : nil, label: Shared.chipLabel)
+        let signedIn = Shared.signedIn
+        return ChipEntry(date: Date(), signedIn: signedIn, image: signedIn ? Shared.chipImage() : nil,
+                         back: signedIn ? Shared.chipBackImage() : nil, flipped: Shared.chipFlipped, label: Shared.chipLabel)
     }
 }
 
@@ -270,7 +314,17 @@ struct ChipView: View {
     }
 
     @ViewBuilder var chip: some View {
-        if let image = entry.image {
+        if let image = entry.image, let back = entry.back {
+            Button(intent: FlipChipIntent()) {
+                ZStack {
+                    Image(uiImage: entry.flipped ? back : image).resizable().scaledToFit()
+                        .id(entry.flipped)
+                        .transition(.chipFlip)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(entry.flipped ? "Chip, back. Tap to turn it over." : "Chip. Tap to turn it over.")
+        } else if let image = entry.image {
             Image(uiImage: image).resizable().scaledToFit()
         } else {
             // the widget gallery's preview: a plain brass coin
@@ -320,7 +374,7 @@ struct ChipWidget: Widget {
             ChipView(entry: entry)
         }
         .configurationDisplayName("Favorite chip")
-        .description("The first chip you starred on your Chips page.")
+        .description("The first chip you starred on your Chips page. Tap the chip to turn it over.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

@@ -29,6 +29,11 @@ final class WidgetData {
         return new File(context.getFilesDir(), "widget-chip.png");
     }
 
+    // Its back, drawn by the site beside the front (lib/appWidgets.js)
+    static File chipBackFile(Context context) {
+        return new File(context.getFilesDir(), "widget-chip-back.png");
+    }
+
     static boolean signedIn(Context context) {
         return prefs(context).getBoolean("signedIn", false);
     }
@@ -39,8 +44,15 @@ final class WidgetData {
 
     // The chip, at most `max` pixels across (a widget's picture has to stay small)
     static Bitmap chip(Context context, int max) {
+        return picture(context, chipFile(context), max);
+    }
+
+    static Bitmap chipBack(Context context, int max) {
+        return picture(context, chipBackFile(context), max);
+    }
+
+    private static Bitmap picture(Context context, File file, int max) {
         if (!prefs(context).getBoolean("hasChip", false)) return null;
-        File file = chipFile(context);
         if (!file.exists()) return null;
         Bitmap full = BitmapFactory.decodeFile(file.getPath());
         if (full == null || full.getWidth() <= max) return full;
