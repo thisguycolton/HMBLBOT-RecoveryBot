@@ -54,6 +54,28 @@ class Api::NotificationsTest < ActionDispatch::IntegrationTest
     assert_equal 0, @reader.notifications.unread.count
   end
 
+  test "readers remove one notification or clear them all, only their own" do
+    Notification.deliver(@reader, kind: "follow.created", title: "One")
+    Notification.deliver(@reader, kind: "test", title: "Two")
+    Notification.deliver(@reader, kind: "test", title: "Three")
+    Notification.deliver(@admin, kind: "test", title: "Not yours")
+    sign_in @reader
+
+    get "/api/notifications", as: :json
+    assert_equal "follows", response.parsed_body["notifications"].find { |n| n["title"] == "One" }["category"]
+
+    delete "/api/notifications/#{@admin.notifications.sole.id}", as: :json
+    assert_response :not_found
+    delete "/api/notifications/#{@reader.notifications.find_by(title: 'One').id}", as: :json
+    assert_response :no_content
+    assert_equal %w[Three Two], @reader.notifications.recent.pluck(:title)
+
+    delete "/api/notifications/clear", as: :json
+    assert_response :no_content
+    assert_empty @reader.notifications.reload
+    assert_equal 1, @admin.notifications.count
+  end
+
   test "opening the page a notification leads to marks it read, with or without its query or anchor" do
     sign_in @reader
     Notification.deliver(@reader, kind: "test", title: "Exact", url: "/service_readings")

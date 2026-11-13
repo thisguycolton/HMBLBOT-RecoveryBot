@@ -72,7 +72,7 @@ class Notification < ApplicationRecord
   def open_path = "/notifications/#{id}/open"
 
   def as_api_json
-    { id: id, kind: kind, title: title, body: body, url: url, read: read?, created_at: created_at.iso8601 }
+    { id: id, kind: kind, category: self.class.push_category(kind), title: title, body: body, url: url, read: read?, created_at: created_at.iso8601 }
   end
 
   private
