@@ -13,8 +13,7 @@ import tailwindcss from '@tailwindcss/vite'
 function vendorChunk(id) {
   if (!id.includes('node_modules') && !id.includes('commonjsHelpers')) return undefined
   if (id.includes('commonjsHelpers') || /node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react'
-  // All the icons in one file: each was its own little file, about 180 of a page's 260 requests
-  if (/node_modules\/lucide-react\//.test(id)) return 'vendor-lucide'
+  if (/node_modules\/lucide-react\/dist\/esm\/(Icon|createLucideIcon|defaultAttributes|utils|shared\/)/.test(id)) return 'vendor-lucide'
   return undefined
 }
 
