@@ -6,6 +6,7 @@
 //               over at midnight without the app being opened)
 //   chipImage   the chip drawn on a clear background, a PNG as base64, or "" without one
 //   chipBackImage  its back, drawn the same way, so tapping the chip on the widget flips it
+//   chipFrames  the turn from one to the other, small PNGs, the widget's flipbook of the flip
 //   chipLabel   its name ("1 year"), and chipId
 // The chip is their first favorite (Chips page), else their newest sobriety chip, else their
 // newest chip. It's drawn right here, the same way chip pictures are (chipMotion.js).
@@ -17,8 +18,10 @@ import { chipMilestones } from "./milestones";
 import { callPlugin, hasPlugin } from "./nativeApp";
 
 const STORE = "hb-widget-key";
-const VERSION = 2; // bump to redraw everyone's widgets after a change to how they're drawn
+const VERSION = 3; // bump to redraw everyone's widgets after a change to how they're drawn
 const SIZE = 600;
+const FRAMES = 18; // the flipbook: a frame every 30 degrees of a turn and a half
+const FRAME_SIZE = 360; // small, since a widget has little memory to hold them in
 
 const remembered = () => { try { return localStorage.getItem(STORE); } catch { return null; } };
 const remember = (key) => { try { localStorage.setItem(STORE, key); } catch { /* private mode */ } };
@@ -45,12 +48,16 @@ async function drawChipPictures(chip, design) {
   const prepared = await prepareChip(chipFaces({ ...chip, on: null }, design));
   const tall = prepared.front.height / prepared.front.width;
   const w = (SIZE * 0.86) / Math.max(1, tall);
-  // The front turned a little one way, the back turned the same amount past half a turn
-  return [14, 194].map((angle) => {
-    const canvas = canvasOf(SIZE, SIZE);
-    drawChip(canvas.getContext("2d"), prepared, { cx: SIZE / 2, cy: SIZE / 2, w, angle, shadow: false });
+  const draw = (angle, size) => {
+    const canvas = canvasOf(size, size);
+    drawChip(canvas.getContext("2d"), prepared, { cx: size / 2, cy: size / 2, w: (w * size) / SIZE, angle, shadow: false });
     return canvas.toDataURL("image/png").split(",", 2)[1] || "";
-  });
+  };
+  // The front turned a little one way, the back turned the same amount past half a turn, and the
+  // frames of a turn and a half from one to the other (edge and all), which the iPhone widget
+  // plays as a flipbook when the chip is tapped (it can't play a video or a GIF)
+  const frames = Array.from({ length: FRAMES }, (_, i) => draw(14 + (540 * (i + 1)) / FRAMES, FRAME_SIZE));
+  return [draw(14, SIZE), draw(194, SIZE), frames];
 }
 
 let running = null;
@@ -83,13 +90,15 @@ async function update(force) {
   const chip = pickChip(data);
   let chipImage = "";
   let chipBackImage = "";
+  let chipFrames = [];
   if (chip) {
-    try { [chipImage, chipBackImage] = await drawChipPictures(chip, data.design); } catch { /* the widget shows its empty state */ }
+    try { [chipImage, chipBackImage, chipFrames] = await drawChipPictures(chip, data.design); } catch { /* the widget shows its empty state */ }
   }
   await callPlugin("WidgetBridge", "update", {
     soberSince: data.sobriety_date || "",
     chipImage,
     chipBackImage,
+    chipFrames,
     chipLabel: chip?.label || "",
     chipId: chip ? String(chip.id) : "",
   });

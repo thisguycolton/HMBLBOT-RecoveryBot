@@ -397,6 +397,18 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         } else {
             try? FileManager.default.removeItem(at: backFile)
         }
+        // The flipbook of the turn (chip-frame-0.png...), replacing the last chip's
+        let folder = chipFile.deletingLastPathComponent()
+        for i in 0..<max(defaults.integer(forKey: "chipFrameCount"), 0) {
+            try? FileManager.default.removeItem(at: folder.appendingPathComponent("chip-frame-\(i).png"))
+        }
+        let frames = (call.getArray("chipFrames") as? [String]) ?? []
+        var saved = 0
+        for base64 in frames {
+            guard let data = Data(base64Encoded: base64), (try? data.write(to: folder.appendingPathComponent("chip-frame-\(saved).png"), options: .atomic)) != nil else { break }
+            saved += 1
+        }
+        defaults.set(saved, forKey: "chipFrameCount")
         // A new chip starts face up
         if defaults.string(forKey: "chipId") != defaults.string(forKey: "chipShownId") {
             defaults.set(false, forKey: "chipFlipped")
@@ -408,7 +420,10 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func clear(_ call: CAPPluginCall) {
         if let (defaults, chipFile) = shared() {
-            ["signedIn", "soberSince", "chipLabel", "chipId", "hasChip", "chipFlipped", "chipShownId"].forEach { defaults.removeObject(forKey: $0) }
+            for i in 0..<max(defaults.integer(forKey: "chipFrameCount"), 0) {
+                try? FileManager.default.removeItem(at: chipFile.deletingLastPathComponent().appendingPathComponent("chip-frame-\(i).png"))
+            }
+            ["signedIn", "soberSince", "chipLabel", "chipId", "hasChip", "chipFlipped", "chipShownId", "chipFrameCount"].forEach { defaults.removeObject(forKey: $0) }
             try? FileManager.default.removeItem(at: chipFile)
             try? FileManager.default.removeItem(at: chipFile.deletingLastPathComponent().appendingPathComponent("chip-back.png"))
             WidgetCenter.shared.reloadAllTimelines()
