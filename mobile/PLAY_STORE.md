@@ -51,7 +51,7 @@ least 12 testers for 14 days in a row** before it can publish to everyone. Start
    - Data safety: email, name, user ID, photos and videos, messages and other content, device
      ID (the push token); all for app functionality, none shared or sold, encrypted in transit;
      people can ask for deletion. **Account deletion URL**: Play wants a web page that explains
-     how to delete an account (Profile > Delete account), reachable without the app
+     how to delete an account: `https://recoverybot.hmblbot.com/delete-account`
    - Health apps declaration, if asked: not a medical app
 4. **Store listing**: name, short and full description, icon (512px), feature graphic
    (1024x500), phone screenshots.

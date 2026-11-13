@@ -28,6 +28,11 @@ class PrivacyAndContactTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, %(data-page="terms")
 
+    # Google Play links here: how to delete an account, without the app or signing in
+    get "/delete-account"
+    assert_response :success
+    assert_includes response.body, %(data-page="delete-account")
+
     get "/contact"
     assert_response :success
     props = JSON.parse(Nokogiri::HTML(response.body).at("#site-page")["data-props"])

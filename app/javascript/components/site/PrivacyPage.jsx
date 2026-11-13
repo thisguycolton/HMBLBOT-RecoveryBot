@@ -293,6 +293,10 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
             <li>your chat messages and where you'd read up to, notes others wrote on your page, and reports you made or that were made about you.</li>
           </ul>
           <p>
+            If you signed in with Apple, we also tell Apple to disconnect RecoveryBot from your Apple ID (we keep the token Apple gives
+            us for that, encrypted, until then). If you can't sign in, <a href="/delete-account">here's how to ask us to delete it</a>.
+          </p>
+          <p>
             Some things belong to a group or to everyone, so they stay without your account attached: group documents and minutes you
             edited, decisions you recorded, events, polls you made, and poll and schedule poll answers. Your name stays where it was typed into a record (for
             example in minutes, or as the host of a meeting). Ask the group's record keepers, or us, if you'd like it taken out. If you've

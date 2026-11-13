@@ -25,6 +25,7 @@ Rails.application.routes.draw do
   get "/sitemap.xml", to: "sitemaps#show", as: :sitemap, format: false
   get "/privacy", to: "privacy#show", as: :privacy
   get "/terms", to: "terms#show", as: :terms
+  get "/delete-account", to: "delete_accounts#show", as: :delete_account
   # The Docs: tutorials for every tool (DocsController, entrypoints/docs.jsx); About and History are docs pages too
   get "/docs(/*path)", to: "docs#app", as: :docs, format: false
   get "/about", to: "docs#app", defaults: { alias: "about" }, as: :about
