@@ -68,7 +68,7 @@ class NativeSignInTest < ActionDispatch::IntegrationTest
     assert_equal "g-555", user.google_uid
     assert_equal "Sam L.", user.name
     assert user.confirmed?
-    assert response.parsed_body["redirect"].present?
+    assert_equal "/welcome", response.parsed_body["redirect"], "a new account starts with the welcome wizard"
     assert cookies["remember_user_token"].present?, "the app keeps them signed in"
     get "/recovery"
     assert_response :success

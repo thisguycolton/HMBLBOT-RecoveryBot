@@ -48,7 +48,7 @@ class GoogleSignInTest < ActionDispatch::IntegrationTest
     assert user.confirmed?
     assert user.confirmed
     assert_not user.password_chosen
-    assert_redirected_to "/"
+    assert_redirected_to "/welcome", "a new account starts with the welcome wizard"
     assert cookies["remember_user_token"].present?, "Google's page has no Remember me box, so they're kept signed in"
     get "/api/profile"
     assert_response :success
