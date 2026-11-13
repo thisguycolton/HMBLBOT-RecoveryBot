@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "November 10, 2026";
+const UPDATED = "November 12, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -23,7 +23,8 @@ const SECTIONS = [
 
 const COOKIES = [
   ["_acid_test_session", "Keeps you signed in while you use the site and protects forms from being sent by other sites.", "Until you close the browser"],
-  ["remember_user_token", "Keeps you signed in between visits, only if you tick “Remember me”.", "2 weeks, or until you sign out"],
+  ["remember_user_token", "Keeps you signed in between visits, only if you tick “Remember me” (the iPhone and Android apps always keep you signed in).", "2 weeks after your last visit, or until you sign out"],
+  ["apple_sign_in", "Checks that the answer from Apple's page belongs to the Sign in with Apple you started. Removed once used.", "10 minutes"],
   ["group_ask, group_invite", "Remembers the group you asked to join or were invited to while you sign in or sign up. Removed once used.", "30 days"],
   ["event_rsvp_…", "Lets you change your RSVP to an event if you answered without an account.", "Until you clear it"],
   ["hb_voter", "Lets you change your answers to a poll or schedule poll if you voted without an account.", "Until you clear it"],
@@ -38,6 +39,7 @@ const STORAGE = [
   ["questScreenName, questChime", "Your screen name and sound setting in The Acid Quest"],
   ["installNudge.dismissed", "That you closed the “Add RecoveryBot to your home screen” card"],
   ["hb-day-count-seen", "The day your day count last popped up, so a milestone celebration shows once that day"],
+  ["hb-device-token", "In the iPhone and Android apps, once you turn on notifications: the address Firebase gave this install, so turning them off or logging out can tell us which phone to stop"],
   ["hb-widget-key", "In the iPhone and Android apps: what the home-screen widgets were last given, so they're only redrawn when your sobriety date or favorite chip changes"],
 ];
 
@@ -137,7 +139,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
           <H2 id="what-we-collect">What we collect</H2>
           <h3>Things you give us</h3>
           <ul>
-            <li><strong>Your account:</strong> name, email address and password. The password is stored only as a one-way hash; nobody can read it. We email you a link to confirm the address before you can sign in.{google && <> If you sign up or log in with Google instead, Google tells us your email address (and that it's confirmed), your name and an id for your Google account. We keep the address, your first name and last initial, and the id, which links the Google account to yours. We don't get your Google password, contacts or anything else, and we don't use your Google picture.</>}</li>
+            <li><strong>Your account:</strong> name, email address and password. The password is stored only as a one-way hash; nobody can read it. We email you a link to confirm the address before you can sign in.{google && <> If you sign up or log in with Google instead, Google tells us your email address (and that it's confirmed), your name and an id for your Google account. We keep the address, your first name and last initial, and the id, which links the Google account to yours. We don't get your Google password, contacts or anything else, and we don't use your Google picture.</>} If you use Sign in with Apple, Apple tells us an id for your Apple account and an email address, which can be a private relay address that forwards to you if you chose “Hide My Email”, and, the first time only, your name. We keep the address, your first name and last initial, and the id. The apps' own sign-in sheets work the same way.</li>
             <li><strong>Your profile:</strong> username, picture, a short bio, an optional sobriety date, and how you lay out your profile page.</li>
             <li><strong>Notes and highlights:</strong> passages you highlight in the library, notes you write on them, and notes on your timeline (with up to six pictures). Each one has its own visibility (see below).</li>
             <li><strong>10th step inventories and gratitude lists:</strong> what you write in the 10th step (your yes or no to each question and your notes) and your gratitude lists, one of each a day, with the day they're for. If you change your 10th step questions, we keep your questions too, and each night keeps the questions it was written with. Only you can read them on the site: not your groups, not the people you follow, and not your sponsor unless you send one to them (see Sponsorship). No admin page shows them; the few people who run RecoveryBot could reach them in the database, like anything stored, but we don't look. <em>Share</em> on a list or a 10th step only makes text on your own device for you to copy or send yourself: we don't send it, keep a copy, or note that you shared. The link at its top is the same for everyone, so it tells whoever opens it nothing about you or what you wrote.</li>
@@ -148,7 +150,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
             <li><strong>Available to sponsor:</strong> if you turn on <em>Offer to sponsor</em>, we keep that it's on, your note, the picks you chose (who you'll sponsor and how you work), the languages you list, how many sponsees you'll take, and whether to show your time sober (worked out from your sobriety date; off unless you turn it on). Your offer is only shown to people signed in who are in one of your groups, in groups that list sponsors (a group's admins can turn this off), and never to anyone you've blocked or who has blocked you. It shows under Find a sponsor and on the Members tab of those groups, where a green check by your name says you're available. It stops showing when you turn it off or have as many sponsees as you said. Anyone who can see it can report it, and a site admin can stop you offering; we keep when and who did.</li>
             <li><strong>Follows:</strong> who you follow and who follows you.</li>
             <li><strong>Reminders:</strong> if you turn on the daily gratitude or 10th step reminder, we keep whether each is on, the time you picked, the day it last went out, and your time zone as your browser reports it (like “America/Phoenix”), so the reminder comes at your time. Turning a reminder off stops it.</li>
-            <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. Turning them off, removing the device in your settings, or signing out on that device deletes it.</li>
+            <li><strong>Notifications on your devices:</strong> if you turn on notifications for a phone or computer, we keep the address your browser's push service gave it, the keys that encrypt what we send, and the browser and device type (like “Safari on iPhone”) so you can tell your devices apart. In the iPhone and Android apps we keep the address Firebase gives that install instead, with whether it's an iPhone or Android phone and the app's version. Turning them off, removing the device in your settings, or logging out on that device deletes it.</li>
             <li><strong>Widgets in the iPhone and Android apps:</strong> if you add the day count or chip widget, the app keeps your sobriety date and a picture of your favorite chip on your phone for it. They stay on the phone, and signing out of the app clears them. A widget on your Home Screen or Lock Screen can be seen by anyone who looks at your phone.</li>
             <li><strong>Reactions, comments and reposts:</strong> the Like, Love or Hugs you give a note or comment, comments you write on notes, and notes and highlights you repost to your timeline.</li>
             <li><strong>Pictures to share:</strong> <em>Share as a picture</em> on your own highlight or note draws a picture of its words on our server, with the fonts we host; nothing is sent to another company to make it. We keep the drawn picture for a while so it's quick next time, and it only has your name on it if you tick <em>Add my first name</em>. Where it goes after that (Instagram, Messages, your photos) is up to you.</li>
@@ -239,8 +241,15 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
               makes your browser (Apple for Safari, iPhone and iPad; Google for Chrome and Android; Mozilla for Firefox; Microsoft for Edge on
               Windows). It's encrypted so only your device can read it: the service sees that RecoveryBot sent your device something and when, not what it says.
             </li>
+            <li>
+              <strong>Firebase Cloud Messaging (Google):</strong> if you turn on notifications in the iPhone or Android app, each one goes
+              through Google's Firebase, which passes it to Apple (for iPhone) or to your Android phone. Unlike browser notifications, Firebase
+              and Apple can read what a notification says: its title and the short line under it, the same words the bell shows. We don't send
+              anything else, and Firebase Analytics is off.
+            </li>
             <li><strong>ipinfo.io:</strong> looks up the shortened IP address of a visit to get the rough location for visit statistics.</li>
             {google && <li><strong>Google sign-in:</strong> if you choose “Continue with Google”, you sign in on Google's own page, so Google sees that you're signing in to RecoveryBot, under Google's privacy policy. Nothing goes to Google if you use your email and password.</li>}
+            <li><strong>Sign in with Apple:</strong> if you choose it, you sign in on Apple's own page or sheet, so Apple sees that you're signing in to RecoveryBot, under Apple's privacy policy. Nothing goes to Apple if you use your email and password.</li>
             {turnstile && <li><strong>Cloudflare Turnstile:</strong> checks that the sign-up and contact forms are filled in by a person. Cloudflare sees your IP address and browser details when the check runs.</li>}
             <li>
               <strong>Fonts and page code:</strong> some pages load fonts from Google Fonts and code from public content networks

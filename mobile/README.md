@@ -71,8 +71,14 @@ show a "sign in" note until you open the app signed in.
   (Signing & Capabilities). Long-press the Home Screen, tap Edit > Add Widget, find RecoveryBot.
 - Android: long-press the home screen, Widgets, RecoveryBot.
 
+## Notifications
+
+Through Firebase Cloud Messaging (`@capacitor-firebase/messaging`). They need an Apple Push Key,
+a Firebase project and its two config files, and `FIREBASE_SERVICE_ACCOUNT` on the server: see
+[PUSH_SETUP.md](PUSH_SETUP.md). Until then the apps don't offer them.
+
 ## Not in the app yet
 
-Native push notifications, Google and Apple sign-in, links that open the app (Universal Links /
-App Links) and Face ID lock. See the plan:
+Face ID lock. Google and Apple sign-in and links that open the app are built, and need the
+console setup in [SIGN_IN_SETUP.md](SIGN_IN_SETUP.md). See the plan:
 https://claude.ai/artifact/D8Aft6jCHPzgLJTwj8kmEj

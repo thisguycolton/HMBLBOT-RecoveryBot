@@ -76,6 +76,7 @@ export async function turnOffPush() {
 // shouldn't keep getting the last account's notifications. Just being signed out isn't enough:
 // a session that ran out (or a home-screen app that lost it) keeps them.
 export async function forgetPushAfterSignOut() {
+  if (isNativeApp()) return; // the app's own notifications: lib/nativePush.js
   if (!/(?:^|;\s*)forget_push=/.test(document.cookie)) return;
   document.cookie = "forget_push=; Max-Age=0; path=/; SameSite=Lax";
   if (document.body.dataset.currentUser === "true") return;

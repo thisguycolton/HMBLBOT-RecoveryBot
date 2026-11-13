@@ -18,6 +18,14 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Links to the site open the app (App Links; the site's /.well-known/assetlinks.json
+                 names this app), except sign-in callbacks and downloads (native_app.js sends those on) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="recoverybot.hmblbot.com" />
+            </intent-filter>
             <!-- The widgets open the app on a page: recoverybot://open/recovery -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -41,6 +49,14 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_chip_info" />
         </receiver>
 
+        <!-- Notifications (Firebase Cloud Messaging, @capacitor-firebase/messaging; FcmSender on
+             the server). No token is made until they're turned on in account settings, and
+             Firebase Analytics stays off. -->
+        <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_notify" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_tint" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -53,4 +69,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+: asked when notifications are turned on in account settings -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

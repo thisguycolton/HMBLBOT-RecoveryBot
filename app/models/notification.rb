@@ -47,8 +47,9 @@ class Notification < ApplicationRecord
   }.freeze
   PUSH_CATEGORY_BY_KIND = PUSH_CATEGORIES.flat_map { |key, c| c[:kinds].map { |k| [k, key] } }.to_h.freeze
 
-  # Also sent to the account's devices that turned on push (WebPushSender)
-  after_create_commit :push_later, if: -> { WebPushSender.configured? && user.wants_push?(kind) && user.push_subscriptions.exists? }
+  # Also sent to the account's devices that turned on push: browsers (WebPushSender) and the
+  # iPhone and Android apps (FcmSender)
+  after_create_commit :push_later, if: -> { user.wants_push?(kind) && pushable_devices? }
 
   scope :unread, -> { where(read_at: nil) }
   scope :recent, -> { order(created_at: :desc, id: :desc) }
@@ -78,5 +79,9 @@ class Notification < ApplicationRecord
 
   def push_later
     WebPushJob.perform_later(self)
+  end
+
+  def pushable_devices?
+    (WebPushSender.configured? && user.push_subscriptions.exists?) || (FcmSender.configured? && user.device_tokens.exists?)
   end
 end

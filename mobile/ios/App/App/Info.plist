@@ -83,6 +83,9 @@
 			</array>
 		</dict>
 	</array>
+	<!-- No notification token until they're turned on in account settings (lib/nativePush.js) -->
+	<key>FirebaseMessagingAutoInitEnabled</key>
+	<false/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>

@@ -48,6 +48,21 @@ const config: CapacitorConfig = {
     SystemBars: {
       insetsHandling: "css",
     },
+    // Notifications (lib/nativePush.js on the site): on iPhone, one that comes while the app is
+    // open still shows as a banner. Android hands those to the page, which shows a toast.
+    FirebaseMessaging: {
+      presentationOptions: ["alert", "sound"],
+    },
+  },
+  // Keeps Swift Package Manager from seeing two packages named "firebase-ios-sdk"
+  experimental: {
+    ios: {
+      spm: {
+        packageOptions: {
+          "@capacitor-firebase/messaging": { symlink: true },
+        },
+      },
+    },
   },
 };
 
