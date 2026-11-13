@@ -23,7 +23,7 @@ export default function Layout(props) {
   return share ? <ShareLayout>{props.children}</ShareLayout> : <Shell {...props} />;
 }
 
-function Shell({ children, isAuthenticated, showFooter: footer = true, fill = false }) {
+function Shell({ children, isAuthenticated, showFooter: footer = true, fill = false, bottomBar = true }) {
   const showFooter = footer && !fill;
   const nav = useNav();
   const theme = useTheme();
@@ -145,12 +145,14 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
           </div>
           {/* Under the stage, on the shell's own color: scrolled down to it, the stage's bottom
               corner rounds like its top one, so the page reads as one contained card */}
-          {showFooter && <div className="pb-28 lg:pb-0"><Footer /></div>}
+          {showFooter && <div className={bottomBar ? "pb-28 lg:pb-0" : ""}><Footer /></div>}
         </div>
 
-        <BottomBar nav={nav} isAuthenticated={isAuthenticated} homeActive={homeActive}
+        {/* bottomBar={false}: a page that is only a form (sign in, sign up) keeps the phone's
+            bottom bar out of the way; the logo in the top bar still goes home */}
+        {bottomBar && <BottomBar nav={nav} isAuthenticated={isAuthenticated} homeActive={homeActive}
           onMenu={() => chrome.show("menu")} onActions={() => chrome.show("actions")} onToday={() => chrome.show("today")}
-          onAside={openAside} asideLabel={aside?.title || "Info"} />
+          onAside={openAside} asideLabel={aside?.title || "Info"} />}
         </div>
 
         {/* The page's side panel below that: under the page layer, shown as it slides aside */}

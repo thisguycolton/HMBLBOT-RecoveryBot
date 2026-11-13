@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { VISIBILITY, visibilityOf } from "./lib";
 
@@ -9,6 +9,8 @@ import { VISIBILITY, visibilityOf } from "./lib";
 export default function VisibilityPicker({ value, onChange, disabled = false, align = "left", up = false, options = VISIBILITY, title = "Who sees this on your profile", className = "", children }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const menuRef = useRef(null);
+  const [shift, setShift] = useState(0);
   const current = options.find((v) => v.value === value) || visibilityOf(value);
   const Icon = current.icon;
 
@@ -21,6 +23,18 @@ export default function VisibilityPicker({ value, onChange, disabled = false, al
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc, true); };
   }, [open]);
 
+  // Keep the open menu on screen: on a phone a right-aligned menu under a button near the left
+  // edge would hang off the side, so slide it back inside the window.
+  useLayoutEffect(() => {
+    if (!open) { setShift(0); return; }
+    const box = menuRef.current?.getBoundingClientRect();
+    if (!box) return;
+    const edge = 8;
+    const width = document.documentElement.clientWidth;
+    if (box.left < edge) setShift(edge - box.left);
+    else if (box.right > width - edge) setShift(Math.max(edge - box.left, width - edge - box.right));
+  }, [open]);
+
   return (
     <div ref={ref} className="relative inline-block">
       <button type="button" disabled={disabled} onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}
@@ -29,7 +43,8 @@ export default function VisibilityPicker({ value, onChange, disabled = false, al
         {children || <><Icon className="size-3.5" /> <span className="wb-vis-label">{current.label}</span> <ChevronDown className="size-3" /></>}
       </button>
       {open && (
-        <ul role="listbox" className={`absolute z-30 w-60 ${up ? "bottom-full mb-1" : "mt-1"} overflow-hidden rounded-xl bg-white p-1 shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700 ${align === "right" ? "right-0" : "left-0"}`}>
+        <ul ref={menuRef} role="listbox" style={shift ? { transform: `translateX(${shift}px)` } : undefined}
+          className={`absolute z-30 w-60 max-w-[calc(100vw-16px)] ${up ? "bottom-full mb-1" : "mt-1"} overflow-hidden rounded-xl bg-white p-1 shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700 ${align === "right" ? "right-0" : "left-0"}`}>
           {options.map((v) => {
             const VIcon = v.icon;
             const picked = !children && v.value === current.value;

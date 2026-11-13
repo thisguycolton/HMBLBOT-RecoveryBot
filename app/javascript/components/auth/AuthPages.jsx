@@ -40,7 +40,6 @@ function AuthFrame({ icon, title, subtitle, children, footer }) {
         </section>
 
         <div className="mx-auto w-full max-w-md">
-          <a href="/" className="mb-6 flex justify-center !text-slate-900 dark:!text-white lg:hidden"><RecoveryBotLogo markClassName="h-9 w-auto" textClassName="text-2xl" /></a>
           <Shell>
             <ShellBand icon={icon} title={title} subtitle={subtitle} />
             <ShellPanel position="bottom" className="p-5">

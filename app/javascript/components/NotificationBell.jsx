@@ -181,7 +181,7 @@ export default function NotificationBell({ align = "right", sheet = false }) {
   const groups = groupByDay(notifications);
   const panel = (
     <>
-      <div className="flex items-center gap-2 px-4 pb-3 pt-2 sm:pt-3">
+      <div className="@container flex items-center gap-2 px-4 pb-3 pt-2 sm:pt-3">
         <h2 className="flex min-w-0 flex-1 items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
           Notifications
           {unread > 0 && <span className="shrink-0 whitespace-nowrap rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white">{unread} new</span>}
@@ -189,7 +189,7 @@ export default function NotificationBell({ align = "right", sheet = false }) {
         {unread > 0 && (
           <button type="button" onClick={markAllRead} title="Mark all read" aria-label="Mark all read"
             className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full !bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm hover:text-slate-900 dark:!bg-neutral-800 dark:text-neutral-200 dark:hover:text-white">
-            <CheckCheck size={15} /> <span className="hidden min-[420px]:inline">Read all</span>
+            <CheckCheck size={15} /> <span className="hidden @[27rem]:inline">Read all</span>
           </button>
         )}
         {notifications.length > 0 && (

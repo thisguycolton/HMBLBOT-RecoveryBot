@@ -1,15 +1,18 @@
-# Site Admin > TestFlight requests: people who asked to try the iPhone app (/testflight).
+# Site Admin > Tester requests: people who asked to try the iPhone or Android app (/testflight).
 # List them, mark them invited or done (or back to new), delete.
 class Api::Admin::TestflightRequestsController < Api::Admin::SuiteController
   LIMIT = 500
 
-  # GET ?status=new|invited|done|all (default new)
+  # GET ?status=new|invited|done|all (default new)&platform=ios|android (default both)
   def index
-    requests = TestflightRequest.includes(:user, :handled_by).order(created_at: :desc)
+    scope = TestflightRequest.all
+    scope = scope.where(platform: params[:platform]) if TestflightRequest::PLATFORMS.include?(params[:platform])
+    counts = scope.group(:status).count
+    requests = scope.includes(:user, :handled_by).order(created_at: :desc)
     requests = requests.where(status: params[:status].presence || "new") unless params[:status] == "all"
     render json: {
       total: requests.count,
-      counts: TestflightRequest.group(:status).count,
+      counts: counts,
       limit: LIMIT,
       testflight_requests: requests.limit(LIMIT).map(&:as_admin_json),
     }

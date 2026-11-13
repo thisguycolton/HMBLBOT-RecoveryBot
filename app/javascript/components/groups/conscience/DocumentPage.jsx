@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { ChevronLeft, Download, FileUp, History, MessageSquare, MessageSquarePlus, Paperclip, Pin, Save, Trash2, X } from "lucide-react";
@@ -498,6 +498,16 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
 
   const folderLink = `${documentsPath(slug)}${isMember ? `?folder=${form.kind}` : ""}`;
   const showPaper = canEdit ? withText : !!initialHtml.trim();
+  // The title is a textarea so a long one wraps on a phone (an input shows one line and cuts it
+  // off). It grows to fit its text whenever the title or the window's width changes.
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (!el) return undefined;
+    const fit = () => { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [form.title, showPaper, compare]);
   const isPdf = file?.type === "application/pdf";
   const pdfOnly = isPdf && !showPaper;
   const status = saving ? "Saving…"
@@ -673,7 +683,9 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
           <article className={`doc-paper ${commentsOn && side === "comments" ? "doc-comments-on" : ""} ${compare ? "hidden" : ""}`} aria-label={form.title || "Untitled document"}>
             {letterhead && <Letterhead template={letterhead} groupTitle={group.title} />}
             {canEdit ? (
-              <input ref={titleRef} className="doc-title" value={form.title} maxLength={160} onChange={(e) => change("title")(e.target.value)} placeholder="Untitled document" aria-label="Title" />
+              <textarea ref={titleRef} className="doc-title" rows={1} value={form.title} maxLength={160} placeholder="Untitled document" aria-label="Title"
+                onChange={(e) => change("title")(e.target.value.replace(/\s*\n\s*/g, " "))}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); editor?.commands.focus("start"); } }} />
             ) : <h1 className="doc-title">{form.title}</h1>}
             <p className="doc-meta print:hidden">
               {form.pinned && <Pin className="size-3.5 text-amber-600" aria-label="Pinned" />}

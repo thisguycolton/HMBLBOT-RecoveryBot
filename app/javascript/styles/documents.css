@@ -26,7 +26,10 @@
   font-weight: 700;
   line-height: 1.2;
   outline: none;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   padding: 0;
+  resize: none;
   width: 100%;
 }
 .doc-title::placeholder { color: #94a3b8; }

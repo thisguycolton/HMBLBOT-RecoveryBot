@@ -52,7 +52,7 @@ export const SECTIONS = [
       { to: "/users", label: "Members", icon: Users },
       { to: "/contact_requests", label: "Contact requests", icon: Inbox, count: "contact_requests" },
       // People asking to try the iPhone app (/testflight)
-      { to: "/testflight_requests", label: "TestFlight requests", icon: Smartphone, count: "testflight_requests" },
+      { to: "/testflight_requests", label: "Tester requests", icon: Smartphone, count: "testflight_requests" },
       { to: "/text_reports", label: "Text reports", icon: Flag, count: "text_reports" },
       { to: "/reports", label: "Reports about people", icon: ShieldAlert, count: "user_reports" },
       { to: "/court_verifications", label: "Court verifications", icon: ClipboardCheck },
