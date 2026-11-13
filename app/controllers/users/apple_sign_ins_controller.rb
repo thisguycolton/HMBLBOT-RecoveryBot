@@ -32,7 +32,7 @@ class Users::AppleSignInsController < ApplicationController
                                       name: AppleSignIn.name_from(params[:user]))
     return failed("Apple hasn't confirmed that account's email address, so we can't use it to sign you in. Please sign up with your email instead.") unless user
 
-    user.remember_me = true if native_app? # the Android app shows this page; it's their phone
+    user.remember_me = true # no "Remember me" box on Apple's page, so kept signed in like the box's default
     flash[:notice] = "Signed in with Apple."
     sign_in_and_redirect user, event: :authentication
   rescue IdentityToken::Invalid => e

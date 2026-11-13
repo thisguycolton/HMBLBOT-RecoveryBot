@@ -175,7 +175,8 @@ public class PrinterPlugin: CAPPlugin, CAPBridgedPlugin {
 
 // The Home Screen and Lock Screen widgets (RecoveryBotWidgets): the site hands them what they
 // show (lib/appWidgets.js), and this keeps it in the App Group both share, then has them redraw.
-// soberSince "YYYY-MM-DD" (the widget counts the days itself), the chip as a PNG, its name.
+// soberSince "YYYY-MM-DD" (the widget counts the days itself), the chip and its back as PNGs,
+// its name.
 @objc(WidgetBridgePlugin)
 public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "WidgetBridgePlugin"
@@ -201,6 +202,7 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         defaults.set(call.getString("soberSince") ?? "", forKey: "soberSince")
         defaults.set(call.getString("chipLabel") ?? "", forKey: "chipLabel")
         defaults.set(call.getString("chipId") ?? "", forKey: "chipId")
+        let backFile = chipFile.deletingLastPathComponent().appendingPathComponent("chip-back.png")
         if let base64 = call.getString("chipImage"), !base64.isEmpty, let data = Data(base64Encoded: base64) {
             try? data.write(to: chipFile, options: .atomic)
             defaults.set(true, forKey: "hasChip")
@@ -208,14 +210,25 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             try? FileManager.default.removeItem(at: chipFile)
             defaults.set(false, forKey: "hasChip")
         }
+        if let base64 = call.getString("chipBackImage"), !base64.isEmpty, let data = Data(base64Encoded: base64) {
+            try? data.write(to: backFile, options: .atomic)
+        } else {
+            try? FileManager.default.removeItem(at: backFile)
+        }
+        // A new chip starts face up
+        if defaults.string(forKey: "chipId") != defaults.string(forKey: "chipShownId") {
+            defaults.set(false, forKey: "chipFlipped")
+            defaults.set(defaults.string(forKey: "chipId"), forKey: "chipShownId")
+        }
         WidgetCenter.shared.reloadAllTimelines()
         call.resolve()
     }
 
     @objc func clear(_ call: CAPPluginCall) {
         if let (defaults, chipFile) = shared() {
-            ["signedIn", "soberSince", "chipLabel", "chipId", "hasChip"].forEach { defaults.removeObject(forKey: $0) }
+            ["signedIn", "soberSince", "chipLabel", "chipId", "hasChip", "chipFlipped", "chipShownId"].forEach { defaults.removeObject(forKey: $0) }
             try? FileManager.default.removeItem(at: chipFile)
+            try? FileManager.default.removeItem(at: chipFile.deletingLastPathComponent().appendingPathComponent("chip-back.png"))
             WidgetCenter.shared.reloadAllTimelines()
         }
         call.resolve()

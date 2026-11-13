@@ -21,4 +21,16 @@ class Api::NotificationsController < ApplicationController
     current_user.notifications.unread.update_all(read_at: Time.current)
     head :no_content
   end
+
+  # DELETE /api/notifications/:id (the x on one in the panel)
+  def destroy
+    current_user.notifications.find(params[:id]).destroy!
+    head :no_content
+  end
+
+  # DELETE /api/notifications/clear (Clear all)
+  def clear
+    Notification.where(user_id: current_user.id).delete_all
+    head :no_content
+  end
 end

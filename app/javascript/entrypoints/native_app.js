@@ -32,6 +32,90 @@ if (platform && !window.__nativeApp) {
   const ready = () => hasPlugin("SplashScreen") && callPlugin("SplashScreen", "hide").catch(() => {});
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready, { once: true });
   else ready();
+  finishLaunch();
+  installShellGhost();
+  installHidingTopBar();
+}
+
+// Phones: the top bar (search, bell, account) slides up out of the way while scrolling down
+// and comes back on the way up, or near the top of the page (CSS in _app_launch_head). It stays
+// while something in it is in use, like the search box.
+function installHidingTopBar() {
+  const root = document.documentElement;
+  let last = window.scrollY;
+  let travelled = 0;
+  const show = () => root.classList.remove("shell-top-hidden");
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY;
+    const delta = y - last;
+    last = y;
+    const top = document.querySelector("[data-shell-top]");
+    if (!top || window.innerWidth >= 1024 || y < 80 || top.contains(document.activeElement) || top.matches("[class*='z-[2100]']")) {
+      travelled = 0;
+      show();
+      return;
+    }
+    // a little way in one direction before it moves, so small jitters don't flicker it
+    travelled = Math.sign(delta) === Math.sign(travelled) ? travelled + delta : delta;
+    if (travelled > 24) root.classList.add("shell-top-hidden");
+    else if (travelled < -12) show();
+  }, { passive: true });
+  window.addEventListener("pagehide", show);
+}
+
+// Keeps a copy of the shell (top bar, sidebar, bottom bar and the empty stage) as the app leaves
+// a page, for the next page to show before its scripts run (layouts/_app_launch_body.html.erb),
+// so moving between pages doesn't flash a blank screen where the menus were. Ids and the pull to
+// refresh mark are taken off the copy so nothing finds it instead of the real thing.
+function installShellGhost() {
+  const ghost = document.getElementById("shell-ghost");
+  if (ghost) {
+    // Layout.jsx removes it as the real shell draws; pages without the shell drop it here
+    const drop = () => setTimeout(() => ghost.remove(), 400);
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", drop, { once: true });
+    else drop();
+  }
+  window.addEventListener("pagehide", () => {
+    try {
+      const top = document.querySelector("[data-shell-top]");
+      const stage = document.querySelector(".shell .stage");
+      if (!top || !stage) { sessionStorage.removeItem("hb-shell"); return; }
+      const parts = [top, document.querySelector(".shell .shell-side"), document.querySelector(".shell .shell-bottom")]
+        .filter(Boolean).map((el) => el.cloneNode(true));
+      const frame = stage.parentElement.cloneNode(false);
+      frame.removeAttribute("style");
+      frame.appendChild(stage.cloneNode(false));
+      parts.push(frame);
+      parts.forEach((el) => {
+        el.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
+        el.removeAttribute("id");
+        el.removeAttribute("data-pull-refresh");
+      });
+      sessionStorage.setItem("hb-shell", parts.map((el) => el.outerHTML).join(""));
+    } catch { /* storage full or private mode: the next page just draws without it */ }
+  });
+}
+
+// The loading screen on the first page after the app opens (layouts/_app_launch_head.html.erb):
+// the app's launch screen hides as soon as the page is there (above), and the shimmering robot
+// in its place fades once the page and everything it needs have loaded, or after 8 seconds
+function finishLaunch() {
+  const root = document.documentElement;
+  if (!root.classList.contains("app-launching")) return;
+  try { sessionStorage.setItem("hb-launched", "1"); } catch { /* private mode */ }
+  let finished = false;
+  const done = () => {
+    if (finished) return;
+    finished = true;
+    const cover = document.getElementById("app-launch");
+    if (!cover) { root.classList.remove("app-launching"); return; }
+    // a frame for the page to draw first, then fade
+    requestAnimationFrame(() => requestAnimationFrame(() => cover.classList.add("app-launch-done")));
+    setTimeout(() => root.classList.remove("app-launching"), 450);
+  };
+  if (document.readyState === "complete") done();
+  else window.addEventListener("load", done, { once: true });
+  setTimeout(done, 8000);
 }
 
 // --- Sharing --------------------------------------------------------------------------------
@@ -276,7 +360,7 @@ function installWidgets() {
 
 // A recoverybot.hmblbot.com link tapped in Messages, Mail or a browser opens the app
 // (Universal Links / App Links, WellKnownController); this goes to that page. A widget opens the app with
-// recoverybot://open/<path> (the day count goes to /recovery).
+// recoverybot://open/<path> (the chip goes to /recovery, the day count to #today).
 function installAppLinks() {
   const go = (url) => {
     try {
@@ -286,6 +370,8 @@ function installAppLinks() {
       // A sign-in callback belongs to the browser that started it (Android can't leave it out
       // of the app's links), so the app stays where it is
       if (!ours || path.startsWith("/users/auth/")) return;
+      // #today (the day count widget) opens Today over whatever page is showing
+      if (target.hash === "#today" && path === "/" && !target.search) { window.location.hash = "today"; return; }
       if (path + target.search !== window.location.pathname + window.location.search) window.location.href = path + target.search + target.hash;
     } catch { /* not a link we know */ }
   };

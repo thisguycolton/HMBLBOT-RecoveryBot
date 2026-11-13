@@ -362,9 +362,10 @@ Rails.application.routes.draw do
       delete "ballots/:id", action: :remove_ballot
     end
   end
-  resources :notifications, only: :index do
+  resources :notifications, only: [:index, :destroy] do
     post :read, on: :member
     post :read_all, on: :collection
+    delete :clear, on: :collection
   end
   # Chips given to them that the "you got a chip" popup hasn't shown yet
   resources :chip_arrivals, only: :index do

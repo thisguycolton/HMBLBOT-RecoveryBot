@@ -2,6 +2,7 @@
 <html>
   <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <%= render "layouts/early_theme" %>
     <%= render "application/viewport" %>
     <title><%= content_for(:page_title) || "RecoveryBot" %></title>
 
@@ -49,9 +50,11 @@
   <%= vite_javascript_tag 'pull_to_refresh' %>
   <%= vite_javascript_tag 'native_app' if native_app? %>
   <% unless native_platform == "ios" %><script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="hmblbot" data-description="Support me on Buy me a coffee!" data-message="Thanks for supporting the site!" data-color="#5F7FFF" data-position="Right" data-x_margin="18" data-y_margin="18"></script><% end %>
+    <%= render "layouts/app_launch_head" %>
   </head>
 
   <body data-layout="application"<% if native_app? %> data-native-app="<%= native_platform %>" data-widget="<%= native_widget_key %>"<% end %>>
+    <%= render "layouts/app_launch_body" %>
     <div id="scroll-progress"></div>
     <div class="container-fluid bg-body-tertiary nav-container">
 

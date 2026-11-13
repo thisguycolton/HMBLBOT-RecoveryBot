@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "November 12, 2026";
+const UPDATED = "November 13, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -23,7 +23,7 @@ const SECTIONS = [
 
 const COOKIES = [
   ["_acid_test_session", "Keeps you signed in while you use the site and protects forms from being sent by other sites.", "Until you close the browser"],
-  ["remember_user_token", "Keeps you signed in between visits, only if you tick “Remember me” (the iPhone and Android apps always keep you signed in).", "2 weeks after your last visit, or until you sign out"],
+  ["remember_user_token", "Keeps you signed in between visits. “Remember me” is ticked unless you untick it, and signing in with Google or Apple (or in the iPhone and Android apps) always keeps you signed in.", "3 months after your last visit, or until you sign out"],
   ["apple_sign_in", "Checks that the answer from Apple's page belongs to the Sign in with Apple you started. Removed once used.", "10 minutes"],
   ["group_ask, group_invite", "Remembers the group you asked to join or were invited to while you sign in or sign up. Removed once used.", "30 days"],
   ["event_rsvp_…", "Lets you change your RSVP to an event if you answered without an account.", "Until you clear it"],
@@ -40,6 +40,7 @@ const STORAGE = [
   ["installNudge.dismissed", "That you closed the “Add RecoveryBot to your home screen” card"],
   ["hb-day-count-seen", "The day your day count last popped up, so a milestone celebration shows once that day"],
   ["hb-device-token", "In the iPhone and Android apps, once you turn on notifications: the address Firebase gave this install, so turning them off or logging out can tell us which phone to stop"],
+  ["hb-shell, hb-launched", "In the iPhone and Android apps, only while the app is open (session storage): a copy of the menus from the last page, drawn while the next one loads, and that the loading screen has already shown"],
   ["hb-widget-key", "In the iPhone and Android apps: what the home-screen widgets were last given, so they're only redrawn when your sobriety date or favorite chip changes"],
 ];
 

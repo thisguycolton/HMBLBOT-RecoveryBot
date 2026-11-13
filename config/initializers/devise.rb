@@ -164,13 +164,15 @@ Devise.setup do |config|
 
   # ==> Configuration for :rememberable
   # The time the user will be remembered without asking for credentials again.
-  # config.remember_for = 2.weeks
+  # Three months from the last visit (extend_remember_period below): people kept getting logged
+  # out, mostly iPhone Safari and home-screen apps dropping the session cookie
+  config.remember_for = 3.months
 
   # Invalidates all the remember me tokens when the user signs out.
   config.expire_all_remember_me_on_sign_out = true
 
   # If true, extends the user's remember period when remembered via cookie.
-  # Each visit starts the two weeks again, so someone who keeps using the app (or ticked
+  # Each visit starts the three months again, so someone who keeps using the app (or ticked
   # "Remember me") stays signed in
   config.extend_remember_period = true
 

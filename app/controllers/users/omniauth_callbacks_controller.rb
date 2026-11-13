@@ -10,6 +10,7 @@ class Users::OmniauthCallbacksController < Devise::OmniauthCallbacksController
     end
 
     flash[:notice] = "Signed in with Google."
+    user.remember_me = true # no "Remember me" box on Google's page, so kept signed in like the box's default
     sign_in_and_redirect user, event: :authentication
   rescue ActiveRecord::RecordInvalid => e
     redirect_to new_user_registration_path, alert: "We couldn't make your account from Google: #{e.record.errors.full_messages.to_sentence}. Please sign up with your email instead."

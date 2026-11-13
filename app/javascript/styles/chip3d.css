@@ -8,7 +8,8 @@
   margin: 0 auto;
   outline: none;
   perspective: 900px;
-  touch-action: pan-y;
+  /* Every drag on the chip spins it; none of it scrolls the page (it did with pan-y) */
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }

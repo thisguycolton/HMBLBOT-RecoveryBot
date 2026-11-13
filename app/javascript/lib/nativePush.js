@@ -4,7 +4,7 @@
 // it (FcmSender). The token is kept here too, so turning off, logging out and settings can say
 // which device this is.
 import { api } from "../components/groups/lib";
-import { callPlugin, hasPlugin, nativePlatform } from "./nativeApp";
+import { callPlugin, hasPlugin, nativePlatform, onPlugin } from "./nativeApp";
 
 const KEY = "hb-device-token";
 
@@ -20,6 +20,26 @@ export async function nativePermission() {
 
 const appVersion = () => (navigator.userAgent.match(/RecoveryBotApp\/([\d.]+)/) || [])[1];
 
+// On iPhone, Firebase can only make a token once Apple has given the app its own push address,
+// which comes a moment after launch (and the first time, after permission). Asking too soon
+// fails with "No APNS token specified before fetching FCM Token", so wait for it and ask again.
+const notYet = (e) => /APNS token/i.test(e?.message || "");
+async function fetchToken(tries = 8) {
+  for (let i = 0; ; i += 1) {
+    try {
+      return (await callPlugin("FirebaseMessaging", "getToken")).token;
+    } catch (e) {
+      if (!notYet(e) || i >= tries) throw e;
+      await new Promise((resolve) => {
+        let stop = null;
+        const done = () => { setTimeout(() => stop?.(), 0); resolve(); };
+        stop = onPlugin("FirebaseMessaging", "apnsTokenReceived", done);
+        setTimeout(done, 1500);
+      });
+    }
+  }
+}
+
 // Asks for permission (from a tap), gets this install's token and tells the server
 export async function turnOnNativePush() {
   const { receive } = await callPlugin("FirebaseMessaging", "requestPermissions");
@@ -28,7 +48,13 @@ export async function turnOnNativePush() {
     error.code = receive === "denied" ? "denied" : "default";
     throw error;
   }
-  const { token } = await callPlugin("FirebaseMessaging", "getToken");
+  let token;
+  try {
+    token = await fetchToken();
+  } catch (e) {
+    if (notYet(e)) throw new Error("Your phone hasn't connected the app to Apple's notifications yet. Wait a minute, then try again.");
+    throw e;
+  }
   if (!token) throw new Error("The phone didn't give the app a notification address. Try again in a minute.");
   const state = await api("/push_subscriptions/app", { method: "POST", body: { token, platform: nativePlatform(), app_version: appVersion() } });
   store(token);
@@ -48,7 +74,7 @@ export async function turnOffNativePush() {
 export async function refreshNativeToken(token) {
   const had = storedToken();
   if (!had || !document.body?.dataset.widget) return; // data-widget is blank when signed out
-  const next = token || (await callPlugin("FirebaseMessaging", "getToken").catch(() => ({}))).token;
+  const next = token || (await fetchToken(3).catch(() => null));
   if (!next) return;
   const day = new Date().toISOString().slice(0, 10);
   const mark = `${next}|${day}`;

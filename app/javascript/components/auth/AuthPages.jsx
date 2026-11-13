@@ -214,7 +214,7 @@ export function LoginPage({ email = "", remember = true, always_remember = false
         {remember && (
           <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-300">
             <input type="hidden" name="user[remember_me]" value="0" />
-            <input type="checkbox" name="user[remember_me]" value="1" className="h-4 w-4 rounded accent-[#0b6ede]" />
+            <input type="checkbox" name="user[remember_me]" value="1" defaultChecked className="h-4 w-4 rounded accent-[#0b6ede]" />
             Remember me
           </label>
         )}

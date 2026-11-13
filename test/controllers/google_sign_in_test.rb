@@ -49,6 +49,7 @@ class GoogleSignInTest < ActionDispatch::IntegrationTest
     assert user.confirmed
     assert_not user.password_chosen
     assert_redirected_to "/"
+    assert cookies["remember_user_token"].present?, "Google's page has no Remember me box, so they're kept signed in"
     get "/api/profile"
     assert_response :success
     assert_equal "jordan@example.com", response.parsed_body["email"]

@@ -41,7 +41,20 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
 
   // The service worker shows push notifications (lib/push.js); logging out, this browser stops getting them
   useEffect(() => { registerServiceWorker().then(() => forgetPushAfterSignOut()); }, []);
+  // In the apps, the last page's shell stands in until this one draws (layouts/_app_launch_body)
+  useLayoutEffect(() => { document.getElementById("shell-ghost")?.remove(); }, []);
   useEffect(() => { chrome.close(); setAsideOpen(false); }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
+  // #today opens the Today panel (the app's day count widget links to recoverybot://open/#today)
+  useEffect(() => {
+    const check = () => {
+      if (window.location.hash !== "#today") return;
+      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+      chrome.show("today");
+    };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!asideOpen) return undefined;
     const onKey = (e) => e.key === "Escape" && setAsideOpen(false);
@@ -105,7 +118,7 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
           </div>
         </aside>
 
-        <div data-pull-refresh className={`fixed inset-x-0 top-0 z-50 h-[var(--nav-h)] bg-[#ececec] lg:left-[var(--side-w)] motion-safe:transition-[left] motion-safe:duration-200 dark:bg-neutral-950 print:!hidden ${chrome.open ? "z-[2100]" : ""}`}>
+        <div data-pull-refresh data-shell-top className={`fixed inset-x-0 top-0 z-50 h-[var(--nav-h)] bg-[#ececec] lg:left-[var(--side-w)] motion-safe:transition-[left] motion-safe:duration-200 dark:bg-neutral-950 print:!hidden ${chrome.open ? "z-[2100]" : ""}`}>
           <TopBar nav={nav} isAuthenticated={isAuthenticated} theme={theme} bottomMenu
             onMenu={() => chrome.show("menu")} onSearch={() => chrome.show("search")} searching={chrome.open === "search"} onSearchDone={chrome.close} onDonate={() => chrome.show("donate")} onCourt={() => chrome.show("court")}
             onAside={openAside} asideLabel={aside?.title || "Info"} />
@@ -119,7 +132,7 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
         <div aria-hidden="true"
           className={`pointer-events-none fixed left-[var(--side-w)] top-[var(--nav-h)] z-40 hidden size-8 bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#f6f6f6_32px)] transition-opacity ease-out dark:bg-[radial-gradient(circle_at_100%_100%,transparent_31.5px,#101010_32px)] lg:block print:!hidden ${submenu && !rail ? "opacity-100 duration-200" : "opacity-0 duration-150"}`} />
 
-        <div className="pt-[var(--nav-h)] lg:pl-[var(--side-w)] motion-safe:transition-[padding] motion-safe:duration-200 print:!p-0" style={push ? { marginTop: -push.y } : undefined}>
+        <div className="pt-[var(--nav-space,var(--nav-h))] lg:pl-[var(--side-w)] motion-safe:transition-[padding] motion-safe:duration-200 print:!p-0" style={push ? { marginTop: -push.y } : undefined}>
           <div className="stage flex min-h-[calc(100dvh-var(--nav-h))] overflow-clip bg-white dark:bg-neutral-900 max-lg:rounded-b-[28px] lg:rounded-l-[32px] print:!rounded-none">
             <main className={`flex min-w-0 flex-1 flex-col ${fill ? "" : showFooter ? "pb-10" : "pb-32 lg:pb-0"}`}>
               <div className="flex-1">{children}</div>

@@ -5,6 +5,7 @@
 //   soberSince  "YYYY-MM-DD", or "" without one (the widget counts the days itself, so it turns
 //               over at midnight without the app being opened)
 //   chipImage   the chip drawn on a clear background, a PNG as base64, or "" without one
+//   chipBackImage  its back, drawn the same way, so tapping the chip on the widget flips it
 //   chipLabel   its name ("1 year"), and chipId
 // The chip is their first favorite (Chips page), else their newest sobriety chip, else their
 // newest chip. It's drawn right here, the same way chip pictures are (chipMotion.js).
@@ -16,7 +17,7 @@ import { chipMilestones } from "./milestones";
 import { callPlugin, hasPlugin } from "./nativeApp";
 
 const STORE = "hb-widget-key";
-const VERSION = 1; // bump to redraw everyone's widgets after a change to how they're drawn
+const VERSION = 2; // bump to redraw everyone's widgets after a change to how they're drawn
 const SIZE = 600;
 
 const remembered = () => { try { return localStorage.getItem(STORE); } catch { return null; } };
@@ -36,17 +37,20 @@ export function pickChip({ chips = [], favorites = [] }) {
 }
 
 // The chip, a little turned so its edge shows, on a clear square: base64 PNG
-async function drawChipPicture(chip, design) {
+async function drawChipPictures(chip, design) {
   const [{ prepareChip, drawChip, canvasOf }, { chipFaces }] = await Promise.all([
     import("../components/recovery/chipMotion"),
     import("../components/recovery/ChipModal"),
   ]);
   const prepared = await prepareChip(chipFaces({ ...chip, on: null }, design));
-  const canvas = canvasOf(SIZE, SIZE);
   const tall = prepared.front.height / prepared.front.width;
   const w = (SIZE * 0.86) / Math.max(1, tall);
-  drawChip(canvas.getContext("2d"), prepared, { cx: SIZE / 2, cy: SIZE / 2, w, angle: 14, shadow: false });
-  return canvas.toDataURL("image/png").split(",", 2)[1] || "";
+  // The front turned a little one way, the back turned the same amount past half a turn
+  return [14, 194].map((angle) => {
+    const canvas = canvasOf(SIZE, SIZE);
+    drawChip(canvas.getContext("2d"), prepared, { cx: SIZE / 2, cy: SIZE / 2, w, angle, shadow: false });
+    return canvas.toDataURL("image/png").split(",", 2)[1] || "";
+  });
 }
 
 let running = null;
@@ -78,14 +82,16 @@ async function update(force) {
   const data = await res.json();
   const chip = pickChip(data);
   let chipImage = "";
+  let chipBackImage = "";
   if (chip) {
-    try { chipImage = await drawChipPicture(chip, data.design); } catch { /* the widget shows its empty state */ }
+    try { [chipImage, chipBackImage] = await drawChipPictures(chip, data.design); } catch { /* the widget shows its empty state */ }
   }
   await callPlugin("WidgetBridge", "update", {
     soberSince: data.sobriety_date || "",
     chipImage,
+    chipBackImage,
     chipLabel: chip?.label || "",
-    chipId: chip?.id || "",
+    chipId: chip ? String(chip.id) : "",
   });
   remember(key);
 }
