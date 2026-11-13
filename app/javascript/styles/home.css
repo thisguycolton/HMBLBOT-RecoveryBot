@@ -5,3 +5,6 @@
   70%, 100% { transform: perspective(300px) rotateY(360deg); }
 }
 @media (prefers-reduced-motion: reduce) { .hb-home-spin { animation: none; } }
+
+/* The welcome wizard's tour (components/welcome/Tour.jsx): each card slides in */
+@keyframes hb-tour-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

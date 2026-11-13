@@ -199,6 +199,7 @@ class Api::PeopleTest < ActionDispatch::IntegrationTest
   end
 
   test "people land on the home page after signing in" do
+    @mo.update!(onboarded_at: 1.day.ago) # past the welcome wizard (WelcomeTest)
     post "/users/sign_in", params: { user: { email: "mo@example.com", password: "password123" } }
     assert_redirected_to "/people"
   end

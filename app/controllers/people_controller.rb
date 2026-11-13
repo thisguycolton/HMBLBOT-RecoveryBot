@@ -6,6 +6,9 @@ class PeopleController < ApplicationController
   after_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }
 
   def app
+    # A new account that left the welcome wizard part way (closed the app, say) sees it once more
+    return redirect_to(WelcomeController.path) if current_user.onboarding_due? && request.path == "/people"
+
     redirect_to root_path, alert: "Profiles aren't open yet." unless User.profiles_open_to?(current_user)
   end
 end

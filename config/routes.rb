@@ -156,6 +156,9 @@ Rails.application.routes.draw do
   post "groups/start", to: "groups#start"
   post "groups/join_with_token", to: "groups#join_with_token"
   post "groups/dismiss_prompt", to: "groups#dismiss_prompt"
+  # The welcome wizard after sign-up (WelcomeController): finding a group, then done
+  get "welcome/groups", to: "welcome#groups"
+  post "welcome/finish", to: "welcome#finish"
   resources :groups, param: :slug, only: %i[index show create update destroy] do
     member do
       post :join
@@ -481,6 +484,8 @@ end
   # Your timeline moved to your profile
   get "/groups/timeline", to: redirect("/people/me")
   get "/groups/*path", to: "groups#app", format: false
+  # The welcome wizard a new account sees once after signing in (entrypoints/welcome.jsx)
+  get "/welcome", to: "welcome#show", as: :welcome
   # Profiles: a React app (app/javascript/entrypoints/people.jsx)
   get "/people", to: "people#app", as: :people
   get "/people/*path", to: "people#app", format: false

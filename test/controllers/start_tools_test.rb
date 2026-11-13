@@ -24,7 +24,8 @@ class StartToolsTest < ActionDispatch::IntegrationTest
     assert_equal "noindex, nofollow", response.headers["X-Robots-Tag"]
 
     post "/users/sign_in", params: { user: { email: "kim@example.com", password: "password123" } }
-    assert_redirected_to "/recovery/inventory"
+    # a new account sees the welcome wizard first, which then goes on to the page
+    assert_redirected_to "/welcome?next=%2Frecovery%2Finventory"
   end
 
   test "anything else isn't a page" do

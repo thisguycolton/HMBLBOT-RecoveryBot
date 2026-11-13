@@ -296,6 +296,14 @@ class User < ApplicationRecord
       sobriety_date: (sobriety_date&.iso8601 if show_sobriety_date) }.compact
   end
 
+  # The welcome wizard (/welcome, WelcomeController) hasn't been finished or skipped: only
+  # accounts made after it arrived (the migration marked everyone before as done)
+  def onboarding_due? = onboarded_at.nil?
+
+  def finish_onboarding!
+    update_column(:onboarded_at, Time.current) if onboarding_due?
+  end
+
   # The "You're not in a group yet" nudge: Groups is open to them, they aren't in (or
   # waiting on) one, and they haven't waved it off in the last 30 days.
   def needs_group?

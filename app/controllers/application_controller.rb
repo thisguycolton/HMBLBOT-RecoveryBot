@@ -42,6 +42,9 @@ class ApplicationController < ActionController::Base
     end
     # Where they were headed, or the home page (notes and what's coming up) once profiles are open to them
     stored = resource.is_a?(User) && stored_location_for(resource)
+    # A new account goes through the welcome wizard first (finding their group, a short tour),
+    # then on to wherever they were headed
+    return WelcomeController.path(next_path: stored) if resource.is_a?(User) && resource.onboarding_due?
     return stored if stored
     return "/people" if resource.is_a?(User) && User.profiles_open_to?(resource)
 
