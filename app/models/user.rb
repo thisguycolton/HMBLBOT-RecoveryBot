@@ -167,6 +167,17 @@ class User < ApplicationRecord
   # is linked (and confirmed, since the provider vouches for the address), or a new one is made,
   # already confirmed, with a random password they can replace from their profile. Apple may
   # give a private relay address (…@privaterelay.appleid.com) and, after the first time, no name.
+  # Sign in with Apple's refresh token (AppleSignIn): kept so deleting the account revokes it
+  encrypts :apple_refresh_token
+  before_destroy :revoke_apple_sign_in
+
+  # After a Sign in with Apple: trades the sign-in's authorization code for a refresh token and
+  # keeps it, with the client ID it belongs to (the app's bundle ID or the website's Services ID)
+  def remember_apple_sign_in(code, client_id:, redirect_uri: nil)
+    token = AppleSignIn.refresh_token_for(code, client_id: client_id, redirect_uri: redirect_uri)
+    update_columns(apple_refresh_token: token, apple_client_id: client_id) if token
+  end
+
   def self.from_identity(provider, uid:, email:, email_verified:, name: nil)
     column = IDENTITY_COLUMNS.fetch(provider)
     uid = uid.to_s
@@ -322,5 +333,14 @@ class User < ApplicationRecord
     n = 1
     candidate = "#{base}-#{n += 1}" while self.class.where.not(id: id).exists?(username: candidate)
     self.username = candidate
+  end
+
+  # Deleting the account tells Apple too (App Store rule 5.1.1(v)). The account goes either way:
+  # an old sign-in with no token kept, or Apple not answering, doesn't stop it.
+  def revoke_apple_sign_in
+    return if apple_refresh_token.blank?
+
+    AppleSignIn.revoke(apple_refresh_token, client_id: apple_client_id) ||
+      Rails.logger.warn("[apple sign-in] user #{id}: Apple didn't confirm the revoke")
   end
 end

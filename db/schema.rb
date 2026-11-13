@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_13_010000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_13_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1932,6 +1932,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_13_010000) do
     t.string "google_uid"
     t.boolean "password_chosen", default: true, null: false
     t.string "apple_uid"
+    t.text "apple_refresh_token"
+    t.string "apple_client_id"
     t.index ["apple_uid"], name: "index_users_on_apple_uid", unique: true
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true

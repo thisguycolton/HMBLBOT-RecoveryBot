@@ -21,6 +21,8 @@
 		6F0796FC30A689420050DC90 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6F0796FB30A689420050DC90 /* GoogleService-Info.plist */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		CC99520603AA2266C2C0A9BF /* RecoveryBotWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E3234F9190B7876F9B9699F /* RecoveryBotWidgets.swift */; };
+		7A10C0DE30B1000100A1B2C2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7A10C0DE30B1000100A1B2C1 /* PrivacyInfo.xcprivacy */; };
+		7A10C0DE30B1000100A1B2C4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7A10C0DE30B1000100A1B2C3 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -68,6 +70,8 @@
 		AAF41259BE0483AEB20153A7 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B26ED5483CE20AEEEFB747A9 /* RecoveryBotWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = RecoveryBotWidgets.entitlements; sourceTree = "<group>"; };
 		EC90B8B6D0DC042C65399F9E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		7A10C0DE30B1000100A1B2C1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		7A10C0DE30B1000100A1B2C3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,6 +129,7 @@
 				4FA3A2E7A9CAFAB52D010B55 /* App.entitlements */,
 				A65C85EDED39D9C33F1FF63D /* App-Personal.entitlements */,
 				6F0796FB30A689420050DC90 /* GoogleService-Info.plist */,
+				7A10C0DE30B1000100A1B2C1 /* PrivacyInfo.xcprivacy */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -152,6 +157,7 @@
 				AAF41259BE0483AEB20153A7 /* Assets.xcassets */,
 				5A430878B9E625EEAA24731E /* Info.plist */,
 				B26ED5483CE20AEEEFB747A9 /* RecoveryBotWidgets.entitlements */,
+				7A10C0DE30B1000100A1B2C3 /* PrivacyInfo.xcprivacy */,
 			);
 			path = RecoveryBotWidgets;
 			sourceTree = "<group>";
@@ -248,6 +254,7 @@
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				6F0796FC30A689420050DC90 /* GoogleService-Info.plist in Resources */,
+				7A10C0DE30B1000100A1B2C2 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -256,6 +263,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				50D1F8FBD7069C4CEB1FD89C /* Assets.xcassets in Resources */,
+				7A10C0DE30B1000100A1B2C4 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

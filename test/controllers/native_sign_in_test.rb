@@ -9,18 +9,35 @@ class NativeSignInTest < ActionDispatch::IntegrationTest
   IOS_CLIENT = "123-ios.apps.googleusercontent.com"
   KEY = OpenSSL::PKey::RSA.generate(2048)
   JWK = JWT::JWK.new(KEY, kid: "test-key")
+  ENV_KEYS = %w[GOOGLE_IOS_CLIENT_ID APPLE_SERVICES_ID APPLE_TEAM_ID ANDROID_CERT_SHA256 APPLE_KEY_ID APPLE_PRIVATE_KEY].freeze
+  APPLE_KEY = OpenSSL::PKey::EC.generate("prime256v1") # stands in for the Sign in with Apple .p8 key
+
+  # Apple's token endpoints, played here: records each call and answers like Apple
+  def fake_apple
+    calls = []
+    ENV["APPLE_TEAM_ID"] = "RJUT73YPEK"
+    ENV["APPLE_KEY_ID"] = "KEY123"
+    ENV["APPLE_PRIVATE_KEY"] = APPLE_KEY.to_pem.gsub("\n", "\\n") # as one line, the way it's pasted into CapRover
+    AppleSignIn.poster = lambda do |url, form|
+      calls << [url, form]
+      url == AppleSignIn::TOKEN_URL ? { "refresh_token" => "r-#{form[:code]}", "access_token" => "a" } : {}
+    end
+    calls
+  end
 
   setup do
     Rails.application.reload_routes_unless_loaded
     @source = IdentityToken.key_source
     IdentityToken.key_source = ->(_provider) { { keys: [JWK.export] } }
-    @env = ENV.to_h.slice("GOOGLE_IOS_CLIENT_ID", "APPLE_SERVICES_ID", "APPLE_TEAM_ID", "ANDROID_CERT_SHA256")
+    @env = ENV.to_h.slice(*ENV_KEYS)
+    @poster = AppleSignIn.poster
     ENV["GOOGLE_IOS_CLIENT_ID"] = IOS_CLIENT
   end
 
   teardown do
     IdentityToken.key_source = @source
-    %w[GOOGLE_IOS_CLIENT_ID APPLE_SERVICES_ID APPLE_TEAM_ID ANDROID_CERT_SHA256].each { |k| ENV[k] = @env[k] }
+    ENV_KEYS.each { |k| ENV[k] = @env[k] }
+    AppleSignIn.poster = @poster
   end
 
   def token(key: KEY, **claims)
@@ -96,6 +113,42 @@ class NativeSignInTest < ActionDispatch::IntegrationTest
     assert_equal "a-777", user.reload.apple_uid
   end
 
+  test "Apple's native sheet's code is traded for a refresh token, and deleting the account revokes it" do
+    calls = fake_apple
+    native("apple", apple_token(nonce: nonce), authorization_code: "code-1")
+    assert_response :success
+    user = User.find_by(apple_uid: "a-777")
+    assert_equal ["r-code-1", "com.hmblbot.recoverybot"], [user.apple_refresh_token, user.apple_client_id]
+    assert_not_equal "r-code-1", User.connection.select_value("SELECT apple_refresh_token FROM users WHERE id = #{user.id}"), "kept encrypted"
+
+    url, form = calls.first
+    assert_equal [AppleSignIn::TOKEN_URL, "code-1", "authorization_code", "com.hmblbot.recoverybot"], [url, form[:code], form[:grant_type], form[:client_id]]
+    secret, = JWT.decode(form[:client_secret], APPLE_KEY, true, algorithm: "ES256")
+    assert_equal ["RJUT73YPEK", "com.hmblbot.recoverybot", "https://appleid.apple.com"], secret.values_at("iss", "sub", "aud")
+    assert_nil form[:redirect_uri], "the app's codes weren't issued for a return URL"
+
+    delete "/api/profile", params: { confirm_email: user.email }, as: :json
+    assert_response :no_content
+    assert_not User.exists?(user.id)
+    url, form = calls.last
+    assert_equal [AppleSignIn::REVOKE_URL, "r-code-1", "refresh_token", "com.hmblbot.recoverybot"], [url, form[:token], form[:token_type_hint], form[:client_id]]
+  end
+
+  test "the account is deleted even if Apple won't revoke, and nothing is kept without the Apple key" do
+    native("apple", apple_token(nonce: nonce), authorization_code: "code-1")
+    user = User.find_by(apple_uid: "a-777")
+    assert_nil user.apple_refresh_token, "no key set up: no code traded"
+
+    calls = fake_apple
+    AppleSignIn.poster = ->(url, form) { calls << url; url == AppleSignIn::TOKEN_URL ? { "refresh_token" => "r" } : nil }
+    native("apple", apple_token(nonce: nonce), authorization_code: "code-2")
+    assert_equal "r", user.reload.apple_refresh_token
+    delete "/api/profile", params: { confirm_email: user.email }, as: :json
+    assert_response :no_content
+    assert_not User.exists?(user.id)
+    assert_equal AppleSignIn::REVOKE_URL, calls.last
+  end
+
   test "Sign in with Apple on the website goes to Apple and back" do
     ENV["APPLE_SERVICES_ID"] = "com.hmblbot.recoverybot.web"
     get "/users/sign_in"
@@ -115,6 +168,17 @@ class NativeSignInTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     user = User.find_by(apple_uid: "a-777")
     assert_equal "Robin H.", user.name
+  end
+
+  test "the website's Apple code is traded with its Services ID and return URL" do
+    ENV["APPLE_SERVICES_ID"] = "com.hmblbot.recoverybot.web"
+    calls = fake_apple
+    post "/users/auth/apple"
+    query = Rack::Utils.parse_query(URI(response.location).query)
+    post "/users/auth/apple/callback", params: { state: query["state"], id_token: apple_token(aud: "com.hmblbot.recoverybot.web", nonce: query["nonce"]), code: "web-code" }
+    user = User.find_by(apple_uid: "a-777")
+    assert_equal ["r-web-code", "com.hmblbot.recoverybot.web"], [user.apple_refresh_token, user.apple_client_id]
+    assert_equal "http://www.example.com/users/auth/apple/callback", calls.first.last[:redirect_uri]
   end
 
   test "Apple's answer without the state we sent is turned away" do

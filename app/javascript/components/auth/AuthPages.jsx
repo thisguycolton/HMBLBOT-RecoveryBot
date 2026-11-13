@@ -115,7 +115,7 @@ async function nativeSignIn(provider, options, authenticityToken) {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": authenticityToken },
-    body: JSON.stringify({ provider, id_token: result.idToken, given_name: result.givenName, family_name: result.familyName }),
+    body: JSON.stringify({ provider, id_token: result.idToken, authorization_code: result.authorizationCode, given_name: result.givenName, family_name: result.familyName }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "We couldn't sign you in. Please try again.");

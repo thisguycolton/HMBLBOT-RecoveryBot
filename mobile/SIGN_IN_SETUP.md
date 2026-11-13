@@ -10,9 +10,8 @@ can't sign builds that use Sign in with Apple or Associated Domains (Universal L
 So that a free Apple ID can still put the app on your iPhone, **Debug** builds (what Xcode's
 Run button makes) use `App/App-Personal.entitlements`, which leaves those two out: in them, the
 Apple button and app links don't work, but everything else, widgets included, does. **Release**
-builds (Archive, TestFlight, the App Store) use `App/App.entitlements` with everything. Once
-the paid account is set up, point Debug at the full file too: App target > Build Settings >
-Code Signing Entitlements > Debug: `App/App.entitlements`.
+builds (Archive, TestFlight, the App Store) use `App/App.entitlements` with everything. With
+the paid account (team RJUT73YPEK) Debug now uses the full file too.
 
 ## 1. Apple Developer account (developer.apple.com > Certificates, Identifiers & Profiles)
 
@@ -27,6 +26,13 @@ Code Signing Entitlements > Debug: `App/App.entitlements`.
    - Primary App ID: com.hmblbot.recoverybot
    - Domains: `recoverybot.hmblbot.com`
    - Return URLs: `https://recoverybot.hmblbot.com/users/auth/apple/callback`
+4. **Sign in with Apple key**, so deleting an account also revokes it with Apple (App Store
+   rule 5.1.1(v); AppleSignIn): Keys > + > name it, tick **Sign in with Apple** > Configure >
+   Primary App ID com.hmblbot.recoverybot > Save > Continue > Register, then **Download** the
+   `.p8` file (Apple only lets you download it once). In CapRover set `APPLE_KEY_ID` to the
+   key's ID and `APPLE_PRIVATE_KEY` to the whole text of the `.p8` file (new lines can be typed
+   as `\n`). Sign-ins from then on keep a token to revoke; earlier ones have none, which is
+   fine.
 
    In CapRover, set `APPLE_SERVICES_ID` to it. No key or secret is needed: the site checks the
    signed token Apple sends back.
@@ -70,6 +76,7 @@ Xcode / Android Studio once, since the entitlements and Android's link list chan
 | `APPLE_TEAM_ID` | Apple team ID, for Universal Links and iPhone password autofill |
 | `APPLE_SERVICES_ID` | Services ID for Sign in with Apple on the website |
 | `APPLE_BUNDLE_ID` | Optional, defaults to `com.hmblbot.recoverybot` |
+| `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` | Sign in with Apple key (ID, and the `.p8` file's text), to revoke Apple sign-ins when an account is deleted |
 | `GOOGLE_IOS_CLIENT_ID` | Google iOS OAuth client, for the iPhone app's Google sheet |
 | `ANDROID_CERT_SHA256` | Android signing key SHA-256 fingerprints, comma separated |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Already set up for the website; the Android app uses the client ID |

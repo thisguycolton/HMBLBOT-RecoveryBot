@@ -12,7 +12,8 @@ class Users::NativeSignInsController < ApplicationController
     render json: { nonce: value }
   end
 
-  # POST /users/auth/native { provider: google|apple, id_token, given_name, family_name }
+  # POST /users/auth/native { provider: google|apple, id_token, given_name, family_name }, and
+  # Apple's authorization_code (traded for a refresh token, revoked if the account is deleted)
   def create
     provider = params[:provider].to_s
     return render_error("That isn't a sign-in we know.") unless %w[google apple].include?(provider)
@@ -29,6 +30,7 @@ class Users::NativeSignInsController < ApplicationController
       return render_error("#{provider.capitalize} hasn't confirmed that account's email address yet, so we can't use it to sign you in. Please sign up with your email instead.")
     end
 
+    user.remember_apple_sign_in(params[:authorization_code], client_id: AppleSignIn.bundle_id) if provider == "apple"
     user.remember_me = true
     sign_in(:user, user, event: :authentication)
     flash[:notice] = "Signed in with #{provider.capitalize}."

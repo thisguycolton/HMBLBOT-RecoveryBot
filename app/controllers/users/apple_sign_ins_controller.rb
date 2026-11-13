@@ -18,7 +18,8 @@ class Users::AppleSignInsController < ApplicationController
     redirect_to AppleSignIn.authorize_url(redirect_uri: callback_url, state: state, nonce: nonce), allow_other_host: true
   end
 
-  # POST /users/auth/apple/callback { state, id_token, code, user } or { error }
+  # POST /users/auth/apple/callback { state, id_token, code, user } or { error }. The code is
+  # traded for a refresh token, so deleting the account can revoke it (AppleSignIn).
   def callback
     saved = cookies.signed[COOKIE] || {}
     cookies.delete(COOKIE)
@@ -32,6 +33,7 @@ class Users::AppleSignInsController < ApplicationController
                                       name: AppleSignIn.name_from(params[:user]))
     return failed("Apple hasn't confirmed that account's email address, so we can't use it to sign you in. Please sign up with your email instead.") unless user
 
+    user.remember_apple_sign_in(params[:code], client_id: AppleSignIn.services_id, redirect_uri: callback_url)
     user.remember_me = true # no "Remember me" box on Apple's page, so kept signed in like the box's default
     flash[:notice] = "Signed in with Apple."
     sign_in_and_redirect user, event: :authentication

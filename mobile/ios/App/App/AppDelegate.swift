@@ -354,6 +354,8 @@ public class NativeAuthPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationContr
         }
         appleCall?.resolve([
             "idToken": token,
+            // traded by the server for a refresh token, so deleting the account can revoke it
+            "authorizationCode": credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) } ?? "",
             "givenName": credential.fullName?.givenName ?? "",
             "familyName": credential.fullName?.familyName ?? "",
             "email": credential.email ?? ""
