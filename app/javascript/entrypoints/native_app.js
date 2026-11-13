@@ -99,10 +99,11 @@ function installShellGhost() {
 
 // Moving between pages in the iPhone app: the app keeps a picture of the last page over this one
 // (PageCurtain in AppDelegate.swift) until this says it has drawn: the shell is up (the copy of
-// the last one, #shell-ghost, is gone) and nothing is still loading behind a skeleton (Skullet
-// marks those aria-busy), or 1.5 seconds after the page's scripts ran at most. A page brought back
-// whole from the browser's cache (going back) is drawn already. Older app builds don't have the
-// plugin, so nothing happens there.
+// the last one, #shell-ghost, is gone), or 0.8 seconds after the page's scripts ran at most. It
+// doesn't wait for the page's content: skeletons stand in for what's still loading, so a tap
+// answers right away instead of holding the old page. A page brought back whole from the
+// browser's cache (going back) is drawn already. Older app builds don't have the plugin, so
+// nothing happens there.
 function installPageReady() {
   if (!hasPlugin("PageCurtain")) return;
   const send = () => callPlugin("PageCurtain", "ready").catch(() => {});
@@ -110,9 +111,9 @@ function installPageReady() {
     const start = performance.now();
     const check = () => {
       const waited = performance.now() - start;
-      const drawn = !document.getElementById("shell-ghost") && !document.querySelector('[aria-busy="true"]');
+      const drawn = !document.getElementById("shell-ghost");
       // two frames on, so what was just drawn is on screen before the picture fades
-      if ((drawn && waited > 50) || waited > 1500) requestAnimationFrame(() => requestAnimationFrame(send));
+      if (drawn || waited > 800) requestAnimationFrame(() => requestAnimationFrame(send));
       else requestAnimationFrame(check);
     };
     requestAnimationFrame(check);
