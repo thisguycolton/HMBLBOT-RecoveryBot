@@ -10,9 +10,9 @@ import WidgetKit
 // - Favorite chip: their first favorite chip (else their newest sobriety chip), drawn by the site.
 // The app (WidgetBridgePlugin in AppDelegate.swift) keeps what they show in the App Group both
 // share; signing out of the app clears it. Tapping the day count opens Today; tapping the chip
-// widget opens the Chips page, except the chip itself, which turns over (FlipChipIntent).
-// Both can be edited (touch and hold > Edit Widget): four looks for the day count (DayStyle),
-// six backgrounds for the chip (ChipBackground).
+// opens that chip full size on the Chips page, where it spins in 3D (a widget can only turn a
+// flat picture). Both can be edited (touch and hold > Edit Widget): looks for the day count
+// (DayStyle) and backgrounds for the chip (ChipBackground).
 
 enum Shared {
     static let group = "group.com.hmblbot.recoverybot"
@@ -38,6 +38,14 @@ enum Shared {
     static var chipFlipped: Bool { defaults?.bool(forKey: "chipFlipped") ?? false }
 
     static let chipsPage = URL(string: "recoverybot://open/recovery")!
+
+    // The chip on the widget, opened full size on the Chips page, where it spins in 3D
+    static var chipLink: URL {
+        let id = defaults?.string(forKey: "chipId") ?? ""
+        var parts = URLComponents(string: "recoverybot://open/recovery")!
+        if !id.isEmpty { parts.queryItems = [URLQueryItem(name: "chip", value: id), URLQueryItem(name: "from", value: "widget")] }
+        return parts.url ?? chipsPage
+    }
     // native_app.js opens the Today panel for #today, on whatever page the app is on
     static let todayPanel = URL(string: "recoverybot://open/#today")!
 }
@@ -385,18 +393,6 @@ struct ChipSettings: WidgetConfigurationIntent {
     var background: ChipBackground
 }
 
-// Tapping the chip turns it over. The widget runs this itself (the app doesn't open), and
-// WidgetKit then redraws the widget, fading from one face to the other.
-struct FlipChipIntent: AppIntent {
-    static let title: LocalizedStringResource = "Turn the chip over"
-    static let isDiscoverable = false
-
-    func perform() async throws -> some IntentResult {
-        Shared.defaults?.set(!Shared.chipFlipped, forKey: "chipFlipped")
-        return .result()
-    }
-}
-
 struct ChipProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> ChipEntry { ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", sample: true) }
 
@@ -432,7 +428,7 @@ struct ChipView: View {
         content
             .foregroundStyle(entry.background.ink(colorScheme))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .widgetURL(Shared.chipsPage)
+            .widgetURL(entry.image == nil ? Shared.chipsPage : Shared.chipLink)
             .widgetBackground(family, entry.background.style(colorScheme))
     }
 
@@ -447,18 +443,7 @@ struct ChipView: View {
     }
 
     @ViewBuilder var chip: some View {
-        if let image = entry.image, let back = entry.back {
-            Button(intent: FlipChipIntent()) {
-                // A smooth fade between the faces. (A widget can't spin a coin convincingly: it
-                // only turns a flat picture, or shows a few frames of a flipbook.)
-                coin(entry.flipped ? back : image)
-                    .id(entry.flipped)
-                    .transition(.opacity)
-                    .animation(.easeInOut(duration: 0.45), value: entry.flipped)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(entry.flipped ? "Chip, back. Tap to turn it over." : "Chip. Tap to turn it over.")
-        } else if let image = entry.image {
+        if let image = entry.image {
             coin(image)
         } else {
             // the widget gallery's preview: a plain brass coin

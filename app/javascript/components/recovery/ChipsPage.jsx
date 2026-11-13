@@ -33,11 +33,12 @@ export default function ChipsPage() {
   const [params, setParams] = useSearchParams();
   const load = useCallback(() => api(`/recovery?today=${localDate()}`).then(setData).catch((e) => setError(e.message)), []);
   useEffect(() => { document.title = "Chips | RecoveryBot"; load(); }, [load]);
-  // A chip someone gave them opens from its notification (?chip=award:12), with confetti
+  // A chip someone gave them opens from its notification (?chip=award:12), with confetti; the
+  // iPhone widget's chip opens itself the same way, without the confetti (&from=widget)
   useEffect(() => {
     const id = params.get("chip");
     if (!id || !data) return;
-    if (data.chips.some((c) => c.id === id)) { setOpenId(id); setCelebrate(true); setSharing(params.get("share") === "1"); }
+    if (data.chips.some((c) => c.id === id)) { setOpenId(id); setCelebrate(params.get("from") !== "widget"); setSharing(params.get("share") === "1"); }
     setParams({}, { replace: true });
   }, [params, data]); // eslint-disable-line react-hooks/exhaustive-deps
 
