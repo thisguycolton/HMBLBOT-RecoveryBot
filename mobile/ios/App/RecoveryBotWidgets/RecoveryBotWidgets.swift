@@ -441,22 +441,12 @@ struct ChipView: View {
             .widgetBackground(family, entry.background.style(colorScheme))
     }
 
-    // A coin, not a sticker: copies of the chip stacked a fraction of a point apart in depth make
-    // its edge (darker, lightest in the middle like a rounded rim), with the face on top. They all
-    // turn together, so a turn fans them out into a solid edge, and a soft shadow sits under it.
-    // `degrees` is the chip's turn; each layer turns about its own depth (anchorZ).
-    func coin(_ picture: UIImage, degrees: Double) -> some View {
-        let layers = 10
-        let thickness: CGFloat = 9
-        return ZStack {
-            ForEach(0..<layers, id: \.self) { i in
-                let z = -thickness / 2 + thickness * (CGFloat(i) + 0.5) / CGFloat(layers)
-                Image(uiImage: picture).resizable().scaledToFit()
-                    .brightness(-0.42 + 0.18 * (1 - abs(z) / (thickness / 2)))
-                    .rotation3DEffect(.degrees(degrees), axis: (x: 0, y: 1, z: 0), anchorZ: z, perspective: 0.5)
-            }
+    // Depth: a darker copy just below it for the coin's rim, and a soft shadow under the whole chip
+    func coin(_ picture: UIImage) -> some View {
+        ZStack {
             Image(uiImage: picture).resizable().scaledToFit()
-                .rotation3DEffect(.degrees(degrees), axis: (x: 0, y: 1, z: 0), anchorZ: thickness / 2, perspective: 0.5)
+                .brightness(-0.38).offset(y: 3)
+            Image(uiImage: picture).resizable().scaledToFit()
         }
         .shadow(color: .black.opacity(0.45), radius: 7, x: 0, y: 6)
     }
@@ -464,13 +454,14 @@ struct ChipView: View {
     @ViewBuilder var chip: some View {
         if let image = entry.image, let back = entry.back {
             Button(intent: FlipChipIntent()) {
-                coin(entry.flipped ? back.withHorizontallyFlippedOrientation() : image, degrees: entry.flipped ? chipTurnDegrees : 0)
+                coin(entry.flipped ? back.withHorizontallyFlippedOrientation() : image)
+                    .rotation3DEffect(.degrees(entry.flipped ? chipTurnDegrees : 0), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
                     .animation(.easeOut(duration: 1.1), value: entry.flipped)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(entry.flipped ? "Chip, back. Tap to turn it over." : "Chip. Tap to turn it over.")
         } else if let image = entry.image {
-            coin(image, degrees: 0)
+            coin(image)
         } else {
             // the widget gallery's preview: a plain brass coin
             Circle()
