@@ -17,6 +17,7 @@ export default function OverviewPage({ notify }) {
 
   const waiting = [
     { label: "Contact requests to answer", count: data.contact_requests.open, to: "/contact_requests", tone: "bg-sky-600" },
+    { label: "TestFlight invites to send", count: data.testflight_requests.new, to: "/testflight_requests", tone: "bg-violet-600" },
     { label: "Open text reports", count: data.text_reports.open, to: "/text_reports", tone: "bg-red-500" },
     { label: "Site notices showing", count: data.notices.live, to: "/notices", tone: "bg-emerald-600" },
   ];

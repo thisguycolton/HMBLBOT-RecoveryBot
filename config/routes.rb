@@ -32,6 +32,9 @@ Rails.application.routes.draw do
   get "/history", to: "docs#app", defaults: { alias: "history" }, as: :history
   get "/contact", to: "contacts#new", as: :contact
   post "/contact", to: "contacts#create"
+  # Ask for an invite to the iPhone app's TestFlight beta (linked from a site notice)
+  get "/testflight", to: "testflight_requests#new", as: :testflight
+  post "/testflight", to: "testflight_requests#create"
   # A reading in a step worksheet ("Chapter 4, We Agnostics, in the Big Book", "page 63"):
   # finds that book, chapter or printed page in the library and goes there (LibraryLinksController)
   get "/library/go", to: "library_links#show", as: :library_go
@@ -586,6 +589,9 @@ end
         post :comment, on: :member
       end
       resources :contact_requests, only: %i[index update destroy]
+      resources :testflight_requests, only: %i[index update destroy] do
+        patch :bulk, on: :collection
+      end
       resources :user_reports, only: %i[index update destroy]
       resources :chip_templates, only: %i[index show create update destroy] do
         post :publish, on: :member

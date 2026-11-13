@@ -169,6 +169,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
             <li><strong>Readings and reports:</strong> readings you add to the shared archive, and any problems you report in the library's text.</li>
             <li><strong>The Acid Quest:</strong> a screen name and your progress in the game.</li>
             <li><strong>Messages to us:</strong> what you send through the Contact page (your name if you give one, your email and your message) is emailed to us and kept so the people who run the site can answer it. Ask us if you'd like it deleted afterwards.</li>
+            <li><strong>Asking to try the iPhone app:</strong> if you ask for a TestFlight invite, we keep your name, the email address on your Apple ID and any note you add, so the people who run the site can send the invite. Ask us if you'd like it deleted afterwards.</li>
           </ul>
           <h3>Things we record when you visit</h3>
           <ul>
@@ -179,7 +180,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
               when you were last active. Only site admins see these statistics, and only as totals.
             </li>
             <li>
-              <strong>Bot check:</strong> the sign-up and contact forms have an “I'm not a robot” box.{" "}
+              <strong>Bot check:</strong> the sign-up, contact and TestFlight forms have an “I'm not a robot” box.{" "}
               {turnstile
                 ? "It's run by Cloudflare Turnstile (see Outside services)."
                 : "Ticking it has your browser solve a small math puzzle we made, which takes a second or two. It runs on your device; nothing about you is sent anywhere, and we only check the answer."}
@@ -251,7 +252,8 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
             <li><strong>ipinfo.io:</strong> looks up the shortened IP address of a visit to get the rough location for visit statistics.</li>
             {google && <li><strong>Google sign-in:</strong> if you choose “Continue with Google”, you sign in on Google's own page, so Google sees that you're signing in to RecoveryBot, under Google's privacy policy. Nothing goes to Google if you use your email and password.</li>}
             <li><strong>Sign in with Apple:</strong> if you choose it, you sign in on Apple's own page or sheet, so Apple sees that you're signing in to RecoveryBot, under Apple's privacy policy. Nothing goes to Apple if you use your email and password.</li>
-            {turnstile && <li><strong>Cloudflare Turnstile:</strong> checks that the sign-up and contact forms are filled in by a person. Cloudflare sees your IP address and browser details when the check runs.</li>}
+            <li><strong>TestFlight (Apple):</strong> if you ask to try the iPhone app, we give Apple your name and email address so it can send you the TestFlight invite. Testing the app then happens under Apple's privacy policy, and Apple shares crash reports and any feedback you send through TestFlight with us.</li>
+            {turnstile && <li><strong>Cloudflare Turnstile:</strong> checks that the sign-up, contact and TestFlight forms are filled in by a person. Cloudflare sees your IP address and browser details when the check runs.</li>}
             <li>
               <strong>Fonts and page code:</strong> some pages load fonts from Google Fonts and code from public content networks
               (jsDelivr, unpkg, cdnjs and Google's hosted libraries). Your browser asks those servers for the files, so they see your IP
