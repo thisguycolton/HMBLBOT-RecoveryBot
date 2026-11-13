@@ -37,13 +37,6 @@ enum Shared {
 
     static var chipFlipped: Bool { defaults?.bool(forKey: "chipFlipped") ?? false }
 
-    // The flipbook of the turn, drawn by the site (lib/appWidgets.js); none from older sites
-    static func chipFrames() -> [UIImage] {
-        guard let folder = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else { return [] }
-        let count = defaults?.integer(forKey: "chipFrameCount") ?? 0
-        return (0..<max(count, 0)).compactMap { UIImage(contentsOfFile: folder.appendingPathComponent("chip-frame-\($0).png").path) }
-    }
-
     static let chipsPage = URL(string: "recoverybot://open/recovery")!
     // native_app.js opens the Today panel for #today, on whatever page the app is on
     static let todayPanel = URL(string: "recoverybot://open/#today")!
@@ -331,7 +324,6 @@ struct ChipEntry: TimelineEntry {
     let signedIn: Bool
     let image: UIImage?
     var back: UIImage? = nil
-    var frames: [UIImage] = []
     var flipped = false
     let label: String
     var sample = false
@@ -428,8 +420,7 @@ struct ChipProvider: AppIntentTimelineProvider {
     private func current(_ background: ChipBackground) -> ChipEntry {
         let signedIn = Shared.signedIn
         return ChipEntry(date: Date(), signedIn: signedIn, image: signedIn ? Shared.chipImage() : nil,
-                         back: signedIn ? Shared.chipBackImage() : nil, frames: signedIn ? Shared.chipFrames() : [],
-                         flipped: Shared.chipFlipped, label: Shared.chipLabel,
+                         back: signedIn ? Shared.chipBackImage() : nil, flipped: Shared.chipFlipped, label: Shared.chipLabel,
                          background: background)
     }
 }
@@ -460,29 +451,8 @@ struct ChipView: View {
         .shadow(color: .black.opacity(0.45), radius: 7, x: 0, y: 6)
     }
 
-    // The flipbook: the frames of the turn lie on top of the front, hidden. Turning to the back,
-    // each one shows a moment after the one before (each covering the last), so the chip spins and
-    // lands on the last frame, its back. Turning back, they hide again newest first, so it spins
-    // the other way down to the front. Widgets can't play a video, but they do run these.
-    func flipbook(_ front: UIImage, _ frames: [UIImage]) -> some View {
-        let step = 1.0 / Double(frames.count)
-        return ZStack {
-            Image(uiImage: front).resizable().scaledToFit()
-            ForEach(frames.indices, id: \.self) { i in
-                Image(uiImage: frames[i]).resizable().scaledToFit()
-                    .opacity(entry.flipped ? 1 : 0)
-                    .animation(.linear(duration: 0.01).delay(step * Double(entry.flipped ? i : frames.count - 1 - i)), value: entry.flipped)
-            }
-        }
-        .shadow(color: .black.opacity(0.45), radius: 7, x: 0, y: 6)
-    }
-
     @ViewBuilder var chip: some View {
-        if let image = entry.image, !entry.frames.isEmpty {
-            Button(intent: FlipChipIntent()) { flipbook(image, entry.frames) }
-                .buttonStyle(.plain)
-                .accessibilityLabel(entry.flipped ? "Chip, back. Tap to turn it over." : "Chip. Tap to turn it over.")
-        } else if let image = entry.image, let back = entry.back {
+        if let image = entry.image, let back = entry.back {
             Button(intent: FlipChipIntent()) {
                 coin(entry.flipped ? back.withHorizontallyFlippedOrientation() : image)
                     .rotation3DEffect(.degrees(entry.flipped ? chipTurnDegrees : 0), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
