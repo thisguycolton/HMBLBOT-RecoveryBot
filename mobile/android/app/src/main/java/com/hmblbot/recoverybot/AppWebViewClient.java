@@ -1,6 +1,7 @@
 package com.hmblbot.recoverybot;
 
 import android.net.Uri;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
@@ -19,6 +20,21 @@ public class AppWebViewClient extends BridgeWebViewClient {
     public AppWebViewClient(Bridge bridge) {
         super(bridge);
         this.bridge = bridge;
+    }
+
+    // A whole page that couldn't be reached (no signal, or the server restarting): the offline
+    // page, told which page it was (?from=) so it can go back there. Capacitor opens it without
+    // that, and inside the app the page can't find the site's address by itself.
+    @Override
+    public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+        String errorUrl = bridge.getErrorUrl();
+        if (!request.isForMainFrame() || errorUrl == null) {
+            super.onReceivedError(view, request, error);
+            return;
+        }
+        view.loadUrl(Uri.parse(errorUrl).buildUpon()
+            .appendQueryParameter("from", request.getUrl().toString())
+            .build().toString());
     }
 
     @Override

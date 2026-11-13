@@ -253,15 +253,35 @@ final class ServerErrorGuard: NSObject, WKNavigationDelegate {
             redirectedAt = nil
             return
         }
-        inner.webView?(webView, didFailProvisionalNavigation: navigation, withError: error)
+        showOffline(webView, error)
+    }
+
+    // A page that couldn't be reached (no signal, or the server restarting): the offline page,
+    // told which page it was (?from=) so "Try again" and its own retries go back there. Capacitor
+    // would open it without that, and the page can't find the site's address by itself (inside
+    // the app, Capacitor's getServerUrl() is the app's own local address, not the site).
+    private func showOffline(_ webView: WKWebView, _ error: Error) {
+        let nsError = error as NSError
+        // Not failures: another page took over (a quick second tap), or the load turned into a
+        // download or an outside link
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled { return }
+        if nsError.domain == "WebKitErrorDomain" && nsError.code == 102 { return }
+        guard let errorURL, var parts = URLComponents(url: errorURL, resolvingAgainstBaseURL: false) else { return }
+        let failed = (nsError.userInfo[NSURLErrorFailingURLStringErrorKey] as? String)
+            ?? (nsError.userInfo[NSURLErrorFailingURLErrorKey] as? URL)?.absoluteString
+            ?? startedURL?.absoluteString
+        if let failed, failed.hasPrefix("http") { parts.queryItems = [URLQueryItem(name: "from", value: failed)] }
+        if let url = parts.url { webView.load(URLRequest(url: url)) }
     }
 
     // Moving between pages (PageCurtain): a picture of the page they were on stays up until the
     // new one has drawn
     weak var curtain: PageCurtain?
+    private var startedURL: URL?
 
     // swiftlint:disable:next implicitly_unwrapped_optional
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        startedURL = webView.url // the page being opened, for the offline page if it can't be reached
         curtain?.drop(over: webView)
         inner.webView?(webView, didStartProvisionalNavigation: navigation)
     }
