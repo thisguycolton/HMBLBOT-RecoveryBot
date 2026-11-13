@@ -40,8 +40,8 @@ class Notification < ApplicationRecord
                        kinds: %w[sponsorship.request sponsorship.accepted sponsorship.share sponsorship.reply sponsorship.suggestion sponsorship.step sponsorship.nudge] },
     "recovery_reminders" => { label: "Gratitude, 10th step and worksheet reminders", description: "The reminders you turned on under Reminders, or on a step worksheet.",
                               kinds: %w[recovery.gratitude_reminder recovery.step_reminder recovery.step_work_reminder] },
-    "site_admin" => { label: "Site admin", description: "New groups waiting for approval, text reports, reports about people, and a daily Facebook story that didn't post.",
-                      kinds: %w[group.pending text_report.created user_report.created daily_story.failed], admin_only: true },
+    "site_admin" => { label: "Site admin", description: "New groups waiting for approval, text reports, reports about people, requests to try the iPhone app, and a daily Facebook story that didn't post.",
+                      kinds: %w[group.pending text_report.created user_report.created testflight.requested daily_story.failed], admin_only: true },
     "admin_tasks" => { label: "Site admin tasks", description: "When a task on the admin Task board is given to you or all site admins, finished, commented on, due tomorrow or overdue.",
                        kinds: %w[admin_task.assigned admin_task.done admin_task.comment admin_task.due], admin_only: true },
   }.freeze

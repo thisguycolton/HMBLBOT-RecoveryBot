@@ -13,6 +13,7 @@ import BlockedWordsPage from "./BlockedWordsPage";
 import CourtVerificationsPage from "./CourtVerificationsPage";
 import TextReportsPage from "./TextReportsPage";
 import ContactRequestsPage from "./ContactRequestsPage";
+import TestflightRequestsPage from "./TestflightRequestsPage";
 import UserReportsPage from "./UserReportsPage";
 import NoticesPage from "./NoticesPage";
 import ChipTemplatesPage from "./ChipTemplatesPage";
@@ -74,6 +75,7 @@ function SuiteShell() {
           <Route path="/host_scripts" element={<HostScriptsPage notify={notify} />} />
           <Route path="/host_scripts/:id" element={<HostScriptsPage notify={notify} />} />
           <Route path="/contact_requests" element={<ContactRequestsPage notify={notify} />} />
+          <Route path="/testflight_requests" element={<TestflightRequestsPage notify={notify} />} />
           <Route path="/reports" element={<UserReportsPage notify={notify} />} />
           <Route path="/text_reports" element={<TextReportsPage notify={notify} />} />
           <Route path="/court_verifications" element={<CourtVerificationsPage notify={notify} />} />
