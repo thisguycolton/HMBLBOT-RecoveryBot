@@ -92,12 +92,14 @@ func plural(_ n: Int, _ one: String, _ many: String) -> String { n == 1 ? one : 
 
 // The day count's four looks, picked in Edit Widget
 enum DayStyle: String, AppEnum {
-    case classic, paper, midnight, sunrise
+    case classic, paper, paperLight, paperDark, midnight, sunrise
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Style"
     static let caseDisplayRepresentations: [DayStyle: DisplayRepresentation] = [
         .classic: "Classic blue",
-        .paper: "Paper",
+        .paper: "Paper (follows Light/Dark Mode)",
+        .paperLight: "Paper, light",
+        .paperDark: "Paper, dark",
         .midnight: "Midnight",
         .sunrise: "Sunrise",
     ]
@@ -111,7 +113,8 @@ struct DayCountSettings: WidgetConfigurationIntent {
     var style: DayStyle
 }
 
-// Colors and type for a look: Classic is rounded on blue, Paper a serif on cream, Midnight thin
+// Colors and type for a look: Classic is rounded on blue, Paper a serif on cream (or, dark, on
+// warm charcoal; plain Paper follows the phone's Light/Dark Mode), Midnight thin
 // monospaced digits on black, Sunrise tall condensed type on orange to pink
 struct DayTheme {
     let background: AnyShapeStyle
@@ -130,13 +133,20 @@ struct DayTheme {
         Font.system(style, design: design).weight(weight)
     }
 
-    static func of(_ style: DayStyle) -> DayTheme {
+    // Paper in the light (cream) and dark (warm charcoal) versions
+    static let paperLight = DayTheme(background: AnyShapeStyle(Color(red: 0.96, green: 0.94, blue: 0.89)), ink: Color(red: 0.23, green: 0.18, blue: 0.13),
+                                     accent: Color(red: 0.72, green: 0.42, blue: 0.16), design: .serif, weight: .semibold)
+    static let paperDark = DayTheme(background: AnyShapeStyle(Color(red: 0.16, green: 0.14, blue: 0.12)), ink: Color(red: 0.95, green: 0.91, blue: 0.83),
+                                    accent: Color(red: 0.87, green: 0.6, blue: 0.3), design: .serif, weight: .semibold)
+
+    static func of(_ style: DayStyle, scheme: ColorScheme = .light) -> DayTheme {
         switch style {
+        case .paperLight: return paperLight
+        case .paperDark: return paperDark
         case .classic:
             return DayTheme(background: AnyShapeStyle(dayGradient), ink: .white, accent: .white, design: .rounded, weight: .bold)
         case .paper:
-            return DayTheme(background: AnyShapeStyle(Color(red: 0.96, green: 0.94, blue: 0.89)), ink: Color(red: 0.23, green: 0.18, blue: 0.13),
-                            accent: Color(red: 0.72, green: 0.42, blue: 0.16), design: .serif, weight: .semibold)
+            return scheme == .dark ? paperDark : paperLight
         case .midnight:
             return DayTheme(background: AnyShapeStyle(Color(red: 0.04, green: 0.04, blue: 0.06)), ink: .white,
                             accent: Color(red: 0.96, green: 0.62, blue: 0.04), design: .monospaced, weight: .light)
@@ -192,8 +202,9 @@ let dayGradient = LinearGradient(colors: [Color(red: 0.36, green: 0.55, blue: 0.
 
 struct DayCountView: View {
     @Environment(\.widgetFamily) var family
+    @Environment(\.colorScheme) var colorScheme
     let entry: DayEntry
-    var theme: DayTheme { DayTheme.of(entry.style) }
+    var theme: DayTheme { DayTheme.of(entry.style, scheme: colorScheme) }
 
     var body: some View {
         content
@@ -321,7 +332,7 @@ struct ChipEntry: TimelineEntry {
 
 // The chip widget's backgrounds, picked in Edit Widget
 enum ChipBackground: String, AppEnum {
-    case night, ocean, forest, sunset, black, light
+    case night, ocean, forest, sunset, black, light, paper
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Background"
     static let caseDisplayRepresentations: [ChipBackground: DisplayRepresentation] = [
@@ -331,9 +342,10 @@ enum ChipBackground: String, AppEnum {
         .sunset: "Sunset",
         .black: "Black",
         .light: "Light",
+        .paper: "Paper (follows Light/Dark Mode)",
     ]
 
-    var style: AnyShapeStyle {
+    func style(_ scheme: ColorScheme) -> AnyShapeStyle {
         func radial(_ a: Color, _ b: Color) -> AnyShapeStyle {
             AnyShapeStyle(RadialGradient(colors: [a, b], center: .center, startRadius: 5, endRadius: 220))
         }
@@ -345,10 +357,17 @@ enum ChipBackground: String, AppEnum {
                                                           startPoint: .top, endPoint: .bottom))
         case .black: return AnyShapeStyle(Color.black)
         case .light: return radial(.white, Color(red: 0.89, green: 0.89, blue: 0.87))
+        case .paper: return DayTheme.of(.paper, scheme: scheme).background
         }
     }
 
-    var ink: Color { self == .light ? Color(red: 0.12, green: 0.14, blue: 0.2) : .white }
+    func ink(_ scheme: ColorScheme) -> Color {
+        switch self {
+        case .light: return Color(red: 0.12, green: 0.14, blue: 0.2)
+        case .paper: return DayTheme.of(.paper, scheme: scheme).ink
+        default: return .white
+        }
+    }
 }
 
 struct ChipSettings: WidgetConfigurationIntent {
@@ -360,7 +379,7 @@ struct ChipSettings: WidgetConfigurationIntent {
 }
 
 // Tapping the chip turns it over. The widget runs this itself (the app doesn't open), and
-// WidgetKit then redraws the widget, which animates the turn (ChipTurn).
+// WidgetKit then redraws the widget, which animates the turn (chipTurnDegrees).
 struct FlipChipIntent: AppIntent {
     static let title: LocalizedStringResource = "Turn the chip over"
     static let isDiscoverable = false
@@ -371,23 +390,11 @@ struct FlipChipIntent: AppIntent {
     }
 }
 
-// Half a coin flip: the face turns edge-on, then the other face turns in from its edge
-struct ChipTurn: ViewModifier {
-    let degrees: Double
-    func body(content: Content) -> some View {
-        content.rotation3DEffect(.degrees(degrees), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
-    }
-}
-
-extension AnyTransition {
-    static var chipFlip: AnyTransition {
-        .asymmetric(
-            insertion: .modifier(active: ChipTurn(degrees: -90), identity: ChipTurn(degrees: 0)).animation(.easeOut(duration: 0.25).delay(0.25)),
-            removal: .modifier(active: ChipTurn(degrees: 90), identity: ChipTurn(degrees: 0)).animation(.easeIn(duration: 0.25))
-        )
-    }
-}
-
+// The turn when the chip is tapped: a turn and a half about its upright axis, so it lands on its
+// other face. Widgets only animate changes to the same view (a swap of views just fades), so the
+// chip stays one view whose angle changes, and the back is drawn mirrored, which reads the right
+// way round once it has turned half a turn more.
+let chipTurnDegrees = 540.0
 struct ChipProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> ChipEntry { ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", sample: true) }
 
@@ -416,29 +423,38 @@ let chipBackdrop = RadialGradient(colors: [Color(red: 0.2, green: 0.25, blue: 0.
 
 struct ChipView: View {
     @Environment(\.widgetFamily) var family
+    @Environment(\.colorScheme) var colorScheme
     let entry: ChipEntry
 
     var body: some View {
         content
-            .foregroundStyle(entry.background.ink)
+            .foregroundStyle(entry.background.ink(colorScheme))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .widgetURL(Shared.chipsPage)
-            .widgetBackground(family, entry.background.style)
+            .widgetBackground(family, entry.background.style(colorScheme))
+    }
+
+    // Depth: a darker copy just below it for the coin's rim, and a soft shadow under the whole chip
+    func coin(_ picture: UIImage) -> some View {
+        ZStack {
+            Image(uiImage: picture).resizable().scaledToFit()
+                .brightness(-0.38).offset(y: 3)
+            Image(uiImage: picture).resizable().scaledToFit()
+        }
+        .shadow(color: .black.opacity(0.45), radius: 7, x: 0, y: 6)
     }
 
     @ViewBuilder var chip: some View {
         if let image = entry.image, let back = entry.back {
             Button(intent: FlipChipIntent()) {
-                ZStack {
-                    Image(uiImage: entry.flipped ? back : image).resizable().scaledToFit()
-                        .id(entry.flipped)
-                        .transition(.chipFlip)
-                }
+                coin(entry.flipped ? back.withHorizontallyFlippedOrientation() : image)
+                    .rotation3DEffect(.degrees(entry.flipped ? chipTurnDegrees : 0), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
+                    .animation(.easeOut(duration: 1.1), value: entry.flipped)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(entry.flipped ? "Chip, back. Tap to turn it over." : "Chip. Tap to turn it over.")
         } else if let image = entry.image {
-            Image(uiImage: image).resizable().scaledToFit()
+            coin(image)
         } else {
             // the widget gallery's preview: a plain brass coin
             Circle()
