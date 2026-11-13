@@ -144,7 +144,7 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
   test "find your group: groups here, and OIAA meetings that could start one" do
     group = create_group("Sunrise Crew")
     OiaaFeed.sync!([{ slug: "x1", name: "Sunrise Zoom", day: [1], time: "07:00", timezone: "America/Phoenix" },
-                    { slug: "y1", name: "Sunset Study", group: "Sunset Folks", day: [2], time: "19:00", timezone: "America/Phoenix" }].to_json)
+                    { slug: "y1", name: "Sunset Study", group: "Sunset Folks", day: [2], time: "19:00", timezone: "America/Phoenix", group_notes: "Sunset readings, all welcome." }].to_json)
     group.meetings.new.apply_oiaa(OiaaMeeting.find_by!(slug: "x1")).save!
 
     get "/api/groups/find", params: { q: "sun" }, as: :json
@@ -163,6 +163,7 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
     assert_response :created
     started = Group.find_by!(slug: response.parsed_body["slug"])
     assert_equal ["Sunset Folks", "pending", 1], [started.title, started.status, started.meetings.count]
+    assert_equal "Sunset readings, all welcome.", started.description
 
     post "/api/groups/start", params: { oiaa_slug: "x1" }, as: :json
     assert_response :unprocessable_entity

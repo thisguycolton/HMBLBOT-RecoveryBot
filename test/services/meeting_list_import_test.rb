@@ -66,6 +66,24 @@ class MeetingListImportTest < ActiveSupport::TestCase
     assert OiaaMeeting.exists?(slug: "phx-hybrid-saturday")
   end
 
+  test "a listing's group description imports, shows as a change, and fills in a linked group's blank one" do
+    MeetingListImport.new(@list, text: FEED).apply!(keys: %w[phx-monday-night])
+    group = Group.create!(title: "Monday Night Group")
+    group.meetings.new.apply_oiaa(OiaaMeeting.find_by!(slug: "phx-monday-night")).save!
+
+    described = JSON.parse(FEED).first.merge("group_notes" => "A friendly <i>step</i> meeting.").to_json
+    import = MeetingListImport.new(@list, text: "[#{described}]")
+    row = import.preview[:rows].first
+    assert_equal ["changed", ["group_notes"]], [row[:status], row[:changes]]
+    import.apply!(keys: [row[:key]])
+    assert_equal "A friendly step meeting.", OiaaMeeting.find_by!(slug: "phx-monday-night").group_notes
+    assert_equal "A friendly step meeting.", group.reload.description
+
+    csv = "Name,Day,Time,Address,Group Notes\nTuesday Talk,Tuesday,7:00 PM,1 Elm St,Come early for coffee\n"
+    MeetingListImport.new(@list, text: csv).then { |i| i.apply!(keys: i.preview[:rows].map { |r| r[:key] }) }
+    assert_equal "Come early for coffee", @list.listings.find_by!(name: "Tuesday Talk").group_notes
+  end
+
   test "an AA Intergroup sync doesn't drop imported listings or flag meetings linked to them" do
     import = MeetingListImport.new(@list, text: FEED)
     import.apply!(keys: ["phx-monday-night"])

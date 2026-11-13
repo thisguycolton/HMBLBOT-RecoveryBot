@@ -115,6 +115,8 @@ class Api::GroupsController < ApplicationController
 
     @group = Group.new(title: record.group_name.presence || record.name, status: "pending", created_by: current_user,
                        time_zone: Group::TIME_ZONES.include?(record.zone.tzinfo.name) ? record.zone.tzinfo.name : "America/Phoenix")
+    @group.adopt_listing_description(record)
+    @group.description = nil if @group.description.present? && BlockedLanguage.found?(@group.description)
     Group.transaction do
       @group.save!
       @group.memberships.create!(user: current_user, role: "admin")

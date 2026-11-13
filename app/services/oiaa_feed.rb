@@ -69,7 +69,8 @@ module OiaaFeed
     end
   end
 
-  # Copy the feed onto every linked meeting; flag the ones OIAA no longer lists. Meetings
+  # Copy the feed onto every linked meeting (and its group notes onto a group with no
+  # description yet); flag the ones OIAA no longer lists. Meetings
   # linked to an imported list's listings refresh when that list is imported (MeetingListImport).
   def refresh_linked_meetings(synced_at = last_synced_at)
     listings = OiaaMeeting.where(slug: Meeting.linked_to_oiaa.select(:oiaa_slug)).index_by(&:slug)
@@ -82,6 +83,7 @@ module OiaaFeed
       else
         meeting.apply_oiaa(record)
         meeting.save || Rails.logger.warn("[oiaa] couldn't refresh meeting #{meeting.id}: #{meeting.errors.full_messages.to_sentence}")
+        meeting.group&.adopt_listing_description(record)
       end
     end
   end
@@ -99,6 +101,7 @@ module OiaaFeed
       conference_phone: record["conference_phone"].to_s.presence&.first(255),
       conference_id: conference_id(record["conference_url"]),
       types: Array(record["types"]).map(&:to_s).first(40), notes: clean(record["notes"]).presence&.first(4000),
+      group_notes: clean_paragraphs(record["group_notes"]).presence&.first(4000),
       url: record["url"].to_s.presence&.first(1000), last_seen_at: seen_at, created_at: seen_at, updated_at: seen_at,
       **place(record),
     }
@@ -132,6 +135,13 @@ module OiaaFeed
     plain = ActionController::Base.helpers.strip_tags(text.to_s)
     2.times { plain = CGI.unescapeHTML(plain) }
     plain.tr("\u00a0", " ").strip
+  end
+
+  # Like #clean, but it keeps the text's paragraphs and line breaks (a <br> or </p> becomes a
+  # new line), for longer text such as a group's description
+  def clean_paragraphs(text)
+    marked = text.to_s.gsub(%r{<br\s*/?>|</(?:p|div|li|h[1-6])>}i, "\n")
+    clean(marked).gsub(/\r\n?/, "\n").split("\n").map(&:squish).join("\n").gsub(/\n{3,}/, "\n\n").strip
   end
 
   # The same video meeting written different ways: a Zoom meeting ID (from a link or typed

@@ -18,7 +18,7 @@ class MeetingListImport
 
   MAX_ROWS = 10_000
   # What a listing's preview compares, and shows when it changed
-  FIELDS = %i[name group_name days start_time end_time time_zone types notes location location_notes
+  FIELDS = %i[name group_name days start_time end_time time_zone types notes group_notes location location_notes
               formatted_address region attendance_option conference_url conference_url_notes conference_phone url
               latitude longitude].freeze
 
@@ -47,6 +47,7 @@ class MeetingListImport
     "postal code" => :postal_code, "zip" => :postal_code, "zip code" => :postal_code, "country" => :country,
     "formatted address" => :formatted_address, "types" => :types, "type" => :types, "notes" => :notes,
     "meeting notes" => :notes, "location notes" => :location_notes, "group" => :group, "group name" => :group,
+    "group notes" => :group_notes, "group description" => :group_notes,
     "region" => :region, "sub region" => :sub_region, "district" => :sub_region, "timezone" => :timezone,
     "time zone" => :timezone, "latitude" => :latitude, "lat" => :latitude, "longitude" => :longitude,
     "lng" => :longitude, "lon" => :longitude, "conference url" => :conference_url, "online meeting url" => :conference_url,
@@ -159,7 +160,7 @@ class MeetingListImport
     table.map do |line|
       fields = columns.each_with_object({}) { |(header, field), h| h[field] = line[header].to_s.strip.presence || h[field] }
       record = fields.slice(:slug, :name, :location, :address, :city, :state, :postal_code, :country, :formatted_address,
-                            :notes, :location_notes, :group, :timezone, :conference_url, :conference_url_notes,
+                            :notes, :group_notes, :location_notes, :group, :timezone, :conference_url, :conference_url_notes,
                             :conference_phone, :attendance_option, :url, :latitude, :longitude).transform_keys(&:to_s)
       record["day"] = fields[:day].to_s.split(/[,;\/]|\band\b/).map(&:strip).reject(&:empty?)
       record["time"] = fields[:time]
@@ -271,12 +272,13 @@ class MeetingListImport
     return if slugs.empty?
 
     listings = OiaaMeeting.where(slug: slugs).includes(:meeting_directory).index_by(&:slug)
-    Meeting.where(oiaa_slug: slugs).find_each do |meeting|
+    Meeting.where(oiaa_slug: slugs).includes(:group).find_each do |meeting|
       record = listings[meeting.oiaa_slug] or next
       next unless record.days.include?(meeting.day_of_week) || record.days.size == 1
 
       meeting.apply_oiaa(record)
       meeting.save || Rails.logger.warn("[meeting list] couldn't refresh meeting #{meeting.id}: #{meeting.errors.full_messages.to_sentence}")
+      meeting.group&.adopt_listing_description(record)
     end
   end
 
