@@ -39,6 +39,8 @@
     try { if (window.Capacitor && window.Capacitor.getServerUrl) home = window.Capacitor.getServerUrl() || home; } catch (e) {}
     document.getElementById("retry").addEventListener("click", function () { window.location.href = home; });
     window.addEventListener("online", function () { window.location.href = home; });
+    // The launch screen waits for the site; there isn't one, so don't keep it up
+    try { window.Capacitor.Plugins.SplashScreen.hide(); } catch (e) {}
   </script>
 </body>
 </html>

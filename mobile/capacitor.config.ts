@@ -31,9 +31,12 @@ const config: CapacitorConfig = {
     backgroundColor: "#f5f5f4",
   },
   plugins: {
+    // Up until the site's first page is there (native_app.js hides it, then shows its own
+    // shimmering robot until everything has loaded), at most 8 seconds
     SplashScreen: {
-      launchShowDuration: 1500,
+      launchShowDuration: 8000,
       launchAutoHide: true,
+      launchFadeOutDuration: 250,
       backgroundColor: "#f5f5f4",
       showSpinner: false,
     },
