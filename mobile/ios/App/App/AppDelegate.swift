@@ -73,17 +73,37 @@ class AppShellViewController: UIViewController {
     let main = MainViewController()
     private var themeObservation: NSKeyValueObservation?
 
+    // The app's own light or dark ground, following Light/Dark Mode (the offline page's colors).
+    // Behind the clock and under the page (the home indicator's strip) until a page says otherwise.
+    static let ground = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0x29 / 255, green: 0x25 / 255, blue: 0x24 / 255, alpha: 1)
+            : UIColor(red: 0xf5 / 255, green: 0xf5 / 255, blue: 0xf4 / 255, alpha: 1)
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0xf5 / 255, green: 0xf5 / 255, blue: 0xf4 / 255, alpha: 1)
+        view.backgroundColor = Self.ground
         addChild(main)
         main.view.frame = view.bounds
         view.addSubview(main.view)
         main.didMove(toParent: self)
         if let webView = main.webView {
+            // The web view's own ground shows below the page, in the home indicator's strip: it was
+            // always the light gray, a white bar under dark pages
+            webView.isOpaque = false
+            webView.backgroundColor = Self.ground
+            webView.scrollView.backgroundColor = Self.ground
+            main.view.backgroundColor = Self.ground
+            // A page's theme-color (the site's top bar) colors the strip behind the clock and the
+            // ground under the page; a page without one (the offline page) gets the app's own
             themeObservation = webView.observe(\.themeColor, options: [.initial, .new]) { [weak self] webView, _ in
                 DispatchQueue.main.async {
-                    if let color = webView.themeColor { self?.view.backgroundColor = color }
+                    let color = webView.themeColor ?? Self.ground
+                    self?.view.backgroundColor = color
+                    webView.backgroundColor = color
+                    webView.scrollView.backgroundColor = color
+                    self?.main.view.backgroundColor = color
                 }
             }
         }
