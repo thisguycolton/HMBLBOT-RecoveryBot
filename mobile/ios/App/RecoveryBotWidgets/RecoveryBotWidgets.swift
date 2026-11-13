@@ -332,7 +332,7 @@ struct ChipEntry: TimelineEntry {
 
 // The chip widget's backgrounds, picked in Edit Widget
 enum ChipBackground: String, AppEnum {
-    case night, ocean, forest, sunset, black, light, paper
+    case night, ocean, forest, sunset, black, light, paper, paperLight, paperDark
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Background"
     static let caseDisplayRepresentations: [ChipBackground: DisplayRepresentation] = [
@@ -340,9 +340,11 @@ enum ChipBackground: String, AppEnum {
         .ocean: "Ocean",
         .forest: "Forest",
         .sunset: "Sunset",
-        .black: "Black",
+        .black: "Charcoal",
         .light: "Light",
         .paper: "Paper (follows Light/Dark Mode)",
+        .paperLight: "Paper, light",
+        .paperDark: "Paper, dark",
     ]
 
     func style(_ scheme: ColorScheme) -> AnyShapeStyle {
@@ -355,9 +357,12 @@ enum ChipBackground: String, AppEnum {
         case .forest: return radial(Color(red: 0.2, green: 0.5, blue: 0.36), Color(red: 0.04, green: 0.2, blue: 0.13))
         case .sunset: return AnyShapeStyle(LinearGradient(colors: [Color(red: 0.98, green: 0.6, blue: 0.25), Color(red: 0.73, green: 0.18, blue: 0.4)],
                                                           startPoint: .top, endPoint: .bottom))
-        case .black: return AnyShapeStyle(Color.black)
+        // a deep charcoal with a little light in the middle, rather than flat black
+        case .black: return radial(Color(red: 0.2, green: 0.2, blue: 0.22), Color(red: 0.09, green: 0.09, blue: 0.1))
         case .light: return radial(.white, Color(red: 0.89, green: 0.89, blue: 0.87))
         case .paper: return DayTheme.of(.paper, scheme: scheme).background
+        case .paperLight: return DayTheme.paperLight.background
+        case .paperDark: return DayTheme.paperDark.background
         }
     }
 
@@ -365,6 +370,8 @@ enum ChipBackground: String, AppEnum {
         switch self {
         case .light: return Color(red: 0.12, green: 0.14, blue: 0.2)
         case .paper: return DayTheme.of(.paper, scheme: scheme).ink
+        case .paperLight: return DayTheme.paperLight.ink
+        case .paperDark: return DayTheme.paperDark.ink
         default: return .white
         }
     }
