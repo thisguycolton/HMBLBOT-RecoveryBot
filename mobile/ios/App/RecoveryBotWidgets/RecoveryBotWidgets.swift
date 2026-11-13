@@ -327,11 +327,12 @@ struct DayCountWidget: Widget {
 // MARK: - Favorite chip widget
 
 struct ChipEntry: TimelineEntry {
-    let date: Date
+    var date: Date
     let signedIn: Bool
     let image: UIImage?
     var back: UIImage? = nil
     var frames: [UIImage] = []
+    var frame: Int? = nil // one frame of the turn, while it plays
     var flipped = false
     let label: String
     var sample = false
@@ -401,6 +402,7 @@ struct FlipChipIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         Shared.defaults?.set(!Shared.chipFlipped, forKey: "chipFlipped")
+        Shared.defaults?.set(Date().timeIntervalSince1970, forKey: "chipFlipAt")
         return .result()
     }
 }
@@ -421,8 +423,25 @@ struct ChipProvider: AppIntentTimelineProvider {
     }
 
     // It only changes when the app hands it a new chip, which asks for a new timeline
+    // Just after a tap (FlipChipIntent), the turn as a run of entries a moment apart, one frame of
+    // the site's flipbook each (forwards to the back, backwards to the front), then the chip at rest
     func timeline(for settings: ChipSettings, in context: Context) async -> Timeline<ChipEntry> {
-        Timeline(entries: [current(settings.background)], policy: .never)
+        let rest = current(settings.background)
+        let flipAt = Shared.defaults?.double(forKey: "chipFlipAt") ?? 0
+        let count = rest.frames.count
+        guard count > 0, Date().timeIntervalSince1970 - flipAt < 3 else { return Timeline(entries: [rest], policy: .never) }
+        let start = Date()
+        let step = 0.05
+        var entries = (0..<count).map { k -> ChipEntry in
+            var entry = rest
+            entry.date = start.addingTimeInterval(step * Double(k))
+            entry.frame = rest.flipped ? k : count - 1 - k
+            return entry
+        }
+        var landed = rest
+        landed.date = start.addingTimeInterval(step * Double(count))
+        entries.append(landed)
+        return Timeline(entries: entries, policy: .never)
     }
 
     private func current(_ background: ChipBackground) -> ChipEntry {
@@ -460,26 +479,18 @@ struct ChipView: View {
         .shadow(color: .black.opacity(0.45), radius: 7, x: 0, y: 6)
     }
 
-    // The flipbook: the frames of the turn lie on top of the front, hidden. Turning to the back,
-    // each one shows a moment after the one before (each covering the last), so the chip spins and
-    // lands on the last frame, its back. Turning back, they hide again newest first, so it spins
-    // the other way down to the front. Widgets can't play a video, but they do run these.
-    func flipbook(_ front: UIImage, _ frames: [UIImage]) -> some View {
-        let step = 1.0 / Double(frames.count)
-        return ZStack {
-            Image(uiImage: front).resizable().scaledToFit()
-            ForEach(frames.indices, id: \.self) { i in
-                Image(uiImage: frames[i]).resizable().scaledToFit()
-                    .opacity(entry.flipped ? 1 : 0)
-                    .animation(.linear(duration: 0.01).delay(step * Double(entry.flipped ? i : frames.count - 1 - i)), value: entry.flipped)
-            }
-        }
-        .shadow(color: .black.opacity(0.45), radius: 7, x: 0, y: 6)
+    // The flipbook: while the turn plays, each timeline entry shows one of its frames; at rest, the
+    // front or the back (both drawn by the site like the frames, turned a little so the edge shows)
+    func flipbook(_ front: UIImage, _ back: UIImage?, _ frames: [UIImage]) -> some View {
+        let picture: UIImage = entry.frame.map { frames[min($0, frames.count - 1)] } ?? (entry.flipped ? (back ?? frames[frames.count - 1]) : front)
+        return Image(uiImage: picture).resizable().scaledToFit()
+            .shadow(color: .black.opacity(0.45), radius: 7, x: 0, y: 6)
+            .transaction { $0.animation = nil } // each frame replaces the last outright, no fade
     }
 
     @ViewBuilder var chip: some View {
         if let image = entry.image, !entry.frames.isEmpty {
-            Button(intent: FlipChipIntent()) { flipbook(image, entry.frames) }
+            Button(intent: FlipChipIntent()) { flipbook(image, entry.back, entry.frames) }
                 .buttonStyle(.plain)
                 .accessibilityLabel(entry.flipped ? "Chip, back. Tap to turn it over." : "Chip. Tap to turn it over.")
         } else if let image = entry.image, let back = entry.back {
