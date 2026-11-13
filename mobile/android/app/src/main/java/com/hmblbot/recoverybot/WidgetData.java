@@ -67,13 +67,37 @@ final class WidgetData {
         return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
+    // Tapping the day count opens the Today panel on whatever page the app is on (native_app.js)
+    static PendingIntent openToday(Context context) {
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("recoverybot://open/#today"), context, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        return PendingIntent.getActivity(context, 2, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    // Each placed widget's look, picked in WidgetSettingsActivity: "day.<id>" holds a
+    // DayCountWidget style, "chip.<id>" a ChipWidget background. Kept apart from what the site
+    // hands over, so signing out (which clears that) leaves them.
+    static SharedPreferences looks(Context context) {
+        return context.getSharedPreferences("recoverybot_widget_looks", Context.MODE_PRIVATE);
+    }
+
+    static String look(Context context, String widget, int id, String fallback) {
+        return looks(context).getString(widget + "." + id, fallback);
+    }
+
+    static void forget(Context context, String widget, int[] ids) {
+        SharedPreferences.Editor edit = looks(context).edit();
+        for (int id : ids) edit.remove(widget + "." + id);
+        edit.apply();
+    }
+
     static void redrawAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         redraw(context, manager, DayCountWidget.class);
         redraw(context, manager, ChipWidget.class);
     }
 
-    private static void redraw(Context context, AppWidgetManager manager, Class<?> widget) {
+    static void redraw(Context context, AppWidgetManager manager, Class<?> widget) {
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, widget));
         if (ids.length == 0) return;
         Intent intent = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE, null, context, widget);

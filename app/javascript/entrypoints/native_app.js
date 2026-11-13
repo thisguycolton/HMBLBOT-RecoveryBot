@@ -360,7 +360,7 @@ function installWidgets() {
 
 // A recoverybot.hmblbot.com link tapped in Messages, Mail or a browser opens the app
 // (Universal Links / App Links, WellKnownController); this goes to that page. A widget opens the app with
-// recoverybot://open/<path> (the day count goes to /recovery).
+// recoverybot://open/<path> (the chip goes to /recovery, the day count to #today).
 function installAppLinks() {
   const go = (url) => {
     try {
@@ -370,6 +370,8 @@ function installAppLinks() {
       // A sign-in callback belongs to the browser that started it (Android can't leave it out
       // of the app's links), so the app stays where it is
       if (!ours || path.startsWith("/users/auth/")) return;
+      // #today (the day count widget) opens Today over whatever page is showing
+      if (target.hash === "#today" && path === "/" && !target.search) { window.location.hash = "today"; return; }
       if (path + target.search !== window.location.pathname + window.location.search) window.location.href = path + target.search + target.hash;
     } catch { /* not a link we know */ }
   };

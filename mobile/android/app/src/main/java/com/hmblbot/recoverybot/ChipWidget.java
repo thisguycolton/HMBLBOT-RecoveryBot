@@ -13,14 +13,31 @@ import android.widget.RemoteViews;
 // The favorite chip widget: their first favorite chip (else their newest sobriety chip), drawn
 // by the site and handed over by WidgetBridgePlugin. Tapping the chip turns it over to its back
 // (a ViewFlipper with a squash-and-grow flip, res/anim/chip_flip_*); tapping anywhere else
-// opens the Chips page.
+// opens the Chips page. Each one has its own background (WidgetSettingsActivity).
 public class ChipWidget extends AppWidgetProvider {
     static final String FLIP = "com.hmblbot.recoverybot.FLIP_CHIP";
+    static final String[] BACKGROUNDS = {"night", "ocean", "forest", "sunset", "black", "light"};
+    static final String[] BACKGROUND_NAMES = {"Night", "Ocean", "Forest", "Sunset", "Black", "Light"};
+
+    static int background(String name) {
+        switch (name) {
+            case "ocean": return R.drawable.widget_chip_bg_ocean;
+            case "forest": return R.drawable.widget_chip_bg_forest;
+            case "sunset": return R.drawable.widget_chip_bg_sunset;
+            case "black": return R.drawable.widget_chip_bg_black;
+            case "light": return R.drawable.widget_chip_bg_light;
+            default: return R.drawable.widget_chip_bg;
+        }
+    }
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
-        RemoteViews views = draw(context);
-        for (int id : ids) manager.updateAppWidget(id, views);
+        for (int id : ids) manager.updateAppWidget(id, draw(context, id));
+    }
+
+    @Override
+    public void onDeleted(Context context, int[] ids) {
+        WidgetData.forget(context, "chip", ids);
     }
 
     @Override
@@ -39,9 +56,14 @@ public class ChipWidget extends AppWidgetProvider {
         for (int id : ids) manager.partiallyUpdateAppWidget(id, turn);
     }
 
-    static RemoteViews draw(Context context) {
+    static RemoteViews draw(Context context, int id) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_chip);
         views.setOnClickPendingIntent(R.id.widget_root, WidgetData.openChips(context));
+        String bg = WidgetData.look(context, "chip", id, "night");
+        views.setInt(R.id.widget_root, "setBackgroundResource", background(bg));
+        int ink = "light".equals(bg) ? 0xFF1F2433 : 0xFFFFFFFF;
+        views.setTextColor(R.id.chip_label, ink);
+        views.setTextColor(R.id.chip_empty, ink);
         Bitmap chip = WidgetData.signedIn(context) ? WidgetData.chip(context, 480) : null;
         if (chip == null) {
             views.setViewVisibility(R.id.chip_flipper, View.GONE);

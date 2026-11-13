@@ -44,6 +44,17 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
   // In the apps, the last page's shell stands in until this one draws (layouts/_app_launch_body)
   useLayoutEffect(() => { document.getElementById("shell-ghost")?.remove(); }, []);
   useEffect(() => { chrome.close(); setAsideOpen(false); }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
+  // #today opens the Today panel (the app's day count widget links to recoverybot://open/#today)
+  useEffect(() => {
+    const check = () => {
+      if (window.location.hash !== "#today") return;
+      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+      chrome.show("today");
+    };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!asideOpen) return undefined;
     const onKey = (e) => e.key === "Escape" && setAsideOpen(false);

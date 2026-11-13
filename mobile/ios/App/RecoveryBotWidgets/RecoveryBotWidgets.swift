@@ -9,8 +9,10 @@ import WidgetKit
 //   number ("127 days"), never what the days are of, so it's discreet on a Lock Screen.
 // - Favorite chip: their first favorite chip (else their newest sobriety chip), drawn by the site.
 // The app (WidgetBridgePlugin in AppDelegate.swift) keeps what they show in the App Group both
-// share; signing out of the app clears it. Tapping either opens the Chips page, except the chip
-// itself, which turns over (FlipChipIntent) to show its back.
+// share; signing out of the app clears it. Tapping the day count opens Today; tapping the chip
+// widget opens the Chips page, except the chip itself, which turns over (FlipChipIntent).
+// Both can be edited (touch and hold > Edit Widget): four looks for the day count (DayStyle),
+// six backgrounds for the chip (ChipBackground).
 
 enum Shared {
     static let group = "group.com.hmblbot.recoverybot"
@@ -36,6 +38,8 @@ enum Shared {
     static var chipFlipped: Bool { defaults?.bool(forKey: "chipFlipped") ?? false }
 
     static let chipsPage = URL(string: "recoverybot://open/recovery")!
+    // native_app.js opens the Today panel for #today, on whatever page the app is on
+    static let todayPanel = URL(string: "recoverybot://open/#today")!
 }
 
 // MARK: - Counting
@@ -86,6 +90,64 @@ func plural(_ n: Int, _ one: String, _ many: String) -> String { n == 1 ? one : 
 
 // MARK: - Day count widget
 
+// The day count's four looks, picked in Edit Widget
+enum DayStyle: String, AppEnum {
+    case classic, paper, midnight, sunrise
+
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Style"
+    static let caseDisplayRepresentations: [DayStyle: DisplayRepresentation] = [
+        .classic: "Classic blue",
+        .paper: "Paper",
+        .midnight: "Midnight",
+        .sunrise: "Sunrise",
+    ]
+}
+
+struct DayCountSettings: WidgetConfigurationIntent {
+    static let title: LocalizedStringResource = "Day count"
+    static let description = IntentDescription("Pick how your day count looks.")
+
+    @Parameter(title: "Style", default: .classic)
+    var style: DayStyle
+}
+
+// Colors and type for a look: Classic is rounded on blue, Paper a serif on cream, Midnight thin
+// monospaced digits on black, Sunrise tall condensed type on orange to pink
+struct DayTheme {
+    let background: AnyShapeStyle
+    let ink: Color
+    let accent: Color
+    let design: Font.Design
+    let weight: Font.Weight
+    var compressed = false
+
+    func number(_ size: CGFloat) -> Font {
+        let font = Font.system(size: size, weight: weight, design: design)
+        return compressed ? font.width(.compressed) : font
+    }
+
+    func text(_ style: Font.TextStyle, _ weight: Font.Weight = .regular) -> Font {
+        Font.system(style, design: design).weight(weight)
+    }
+
+    static func of(_ style: DayStyle) -> DayTheme {
+        switch style {
+        case .classic:
+            return DayTheme(background: AnyShapeStyle(dayGradient), ink: .white, accent: .white, design: .rounded, weight: .bold)
+        case .paper:
+            return DayTheme(background: AnyShapeStyle(Color(red: 0.96, green: 0.94, blue: 0.89)), ink: Color(red: 0.23, green: 0.18, blue: 0.13),
+                            accent: Color(red: 0.72, green: 0.42, blue: 0.16), design: .serif, weight: .semibold)
+        case .midnight:
+            return DayTheme(background: AnyShapeStyle(Color(red: 0.04, green: 0.04, blue: 0.06)), ink: .white,
+                            accent: Color(red: 0.96, green: 0.62, blue: 0.04), design: .monospaced, weight: .light)
+        case .sunrise:
+            return DayTheme(background: AnyShapeStyle(LinearGradient(colors: [Color(red: 0.98, green: 0.45, blue: 0.09), Color(red: 0.86, green: 0.15, blue: 0.47)],
+                                                                    startPoint: .topLeading, endPoint: .bottomTrailing)),
+                            ink: .white, accent: .white, design: .default, weight: .black, compressed: true)
+        }
+    }
+}
+
 enum DayState {
     case signedOut, noDate, counting(DayCount)
 }
@@ -93,32 +155,35 @@ enum DayState {
 struct DayEntry: TimelineEntry {
     let date: Date
     let state: DayState
+    var style: DayStyle = .classic
 }
 
-struct DayProvider: TimelineProvider {
+struct DayProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> DayEntry { DayEntry(date: Date(), state: .counting(.sample)) }
 
-    func getSnapshot(in context: Context, completion: @escaping (DayEntry) -> Void) {
-        completion(context.isPreview && !Shared.signedIn ? placeholder(in: context) : entry(at: Date()))
+    func snapshot(for settings: DayCountSettings, in context: Context) async -> DayEntry {
+        context.isPreview && !Shared.signedIn
+            ? DayEntry(date: Date(), state: .counting(.sample), style: settings.style)
+            : entry(at: Date(), settings.style)
     }
 
     // Now, then each midnight for a week (the app asks for a new one whenever it opens)
-    func getTimeline(in context: Context, completion: @escaping (Timeline<DayEntry>) -> Void) {
+    func timeline(for settings: DayCountSettings, in context: Context) async -> Timeline<DayEntry> {
         let cal = Calendar.current
-        var entries = [entry(at: Date())]
+        var entries = [entry(at: Date(), settings.style)]
         var day = cal.startOfDay(for: Date())
         for _ in 0..<7 {
             guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
             day = next
-            entries.append(entry(at: day))
+            entries.append(entry(at: day, settings.style))
         }
-        completion(Timeline(entries: entries, policy: .atEnd))
+        return Timeline(entries: entries, policy: .atEnd)
     }
 
-    private func entry(at date: Date) -> DayEntry {
-        guard Shared.signedIn else { return DayEntry(date: date, state: .signedOut) }
-        guard let count = DayCount.from(Shared.soberSince, on: date) else { return DayEntry(date: date, state: .noDate) }
-        return DayEntry(date: date, state: .counting(count))
+    private func entry(at date: Date, _ style: DayStyle) -> DayEntry {
+        guard Shared.signedIn else { return DayEntry(date: date, state: .signedOut, style: style) }
+        guard let count = DayCount.from(Shared.soberSince, on: date) else { return DayEntry(date: date, state: .noDate, style: style) }
+        return DayEntry(date: date, state: .counting(count), style: style)
     }
 }
 
@@ -128,11 +193,12 @@ let dayGradient = LinearGradient(colors: [Color(red: 0.36, green: 0.55, blue: 0.
 struct DayCountView: View {
     @Environment(\.widgetFamily) var family
     let entry: DayEntry
+    var theme: DayTheme { DayTheme.of(entry.style) }
 
     var body: some View {
         content
-            .widgetURL(Shared.chipsPage)
-            .widgetBackground(family, dayGradient)
+            .widgetURL(Shared.todayPanel)
+            .widgetBackground(family, theme.background)
     }
 
     @ViewBuilder var content: some View {
@@ -160,9 +226,9 @@ struct DayCountView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Image(systemName: "calendar").font(.title2)
                 Spacer(minLength: 0)
-                Text(text).font(.footnote.weight(.medium))
+                Text(text).font(theme.text(.footnote, .medium))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(theme.ink)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
@@ -195,32 +261,35 @@ struct DayCountView: View {
         case .systemMedium:
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("\(c.days)").font(.system(size: 60, weight: .bold, design: .rounded)).minimumScaleFactor(0.4).lineLimit(1)
-                    Text(unit).font(.title3.weight(.semibold)).opacity(0.9)
+                    Text("\(c.days)").font(theme.number(60)).minimumScaleFactor(0.4).lineLimit(1)
+                    Text(unit).font(theme.text(.title3, .semibold)).opacity(0.9)
                 }
                 Spacer(minLength: 0)
                 VStack(alignment: .leading, spacing: 6) {
                     if let today = c.today {
-                        Text("Today").font(.caption.weight(.semibold)).opacity(0.8)
-                        Text(today).font(.title3.weight(.bold))
+                        Text("Today").font(theme.text(.caption, .semibold)).opacity(0.8)
+                        Text(today).font(theme.text(.title3, .bold))
                     } else if let next = c.next {
-                        Text("Next").font(.caption.weight(.semibold)).opacity(0.8)
-                        Text(next).font(.headline)
-                        ProgressView(value: c.progress).tint(.white)
-                        Text("in \(c.nextIn) \(plural(c.nextIn, "day", "days"))").font(.caption).opacity(0.85)
+                        Text("Next").font(theme.text(.caption, .semibold)).opacity(0.8)
+                        Text(next).font(theme.text(.headline, .semibold))
+                        ProgressView(value: c.progress).tint(theme.accent)
+                        Text("in \(c.nextIn) \(plural(c.nextIn, "day", "days"))").font(theme.text(.caption)).opacity(0.85)
                     }
                 }.frame(maxWidth: 140)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(theme.ink)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         default:
             VStack(alignment: .leading, spacing: 0) {
-                Text("\(c.days)").font(.system(size: 54, weight: .bold, design: .rounded)).minimumScaleFactor(0.4).lineLimit(1)
-                Text(unit).font(.headline).opacity(0.9)
+                Text("\(c.days)").font(theme.number(54)).minimumScaleFactor(0.4).lineLimit(1)
+                Text(unit).font(theme.text(.headline, .semibold)).opacity(0.9)
                 Spacer(minLength: 0)
-                if let line = nextLine(c) { Text(line).font(.caption.weight(.medium)).opacity(0.9).lineLimit(2) }
+                if let line = nextLine(c) { Text(line).font(theme.text(.caption, .medium)).opacity(0.9).lineLimit(2) }
+                if c.next != nil && c.today == nil {
+                    ProgressView(value: c.progress).tint(theme.accent).padding(.top, 4)
+                }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(theme.ink)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
@@ -228,11 +297,11 @@ struct DayCountView: View {
 
 struct DayCountWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "DayCount", provider: DayProvider()) { entry in
+        AppIntentConfiguration(kind: "DayCount", intent: DayCountSettings.self, provider: DayProvider()) { entry in
             DayCountView(entry: entry)
         }
         .configurationDisplayName("Day count")
-        .description("Your days, counted on your phone, and your next milestone. It shows only the number.")
+        .description("Your days, counted on your phone, and your next milestone. It shows only the number. Touch and hold to pick a style.")
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
@@ -247,6 +316,47 @@ struct ChipEntry: TimelineEntry {
     var flipped = false
     let label: String
     var sample = false
+    var background: ChipBackground = .night
+}
+
+// The chip widget's backgrounds, picked in Edit Widget
+enum ChipBackground: String, AppEnum {
+    case night, ocean, forest, sunset, black, light
+
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Background"
+    static let caseDisplayRepresentations: [ChipBackground: DisplayRepresentation] = [
+        .night: "Night",
+        .ocean: "Ocean",
+        .forest: "Forest",
+        .sunset: "Sunset",
+        .black: "Black",
+        .light: "Light",
+    ]
+
+    var style: AnyShapeStyle {
+        func radial(_ a: Color, _ b: Color) -> AnyShapeStyle {
+            AnyShapeStyle(RadialGradient(colors: [a, b], center: .center, startRadius: 5, endRadius: 220))
+        }
+        switch self {
+        case .night: return AnyShapeStyle(chipBackdrop)
+        case .ocean: return radial(Color(red: 0.16, green: 0.5, blue: 0.85), Color(red: 0.03, green: 0.2, blue: 0.43))
+        case .forest: return radial(Color(red: 0.2, green: 0.5, blue: 0.36), Color(red: 0.04, green: 0.2, blue: 0.13))
+        case .sunset: return AnyShapeStyle(LinearGradient(colors: [Color(red: 0.98, green: 0.6, blue: 0.25), Color(red: 0.73, green: 0.18, blue: 0.4)],
+                                                          startPoint: .top, endPoint: .bottom))
+        case .black: return AnyShapeStyle(Color.black)
+        case .light: return radial(.white, Color(red: 0.89, green: 0.89, blue: 0.87))
+        }
+    }
+
+    var ink: Color { self == .light ? Color(red: 0.12, green: 0.14, blue: 0.2) : .white }
+}
+
+struct ChipSettings: WidgetConfigurationIntent {
+    static let title: LocalizedStringResource = "Favorite chip"
+    static let description = IntentDescription("Pick the background behind your chip.")
+
+    @Parameter(title: "Background", default: .night)
+    var background: ChipBackground
 }
 
 // Tapping the chip turns it over. The widget runs this itself (the app doesn't open), and
@@ -278,23 +388,26 @@ extension AnyTransition {
     }
 }
 
-struct ChipProvider: TimelineProvider {
+struct ChipProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> ChipEntry { ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", sample: true) }
 
-    func getSnapshot(in context: Context, completion: @escaping (ChipEntry) -> Void) {
-        let now = current()
-        completion(context.isPreview && now.image == nil ? placeholder(in: context) : now)
+    func snapshot(for settings: ChipSettings, in context: Context) async -> ChipEntry {
+        let now = current(settings.background)
+        return context.isPreview && now.image == nil
+            ? ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", sample: true, background: settings.background)
+            : now
     }
 
     // It only changes when the app hands it a new chip, which asks for a new timeline
-    func getTimeline(in context: Context, completion: @escaping (Timeline<ChipEntry>) -> Void) {
-        completion(Timeline(entries: [current()], policy: .never))
+    func timeline(for settings: ChipSettings, in context: Context) async -> Timeline<ChipEntry> {
+        Timeline(entries: [current(settings.background)], policy: .never)
     }
 
-    private func current() -> ChipEntry {
+    private func current(_ background: ChipBackground) -> ChipEntry {
         let signedIn = Shared.signedIn
         return ChipEntry(date: Date(), signedIn: signedIn, image: signedIn ? Shared.chipImage() : nil,
-                         back: signedIn ? Shared.chipBackImage() : nil, flipped: Shared.chipFlipped, label: Shared.chipLabel)
+                         back: signedIn ? Shared.chipBackImage() : nil, flipped: Shared.chipFlipped, label: Shared.chipLabel,
+                         background: background)
     }
 }
 
@@ -307,10 +420,10 @@ struct ChipView: View {
 
     var body: some View {
         content
-            .foregroundStyle(.white)
+            .foregroundStyle(entry.background.ink)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .widgetURL(Shared.chipsPage)
-            .widgetBackground(family, chipBackdrop)
+            .widgetBackground(family, entry.background.style)
     }
 
     @ViewBuilder var chip: some View {
@@ -370,11 +483,11 @@ struct ChipView: View {
 
 struct ChipWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "FavoriteChip", provider: ChipProvider()) { entry in
+        AppIntentConfiguration(kind: "FavoriteChip", intent: ChipSettings.self, provider: ChipProvider()) { entry in
             ChipView(entry: entry)
         }
         .configurationDisplayName("Favorite chip")
-        .description("The first chip you starred on your Chips page. Tap the chip to turn it over.")
+        .description("The first chip you starred on your Chips page. Tap the chip to turn it over; touch and hold to pick a background.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
