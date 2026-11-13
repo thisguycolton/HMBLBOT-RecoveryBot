@@ -11,8 +11,10 @@ const MAX_NOTE = 1000;
 // Google Play's closed test, and each sends the invite to a different account's email
 const PLATFORMS = {
   ios: {
-    label: "iPhone", title: "Try the iPhone app", subtitle: "Ask for an invite to the TestFlight beta",
-    intro: "The RecoveryBot iPhone app is in testing before it goes in the App Store. Testing happens through Apple's TestFlight app, and Apple sends the invite to the email address on your Apple ID.",
+    label: "iPhone", title: "Try the iPhone app", subtitle: "Join the TestFlight beta",
+    intro: "The RecoveryBot iPhone app is in testing before it goes in the App Store. Anyone can join: open this on your iPhone, tap the button, and Apple's free TestFlight app installs RecoveryBot.",
+    // TestFlight's public link: no invite or email needed, so iPhones skip the form
+    joinUrl: "https://testflight.apple.com/join/fCjuQmFW",
     emailLabel: "Apple ID email", emailPlaceholder: "The email you sign in to the App Store with",
     emailHint: "Not sure? On your iPhone, open Settings and tap your name at the top.",
     done: "A person adds every invite by hand, so it can take a few days. When it's ready, Apple emails you from TestFlight. Open that email on your iPhone, install Apple's free TestFlight app, and tap the link to get RecoveryBot.",
@@ -68,6 +70,12 @@ export default function TestflightPage({ action, authenticity_token, sent, error
                   </div>
                 </fieldset>
                 <p className="text-sm text-slate-600 dark:text-neutral-400">{copy.intro}</p>
+                {platform === "ios" ? (
+                  <a href={PLATFORMS.ios.joinUrl}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl !bg-accent px-4 py-2.5 text-sm font-semibold !text-white shadow-panel hover:opacity-90">
+                    <Smartphone className="h-4 w-4" /> Join the beta on TestFlight
+                  </a>
+                ) : <>
                 {errors.length > 0 && (
                   <ul role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-200 space-y-1">
                     {errors.map((e) => <li key={e}>{e}</li>)}
@@ -100,6 +108,7 @@ export default function TestflightPage({ action, authenticity_token, sent, error
                   {copy.privacy} See the{" "}
                   <a href="/privacy" className={linkClass}>privacy policy</a>.
                 </p>
+                </>}
               </form>
             )}
           </ShellPanel>
