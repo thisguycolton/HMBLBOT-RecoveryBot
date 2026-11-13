@@ -3,6 +3,7 @@ import Capacitor
 import WidgetKit
 import AuthenticationServices
 import CryptoKit
+import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -103,17 +104,75 @@ class AppShellViewController: UIViewController {
 
 // The web view that shows recoverybot.hmblbot.com, with the app's own plugins added
 class MainViewController: CAPBridgeViewController {
+    private var serverErrorGuard: ServerErrorGuard?
+
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(PrinterPlugin())
         bridge?.registerPluginInstance(AppClipboardPlugin())
         bridge?.registerPluginInstance(WidgetBridgePlugin())
         bridge?.registerPluginInstance(NativeAuthPlugin())
+        // Runs before the first page loads, so even the first one is covered
+        if let webView, let inner = webView.navigationDelegate as? (NSObject & WKNavigationDelegate) {
+            let guardDelegate = ServerErrorGuard(inner: inner, errorURL: bridge?.config.errorPathURL)
+            serverErrorGuard = guardDelegate
+            webView.navigationDelegate = guardDelegate
+        }
     }
 
     // Status bar style changes (StatusBar plugin) reach the screen through AppShellViewController
     override open func setStatusBarStyle(_ statusBarStyle: UIStatusBarStyle) {
         super.setStatusBarStyle(statusBarStyle)
         parent?.setNeedsStatusBarAppearanceUpdate()
+    }
+}
+
+// While the server restarts (a deploy), nginx answers with its own "502 Error" page. WebKit
+// counts that as a page that loaded, so Capacitor would show it. This sits in front of
+// Capacitor's navigation delegate (passing everything else through) and sends a server error on
+// a whole page to the app's offline page instead (www/offline.html?reason=server), which says
+// RecoveryBot is updating and tries again by itself.
+final class ServerErrorGuard: NSObject, WKNavigationDelegate {
+    private let inner: NSObject & WKNavigationDelegate
+    private let errorURL: URL?
+    private var redirectedAt: Date?
+
+    init(inner: NSObject & WKNavigationDelegate, errorURL: URL?) {
+        self.inner = inner
+        self.errorURL = errorURL
+    }
+
+    override func responds(to aSelector: Selector!) -> Bool {
+        super.responds(to: aSelector) || inner.responds(to: aSelector)
+    }
+
+    override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        inner.responds(to: aSelector) ? inner : nil
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
+                 decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+        guard navigationResponse.isForMainFrame,
+              let http = navigationResponse.response as? HTTPURLResponse, (500...599).contains(http.statusCode),
+              let errorURL, var parts = URLComponents(url: errorURL, resolvingAgainstBaseURL: false)
+        else {
+            decisionHandler(.allow)
+            return
+        }
+        parts.queryItems = [URLQueryItem(name: "reason", value: "server"), URLQueryItem(name: "from", value: http.url?.absoluteString)]
+        redirectedAt = Date()
+        decisionHandler(.cancel)
+        if let url = parts.url { webView.load(URLRequest(url: url)) }
+    }
+
+    // Cancelling that page is itself reported as a failed load, which would have Capacitor load
+    // the plain offline page over ours; that one report is dropped
+    // swiftlint:disable:next implicitly_unwrapped_optional
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        if let at = redirectedAt, Date().timeIntervalSince(at) < 3 {
+            redirectedAt = nil
+            return
+        }
+        inner.webView?(webView, didFailProvisionalNavigation: navigation, withError: error)
     }
 }
 

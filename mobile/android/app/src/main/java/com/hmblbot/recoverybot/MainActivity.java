@@ -16,6 +16,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(NativeAuthPlugin.class);
         openTappedNotification(getIntent());
         super.onCreate(savedInstanceState);
+        // Server errors (a deploy restarting the server) get the app's own page, not nginx's
+        getBridge().setWebViewClient(new AppWebViewClient(getBridge()));
     }
 
     // A notification tapped while the app wasn't running starts it with the message's data as
