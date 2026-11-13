@@ -328,7 +328,7 @@ struct DayCountWidget: Widget {
 // MARK: - Favorite chip widget
 
 struct ChipEntry: TimelineEntry {
-    var date: Date
+    let date: Date
     let signedIn: Bool
     let image: UIImage?
     var back: UIImage? = nil
@@ -404,19 +404,8 @@ struct ChipProvider: AppIntentTimelineProvider {
     }
 
     // It only changes when the app hands it a new chip, which asks for a new timeline
-    // It shows heads and tails in turn, fading from one to the other every quarter of an hour, for
-    // a day (then asks for more). A new chip from the app asks for a new timeline anyway.
     func timeline(for settings: ChipSettings, in context: Context) async -> Timeline<ChipEntry> {
-        let now = current(settings.background)
-        guard now.image != nil, now.back != nil else { return Timeline(entries: [now], policy: .never) }
-        let start = Date()
-        let entries = (0..<96).map { i -> ChipEntry in
-            var entry = now
-            entry.date = start.addingTimeInterval(Double(i) * 15 * 60)
-            entry.flipped = i % 2 == 1
-            return entry
-        }
-        return Timeline(entries: entries, policy: .atEnd)
+        Timeline(entries: [current(settings.background)], policy: .never)
     }
 
     private func current(_ background: ChipBackground) -> ChipEntry {
@@ -455,11 +444,7 @@ struct ChipView: View {
 
     @ViewBuilder var chip: some View {
         if let image = entry.image {
-            // heads or tails, as the timeline turns it, faded from one to the other
-            coin(entry.flipped ? (entry.back ?? image) : image)
-                .id(entry.flipped)
-                .transition(.opacity)
-                .animation(.easeInOut(duration: 0.8), value: entry.flipped)
+            coin(image)
         } else {
             // the widget gallery's preview: a plain brass coin
             Circle()
