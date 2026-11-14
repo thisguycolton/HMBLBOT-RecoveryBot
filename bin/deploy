@@ -41,7 +41,9 @@ test -f "$src/public/vite/.vite/manifest.json" || { echo "Vite build produced no
 
 echo "==> Packing"
 tarball="$work/deploy-$sha.tar.gz"
-tar -czf "$tarball" -C "$src" --exclude=./node_modules .
+# The server never needs the app projects (mobile/, built on the Mac), and COPYFILE_DISABLE keeps
+# macOS tar from adding a ._ file beside every file with extended attributes
+COPYFILE_DISABLE=1 tar -czf "$tarball" -C "$src" --exclude=./node_modules --exclude=./mobile .
 
 if [ -n "${CAPROVER_APP_TOKEN:-}" ]; then
   echo "==> Deploying $sha to $app on $url (app token)"
