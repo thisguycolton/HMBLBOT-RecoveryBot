@@ -235,6 +235,7 @@ mountReact("service-reading-show-root", (el) => {
     <Layout isAuthenticated={isAuthenticated}>
       <ServiceReadingShow
         reading={reading}
+        notice={el.dataset.notice}
         isAdmin={isAdmin}
         isAuthenticated={isAuthenticated}
       />

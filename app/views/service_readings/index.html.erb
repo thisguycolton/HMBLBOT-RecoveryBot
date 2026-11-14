@@ -10,6 +10,6 @@
 <%= vite_client_tag %>
 <%= vite_javascript_tag 'topicificator.jsx' %>
 
-<div id="service-readings-root"
+<div id="service-readings-root" class="w-full self-start"
   data-service-readings="<%= json_escape(@service_readings.as_json(only: [:id, :title, :source, :icon]).to_json) %>"
   data-is-admin="<%= user_signed_in? && current_user.admin? ? 'true' : 'false' %>"></div>

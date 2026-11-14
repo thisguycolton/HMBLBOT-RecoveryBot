@@ -34,6 +34,7 @@ const STORAGE = [
   ["theme", "Light, dark or system appearance"],
   ["findMeeting.view", "List or map view in Find a meeting"],
   ["doc-paper", "Page color in the document editor"],
+  ["reading-text-size", "Text size you picked for meeting readings and service readings"],
   ["hosting-text-size", "Script text size in HostDeck"],
   ["hosting-share-size", "Text size of a service reading opened to share on screen"],
   ["questScreenName, questChime", "Your screen name and sound setting in The Acid Quest"],

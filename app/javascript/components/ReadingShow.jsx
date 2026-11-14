@@ -13,6 +13,7 @@ import {
 import ShareButton from "./share/ShareButton";
 import { isShareView } from "./shell/shareView";
 import EmbeddedPoll from "./polls/EmbeddedPoll";
+import { TextSizeControl, useReadingTextSize } from "./ui/TextSize";
 
 function hasMeaningfulContent(value) {
   if (value == null) return false;
@@ -46,6 +47,7 @@ export default function ReadingShow({
 }) {
   const [scrollWidth, setScrollWidth] = useState(0);
   const [copied, setCopied] = useState(false);
+  const textSize = useReadingTextSize();
 
   const ownerId = reading?.user_id ?? reading?.userId;
   const currentUserId = currentUser?.id;
@@ -356,6 +358,8 @@ const topicHtml = renderRichContent(topicSource);
                 {copied ? "Copied" : "Copy for chat"}
               </button>
 
+              <TextSizeControl scale={textSize.scale} change={textSize.change} look="hero" />
+
               <ShareButton url={`/readings/${reading.id}`} title={[reading.title || reading.meetingName, group?.name].filter(Boolean).join(" · ")}
                 text={reading.title || reading.meetingName} image={reading.published ? `/share_cards/reading/${reading.id}.png` : null}
                 panelTitle="Share this reading" className={`${ghostButton} !bg-transparent`} />
@@ -385,11 +389,15 @@ const topicHtml = renderRichContent(topicSource);
         <div className="mx-auto max-w-3xl px-5 py-8 md:py-12">
           {/* MAIN READING */}
           <article>
-            <h2 className="mb-6 text-3xl font-bold uppercase tracking-wide md:text-4xl ttSans">
-              {reading.title}
-            </h2>
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+              <h2 className="min-w-0 break-words text-3xl font-bold uppercase tracking-wide md:text-4xl ttSans">
+                {reading.title}
+              </h2>
+              {/* Shared on screen there are no hero buttons, so it stays here */}
+              {share && <TextSizeControl scale={textSize.scale} change={textSize.change} className="ml-auto" />}
+            </div>
 
-            <div className="reading-prose wrap-normal" dangerouslySetInnerHTML={{ __html: contentHtml }} />
+            <div className="reading-prose wrap-normal" style={textSize.style} dangerouslySetInnerHTML={{ __html: contentHtml }} />
 
             {reading.source && (
               <div className="mt-8 border-t border-stone-200 pt-4 text-base italic text-neutral-600 dark:border-neutral-700 dark:text-neutral-400 wrap-normal">
