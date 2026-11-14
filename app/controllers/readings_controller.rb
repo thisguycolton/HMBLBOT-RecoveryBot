@@ -4,7 +4,7 @@ class ReadingsController < ApplicationController
   before_action :authenticate_user!, only: %i[ mine new create edit update destroy ]
   before_action :set_reading, only: %i[ show edit update destroy ]
   before_action :authorize_owner!, only: %i[ edit update destroy ]
-  # A shared reading's link shows its title and card in Messages and the like; its text stays for people
+  # A shared reading's link shows its title and card in Messages and the like; its card shows the opening lines and the full text stays for people
   before_action :answer_robots, only: :show
   after_action :tag_noindex, only: :show
   layout "reader", only: %i[new index show edit mine]
@@ -196,14 +196,7 @@ end
     end
 
     def reading_card_json(reading)
-      text =
-        if reading.richer_content&.id.present?
-          reading.richer_content.to_plain_text
-        elsif reading.content.present?
-          reading.content.to_plain_text
-        else
-          ""
-        end
+      text = reading.plain_text
 
       {
         id: reading.id,

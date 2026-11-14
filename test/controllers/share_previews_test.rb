@@ -76,6 +76,16 @@ class SharePreviewsTest < ActionDispatch::IntegrationTest
     assert_match %r{/share_cards/reading/#{@reading.id}\.png}, meta("og:image")
   end
 
+  test "a reading's card shows the start of its text, ending on a whole word" do
+    assert_equal "Secret text", ShareCard.for(@reading).text
+
+    @reading.update!(content: "<p>#{'One day at a time. ' * 30}</p>")
+    text = ShareMeta.reading(@reading).card.text
+    assert_match(/\A(\S+ )*\S+…\z/, text)
+    assert_operator text.size, :<=, 260
+    assert text.start_with?("One day at a time.")
+  end
+
   test "cards are PNGs for things anyone may open, and 404 for the rest" do
     [["document", @public.id], ["group", @group.slug], ["event", @event.token], ["meeting", @meeting.id], ["reading", @reading.id], ["site", "recoverybot"]].each do |kind, id|
       get "/share_cards/#{kind}/#{id}.png", headers: { "User-Agent" => IMESSAGE }
