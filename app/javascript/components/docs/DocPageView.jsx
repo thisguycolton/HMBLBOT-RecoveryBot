@@ -8,6 +8,7 @@ import { useDocs } from "./DocsApp";
 import { NotFound } from "./DocsSectionPage";
 import { renderDoc } from "./docMarkdown";
 import { flashLine, LineLinks, ShareButton } from "./DocShare";
+import { NewsMeta } from "./DocsNews";
 
 const longDate = (iso) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
@@ -69,6 +70,7 @@ export default function DocPageView({ alias }) {
     );
   }
 
+  const news = page.section.kind === "news";
   const toc = headings.length > 1 ? <OnThisPage headings={headings} active={active} onPick={setActive} /> : null;
 
   return (
@@ -82,10 +84,13 @@ export default function DocPageView({ alias }) {
 
         <header className="mb-8 border-b border-neutral-200 pb-6 dark:border-neutral-800">
           <div className="flex items-start gap-4">
-            <span className="mt-1 hidden size-11 shrink-0 place-items-center rounded-xl bg-accent-tint text-accent dark:bg-accent/25 dark:text-white sm:grid">
-              <LucideIcon name={page.icon} fallback={BookOpen} size={20} />
-            </span>
+            {!news && (
+              <span className="mt-1 hidden size-11 shrink-0 place-items-center rounded-xl bg-accent-tint text-accent dark:bg-accent/25 dark:text-white sm:grid">
+                <LucideIcon name={page.icon} fallback={BookOpen} size={20} />
+              </span>
+            )}
             <div className="min-w-0 flex-1">
+              {news && <NewsMeta post={page} className="mb-2" />}
               <h1 className="!m-0 !text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:!text-4xl">{page.title}</h1>
               {page.summary && <p className="mt-2 text-lg text-slate-600 dark:text-neutral-400">{page.summary}</p>}
             </div>
@@ -105,6 +110,10 @@ export default function DocPageView({ alias }) {
             </span>
           </div>
         </header>
+
+        {news && page.cover_image && (
+          <img src={page.cover_image} alt="" className="mb-8 aspect-[16/9] w-full rounded-3xl object-cover" />
+        )}
 
         {toc && (
           <details className="group mb-8 rounded-2xl border border-neutral-200 px-4 py-3 dark:border-neutral-800 2xl:hidden">

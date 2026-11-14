@@ -7,9 +7,11 @@ import { Bone, SkeletonGroup } from "../ui/Skeleton";
 import { inputClass, labelClass } from "../ui/styles";
 import { api } from "../groups/lib";
 import { useDocs } from "./DocsApp";
+import { NewsList } from "./DocsNews";
 
 // A section of the docs (/docs/:section): its intro and every page in it. Site admins can add a
-// page (a draft, opened in the editor), rename the section, and delete it once it's empty.
+// page (a draft, opened in the editor), rename the section, and delete it once it's empty. A news
+// section lists its posts as cards, newest first, and makes posts instead of pages.
 export default function DocsSectionPage() {
   const { section: slug } = useParams();
   const { sections, loaded, editor, reload } = useDocs();
@@ -20,9 +22,10 @@ export default function DocsSectionPage() {
 
   if (!loaded) return <SkeletonGroup className="space-y-4"><Bone className="h-9 w-1/2" /><Bone className="h-4 w-2/3" /><Bone rounded="rounded-2xl" className="h-24" /></SkeletonGroup>;
   if (!section) return <NotFound />;
+  const news = section.kind === "news";
 
   const newPage = () => {
-    api("/docs/pages", { method: "POST", body: { page: { doc_section_id: section.id, title: "New page" } } })
+    api("/docs/pages", { method: "POST", body: { page: { doc_section_id: section.id, title: news ? "New post" : "New page" } } })
       .then((d) => reload().then(() => navigate(`${d.page.docs_path}/edit`)))
       .catch((e) => setError(e.message));
   };
@@ -48,7 +51,7 @@ export default function DocsSectionPage() {
             {section.summary && <p className="mt-2 max-w-2xl text-base text-slate-600 dark:text-neutral-400">{section.summary}</p>}
             {editor && (
               <div className="mt-4 flex flex-wrap gap-2">
-                <button type="button" onClick={newPage} className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold !bg-accent !text-white hover:opacity-90"><FilePlus2 size={15} /> New page</button>
+                <button type="button" onClick={newPage} className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold !bg-accent !text-white hover:opacity-90"><FilePlus2 size={15} /> {news ? "New post" : "New page"}</button>
                 <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold !bg-neutral-100 !text-slate-700 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:!text-neutral-200"><Pencil size={15} /> Rename section</button>
                 {!section.pages.length && <button type="button" onClick={remove} className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold !bg-rose-50 !text-rose-700 dark:!bg-rose-500/10 dark:!text-rose-300"><Trash2 size={15} /> Delete section</button>}
               </div>
@@ -58,6 +61,8 @@ export default function DocsSectionPage() {
         </header>
       )}
 
+      {news ? <NewsList section={section} /> : (
+      <>
       <ul className="!m-0 grid list-none gap-3 !p-0 sm:grid-cols-2">
         {section.pages.map((page) => (
           <li key={page.id}>
@@ -78,6 +83,8 @@ export default function DocsSectionPage() {
         ))}
       </ul>
       {!section.pages.length && <p className="text-slate-500 dark:text-neutral-400">No pages here yet.</p>}
+      </>
+      )}
     </div>
   );
 }

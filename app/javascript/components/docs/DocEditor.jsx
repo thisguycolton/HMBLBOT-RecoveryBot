@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BubbleMenu, EditorContent, useEditor } from "@tiptap/react";
 import {
-  ArrowLeft, Bold, Check, Code, Eye, FileCode2, History, Italic, Link2, Loader2, PenLine, RotateCcw, SlidersHorizontal, Strikethrough, Trash2, X,
+  ArrowLeft, Bold, Check, Code, Eye, FileCode2, History, ImagePlus, Italic, Link2, Loader2, PenLine, RotateCcw, SlidersHorizontal, Strikethrough, Trash2, X,
 } from "lucide-react";
 import Sheet from "../shell/Sheet";
 import IconPicker from "../ui/IconPicker";
@@ -15,6 +15,7 @@ import { NotFound } from "./DocsSectionPage";
 import { docExtensions, editorMarkdown } from "./editorExtensions";
 import SlashMenu, { matchCommands } from "./SlashMenu";
 import { renderDoc } from "./docMarkdown";
+import { NewsCover } from "./DocsNews";
 
 const SAVE_AFTER = 1200; // ms after the last keystroke
 const when = (iso) => new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -333,12 +334,15 @@ function Editor({ initial }) {
     const [slug, setSlug] = useState(doc.slug);
     const [position, setPosition] = useState(doc.position);
     useEffect(() => { setSlug(doc.slug); setPosition(doc.position); }, [doc.slug, doc.position]);
+    const news = doc.section.kind === "news"; // posts go by date, so no Order or Reviewed
 
     return (
       <div className="space-y-5 !font-sans text-sm">
+        {!news && (
         <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-500/10">
           <Toggle checked={doc.reviewed} onChange={(on) => onSave({ reviewed: on })} label="Reviewed" description={doc.reviewed ? `By ${doc.reviewed_by || "an admin"}, ${when(doc.reviewed_at)}` : "Tick once you've read the draft text through."} />
         </div>
+        )}
         <label className="block">
           <span className={labelClass}>Status</span>
           <select className={selectClass} value={doc.status} onChange={(e) => onSave({ status: e.target.value })}>
@@ -360,16 +364,17 @@ function Editor({ initial }) {
             {sections.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
           </select>
         </label>
-        <div className="grid grid-cols-[1fr_5rem] gap-3">
+        <div className={`grid gap-3 ${news ? "" : "grid-cols-[1fr_5rem]"}`}>
           <label className="block">
             <span className={labelClass}>Address</span>
             <input className={inputClass} value={slug} onChange={(e) => setSlug(e.target.value)} onBlur={() => slug !== doc.slug && onSave({ slug })} />
           </label>
-          <label className="block">
+          <label className={`block ${news ? "hidden" : ""}`}>
             <span className={labelClass}>Order</span>
             <input type="number" className={inputClass} value={position} onChange={(e) => setPosition(e.target.value)} onBlur={() => Number(position) !== doc.position && onSave({ position })} />
           </label>
         </div>
+        {news && <NewsSettings doc={doc} onSave={onSave} />}
         {doc.path_alias && <p className="!m-0 text-xs text-slate-500 dark:text-neutral-400">Also at <Link to={`/${doc.path_alias}`}>/{doc.path_alias}</Link></p>}
         <IconPicker value={doc.icon} onChange={(icon) => onSave({ icon })} />
         <VersionHistory doc={doc} onRestored={onRestored} />
@@ -378,6 +383,76 @@ function Editor({ initial }) {
         </button>
       </div>
     );
+  }
+
+  // A news post's own settings: Featured (leads the News block on the Docs home), what kind of
+  // post it is, its date and its cover picture (uploaded here, so it stays on RecoveryBot)
+  function NewsSettings({ doc, onSave }) {
+    const [date, setDate] = useState(toDateInput(doc.published_at));
+    const [uploading, setUploading] = useState(false);
+    const [error, setError] = useState(null);
+    const file = useRef(null);
+    useEffect(() => { setDate(toDateInput(doc.published_at)); }, [doc.published_at]);
+
+    const upload = (picked) => {
+      if (!picked?.type?.startsWith("image/")) return;
+      const form = new FormData();
+      form.append("image", picked);
+      setUploading(true);
+      setError(null);
+      api(`/docs/pages/${doc.id}/images`, { method: "POST", form })
+        .then((d) => onSave({ cover_image: d.url }))
+        .catch((e) => setError(e.message))
+        .finally(() => setUploading(false));
+    };
+    const saveDate = () => {
+      if (date === toDateInput(doc.published_at)) return;
+      // noon local time, so the day doesn't slip in other time zones
+      onSave({ published_at: date ? new Date(`${date}T12:00:00`).toISOString() : "" });
+    };
+
+    return (
+      <div className="space-y-4 rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
+        <p className="!m-0 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">News post</p>
+        <Toggle checked={doc.featured} onChange={(on) => onSave({ featured: on })} label="Featured" description="Kept at the front of News on the Docs home, ahead of newer posts." />
+        <label className="block">
+          <span className={labelClass}>Kind</span>
+          <select className={selectClass} value={doc.news_kind || "news"} onChange={(e) => onSave({ news_kind: e.target.value })}>
+            <option value="blog">Blog</option>
+            <option value="news">Site news</option>
+            <option value="update">Update</option>
+          </select>
+        </label>
+        <label className="block">
+          <span className={labelClass}>Date</span>
+          <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} onBlur={saveDate} />
+          {!doc.published_at && <span className="mt-1 block text-xs text-slate-500 dark:text-neutral-400">Set to today when you publish it.</span>}
+        </label>
+        <div>
+          <p className={labelClass}>Cover picture</p>
+          <NewsCover post={doc} className="aspect-[16/9] w-full rounded-xl" />
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" onClick={() => file.current?.click()} disabled={uploading} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold !bg-neutral-100 !text-slate-700 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:!text-neutral-200">
+              {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />} {doc.cover_image ? "Change" : "Add a picture"}
+            </button>
+            {doc.cover_image && (
+              <button type="button" onClick={() => onSave({ cover_image: "" })} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold !bg-transparent !text-slate-500 hover:!text-rose-600 dark:!text-neutral-400">
+                <X size={14} /> Remove
+              </button>
+            )}
+          </div>
+          {error && <p className="!m-0 mt-1 text-xs text-rose-600">{error}</p>}
+          <input ref={file} type="file" accept="image/*" hidden onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ""; }} />
+        </div>
+      </div>
+    );
+  }
+
+  function toDateInput(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
   // Earlier copies of the page (DocPageVersion): look at one, or put it back

@@ -46,6 +46,17 @@ The side panel (the panel button on a phone) has:
 - In a section, choose **New page**. It starts as a draft with a simple outline.
 - On the Docs home, **New section** adds one. In a section, **Rename section** changes its name, summary, icon, address and order.
 
+## News posts
+
+Blog posts and site news live in the **News** section, and the newest show at the top of the Docs home for everyone.
+
+1. On the Docs home choose **Write a post** (or **New post** in News). It starts as a draft only site admins see.
+2. Write it like any page. The summary is the line people see on the card.
+3. In the post's settings pick what kind it is (**Blog**, **Site news** or **Update**), add a **Cover picture** if you like, and set **Status** to **Published**. The date is set to that day; you can change it.
+4. Switch on **Featured** to keep a post at the front of News, ahead of newer ones. Switch it off when it's old news.
+
+Cover pictures upload to RecoveryBot, so readers' browsers never reach another site for them.
+
 ## Screenshots
 
 The pictures in these pages live in the code, in `public/docs-images/`, and the Markdown points at them like `![Group chat](/docs-images/group-tools/chat.webp)`. You can keep them, delete them, or replace one by pasting your own picture (which uploads it to the page). Files whose name ends in `-phone` show phone-sized.
