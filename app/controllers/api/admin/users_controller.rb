@@ -69,6 +69,32 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
     head :no_content
   end
 
+  # GET: why someone isn't getting a reminder or push. Their reminders and time zone, which app
+  # installs and browsers are signed up for notifications (and when each was last sent one), what
+  # kinds they turned off, and their latest bell notifications. Nothing they wrote.
+  def notifications
+    user = User.find(params[:id])
+    local = Time.current.in_time_zone(user.zone)
+    today = local.to_date
+    reminders = RecoveryReminders::KINDS.to_h do |which, k|
+      [which, { on: !!user.public_send("#{which}_reminder"), at: user.public_send("#{which}_reminder_at"),
+                reminded_on: user.public_send("#{which}_reminded_on")&.iso8601,
+                written_today: k[:model].where(user: user, on: today).exists? }]
+    end
+    render json: {
+      time_zone: user.zone.tzinfo.name, time_zone_saved: user.time_zone.present?, local_time: local.strftime("%a %b %-d, %-l:%M %p"),
+      reminders: reminders,
+      app_push_ready: FcmSender.configured?, web_push_ready: WebPushSender.configured?,
+      reminders_pushed: user.wants_push?("recovery.step_reminder"),
+      turned_off: user.push_categories.reject { |c| c[:on] }.map { |c| c[:label] },
+      apps: user.device_tokens.order(created_at: :desc).map do |d|
+        { label: d.label, app_version: d.app_version, created_at: d.created_at.iso8601, updated_at: d.updated_at.iso8601, last_sent_at: d.last_sent_at&.iso8601 }
+      end,
+      browsers: user.push_subscriptions.order(created_at: :desc).map { |s| s.as_api_json.slice(:label, :created_at, :last_sent_at) },
+      recent: user.notifications.recent.limit(8).map { |n| n.as_api_json.slice(:title, :kind, :read, :created_at) },
+    }
+  end
+
   private
 
   def user_json(user, readings_count = nil, last_seen = nil)

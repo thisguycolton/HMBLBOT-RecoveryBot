@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Check, Search, Shield, ShieldOff, Trash2, Users } from "lucide-react";
+import React, { Fragment, useEffect, useState } from "react";
+import { Bell, Check, Search, Shield, ShieldOff, Trash2, Users } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass } from "../ui/styles";
@@ -19,6 +19,20 @@ export default function UsersPage({ notify }) {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [data, setData] = useState(null);
+  const [diag, setDiag] = useState(null); // { id, info } for the member whose notifications are open
+
+  // Why someone isn't getting reminders or push: opens under their row
+  async function showNotifications(user) {
+    if (diag?.id === user.id) return setDiag(null);
+    setDiag({ id: user.id, info: null });
+    try {
+      const info = await api(`/users/${user.id}/notifications`);
+      setDiag((d) => (d?.id === user.id ? { id: user.id, info } : d));
+    } catch (e) {
+      setDiag(null);
+      notify(e.message, "error");
+    }
+  }
 
   async function load() {
     try {
@@ -81,7 +95,8 @@ export default function UsersPage({ notify }) {
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {data.users.map((u) => (
-                <tr key={u.id}>
+                <Fragment key={u.id}>
+                <tr>
                   <td className={td}>
                     <p className="font-medium text-slate-900 dark:text-white">{u.name || u.email}</p>
                     {u.name && <p className="text-slate-500">{u.email}</p>}
@@ -95,6 +110,10 @@ export default function UsersPage({ notify }) {
                     {u.is_you && <Badge>You</Badge>}
                   </td>
                   <td className={`${td} text-right whitespace-nowrap`}>
+                    <button type="button" className={buttonClass.secondary} onClick={() => showNotifications(u)} aria-expanded={diag?.id === u.id}
+                      aria-label={`${u.email}'s notifications`} title="Notifications and reminders">
+                      <Bell className="w-4 h-4" />
+                    </button>
                     {!u.confirmed && (
                       <button type="button" className={buttonClass.secondary} onClick={() => approve(u)}>
                         <Check className="w-4 h-4" strokeWidth={2.5} /> Confirm for them
@@ -112,12 +131,51 @@ export default function UsersPage({ notify }) {
                     )}
                   </td>
                 </tr>
+                {diag?.id === u.id && (
+                  <tr><td colSpan={6} className="px-4 pb-4 bg-neutral-50 dark:bg-neutral-900/60">{diag.info ? <NotificationInfo info={diag.info} /> : <InlineSkeleton />}</td></tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>
         )}
       </ShellPanel>
     </Shell>
+  );
+}
+
+const when = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "never");
+
+// Site Admin > Members > the bell button: their reminders, time zone and notification devices
+function NotificationInfo({ info }) {
+  const row = "flex gap-2 py-0.5";
+  const label = "w-40 shrink-0 text-slate-500 dark:text-neutral-400";
+  const names = { gratitude: "Gratitude reminder", step: "10th step reminder" };
+  return (
+    <div className="grid gap-4 pt-3 text-sm sm:grid-cols-2">
+      <div>
+        <p className={row}><span className={label}>Their time</span><span>{info.local_time} ({info.time_zone}{info.time_zone_saved ? "" : ", site default"})</span></p>
+        {Object.entries(info.reminders).map(([k, r]) => (
+          <p key={k} className={row}><span className={label}>{names[k] || k}</span>
+            <span>{r.on ? `On at ${r.at}` : "Off"}{r.on && ` · last sent ${r.reminded_on || "never"}`}{r.on && r.written_today && " · already written today (skipped)"}</span></p>
+        ))}
+        <p className={row}><span className={label}>Reminders pushed</span><span>{info.reminders_pushed ? "Yes" : "No, they turned reminder pushes off"}</span></p>
+        {info.turned_off.length > 0 && <p className={row}><span className={label}>Push turned off for</span><span>{info.turned_off.join(", ")}</span></p>}
+        {!info.app_push_ready && <p className="py-0.5 text-amber-700 dark:text-amber-300">App notifications aren't set up on the server (FIREBASE_SERVICE_ACCOUNT).</p>}
+      </div>
+      <div>
+        <p className="font-semibold text-slate-700 dark:text-neutral-200">Devices getting notifications</p>
+        {info.apps.length + info.browsers.length === 0 && <p className="py-0.5 text-amber-700 dark:text-amber-300">None. Push can't reach them until they open the app signed in, or turn notifications on in a browser.</p>}
+        {[...info.apps.map((d) => ({ ...d, label: `${d.label}${d.app_version ? ` ${d.app_version}` : ""}` })), ...info.browsers].map((d, i) => (
+          <p key={i} className={row}><span className="min-w-0 flex-1">{d.label}</span><span className="text-slate-500 dark:text-neutral-400">added {when(d.created_at)} · last sent {when(d.last_sent_at)}</span></p>
+        ))}
+        <p className="mt-3 font-semibold text-slate-700 dark:text-neutral-200">Latest in their bell</p>
+        {info.recent.length === 0 && <p className="py-0.5 text-slate-500">Nothing yet.</p>}
+        {info.recent.map((n, i) => (
+          <p key={i} className={row}><span className="min-w-0 flex-1 truncate">{n.title}</span><span className="text-slate-500 dark:text-neutral-400">{when(n.created_at)}</span></p>
+        ))}
+      </div>
+    </div>
   );
 }
 

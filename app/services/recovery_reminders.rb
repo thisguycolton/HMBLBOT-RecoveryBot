@@ -61,6 +61,9 @@ module RecoveryReminders
     return false if claimed.zero?
 
     Notification.deliver(user, kind: k[:kind], title: k[:title], body: k[:body], url: k[:url])
+    Rails.logger.info("[recovery reminders] #{which} for user #{user.id} (#{user.zone.tzinfo.name}): " \
+                      "#{user.device_tokens.count} app device(s), #{user.push_subscriptions.count} browser(s), " \
+                      "push #{user.wants_push?(k[:kind]) ? 'on' : 'off for reminders'}")
     true
   rescue StandardError => e
     Rails.logger.warn("[recovery reminders] #{user.id} #{which}: #{e.message}")
