@@ -145,6 +145,7 @@ Rails.application.routes.draw do
     get "pages/:id/versions/:version_id", action: :version
     post "pages/:id/restore", action: :restore
     post "pages/:id/images", action: :images
+    post "pages/:id/videos", action: :videos
     post "sections", action: :create_section
     patch "sections/:id", action: :update_section
     delete "sections/:id", action: :destroy_section

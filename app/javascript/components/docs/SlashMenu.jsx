@@ -1,11 +1,11 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import {
   CheckSquare, Code2, Heading1, Heading2, Heading3, Image as ImageIcon, Lightbulb, List, ListOrdered, Minus, Pilcrow,
-  ShieldCheck, StickyNote, Table as TableIcon, TextQuote, TriangleAlert,
+  ShieldCheck, StickyNote, Table as TableIcon, TextQuote, TriangleAlert, Clapperboard,
 } from "lucide-react";
 
 // What "/" offers in the docs editor, Notion-style. `run` gets a chain with the "/query" already
-// removed; `picture` asks DocEditor for a file instead.
+// removed; `picture` asks DocEditor for a file instead, and `video` opens its Add a video window.
 const callout = (kind) => (chain) => chain.setParagraph().toggleBlockquote().insertContent(`[!${kind}] `);
 export const COMMANDS = [
   { key: "text", label: "Text", hint: "Plain writing", icon: Pilcrow, words: "paragraph plain", run: (c) => c.setParagraph() },
@@ -23,6 +23,7 @@ export const COMMANDS = [
   { key: "divider", label: "Divider", hint: "--- a line across", icon: Minus, words: "hr rule line separator", run: (c) => c.setHorizontalRule() },
   { key: "code", label: "Code", hint: "``` monospace block", icon: Code2, words: "codeblock pre", run: (c) => c.toggleCodeBlock() },
   { key: "table", label: "Table", hint: "3 × 3 with a header row", icon: TableIcon, words: "grid columns", run: (c) => c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }) },
+  { key: "video", label: "Video", hint: "Upload a video, with chapters", icon: Clapperboard, words: "movie clip chapters timeline player upload", video: true },
   { key: "picture", label: "Picture", hint: "Upload a screenshot", icon: ImageIcon, words: "image photo screenshot upload", picture: true },
 ];
 

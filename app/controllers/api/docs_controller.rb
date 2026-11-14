@@ -3,9 +3,11 @@
 # (DocPage.editor?, which is User#suite_admin?).
 class Api::DocsController < ApplicationController
   SEARCH_LIMIT = 20
+  VIDEO_TYPES = %w[video/mp4 video/webm video/quicktime].freeze
+  VIDEO_MAX = 300.megabytes
 
   before_action :require_editor!, except: %i[index show search]
-  before_action :set_page, only: %i[update destroy versions version restore images]
+  before_action :set_page, only: %i[update destroy versions version restore images videos]
 
   rescue_from ActiveRecord::RecordNotFound, with: -> { render json: { error: "Not found" }, status: :not_found }
 
@@ -112,6 +114,19 @@ class Api::DocsController < ApplicationController
 
     blob = ActiveStorage::Blob.create_and_upload!(io: file, filename: file.original_filename, content_type: file.content_type)
     @page.images.attach(blob)
+    render json: { url: Rails.application.routes.url_helpers.rails_storage_proxy_path(blob, only_path: true) }, status: :created
+  end
+
+  # POST /api/docs/pages/:id/videos (multipart: video) -> { url } for a ```video block. The
+  # editor sends it with XMLHttpRequest to show a progress bar (DocVideoUpload). Served from
+  # this site (the storage proxy), like the pictures, so the reader never talks to S3 itself.
+  def videos
+    file = params.require(:video)
+    return render(json: { error: "That isn't an MP4, WebM or MOV video." }, status: :unprocessable_entity) unless file.respond_to?(:content_type) && VIDEO_TYPES.include?(file.content_type.to_s)
+    return render(json: { error: "Videos can be up to #{VIDEO_MAX / 1.megabyte} MB." }, status: :unprocessable_entity) if file.size > VIDEO_MAX
+
+    blob = ActiveStorage::Blob.create_and_upload!(io: file, filename: file.original_filename, content_type: file.content_type)
+    @page.videos.attach(blob)
     render json: { url: Rails.application.routes.url_helpers.rails_storage_proxy_path(blob, only_path: true) }, status: :created
   end
 
