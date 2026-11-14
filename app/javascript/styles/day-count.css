@@ -109,6 +109,7 @@ html.dark .hb-daycount__panel {
   padding: 0.75rem 0.9rem;
   text-align: left;
 }
+.hb-daycount .hb-daycount__more { background: none; border: 0; color: var(--hb-daycount-edge); cursor: pointer; font: inherit; font-size: 0.9rem; margin: 0 0 0.75rem; text-decoration: underline; }
 .hb-daycount__fact-icon { font-size: 1.5rem; line-height: 1.2; }
 .hb-daycount .hb-daycount__fact-detail { color: var(--hb-daycount-muted); display: block; font-size: 0.9rem; margin-top: 0.15rem; }
 

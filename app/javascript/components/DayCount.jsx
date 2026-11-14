@@ -30,6 +30,7 @@ export default function DayCount({ since, signedIn }) {
   const [open, setOpen] = useState(() => Boolean(status && (signedIn || (status.today && !seenToday()))));
   const closeRef = useRef(null);
   const [chip, setChip] = useState(null); // { chip, design } on a milestone day
+  const [moreFacts, setMoreFacts] = useState(false); // some days have several fun facts; two show at first
 
   useEffect(() => {
     if (!open) return undefined;
@@ -87,12 +88,15 @@ export default function DayCount({ since, signedIn }) {
           ) : (
             <p>One day at a time. Keep coming back.</p>
           )}
-          {facts.today.map((f) => (
+          {facts.today.slice(0, moreFacts ? undefined : 2).map((f) => (
             <div key={f.title} className="hb-daycount__fact">
               <span className="hb-daycount__fact-icon" aria-hidden="true">{TOPIC_ICONS[f.topic]}</span>
               <span><strong>{f.title}</strong><span className="hb-daycount__fact-detail">{f.detail}</span></span>
             </div>
           ))}
+          {!moreFacts && facts.today.length > 2 && (
+            <button type="button" className="hb-daycount__more" onClick={() => setMoreFacts(true)}>{facts.today.length - 2} more fun {facts.today.length === 3 ? "fact" : "facts"} for today</button>
+          )}
           {next && (
             <p className="hb-daycount__next">
               Next milestone: <strong>{next.label}</strong> {next.inDays === 1 ? "tomorrow" : `in ${next.inDays.toLocaleString()} days`}
