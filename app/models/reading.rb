@@ -76,6 +76,19 @@ class Reading < ApplicationRecord
     unpublish!
   end
 
+  # The reading's words as plain text (from the newer editor's JSON, or the older rich text)
+  # (an untouched newer editor saves an empty doc, so its words win only when there are some)
+  def plain_text
+    newer = richer_text_richer_content&.to_plain_text.to_s
+    newer.strip.present? ? newer : content.to_plain_text.to_s
+  end
+
+  # Its opening, ending on a whole word with "…" when it goes on (the link preview's card)
+  def summary(length = 260)
+    text = plain_text.squish
+    text.size <= length ? text : "#{text.first(length - 1).sub(/\s+\S*\z/, '')}…"
+  end
+
   after_validation :parse_time
 
   def parse_time

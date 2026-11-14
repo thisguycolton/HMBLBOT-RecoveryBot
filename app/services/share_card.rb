@@ -36,7 +36,7 @@ class ShareCard
     when GroupDocument
       new(style: :page, title: record.title, kicker: record.group.title, text: record.summary, logo: record.group.logo)
     when Reading
-      new(style: :page, title: record.title.presence || record.meetingName, kicker: record.group&.title || "Meeting reading", subtitle: record.source, logo: record.group&.logo)
+      new(style: :page, title: record.title.presence || record.meetingName, kicker: record.group&.title || "Meeting reading", subtitle: record.source, text: record.summary, logo: record.group&.logo)
     when Event
       new(style: :flyer, title: record.title.presence || "Event", subtitle: record.when_label || "Date to be decided",
           kicker: record.group.title, cover: record.cover.attached? ? record.cover : record.group.cover)
