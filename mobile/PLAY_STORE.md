@@ -28,7 +28,11 @@ keyPassword=<the password>
 ## 2. Build the bundle
 
 ```bash
-cd mobile && npx cap sync android && cd android && ./gradlew bundleRelease
+# Capacitor 8 needs Node 22+, and Gradle 8.14 needs JDK 21 (Android Studio's bundled JDK 25 fails
+# with "Unsupported class file major version 69")
+export PATH="$HOME/.nvm/versions/node/v22.23.2/bin:$PATH"
+export JAVA_HOME="$HOME/Library/Java/JavaVirtualMachines/jbr-21.0.11/Contents/Home"
+cd mobile && npm ci && npx cap sync android && cd android && ./gradlew clean bundleRelease
 ```
 
 The bundle is `mobile/android/app/build/outputs/bundle/release/app-release.aab`. Each upload
