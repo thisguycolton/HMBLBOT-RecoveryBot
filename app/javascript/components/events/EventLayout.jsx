@@ -3,16 +3,19 @@ import PageAside from "../shell/PageAside";
 import { useMedia } from "../shell/useShell";
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import BlockView, { isCompact } from "./BlockView";
+import { heroBleed } from "../groups/page/GroupHero";
 import { SPAN_CLASS } from "./lib";
 
 // The event page's frame, shared by the page and the editor's canvas: the cover and
 // title, an aside (RSVP, flyer), then the blocks in the event's layout.
 
-export function EventHero({ event, aside, coverUrl = event.cover_url, groupLink = true, share = null }) {
+// A `bleed` hero tops its page: on phones its cover fills the stage edge to edge, like a group's
+// or a profile's (the aside, RSVP, stays a card under it).
+export function EventHero({ event, aside, coverUrl = event.cover_url, groupLink = true, share = null, bleed = false }) {
   const chip = "inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur";
   return (
     <header className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-stretch">
-      <div className={`relative overflow-hidden rounded-3xl ${coverUrl ? "bg-neutral-900" : "cover-default"}`}>
+      <div className={`relative overflow-hidden rounded-3xl ${bleed ? heroBleed : ""} ${coverUrl ? "bg-neutral-900" : "cover-default"}`}>
         {coverUrl && <img src={coverUrl} alt="" className="absolute inset-0 size-full object-cover" />}
         {share && <div className="absolute right-4 top-4 z-10">{share}</div>}
         <div className={`relative flex h-full min-h-[16rem] flex-col justify-end p-6 sm:min-h-[20rem] sm:p-10 ${coverUrl ? "bg-gradient-to-t from-black/80 via-black/30 to-transparent" : ""}`}>

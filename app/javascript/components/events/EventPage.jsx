@@ -35,21 +35,28 @@ export default function EventPage() {
 
   const updates = allUpdates ? event.updates : event.updates.slice(0, 1);
 
+  // "You can edit this event": above the cover on wider screens; on phones the cover tops
+  // the page edge to edge (like a group's or profile's), so the note goes under it
+  const canEdit = event.status !== "published" || event.can_edit;
+  const editNote = (where) => (
+    <div className={`${where} flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-100 dark:ring-amber-900/60`}>
+      <span className="min-w-0 flex-1 basis-56">{event.status === "published" ? "You can edit this event." : "This is a draft. Only the people editing it can see it."}</span>
+      <Link to={`/${token}/edit`} className="inline-flex items-center gap-1.5 rounded-xl !bg-accent px-3 py-1.5 font-semibold !text-white"><Pencil className="size-4" /> Open in the editor</Link>
+    </div>
+  );
+
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:py-8">
-      {(event.status !== "published" || event.can_edit) && (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-100 dark:ring-amber-900/60">
-          <span className="min-w-0 flex-1 basis-56">{event.status === "published" ? "You can edit this event." : "This is a draft. Only the people editing it can see it."}</span>
-          <Link to={`/${token}/edit`} className="inline-flex items-center gap-1.5 rounded-xl !bg-accent px-3 py-1.5 font-semibold !text-white"><Pencil className="size-4" /> Open in the editor</Link>
-        </div>
-      )}
+      {canEdit && editNote("max-sm:hidden")}
 
-      <EventHero event={event} aside={<RsvpCard event={event} setEvent={setEvent} />}
+      <EventHero bleed event={event} aside={<RsvpCard event={event} setEvent={setEvent} />}
         share={event.status === "published" && (
           <ShareButton url={`/events/${event.token || token}`} title={`${event.title} · ${event.group.title}`} text={[event.title, event.when_label].filter(Boolean).join(", ")}
             image={`/share_cards/event/${event.token || token}.png`} panelTitle="Share this event"
             className="inline-flex items-center gap-1.5 rounded-full !bg-white/15 px-3 py-1.5 text-xs font-semibold !text-white ring-1 ring-white/30 backdrop-blur hover:!bg-white/25" />
         )} />
+
+      {canEdit && editNote("sm:hidden")}
 
       {event.updates.length > 0 && (
         <section className="rounded-2xl bg-accent/5 p-4 ring-1 ring-accent/20 dark:bg-accent/10">
