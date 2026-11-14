@@ -46,6 +46,30 @@ The side panel (the panel button on a phone) has:
 - In a section, choose **New page**. It starts as a draft with a simple outline.
 - On the Docs home, **New section** adds one. In a section, **Rename section** changes its name, summary, icon, address and order.
 
+## Videos with chapters
+
+Type `/` and pick **Video**. It adds a block like this, which shows as a video player on the page:
+
+```
+{
+  "src": "/docs-videos/group-tour.mp4",
+  "poster": "/docs-videos/group-tour.webp",
+  "title": "A quick tour of your group",
+  "chapters": [
+    { "start": "0:00", "title": "Open your group's home page" },
+    { "start": "0:12", "title": "Find the next meeting" },
+    { "start": "1:10", "title": "Wrap up" }
+  ]
+}
+```
+
+- The block starts with three backticks and the word `video` (` ```video `), and ends with three backticks.
+- **src** is the video file. It has to be on this site (an address starting with `/`, like the files in `public/docs-videos/`). `poster` (a still shown before it plays) and `title` are optional.
+- **chapters** cut the timeline into pieces with a small gap between them. Point at a piece (or drag along it with a finger) to see its title and time. A start can be seconds (`42`) or a clock (`0:42`, `1:02:03`), and each chapter runs until the next one starts.
+- Instead of the list, `chapters` can be the address of a JSON file on this site, like `"/docs-videos/group-tour.json"`. The file can be the same list, `{ "chapters": [...] }`, or `{ "0:00": "Intro", "0:42": "Next part" }`.
+- Under the video, the chapter list opens with one tap and jumps to any chapter.
+- Keys while the player is focused: Space or K plays and pauses, ← → skip 5 seconds, J L skip 10, `[` `]` go to the chapter before or after, M mutes, F goes full screen.
+
 ## Screenshots
 
 The pictures in these pages live in the code, in `public/docs-images/`, and the Markdown points at them like `![Group chat](/docs-images/group-tools/chat.webp)`. You can keep them, delete them, or replace one by pasting your own picture (which uploads it to the page). Files whose name ends in `-phone` show phone-sized.

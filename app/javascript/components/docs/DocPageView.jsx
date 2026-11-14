@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, ChevronRight, EyeOff, Lock, Pencil, Users } from "lucide-react";
 import LucideIcon from "../ui/LucideIcon";
@@ -8,6 +9,7 @@ import { useDocs } from "./DocsApp";
 import { NotFound } from "./DocsSectionPage";
 import { renderDoc } from "./docMarkdown";
 import { flashLine, LineLinks, ShareButton } from "./DocShare";
+import ChapterVideo from "../ui/ChapterVideo";
 
 const longDate = (iso) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
@@ -22,6 +24,7 @@ export default function DocPageView({ alias }) {
   const [data, setData] = useState(null);
   const [missing, setMissing] = useState(false);
   const [active, setActive] = useState(null);
+  const [videos, setVideos] = useState([]); // [{ el, config }] for each ```video block
   const body = useRef(null);
 
   useEffect(() => {
@@ -33,6 +36,20 @@ export default function DocPageView({ alias }) {
 
   const page = data?.page;
   const { html, headings } = useMemo(() => (page ? renderDoc(page.body) : { html: "", headings: [] }), [page]);
+  // One object per page: React 19 rewrites innerHTML whenever this prop is a new object, which
+  // would wipe the video players mounted inside it on every re-render
+  const inner = useMemo(() => ({ __html: html }), [html]);
+
+  // Each ```video block arrives as a plain <video> (docMarkdown); swap in the chapter player
+  useLayoutEffect(() => {
+    const found = [...(body.current?.querySelectorAll(".doc-video[data-video]") || [])].map((el) => {
+      let config = null;
+      try { config = JSON.parse(el.dataset.video); } catch { /* left as the plain video */ }
+      if (config) el.replaceChildren();
+      return config && { el, config };
+    }).filter(Boolean);
+    setVideos(found);
+  }, [html]);
 
   useEffect(() => {
     if (page) document.title = page.path_alias ? `${page.title} | RecoveryBot` : `${page.title} | RecoveryBot Docs`;
@@ -121,8 +138,9 @@ export default function DocPageView({ alias }) {
           ref={body}
           className="doc-body prose prose-slate max-w-none dark:prose-invert [&_p]:!text-left [&_li]:!text-left prose-headings:font-semibold prose-headings:tracking-tight prose-h2:mt-10 prose-h2:text-2xl prose-h3:text-lg prose-a:text-accent dark:prose-a:text-accent-light prose-li:my-1 prose-img:rounded-2xl prose-table:text-sm"
           // renderDoc runs markdown-it with raw HTML off: the text can't add tags of its own
-          dangerouslySetInnerHTML={{ __html: html }} // eslint-disable-line react/no-danger
+          dangerouslySetInnerHTML={inner} // eslint-disable-line react/no-danger
         />
+        {videos.map(({ el, config }, i) => createPortal(<ChapterVideo {...config} />, el, `${i}-${config.src}`))}
 
         <footer className="mt-12 border-t border-neutral-200 pt-6 dark:border-neutral-800">
           <p className="!m-0 text-sm text-slate-500 dark:text-neutral-400">Last updated {longDate(page.updated_at)}</p>
