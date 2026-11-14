@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { Gift, RotateCcw } from "lucide-react";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { RoundChip } from "../recovery/Chip";
@@ -47,6 +47,7 @@ export default function ChipDesignPage({ notify }) {
         <p className="flex-1 text-sm text-slate-600 dark:text-neutral-300 !font-sans">
           The round chips every member earns for their sobriety milestones. Changes show on chips earned from now on; chips already earned keep their look.
         </p>
+        <a href="/recovery/give?group=_admin" className={buttonClass.secondary}><Gift className="size-4" /> Give one</a>
         {data.customized && <button type="button" className={buttonClass.secondary} disabled={busy} onClick={reset}><RotateCcw className="size-4" /> Plain chips</button>}
         <button type="button" className={buttonClass.primary} disabled={busy || !dirty} onClick={() => put({ design: storedDesign({ round: design.round }) }, "Saved. Chips earned from now on look like this.")}>
           {busy ? "Saving…" : "Save"}

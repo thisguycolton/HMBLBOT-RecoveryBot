@@ -11,6 +11,6 @@ class ChipsController < ApplicationController
     return redirect_to(ClaimsChip.call(current_user, award) || "/recovery") if user_signed_in?
 
     cookies.signed[:chip_claim] = { value: award.claim_token, expires: 30.days, httponly: true }
-    redirect_to new_user_registration_path, notice: "#{award.group.title} sent you a #{award.label} chip. Make an account (or log in) to claim it."
+    redirect_to new_user_registration_path, notice: "#{award.from_title} sent you a #{award.label} chip. Make an account (or log in) to claim it."
   end
 end
