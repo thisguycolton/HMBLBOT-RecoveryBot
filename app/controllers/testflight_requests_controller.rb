@@ -3,9 +3,11 @@
 # Android to start with, and so does visiting from an Android phone. Saves a TestflightRequest
 # (Site Admin > Tester requests, site admins get a notification), with
 # HumanCheck and a rate limit in front of it. Not in the nav or sitemap, and noindex (the
-# default); link it from a site notice (Site Admin > Site notices, link /testflight).
+# default); link it from a site notice (Site Admin > Site notices, link /testflight). Someone
+# already in the app is sent home, and the apps don't get notices that link here.
 class TestflightRequestsController < ApplicationController
   layout "reader"
+  before_action -> { redirect_to "/" if native_app? }, only: :new # they already have the app
   rate_limit to: 5, within: 1.hour, only: :create, with: -> { show_form("You've asked a few times already. Please try again in a little while.", status: :too_many_requests) }
 
   # GET /testflight
