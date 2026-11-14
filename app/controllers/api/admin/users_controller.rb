@@ -18,12 +18,19 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
     ids = users.map(&:id)
     readings = Reading.where(user_id: ids).group(:user_id).count
     last_seen = Ahoy::Visit.where(user_id: ids).group(:user_id).maximum(:started_at)
+    devices = MemberStats.devices_for(ids)
 
     render json: {
       total: total,
       limit: LIMIT,
-      users: users.map { |u| user_json(u, readings[u.id].to_i, last_seen[u.id]) },
+      users: users.map { |u| user_json(u, readings[u.id].to_i, last_seen[u.id]).merge(devices: devices[u.id] || []) },
     }
+  end
+
+  # GET: the whole site's 10th step and gratitude list counts, devices and day counts, with no
+  # names attached (MemberStats.summary). Never filtered by the search, on purpose.
+  def stats
+    render json: MemberStats.summary
   end
 
   # PATCH { admin: true|false }. You can't change your own admin flag.
