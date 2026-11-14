@@ -34,6 +34,20 @@ cd mobile && npx cap sync android && cd android && ./gradlew bundleRelease
 The bundle is `mobile/android/app/build/outputs/bundle/release/app-release.aab`. Each upload
 needs a higher `versionCode` (`mobile/android/app/build.gradle`); `versionName` is what people see.
 
+Release builds run R8, which shrinks and obfuscates the code (`minifyEnabled`), and drop unused
+resources (`shrinkResources`). The keep rules are in `android/app/proguard-rules.pro`; a resource
+that's only looked up by name goes in `res/raw/keep.xml`. The R8 mapping file rides inside the
+`.aab`, so Play's crash reports stay readable. If a release build works differently from a debug
+build (a plugin call or the widgets fail), a missing keep rule is the first suspect: test the
+release build on a phone before uploading (`./gradlew installRelease` with the phone plugged in,
+or Play's internal or closed test track).
+
+The app draws edge to edge (MainActivity, `EdgeToEdge.enable`). The SystemBars plugin
+(`insetsHandling: "css"`) keeps the page clear of the bars and the keyboard, and `AppBarsPlugin`
+colors what shows behind them. `@capacitor/status-bar` is left out of the Android build
+(`android.includePlugins` in `capacitor.config.ts`), so **a new plugin has to be added to that
+list** or Android leaves it out.
+
 ## 3. Play Console
 
 A personal developer account made after November 2023 has to run a **closed test with at

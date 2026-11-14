@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resources the release build's resource shrinking must keep because they're only looked up
+     by name: the splash screen (SplashScreen plugin) and the notification icon (Firebase). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/splash,@drawable/ic_stat_notify,@color/notification_tint,@layout/widget_*,@drawable/widget_*" />

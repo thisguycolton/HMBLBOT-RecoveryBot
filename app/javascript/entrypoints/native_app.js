@@ -331,13 +331,21 @@ function installBackButton() {
 
 // --- Status bar -----------------------------------------------------------------------------
 
+// Android 1.0.1 and later draw edge to edge and color the bars with their own AppBars plugin;
+// the iPhone app and Android 1.0 use @capacitor/status-bar.
 function installStatusBar() {
-  if (!hasPlugin("StatusBar")) return;
+  const appBars = hasPlugin("AppBars");
+  if (!appBars && !hasPlugin("StatusBar")) return;
   const apply = () => {
     const dark = document.documentElement.classList.contains("dark");
+    const color = dark ? "#0a0a0a" : "#f5f5f4";
+    if (appBars) {
+      callPlugin("AppBars", "set", { dark, color }).catch(() => {});
+      return;
+    }
     // DARK = light text, for a dark page
     callPlugin("StatusBar", "setStyle", { style: dark ? "DARK" : "LIGHT" }).catch(() => {});
-    if (platform === "android") callPlugin("StatusBar", "setBackgroundColor", { color: dark ? "#0a0a0a" : "#f5f5f4" }).catch(() => {});
+    if (platform === "android") callPlugin("StatusBar", "setBackgroundColor", { color }).catch(() => {});
   };
   apply();
   new MutationObserver(apply).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
