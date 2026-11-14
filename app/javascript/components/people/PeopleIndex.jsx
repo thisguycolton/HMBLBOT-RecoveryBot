@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
 import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
-import { Card, ErrorNote, Loading } from "../groups/ui";
+import { Card, ErrorNote } from "../groups/ui";
+import { SkeletonGroup, SkeletonHome, SkeletonToday } from "../ui/Skeleton";
 import FeedItem from "../notes/FeedItem";
 import NoteEditor from "../notes/NoteEditor";
 import InstallNudge from "../site/InstallNudge";
@@ -40,7 +41,15 @@ export default function PeopleIndex() {
   }, [data]);
 
   if (error) return <ErrorNote error={error} />;
-  if (!data) return <Loading variant="feed" />;
+  // While it loads: the same column and side panel as below, with placeholder shapes in them
+  if (!data) {
+    return (
+      <div className="mx-auto max-w-3xl !font-sans">
+        <PageAside title="Today"><SkeletonGroup label="Loading today"><SkeletonToday /></SkeletonGroup></PageAside>
+        <SkeletonGroup label="Loading your feed"><SkeletonHome /></SkeletonGroup>
+      </div>
+    );
+  }
 
   const replace = (item) => setData((d) => ({ ...d, feed: d.feed.map((i) => (i.kind === item.kind && i.id === item.id ? { ...i, ...item } : i)) }));
   const remove = (kind) => (id) => setData((d) => ({ ...d, feed: d.feed.filter((i) => !(i.kind === kind && i.id === id)) }));

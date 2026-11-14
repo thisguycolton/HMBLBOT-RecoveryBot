@@ -164,6 +164,80 @@ export function SkeletonFeed({ items = 3, composer = false }) {
   );
 }
 
+// The home feed (people/PeopleIndex), drawn in the real page's own frames so nothing moves
+// when it arrives: the Notes title and Your profile button, the name search, the composer card
+// (the same wb-note-editor--card box) and notes in wb-feed-item boxes. PeopleIndex puts it in
+// the page's own column and SkeletonToday in the Today side panel.
+function SkeletonHomeNote({ seed = 0 }) {
+  const lines = [["w-1/4", "w-3/5", "w-4/5", "w-2/3"], ["w-11/12"], ["w-2/3", "w-1/2"]][seed % 3];
+  return (
+    <div className="wb-feed-item">
+      <div className="wb-feed-item__head">
+        <SkeletonAvatar size={32} />
+        <Bone className={`h-4 ${["w-14", "w-20", "w-16"][seed % 3]}`} />
+        <Bone className="h-3 w-28" />
+        <span className="flex-1" />
+        <Bone className="h-6 w-28" />
+        <Bone className="h-1.5 w-5" />
+      </div>
+      <div className="space-y-3 py-1.5">
+        {lines.map((w, i) => <Bone key={i} className={`h-3.5 ${w}`} />)}
+      </div>
+      <div className="wb-note-actions">
+        {[0, 1, 2].map((i) => <Bone key={i} className="my-1.5 mr-3 h-4 w-12 max-[30rem]:w-6" />)}
+        <span className="flex-1" />
+        <Bone className="my-1.5 h-4 w-20 max-[30rem]:w-6" />
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonHome({ notes = 3 }) {
+  return (
+    <div className="min-w-0 space-y-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="flex h-14 flex-1 items-center"><Bone rounded="rounded-xl" className="h-9 w-36" /></span>
+        <Bone rounded="rounded-xl" className="h-10 w-[8.3rem]" />
+      </div>
+      <Bone rounded="rounded-xl" className="block h-11 w-full" />
+      <div className="wb space-y-4">
+        <div className="wb-hl-note wb-hl-note--editing wb-note-editor wb-note-editor--card">
+          <div className="wb-hl-note__input wb-md-input__text !min-h-0 h-[5.7rem] max-[30rem]:h-[5.325rem]">
+            <Bone className="h-3.5 w-3/4" />
+          </div>
+          <div className="wb-hl-note__actions">
+            {/* On phones the buttons drop their words (wb-note-editor__label), so they're narrower */}
+            <Bone className="h-8 w-[5.5rem] max-[30rem]:w-10" />
+            <Bone className="h-6 w-28 max-[30rem]:w-14" />
+            <span className="flex-1" />
+            <Bone className="h-8 w-20 max-[30rem]:w-11" />
+          </div>
+        </div>
+        <div className="wb-feed">
+          {Array.from({ length: notes }, (_, i) => <SkeletonHomeNote key={i} seed={i} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// The home feed's Today panel (shell/TodayPanel): the greeting, the day count line, then a note
+export function SkeletonToday() {
+  return (
+    <div className="space-y-8 !font-sans">
+      <section>
+        <span className="flex h-8 items-center"><Bone rounded="rounded-lg" className="h-6 w-56" /></span>
+        <Bone className="mt-4 h-3 w-11/12" />
+      </section>
+      <div className="space-y-2.5">
+        <Bone className="h-3 w-full" />
+        <Bone className="h-3 w-3/5" />
+        <Bone className="mt-5 h-3 w-24" />
+      </div>
+    </div>
+  );
+}
+
 // Chat messages: a picture and a name, then lines of different lengths
 export function SkeletonMessages({ count = 7 }) {
   const shapes = [["w-3/5"], ["w-2/5", "w-1/4"], ["w-4/5", "w-3/5"], ["w-1/3"], ["w-2/3", "w-1/2", "w-1/3"], ["w-1/2"], ["w-3/4"]];
