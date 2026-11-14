@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_14_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_14_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -527,8 +527,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_14_000000) do
     t.bigint "updated_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "featured", default: false, null: false
+    t.datetime "published_at"
+    t.string "news_kind"
+    t.string "cover_image"
     t.index ["doc_section_id", "slug"], name: "index_doc_pages_on_doc_section_id_and_slug", unique: true
     t.index ["doc_section_id"], name: "index_doc_pages_on_doc_section_id"
+    t.index ["featured", "published_at"], name: "index_doc_pages_on_featured_and_published_at"
     t.index ["path_alias"], name: "index_doc_pages_on_path_alias", unique: true, where: "(path_alias IS NOT NULL)"
     t.index ["reviewed_by_id"], name: "index_doc_pages_on_reviewed_by_id"
     t.index ["updated_by_id"], name: "index_doc_pages_on_updated_by_id"
@@ -542,6 +547,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_14_000000) do
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "kind", default: "guides", null: false
     t.index ["slug"], name: "index_doc_sections_on_slug", unique: true
   end
 

@@ -6,9 +6,10 @@ import { Bone, SkeletonGroup } from "../ui/Skeleton";
 import { api } from "../groups/lib";
 import { useDocs } from "./DocsApp";
 import DocSearch from "./DocSearch";
+import { NewsBlock } from "./DocsNews";
 
-// The Docs home (/docs): a welcome, the big search box, and a card per section with its first
-// few pages. Site admins also see how many pages still need a read-through and New section.
+// The Docs home (/docs): a welcome, the big search box, the News block (featured posts and the
+// newest, DocsNews), and a card per section with its first few pages. Site admins also see how many pages still need a read-through and New section.
 export default function DocsHome() {
   const { sections, loaded, editor, to_review: toReview, reload } = useDocs();
   const navigate = useNavigate();
@@ -28,6 +29,8 @@ export default function DocsHome() {
         </div>
       </header>
 
+      <NewsBlock />
+
       {editor && toReview > 0 && (
         <p className="mb-6 flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
           <span className="size-2 rounded-full bg-amber-400" />
@@ -41,7 +44,7 @@ export default function DocsHome() {
         </SkeletonGroup>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {sections.map((section) => (
+          {sections.filter((s) => s.kind !== "news").map((section) => (
             <section key={section.id} className="flex flex-col rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
               <Link to={section.path} className="group flex items-start gap-3 !no-underline">
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-tint text-accent dark:bg-accent/25 dark:text-white">

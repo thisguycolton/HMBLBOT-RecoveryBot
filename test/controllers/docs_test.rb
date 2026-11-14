@@ -208,4 +208,56 @@ class DocsTest < ActionDispatch::IntegrationTest
     post "/api/docs/pages/#{@chat.id}/images", params: { image: text }
     assert_response :unprocessable_entity
   end
+
+  test "news: featured posts lead the News block, then the newest, and drafts stay hidden" do
+    news = DocSection.find_by(slug: "news") || DocSection.create!(title: "News", slug: "news", kind: "news", position: 0)
+    old = news.pages.create!(title: "Old post", body: "Hi", published_at: 3.days.ago)
+    pinned = news.pages.create!(title: "Pinned post", body: "Hi", published_at: 10.days.ago, featured: true, news_kind: "blog")
+    fresh = news.pages.create!(title: "Fresh post", body: "New today", news_kind: "update")
+    news.pages.create!(title: "Draft post", body: "Not yet", status: "draft", featured: true)
+    assert fresh.published_at.present?, "a published post gets today's date"
+
+    get "/api/docs", as: :json
+    feed = response.parsed_body["news"]
+    assert_equal ["Pinned post", "Fresh post", "Old post"], feed.map { |p| p["title"] }
+    assert_equal "Blog", feed.first["news_label"]
+    assert_equal "New today", feed.second["summary"], "the text stands in for a missing summary"
+    listed = response.parsed_body["sections"].find { |s| s["slug"] == "news" }
+    assert_equal "news", listed["kind"]
+    assert_equal ["Fresh post", "Old post", "Pinned post"], listed["pages"].map { |p| p["title"] }, "the News section lists newest first"
+
+    get "/api/docs/page", params: { section: "news", page: old.slug }, as: :json
+    assert_equal "Fresh post", response.parsed_body.dig("previous", "title")
+    assert_equal "Pinned post", response.parsed_body.dig("next", "title")
+    assert_equal "news", response.parsed_body.dig("page", "section", "kind")
+    pinned.destroy
+  end
+
+  test "editors write news posts: featured, kind, date and a cover picture from this site only" do
+    news = DocSection.find_by(slug: "news") || DocSection.create!(title: "News", slug: "news", kind: "news", position: 0)
+    sign_in @admin
+    post "/api/docs/pages", params: { page: { doc_section_id: news.id, title: "Big news" } }, as: :json
+    assert_response :created
+    page = DocPage.find(response.parsed_body.dig("page", "id"))
+    assert_equal "draft", page.status
+    assert_equal "blog", page.news_kind
+    assert_nil page.published_at
+    assert page.reviewed?, "posts don't wait for a read-through"
+
+    patch "/api/docs/pages/#{page.id}", params: { page: { status: "published", featured: true, news_kind: "news", cover_image: "/rails/active_storage/blobs/proxy/abc/cover.png" } }, as: :json
+    assert_response :success
+    body = response.parsed_body["page"]
+    assert body["featured"]
+    assert_equal "Site news", body["news_label"]
+    assert body["published_at"].present?
+
+    patch "/api/docs/pages/#{page.id}", params: { page: { cover_image: "https://tracker.example.com/pixel.png" } }, as: :json
+    assert_response :unprocessable_entity
+    patch "/api/docs/pages/#{page.id}", params: { page: { cover_image: "//tracker.example.com/pixel.png" } }, as: :json
+    assert_response :unprocessable_entity
+
+    sign_in @sam
+    patch "/api/docs/pages/#{page.id}", params: { page: { featured: false } }, as: :json
+    assert_response :forbidden
+  end
 end

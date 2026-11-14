@@ -11,7 +11,8 @@ class Api::DocsController < ApplicationController
 
   rescue_from ActiveRecord::RecordNotFound, with: -> { render json: { error: "Not found" }, status: :not_found }
 
-  # GET /api/docs: every section with the pages this person may read
+  # GET /api/docs: every section with the pages this person may read, and the News block (featured
+  # posts first, then the newest)
   def index
     pages = DocPage.readable_by(current_user).order(:position, :id).group_by(&:doc_section_id)
     editor = DocPage.editor?(current_user)
@@ -19,8 +20,8 @@ class Api::DocsController < ApplicationController
       list = pages[s.id] || []
       s.as_api_json(list) if list.any? || editor
     end
-    json = { sections: sections, editor: editor }
-    json[:to_review] = DocPage.where(reviewed_at: nil).count if editor
+    json = { sections: sections, editor: editor, news: DocPage.news_feed(current_user).map(&:as_news_json) }
+    json[:to_review] = DocPage.where(reviewed_at: nil).where.not(doc_section_id: DocSection.news.select(:id)).count if editor
     render json: json
   end
 
@@ -32,7 +33,11 @@ class Api::DocsController < ApplicationController
            else
              scope.joins(:section).find_by!(slug: params[:page], doc_sections: { slug: params[:section] })
            end
-    order = DocPage.readable_by(current_user).ordered.includes(:section).to_a
+    order = if page.news?
+              DocPage.newest_first(DocPage.readable_by(current_user).where(doc_section_id: page.doc_section_id).includes(:section).to_a)
+            else
+              DocPage.readable_by(current_user).ordered.includes(:section).to_a
+            end
     at = order.index(page)
     neighbor = ->(p) { p && { title: p.title, path: p.path, section: p.section.title } }
     render json: {
@@ -64,6 +69,14 @@ class Api::DocsController < ApplicationController
     page = section.pages.new(page_params.except(:reviewed))
     page.position = (section.pages.maximum(:position) || 0) + 1 if page_params[:position].blank?
     page.status = page_params[:status].presence || "draft"
+    if section.news?
+      page.news_kind ||= "blog"
+      # Posts are an editor's own words, not seeded draft text, so there's nothing to review
+      page.reviewed_at = Time.current
+      page.reviewed_by = current_user
+      page.icon ||= "newspaper"
+      page.body = "Write the post here. Type '/' for headings, lists and pictures.\n" if page.body.blank?
+    end
     page.body = "## What it's for\n\n\n## How to use it\n\n1. \n" if page.body.blank?
     if page.save_edit({}, current_user)
       render json: { page: page.as_api_json(editor: true) }, status: :created
@@ -73,7 +86,8 @@ class Api::DocsController < ApplicationController
   end
 
   # PATCH /api/docs/pages/:id { page: { title, summary, body, icon, slug, status, audience,
-  # position, doc_section_id, reviewed } }
+  # position, doc_section_id, reviewed, and for news posts featured, news_kind, cover_image,
+  # published_at } }
   def update
     attrs = page_params
     reviewed = attrs.delete(:reviewed)
@@ -159,7 +173,8 @@ class Api::DocsController < ApplicationController
   def set_page = @page = DocPage.find(params[:id])
 
   def page_params
-    params.require(:page).permit(:doc_section_id, :title, :summary, :body, :icon, :slug, :status, :audience, :position, :reviewed).to_h.symbolize_keys
+    params.require(:page).permit(:doc_section_id, :title, :summary, :body, :icon, :slug, :status, :audience, :position, :reviewed,
+                                 :featured, :news_kind, :cover_image, :published_at).to_h.symbolize_keys
   end
 
   def section_params = params.require(:section).permit(:title, :summary, :icon, :slug, :position)

@@ -73,6 +73,17 @@ Type `/` and pick **Video** (or drop a video file on the page). The **Add a vide
 - You can also write the block yourself: three backticks and the word `video` (` ```video `), the JSON, then three backticks. `src`, `poster` (a still shown before it plays) and a `chapters` file address all have to be on this site (starting with `/`).
 - Keys while the player is focused: Space or K plays and pauses, ← → skip 5 seconds, J L skip 10, `[` `]` go to the chapter before or after, M mutes, F goes full screen.
 
+## News posts
+
+Blog posts and site news live in the **News** section, and the newest show at the top of the Docs home for everyone.
+
+1. On the Docs home choose **Write a post** (or **New post** in News). It starts as a draft only site admins see.
+2. Write it like any page. The summary is the line people see on the card.
+3. In the post's settings pick what kind it is (**Blog**, **Site news** or **Update**), add a **Cover picture** if you like, and set **Status** to **Published**. The date is set to that day; you can change it.
+4. Switch on **Featured** to keep a post at the front of News, ahead of newer ones. Switch it off when it's old news.
+
+Cover pictures upload to RecoveryBot, so readers' browsers never reach another site for them.
+
 ## Screenshots
 
 The pictures in these pages live in the code, in `public/docs-images/`, and the Markdown points at them like `![Group chat](/docs-images/group-tools/chat.webp)`. You can keep them, delete them, or replace one by pasting your own picture (which uploads it to the page). Files whose name ends in `-phone` show phone-sized.
