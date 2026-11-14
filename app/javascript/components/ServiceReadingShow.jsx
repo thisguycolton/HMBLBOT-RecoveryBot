@@ -117,6 +117,8 @@ export default function ServiceReadingShow({ reading, notice, isAdmin, isAuthent
                 {copied ? "Copied" : "Copy for chat"}
               </button>
 
+              <TextSizeControl scale={textSize.scale} change={textSize.change} look="hero" />
+
               {isAdmin && (
                 <>
                   <a href={`/service_readings/${reading.id}/edit`} className={ghostButton} aria-label="Edit this reading" title="Edit this reading">
@@ -151,9 +153,6 @@ export default function ServiceReadingShow({ reading, notice, isAdmin, isAuthent
 
           {/* The reading */}
           <article className="min-w-0">
-            <div className="mb-6 flex justify-end">
-              <TextSizeControl scale={textSize.scale} change={textSize.change} />
-            </div>
             <div
               style={textSize.style}
               className="reading-prose min-w-0 break-words [overflow-wrap:anywhere] [&_img]:h-auto [&_img]:max-w-full [&_ol]:mb-5 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:mb-5 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-2 [&_pre]:whitespace-pre-wrap [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto"

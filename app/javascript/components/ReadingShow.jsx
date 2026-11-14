@@ -358,6 +358,8 @@ const topicHtml = renderRichContent(topicSource);
                 {copied ? "Copied" : "Copy for chat"}
               </button>
 
+              <TextSizeControl scale={textSize.scale} change={textSize.change} look="hero" />
+
               <ShareButton url={`/readings/${reading.id}`} title={[reading.title || reading.meetingName, group?.name].filter(Boolean).join(" · ")}
                 text={reading.title || reading.meetingName} image={reading.published ? `/share_cards/reading/${reading.id}.png` : null}
                 panelTitle="Share this reading" className={`${ghostButton} !bg-transparent`} />
@@ -391,7 +393,8 @@ const topicHtml = renderRichContent(topicSource);
               <h2 className="min-w-0 break-words text-3xl font-bold uppercase tracking-wide md:text-4xl ttSans">
                 {reading.title}
               </h2>
-              <TextSizeControl scale={textSize.scale} change={textSize.change} className="ml-auto" />
+              {/* Shared on screen there are no hero buttons, so it stays here */}
+              {share && <TextSizeControl scale={textSize.scale} change={textSize.change} className="ml-auto" />}
             </div>
 
             <div className="reading-prose wrap-normal" style={textSize.style} dangerouslySetInnerHTML={{ __html: contentHtml }} />
