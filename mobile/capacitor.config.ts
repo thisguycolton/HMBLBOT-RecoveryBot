@@ -29,6 +29,20 @@ const config: CapacitorConfig = {
   android: {
     appendUserAgent: `RecoveryBotApp/${VERSION} (Android)`,
     backgroundColor: "#f5f5f4",
+    // Every plugin but @capacitor/status-bar, which only the iPhone app uses: on Android its
+    // Window.setStatusBarColor calls are deprecated (Play warns) and do nothing from Android 15
+    // on. AppBarsPlugin colors the bars instead. Add new plugins here too, or Android leaves
+    // them out.
+    includePlugins: [
+      "@capacitor-firebase/messaging",
+      "@capacitor/app",
+      "@capacitor/browser",
+      "@capacitor/filesystem",
+      "@capacitor/haptics",
+      "@capacitor/keyboard",
+      "@capacitor/share",
+      "@capacitor/splash-screen",
+    ],
   },
   plugins: {
     // Up until the site's first page is there (native_app.js hides it, then shows its own

@@ -14,8 +14,8 @@ android {
         applicationId "com.hmblbot.recoverybot"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -36,8 +36,12 @@ android {
     buildTypes {
         release {
             if (keystoreFile.exists()) signingConfig signingConfigs.upload
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // R8 shrinks and obfuscates the code (Play warns without it). Capacitor, its plugins
+            // and Firebase bring their own keep rules; the app's are in proguard-rules.pro. The
+            // mapping file goes inside the .aab, so Play's crash reports still read normally.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
