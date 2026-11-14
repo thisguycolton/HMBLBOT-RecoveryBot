@@ -3,6 +3,10 @@
 //   > [!TIP] ...      a callout (TIP, NOTE, WARNING, PRIVACY), the way GitHub writes them
 //   - [ ] / - [x]     a checklist
 //   ## Heading        gets an id from its words, so #links and the side list can find it
+//   ```video          a video with chapters: a JSON object with "src" and, optionally, "poster",
+//   { "src": … }      "title" and "chapters" (the list itself, or the address of a .json file).
+//   ```               The reader turns it into ui/ChapterVideo (DocPageView); elsewhere it's a
+//                     plain <video> with controls.
 import MarkdownIt from "markdown-it";
 
 export const CALLOUTS = {
@@ -124,6 +128,20 @@ function lineIds(md) {
   });
 }
 
+// A ```video block's JSON -> { src, poster, title, chapters } (or { error })
+// Only files on this site: a video from somewhere else would tell that site who's reading
+// (and need a line in the privacy policy)
+const SAFE_URL = /^\/(?!\/)\S*$/;
+export function readVideo(text) {
+  let data;
+  try { data = JSON.parse(text); } catch { return { error: "This video block isn't valid JSON." }; }
+  if (!data || typeof data !== "object" || Array.isArray(data)) return { error: 'A video block is a JSON object with a "src".' };
+  if (typeof data.src === "string" && data.src.trim() && !SAFE_URL.test(data.src.trim())) return { error: "Videos have to be files on this site (an address starting with /)." };
+  const url = (v) => (typeof v === "string" && SAFE_URL.test(v.trim()) ? v.trim() : null);
+  const chapters = typeof data.chapters === "string" ? url(data.chapters) || data.chapters : data.chapters;
+  return { src: url(data.src), poster: url(data.poster), title: typeof data.title === "string" ? data.title : null, chapters: chapters || [] };
+}
+
 // { html, headings: [{ id, text, level }] }
 export function renderDoc(source) {
   const headings = [];
@@ -143,6 +161,15 @@ export function renderDoc(source) {
     const t = tokens[idx];
     const alt = md.utils.escapeHtml(t.content || "");
     return `<img src="${md.utils.escapeHtml(t.attrGet("src") || "")}" alt="${alt}" loading="lazy" class="doc-image">`;
+  };
+  const defaultFence = md.renderer.rules.fence;
+  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+    const t = tokens[idx];
+    if (t.info.trim().toLowerCase() !== "video") return defaultFence(tokens, idx, options, env, self);
+    const config = readVideo(t.content);
+    if (!config.src) return `<p class="doc-video-problem">${md.utils.escapeHtml(config.error || 'This video needs a "src".')}</p>`;
+    const esc = md.utils.escapeHtml;
+    return `<div class="doc-video" data-video="${esc(JSON.stringify(config))}"><video src="${esc(config.src)}"${config.poster ? ` poster="${esc(config.poster)}"` : ""} controls preload="none" playsinline></video></div>`;
   };
   const html = md.render(source || "");
   return { html, headings };

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useBlocker, useNavigate, useParams } from "react-router-dom";
 import { BubbleMenu, EditorContent, useEditor } from "@tiptap/react";
 import {
   ArrowLeft, Bold, Check, Code, Eye, FileCode2, History, ImagePlus, Italic, Link2, Loader2, PenLine, RotateCcw, SlidersHorizontal, Strikethrough, Trash2, X,
@@ -15,9 +15,18 @@ import { NotFound } from "./DocsSectionPage";
 import { docExtensions, editorMarkdown } from "./editorExtensions";
 import SlashMenu, { matchCommands } from "./SlashMenu";
 import { renderDoc } from "./docMarkdown";
+import DocVideoUpload from "./DocVideoUpload";
 import { NewsCover } from "./DocsNews";
 
 const SAVE_AFTER = 1200; // ms after the last keystroke
+// A ```video block's JSON the way people write it by hand: one chapter per line
+const videoBlock = ({ chapters, ...rest }) => {
+  const lines = Object.entries(rest).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
+  if (chapters?.length) lines.push(`  "chapters": [\n${chapters.map((c) => `    { "start": ${JSON.stringify(c.start)}, "title": ${JSON.stringify(c.title)} }`).join(",\n")}\n  ]`);
+  return `{\n${lines.join(",\n")}\n}`;
+};
+const isVideo = (f) => /^video\//.test(f.type) || /\.(mp4|webm|mov|m4v)$/i.test(f.name);
+
 const when = (iso) => new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 // The docs editor (/docs/:section/:page/edit, site admins): a title, a summary and one big
@@ -70,6 +79,10 @@ function Editor({ initial }) {
   const fileInput = useRef(null);
   const slashRef = useRef(null);
   slashRef.current = slash;
+  const [video, setVideo] = useState(null); // the Add a video window: { file, pos }
+  const [videoBusy, setVideoBusy] = useState(false); // a video is uploading
+  const videoBusyRef = useRef(false);
+  videoBusyRef.current = videoBusy;
 
   const flush = useCallback(() => {
     clearTimeout(timer.current);
@@ -97,6 +110,7 @@ function Editor({ initial }) {
   // Leaving with words not saved yet: save them on the way out, and ask first
   useEffect(() => {
     const warn = (e) => {
+      if (videoBusyRef.current) { e.preventDefault(); e.returnValue = ""; return; }
       if (!Object.keys(pending.current).length) return;
       flush();
       e.preventDefault();
@@ -105,6 +119,23 @@ function Editor({ initial }) {
     window.addEventListener("beforeunload", warn);
     return () => { window.removeEventListener("beforeunload", warn); flush(); };
   }, [flush]);
+
+  // A video still uploading: moving to another page in the app asks first (and leaving cancels it)
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => videoBusy && currentLocation.pathname !== nextLocation.pathname);
+
+  const openVideo = useCallback((file = null) => {
+    const ed = editorRef.current;
+    setVideo({ file, pos: ed ? ed.state.selection.from : null });
+  }, []);
+  const addVideo = (block) => {
+    const ed = editorRef.current;
+    const at = video?.pos;
+    setVideo(null);
+    if (!ed) return;
+    const node = { type: "codeBlock", attrs: { language: "video" }, content: [{ type: "text", text: videoBlock(block) }] };
+    const chain = ed.chain().focus();
+    (at != null && at <= ed.state.doc.content.size ? chain.insertContentAt(at, node) : chain.insertContent(node)).run();
+  };
 
   const upload = useCallback((file, editor) => {
     if (!file?.type?.startsWith("image/")) return;
@@ -128,13 +159,19 @@ function Editor({ initial }) {
         return menu.current?.onKey(event) || false;
       },
       handlePaste: (view, event) => {
-        const file = [...(event.clipboardData?.files || [])].find((f) => f.type.startsWith("image/"));
+        const files = [...(event.clipboardData?.files || [])];
+        const clip = files.find(isVideo);
+        if (clip) { openVideo(clip); return true; }
+        const file = files.find((f) => f.type.startsWith("image/"));
         if (!file) return false;
         upload(file, editorRef.current);
         return true;
       },
       handleDrop: (view, event) => {
-        const file = [...(event.dataTransfer?.files || [])].find((f) => f.type.startsWith("image/"));
+        const files = [...(event.dataTransfer?.files || [])];
+        const clip = files.find(isVideo);
+        if (clip) { event.preventDefault(); openVideo(clip); return true; }
+        const file = files.find((f) => f.type.startsWith("image/"));
         if (!file) return false;
         event.preventDefault();
         upload(file, editorRef.current);
@@ -169,6 +206,7 @@ function Editor({ initial }) {
     setSlash(null);
     const chain = editor.chain().focus().deleteRange({ from: s.from, to: s.to });
     if (command.picture) { chain.run(); fileInput.current?.click(); return; }
+    if (command.video) { chain.run(); openVideo(); return; }
     command.run(chain).run();
   }, [editor]);
 
@@ -297,6 +335,11 @@ function Editor({ initial }) {
         )}
 
         <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => { upload(e.target.files?.[0], editor); e.target.value = ""; }} />
+
+        {video && (
+          <DocVideoUpload pageId={initial.id} initialFile={video.file} onBusy={setVideoBusy} onDone={addVideo} onClose={() => setVideo(null)} />
+        )}
+        {blocker.state === "blocked" && <LeaveWhileUploading onStay={() => blocker.reset()} onLeave={() => blocker.proceed()} />}
 
       </div>
       <aside className="hidden w-80 shrink-0 border-l border-neutral-200 dark:border-neutral-800 xl:block">
@@ -516,6 +559,24 @@ function Editor({ initial }) {
           {/* renderDoc has raw HTML off */}
           <div className="doc-body prose prose-slate max-w-none overflow-y-auto px-6 py-5 dark:prose-invert" dangerouslySetInnerHTML={{ __html: html }} /> {/* eslint-disable-line react/no-danger */}
         </div>
+    </div>
+  );
+}
+
+// Trying to leave the editor while a video is still uploading
+function LeaveWhileUploading({ onStay, onLeave }) {
+  return (
+    <div className="fixed inset-0 z-[80] grid place-items-center p-4" role="alertdialog" aria-modal="true" aria-label="A video is still uploading">
+      <div className="absolute inset-0 bg-black/40" />
+      <div className="relative w-full max-w-sm rounded-[24px] bg-white p-5 shadow-2xl dark:bg-neutral-900">
+        <h2 className="!m-0 text-lg font-semibold text-slate-900 dark:text-white">A video is still uploading</h2>
+        <p className="mt-1.5 text-sm text-slate-600 dark:text-neutral-400">If you leave now, the upload stops and the video won't be added.</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onLeave} className="rounded-full !bg-transparent px-4 py-2 text-sm font-semibold !text-red-600 hover:!bg-red-50 dark:!text-red-400 dark:hover:!bg-red-500/10">Leave anyway</button>
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
+          <button type="button" autoFocus onClick={onStay} className="rounded-full !bg-accent px-4 py-2 text-sm font-semibold !text-white hover:opacity-90">Stay</button>
+        </div>
+      </div>
     </div>
   );
 }

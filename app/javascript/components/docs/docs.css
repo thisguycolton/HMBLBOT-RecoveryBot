@@ -63,6 +63,12 @@
 .doc-editor .ProseMirror img[src*="-phone."] { max-width: min(100%, 20rem); border-radius: 1.75rem; }
 .doc-body [id] { scroll-margin-top: 6rem; }
 
+/* ```video blocks (ui/ChapterVideo once the reader swaps it in; a plain <video> in History) */
+.doc-body .doc-video { margin: 1.5rem 0; }
+.doc-body .doc-video > video { display: block; width: 100%; border-radius: 1rem; background: black; }
+.doc-body .doc-video-problem { padding: 0.75rem 1rem; border-radius: 1rem; background: rgb(239 68 68 / 0.1); color: rgb(185 28 28); font-size: 0.9rem; }
+.dark .doc-body .doc-video-problem { color: rgb(252 165 165); }
+
 /* A line someone linked to (#l-…) or just shared: it lights up, then fades back */
 .doc-body .doc-flash {
   border-radius: 0.4rem;
