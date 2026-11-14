@@ -2,12 +2,16 @@
 # design. Given to a member or an email address: an address with an account gets it at once
 # (and a notification); any other gets an email with a link to claim it (ChipsController#claim),
 # and it's theirs when they open it signed in, or confirm an account made with that address.
+# A site admin can also give RecoveryBot's own chip (Site Admin > Sobriety chips, ChipDesign.
+# for_site) from no group: those have no group and say they're from RecoveryBot.
 class ChipAward < ApplicationRecord
+  SITE_TITLE = "RecoveryBot"
+
   moderates_language :note
   ROUND_KEYS = ChipDesign::ROUND_KEYS
   LABELS = { "24h" => "24 hours", "30d" => "30 days", "60d" => "60 days", "90d" => "90 days", "6m" => "6 months", "9m" => "9 months", "18m" => "18 months" }.freeze
 
-  belongs_to :group
+  belongs_to :group, optional: true
   belongs_to :given_by, class_name: "User", optional: true
   belongs_to :user, optional: true
   # Given in a Special Edition during its run: its numbered chip comes with it
@@ -24,7 +28,7 @@ class ChipAward < ApplicationRecord
   before_validation { self.claim_token ||= SecureRandom.urlsafe_base64(24) }
   before_validation { self.years = nil unless milestone_key == "year" }
   # Minted in the group's design as it is when given, and never changes after
-  before_create { self.design ||= chip_edition ? chip_edition.chip_design : ChipDesign.for_group(group) }
+  before_create { self.design ||= chip_edition ? chip_edition.chip_design : group ? ChipDesign.for_group(group) : ChipDesign.for_site }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP, message: "doesn't look like an email address" }
   validates :milestone_key, inclusion: { in: ROUND_KEYS }
   validates :years, numericality: { only_integer: true, in: 1..99 }, if: -> { milestone_key == "year" }
@@ -35,17 +39,21 @@ class ChipAward < ApplicationRecord
   def label = self.class.label_for(milestone_key, years)
   def slot = Chips.round_slot(milestone_key, years)
   def claimed? = claimed_at.present?
+  # RecoveryBot's own chip, given by a site admin
+  def site? = group_id.nil?
+  # Who it's from: the group, or RecoveryBot
+  def from_title = group&.title || SITE_TITLE
 
   # Theirs now: a notification says who gave it
   def claim!(account)
     update!(user: account, claimed_at: Time.current)
     edition_chip&.update!(user: account, claimed_at: claimed_at)
-    Notification.deliver(account, kind: "chip.given", title: "#{given_by&.display_name || group.title} gave you a #{label} chip",
-                                  body: note.presence || "From #{group.title}", url: "/recovery?chip=award:#{id}")
+    Notification.deliver(account, kind: "chip.given", title: "#{given_by&.display_name || from_title} gave you a #{label} chip",
+                                  body: note.presence || "From #{from_title}", url: "/recovery?chip=award:#{id}")
   end
 
   # What the popup says (ChipArrival), as the notification does
-  def arrival_title = "#{given_by&.display_name || group.title} gave you a #{label} chip"
+  def arrival_title = "#{given_by&.display_name || from_title} gave you a #{label} chip"
 
   # Seen in the popup: it doesn't show again, and its notification is read
   def celebrated!
@@ -58,19 +66,19 @@ class ChipAward < ApplicationRecord
     unclaimed.where(email: user.email.to_s.downcase).find_each { |a| a.claim!(user) }
   end
 
-  def logo_url = group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(group.logo, only_path: true) : nil
+  def logo_url = group&.logo&.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(group.logo, only_path: true) : nil
 
   def as_chip_json
     { id: "award:#{id}", slot: slot, shape: "round", kind: "round", label: label, on: on.iso8601, source: "given",
-      milestone: { key: milestone_key, years: years, label: label }.compact, design: design || ChipDesign.for_group(group),
-      group: { title: group.title, logo_url: logo_url }, given_by: given_by&.display_name, note: note.presence,
+      milestone: { key: milestone_key, years: years, label: label }.compact, design: design || (group ? ChipDesign.for_group(group) : ChipDesign.for_site),
+      group: { title: from_title, logo_url: logo_url }, site: site?, given_by: given_by&.display_name, note: note.presence,
       edition: edition_chip && chip_edition&.edition_json(edition_chip.serial) }
   end
 
   # For the giver's list
   def as_api_json
     { id: id, label: label, on: on.iso8601, note: note, email: user ? nil : email, to: user&.display_name || email,
-      claimed: claimed?, group_slug: group.slug, group_title: group.title, given_by: given_by&.display_name, created_at: created_at.iso8601,
+      claimed: claimed?, group_slug: group&.slug, group_title: from_title, site: site?, given_by: given_by&.display_name, created_at: created_at.iso8601,
       edition: chip_edition && edition_chip && chip_edition.edition_json(edition_chip.serial) }
   end
 

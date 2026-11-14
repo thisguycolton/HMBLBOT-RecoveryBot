@@ -1,18 +1,21 @@
 # Giving chips (/recovery/give): a group's hosts, host coordinators, record keepers and admins
 # (Group#can_host?) give a round chip in the group's design to a member or to an email address
 # (ChipAward). An address with an account gets it straight away; any other gets an email with
-# a link to claim it (ChipMailer, ChipsController#claim).
+# a link to claim it (ChipMailer, ChipsController#claim). Site admins (User#suite_admin?) also
+# get "Admin Chips": RecoveryBot's own chip as designed in Site Admin > Sobriety chips, to anyone.
 class Api::ChipAwardsController < ApplicationController
   include GroupScoped
   # Emails to addresses without an account, per giver per day, so this can't be used to spam
   EMAILS_PER_DAY = 25
+  # The "group" Admin Chips are given from (group slugs are only a-z, 0-9 and dashes)
+  ADMIN_SLUG = "_admin"
 
-  # GET /api/chip_awards -> the groups they can give for, and chips given
-  # there (by them, or by anyone for a group they run)
+  # GET /api/chip_awards -> the groups they can give for (then Admin Chips, for site admins),
+  # and chips given there (by them, or by anyone for a group they run; every Admin Chip for admins)
   def index
     groups = giving_groups
     render json: {
-      groups: groups.map do |g|
+      groups: groups.map { |g|
         { slug: g.slug, title: g.title, logo_url: g.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(g.logo, only_path: true) : nil,
           design: ChipDesign.for_group(g),
           # Special Editions running now that hosts can give
@@ -20,7 +23,7 @@ class Api::ChipAwardsController < ApplicationController
             { id: e.id, name: e.name, design: e.chip_design, milestones: e.milestones, window_label: e.window_label,
               left: e.limited? ? e.limit - e.issued : nil, numbered: e.numbered, limit: e.limit }
           end }
-      end,
+      } + admin_choice,
       given: given_scope(groups).includes(:group, :user, :given_by).order(created_at: :desc).limit(100).map(&:as_api_json),
     }
   end
@@ -29,29 +32,34 @@ class Api::ChipAwardsController < ApplicationController
   # To field, people in the group whose name or email matches (names only, never the addresses),
   # and, once it's a whole email address, whether someone has an account with it. Accounts outside
   # the group are only found by the exact address, so nobody can fish for who's signed up.
+  # Admin Chips go to anyone, so admins find every account by name (they can already see them
+  # all in Site Admin > Members), still showing names only.
   def lookup
-    group = giving_groups.find { |g| g.slug == params[:group_slug].to_s }
-    return render(json: { error: "You can only give chips for a group you host for." }, status: :forbidden) unless group
+    group = admin_giving? ? nil : giving_groups.find { |g| g.slug == params[:group_slug].to_s }
+    return render(json: { error: "You can only give chips for a group you host for." }, status: :forbidden) unless group || admin_giving?
 
     q = params[:q].to_s.strip.downcase.first(120)
-    members = q.length < 2 ? [] : group.members.includes(avatar_attachment: :blob)
+    people = group ? group.members : User.where.not(confirmed_at: nil)
+    members = q.length < 2 ? [] : people.includes(avatar_attachment: :blob)
       .where("lower(users.name) LIKE :q OR lower(users.email) LIKE :q", q: "%#{User.sanitize_sql_like(q)}%")
       .order("lower(users.name)").limit(8).map { |u| { id: u.id, name: u.display_name, avatar_url: u.avatar_url } }
     account = (User.where.not(confirmed_at: nil).find_by("lower(email) = ?", q) if q.match?(URI::MailTo::EMAIL_REGEXP))
-    render json: { members: members, account: account && { name: account.display_name, avatar_url: account.avatar_url, member: group.members.exists?(account.id) } }
+    render json: { members: members, account: account && { name: account.display_name, avatar_url: account.avatar_url, member: group ? group.members.exists?(account.id) : true } }
   end
 
   # POST /api/chip_awards { group_slug, user_id | email, milestone_key, years, on, note, chip_edition_id }
+  # (group_slug "_admin": an Admin Chip, from RecoveryBot)
   def create
-    group = giving_groups.find { |g| g.slug == params[:group_slug].to_s }
-    return render(json: { error: "You can only give chips for a group you host for." }, status: :forbidden) unless group
+    group = admin_giving? ? nil : giving_groups.find { |g| g.slug == params[:group_slug].to_s }
+    return render(json: { error: "You can only give chips for a group you host for." }, status: :forbidden) unless group || admin_giving?
 
-    member = group.members.find_by(id: params[:user_id]) if params[:user_id].present?
-    return render(json: { error: "Pick someone in the group, or enter an email address." }, status: :unprocessable_entity) if params[:user_id].present? && !member
+    people = group ? group.members : User.where.not(confirmed_at: nil)
+    member = people.find_by(id: params[:user_id]) if params[:user_id].present?
+    return render(json: { error: "Pick someone from the list, or enter an email address." }, status: :unprocessable_entity) if params[:user_id].present? && !member
 
-    award = group.chip_awards.new(given_by: current_user, email: member&.email || params[:email].to_s, milestone_key: params[:milestone_key].to_s,
+    award = ChipAward.new(group: group, given_by: current_user, email: member&.email || params[:email].to_s, milestone_key: params[:milestone_key].to_s,
                                   years: params[:years].presence&.to_i, on: StepInventory.parse_day(params[:on]) || Date.current, note: params[:note].to_s.strip)
-    if params[:chip_edition_id].present?
+    if params[:chip_edition_id].present? && group
       award.chip_edition = group.chip_editions.running_on(Date.current).find_by(id: params[:chip_edition_id], kind: "milestone")
       return render(json: { error: "That Special Edition isn't running now." }, status: :unprocessable_entity) unless award.chip_edition&.givable?
       if award.chip_edition.milestones.any? && !award.chip_edition.milestones.include?(award.milestone_key)
@@ -91,10 +99,21 @@ class Api::ChipAwardsController < ApplicationController
 
   private
 
+  # Giving an Admin Chip: only site admins
+  def admin_giving? = params[:group_slug].to_s == ADMIN_SLUG && current_user.suite_admin?
+
+  # The Admin Chips choice on the form, for site admins
+  def admin_choice
+    return [] unless current_user.suite_admin?
+
+    [{ slug: ADMIN_SLUG, title: "Admin Chips", admin: true, logo_url: nil, design: ChipDesign.for_site, editions: [] }]
+  end
+
   def giving_groups = current_user.groups.includes(logo_attachment: :blob).order(:title).select { |g| g.can_host?(current_user) }
 
   def given_scope(groups)
     managed = groups.select { |g| g.manageable_by?(current_user) }.map(&:id)
-    ChipAward.where(group_id: groups.map(&:id)).where("given_by_id = ? OR group_id IN (?)", current_user.id, managed.presence || [0])
+    scope = ChipAward.where(group_id: groups.map(&:id)).where("given_by_id = ? OR group_id IN (?)", current_user.id, managed.presence || [0])
+    current_user.suite_admin? ? scope.or(ChipAward.where(group_id: nil)) : scope
   end
 end

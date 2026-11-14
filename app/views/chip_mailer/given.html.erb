@@ -1,4 +1,4 @@
-<p><strong><%= @award.group.title %></strong> sent you a <strong><%= @award.label %></strong> chip<% if @from %>, from <%= @from %><% end %>.</p>
+<p><strong><%= @award.from_title %></strong> sent you a <strong><%= @award.label %></strong> chip<% if @from %>, from <%= @from %><% end %>.</p>
 <% if @award.note.present? %>
   <blockquote style="margin: 1em 0; padding-left: 1em; border-left: 3px solid #d6d3d1; color: #44403c;"><%= simple_format(@award.note) %></blockquote>
 <% end %>

@@ -66,16 +66,35 @@ export default function MilestoneLooks({ kind, part, base, design, onChange, chi
     setNewYear("");
   };
 
-  // Its color: round chips keep the usual milestones' in colors, one year's in its look
+  // Its color: round chips keep the usual milestones' in colors, one year's in its look. A color
+  // in the usual milestone's look (saved by older designers) wins when the chip is drawn
+  // (Chip.jsx partAt), so it's shown here, and changing the color clears it.
   const colorOf = (m) => {
     const own = looks[lookKey(m)]?.color;
-    if (kind === "meeting") return own || part.color;
-    if (oneYear(lookKey(m))) return own || part.colors.year;
-    return part.colors[m.key];
+    if (kind === "meeting") return own || part.color || "#0f766e";
+    if (oneYear(lookKey(m))) return own || part.colors?.year || base.colors?.year;
+    return own || part.colors?.[m.key] || base.colors?.[m.key] || "#0f766e";
   };
   const setColor = (m, v) => {
-    if (kind === "round" && !oneYear(lookKey(m))) onChange({ colors: { ...part.colors, [m.key]: v } });
-    else setLook(lookKey(m), { color: v });
+    const key = lookKey(m);
+    if (kind === "round" && !oneYear(key)) {
+      const patch = { colors: { ...part.colors, [m.key]: v } };
+      if (looks[key]?.color) {
+        const { color: _old, ...rest } = looks[key];
+        const all = { ...looks, [key]: rest };
+        if (!Object.keys(rest).length) delete all[key];
+        patch.milestones = all;
+      }
+      onChange(patch);
+    } else setLook(key, { color: v });
+  };
+  // Whether an illustrated chip at this milestone is colored plastic: its own look, the
+  // template's look for it, then the design's
+  const bodyOf = (m) => sceneAt(m)?.body || "metal";
+  // ...and without its own look: what "Same" means
+  const usualBody = (m) => {
+    const keys = milestoneKeys(kind === "meeting" ? null : m, kind === "meeting" ? m.count : undefined);
+    return keys.reduce((b, k) => scene?.template_milestones?.[k]?.body || b, scene?.body || "metal");
   };
   const changed = (m) => Object.keys(looks[lookKey(m)] || {}).length > 0 || oneYear(lookKey(m))
     || (!scene && kind === "round" && part.colors[m.key] !== base.colors?.[m.key]);
@@ -115,13 +134,13 @@ export default function MilestoneLooks({ kind, part, base, design, onChange, chi
                 {scene ? (
                   <>
                     {(
-                      <select aria-label={`${m.label}: chip`} className={`${small} !w-28`} value={look.body || SAME} onChange={(e) => setLook(key, { body: e.target.value })}>
-                        <option value={SAME}>Chip</option>
+                      <select aria-label={`${m.label}: chip`} className={`${small} !w-32`} value={look.body || SAME} onChange={(e) => setLook(key, { body: e.target.value })}>
+                        <option value={SAME}>Same ({usualBody(m) === "colored" ? "Colored" : "Metal"})</option>
                         <option value="metal">Metal</option>
                         <option value="colored">Colored</option>
                       </select>
                     )}
-                    {!template && (look.body || scene.body) === "colored" && (
+                    {!template && bodyOf(m) === "colored" && (
                       <input type="color" aria-label={`${m.label}: color`} value={colorOf(m)} onChange={(e) => setColor(m, e.target.value)}
                         className="size-8 shrink-0 cursor-pointer rounded-md border-0 !bg-transparent p-0" />
                     )}

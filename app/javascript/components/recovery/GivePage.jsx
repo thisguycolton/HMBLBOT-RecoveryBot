@@ -20,7 +20,9 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // group (Api::ChipAwardsController). A round chip in the group's design, to a member or to an
 // email address: someone with an account gets it at once with a notification, anyone else an
 // email with a link to claim it. Below, the chips given so far, which can be taken back. Each
-// group's folder in the sidebar links here with ?group=, the group it gives for.
+// group's folder in the sidebar links here with ?group=, the group it gives for. Site admins also
+// get "Admin Chips" in From (group.admin): RecoveryBot's own chip, as designed in Site Admin >
+// Sobriety chips, to anyone with an account or any email address.
 export default function GivePage() {
   const [data, setData] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -40,6 +42,7 @@ export default function GivePage() {
   const group = data.groups.find((g) => g.slug === slug) || data.groups[0];
   const set = (patch) => { setForm((f) => ({ ...f, ...patch })); setDone(null); };
   const label = form.milestone_key === "year" ? `${form.years} year${Number(form.years) === 1 ? "" : "s"}` : MILESTONES.find(([k]) => k === form.milestone_key)[1];
+  const from = group.admin ? "RecoveryBot" : group.title;
   const editions = group.editions || [];
   const edition = editions.find((x) => String(x.id) === String(form.edition_id));
   const milestones = edition?.milestones?.length ? MILESTONES.filter(([k]) => edition.milestones.includes(k)) : MILESTONES;
@@ -48,7 +51,7 @@ export default function GivePage() {
     set({ edition_id: id, ...(e?.milestones?.length && !e.milestones.includes(form.milestone_key) ? { milestone_key: e.milestones[0] } : {}) });
   };
   const preview = { id: "preview", shape: "round", kind: "round", label, on: form.on, design: edition ? edition.design : group.design,
-    edition: edition && { name: edition.name, mark: edition.name.toUpperCase() }, group: { title: group.title, logo_url: group.logo_url },
+    edition: edition && { name: edition.name, mark: edition.name.toUpperCase() }, group: { title: from, logo_url: group.logo_url },
     milestone: { key: form.milestone_key, years: Number(form.years) || 1, label } };
 
   const give = async (e) => {
@@ -78,7 +81,9 @@ export default function GivePage() {
       <header>
         <Link to="/" className="mb-2 inline-flex items-center gap-1 text-sm !text-slate-500 hover:!text-accent"><ChevronLeft className="size-4" /> Chips</Link>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Give a chip</h1>
-        <p className="mt-1 text-slate-600 dark:text-neutral-400">For someone celebrating a milestone with your group. It comes in your group's design, alongside the plain one they earn themselves.</p>
+        <p className="mt-1 text-slate-600 dark:text-neutral-400">{group.admin
+          ? "RecoveryBot's own chip, in the design from Site Admin > Sobriety chips, for anyone celebrating a milestone."
+          : "For someone celebrating a milestone with your group. It comes in your group's design, alongside the plain one they earn themselves."}</p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -90,6 +95,7 @@ export default function GivePage() {
                 <select id="g-group" className={selectClass} value={group.slug} onChange={(e) => { setSlug(e.target.value); set({ user_id: "", to: "" }); }}>
                   {data.groups.map((g) => <option key={g.slug} value={g.slug}>{g.title}</option>)}
                 </select>
+                {group.admin && <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Only site admins see Admin Chips. They come from RecoveryBot, not a group.</p>}
               </div>
             )}
             <ToField group={group} form={form} set={set} />
@@ -97,7 +103,7 @@ export default function GivePage() {
               <div>
                 <label htmlFor="g-edition" className={labelClass}>Edition</label>
                 <select id="g-edition" className={selectClass} value={form.edition_id} onChange={(e) => pickEdition(e.target.value)}>
-                  <option value="">{group.title}'s chip</option>
+                  <option value="">{from}'s chip</option>
                   {editions.map((x) => <option key={x.id} value={x.id}>{x.name} (Special Edition{x.left != null ? `, ${x.left} left` : ""})</option>)}
                 </select>
                 {edition && <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Running {edition.window_label}.{edition.numbered && " Each one is numbered in the order it's given or claimed."}</p>}
@@ -179,12 +185,14 @@ function ToField({ group, form, set }) {
   const choose = (m) => { set({ user_id: m.id, to: m.name }); setOpen(false); };
   const list = open && !form.user_id ? found.members : [];
   const email = EMAIL.test(q);
+  // Admin Chips go to anyone; a group's to its members, or an email address
+  const where = group.admin ? "Has an account" : `In ${group.title}`;
   return (
     <div>
       <label htmlFor="g-to" className={labelClass}>To</label>
       <div className="relative">
         <input id="g-to" required autoComplete="off" role="combobox" aria-expanded={list.length > 0} aria-controls={listId} aria-autocomplete="list"
-          className={inputClass} placeholder={`A name in ${group.title}, or an email address`} value={form.to}
+          className={inputClass} placeholder={group.admin ? "Anyone's name, or an email address" : `A name in ${group.title}, or an email address`} value={form.to}
           onChange={(e) => { set({ to: e.target.value, user_id: "" }); setOpen(true); setActive(0); }}
           onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
           onKeyDown={(e) => {
@@ -206,10 +214,11 @@ function ToField({ group, form, set }) {
         )}
       </div>
       <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400">
-        {form.user_id ? <><UserCheck className="size-3.5 text-emerald-600" /> In {group.title}. It goes straight to them, with a notification.</>
+        {form.user_id ? <><UserCheck className="size-3.5 text-emerald-600" /> {where}. It goes straight to them, with a notification.</>
           : email && found.account ? <><UserCheck className="size-3.5 text-emerald-600" /> {found.account.name} has an account with this address. It goes straight to them, with a notification.</>
             : email ? <><Mail className="size-3.5" /> No account with this address yet. We'll email them a link to make one and claim it.</>
-              : "Start typing a name to find someone in the group, or enter an email address."}
+              : group.admin ? "Start typing a name to find anyone with an account, or enter an email address."
+                : "Start typing a name to find someone in the group, or enter an email address."}
       </p>
     </div>
   );
