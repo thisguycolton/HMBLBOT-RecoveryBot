@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 
+import androidx.activity.EdgeToEdge;
+
 import com.getcapacitor.BridgeActivity;
 
 // The web view that shows recoverybot.hmblbot.com, with the app's own plugins added
@@ -14,7 +16,12 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AppClipboardPlugin.class);
         registerPlugin(WidgetBridgePlugin.class);
         registerPlugin(NativeAuthPlugin.class);
+        registerPlugin(AppBarsPlugin.class);
         openTappedNotification(getIntent());
+        // Edge to edge on every Android version, the way Android 15 and up already draw apps
+        // that target them. The SystemBars plugin (insetsHandling "css") keeps the page clear of
+        // the status and navigation bars and the keyboard; AppBarsPlugin colors what's behind them.
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         // Server errors (a deploy restarting the server) get the app's own page, not nginx's
         getBridge().setWebViewClient(new AppWebViewClient(getBridge()));

@@ -2,4 +2,6 @@
 <resources>
     <!-- The tint of the notification icon (the widgets' blue) -->
     <color name="notification_tint">#2C4F78</color>
+    <!-- The site's page color, behind the status and navigation bars (styles.xml) -->
+    <color name="page_background">#f5f5f4</color>
 </resources>
