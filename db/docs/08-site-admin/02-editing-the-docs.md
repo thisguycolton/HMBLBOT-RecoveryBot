@@ -22,7 +22,7 @@ Every page of these docs, including [About](/about) and [History](/history), is 
 ![The / insert menu](/docs-images/site-admin/docs-slash-menu.webp)
 
 - **Select text** for the bubble: bold, italic, strikethrough, code and link.
-- **Paste or drop a picture** to upload it. Screenshots make tutorials much easier to follow.
+- **Paste or drop a picture** to upload it, or a video to open **Add a video**. Screenshots make tutorials much easier to follow.
 - **Markdown** (top bar) shows the raw Markdown. Both views edit the same text.
 
 > [!TIP] Callouts are quotes that start with `[!TIP]`, `[!NOTE]`, `[!WARNING]` or `[!PRIVACY]`. Only `##` and `###` headings show in **On this page**.
@@ -48,12 +48,17 @@ The side panel (the panel button on a phone) has:
 
 ## Videos with chapters
 
-Type `/` and pick **Video**. It adds a block like this, which shows as a video player on the page:
+Type `/` and pick **Video** (or drop a video file on the page). The **Add a video** window asks for:
+
+- **Video**: an MP4 (works everywhere), WebM or MOV file, up to 300 MB.
+- **Title**: shown above the chapter list under the video.
+- **Chapters** (optional): choose **Upload JSON** for a chapters file, or paste or type them. The list underneath shows exactly what the timeline will get before anything is sent.
+
+**Upload and add** shows a progress bar. Keep the page open until it finishes. Leaving the editor asks first, and closing the tab warns you, because leaving stops the upload. When it's done, the video goes into the page as a block like this, which you can still edit:
 
 ```
 {
-  "src": "/docs-videos/group-tour.mp4",
-  "poster": "/docs-videos/group-tour.webp",
+  "src": "/rails/active_storage/blobs/proxy/…/group-tour.mp4",
   "title": "A quick tour of your group",
   "chapters": [
     { "start": "0:00", "title": "Open your group's home page" },
@@ -63,11 +68,9 @@ Type `/` and pick **Video**. It adds a block like this, which shows as a video p
 }
 ```
 
-- The block starts with three backticks and the word `video` (` ```video `), and ends with three backticks.
-- **src** is the video file. It has to be on this site (an address starting with `/`, like the files in `public/docs-videos/`). `poster` (a still shown before it plays) and `title` are optional.
-- **chapters** cut the timeline into pieces with a small gap between them. Point at a piece (or drag along it with a finger) to see its title and time. A start can be seconds (`42`) or a clock (`0:42`, `1:02:03`), and each chapter runs until the next one starts.
-- Instead of the list, `chapters` can be the address of a JSON file on this site, like `"/docs-videos/group-tour.json"`. The file can be the same list, `{ "chapters": [...] }`, or `{ "0:00": "Intro", "0:42": "Next part" }`.
-- Under the video, the chapter list opens with one tap and jumps to any chapter.
+- A chapters file can be a list like the one above, `{ "chapters": [...] }`, or `{ "0:00": "Intro", "0:42": "Next part" }`. A start can be seconds (`42`) or a clock (`0:42`, `1:02:03`), and each chapter runs until the next one starts.
+- The timeline is cut into one piece per chapter with a small gap between them. Point at a piece (or drag along it with a finger) to see its title and time. The chapter list under the video jumps to any chapter.
+- You can also write the block yourself: three backticks and the word `video` (` ```video `), the JSON, then three backticks. `src`, `poster` (a still shown before it plays) and a `chapters` file address all have to be on this site (starting with `/`).
 - Keys while the player is focused: Space or K plays and pauses, ← → skip 5 seconds, J L skip 10, `[` `]` go to the chapter before or after, M mutes, F goes full screen.
 
 ## Screenshots

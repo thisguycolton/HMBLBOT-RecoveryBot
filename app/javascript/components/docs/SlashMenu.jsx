@@ -5,16 +5,7 @@ import {
 } from "lucide-react";
 
 // What "/" offers in the docs editor, Notion-style. `run` gets a chain with the "/query" already
-// removed; `picture` asks DocEditor for a file instead.
-// A ```video block to fill in: the file, and the chapters that cut up its timeline
-const VIDEO_TEMPLATE = `{
-  "src": "/docs-videos/your-video.mp4",
-  "title": "What this video shows",
-  "chapters": [
-    { "start": "0:00", "title": "First part" },
-    { "start": "0:30", "title": "Second part" }
-  ]
-}`;
+// removed; `picture` asks DocEditor for a file instead, and `video` opens its Add a video window.
 const callout = (kind) => (chain) => chain.setParagraph().toggleBlockquote().insertContent(`[!${kind}] `);
 export const COMMANDS = [
   { key: "text", label: "Text", hint: "Plain writing", icon: Pilcrow, words: "paragraph plain", run: (c) => c.setParagraph() },
@@ -32,7 +23,7 @@ export const COMMANDS = [
   { key: "divider", label: "Divider", hint: "--- a line across", icon: Minus, words: "hr rule line separator", run: (c) => c.setHorizontalRule() },
   { key: "code", label: "Code", hint: "``` monospace block", icon: Code2, words: "codeblock pre", run: (c) => c.toggleCodeBlock() },
   { key: "table", label: "Table", hint: "3 × 3 with a header row", icon: TableIcon, words: "grid columns", run: (c) => c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }) },
-  { key: "video", label: "Video", hint: "A video with chapters (JSON)", icon: Clapperboard, words: "movie clip chapters timeline player", run: (c) => c.insertContent({ type: "codeBlock", attrs: { language: "video" }, content: [{ type: "text", text: VIDEO_TEMPLATE }] }) },
+  { key: "video", label: "Video", hint: "Upload a video, with chapters", icon: Clapperboard, words: "movie clip chapters timeline player upload", video: true },
   { key: "picture", label: "Picture", hint: "Upload a screenshot", icon: ImageIcon, words: "image photo screenshot upload", picture: true },
 ];
 

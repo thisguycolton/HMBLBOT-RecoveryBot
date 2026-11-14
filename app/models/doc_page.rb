@@ -18,6 +18,7 @@ class DocPage < ApplicationRecord
   belongs_to :reviewed_by, class_name: "User", optional: true
   has_many :versions, -> { order(created_at: :desc, id: :desc) }, class_name: "DocPageVersion", dependent: :delete_all
   has_many_attached :images
+  has_many_attached :videos # uploaded for ```video blocks (Api::DocsController#videos)
 
   validates :title, presence: true, length: { maximum: 160 }
   validates :summary, length: { maximum: 400 }
