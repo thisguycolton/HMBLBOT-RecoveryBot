@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, Copy, MessageSquareQuote, Pencil, Trash2 } from "lucide-react";
+import { TextSizeControl, useReadingTextSize } from "./ui/TextSize";
 
 const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80";
@@ -11,6 +12,7 @@ export default function ServiceReadingShow({ reading, notice, isAdmin, isAuthent
   const [progress, setProgress] = useState(0);
   const [copied, setCopied] = useState(false);
   const deleteForm = useRef(null);
+  const textSize = useReadingTextSize();
   const otherSources = reading.other_sources || [];
   const csrf = typeof document !== "undefined"
     ? document.querySelector('meta[name="csrf-token"]')?.getAttribute("content")
@@ -149,7 +151,11 @@ export default function ServiceReadingShow({ reading, notice, isAdmin, isAuthent
 
           {/* The reading */}
           <article className="min-w-0">
+            <div className="mb-6 flex justify-end">
+              <TextSizeControl scale={textSize.scale} change={textSize.change} />
+            </div>
             <div
+              style={textSize.style}
               className="reading-prose min-w-0 break-words [overflow-wrap:anywhere] [&_img]:h-auto [&_img]:max-w-full [&_ol]:mb-5 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:mb-5 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-2 [&_pre]:whitespace-pre-wrap [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto"
               dangerouslySetInnerHTML={{ __html: reading.content_html }}
             />
