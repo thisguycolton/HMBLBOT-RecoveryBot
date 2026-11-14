@@ -580,7 +580,7 @@ end
       end
       resources :task_columns, only: %i[create update destroy]
       resource :analytics, only: :show
-      resources :users, only: %i[index update] do
+      resources :users, only: %i[index update destroy] do
         patch :confirm, on: :member
       end
       resources :readings, only: %i[index update destroy]
@@ -595,6 +595,7 @@ end
       end
       resources :contact_requests, only: %i[index update destroy]
       resources :testflight_requests, only: %i[index update destroy] do
+        post :resend, on: :member
         patch :bulk, on: :collection
       end
       resources :user_reports, only: %i[index update destroy]

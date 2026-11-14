@@ -119,6 +119,11 @@ class TestflightRequestsTest < ActionDispatch::IntegrationTest
     get "/api/admin/testflight_requests?status=invited", as: :json
     assert_equal 1, response.parsed_body["testflight_requests"].size
 
+    assert_enqueued_emails 1 do
+      post "/api/admin/testflight_requests/#{req.id}/resend", as: :json
+    end
+    assert_response :success
+
     assert_no_enqueued_emails do
       patch "/api/admin/testflight_requests/bulk", params: { ids: [req.id], status: "done" }, as: :json
     end

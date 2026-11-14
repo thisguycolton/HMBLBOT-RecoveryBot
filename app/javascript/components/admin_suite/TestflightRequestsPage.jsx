@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CheckCircle2, Copy, Mail, RotateCcw, Smartphone, Trash2 } from "lucide-react";
+import { CheckCircle2, Copy, Mail, RotateCcw, Send, Smartphone, Trash2 } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import SegmentedControl from "../ui/SegmentedControl";
 import { api } from "../topicificator_admin/api";
@@ -148,6 +148,12 @@ function Request({ request: r, act, showStatus }) {
           {r.status === "invited" && (
             <button type="button" className={buttonClass.primary} onClick={() => mark("done", "Marked done.")}>
               <CheckCircle2 className="w-4 h-4" /> Mark done
+            </button>
+          )}
+          {r.status !== "new" && (
+            <button type="button" className={buttonClass.secondary}
+              onClick={() => act(`/testflight_requests/${r.id}/resend`, { method: "POST" }, `Emailed ${r.email} the link to join again.`)}>
+              <Send className="w-4 h-4" /> Resend email
             </button>
           )}
           {r.status !== "new" && (

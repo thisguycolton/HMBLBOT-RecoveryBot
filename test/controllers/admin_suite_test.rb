@@ -93,6 +93,29 @@ class AdminSuiteTest < ActionDispatch::IntegrationTest
     assert me.reload.admin
   end
 
+  test "deletes an account after typing its email, moving its readings to the admin" do
+    me = create_court_admin
+    member = User.create!(email: "gone@example.com", password: "password123", confirmed: true)
+    reading = Reading.create!(title: "Their reading", user: member)
+    other_admin = User.create!(email: "boss@example.com", password: "password123", confirmed: true, admin: true)
+    sign_in me
+
+    delete "/api/admin/users/#{member.id}", params: { confirm_email: "wrong@example.com" }, as: :json
+    assert_response :unprocessable_entity
+    assert User.exists?(member.id)
+
+    delete "/api/admin/users/#{member.id}", params: { confirm_email: " Gone@Example.com " }, as: :json
+    assert_response :no_content
+    refute User.exists?(member.id)
+    assert_equal me, reading.reload.user
+
+    delete "/api/admin/users/#{other_admin.id}", params: { confirm_email: other_admin.email }, as: :json
+    assert_response :unprocessable_entity
+    delete "/api/admin/users/#{me.id}", params: { confirm_email: me.email }, as: :json
+    assert_response :unprocessable_entity
+    assert User.exists?(me.id)
+  end
+
   test "publishes, unpublishes, schedules and deletes readings" do
     me = create_court_admin
     reading = Reading.create!(title: "Draft one", user: me)
