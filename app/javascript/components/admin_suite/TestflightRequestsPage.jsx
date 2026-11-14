@@ -23,7 +23,7 @@ const PLATFORM_LABELS = { ios: "iPhone", android: "Android" };
 
 // People who asked to try the app before it's in the stores (/testflight), for iPhone or Android.
 // iPhone: copy the emails into App Store Connect (TestFlight > testers). Android: paste them into
-// the Play Console's closed-test email list, then send each person the test's opt-in link. Mark
+// the Play Console's closed-test email list. Mark invited emails each person the link to join (TesterMailer),
 // them invited after that; done is for once they're in.
 export default function TestflightRequestsPage({ notify }) {
   const [status, setStatus] = useState("new");
@@ -94,8 +94,8 @@ export default function TestflightRequestsPage({ notify }) {
           {" "}(<code>/testflight?platform=android</code> starts on Android, and so does an Android phone).
           To show the form to everyone, add a site notice with the link.{" "}
           {platform === "android"
-            ? "Android: paste the emails into Play Console > Test and release > Closed testing > Testers (email list), then tell each person they can join at https://play.google.com/apps/testing/com.hmblbot.recoverybot (the form's thank-you page shows it too)."
-            : "iPhone: add the emails in App Store Connect > TestFlight > testers, and Apple emails the invite."}
+            ? "Android: paste the emails into Play Console > Test and release > Closed testing > Testers (email list) first, then Mark invited: that emails each person the link to join (Google doesn't email them)."
+            : "iPhone: the form sends people straight to TestFlight's public link, so new iPhone requests are only from before that. Mark invited emails them the link."}
         </p>
         {rows.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -103,8 +103,8 @@ export default function TestflightRequestsPage({ notify }) {
             {platform === "ios" && <button type="button" className={buttonClass.secondary} onClick={downloadCsv}>Download CSV for App Store Connect</button>}
             {status === "new" && (
               <button type="button" className={buttonClass.primary}
-                onClick={() => act("/testflight_requests/bulk", { method: "PATCH", body: { ids: rows.map((r) => r.id), status: "invited" } }, "Marked invited.")}>
-                <Mail className="w-4 h-4" /> Mark all {rows.length} invited
+                onClick={() => act("/testflight_requests/bulk", { method: "PATCH", body: { ids: rows.map((r) => r.id), status: "invited" } }, "Marked invited and emailed the links to join.")}>
+                <Mail className="w-4 h-4" /> Mark all {rows.length} invited and email them
               </button>
             )}
           </div>
@@ -141,8 +141,8 @@ function Request({ request: r, act, showStatus }) {
         </div>
         <div className="flex flex-wrap gap-1">
           {r.status === "new" && (
-            <button type="button" className={buttonClass.primary} onClick={() => mark("invited", "Marked invited.")}>
-              <Mail className="w-4 h-4" /> Mark invited
+            <button type="button" className={buttonClass.primary} onClick={() => mark("invited", "Marked invited and emailed the link to join.")}>
+              <Mail className="w-4 h-4" /> Mark invited and email
             </button>
           )}
           {r.status === "invited" && (

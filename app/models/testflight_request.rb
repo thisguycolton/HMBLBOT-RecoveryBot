@@ -33,12 +33,16 @@ class TestflightRequest < ApplicationRecord
 
   def platform_name = PLATFORM_NAMES[platform]
 
+  # Moving a request from new to invited emails the person how to join (TesterMailer). Done
+  # doesn't email; Back to new and then invited again sends it again, which is how to resend.
   def mark!(new_status, by)
+    send_invite = status == "new" && new_status == "invited" && invited_at.nil?
     update!(
       status: new_status,
       invited_at: new_status == "new" ? nil : (invited_at || Time.current),
       handled_by: new_status == "new" ? nil : by,
     )
+    TesterMailer.with(testflight_request: self).invited.deliver_later if send_invite
   end
 
   def as_admin_json
