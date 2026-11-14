@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { BellRing, CalendarClock, CalendarDays, Check, ChevronRight, Hand, Repeat, RotateCcw, SquareKanban, Sparkles, Video, X } from "lucide-react";
 import { milestoneStatus } from "../../lib/milestones";
+import { dayFacts, TOPIC_ICONS } from "../../lib/dayFacts";
 import Avatar from "../groups/Avatar";
 import { soberFor } from "../groups/lib";
 import MeetingPasscode from "../groups/MeetingPasscode";
@@ -32,6 +33,7 @@ const partOfDay = (hour = new Date().getHours()) => {
 function Greeting({ me }) {
   if (!me) return null;
   const status = milestoneStatus(me.sobriety_date);
+  const fact = status && dayFacts(status.days).today[0];
   return (
     <section>
       <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Good {partOfDay()}{me.first_name ? `, ${me.first_name}` : ""}</h2>
@@ -45,6 +47,12 @@ function Greeting({ me }) {
             <span className="block text-sm text-slate-600 dark:text-neutral-300">
               {status.today ? `Happy ${status.today.label}! 🎉` : [status.days >= 90 && soberFor(me.sobriety_date), status.next && `${status.next.inDays} ${status.next.inDays === 1 ? "day" : "days"} to ${status.next.label}`].filter(Boolean).join(" · ")}
             </span>
+            {fact && (
+              <span className="mt-1.5 block text-sm" title={fact.detail}>
+                <span aria-hidden="true">{TOPIC_ICONS[fact.topic]}</span> <strong className="font-semibold">{fact.title}.</strong>{" "}
+                <span className="text-slate-600 dark:text-neutral-300">{fact.detail}</span>
+              </span>
+            )}
           </span>
           <ChevronRight className="size-5 shrink-0 text-slate-400" />
         </a>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { confetti } from "../lib/confetti";
 import { milestoneStatus } from "../lib/milestones";
+import { dayFacts, TOPIC_ICONS } from "../lib/dayFacts";
 import { api, soberFor } from "./groups/lib";
 import { SpinningChip } from "./recovery/ChipModal";
 import "../styles/day-count.css";
@@ -56,6 +57,7 @@ export default function DayCount({ since, signedIn }) {
 
   if (!open) return null;
   const { days, today, next } = status;
+  const facts = dayFacts(days);
   const close = () => setOpen(false);
   const sinceLabel = new Date(`${since}T00:00:00`).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" });
 
@@ -85,9 +87,20 @@ export default function DayCount({ since, signedIn }) {
           ) : (
             <p>One day at a time. Keep coming back.</p>
           )}
+          {facts.today.map((f) => (
+            <div key={f.title} className="hb-daycount__fact">
+              <span className="hb-daycount__fact-icon" aria-hidden="true">{TOPIC_ICONS[f.topic]}</span>
+              <span><strong>{f.title}</strong><span className="hb-daycount__fact-detail">{f.detail}</span></span>
+            </div>
+          ))}
           {next && (
             <p className="hb-daycount__next">
               Next milestone: <strong>{next.label}</strong> {next.inDays === 1 ? "tomorrow" : `in ${next.inDays.toLocaleString()} days`}
+            </p>
+          )}
+          {facts.next && (
+            <p className="hb-daycount__next">
+              {facts.next.inDays === 1 ? "Tomorrow" : `In ${facts.next.inDays.toLocaleString()} days`}: {TOPIC_ICONS[facts.next.topic]} {facts.next.title.charAt(0).toLowerCase() + facts.next.title.slice(1)}
             </p>
           )}
         </div>

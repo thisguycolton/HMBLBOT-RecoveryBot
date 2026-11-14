@@ -99,6 +99,19 @@ html.dark .hb-daycount__panel {
 .hb-daycount__body p { font-family: inherit; hyphens: none; margin: 0 0 0.75rem; text-align: center; }
 .hb-daycount .hb-daycount__next { color: var(--hb-daycount-muted); font-size: 0.9rem; }
 
+/* A fun comparison for today's count (lib/dayFacts.js) */
+.hb-daycount__fact {
+  background: color-mix(in srgb, var(--hb-daycount-edge) 10%, transparent);
+  border-radius: 1rem;
+  display: flex;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+}
+.hb-daycount__fact-icon { font-size: 1.5rem; line-height: 1.2; }
+.hb-daycount .hb-daycount__fact-detail { color: var(--hb-daycount-muted); display: block; font-size: 0.9rem; margin-top: 0.15rem; }
+
 .hb-daycount__foot {
   align-items: center;
   border-top: 1px solid var(--hb-daycount-line);

@@ -31,7 +31,7 @@ module WebPushSender
   end
 
   def payload_for(notification)
-    { title: notification.title, body: notification.body.to_s, tag: "n-#{notification.id}", id: notification.id,
+    { title: notification.plain_title, body: notification.plain_body.to_s, tag: "n-#{notification.id}", id: notification.id,
       url: notification.open_path, unread: notification.user.notifications.unread.count }
   end
 

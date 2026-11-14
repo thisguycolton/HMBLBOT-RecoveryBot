@@ -347,7 +347,7 @@ function installStatusBar() {
 
 // Firebase Cloud Messaging (FcmSender on the server). A tap on a notification opens its page
 // (data.url, /notifications/:id/open, which marks it read). One that arrives while the app is
-// open shows as a toast on Android (the iPhone shows its own banner).
+// open updates the bell right away (and shows as a toast; the iPhone also shows its own banner).
 function installPush() {
   if (!hasPlugin("FirebaseMessaging")) return;
   const push = () => import("../lib/nativePush");
@@ -360,12 +360,14 @@ function installPush() {
     const url = notification?.data?.url;
     if (typeof url === "string" && url.startsWith("/") && !url.startsWith("//")) window.location.href = url;
   });
-  if (platform === "android") {
-    onPlugin("FirebaseMessaging", "notificationReceived", ({ notification }) => {
-      const url = notification?.data?.url;
-      if (notification?.title || notification?.body) showToast(notification.title || notification.body, { href: typeof url === "string" && url.startsWith("/") ? url : undefined });
-    });
-  }
+  // One that arrives while the app is open: the bell fetches it right away and toasts it. Android
+  // shows no banner of its own, so a page without a bell toasts it here.
+  onPlugin("FirebaseMessaging", "notificationReceived", ({ notification }) => {
+    window.dispatchEvent(new Event("hb:notifications"));
+    if (platform !== "android" || window.hbBells > 0) return;
+    const url = notification?.data?.url;
+    if (notification?.title || notification?.body) showToast(notification.title || notification.body, { href: typeof url === "string" && url.startsWith("/") ? url : undefined });
+  });
 }
 
 // --- Widgets --------------------------------------------------------------------------------
