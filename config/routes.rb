@@ -584,6 +584,7 @@ end
       resources :users, only: %i[index update destroy] do
         patch :confirm, on: :member
         get :notifications, on: :member
+        get :stats, on: :collection
       end
       resources :readings, only: %i[index update destroy]
       resources :tags, only: %i[index create update destroy]
