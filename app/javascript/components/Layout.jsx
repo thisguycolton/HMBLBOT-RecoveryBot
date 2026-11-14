@@ -134,7 +134,7 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
 
         <div className="pt-[var(--nav-space,var(--nav-h))] lg:pl-[var(--side-w)] motion-safe:transition-[padding] motion-safe:duration-200 print:!p-0" style={push ? { marginTop: -push.y } : undefined}>
           <div className="stage flex min-h-[calc(100dvh-var(--nav-h))] overflow-clip bg-white dark:bg-neutral-900 max-lg:rounded-b-[28px] lg:rounded-l-[32px] print:!rounded-none">
-            <main className={`flex min-w-0 flex-1 flex-col ${fill ? "" : showFooter ? "pb-10" : "pb-32 lg:pb-0"}`}>
+            <main className={`flex min-w-0 flex-1 flex-col ${fill ? "" : showFooter ? "pb-10" : "pb-24 lg:pb-0"}`}>
               <div className="flex-1">{children}</div>
             </main>
 
@@ -145,7 +145,7 @@ function Shell({ children, isAuthenticated, showFooter: footer = true, fill = fa
           </div>
           {/* Under the stage, on the shell's own color: scrolled down to it, the stage's bottom
               corner rounds like its top one, so the page reads as one contained card */}
-          {showFooter && <div className={bottomBar ? "pb-28 lg:pb-0" : ""}><Footer /></div>}
+          {showFooter && <div className={bottomBar ? "pb-20 lg:pb-0" : ""}><Footer /></div>}
         </div>
 
         {/* bottomBar={false}: a page that is only a form (sign in, sign up) keeps the phone's
