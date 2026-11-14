@@ -136,6 +136,34 @@ class Api::AppPushTest < ActionDispatch::IntegrationTest
     assert_equal 0, DeviceToken.count
   end
 
+  test "a reminder goes to every app install on the account, as plain words, and a Site Admin can see where it went" do
+    register
+    register("#{TOKEN}-android", platform: "android")
+    sent = with_firebase do
+      perform_enqueued_jobs { Notification.deliver(@user, kind: "recovery.step_reminder", title: "Time for your **10th step**", body: "### **Android Users!!**  Test the [real app](https://x.test) now") }
+    end
+    assert_equal [TOKEN, "#{TOKEN}-android"].sort, sent.map { |r| r[:message]["token"] }.sort
+    assert_equal({ "title" => "Time for your 10th step", "body" => "Android Users!! Test the real app now" }, sent.first[:message]["notification"])
+    get "/api/notifications"
+    assert_equal ["Time for your 10th step", "Android Users!! Test the real app now"], response.parsed_body["notifications"].sole.values_at("title", "body")
+
+    admin = User.create!(email: "boss@example.com", name: "Boss", password: "password123", confirmed: true, admin: true)
+    get "/api/admin/users/#{@user.id}/notifications"
+    assert_response :forbidden
+    sign_in admin
+    old = ENV["ADMIN_EMAILS"]
+    ENV["ADMIN_EMAILS"] = admin.email
+    get "/api/admin/users/#{@user.id}/notifications"
+    assert_response :success
+    info = response.parsed_body
+    assert_equal ["RecoveryBot app on Android", "RecoveryBot app on iPhone"], info["apps"].map { |d| d["label"] }.sort
+    assert(info["apps"].all? { |d| d["last_sent_at"].present? })
+    assert info["reminders_pushed"]
+    assert_equal "Time for your 10th step", info["recent"].sole["title"]
+  ensure
+    ENV["ADMIN_EMAILS"] = old if admin
+  end
+
   test "Firebase having a bad moment keeps the token" do
     register
     with_firebase(503, { error: { code: 503, status: "UNAVAILABLE" } }.to_json) do

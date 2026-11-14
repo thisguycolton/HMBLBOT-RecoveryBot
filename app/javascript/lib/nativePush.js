@@ -7,6 +7,11 @@ import { api } from "../components/groups/lib";
 import { callPlugin, hasPlugin, nativePlatform, onPlugin } from "./nativeApp";
 
 const KEY = "hb-device-token";
+// Set when they turn the app's notifications off in settings (not when they log out), so the
+// app doesn't sign this phone up again on its own
+const OFF_KEY = "hb-device-push-off";
+const turnedOff = () => { try { return localStorage.getItem(OFF_KEY) === "1"; } catch { return false; } };
+const setTurnedOff = (off) => { try { if (off) localStorage.setItem(OFF_KEY, "1"); else localStorage.removeItem(OFF_KEY); } catch { /* private mode */ } };
 
 export const nativePushSupported = () => hasPlugin("FirebaseMessaging");
 
@@ -58,22 +63,30 @@ export async function turnOnNativePush() {
   if (!token) throw new Error("The phone didn't give the app a notification address. Try again in a minute.");
   const state = await api("/push_subscriptions/app", { method: "POST", body: { token, platform: nativePlatform(), app_version: appVersion() } });
   store(token);
+  setTurnedOff(false);
   return state;
 }
 
-export async function turnOffNativePush() {
+// From the switch in settings (byThem), or logging out, which doesn't count as turning them off:
+// signing in again brings them back
+export async function turnOffNativePush({ byThem = true } = {}) {
   const token = storedToken();
   store(null);
+  if (byThem) setTurnedOff(true);
   const state = token ? await api("/push_subscriptions/app", { method: "DELETE", body: { token } }).catch(() => null) : null;
   await callPlugin("FirebaseMessaging", "deleteToken").catch(() => {});
   return state;
 }
 
-// Signed in with notifications on: a token Firebase replaced goes to the server, and so does
-// the token if this phone is now signed in to another account (it moves there)
+// Every app page, signed in: the server gets this phone's token whenever the phone allows the
+// app's notifications, so it can reach every device they use. That covers a token Firebase
+// replaced, this phone now signed in to another account (the token moves there), signing in again
+// after logging out, an Android phone that allowed notifications without asking, and a token
+// the app forgot. Not when they turned notifications off in the app's settings.
 export async function refreshNativeToken(token) {
+  if (!document.body?.dataset.widget) return; // data-widget is blank when signed out
   const had = storedToken();
-  if (!had || !document.body?.dataset.widget) return; // data-widget is blank when signed out
+  if (!had && (turnedOff() || (await nativePermission()) !== "granted")) return;
   const next = token || (await fetchToken(3).catch(() => null));
   if (!next) return;
   const day = new Date().toISOString().slice(0, 10);
@@ -91,5 +104,5 @@ export async function forgetNativePushAfterSignOut() {
   if (!/(?:^|;\s*)forget_push=/.test(document.cookie)) return;
   if (document.body?.dataset.widget) return; // signed in again already
   document.cookie = "forget_push=; Max-Age=0; path=/; SameSite=Lax";
-  if (storedToken()) await turnOffNativePush();
+  if (storedToken()) await turnOffNativePush({ byThem: false });
 }

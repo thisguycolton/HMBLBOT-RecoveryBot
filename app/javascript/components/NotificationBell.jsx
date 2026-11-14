@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Award, Bell, BellRing, CalendarClock, CheckCheck, ClipboardList, FileText, Gavel, Heart, HeartHandshake, MessageCircle, Settings, ShieldCheck, Sparkles, Trash2, UserPlus, Users, Vote, X } from "lucide-react";
 import { clearToasts, showToast } from "../lib/toast";
 import { setAppBadge } from "../lib/push";
+import { onNotificationsChanged } from "../lib/liveNotifications";
 import Sheet from "./shell/Sheet";
 import { useMedia } from "./shell/useShell";
 
@@ -130,12 +131,24 @@ export default function NotificationBell({ align = "right", sheet = false }) {
     }
   }, []);
 
+  // New ones arrive live (lib/liveNotifications.js); the poll and coming back to the tab or the
+  // app catch anything missed while the connection was down
   useEffect(() => {
     load();
     const timer = setInterval(() => !document.hidden && load(), POLL_MS);
     const onFocus = () => load();
+    const onVisible = () => !document.hidden && load();
     window.addEventListener("focus", onFocus);
-    return () => { clearInterval(timer); window.removeEventListener("focus", onFocus); };
+    document.addEventListener("visibilitychange", onVisible);
+    const stopLive = onNotificationsChanged(load);
+    window.hbBells = (window.hbBells || 0) + 1;
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+      stopLive();
+      window.hbBells -= 1;
+    };
   }, [load]);
 
   useEffect(() => {

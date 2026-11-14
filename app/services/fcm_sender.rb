@@ -23,14 +23,16 @@ module FcmSender
       return unless configured? && notification.user.wants_push?(notification.kind)
 
       message = message_for(notification)
-      notification.user.device_tokens.find_each { |device| send_to(device, message) }
+      sent = notification.user.device_tokens.to_a.count { |device| send_to(device, message) }
+      Rails.logger.info("[fcm] notification #{notification.id} (#{notification.kind}) to user #{notification.user_id}: #{sent} app device(s)")
+      sent
     end
 
     # What a phone shows and what a tap opens (native_app.js reads data.url)
     def message_for(notification)
       tag = "n-#{notification.id}"
       {
-        notification: { title: notification.title.to_s, body: notification.body.to_s },
+        notification: { title: notification.plain_title, body: notification.plain_body.to_s },
         data: { url: notification.open_path, id: notification.id.to_s, tag: tag },
         android: { priority: "high", notification: { tag: tag, sound: "default" } },
         apns: { headers: { "apns-collapse-id" => tag }, payload: { aps: { sound: "default" } } },

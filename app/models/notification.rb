@@ -50,6 +50,8 @@ class Notification < ApplicationRecord
   # Also sent to the account's devices that turned on push: browsers (WebPushSender) and the
   # iPhone and Android apps (FcmSender)
   after_create_commit :push_later, if: -> { user.wants_push?(kind) && pushable_devices? }
+  # Open bells (web and the apps) fetch again right away instead of waiting for their next poll
+  after_create_commit -> { NotificationsChannel.changed(user) }
 
   scope :unread, -> { where(read_at: nil) }
   scope :recent, -> { order(created_at: :desc, id: :desc) }
@@ -71,8 +73,36 @@ class Notification < ApplicationRecord
   # Where a push notification's tap goes: marks it read, then on to its url
   def open_path = "/notifications/#{id}/open"
 
+  # Markdown as plain words, for the bell and push notifications, which only show text: note
+  # excerpts come in as "# iOS Users!!" or "**bold**". Headings, list and quote marks, emphasis
+  # and code marks go; a link shows its words; pictures and code blocks go; bare URLs stay.
+  def self.plain(text)
+    return text if text.nil?
+
+    s = text.to_s
+    s = s.gsub(/```.*?(?:```|\z)/m, " ")
+    # A backslash-escaped mark (\*) is kept as itself, so set it aside until the end
+    s = s.gsub(/\\([\\`*_{}\[\]()#+\-.!>~|])/) { "\u0000#{Regexp.last_match(1).ord}\u0001" }
+    s = s.gsub(%r{</?[a-z][^>\n]*>}i, " ")
+    s = s.gsub(/!\[[^\]]*\]\([^)]*\)/, " ")
+    s = s.gsub(/\[([^\]]+)\]\([^)\s]*(?:\s+"[^"]*")?\)/, '\1')
+    s = s.gsub(/^[ \t]{0,3}(?:[-*_][ \t]*){3,}$/, " ")
+    s = s.gsub(/^[ \t]{0,3}(?:\#{1,6}[ \t]+|>+[ \t]?|[-*+][ \t]+(?:\[[ xX]\][ \t]+)?|\d+[.)][ \t]+)/, "")
+    s = s.gsub(/[ \t]+\#+[ \t]*$/, "")
+    2.times do
+      s = s.gsub(/(\*\*\*|\*\*|\*|~~)(?=\S)(.+?)(?<=\S)\1/, '\2')
+      s = s.gsub(/(?<![\w])(__|_)(?=\S)(.+?)(?<=\S)\1(?!\w)/, '\2')
+    end
+    s = s.gsub(/`([^`\n]+)`/, '\1')
+    s = s.gsub(/\u0000(\d+)\u0001/) { Regexp.last_match(1).to_i.chr }
+    s.squish
+  end
+
+  def plain_title = self.class.plain(title).presence || title.to_s
+  def plain_body = self.class.plain(body)
+
   def as_api_json
-    { id: id, kind: kind, category: self.class.push_category(kind), title: title, body: body, url: url, read: read?, created_at: created_at.iso8601 }
+    { id: id, kind: kind, category: self.class.push_category(kind), title: plain_title, body: plain_body.presence, url: url, read: read?, created_at: created_at.iso8601 }
   end
 
   private
