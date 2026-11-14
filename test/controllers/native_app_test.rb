@@ -43,6 +43,13 @@ class NativeAppTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the ask-to-test page sends the apps home too" do
+    get "/testflight", headers: { "User-Agent" => ANDROID_APP }
+    assert_redirected_to "/"
+    get "/testflight", headers: { "User-Agent" => IPHONE_SAFARI }
+    assert_response :success
+  end
+
   test "the widgets' key says who's signed in, their sobriety date and first favorite chip" do
     get "/users/sign_in", headers: { "User-Agent" => IPHONE_APP }
     assert_includes response.body, %(data-widget="") # signed out: the app clears the widgets
