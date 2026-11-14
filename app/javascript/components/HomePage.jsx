@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { NAV_CATEGORIES } from "./nav/siteMenu";
 import GroupNudge from "./GroupNudge";
+import { isNativeApp } from "../lib/nativeApp";
 import FeatureTour from "./home/FeatureTour";
 
 const MIN_SKELETON_MS = 350;
@@ -197,7 +198,8 @@ const FAQ = [
   },
   {
     q: "Can I use it on my phone during a meeting?",
-    a: "That's the point: big text, dark mode, and pages that read well on a phone, a laptop or a Zoom screen share. You can add it to your home screen too.",
+    a: "That's the point: big text, dark mode, and pages that read well on a phone, a laptop or a Zoom screen share.",
+    web: "You can add it to your home screen too.", // left off in the iPhone and Android apps
   },
 ];
 
@@ -375,7 +377,7 @@ export default function HomePage() {
                 className="rounded-2xl border border-neutral-200 bg-slate-50 p-6 dark:border-neutral-700 dark:bg-neutral-800"
               >
                 <div className="font-medium text-slate-900 dark:text-neutral-100">{item.q}</div>
-                <div className="mt-2 text-slate-600 dark:text-neutral-300">{item.a}</div>
+                <div className="mt-2 text-slate-600 dark:text-neutral-300">{item.a}{item.web && !isNativeApp() && ` ${item.web}`}</div>
               </div>
             ))}
           </div>

@@ -125,6 +125,7 @@ export default function NoticesPage({ notify }) {
                     {notice.ends_at && ` · until ${when(notice.ends_at)}`}
                     {notice.body ? " · has a write-up" : notice.link_url ? " · links out" : ""}
                     {notice.author && ` · by ${notice.author}`}
+                    {notice.hidden_in_app && " · not shown in the iPhone and Android apps (it's about getting the app)"}
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">

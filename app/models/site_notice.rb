@@ -23,10 +23,23 @@ class SiteNotice < ApplicationRecord
       .where("ends_at IS NULL OR ends_at > ?", now)
   }
 
+  # Notices about getting the app (a TestFlight or Google Play invite, "add it to your home
+  # screen") make no sense to someone already using the iPhone or Android app, so the apps
+  # (NativeAppRequest#native_app?) don't get them. A notice counts when its link goes to an install
+  # or app store page, or its title or summary names TestFlight, the App Store or Google Play.
+  APP_LINK = %r{\A(/install|/testflight)(\z|[/?#])|\Ahttps?://([a-z0-9-]+\.)*(testflight\.apple\.com|apps\.apple\.com|play\.google\.com)(\z|[/?#:])}i
+  APP_WORDS = /\b(testflight|app store|google play|play store)\b/i
+
   # What this visitor should see: members-only notices need an account, guest notices
-  # (say, "sign up for highlights") go only to people who aren't signed in
-  def self.for_viewer(user)
-    live.where(audience: ["everyone", user ? "members" : "guests"]).order(created_at: :desc)
+  # (say, "sign up for highlights") go only to people who aren't signed in. in_app leaves out
+  # notices about getting the app.
+  def self.for_viewer(user, in_app: false)
+    notices = live.where(audience: ["everyone", user ? "members" : "guests"]).order(created_at: :desc).to_a
+    in_app ? notices.reject(&:about_getting_the_app?) : notices
+  end
+
+  def about_getting_the_app?
+    link_url.to_s.strip.match?(APP_LINK) || [title, summary].any? { |t| t.to_s.match?(APP_WORDS) }
   end
 
   def live?
@@ -50,6 +63,7 @@ class SiteNotice < ApplicationRecord
   def as_admin_json
     as_api_json.merge(
       link_label: link_label, audience: audience, active: active, live: live?,
+      hidden_in_app: about_getting_the_app?,
       starts_at: starts_at&.iso8601, ends_at: ends_at&.iso8601,
       author: user&.name.presence || user&.email, created_at: created_at.iso8601, updated_at: updated_at.iso8601,
     )
