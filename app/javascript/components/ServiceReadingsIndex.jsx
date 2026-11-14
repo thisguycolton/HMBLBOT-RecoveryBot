@@ -26,42 +26,28 @@ function IconTile() {
   );
 }
 
-// One source: the whole card is the link
-function SingleCard({ title, reading }) {
+// Every reading gets the same card: its title, then each source as a row to open.
+// The cards sit in balanced columns (CSS columns), so a reading with three sources
+// doesn't leave a hole beside a reading with one.
+function ReadingCard({ title, readings }) {
+  const count = readings.length;
   return (
-    <a
-      href={`/service_readings/${reading.id}`}
-      className={`group flex min-w-0 items-center gap-4 rounded-2xl border border-neutral-200 bg-white p-4 !text-slate-900 shadow-sm transition hover:border-accent/40 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:!text-white dark:hover:border-accent-light/40 ${focusRing}`}
-    >
-      <IconTile />
-      <div className="min-w-0 flex-1">
-        <div className="text-base font-semibold leading-snug break-words">{title}</div>
-        {reading.source && (
-          <div className="mt-0.5 text-sm text-slate-500 break-words dark:text-neutral-400">{reading.source}</div>
-        )}
-      </div>
-      <ChevronRight className="size-5 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-accent dark:text-neutral-500 dark:group-hover:text-accent-light" />
-    </a>
-  );
-}
-
-// Several sources: the card lists them, each its own link
-function MultiCard({ title, readings }) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="mb-5 flex min-w-0 break-inside-avoid flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       <div className="flex items-center gap-4">
         <IconTile />
         <div className="min-w-0 flex-1">
-          <div className="text-base font-semibold leading-snug text-slate-900 break-words dark:text-white">{title}</div>
-          <div className="mt-0.5 text-sm text-slate-500 dark:text-neutral-400">{readings.length} sources</div>
+          <div className="text-lg font-semibold leading-snug text-slate-900 break-words dark:text-white">{title}</div>
+          <div className="mt-0.5 text-sm text-slate-500 dark:text-neutral-400">
+            {count === 1 ? "1 source" : `${count} sources`}
+          </div>
         </div>
       </div>
-      <ul className="mt-3 space-y-1.5">
+      <ul className="mt-4 space-y-2">
         {readings.map((reading) => (
           <li key={reading.id}>
             <a
               href={`/service_readings/${reading.id}`}
-              className={`group flex min-w-0 items-center gap-3 rounded-xl bg-neutral-50 px-3.5 py-2.5 text-sm !text-slate-700 transition hover:bg-accent-tint hover:!text-accent-ink dark:bg-neutral-800/70 dark:!text-neutral-200 dark:hover:bg-accent/15 dark:hover:!text-white ${focusRing}`}
+              className={`group flex min-h-12 min-w-0 items-center gap-3 rounded-xl bg-neutral-50 px-4 py-2.5 text-sm !text-slate-700 transition hover:bg-accent-tint hover:!text-accent-ink dark:bg-neutral-800/70 dark:!text-neutral-200 dark:hover:bg-accent/15 dark:hover:!text-white ${focusRing}`}
             >
               <span className="min-w-0 flex-1 break-words">{reading.source || "Untitled source"}</span>
               <ChevronRight className="size-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-accent dark:text-neutral-500 dark:group-hover:text-accent-light" />
@@ -126,14 +112,10 @@ export default function ServiceReadingsIndex({ serviceReadings = [], isAdmin = f
         )}
 
         {visible.length > 0 ? (
-          <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {visible.map((group) =>
-              group.readings.length > 1 ? (
-                <MultiCard key={group.title} title={group.title} readings={group.readings} />
-              ) : (
-                <SingleCard key={group.title} title={group.title} reading={group.readings[0]} />
-              )
-            )}
+          <div className="gap-5 md:columns-2 xl:columns-3">
+            {visible.map((group) => (
+              <ReadingCard key={group.title} title={group.title} readings={group.readings} />
+            ))}
           </div>
         ) : (
           <div className="rounded-3xl bg-neutral-100 px-6 py-10 text-center text-sm text-slate-600 dark:bg-neutral-800/60 dark:text-neutral-400">
