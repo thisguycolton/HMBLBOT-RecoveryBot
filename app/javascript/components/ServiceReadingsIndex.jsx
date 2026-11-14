@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { BookOpen, Plus, ChevronRight, X } from "lucide-react";
+import { BookOpen, ChevronRight, Plus, Search } from "lucide-react";
 
+// Readings that share a title (How It Works from the Big Book and from a pamphlet, say)
+// show as one card that lists each source.
 function groupByTitle(serviceReadings = []) {
   const grouped = new Map();
 
@@ -10,157 +12,135 @@ function groupByTitle(serviceReadings = []) {
     grouped.get(key).push(reading);
   });
 
-  return Array.from(grouped.entries()).map(([title, readings]) => ({
-    title,
-    readings,
-    first: readings[0],
-  }));
+  return Array.from(grouped.entries()).map(([title, readings]) => ({ title, readings }));
 }
 
-function ServiceReadingCard({ group, onOpen }) {
-  const { title, readings, first } = group;
-  const hasMany = readings.length > 1;
+const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900";
 
-  const content = (
-    <div className="group h-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900 ">
-      <div className="grid h-full grid-cols-[120px_1fr]">
-        <div className="relative bg-cyan-100 dark:bg-cyan-950/40">
-          <div className="absolute inset-0 flex items-center justify-center text-slate-400 dark:text-slate-600">
-            <BookOpen className="h-14 w-14 opacity-50" />
-          </div>
-        </div>
-
-        <div className="flex flex-col justify-center p-5 text-left">
-          <h3 className="mb-3 text-xl font-bold uppercase tracking-widest text-slate-900 dark:text-slate-100">
-            {title}
-          </h3>
-
-          <p className="text-sm uppercase tracking-widest text-slate-500 dark:text-slate-400 sans">
-            {hasMany ? `${readings.length} sources` : first?.source}
-          </p>
-
-          <div className="mt-4 flex items-center gap-2 text-sm font-medium text-cyan-700 dark:text-cyan-300">
-            <span>{hasMany ? "View sources" : "Open reading"}</span>
-            <ChevronRight className="h-4 w-4 transition group-hover:translate-x-1" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  if (hasMany) {
-    return (
-      <button type="button" onClick={onOpen} className="block h-full w-full text-left">
-        {content}
-      </button>
-    );
-  }
-
+function IconTile() {
   return (
-    <a href={`/service_readings/${first.id}`} className="block h-full">
-      {content}
+    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-tint text-accent dark:bg-accent/15 dark:text-accent-light">
+      <BookOpen className="size-5" strokeWidth={2.25} />
+    </span>
+  );
+}
+
+// One source: the whole card is the link
+function SingleCard({ title, reading }) {
+  return (
+    <a
+      href={`/service_readings/${reading.id}`}
+      className={`group flex min-w-0 items-center gap-4 rounded-2xl border border-neutral-200 bg-white p-4 !text-slate-900 shadow-sm transition hover:border-accent/40 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:!text-white dark:hover:border-accent-light/40 ${focusRing}`}
+    >
+      <IconTile />
+      <div className="min-w-0 flex-1">
+        <div className="text-base font-semibold leading-snug break-words">{title}</div>
+        {reading.source && (
+          <div className="mt-0.5 text-sm text-slate-500 break-words dark:text-neutral-400">{reading.source}</div>
+        )}
+      </div>
+      <ChevronRight className="size-5 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-accent dark:text-neutral-500 dark:group-hover:text-accent-light" />
     </a>
   );
 }
 
-function SourcesModal({ group, onClose }) {
-  if (!group) return null;
-
+// Several sources: the card lists them, each its own link
+function MultiCard({ title, readings }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
-          <h2 className="text-xl font-bold uppercase tracking-widest text-slate-900 dark:text-slate-100">
-            {group.title}
-          </h2>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="p-4">
-          <div className="space-y-2">
-            {group.readings.map((reading) => (
-              <a
-                key={reading.id}
-                href={`/service_readings/${reading.id}`}
-                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm uppercase tracking-widest text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
-              >
-                <span>{reading.source}</span>
-                <ChevronRight className="h-4 w-4" />
-              </a>
-            ))}
-          </div>
+    <div className="min-w-0 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="flex items-center gap-4">
+        <IconTile />
+        <div className="min-w-0 flex-1">
+          <div className="text-base font-semibold leading-snug text-slate-900 break-words dark:text-white">{title}</div>
+          <div className="mt-0.5 text-sm text-slate-500 dark:text-neutral-400">{readings.length} sources</div>
         </div>
       </div>
+      <ul className="mt-3 space-y-1.5">
+        {readings.map((reading) => (
+          <li key={reading.id}>
+            <a
+              href={`/service_readings/${reading.id}`}
+              className={`group flex min-w-0 items-center gap-3 rounded-xl bg-neutral-50 px-3.5 py-2.5 text-sm !text-slate-700 transition hover:bg-accent-tint hover:!text-accent-ink dark:bg-neutral-800/70 dark:!text-neutral-200 dark:hover:bg-accent/15 dark:hover:!text-white ${focusRing}`}
+            >
+              <span className="min-w-0 flex-1 break-words">{reading.source || "Untitled source"}</span>
+              <ChevronRight className="size-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-accent dark:text-neutral-500 dark:group-hover:text-accent-light" />
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-export default function ServiceReadingsIndex({
-  serviceReadings = [],
-  isAdmin = false,
-}) {
+export default function ServiceReadingsIndex({ serviceReadings = [], isAdmin = false }) {
+  const [query, setQuery] = useState("");
   const grouped = useMemo(() => groupByTitle(serviceReadings), [serviceReadings]);
-  const [openGroup, setOpenGroup] = useState(null);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return grouped;
+    return grouped
+      .map((group) => {
+        if (group.title.toLowerCase().includes(q)) return group;
+        const readings = group.readings.filter((r) => (r.source || "").toLowerCase().includes(q));
+        return readings.length ? { ...group, readings } : null;
+      })
+      .filter(Boolean);
+  }, [grouped, query]);
 
   return (
-    <div className="min-h-screen bg-stone-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-w-screen md:min-w-full">
-      <section className="border-b-8 border-cyan-200 bg-teal-700 text-white shadow-sm dark:border-cyan-900">
-        <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
-          <div className="flex flex-col items-center text-center pt-0">
-            <div className="mb-4 rounded-3xl bg-white/10 p-4">
-              <BookOpen className="h-12 w-12 md:h-14 md:w-14" />
+    <div className="w-full min-w-0 px-4 py-8 sm:px-6 md:py-12 lg:px-10">
+      <div className="mx-auto max-w-6xl space-y-6 !font-sans [&_*]:!font-sans">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Service Readings</h1>
+            <div className="mt-1 text-sm text-slate-600 dark:text-neutral-400">
+              The readings meetings use most, ready to read aloud or paste in the chat.
             </div>
-
-            <h1 className="text-4xl font-bold tracking-widest md:text-6xl ttSans">
-              SERVICE READINGS
-            </h1>
-
-            <p className="mt-4 max-w-2xl text-base text-cyan-50 md:text-xl sans">
-              An index of commonly used meeting readings for service work.
-            </p>
           </div>
-        </div>
-      </section>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 md:py-10">
-        {grouped.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            {grouped.map((group) => (
-              <ServiceReadingCard
-                key={group.title}
-                group={group}
-                onOpen={() => setOpenGroup(group)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="sans rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-            No service readings yet.
-          </div>
-        )}
-
-        {isAdmin && (
-          <div className="mt-8">
+          {isAdmin && (
             <a
               href="/service_readings/new"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-4 text-lg font-semibold text-white transition hover:bg-emerald-500"
+              className={`inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold !text-white shadow-sm transition hover:bg-accent/90 ${focusRing}`}
             >
-              <Plus className="h-5 w-5" />
-              New Service Reading
+              <Plus className="size-4" />
+              New reading
             </a>
+          )}
+        </div>
+
+        {grouped.length > 5 && (
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-accent dark:text-accent-light" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search readings and sources"
+              aria-label="Search readings and sources"
+              className="h-12 w-full rounded-full border border-neutral-200 bg-white pl-12 pr-5 text-base text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:placeholder:text-neutral-500"
+            />
           </div>
         )}
-      </main>
 
-      <SourcesModal group={openGroup} onClose={() => setOpenGroup(null)} />
+        {visible.length > 0 ? (
+          <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {visible.map((group) =>
+              group.readings.length > 1 ? (
+                <MultiCard key={group.title} title={group.title} readings={group.readings} />
+              ) : (
+                <SingleCard key={group.title} title={group.title} reading={group.readings[0]} />
+              )
+            )}
+          </div>
+        ) : (
+          <div className="rounded-3xl bg-neutral-100 px-6 py-10 text-center text-sm text-slate-600 dark:bg-neutral-800/60 dark:text-neutral-400">
+            {grouped.length ? "No readings match." : "No service readings yet."}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
