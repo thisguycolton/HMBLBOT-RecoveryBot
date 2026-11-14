@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Check, Search, Shield, ShieldOff, Users } from "lucide-react";
+import { Check, Search, Shield, ShieldOff, Trash2, Users } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass } from "../ui/styles";
@@ -48,6 +48,19 @@ export default function UsersPage({ notify }) {
     change(user, "", { admin: !user.admin }, user.admin ? `${user.email} is no longer an admin.` : `${user.email} is now an admin.`);
   }
 
+  // For good, like deleting your own account: typing their email is the confirmation
+  async function remove(user) {
+    const typed = window.prompt(`Delete ${user.email}'s account for good? Their notes, step work, chips and messages go with it, and it can't be undone.${user.readings_count ? ` Their ${user.readings_count} archive reading${user.readings_count === 1 ? "" : "s"} move to you.` : ""}\n\nType their email address to confirm:`);
+    if (typed === null) return;
+    try {
+      await api(`/users/${user.id}`, { method: "DELETE", body: { confirm_email: typed } });
+      notify(`Deleted ${user.email}'s account.`);
+      await load();
+    } catch (e) {
+      notify(e.message, "error");
+    }
+  }
+
   return (
     <Shell>
       <ShellBand icon={Users} title="Members" subtitle={data ? `${formatCount(data.total)} ${data.total === 1 ? "account" : "accounts"}${data.total > data.limit ? `, showing the newest ${data.limit}` : ""}` : <InlineSkeleton className="w-40" />} />
@@ -90,6 +103,11 @@ export default function UsersPage({ notify }) {
                     {!u.is_you && (
                       <button type="button" className={u.admin ? buttonClass.danger : buttonClass.secondary} onClick={() => toggleAdmin(u)}>
                         {u.admin ? <><ShieldOff className="w-4 h-4" /> Remove admin</> : <><Shield className="w-4 h-4" /> Make admin</>}
+                      </button>
+                    )}
+                    {!u.is_you && !u.admin && (
+                      <button type="button" className={buttonClass.danger} onClick={() => remove(u)} aria-label={`Delete ${u.email}'s account`} title="Delete account">
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     )}
                   </td>

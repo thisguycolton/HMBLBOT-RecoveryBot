@@ -35,6 +35,15 @@ class Api::Admin::TestflightRequestsController < Api::Admin::SuiteController
     head :no_content
   end
 
+  # POST: email the person how to join again (TesterMailer), for someone who lost the first one
+  def resend
+    testflight_request = TestflightRequest.find(params[:id])
+    return render json: { error: "Mark them invited first." }, status: :unprocessable_entity if testflight_request.status == "new"
+
+    TesterMailer.with(testflight_request: testflight_request).invited.deliver_later
+    render json: testflight_request.as_admin_json
+  end
+
   def destroy
     TestflightRequest.find(params[:id]).destroy!
     head :no_content

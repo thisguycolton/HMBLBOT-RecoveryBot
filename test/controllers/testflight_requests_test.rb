@@ -106,7 +106,9 @@ class TestflightRequestsTest < ActionDispatch::IntegrationTest
     get "/api/admin/testflight_requests", as: :json
     assert_equal ["m@example.com"], response.parsed_body["testflight_requests"].map { _1["email"] }
 
-    patch "/api/admin/testflight_requests/#{req.id}", params: { status: "invited" }, as: :json
+    assert_enqueued_emails 1 do
+      patch "/api/admin/testflight_requests/#{req.id}", params: { status: "invited" }, as: :json
+    end
     assert_equal ["invited", @admin.id], [req.reload.status, req.handled_by_id]
     assert req.invited_at
     patch "/api/admin/testflight_requests/#{req.id}", params: { status: "bogus" }, as: :json
@@ -117,12 +119,31 @@ class TestflightRequestsTest < ActionDispatch::IntegrationTest
     get "/api/admin/testflight_requests?status=invited", as: :json
     assert_equal 1, response.parsed_body["testflight_requests"].size
 
-    patch "/api/admin/testflight_requests/bulk", params: { ids: [req.id], status: "done" }, as: :json
+    assert_enqueued_emails 1 do
+      post "/api/admin/testflight_requests/#{req.id}/resend", as: :json
+    end
+    assert_response :success
+
+    assert_no_enqueued_emails do
+      patch "/api/admin/testflight_requests/bulk", params: { ids: [req.id], status: "done" }, as: :json
+    end
     assert_response :no_content
     assert_equal "done", req.reload.status
 
     delete "/api/admin/testflight_requests/#{req.id}", as: :json
     assert_response :no_content
     refute TestflightRequest.exists?(req.id)
+  end
+
+  test "the invite email tells Android testers how to join on Google Play" do
+    req = TestflightRequest.create!(name: "Sam P.", email: "sam@example.com", platform: "android")
+    mail = TesterMailer.with(testflight_request: req).invited
+    assert_equal ["sam@example.com"], mail.to
+    assert_includes mail.subject, "Android"
+    assert_includes mail.text_part.body.to_s, TesterMailer::PLAY_JOIN_URL
+    assert_includes mail.html_part.body.to_s, "Become a tester"
+
+    ios = TesterMailer.with(testflight_request: req.dup.tap { _1.platform = "ios" }).invited
+    assert_includes ios.text_part.body.to_s, TesterMailer::TESTFLIGHT_JOIN_URL
   end
 end

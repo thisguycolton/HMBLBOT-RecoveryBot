@@ -1,4 +1,5 @@
-# Accounts for the admin suite: search, confirm someone whose email never arrived, grant or remove admin.
+# Accounts for the admin suite: search, confirm someone whose email never arrived, grant or remove
+# admin, delete an account.
 class Api::Admin::UsersController < Api::Admin::SuiteController
   LIMIT = 200
 
@@ -44,6 +45,28 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
     else
       render_errors(user)
     end
+  end
+
+  # DELETE { confirm_email }: delete someone's account for good, the same as deleting their own
+  # (User#destroy, which also revokes Sign in with Apple). Readings they added to the archive are
+  # used by others, so they move to the admin doing this instead of blocking it. Not yourself, and
+  # not another admin (remove their admin access first).
+  def destroy
+    user = User.find(params[:id])
+    return render json: { error: "You can't delete your own account here. Use Account settings." }, status: :unprocessable_entity if user == current_user
+    return render json: { error: "Remove their admin access first." }, status: :unprocessable_entity if user.admin
+    unless params[:confirm_email].to_s.strip.casecmp?(user.email)
+      return render json: { error: "Type their email address to confirm." }, status: :unprocessable_entity
+    end
+
+    deleted = User.transaction do
+      user.readings.update_all(user_id: current_user.id)
+      user.destroy || raise(ActiveRecord::Rollback)
+    end
+    return render_errors(user) unless deleted
+
+    Rails.logger.info("[admin] #{current_user.email} deleted account ##{user.id} (#{user.email})")
+    head :no_content
   end
 
   private

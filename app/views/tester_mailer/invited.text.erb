@@ -1,0 +1,17 @@
+Hi <%= @request.name %>,
+
+You're in the RecoveryBot <%= @request.platform_name %> app test. Thanks for helping.
+
+<% if @android %>
+On your Android phone, signed in with <%= @request.email %>:
+1. Open this link: <%= @url %>
+2. Tap "Become a tester".
+3. Tap the "download it on Google Play" link and install RecoveryBot.
+<% else %>
+On your iPhone:
+1. Open this link: <%= @url %>
+2. Install Apple's free TestFlight app if it asks.
+3. Tap Accept, then Install.
+<% end %>
+
+Found a bug or have an idea? Reply to this email or use the Contact page in the app.
