@@ -10,6 +10,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -111,6 +114,32 @@ final class WidgetData {
         String next;
         int nextIn;
         int progress; // 0 to 100, from the last milestone (or the start) to the next
+    }
+
+    // Today's fun fact (lib/dayFacts.json), else the next one: "🪐 In 12 days: a whole year on
+    // Mars". Null without one (or from a site that hasn't sent them).
+    static String factLine(Context context, int days) {
+        String json = prefs(context).getString("funFacts", "");
+        if (json == null || json.isEmpty()) return null;
+        try {
+            JSONArray list = new JSONArray(json);
+            JSONObject pick = null;
+            for (int i = 0; i < list.length(); i++) {
+                JSONObject f = list.getJSONObject(i);
+                int d = f.optInt("d", -1);
+                if (d == days) { pick = f; break; }
+                if (d > days && (pick == null || d < pick.optInt("d"))) pick = f;
+            }
+            if (pick == null) return null;
+            int away = pick.optInt("d") - days;
+            String title = pick.optString("t", "");
+            if (title.isEmpty()) return null;
+            String when = away == 0 ? "Today" : away == 1 ? "Tomorrow" : String.format(java.util.Locale.getDefault(), "In %,d days", away);
+            String lowered = Character.toLowerCase(title.charAt(0)) + title.substring(1);
+            return pick.optString("e", "✨") + " " + when + ": " + lowered;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private static final class Milestone {

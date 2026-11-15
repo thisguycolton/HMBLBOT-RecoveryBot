@@ -7,6 +7,9 @@
 //   chipImage   the chip drawn on a clear background, a PNG as base64, or "" without one
 //   chipBackImage  its back, drawn the same way, so tapping the chip on the widget flips it
 //   chipLabel   its name ("1 year"), and chipId
+//   funFacts    JSON: the fun day-count facts from today on (lib/dayFacts.json) as
+//               [{ d: day, e: emoji, t: title, x: detail }], so the larger day count widgets show
+//               the next one (or today's) and keep up as the days pass. Older app builds ignore it.
 // The chip is their first favorite (Chips page), else their newest sobriety chip, else their
 // newest chip. It's drawn right here, the same way chip pictures are (chipMotion.js).
 //
@@ -15,9 +18,10 @@
 // number of sobriety chips they've earned, changes; signed out, they're cleared.
 import { chipMilestones } from "./milestones";
 import { callPlugin, hasPlugin } from "./nativeApp";
+import FACTS, { TOPIC_ICONS } from "./dayFacts";
 
 const STORE = "hb-widget-key";
-const VERSION = 2; // bump to redraw everyone's widgets after a change to how they're drawn
+const VERSION = 3; // bump to redraw everyone's widgets after a change to how they're drawn
 const SIZE = 600;
 
 const remembered = () => { try { return localStorage.getItem(STORE); } catch { return null; } };
@@ -51,6 +55,16 @@ async function drawChipPictures(chip, design) {
     drawChip(canvas.getContext("2d"), prepared, { cx: SIZE / 2, cy: SIZE / 2, w, angle, shadow: false });
     return canvas.toDataURL("image/png").split(",", 2)[1] || "";
   });
+}
+
+// The facts the widget still has ahead of it (today's included), from their sobriety date
+export function widgetFacts(since, today = new Date()) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(since || "");
+  if (!m) return [];
+  const start = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const days = Math.round((midnight - start) / 86400000);
+  return FACTS.filter((f) => f.days >= days).map((f) => ({ d: f.days, e: TOPIC_ICONS[f.topic] || "✨", t: f.title, x: f.detail }));
 }
 
 let running = null;
@@ -92,6 +106,7 @@ async function update(force) {
     chipBackImage,
     chipLabel: chip?.label || "",
     chipId: chip ? String(chip.id) : "",
+    funFacts: JSON.stringify(widgetFacts(data.sobriety_date)),
   });
   remember(key);
 }

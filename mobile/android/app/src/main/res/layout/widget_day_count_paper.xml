@@ -54,4 +54,18 @@
         android:progress="60"
         android:progressTint="#B86B29"
         android:progressBackgroundTint="#333B2E21" />
+
+    <!-- The next fun fact (or today's), shown only when the widget is big enough (DayCountWidget) -->
+    <TextView
+        android:id="@+id/day_fact"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:fontFamily="serif"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:text="🐾 In 12 days: longer than an elephant's pregnancy"
+        android:textColor="#CC3B2E21"
+        android:textSize="13sp"
+        android:visibility="gone" />
 </LinearLayout>

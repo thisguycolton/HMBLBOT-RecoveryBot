@@ -7,6 +7,8 @@ import WidgetKit
 // - Day count: how many days since their sobriety date, and the next milestone. Counted here on
 //   the phone, so it turns over at midnight without the app being opened. It says only the
 //   number ("127 days"), never what the days are of, so it's discreet on a Lock Screen.
+//   The medium and large sizes also show the next fun fact ("🪐 In 12 days: a whole year on
+//   Mars"), or today's, from the list the site hands over (lib/dayFacts.json).
 // - Favorite chip: their first favorite chip (else their newest sobriety chip), drawn by the site.
 // The app (WidgetBridgePlugin in AppDelegate.swift) keeps what they show in the App Group both
 // share; signing out of the app clears it. Tapping the day count opens Today; tapping the chip
@@ -20,6 +22,12 @@ enum Shared {
     static var signedIn: Bool { defaults?.bool(forKey: "signedIn") ?? false }
     static var soberSince: String { defaults?.string(forKey: "soberSince") ?? "" }
     static var chipLabel: String { defaults?.string(forKey: "chipLabel") ?? "" }
+
+    // The fun day-count facts from the day the site sent them on, in day order
+    static func funFacts() -> [FunFact] {
+        guard let json = defaults?.string(forKey: "funFacts"), let data = json.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([FunFact].self, from: data)) ?? []
+    }
 
     static func chipImage() -> UIImage? {
         guard defaults?.bool(forKey: "hasChip") == true,
@@ -52,14 +60,50 @@ enum Shared {
 
 // MARK: - Counting
 
+// A fun comparison for a day count (lib/dayFacts.json): its day, emoji, title and detail
+struct FunFact: Decodable {
+    let d: Int
+    let e: String
+    let t: String
+    let x: String?
+}
+
+// Today's fact, else the next one, and how many days off it is (0 for today)
+struct FactLine {
+    let emoji: String
+    let title: String
+    let detail: String
+    let inDays: Int
+
+    static let sample = FactLine(emoji: "🐾", title: "Longer than an elephant's pregnancy", detail: "", inDays: 12)
+
+    static func pick(_ facts: [FunFact], days: Int) -> FactLine? {
+        guard let f = facts.first(where: { $0.d == days }) ?? facts.first(where: { $0.d > days }) else { return nil }
+        return FactLine(emoji: f.e, title: f.t, detail: f.x ?? "", inDays: f.d - days)
+    }
+
+    // "Today" or "In 12 days" / "Tomorrow"
+    var when: String {
+        switch inDays {
+        case 0: return "Today"
+        case 1: return "Tomorrow"
+        default: return "In \(inDays.formatted()) days"
+        }
+    }
+
+    // "a whole year on Mars", to follow "In 12 days:"
+    var lowered: String { title.prefix(1).lowercased() + title.dropFirst() }
+}
+
 struct DayCount {
     let days: Int
     let today: String? // a milestone reached today ("1 year")
     let next: String?
     let nextIn: Int
     let progress: Double // from the last milestone (or the start) to the next
+    var fact: FactLine? = nil
 
-    static let sample = DayCount(days: 127, today: nil, next: "6 months", nextIn: 55, progress: 0.6)
+    static let sample = DayCount(days: 127, today: nil, next: "6 months", nextIn: 55, progress: 0.6, fact: .sample)
 
     // The milestones most groups give chips for, the same as the site's (lib/milestones.js):
     // 24 hours, 30, 60 and 90 days, 6, 9 and 18 months, then every year
@@ -200,7 +244,8 @@ struct DayProvider: AppIntentTimelineProvider {
 
     private func entry(at date: Date, _ style: DayStyle) -> DayEntry {
         guard Shared.signedIn else { return DayEntry(date: date, state: .signedOut, style: style) }
-        guard let count = DayCount.from(Shared.soberSince, on: date) else { return DayEntry(date: date, state: .noDate, style: style) }
+        guard var count = DayCount.from(Shared.soberSince, on: date) else { return DayEntry(date: date, state: .noDate, style: style) }
+        count.fact = FactLine.pick(Shared.funFacts(), days: count.days)
         return DayEntry(date: date, state: .counting(count), style: style)
     }
 }
@@ -258,6 +303,14 @@ struct DayCountView: View {
         return "\(next) in \(c.nextIn) \(plural(c.nextIn, "day", "days"))"
     }
 
+    // "🪐 In 12 days: a whole year on Mars", one line along the bottom of the medium size
+    func factLine(_ f: FactLine) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(f.emoji)
+            Text("\(f.when): \(f.lowered)").font(theme.text(.caption, .medium)).opacity(0.9).lineLimit(1).minimumScaleFactor(0.85)
+        }
+    }
+
     @ViewBuilder func counted(_ c: DayCount) -> some View {
         let unit = plural(c.days, "day", "days")
         switch family {
@@ -278,26 +331,58 @@ struct DayCountView: View {
                 if c.next != nil && c.today == nil { ProgressView(value: c.progress) }
             }.frame(maxWidth: .infinity, alignment: .leading)
         case .systemMedium:
-            HStack(alignment: .center, spacing: 16) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("\(c.days)").font(theme.number(60)).minimumScaleFactor(0.4).lineLimit(1)
-                    Text(unit).font(theme.text(.title3, .semibold)).opacity(0.9)
-                }
-                Spacer(minLength: 0)
-                VStack(alignment: .leading, spacing: 6) {
-                    if let today = c.today {
-                        Text("Today").font(theme.text(.caption, .semibold)).opacity(0.8)
-                        Text(today).font(theme.text(.title3, .bold))
-                    } else if let next = c.next {
-                        Text("Next").font(theme.text(.caption, .semibold)).opacity(0.8)
-                        Text(next).font(theme.text(.headline, .semibold))
-                        ProgressView(value: c.progress).tint(theme.accent)
-                        Text("in \(c.nextIn) \(plural(c.nextIn, "day", "days"))").font(theme.text(.caption)).opacity(0.85)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .center, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("\(c.days)").font(theme.number(60)).minimumScaleFactor(0.4).lineLimit(1)
+                        Text(unit).font(theme.text(.title3, .semibold)).opacity(0.9)
                     }
-                }.frame(maxWidth: 140)
+                    Spacer(minLength: 0)
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let today = c.today {
+                            Text("Today").font(theme.text(.caption, .semibold)).opacity(0.8)
+                            Text(today).font(theme.text(.title3, .bold))
+                        } else if let next = c.next {
+                            Text("Next").font(theme.text(.caption, .semibold)).opacity(0.8)
+                            Text(next).font(theme.text(.headline, .semibold))
+                            ProgressView(value: c.progress).tint(theme.accent)
+                            Text("in \(c.nextIn) \(plural(c.nextIn, "day", "days"))").font(theme.text(.caption)).opacity(0.85)
+                        }
+                    }.frame(maxWidth: 140)
+                }
+                if let fact = c.fact { factLine(fact) }
             }
             .foregroundStyle(theme.ink)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .systemLarge:
+            VStack(alignment: .leading, spacing: 0) {
+                Text("\(c.days)").font(theme.number(96)).minimumScaleFactor(0.4).lineLimit(1)
+                Text(unit).font(theme.text(.title2, .semibold)).opacity(0.9)
+                Spacer(minLength: 8)
+                if let today = c.today {
+                    Text("Today").font(theme.text(.caption, .semibold)).opacity(0.8)
+                    Text(today).font(theme.text(.title2, .bold))
+                } else if let next = c.next {
+                    Text("Next: \(next)").font(theme.text(.headline, .semibold))
+                    ProgressView(value: c.progress).tint(theme.accent).padding(.vertical, 4)
+                    Text("in \(c.nextIn) \(plural(c.nextIn, "day", "days"))").font(theme.text(.caption)).opacity(0.85)
+                }
+                if let fact = c.fact {
+                    Spacer(minLength: 8)
+                    HStack(alignment: .top, spacing: 10) {
+                        Text(fact.emoji).font(.system(size: 30))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(fact.when).font(theme.text(.caption, .semibold)).opacity(0.8)
+                            Text(fact.title).font(theme.text(.subheadline, .semibold)).lineLimit(2)
+                            if !fact.detail.isEmpty {
+                                Text(fact.detail).font(theme.text(.caption)).opacity(0.85).lineLimit(3)
+                            }
+                        }
+                    }
+                }
+            }
+            .foregroundStyle(theme.ink)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         default:
             VStack(alignment: .leading, spacing: 0) {
                 Text("\(c.days)").font(theme.number(54)).minimumScaleFactor(0.4).lineLimit(1)
@@ -320,8 +405,8 @@ struct DayCountWidget: Widget {
             DayCountView(entry: entry)
         }
         .configurationDisplayName("Day count")
-        .description("Your days, counted on your phone, and your next milestone. It shows only the number. Touch and hold to pick a style.")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular, .accessoryInline])
+        .description("Your days, counted on your phone, your next milestone and, in the larger sizes, the next fun fact. It shows only the number. Touch and hold to pick a style.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
 

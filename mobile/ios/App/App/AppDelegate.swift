@@ -404,6 +404,8 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         defaults.set(call.getString("soberSince") ?? "", forKey: "soberSince")
         defaults.set(call.getString("chipLabel") ?? "", forKey: "chipLabel")
         defaults.set(call.getString("chipId") ?? "", forKey: "chipId")
+        // The fun day-count facts still ahead (JSON, lib/appWidgets.js); a site from before them sends none
+        if let facts = call.getString("funFacts") { defaults.set(facts, forKey: "funFacts") }
         let backFile = chipFile.deletingLastPathComponent().appendingPathComponent("chip-back.png")
         if let base64 = call.getString("chipImage"), !base64.isEmpty, let data = Data(base64Encoded: base64) {
             try? data.write(to: chipFile, options: .atomic)
@@ -428,7 +430,7 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func clear(_ call: CAPPluginCall) {
         if let (defaults, chipFile) = shared() {
-            ["signedIn", "soberSince", "chipLabel", "chipId", "hasChip", "chipFlipped", "chipShownId"].forEach { defaults.removeObject(forKey: $0) }
+            ["signedIn", "soberSince", "chipLabel", "chipId", "hasChip", "chipFlipped", "chipShownId", "funFacts"].forEach { defaults.removeObject(forKey: $0) }
             try? FileManager.default.removeItem(at: chipFile)
             try? FileManager.default.removeItem(at: chipFile.deletingLastPathComponent().appendingPathComponent("chip-back.png"))
             WidgetCenter.shared.reloadAllTimelines()
