@@ -203,6 +203,37 @@ button:focus-visible {
   --skullet-base: rgb(255 255 255 / 0.12);
   --skullet-highlight: rgb(255 255 255 / 0.32);
 }
+/* The robot outline and the bar where the word goes (brand/Logo.jsx), drawn by the logo itself in
+   plain CSS and SVG so every WebView paints them the same: the skeleton gray with a highlight
+   sweeping across. The real logo fades in over it once the menus are here. */
+.logo-outline-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0.12em;
+  bottom: 0.08em;
+  border-radius: 9999px;
+  background-color: var(--skullet-base, #d4d4d4);
+  background-image: linear-gradient(110deg, transparent 30%, var(--skullet-highlight, rgb(255 255 255 / 0.65)) 50%, transparent 70%);
+  background-size: 250% 100%;
+  background-repeat: no-repeat;
+  animation: logo-outline-sweep 1.6s linear infinite;
+}
+@keyframes logo-outline-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
+}
+@keyframes shell-logo-in {
+  from { opacity: 0; }
+}
+.shell-logo-in {
+  animation: shell-logo-in 0.25s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-outline-bar { animation: none; background-image: none; }
+  .logo-outline-sweep { display: none; }
+  .shell-logo-in { animation: none; }
+}
 
 /* Space where the sticky title sits; will be set at runtime */
 :root {
