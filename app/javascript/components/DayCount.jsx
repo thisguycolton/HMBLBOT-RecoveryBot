@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { confetti } from "../lib/confetti";
 import { milestoneStatus } from "../lib/milestones";
+import { DAY_COUNT_OPEN_EVENT as OPEN_EVENT } from "../lib/openDayCount";
 import { dayFacts, TOPIC_ICONS } from "../lib/dayFacts";
 import { api, soberFor } from "./groups/lib";
 import { SpinningChip } from "./recovery/ChipModal";
@@ -12,7 +13,7 @@ import "../styles/day-count.css";
 // if they stayed signed in, with confetti. Plain CSS (day-count.css), since this mounts with
 // the toasts on the older Bootstrap pages too. On a milestone day the new chip shows at the
 // top (/api/recovery: the one they put on top, if a group gave them one too), and it links to all
-// their chips.
+// their chips. Anything can open it again with openDayCount() (lib/openDayCount.js; the day count card on Today uses it).
 const SEEN_KEY = "hb-day-count-seen"; // the local date it last opened, "YYYY-MM-DD"
 
 const localDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -33,7 +34,15 @@ export default function DayCount({ since, signedIn }) {
   const [moreFacts, setMoreFacts] = useState(false); // some days have several fun facts; two show at first
 
   useEffect(() => {
+    if (!status) return undefined;
+    const onOpen = (e) => { e.preventDefault(); setOpen(true); };
+    window.addEventListener(OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_EVENT, onOpen);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     if (!open) return undefined;
+    const opener = document.activeElement; // focus goes back here on close
     markSeen();
     if (status.today) {
       const m = status.today;
@@ -45,14 +54,20 @@ export default function DayCount({ since, signedIn }) {
     }
     closeRef.current?.focus();
     const timer = status.today ? setTimeout(() => confetti(), 250) : null;
-    const onKey = (e) => e.key === "Escape" && setOpen(false);
-    window.addEventListener("keydown", onKey);
+    // capture, so Escape closes only this and not a sheet underneath (the Today sheet on phones)
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      setOpen(false);
+    };
+    window.addEventListener("keydown", onKey, true);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       clearTimeout(timer);
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
       document.body.style.overflow = overflow;
+      if (opener?.isConnected && opener !== document.body) opener.focus?.();
     };
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
