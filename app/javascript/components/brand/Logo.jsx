@@ -1,5 +1,4 @@
-import React, { useEffect, useId, useState } from "react";
-import { Skeleton, SkeletonBox } from "skullet/react";
+import React, { useEffect, useId, useRef, useState } from "react";
 
 // The mark's shapes, shared by the drawn mark and its skeleton
 const HEAD = "M12 36 Q12 27 20 25 Q50 19 80 25 Q88 27 88 36 V69 Q88 78 79 78 H21 Q12 78 12 69 Z";
@@ -9,9 +8,6 @@ const ANTENNAE = [
   { x: 17.2, y: 18, width: 2.8, height: 8, cx: 18.6, cy: 17, r: 5 },
   { x: 80, y: 18, width: 2.8, height: 8, cx: 81.4, cy: 17, r: 5 },
 ];
-// the eye: a ring around a pupil, and the two dots (black is cut out of the head); the mark
-// below draws the same circles
-const FACE = '<circle cx="50" cy="42" r="10" fill="black"/><circle cx="50" cy="42" r="5.6" fill="white"/><circle cx="30" cy="61" r="5.8" fill="black"/><circle cx="70" cy="61" r="5.8" fill="black"/>';
 
 // The RecoveryBot mark: a robot head with three antennae, ears, one ringed eye and two
 // dots. Drawn in currentColor with the face cut out, so it reads on any background
@@ -44,28 +40,50 @@ export function RecoveryBotMark({ className = "h-7 w-auto", title = "RecoveryBot
   );
 }
 
-// The whole robot as one shape, eye and dots cut out: the skeleton is a shimmering bar
-// clipped to it, the way Skullet's own site turns its skull logo into a skeleton
-const SILHOUETTE = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80"><defs><mask id="m"><rect width="100" height="80" fill="white"/>${FACE}</mask></defs>`
-  + `<path d="${HEAD}" mask="url(#m)"/>${EARS.map((d) => `<path d="${d}"/>`).join("")}`
-  + ANTENNAE.map((a) => `<rect x="${a.x}" y="${a.y}" width="${a.width}" height="${a.height}"/><circle cx="${a.cx}" cy="${a.cy}" r="${a.r}"/>`).join("")
-  + "</svg>",
-)}")`;
-
-// The mark as a skeleton: the robot's outline shimmering with the rest of the page. Same box as
-// the mark (100:80), so pass the same className (a height, w-auto) and nothing moves when it swaps.
-export function RecoveryBotMarkSkeleton({ className = "h-7 w-auto" }) {
+// The robot's shapes, for the outline below (the eye and dots cut out with the mask given)
+function MarkShapes({ mask }) {
   return (
-    <SkeletonBox
-      className={`aspect-[5/4] ${className}`}
-      style={{
-        width: undefined, height: undefined, borderRadius: 0,
-        maskImage: SILHOUETTE, WebkitMaskImage: SILHOUETTE,
-        maskSize: "100% 100%", WebkitMaskSize: "100% 100%",
-        maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat",
-      }}
-    />
+    <>
+      <path d={HEAD} mask={`url(#${mask})`} />
+      {EARS.map((d) => <path key={d} d={d} />)}
+      {ANTENNAE.map((a) => (
+        <React.Fragment key={a.cx}>
+          <rect x={a.x} y={a.y} width={a.width} height={a.height} />
+          <circle cx={a.cx} cy={a.cy} r={a.r} />
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
+
+// The mark as a skeleton: the robot's outline in the skeleton gray, with a highlight sweeping
+// across it. Drawn as a plain SVG of the mark's own box (100:80), so pass the same className (a
+// height, w-auto) and nothing moves when it swaps. It used to be a Skullet bar cut to the robot
+// with a CSS mask and sized by aspect-ratio, which some Android WebViews drew as a squashed blue
+// smear beside the word; an SVG sizes and paints the same everywhere. The sweep is SMIL, and
+// .logo-outline-sweep hides it for reduced motion (tailwind.css).
+export function RecoveryBotMarkSkeleton({ className = "h-7 w-auto" }) {
+  const id = useId();
+  return (
+    <svg viewBox="0 0 100 80" className={`logo-outline ${className}`} aria-hidden="true" focusable="false">
+      <defs>
+        <mask id={`${id}m`}>
+          <rect width="100" height="80" fill="white" />
+          <circle cx="50" cy="42" r="10" fill="black" />
+          <circle cx="50" cy="42" r="5.6" fill="white" />
+          <circle cx="30" cy="61" r="5.8" fill="black" />
+          <circle cx="70" cy="61" r="5.8" fill="black" />
+        </mask>
+        <linearGradient id={`${id}g`} gradientUnits="userSpaceOnUse" x1="-90" y1="0" x2="-10" y2="30">
+          <stop offset="0" stopColor="white" stopOpacity="0" />
+          <stop offset="0.5" style={{ stopColor: "var(--skullet-highlight, white)" }} />
+          <stop offset="1" stopColor="white" stopOpacity="0" />
+          <animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="200 0" dur="1.6s" repeatCount="indefinite" />
+        </linearGradient>
+      </defs>
+      <g style={{ fill: "var(--skullet-base, #d4d4d4)" }}><MarkShapes mask={`${id}m`} /></g>
+      <g className="logo-outline-sweep" fill={`url(#${id}g)`}><MarkShapes mask={`${id}m`} /></g>
+    </svg>
   );
 }
 // Inside a skullet <Skeleton>, the mark draws as its robot outline rather than one block
@@ -81,9 +99,9 @@ export function RecoveryBotLogo({ className = "", markClassName = "h-7 w-auto", 
       {loading ? (
         <span className={`relative top-[0.15em] inline-flex items-center leading-none ${textClassName}`} aria-hidden="true">
           {/* the word's width, held by invisible text, so the bar is exactly as long */}
-          <span className="relative font-extrabold tracking-tight text-transparent">
+          <span className="relative font-extrabold tracking-tight" style={{ color: "transparent" }}>
             RecoveryBot
-            <SkeletonBox className="absolute inset-x-0 top-[0.12em] bottom-[0.08em] rounded-full" style={{ width: undefined, height: undefined, borderRadius: undefined }} />
+            <span className="logo-outline-bar" />
           </span>
         </span>
       ) : (
@@ -123,16 +141,27 @@ export function useShellLogoLoading(loading) {
 }
 
 // The logo in the shell (sidebar, top bar): the robot outline while the menus are still on their
-// way (first page of a visit; after that they come from this tab's cache), then Skullet brings
-// the real logo in over it. mark: just the robot, as in the folded sidebar. The shimmer runs
-// across the logo itself (group-shimmer), so a sweep crosses the robot while it is up rather
-// than whenever the page-wide band happens to pass, and .shell-logo-skeleton brightens it on
-// the dark band.
+// way (first page of a visit; after that they come from this tab's cache), then the real logo
+// fades in over it. mark: just the robot, as in the folded sidebar. This draws the outline
+// itself rather than through a Skullet <Skeleton>: Skullet's ghost and its fade-out copy lean on
+// newer CSS (@scope, aspect-ratio boxes, masks), and on some Android WebViews the header logo
+// came out as the word next to a squashed blue robot. .shell-logo-skeleton sets the outline's
+// grays (tailwind.css).
 export function ShellLogo({ loading = false, mark = false, markClassName = "h-7 w-auto", textClassName = "text-xl" }) {
   const showing = useShellLogoLoading(loading);
+  // fade the real logo in only if the outline was up first, not on pages that draw it straight away
+  const outlined = useRef(showing);
+  if (showing) outlined.current = true;
+  if (showing) {
+    return (
+      <span className="shell-logo-skeleton inline-block">
+        {mark ? <RecoveryBotMarkSkeleton className={markClassName} /> : <RecoveryBotLogo loading markClassName={markClassName} textClassName={textClassName} />}
+      </span>
+    );
+  }
   return (
-    <Skeleton loading={showing} className="shell-logo-skeleton inline-block">
+    <span className={`inline-block ${outlined.current ? "shell-logo-in" : ""}`}>
       {mark ? <RecoveryBotMark className={markClassName} /> : <RecoveryBotLogo markClassName={markClassName} textClassName={textClassName} />}
-    </Skeleton>
+    </span>
   );
 }
