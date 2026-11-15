@@ -9,7 +9,7 @@ import { ItemPill, PrintAgenda, SuggestForm, agendaText } from "./AgendaParts";
 import DecisionForm from "./DecisionForm";
 import MeetingForm from "./MeetingForm";
 import MinutesEditor from "./MinutesEditor";
-import { AGENDA_KINDS, AGENDA_KIND_LABELS, MINUTES_STATUSES, MOTION_STATUS_LABELS, STATUS_TONES, VOTE_METHOD_SHORT, countLabel, dateLabel, decisionsPath, longDate, meetingsPath } from "./lib";
+import { AGENDA_KINDS, AGENDA_KIND_LABELS, MINUTES_STATUSES, MOTION_STATUS_LABELS, STATUS_TONES, VOTE_METHOD_SHORT, countLabel, dateLabel, decisionsPath, longDate, meetingsPath, officialsPath } from "./lib";
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -278,11 +278,12 @@ export default function MeetingPage({ group, id }) {
   };
   const copyAgenda = async () => {
     try {
-      await navigator.clipboard.writeText(agendaText({ groupTitle: group.title, when, items: onAgenda }));
+      await navigator.clipboard.writeText(agendaText({ groupTitle: group.title, when, items: onAgenda, offices: meeting.officer_sections || [] }));
       setNotice("Agenda copied. Paste it into an email, a chat or a document.");
     } catch { setError("Couldn't copy. Use Print agenda and Save as PDF instead."); }
   };
-  const hasReports = onAgenda.some((i) => i.kind === "report");
+  const offices = meeting.officer_sections || [];
+  const hasReports = offices.length > 0 || onAgenda.some((i) => i.kind === "report");
   const addUsualReports = async () => {
     setError(null);
     try {
@@ -343,7 +344,7 @@ export default function MeetingPage({ group, id }) {
 
         <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
           <div className="min-w-0 space-y-5">
-            <Tray label={`Agenda (${onAgenda.length})`} action={onAgenda.length > 0 && (
+            <Tray label={`Agenda (${onAgenda.length})`} action={(onAgenda.length > 0 || offices.length > 0) && (
               <span className="flex gap-1">
                 <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} onClick={copyAgenda}><Copy className="size-3.5" /> Copy</button>
                 <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} onClick={() => printPaper("agenda")}><Printer className="size-3.5" /> Print / PDF</button>
@@ -354,9 +355,25 @@ export default function MeetingPage({ group, id }) {
                   {suggested.length === 1 ? "1 suggestion isn't" : `${suggested.length} suggestions aren't`} on the agenda yet. Add or decline {suggested.length === 1 ? "it" : "them"} below before you print.
                 </p>
               )}
+              {offices.length > 0 && (
+                <Card className="mb-2 space-y-2 p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="min-w-0 flex-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">From elected officials</span>
+                    {canEdit && <Link to={officialsPath(slug)} className="text-xs font-medium text-accent hover:underline">Change these</Link>}
+                  </div>
+                  <ol className="space-y-1.5">
+                    {offices.map((o, n) => (
+                      <li key={o.id} className="text-sm">
+                        <span className="font-medium text-slate-900 dark:text-white">{n + 1}. {o.title}</span>
+                        {o.lines.length > 0 && <ul className="ml-5 list-disc text-slate-600 dark:text-neutral-300">{o.lines.map((l, i) => <li key={i}>{l}</li>)}</ul>}
+                      </li>
+                    ))}
+                  </ol>
+                </Card>
+              )}
               {canEdit && meeting.status === "planned" && !hasReports && (
                 <Card className="mb-2 flex flex-wrap items-center gap-3 border border-dashed border-slate-300 p-3 dark:border-neutral-700">
-                  <span className="min-w-0 flex-1 basis-56 text-sm text-slate-600 dark:text-neutral-300">No reports on this agenda yet. Add the ones the group hears every month: secretary, treasurer, host coordinators and tech admins (or whatever the last agenda had).</span>
+                  <span className="min-w-0 flex-1 basis-56 text-sm text-slate-600 dark:text-neutral-300">No reports on this agenda yet. Add the usual ones (secretary, treasurer, host coordinators, tech admins), or give each office its own section with its holder's name under Elected officials.</span>
                   <button type="button" className={`${primaryButton} !px-2.5 !py-1 !text-xs`} onClick={addUsualReports}><ClipboardList className="size-3.5" /> Add the usual reports</button>
                 </Card>
               )}
@@ -451,7 +468,7 @@ export default function MeetingPage({ group, id }) {
         <h1>{group.title} business meeting{printing === "agenda" ? ": agenda" : ""}</h1>
         <p className="meeting-print__meta">{when}{meeting.meeting ? ` · after ${meeting.meeting.name}` : ""}
           {[meeting.chair && `Chair: ${meeting.chair}`, meeting.secretary && `Secretary: ${meeting.secretary}`, meeting.attendance_count != null && `${meeting.attendance_count} present`, meeting.quorum_met === false && "No quorum", meeting.called_to_order_time && `Called to order ${clock12(meeting.called_to_order_time)}`, meeting.adjourned_time && `Adjourned ${clock12(meeting.adjourned_time)}`].filter(Boolean).map((t) => ` · ${t}`).join("")}</p>
-        <PrintAgenda items={onAgenda} />
+        <PrintAgenda items={onAgenda} offices={printing === "agenda" ? meeting.officer_sections || [] : []} />
         {printing === "all" && meeting.motions.length > 0 && (
           <>
             <h2>Motions</h2>

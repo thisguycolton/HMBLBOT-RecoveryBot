@@ -12,24 +12,34 @@ class Api::GroupServiceTermsController < ApplicationController
   # POST /api/groups/:group_slug/service_positions/:service_position_id/terms { term: { name, user_id, starts_on, ends_on } }
   def create
     term = @position.terms.new(term_params)
+    before = []
     ServiceTerm.transaction do
       if term.valid?
-        @position.terms.where("service_terms.starts_on < ? AND (service_terms.ends_on IS NULL OR service_terms.ends_on >= ?)", term.starts_on, term.starts_on)
-                 .update_all(ends_on: term.starts_on - 1.day)
+        ending = @position.terms.where("service_terms.starts_on < ? AND (service_terms.ends_on IS NULL OR service_terms.ends_on >= ?)", term.starts_on, term.starts_on)
+        before = ending.includes(:user).filter_map(&:user)
+        ending.update_all(ends_on: term.starts_on - 1.day)
         term.save!
       end
     end
-    term.persisted? ? render(json: position_json, status: :created) : render_errors(term)
+    return render_errors(term) unless term.persisted?
+
+    pass_role([term.user, *before])
+    render json: position_json, status: :created
   end
 
   # PATCH .../terms/:id
   def update
-    @term.update(term_params) ? render(json: position_json) : render_errors(@term)
+    was = @term.user
+    return render_errors(@term) unless @term.update(term_params)
+
+    pass_role([was, @term.user])
+    render json: position_json
   end
 
   # DELETE .../terms/:id
   def destroy
     @term.destroy!
+    pass_role([@term.user])
     render json: position_json
   end
 
@@ -49,6 +59,10 @@ class Api::GroupServiceTermsController < ApplicationController
     attrs[:user_id] = nil unless attrs[:user_id].present? && @group.members.exists?(attrs[:user_id])
     attrs
   end
+
+  # The office's role goes with it: the new holder gets it, whoever held it before loses it
+  # unless another office of theirs gives it too
+  def pass_role(users) = OfficeRoles.apply(@group, users, [@position.grants])
 
   def position_json
     @position.reload.as_api_json(today: @group.zone.today)

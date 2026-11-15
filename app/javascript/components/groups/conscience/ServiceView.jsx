@@ -7,15 +7,18 @@ import { NAMES_REMINDER, dateLabel } from "./lib";
 
 const today = () => new Date().toLocaleDateString("en-CA");
 
-function PositionForm({ slug, position, onSaved, onCancel }) {
-  const [form, setForm] = useState({ title: position?.title ?? "", description: position?.description ?? "", term_months: position?.term_months ?? "", sobriety_months: position?.sobriety_months ?? "" });
+const ROLES = [["", "No role"], ["can_keep_records", "Record keeper (agenda, minutes, documents)"], ["can_keep_treasury", "Treasurer (treasurer's reports)"], ["can_schedule_hosts", "Host coordinator (host schedule)"]];
+const ROLE_LABELS = { can_keep_records: "record keeper", can_keep_treasury: "treasurer", can_schedule_hosts: "host coordinator" };
+
+function PositionForm({ slug, position, onSaved, onCancel, canSetRoles }) {
+  const [form, setForm] = useState({ title: position?.title ?? "", description: position?.description ?? "", term_months: position?.term_months ?? "", sobriety_months: position?.sobriety_months ?? "", on_agenda: position?.on_agenda ?? false, agenda_heading: position?.agenda_heading ?? "", agenda_lines: position?.agenda_lines ?? "", grants: position?.grants ?? "" });
   const [error, setError] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const save = async (e) => {
     e.preventDefault();
     setError(null);
     try {
-      await api(`/groups/${slug}/service_positions${position ? `/${position.id}` : ""}`, { method: position ? "PATCH" : "POST", body: { service_position: form } });
+      await api(`/groups/${slug}/service_positions${position ? `/${position.id}` : ""}`, { method: position ? "PATCH" : "POST", body: { service_position: canSetRoles ? form : (({ grants, ...rest }) => rest)(form) } });
       onSaved();
     } catch (err) { setError(err.message); }
   };
@@ -28,6 +31,27 @@ function PositionForm({ slug, position, onSaved, onCancel }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <div><label htmlFor="sp-term" className={labelClass}>A term lasts (months)</label><input id="sp-term" type="number" min="1" max="120" className={inputClass} value={form.term_months ?? ""} onChange={set("term_months")} placeholder="No set length" /></div>
           <div><label htmlFor="sp-sober" className={labelClass}>Sober at least (months)</label><input id="sp-sober" type="number" min="0" max="600" className={inputClass} value={form.sobriety_months ?? ""} onChange={set("sobriety_months")} placeholder="No minimum" /></div>
+        </div>
+        {canSetRoles && (
+          <div>
+            <label htmlFor="sp-role" className={labelClass}>Whoever holds it gets this role on the site</label>
+            <select id="sp-role" className={selectClass} value={form.grants} onChange={set("grants")}>{ROLES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">It goes with the office: the next person you put in gets it, and the one before loses it (unless another office gives it to them). Only works for someone linked to their account. A host coordinator office named for a time, like "9AM Host Coordinator", covers just the meetings at that time.</p>
+          </div>
+        )}
+        <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
+            <input type="checkbox" checked={form.on_agenda} onChange={(e) => setForm((f) => ({ ...f, on_agenda: e.target.checked, agenda_lines: e.target.checked && !f.agenda_lines.trim() ? "Report: {name}" : f.agenda_lines }))} />
+            Give it a section on every business meeting agenda
+          </label>
+          {form.on_agenda && (
+            <div className="mt-2 space-y-2">
+              <div><label htmlFor="sp-heading" className={labelClass}>Agenda heading</label><input id="sp-heading" maxLength={80} className={inputClass} value={form.agenda_heading} onChange={set("agenda_heading")} placeholder={form.title || "The office's name"} /><p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Offices with the same heading share one section. Give all four host coordinators "Host Coordinators" and a line like "9 am: {"{name}"}".</p></div>
+              <label htmlFor="sp-lines" className={labelClass}>What goes under it (one line each)</label>
+              <textarea id="sp-lines" rows={4} maxLength={2000} className={`${inputClass} font-mono text-sm`} value={form.agenda_lines} onChange={set("agenda_lines")} placeholder={"Report: {name}\nContributions\nReserve $100.00"} />
+              <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">{"{name}"} becomes whoever holds the office on the meeting's day. {"{month}"} and {"{last_month}"} become the meeting's month and the one before ({"\"{last_month} minutes\" prints \"Oct minutes\""}). </p>
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-2"><button type="button" onClick={onCancel} className={quietButton}>Cancel</button><button type="submit" className={primaryButton}>Save</button></div>
       </form>
@@ -90,7 +114,7 @@ export default function ServiceView({ group }) {
   const done = async () => { setEditing(null); setPlacing(null); await load(); };
 
   const card = (p) => (
-    editing === p.id ? <PositionForm key={p.id} slug={slug} position={p} onSaved={done} onCancel={() => setEditing(null)} /> : (
+    editing === p.id ? <PositionForm key={p.id} slug={slug} position={p} canSetRoles={data.can_set_roles} onSaved={done} onCancel={() => setEditing(null)} /> : (
       <Card key={p.id} className="p-4">
         <div className="flex flex-wrap items-start gap-2">
           <div className="min-w-0 flex-1 basis-56">
@@ -98,6 +122,8 @@ export default function ServiceView({ group }) {
               {p.title}
               {p.rotation === "vacant" && <Pill tone="amber">Needs someone</Pill>}
               {p.rotation === "due" && <Pill tone="amber">Term ending</Pill>}
+              {p.on_agenda && !p.archived && <Pill tone="accent">On the agenda</Pill>}
+              {p.grants && <Pill>Gives {ROLE_LABELS[p.grants]}</Pill>}
             </h3>
             <p className="text-xs text-slate-500 dark:text-neutral-400">{[p.term_months && `${p.term_months}-month term`, p.sobriety_months != null && `${p.sobriety_months} months sober`].filter(Boolean).join(" · ")}</p>
           </div>
@@ -114,6 +140,15 @@ export default function ServiceView({ group }) {
           {p.current ? (
             <p><span className="font-medium text-slate-900 dark:text-white">{p.current.name}</span> <span className="text-slate-500 dark:text-neutral-400">since {dateLabel(p.current.starts_on)}{p.current.ends_on ? `, until ${dateLabel(p.current.ends_on)}` : ""}</span></p>
           ) : <p className="italic text-slate-500 dark:text-neutral-400">Nobody serves in it now.</p>}
+          {p.current && !p.current.linked && data.can_edit && data.members.length > 0 && (
+            <label className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-neutral-300">
+              <span className="min-w-0 basis-48">{p.grants ? `Link ${p.current.name} to their account so they get the ${ROLE_LABELS[p.grants]} role:` : `Link ${p.current.name} to their account (they'll hear when their term is up):`}</span>
+              <select aria-label={`Link ${p.current.name} to an account`} className={`${selectClass} !w-auto !py-1 !text-xs`} value="" onChange={(e) => e.target.value && call(`/${p.id}/terms/${p.current.id}`, "PATCH", { term: { user_id: e.target.value } })}>
+                <option value="">Pick a member</option>
+                {data.members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </label>
+          )}
           {p.access && (
             <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
               <span className="min-w-0 flex-1 basis-48">{p.access.name} isn't a {p.access.role} on the site yet, so they can't change {p.access.covers}.</span>
@@ -149,7 +184,7 @@ export default function ServiceView({ group }) {
         {data.can_edit && editing !== "new" && <button type="button" onClick={() => setEditing("new")} className={primaryButton}><Plus className="size-4" /> Add an office</button>}
       </div>
       <ErrorNote error={error} />
-      {editing === "new" && <PositionForm slug={slug} onSaved={done} onCancel={() => setEditing(null)} />}
+      {editing === "new" && <PositionForm slug={slug} canSetRoles={data.can_set_roles} onSaved={done} onCancel={() => setEditing(null)} />}
       {active.length === 0 && editing !== "new" && <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">{data.can_edit ? "No elected officials yet. Add the chair, secretary, treasurer, GSR and whatever else your group elects." : "The group hasn't listed its elected officials yet."}</Card>}
       <div className="grid gap-3 lg:grid-cols-2 lg:items-start">{active.map(card)}</div>
       {archived.length > 0 && <Tray label="Offices no longer used"><div className="grid gap-1.5 lg:grid-cols-2">{archived.map(card)}</div></Tray>}

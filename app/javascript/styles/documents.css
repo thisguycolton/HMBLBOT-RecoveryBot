@@ -281,3 +281,4 @@
 .doc-comments-on .doc-comment-anchor.is-active { background: #fde68a; }
 .doc-dark .doc-comments-on .doc-comment-anchor { background: rgb(180 83 9 / 0.3); }
 .doc-dark .doc-comments-on .doc-comment-anchor.is-active { background: rgb(180 83 9 / 0.55); }
+.agenda-print__section ul li { margin-bottom: 0.1em; }

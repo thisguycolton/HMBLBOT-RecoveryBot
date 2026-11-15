@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_15_040000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_15_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1483,6 +1483,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_15_040000) do
     t.boolean "archived", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "on_agenda", default: false, null: false
+    t.string "agenda_heading"
+    t.text "agenda_lines"
+    t.string "grants"
     t.index ["group_id"], name: "index_service_positions_on_group_id"
   end
 

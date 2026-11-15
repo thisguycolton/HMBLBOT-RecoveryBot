@@ -87,6 +87,23 @@ class BusinessMeeting < ApplicationRecord
 
   def planned? = status == "planned"
 
+  # The agenda's sections from the group's elected offices that asked for one, in the offices'
+  # order: a heading (the office's title, or the agenda heading offices share, like "Host
+  # Coordinators") and the lines under it with the blanks filled in. {name} is whoever holds the
+  # office on the meeting's day, {month} and {last_month} the meeting's month and the one before
+  # ("Nov", "Oct").
+  def officer_sections
+    positions = group.service_positions.where(on_agenda: true, archived: false).includes(:terms).order(:position, :id)
+    positions.group_by { |p| (p.agenda_heading || p.title).downcase }.values.map do |offices|
+      first = offices.first
+      lines = offices.flat_map do |p|
+        name = p.current_term(held_on)&.name
+        p.agenda_lines.to_s.lines.map(&:strip).compact_blank.map { |line| fill_in(line, name) }
+      end
+      { id: first.id, title: first.agenda_heading || first.title, lines: lines }
+    end
+  end
+
   # The reports most groups hear at every business meeting, for a group whose agendas don't have
   # any yet
   COMMON_REPORTS = ["Secretary's report (last meeting's minutes)", "Treasurer's report", "Host Coordinators' report", "Tech Admins' report"].freeze
@@ -167,6 +184,10 @@ class BusinessMeeting < ApplicationRecord
   end
 
   private
+
+  def fill_in(line, name)
+    line.gsub(/\{name\}/i, name || "(open)").gsub(/\{month\}/i, held_on.strftime("%b")).gsub(/\{last_month\}/i, held_on.prev_month.strftime("%b"))
+  end
 
   # "19:05" on this meeting's day, in the group's zone; blank clears it
   def clock(time, _was) = time.present? && held_on ? zone.parse("#{held_on} #{time}") : nil
