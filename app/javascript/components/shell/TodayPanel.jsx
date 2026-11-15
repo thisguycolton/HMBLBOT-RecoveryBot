@@ -8,6 +8,7 @@ import { soberFor } from "../groups/lib";
 import MeetingPasscode from "../groups/MeetingPasscode";
 import { isOnNow, refreshNav } from "./useShell";
 import Skeleton from "../ui/Skeleton";
+import TodayCustomize, { CustomizeButton, SECTIONS, resolveLayout } from "./TodayCustomize";
 import TaskCard from "../admin_suite/tasks/TaskCard";
 import { button as taskButton, primary as taskPrimary, small as taskSmall } from "../admin_suite/tasks/lib";
 
@@ -31,15 +32,16 @@ const partOfDay = (hour = new Date().getHours()) => {
 
 // "Good afternoon, Colton", and under it their day count with the next milestone (or a nudge
 // to add a sobriety date). Clicking it opens the day count modal (DayCount); it stays a link to
-// their chips for middle-click, and as the fallback if the modal isn't on this page.
-function Greeting({ me }) {
-  if (!me) return null;
+// their chips for middle-click, and as the fallback if the modal isn't on this page. Either can be
+// hidden in Customize (heading / dayCount), or moved apart, when each shows on its own.
+function Greeting({ me, heading = true, dayCount = true }) {
+  if (!me || (!heading && !dayCount)) return null;
   const status = milestoneStatus(me.sobriety_date);
   const fact = status && dayFacts(status.days).today[0];
   return (
     <section>
-      <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Good {partOfDay()}{me.first_name ? `, ${me.first_name}` : ""}</h2>
-      {status ? (
+      {heading && <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Good {partOfDay()}{me.first_name ? `, ${me.first_name}` : ""}</h2>}
+      {!dayCount ? null : status ? (
         <a
           href="/recovery"
           aria-haspopup="dialog"
@@ -47,7 +49,7 @@ function Greeting({ me }) {
             if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
             if (openDayCount()) e.preventDefault();
           }}
-          className="mt-3 flex items-center gap-3 rounded-2xl bg-accent/10 px-4 py-3 !text-slate-900 hover:bg-accent/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent/20 dark:!text-white">
+          className={`${heading ? "mt-3" : ""} flex items-center gap-3 rounded-2xl bg-accent/10 px-4 py-3 !text-slate-900 hover:bg-accent/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent/20 dark:!text-white`}>
           <span className="min-w-0 flex-1">
             <span className="block text-xs font-semibold uppercase tracking-[0.08em] text-accent">Your day count</span>
             <span className="block text-2xl font-bold tabular-nums">
@@ -66,7 +68,7 @@ function Greeting({ me }) {
           <ChevronRight className="size-5 shrink-0 text-slate-400" />
         </a>
       ) : (
-        <a href="/users/edit" className="mt-2 block text-sm text-slate-500 hover:text-accent dark:text-neutral-400">Add your sobriety date to see your day count here.</a>
+        <a href="/users/edit" className={`${heading ? "mt-2" : ""} block text-sm text-slate-500 hover:text-accent dark:text-neutral-400`}>Add your sobriety date to see your day count here.</a>
       )}
     </section>
   );
@@ -228,99 +230,142 @@ function Covers({ covers }) {
   );
 }
 
+function Meetings({ meetings }) {
+  return (
+    <section>
+      <h2 className={sideTitle}><CalendarClock className="size-4" /> Next meetings</h2>
+      {meetings.length === 0 && <p className="text-sm text-slate-500">Your groups haven't listed meetings yet.</p>}
+      <ul>
+        {meetings.map((m) => {
+          const now = isOnNow(m);
+          return (
+            <li key={m.id} className={`${row} flex items-start gap-3`}>
+              <div className="min-w-0 flex-1">
+                <a href={`/groups/${m.group.slug}/meetings`} className="block truncate text-base font-semibold !text-slate-900 hover:!text-accent dark:!text-white">{m.name}</a>
+                <span className={`block truncate text-sm ${now ? "font-semibold text-emerald-600 dark:text-emerald-400" : "text-slate-500 dark:text-neutral-400"}`}>
+                  {now ? "On now" : when(m.next_start)}
+                </span>
+                {m.name !== m.group.title && <span className="block truncate text-xs text-slate-400">{m.group.title}</span>}
+                {m.conference_url_notes && <MeetingPasscode notes={m.conference_url_notes} copy className="mt-1 !text-xs text-slate-500 dark:text-neutral-400" />}
+              </div>
+              {m.conference_url && (
+                <a href={m.conference_url} data-meeting-join={m.id} target="_blank" rel="noreferrer"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl !bg-accent px-3 py-2 text-sm font-semibold !text-white shadow-sm hover:opacity-90">
+                  <Video className="size-4" /> Join
+                </a>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function Birthdays({ birthdays }) {
+  return (
+    <section>
+      <h2 className={sideTitle}><Sparkles className="size-4" /> Birthdays</h2>
+      {birthdays.length === 0 && <p className="text-sm text-slate-500">No sobriety birthdays in the next month.</p>}
+      <ul>
+        {birthdays.map((b) => (
+          <li key={b.id} className={row}>
+            <a href={`/people/${b.username}`} className="flex items-center gap-3">
+              <Avatar person={b} size={40} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold text-slate-900 dark:text-white">{b.name}</span>
+                <span className="block truncate text-sm text-slate-500 dark:text-neutral-400">{b.years} {b.years === 1 ? "year" : "years"}</span>
+              </span>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-sm ${b.today ? "bg-amber-100 font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" : "text-slate-500 dark:text-neutral-400"}`}>
+                {b.today ? "🎉 Today" : dayLabel(b.date)}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function Events({ events }) {
+  return (
+    <section>
+      <h2 className={sideTitle}><CalendarDays className="size-4" /> Events</h2>
+      {events.length === 0 && <p className="text-sm text-slate-500">Nothing coming up.</p>}
+      <ul>
+        {events.map((e) => (
+          <li key={e.token} className={row}>
+            <a href={`/events/${e.token}`} className="flex items-start gap-3">
+              <span className={`size-12 shrink-0 overflow-hidden rounded-xl ${e.cover_url ? "" : "cover-default"}`}>
+                {e.cover_url && <img src={e.cover_url} alt="" className="size-full object-cover" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate font-semibold text-slate-900 dark:text-white">{e.title}</span>
+                <span className="block truncate text-sm text-slate-500 dark:text-neutral-400">{e.when_label || "Date to be decided"}</span>
+                <span className="block truncate text-sm text-accent">{e.group.title}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // What's coming up for them and in their groups (PeopleHome, by way of /api/nav): a greeting
 // with their day count, what needs them in their roles, who is filling in for whom, the next
 // meetings with their Join buttons, members' sobriety birthdays and events. The home feed's
 // side panel, and the Today sheet from the calendar in the phone bar.
+//
+// Each member can hide sections and change their order (Customize Today, users.today_layout);
+// until they do, it's the default order above with everything showing.
 export default function TodayPanel({ today }) {
+  const [layout, setLayout] = useState(today?.layout || null);
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { if (today) setLayout(today.layout || null); }, [today?.layout]);
   if (!today) return <Skeleton variant="aside" />;
-  if (!today.has_groups) {
-    return (
-      <div className="space-y-8 !font-sans">
-        <Greeting me={today.me} />
-        <AdminTasks data={today.admin_tasks} />
+
+  const groups = today.has_groups;
+  const available = SECTIONS.map((s) => s.id).filter((id) => {
+    if (id === "admin_tasks") return !!today.admin_tasks;
+    if (["greeting", "day_count"].includes(id)) return true;
+    return groups;
+  });
+
+  if (editing) {
+    return <TodayCustomize layout={layout} available={available}
+      onSave={(saved) => { setLayout(saved); setEditing(false); }} onCancel={() => setEditing(false)} />;
+  }
+
+  const { order, hidden } = resolveLayout(layout);
+  const visible = order.filter((id) => available.includes(id) && !hidden.includes(id));
+  const blocks = [];
+  visible.forEach((id, i) => {
+    if (id === "greeting") {
+      // The day count right under the greeting stays one section, as it always was
+      const together = visible[i + 1] === "day_count";
+      blocks.push(<Greeting key="greeting" me={today.me} dayCount={together} />);
+    } else if (id === "day_count") {
+      if (visible[i - 1] !== "greeting") blocks.push(<Greeting key="day_count" me={today.me} heading={false} />);
+    } else if (id === "admin_tasks") blocks.push(<AdminTasks key={id} data={today.admin_tasks} />);
+    else if (id === "attention") blocks.push(<Attention key={id} items={today.attention} cleared={today.cleared} anyRoles={today.any_roles} />);
+    else if (id === "covers") blocks.push(<Covers key={id} covers={today.covers} />);
+    else if (id === "meetings") blocks.push(<Meetings key={id} meetings={today.meetings} />);
+    else if (id === "birthdays") blocks.push(<Birthdays key={id} birthdays={today.birthdays} />);
+    else if (id === "events") blocks.push(<Events key={id} events={today.events} />);
+  });
+
+  return (
+    <div className="space-y-8 !font-sans">
+      {blocks}
+      {!groups && (
         <div className="text-sm text-slate-600 dark:text-neutral-300">
           Join a group to see its next meetings, members' birthdays and events here.
           <a href="/groups/find" className="mt-2 block font-semibold text-accent hover:underline">Find your group</a>
         </div>
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-8 !font-sans">
-      <Greeting me={today.me} />
-      <AdminTasks data={today.admin_tasks} />
-      <Attention items={today.attention} cleared={today.cleared} anyRoles={today.any_roles} />
-      <Covers covers={today.covers} />
-      <section>
-        <h2 className={sideTitle}><CalendarClock className="size-4" /> Next meetings</h2>
-        {today.meetings.length === 0 && <p className="text-sm text-slate-500">Your groups haven't listed meetings yet.</p>}
-        <ul>
-          {today.meetings.map((m) => {
-            const now = isOnNow(m);
-            return (
-              <li key={m.id} className={`${row} flex items-start gap-3`}>
-                <div className="min-w-0 flex-1">
-                  <a href={`/groups/${m.group.slug}/meetings`} className="block truncate text-base font-semibold !text-slate-900 hover:!text-accent dark:!text-white">{m.name}</a>
-                  <span className={`block truncate text-sm ${now ? "font-semibold text-emerald-600 dark:text-emerald-400" : "text-slate-500 dark:text-neutral-400"}`}>
-                    {now ? "On now" : when(m.next_start)}
-                  </span>
-                  {m.name !== m.group.title && <span className="block truncate text-xs text-slate-400">{m.group.title}</span>}
-                  {m.conference_url_notes && <MeetingPasscode notes={m.conference_url_notes} copy className="mt-1 !text-xs text-slate-500 dark:text-neutral-400" />}
-                </div>
-                {m.conference_url && (
-                  <a href={m.conference_url} data-meeting-join={m.id} target="_blank" rel="noreferrer"
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl !bg-accent px-3 py-2 text-sm font-semibold !text-white shadow-sm hover:opacity-90">
-                    <Video className="size-4" /> Join
-                  </a>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      <section>
-        <h2 className={sideTitle}><Sparkles className="size-4" /> Birthdays</h2>
-        {today.birthdays.length === 0 && <p className="text-sm text-slate-500">No sobriety birthdays in the next month.</p>}
-        <ul>
-          {today.birthdays.map((b) => (
-            <li key={b.id} className={row}>
-              <a href={`/people/${b.username}`} className="flex items-center gap-3">
-                <Avatar person={b} size={40} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-slate-900 dark:text-white">{b.name}</span>
-                  <span className="block truncate text-sm text-slate-500 dark:text-neutral-400">{b.years} {b.years === 1 ? "year" : "years"}</span>
-                </span>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-sm ${b.today ? "bg-amber-100 font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" : "text-slate-500 dark:text-neutral-400"}`}>
-                  {b.today ? "🎉 Today" : dayLabel(b.date)}
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section>
-        <h2 className={sideTitle}><CalendarDays className="size-4" /> Events</h2>
-        {today.events.length === 0 && <p className="text-sm text-slate-500">Nothing coming up.</p>}
-        <ul>
-          {today.events.map((e) => (
-            <li key={e.token} className={row}>
-              <a href={`/events/${e.token}`} className="flex items-start gap-3">
-                <span className={`size-12 shrink-0 overflow-hidden rounded-xl ${e.cover_url ? "" : "cover-default"}`}>
-                  {e.cover_url && <img src={e.cover_url} alt="" className="size-full object-cover" />}
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold text-slate-900 dark:text-white">{e.title}</span>
-                  <span className="block truncate text-sm text-slate-500 dark:text-neutral-400">{e.when_label || "Date to be decided"}</span>
-                  <span className="block truncate text-sm text-accent">{e.group.title}</span>
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
+      )}
+      {groups && !visible.length && <p className="text-sm text-slate-500 dark:text-neutral-400">You've hidden everything on Today.</p>}
+      <CustomizeButton onClick={() => setEditing(true)} />
     </div>
   );
 }

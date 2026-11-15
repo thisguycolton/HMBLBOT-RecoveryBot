@@ -132,6 +132,7 @@ Rails.application.routes.draw do
   resource :nav, controller: "nav", only: :show
   # Clearing "Needs your attention" items from Today, and restoring them
   resource :today_dismissals, only: %i[create destroy]
+  resource :today_layout, only: %i[update destroy]
   get "search", to: "search#index"
   # The Docs (Api::DocsController): reading is public, writing for site admins
   scope "docs", controller: "docs", as: "docs" do
