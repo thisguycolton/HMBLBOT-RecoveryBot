@@ -88,6 +88,17 @@ class Group < ApplicationRecord
     ActiveModel::Type::Boolean.new.cast(ENV["GROUPS_FOR_EVERYONE"]) || user.suite_admin?
   end
 
+  # Starting a group from an intergroup listing (POST /api/groups/start) is open to every
+  # signed-in account, even while the rest of Groups is admin-only: the group stays pending
+  # until a site admin approves it (Site Admin > Group requests). Someone who isn't a site
+  # admin may have a few waiting at once.
+  PENDING_STARTS_LIMIT = 3
+  def self.can_start_from_listing?(user) = user.present?
+
+  def self.too_many_pending_starts?(user)
+    !user.suite_admin? && where(status: "pending", created_by: user).count >= PENDING_STARTS_LIMIT
+  end
+
   # Anyone may see an active group's page and ask to join it, signed in or not: Find a
   # meeting is open to everyone. The rest of Groups stays behind .visible_to.
   def self.viewable_by(user) = user ? active.or(visible_to(user)) : active
@@ -108,6 +119,24 @@ class Group < ApplicationRecord
   def to_param = slug
   def zone = ActiveSupport::TimeZone[time_zone]
   def pending? = status == "pending"
+
+  # A site admin says yes to a group someone started: it goes live, run by whoever started it,
+  # and people who followed the listing hear it arrived
+  def approve!
+    update!(status: "active")
+    Notification.deliver(admins, kind: "group.approved", title: "#{title} is approved", url: "/groups/#{slug}")
+    IntergroupFollow.announce!(self)
+  end
+
+  # A site admin says no: whoever started it is told why (if the admin said) and the pending
+  # group is removed, so the listing can be started again
+  def decline!(reason = nil)
+    listing = meetings.linked_to_oiaa.pick(:oiaa_slug)
+    Notification.deliver(admins.to_a, kind: "group.declined", title: "“#{title}” wasn't approved",
+                                      body: reason.to_s.strip.presence&.truncate(500) || "A site admin didn't approve it this time.",
+                                      url: listing ? "/groups/find/#{CGI.escape(listing)}" : "/groups")
+    destroy!
+  end
 
   def membership_for(user) = user && memberships.find_by(user: user)
   def member?(user) = !!membership_for(user)&.active?

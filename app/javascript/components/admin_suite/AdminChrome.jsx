@@ -23,7 +23,7 @@ import {
   Sun,
   Tags,
   Users,
-  X, ShieldAlert, ShieldBan, Vote, ScrollText, Smartphone } from "lucide-react";
+  X, ShieldAlert, ShieldBan, Vote, ScrollText, Smartphone, UserPlus } from "lucide-react";
 import { api } from "../topicificator_admin/api";
 import NotificationBell from "../NotificationBell";
 import Avatar from "../groups/Avatar";
@@ -50,6 +50,8 @@ export const SECTIONS = [
     title: "Review",
     items: [
       { to: "/users", label: "Members", icon: Users },
+      // Groups people started from an intergroup listing, waiting for a yes or no
+      { to: "/group_requests", label: "Group requests", icon: UserPlus, count: "group_requests" },
       { to: "/contact_requests", label: "Contact requests", icon: Inbox, count: "contact_requests" },
       // People asking to try the iPhone app (/testflight)
       { to: "/testflight_requests", label: "Tester requests", icon: Smartphone, count: "testflight_requests" },
@@ -90,6 +92,7 @@ export const OTHER_TOOLS = [
 
 const inboxCounts = (overview) => ({
   text_reports: overview?.text_reports?.open ?? 0,
+  group_requests: overview?.group_requests?.pending ?? 0,
   contact_requests: overview?.contact_requests?.open ?? 0,
   testflight_requests: overview?.testflight_requests?.new ?? 0,
   user_reports: overview?.user_reports?.open ?? 0,

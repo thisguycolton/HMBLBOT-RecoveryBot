@@ -118,7 +118,7 @@ class GroupPage
   end
 
   def viewer_json
-    { signed_in: @viewer.present?, can_start: Group.feature_open_to?(@viewer), is_member: false }
+    { signed_in: @viewer.present?, can_start: Group.can_start_from_listing?(@viewer), is_member: false }
   end
 
   # Its meetings still to come, each with who hosts and co-hosts it next (or now, while it's on)

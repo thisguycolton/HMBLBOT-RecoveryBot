@@ -23,14 +23,16 @@ Casey goes to the Thursday Night Step Meeting on Zoom. Casey opens **Find your g
 
 ## Start a group
 
-If your group meets online and is listed by AA Intergroup, it may already have a page waiting for it.
+If your group is listed by AA Intergroup or a local intergroup, it may already have a page waiting for it. Anyone with an account can start it here.
 
 1. Search for your group, or go to **Find a meeting** and open one of its meetings.
-2. Choose **Start this group on RecoveryBot** (or **Start a group** if it isn't listed).
-3. Match up the meetings it holds. Listed meetings stay in sync with AA Intergroup.
-4. You're the group's first **admin**. Invite your members with the invite link from the [Members page](/docs/group-tools/members-and-roles).
+2. Choose **Start this group on RecoveryBot**. Its meetings come over from the listing, and listed meetings stay in sync with the intergroup.
+3. A site admin checks it first. Until then the group shows **Waiting for approval** and only you can see it.
+4. Once it's approved you're the group's first **admin**, and anyone following the listing hears it arrived. Invite your members with the invite link from the [Members page](/docs/group-tools/members-and-roles).
 
-> [!NOTE] Groups are being opened up gradually. If you don't see how to start one yet, [contact us](/contact) and we'll set it up with you.
+If a site admin doesn't approve it, you'll get a notification (with the reason, if they gave one), and you can start it again later.
+
+> [!NOTE] Groups that aren't listed by an intergroup are being opened up gradually. If yours isn't listed, [contact us](/contact) and we'll set it up with you.
 
 ## Leave a group
 
