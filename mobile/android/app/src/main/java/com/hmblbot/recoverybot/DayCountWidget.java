@@ -7,6 +7,7 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -16,7 +17,8 @@ import java.util.Calendar;
 // says only the number ("127 days"), never what the days are of. Counted here on the phone, and
 // redrawn just after each midnight so it turns over without the app being opened. Tapping it
 // opens Today. Each one has its own look (WidgetSettingsActivity): four layouts with the same
-// views, differing in background, type and colors.
+// views, differing in background, type and colors. Made bigger than its 2x2 start, it also shows
+// the next fun fact (or today's) along the bottom.
 public class DayCountWidget extends AppWidgetProvider {
     static final String[] STYLES = {"classic", "paper", "midnight", "sunrise"};
     static final String[] STYLE_NAMES = {"Classic blue", "Paper", "Midnight", "Sunrise"};
@@ -36,6 +38,23 @@ public class DayCountWidget extends AppWidgetProvider {
         wakeAtMidnight(context);
     }
 
+    // Resized: the fun fact comes or goes
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options) {
+        manager.updateAppWidget(id, draw(context, id));
+    }
+
+    // Room for the fun fact: three rows tall, or wide enough for one line under the count
+    private static int factLines(Context context, int id) {
+        Bundle options = AppWidgetManager.getInstance(context).getAppWidgetOptions(id);
+        if (options == null) return 0;
+        int width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
+        int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
+        if (height >= 170) return 3;
+        if (width >= 250 && height >= 140) return 1;
+        return 0;
+    }
+
     @Override
     public void onDeleted(Context context, int[] ids) {
         WidgetData.forget(context, "day", ids);
@@ -51,6 +70,7 @@ public class DayCountWidget extends AppWidgetProvider {
         RemoteViews views = new RemoteViews(context.getPackageName(), layout(WidgetData.look(context, "day", id, "classic")));
         views.setOnClickPendingIntent(R.id.widget_root, WidgetData.openToday(context));
         WidgetData.Count count = WidgetData.signedIn(context) ? WidgetData.count(context, Calendar.getInstance()) : null;
+        views.setViewVisibility(R.id.day_fact, View.GONE);
         if (count == null) {
             views.setViewVisibility(R.id.day_number, View.GONE);
             views.setViewVisibility(R.id.day_unit, View.GONE);
@@ -74,6 +94,13 @@ public class DayCountWidget extends AppWidgetProvider {
         } else {
             views.setTextViewText(R.id.day_next, "");
             views.setViewVisibility(R.id.day_progress, View.GONE);
+        }
+        int lines = factLines(context, id);
+        String fact = lines > 0 ? WidgetData.factLine(context, count.days) : null;
+        if (fact != null) {
+            views.setTextViewText(R.id.day_fact, fact);
+            views.setInt(R.id.day_fact, "setMaxLines", lines);
+            views.setViewVisibility(R.id.day_fact, View.VISIBLE);
         }
         return views;
     }

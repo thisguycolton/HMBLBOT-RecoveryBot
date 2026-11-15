@@ -15,7 +15,7 @@ import java.io.FileOutputStream;
 // The Home Screen widgets (DayCountWidget, ChipWidget): the site hands them what they show
 // (lib/appWidgets.js), and this keeps it in the app's own storage, then has them redraw.
 // soberSince "YYYY-MM-DD" (the widget counts the days itself), the chip and its back as PNGs,
-// its name.
+// its name, and the fun day-count facts still ahead.
 @CapacitorPlugin(name = "WidgetBridge")
 public class WidgetBridgePlugin extends Plugin {
     @PluginMethod
@@ -29,6 +29,9 @@ public class WidgetBridgePlugin extends Plugin {
             .putString("soberSince", call.getString("soberSince", ""))
             .putString("chipLabel", call.getString("chipLabel", ""))
             .putString("chipId", chipId);
+        // The fun day-count facts still ahead (JSON, lib/appWidgets.js); a site from before them sends none
+        String facts = call.getString("funFacts", null);
+        if (facts != null) prefs.putString("funFacts", facts);
         if (!sameChip) prefs.putBoolean("chipFlipped", false);
         File file = WidgetData.chipFile(context);
         String image = call.getString("chipImage", "");
