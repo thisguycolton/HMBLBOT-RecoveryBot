@@ -2379,16 +2379,17 @@ body:has(.wb) {
 .wb .wb-comment-box .wb-hl-note__input { border-radius: 1rem; font-size: 0.925rem; padding: 0.45rem 0.8rem; }
 .wb-comment-box__actions { display: flex; gap: 0.4rem; justify-content: flex-end; }
 
-/* A repost: who reposted it, then the note inset as its author wrote it */
+/* A repost: who reposted it, a rule, then the note as its author wrote it. The note uses the
+   item's own side padding (no inset card), so it isn't padded twice on narrow screens. */
 .wb-feed-item__reposted { align-items: center; display: inline-flex; gap: 0.35rem; }
 .wb .wb-feed-item__reposted a { color: var(--wb-ink); font-weight: 600; text-decoration: none; }
 .wb .wb-feed-item__reposted a:hover { text-decoration: underline; }
 .wb-feed-item__repost {
   position: relative;
-  border: 1px solid var(--wb-subtle);
-  border-radius: var(--radius-xl, 1.125rem);
-  padding: 0.7rem 0.8rem;
+  border-top: 1px solid var(--wb-subtle);
+  padding-top: 0.7rem;
 }
+.wb-feed-item__repost .wb-feed-item__menu { right: -0.35rem; }
 
 /* Like, Love, Hugs and Repost under a note */
 .wb-note-actions {

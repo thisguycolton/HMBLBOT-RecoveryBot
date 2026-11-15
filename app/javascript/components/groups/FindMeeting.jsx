@@ -366,12 +366,13 @@ function Cover({ group, className = "", children }) {
 const start = (m) => new Date(m.starts_at).getTime();
 const end = (m) => new Date(m.ends_at).getTime();
 
-function Where({ meeting }) {
+// wrap: let a long place run to two lines instead of cutting it off
+function Where({ meeting, wrap = false }) {
   const online = meeting.attendance !== "in_person";
   return (
-    <p className="flex min-w-0 items-center gap-1.5 text-sm text-slate-600 dark:text-neutral-300">
-      {online ? <Video className="h-4 w-4 shrink-0 text-slate-400" /> : <MapPin className="h-4 w-4 shrink-0 text-slate-400" />}
-      <span className="truncate">
+    <p className={`flex min-w-0 max-w-full gap-1.5 text-sm text-slate-600 dark:text-neutral-300 ${wrap ? "items-start" : "items-center"}`}>
+      {online ? <Video className={`h-4 w-4 shrink-0 text-slate-400 ${wrap ? "mt-0.5" : ""}`} /> : <MapPin className={`h-4 w-4 shrink-0 text-slate-400 ${wrap ? "mt-0.5" : ""}`} />}
+      <span className={wrap ? "line-clamp-2 break-words" : "truncate"}>
         {meeting.attendance === "hybrid" ? `Online and at ${meeting.place || "a location"}` : online ? "Online" : meeting.place || "In person"}
       </span>
     </p>
@@ -436,37 +437,43 @@ function MeetingShare({ meeting: m, className }) {
   );
 }
 
+// One line of the List view. Phones stack it: when (and the countdown) on top, then the name
+// and where, each with room to wrap. Wider screens lay it out in one row.
 function MeetingRow({ meeting: m, now }) {
   const { group } = m;
   const at = new Date(m.starts_at);
+  const day = whenLabel(m.starts_at, now).split(",")[0];
+  const time = at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const badge = start(m) <= now ? "" : "!bg-neutral-100 !text-slate-700 dark:!bg-neutral-800 dark:!text-neutral-200";
   return (
-    <div className="flex items-center gap-1 rounded-xl bg-white pr-1.5 shadow-panel hover:ring-1 hover:ring-accent/50 dark:bg-neutral-900">
+    <div className="flex items-start gap-1 rounded-xl bg-white pr-1.5 shadow-panel hover:ring-1 hover:ring-accent/50 sm:items-center dark:bg-neutral-900">
     <Link to={group.href}
-      className={`group flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2.5 ${focusRing}`}>
-      <div className="w-20 shrink-0 text-center">
-        <p className="!text-center text-xs font-medium text-slate-500 dark:text-neutral-400">
-          {whenLabel(m.starts_at, now).split(",")[0]}
-        </p>
-        <p className="!text-center text-sm font-semibold tabular-nums text-slate-900 dark:text-white">
-          {at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-        </p>
+      className={`group flex min-w-0 flex-1 items-start gap-3 rounded-xl p-3 sm:items-center sm:p-2.5 ${focusRing}`}>
+      <div className="hidden w-20 shrink-0 text-center sm:block">
+        <p className="!text-center text-xs font-medium text-slate-500 dark:text-neutral-400">{day}</p>
+        <p className="!text-center text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{time}</p>
       </div>
       <Cover group={group} className="hidden size-12 shrink-0 rounded-lg sm:block" />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-slate-900 group-hover:text-accent dark:text-white">
-          {m.name}
-          {m.name.trim().toLowerCase() !== group.title.trim().toLowerCase() && <span className="ml-2 font-normal text-slate-500 dark:text-neutral-400">{group.title}</span>}
+        <p className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm sm:hidden">
+          <span className="font-semibold tabular-nums text-slate-900 dark:text-white">{time}</span>
+          <span className="text-slate-500 dark:text-neutral-400">{day}</span>
+          <LiveBadge start={start(m)} end={end(m)} now={now} className={badge} />
         </p>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <Where meeting={m} />
+        <p className="line-clamp-2 break-words font-semibold leading-snug text-slate-900 group-hover:text-accent dark:text-white">{m.name}</p>
+        {m.name.trim().toLowerCase() !== group.title.trim().toLowerCase() && (
+          <p className="line-clamp-1 text-sm text-slate-500 dark:text-neutral-400">{group.title}</p>
+        )}
+        <div className="mt-1 flex flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+          <Where meeting={m} wrap />
           {m.conference_url && <MeetingPasscode notes={m.conference_url_notes} className="!text-xs text-slate-500 dark:text-neutral-400" />}
           <span className="hidden md:block"><Types types={m.types} max={3} /></span>
         </div>
       </div>
-      <LiveBadge start={start(m)} end={end(m)} now={now} className={start(m) <= now ? "" : "!bg-neutral-100 !text-slate-700 dark:!bg-neutral-800 dark:!text-neutral-200"} />
-      <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 dark:text-neutral-600" />
+      <LiveBadge start={start(m)} end={end(m)} now={now} className={`max-sm:hidden shrink-0 ${badge}`} />
+      <ChevronRight className="hidden h-4 w-4 shrink-0 text-slate-300 sm:block dark:text-neutral-600" />
     </Link>
-    <MeetingShare meeting={m} className={`grid size-8 shrink-0 place-items-center rounded-lg !bg-transparent text-slate-400 hover:!bg-neutral-100 hover:text-accent dark:text-neutral-500 dark:hover:!bg-neutral-800 ${focusRing}`} />
+    <MeetingShare meeting={m} className={`mt-2 grid size-8 shrink-0 place-items-center rounded-lg !bg-transparent text-slate-400 hover:!bg-neutral-100 hover:text-accent sm:mt-0 dark:text-neutral-500 dark:hover:!bg-neutral-800 ${focusRing}`} />
     </div>
   );
 }
