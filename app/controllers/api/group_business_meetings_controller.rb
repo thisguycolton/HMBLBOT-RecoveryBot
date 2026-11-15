@@ -42,6 +42,7 @@ class Api::GroupBusinessMeetingsController < ApplicationController
     end
     return render_errors(@meeting) unless @meeting.persisted?
 
+    @meeting.add_usual_reports!(common: false) if @meeting.planned?
     tell_members_it_is_scheduled
     render json: meeting_json, status: :created
   rescue ActiveRecord::RecordInvalid => e

@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarClock, CalendarDays, CalendarPlus, ExternalLink, FileText, Gavel, HandHelping, Landmark, Scale, UserCheck, Users } from "lucide-react";
+import { CalendarClock, CalendarDays, CalendarPlus, ExternalLink, FileText, Gavel, HandHelping, Landmark, Printer, Scale, UserCheck, Users } from "lucide-react";
 import { api } from "../lib";
-import { Card, ErrorNote, Loading, Pill, Tray, primaryButton } from "../ui";
+import { Card, ErrorNote, Loading, Pill, Tray, primaryButton, quietButton } from "../ui";
 import { AgendaList, SuggestForm } from "./AgendaParts";
 import { KIND_INFO, MOTION_STATUS_LABELS, countLabel, dateLabel, decisionsPath, documentsPath, longDate, meetingsPath, officialsPath, treasuryPath } from "./lib";
 
@@ -63,14 +63,20 @@ export default function OverviewView({ group }) {
                   {next.meeting && <p className="text-sm text-slate-500 dark:text-neutral-400">After {next.meeting.name}</p>}
                 </div>
                 {next.event && <a href={next.event.path} className="inline-flex items-center gap-1 text-sm text-accent hover:underline">The event <ExternalLink className="size-3.5" /></a>}
+                {data.can_edit && <Link to={`${meetingsPath(slug, next.id)}?print=agenda`} className={quietButton}><Printer className="size-4" /> Print agenda</Link>}
                 <Link to={meetingsPath(slug, next.id)} className={primaryButton}><CalendarClock className="size-4" /> Open the meeting</Link>
               </div>
               <div>
                 <h3 className="mb-2 !text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Agenda so far</h3>
                 <AgendaList items={next.agenda.filter((i) => i.status !== "suggested")} empty="Nothing on the agenda yet." />
+                {data.can_edit && next.agenda.some((i) => i.status === "suggested") && (
+                  <Link to={meetingsPath(slug, next.id)} className="mt-2 inline-block text-sm text-amber-700 hover:underline dark:text-amber-300">
+                    {(() => { const n = next.agenda.filter((i) => i.status === "suggested").length; return `${n} ${n === 1 ? "suggestion is" : "suggestions are"} waiting to be added or declined`; })()}
+                  </Link>
+                )}
               </div>
               <div className="border-t border-neutral-100 pt-4 dark:border-neutral-800">
-                <SuggestForm slug={slug} meetingId={next.id} onAdded={load} />
+                <SuggestForm slug={slug} meetingId={next.id} onAdded={load} keeper={data.can_edit} />
               </div>
             </>
           ) : (
@@ -92,7 +98,7 @@ export default function OverviewView({ group }) {
       {waiting && waitingCount > 0 && (
         <Tray label={`Waiting on you (${waitingCount})`}>
           <div className="space-y-1.5">
-            {waiting.suggested_items.map((i) => <Row key={`i${i.id}`} to={meetingsPath(slug, i.meeting_id)} icon={CalendarClock} title={`Suggested for ${dateLabel(i.held_on)}: ${i.title}`} note="Put it on the agenda or decline it" />)}
+            {waiting.suggested_items.map((i) => <Row key={`i${i.id}`} to={meetingsPath(slug, i.meeting_id)} icon={CalendarClock} title={`Suggested for ${dateLabel(i.held_on)}: ${i.title}`} note={`${i.submitted_by ? `From ${i.submitted_by}. ` : ""}Put it on the agenda or decline it`} />)}
             {waiting.draft_minutes.map((m) => <Row key={`m${m.id}`} to={meetingsPath(slug, m.id)} icon={CalendarClock} title={`Minutes for ${dateLabel(m.held_on)} aren't posted`} note="Still a draft" />)}
             {waiting.draft_documents.map((d) => <Row key={`d${d.id}`} to={documentsPath(slug, d.id)} icon={FileText} title={d.title} note="A draft document" />)}
             {waiting.draft_reports.map((r) => <Row key={`r${r.id}`} to={treasuryPath(slug, r.id)} icon={Scale} title={`Treasurer's report for ${dateLabel(r.period_on)}`} note="Not posted yet" />)}

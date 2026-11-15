@@ -254,6 +254,7 @@ Rails.application.routes.draw do
     resources :business_meetings, controller: "group_business_meetings", only: %i[index show create update destroy] do
       resources :agenda_items, controller: "group_agenda_items", only: %i[create update destroy] do
         post :reorder, on: :collection
+        post :usual_reports, on: :collection
       end
     end
     resources :service_positions, controller: "group_service_positions", only: %i[index create update destroy] do

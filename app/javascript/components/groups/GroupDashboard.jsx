@@ -190,7 +190,7 @@ function DashboardBody({ group }) {
             {group.can_keep_records && waiting && (
               <RolePart title="Record keeper" empty="Nothing is waiting on the records."
                 items={[
-                  ...waiting.suggested_items.map((i) => <Row key={`i${i.id}`} to={meetingsPath(slug, i.meeting_id)} icon={CalendarClock} title={`Suggested for ${dateLabel(i.held_on)}: ${i.title}`} note="Put it on the agenda or decline it" />),
+                  ...waiting.suggested_items.map((i) => <Row key={`i${i.id}`} to={meetingsPath(slug, i.meeting_id)} icon={CalendarClock} title={`Suggested for ${dateLabel(i.held_on)}: ${i.title}`} note={`${i.submitted_by ? `From ${i.submitted_by}. ` : ""}Put it on the agenda or decline it`} />),
                   ...waiting.draft_minutes.map((m) => <Row key={`m${m.id}`} to={meetingsPath(slug, m.id)} icon={CalendarClock} title={`Minutes for ${dateLabel(m.held_on)} aren't posted`} note="Still a draft" />),
                   ...waiting.draft_documents.map((d) => <Row key={`d${d.id}`} to={documentsPath(slug, d.id)} icon={FileText} title={d.title} note="A draft document" />),
                   ...(st?.decisions_to_check ? [<Row key="check" to={decisionsPath(slug)} icon={Scale} title={`${st.decisions_to_check} imported decisions to check`} note="Look them over in Decisions" />] : []),

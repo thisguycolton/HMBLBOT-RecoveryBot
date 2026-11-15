@@ -216,6 +216,49 @@ class Api::GroupBusinessMeetingsTest < ActionDispatch::IntegrationTest
     assert_equal ["Old business", "GSR report", "Treasurer's report"], body["agenda"].map { |i| i["title"] }
   end
 
+  test "a record keeper says who brought an item; members can't, and the name shows to members" do
+    sign_in @member
+    post path(@next.id, "agenda_items"), params: { agenda_item: { title: "Anonymity card", brought_by: "Someone Else" } }, as: :json
+    assert_equal ["Mo", ""], body.values_at("submitted_by", "brought_by"), "a member's own name, whatever they send"
+
+    sign_in @keeper
+    post path(@next.id, "agenda_items"), params: { agenda_item: { title: "Bylaw committee", brought_by: "  Drew   B " } }, as: :json
+    assert_equal ["Drew B", "on_agenda"], body.values_at("submitted_by", "status")
+    patch path(@next.id, "agenda_items", body["id"]), params: { agenda_item: { brought_by: "" } }, as: :json
+    assert_equal "Kay", body["submitted_by"], "blank goes back to whoever added it"
+
+    sign_in @member
+    get "/api/groups/#{@group.slug}/conscience", as: :json
+    assert_includes body.dig("next_meeting", "agenda").map { |i| i["submitted_by"] }, "Kay"
+  end
+
+  test "record keepers add the usual reports: the last agenda's, or the common ones, at the top" do
+    business = @next.agenda_items.create!(title: "Buy an urn")
+    sign_in @member
+    post path(@next.id, "agenda_items", "usual_reports"), as: :json
+    assert_response :forbidden
+
+    sign_in @keeper
+    fresh = @group.business_meetings.create!(held_on: @today + 30)
+    fresh.agenda_items.create!(title: "Coffee")
+    post path(fresh.id, "agenda_items", "usual_reports"), as: :json
+    assert_equal ["Treasurer's report", "Coffee"], body["agenda"].map { |i| i["title"] }, "copied from the last agenda that had reports"
+
+    @agenda.destroy!
+    post path(@next.id, "agenda_items", "usual_reports"), as: :json
+    assert_equal BusinessMeeting::COMMON_REPORTS + ["Buy an urn"], body["agenda"].map { |i| i["title"] }
+    post path(@next.id, "agenda_items", "usual_reports"), as: :json
+    assert_equal 5, @next.agenda_items.count, "nothing twice"
+    assert_equal 4, @next.agenda_items.where("position < ?", business.reload.position).count, "the reports go above the business"
+  end
+
+  test "a new meeting starts with the reports from the last agenda" do
+    sign_in @keeper
+    post path, params: { business_meeting: { held_on: (@today + 34).to_s } }, as: :json
+    assert_response :created
+    assert_equal ["Treasurer's report"], BusinessMeeting.find(body["id"]).agenda_items.map(&:title)
+  end
+
   test "recording a decision at a meeting links it and crosses the agenda item off" do
     sign_in @keeper
     post "/api/groups/#{@group.slug}/motions", params: { motion: { title: "Approve the report", status: "passed", decided_on: @today.to_s, business_meeting_id: @next.id, agenda_item_id: @agenda.id } }, as: :json
