@@ -5,6 +5,7 @@ import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { DateField, todayValue } from "../ui/DateFields";
 import Toggle from "../ui/Toggle";
 import PushSettings from "./PushSettings";
+import WidgetSettings from "./WidgetSettings";
 import { ReminderSetting } from "../recovery/ReminderSetting";
 import { api } from "../groups/lib";
 import Avatar from "../groups/Avatar";
@@ -260,6 +261,8 @@ export default function ProfilePage() {
       </section>
 
       <PushSettings />
+
+      <WidgetSettings />
 
       {profile.hosting && <HostingSettings hosting={profile.hosting} save={saveDefault} saved={saved} />}
 
