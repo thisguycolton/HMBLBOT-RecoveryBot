@@ -17,7 +17,7 @@ class PeopleHome
   def json
     { me: me, meetings: meetings, birthdays: birthdays, events: events, has_groups: @groups.any? }
       .merge(TodayDuties.new(@viewer).json)
-      .merge(admin_tasks: admin_tasks)
+      .merge(admin_tasks: admin_tasks, layout: @viewer.today_layout)
   end
 
   private
