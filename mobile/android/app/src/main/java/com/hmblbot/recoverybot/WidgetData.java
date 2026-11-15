@@ -77,20 +77,17 @@ final class WidgetData {
         return PendingIntent.getActivity(context, 2, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    // Each placed widget's look, picked in WidgetSettingsActivity: "day.<id>" holds a
-    // DayCountWidget style, "chip.<id>" a ChipWidget background. Kept apart from what the site
-    // hands over, so signing out (which clears that) leaves them.
+    // The widgets' styles (WidgetStyles): the app's pick and each widget's own
     static SharedPreferences looks(Context context) {
         return context.getSharedPreferences("recoverybot_widget_looks", Context.MODE_PRIVATE);
     }
 
-    static String look(Context context, String widget, int id, String fallback) {
-        return looks(context).getString(widget + "." + id, fallback);
-    }
-
     static void forget(Context context, String widget, int[] ids) {
         SharedPreferences.Editor edit = looks(context).edit();
-        for (int id : ids) edit.remove(widget + "." + id);
+        for (int id : ids) {
+            edit.remove("style." + widget + "." + id);
+            edit.remove(widget + "." + id); // from before the app's picker
+        }
         edit.apply();
     }
 

@@ -13,8 +13,10 @@ import WidgetKit
 // The app (WidgetBridgePlugin in AppDelegate.swift) keeps what they show in the App Group both
 // share; signing out of the app clears it. Tapping the day count opens Today; tapping the chip
 // opens that chip full size on the Chips page, where it spins in 3D (a widget can only turn a
-// flat picture). Both can be edited (touch and hold > Edit Widget): looks for the day count
-// (DayStyle) and backgrounds for the chip (ChipBackground).
+// flat picture). Both share one set of styles (WidgetStyle). They're picked in the app (Account
+// settings > Widgets, components/profile/WidgetSettings.jsx, saved as "widgetStyle" in the App
+// Group by WidgetBridgePlugin); touch and hold > Edit Widget can give one widget its own style,
+// and leaving it on "Same as the app" follows the app's pick.
 
 enum Shared {
     static let group = "group.com.hmblbot.recoverybot"
@@ -22,6 +24,11 @@ enum Shared {
     static var signedIn: Bool { defaults?.bool(forKey: "signedIn") ?? false }
     static var soberSince: String { defaults?.string(forKey: "soberSince") ?? "" }
     static var chipLabel: String { defaults?.string(forKey: "chipLabel") ?? "" }
+    // The style picked in the app (WidgetStyle raw value); Classic blue until one is picked
+    static var appStyle: WidgetStyle {
+        guard let raw = defaults?.string(forKey: "widgetStyle"), let style = WidgetStyle(rawValue: raw), style != .app else { return .classic }
+        return style
+    }
 
     // The fun day-count facts from the day the site sent them on, in day order
     static func funFacts() -> [FunFact] {
@@ -142,33 +149,47 @@ func plural(_ n: Int, _ one: String, _ many: String) -> String { n == 1 ? one : 
 
 // MARK: - Day count widget
 
-// The day count's four looks, picked in Edit Widget
-enum DayStyle: String, AppEnum {
-    case classic, paper, paperLight, paperDark, midnight, sunrise
+// The widgets' styles, the same for the day count and the chip (and the same list as the app's
+// picker, lib/widgetStyles.js, and the Android widgets, WidgetStyles.java). "app" follows the
+// style picked in the app; the rest give one widget its own. The setting is "theme" on both
+// widgets, a new name, so widgets placed before the app had a picker (whose old "style" /
+// "background" picks are left behind) all start on Same as the app and change with it.
+enum WidgetStyle: String, AppEnum {
+    case app, classic, night, ocean, forest, sunrise, midnight, black, light, paper, paperLight, paperDark
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Style"
-    static let caseDisplayRepresentations: [DayStyle: DisplayRepresentation] = [
+    static let caseDisplayRepresentations: [WidgetStyle: DisplayRepresentation] = [
+        .app: "Same as the app",
         .classic: "Classic blue",
+        .night: "Night",
+        .ocean: "Ocean",
+        .forest: "Forest",
+        .sunrise: "Sunrise",
+        .midnight: "Midnight",
+        .black: "Charcoal",
+        .light: "Light",
         .paper: "Paper (follows Light/Dark Mode)",
         .paperLight: "Paper, light",
         .paperDark: "Paper, dark",
-        .midnight: "Midnight",
-        .sunrise: "Sunrise",
     ]
+
+    // The style to draw: the app's pick for "Same as the app"
+    var resolved: WidgetStyle { self == .app ? Shared.appStyle : self }
 }
 
 struct DayCountSettings: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Day count"
-    static let description = IntentDescription("Pick how your day count looks.")
+    static let description = IntentDescription("Leave the style on Same as the app to use the one picked in RecoveryBot, or give this widget its own.")
 
-    @Parameter(title: "Style", default: .classic)
-    var style: DayStyle
+    @Parameter(title: "Style", default: .app)
+    var theme: WidgetStyle
 }
 
-// Colors and type for a look: Classic is rounded on blue, Paper a serif on cream (or, dark, on
-// warm charcoal; plain Paper follows the phone's Light/Dark Mode), Midnight thin
-// monospaced digits on black, Sunrise tall condensed type on orange to pink
-struct DayTheme {
+// Colors and type for a style: Classic is rounded on blue, Paper a serif on cream (or, dark, on
+// warm charcoal; plain Paper follows the phone's Light/Dark Mode), Midnight thin monospaced
+// digits on black, Sunrise tall condensed type on orange to pink; Night, Ocean, Forest, Charcoal
+// and Light are rounded on a soft glow of their color
+struct WidgetTheme {
     let background: AnyShapeStyle
     let ink: Color
     let accent: Color
@@ -186,26 +207,46 @@ struct DayTheme {
     }
 
     // Paper in the light (cream) and dark (warm charcoal) versions
-    static let paperLight = DayTheme(background: AnyShapeStyle(Color(red: 0.96, green: 0.94, blue: 0.89)), ink: Color(red: 0.23, green: 0.18, blue: 0.13),
-                                     accent: Color(red: 0.72, green: 0.42, blue: 0.16), design: .serif, weight: .semibold)
-    static let paperDark = DayTheme(background: AnyShapeStyle(Color(red: 0.16, green: 0.14, blue: 0.12)), ink: Color(red: 0.95, green: 0.91, blue: 0.83),
-                                    accent: Color(red: 0.87, green: 0.6, blue: 0.3), design: .serif, weight: .semibold)
+    static let paperLight = WidgetTheme(background: AnyShapeStyle(Color(red: 0.96, green: 0.94, blue: 0.89)), ink: Color(red: 0.23, green: 0.18, blue: 0.13),
+                                        accent: Color(red: 0.72, green: 0.42, blue: 0.16), design: .serif, weight: .semibold)
+    static let paperDark = WidgetTheme(background: AnyShapeStyle(Color(red: 0.16, green: 0.14, blue: 0.12)), ink: Color(red: 0.95, green: 0.91, blue: 0.83),
+                                       accent: Color(red: 0.87, green: 0.6, blue: 0.3), design: .serif, weight: .semibold)
 
-    static func of(_ style: DayStyle, scheme: ColorScheme = .light) -> DayTheme {
-        switch style {
+    private static func radial(_ a: Color, _ b: Color) -> AnyShapeStyle {
+        AnyShapeStyle(RadialGradient(colors: [a, b], center: .center, startRadius: 5, endRadius: 220))
+    }
+
+    private static func rounded(_ background: AnyShapeStyle, ink: Color = .white, accent: Color = .white) -> WidgetTheme {
+        WidgetTheme(background: background, ink: ink, accent: accent, design: .rounded, weight: .bold)
+    }
+
+    static func of(_ style: WidgetStyle, scheme: ColorScheme = .light) -> WidgetTheme {
+        switch style.resolved {
+        case .app, .classic:
+            return rounded(AnyShapeStyle(dayGradient))
+        case .night:
+            return rounded(AnyShapeStyle(chipBackdrop), accent: Color(red: 0.6, green: 0.76, blue: 1))
+        case .ocean:
+            return rounded(radial(Color(red: 0.16, green: 0.5, blue: 0.85), Color(red: 0.03, green: 0.2, blue: 0.43)), accent: Color(red: 0.62, green: 0.86, blue: 1))
+        case .forest:
+            return rounded(radial(Color(red: 0.2, green: 0.5, blue: 0.36), Color(red: 0.04, green: 0.2, blue: 0.13)), accent: Color(red: 0.6, green: 0.9, blue: 0.68))
+        case .black:
+            // a deep charcoal with a little light in the middle, rather than flat black
+            return rounded(radial(Color(red: 0.2, green: 0.2, blue: 0.22), Color(red: 0.09, green: 0.09, blue: 0.1)), accent: Color(red: 0.82, green: 0.82, blue: 0.85))
+        case .light:
+            return rounded(radial(.white, Color(red: 0.89, green: 0.89, blue: 0.87)), ink: Color(red: 0.12, green: 0.14, blue: 0.2),
+                           accent: Color(red: 0.23, green: 0.44, blue: 0.65))
         case .paperLight: return paperLight
         case .paperDark: return paperDark
-        case .classic:
-            return DayTheme(background: AnyShapeStyle(dayGradient), ink: .white, accent: .white, design: .rounded, weight: .bold)
         case .paper:
             return scheme == .dark ? paperDark : paperLight
         case .midnight:
-            return DayTheme(background: AnyShapeStyle(Color(red: 0.04, green: 0.04, blue: 0.06)), ink: .white,
-                            accent: Color(red: 0.96, green: 0.62, blue: 0.04), design: .monospaced, weight: .light)
+            return WidgetTheme(background: AnyShapeStyle(Color(red: 0.04, green: 0.04, blue: 0.06)), ink: .white,
+                               accent: Color(red: 0.96, green: 0.62, blue: 0.04), design: .monospaced, weight: .light)
         case .sunrise:
-            return DayTheme(background: AnyShapeStyle(LinearGradient(colors: [Color(red: 0.98, green: 0.45, blue: 0.09), Color(red: 0.86, green: 0.15, blue: 0.47)],
-                                                                    startPoint: .topLeading, endPoint: .bottomTrailing)),
-                            ink: .white, accent: .white, design: .default, weight: .black, compressed: true)
+            return WidgetTheme(background: AnyShapeStyle(LinearGradient(colors: [Color(red: 0.98, green: 0.45, blue: 0.09), Color(red: 0.86, green: 0.15, blue: 0.47)],
+                                                                        startPoint: .topLeading, endPoint: .bottomTrailing)),
+                               ink: .white, accent: .white, design: .default, weight: .black, compressed: true)
         }
     }
 }
@@ -217,7 +258,7 @@ enum DayState {
 struct DayEntry: TimelineEntry {
     let date: Date
     let state: DayState
-    var style: DayStyle = .classic
+    var style: WidgetStyle = .app
 }
 
 struct DayProvider: AppIntentTimelineProvider {
@@ -225,24 +266,24 @@ struct DayProvider: AppIntentTimelineProvider {
 
     func snapshot(for settings: DayCountSettings, in context: Context) async -> DayEntry {
         context.isPreview && !Shared.signedIn
-            ? DayEntry(date: Date(), state: .counting(.sample), style: settings.style)
-            : entry(at: Date(), settings.style)
+            ? DayEntry(date: Date(), state: .counting(.sample), style: settings.theme)
+            : entry(at: Date(), settings.theme)
     }
 
     // Now, then each midnight for a week (the app asks for a new one whenever it opens)
     func timeline(for settings: DayCountSettings, in context: Context) async -> Timeline<DayEntry> {
         let cal = Calendar.current
-        var entries = [entry(at: Date(), settings.style)]
+        var entries = [entry(at: Date(), settings.theme)]
         var day = cal.startOfDay(for: Date())
         for _ in 0..<7 {
             guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
             day = next
-            entries.append(entry(at: day, settings.style))
+            entries.append(entry(at: day, settings.theme))
         }
         return Timeline(entries: entries, policy: .atEnd)
     }
 
-    private func entry(at date: Date, _ style: DayStyle) -> DayEntry {
+    private func entry(at date: Date, _ style: WidgetStyle) -> DayEntry {
         guard Shared.signedIn else { return DayEntry(date: date, state: .signedOut, style: style) }
         guard var count = DayCount.from(Shared.soberSince, on: date) else { return DayEntry(date: date, state: .noDate, style: style) }
         count.fact = FactLine.pick(Shared.funFacts(), days: count.days)
@@ -257,7 +298,7 @@ struct DayCountView: View {
     @Environment(\.widgetFamily) var family
     @Environment(\.colorScheme) var colorScheme
     let entry: DayEntry
-    var theme: DayTheme { DayTheme.of(entry.style, scheme: colorScheme) }
+    var theme: WidgetTheme { WidgetTheme.of(entry.style, scheme: colorScheme) }
 
     var body: some View {
         content
@@ -405,7 +446,7 @@ struct DayCountWidget: Widget {
             DayCountView(entry: entry)
         }
         .configurationDisplayName("Day count")
-        .description("Your days, counted on your phone, your next milestone and, in the larger sizes, the next fun fact. It shows only the number. Touch and hold to pick a style.")
+        .description("Your days, counted on your phone, your next milestone and, in the larger sizes, the next fun fact. It shows only the number. Pick its style in RecoveryBot, or touch and hold to give this one its own.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
@@ -420,84 +461,37 @@ struct ChipEntry: TimelineEntry {
     var flipped = false
     let label: String
     var sample = false
-    var background: ChipBackground = .night
-}
-
-// The chip widget's backgrounds, picked in Edit Widget
-enum ChipBackground: String, AppEnum {
-    case night, ocean, forest, sunset, black, light, paper, paperLight, paperDark
-
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Background"
-    static let caseDisplayRepresentations: [ChipBackground: DisplayRepresentation] = [
-        .night: "Night",
-        .ocean: "Ocean",
-        .forest: "Forest",
-        .sunset: "Sunset",
-        .black: "Charcoal",
-        .light: "Light",
-        .paper: "Paper (follows Light/Dark Mode)",
-        .paperLight: "Paper, light",
-        .paperDark: "Paper, dark",
-    ]
-
-    func style(_ scheme: ColorScheme) -> AnyShapeStyle {
-        func radial(_ a: Color, _ b: Color) -> AnyShapeStyle {
-            AnyShapeStyle(RadialGradient(colors: [a, b], center: .center, startRadius: 5, endRadius: 220))
-        }
-        switch self {
-        case .night: return AnyShapeStyle(chipBackdrop)
-        case .ocean: return radial(Color(red: 0.16, green: 0.5, blue: 0.85), Color(red: 0.03, green: 0.2, blue: 0.43))
-        case .forest: return radial(Color(red: 0.2, green: 0.5, blue: 0.36), Color(red: 0.04, green: 0.2, blue: 0.13))
-        case .sunset: return AnyShapeStyle(LinearGradient(colors: [Color(red: 0.98, green: 0.6, blue: 0.25), Color(red: 0.73, green: 0.18, blue: 0.4)],
-                                                          startPoint: .top, endPoint: .bottom))
-        // a deep charcoal with a little light in the middle, rather than flat black
-        case .black: return radial(Color(red: 0.2, green: 0.2, blue: 0.22), Color(red: 0.09, green: 0.09, blue: 0.1))
-        case .light: return radial(.white, Color(red: 0.89, green: 0.89, blue: 0.87))
-        case .paper: return DayTheme.of(.paper, scheme: scheme).background
-        case .paperLight: return DayTheme.paperLight.background
-        case .paperDark: return DayTheme.paperDark.background
-        }
-    }
-
-    func ink(_ scheme: ColorScheme) -> Color {
-        switch self {
-        case .light: return Color(red: 0.12, green: 0.14, blue: 0.2)
-        case .paper: return DayTheme.of(.paper, scheme: scheme).ink
-        case .paperLight: return DayTheme.paperLight.ink
-        case .paperDark: return DayTheme.paperDark.ink
-        default: return .white
-        }
-    }
+    var style: WidgetStyle = .app
 }
 
 struct ChipSettings: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Favorite chip"
-    static let description = IntentDescription("Pick the background behind your chip.")
+    static let description = IntentDescription("Leave the style on Same as the app to use the one picked in RecoveryBot, or give this widget its own.")
 
-    @Parameter(title: "Background", default: .night)
-    var background: ChipBackground
+    @Parameter(title: "Style", default: .app)
+    var theme: WidgetStyle
 }
 
 struct ChipProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> ChipEntry { ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", sample: true) }
 
     func snapshot(for settings: ChipSettings, in context: Context) async -> ChipEntry {
-        let now = current(settings.background)
+        let now = current(settings.theme)
         return context.isPreview && now.image == nil
-            ? ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", sample: true, background: settings.background)
+            ? ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", sample: true, style: settings.theme)
             : now
     }
 
     // It only changes when the app hands it a new chip, which asks for a new timeline
     func timeline(for settings: ChipSettings, in context: Context) async -> Timeline<ChipEntry> {
-        Timeline(entries: [current(settings.background)], policy: .never)
+        Timeline(entries: [current(settings.theme)], policy: .never)
     }
 
-    private func current(_ background: ChipBackground) -> ChipEntry {
+    private func current(_ style: WidgetStyle) -> ChipEntry {
         let signedIn = Shared.signedIn
         return ChipEntry(date: Date(), signedIn: signedIn, image: signedIn ? Shared.chipImage() : nil,
                          back: signedIn ? Shared.chipBackImage() : nil, flipped: Shared.chipFlipped, label: Shared.chipLabel,
-                         background: background)
+                         style: style)
     }
 }
 
@@ -508,13 +502,14 @@ struct ChipView: View {
     @Environment(\.widgetFamily) var family
     @Environment(\.colorScheme) var colorScheme
     let entry: ChipEntry
+    var theme: WidgetTheme { WidgetTheme.of(entry.style, scheme: colorScheme) }
 
     var body: some View {
         content
-            .foregroundStyle(entry.background.ink(colorScheme))
+            .foregroundStyle(theme.ink)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .widgetURL(entry.image == nil ? Shared.chipsPage : Shared.chipLink)
-            .widgetBackground(family, entry.background.style(colorScheme))
+            .widgetBackground(family, theme.background)
     }
 
     // Depth: a darker copy just below it for the coin's rim, and a soft shadow under the whole chip
@@ -578,7 +573,7 @@ struct ChipWidget: Widget {
             ChipView(entry: entry)
         }
         .configurationDisplayName("Favorite chip")
-        .description("The first chip you starred on your Chips page. Tap the chip to turn it over; touch and hold to pick a background.")
+        .description("The first chip you starred on your Chips page. Tap the chip to turn it over; pick its style in RecoveryBot, or touch and hold to give this one its own.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

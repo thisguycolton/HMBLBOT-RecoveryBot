@@ -13,10 +13,10 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-// Picking a widget's look: opened when one is placed and from the widget's Edit (Android 12
-// and up; widgetFeatures reconfigurable|configuration_optional). The day count gets one of four
-// styles (DayCountWidget.STYLES), the chip one of six backgrounds (ChipWidget.BACKGROUNDS).
-// Leaving without picking keeps the widget as it is.
+// Giving one widget its own style: opened when one is placed and from the widget's Edit (Android
+// 12 and up; widgetFeatures reconfigurable|configuration_optional). The same styles for the day
+// count and the chip (WidgetStyles), and first "Same as the app", which follows the style picked
+// in the app (Account settings > Widgets). Leaving without picking keeps the widget as it is.
 public class WidgetSettingsActivity extends Activity {
     private int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
@@ -41,18 +41,25 @@ public class WidgetSettingsActivity extends Activity {
         list.setPadding(pad, pad, pad, pad);
 
         TextView title = new TextView(this);
-        title.setText(chip ? "Chip background" : "Day count style");
+        title.setText(chip ? "Chip style" : "Day count style");
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setPadding(0, 0, 0, dp(12));
         list.addView(title);
 
-        String[] keys = chip ? ChipWidget.BACKGROUNDS : DayCountWidget.STYLES;
-        String[] names = chip ? ChipWidget.BACKGROUND_NAMES : DayCountWidget.STYLE_NAMES;
-        String current = WidgetData.look(this, chip ? "chip" : "day", widgetId, keys[0]);
-        for (int i = 0; i < keys.length; i++) {
-            String key = keys[i];
-            list.addView(option(names[i], key.equals(current), chip ? ChipWidget.background(key) : dayBackground(key), v -> pick(chip, key)));
+        TextView note = new TextView(this);
+        note.setText("Pick the style for all your widgets in RecoveryBot, under Account settings > Widgets, or give this one its own.");
+        note.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        note.setPadding(0, 0, 0, dp(12));
+        list.addView(note);
+
+        String widget = chip ? "chip" : "day";
+        String current = WidgetStyles.own(this, widget, widgetId);
+        String appStyle = WidgetStyles.appStyle(this);
+        list.addView(option("Same as the app", WidgetStyles.APP.equals(current), WidgetStyles.background(appStyle), v -> pick(chip, WidgetStyles.APP)));
+        for (int i = 0; i < WidgetStyles.KEYS.length; i++) {
+            String key = WidgetStyles.KEYS[i];
+            list.addView(option(WidgetStyles.NAMES[i], key.equals(current), WidgetStyles.background(key), v -> pick(chip, key)));
         }
 
         ScrollView scroll = new ScrollView(this);
@@ -84,17 +91,8 @@ public class WidgetSettingsActivity extends Activity {
         return row;
     }
 
-    private static int dayBackground(String style) {
-        switch (style) {
-            case "paper": return R.drawable.widget_day_bg_paper;
-            case "midnight": return R.drawable.widget_day_bg_midnight;
-            case "sunrise": return R.drawable.widget_day_bg_sunrise;
-            default: return R.drawable.widget_day_bg;
-        }
-    }
-
     private void pick(boolean chip, String key) {
-        WidgetData.looks(this).edit().putString((chip ? "chip." : "day.") + widgetId, key).apply();
+        WidgetStyles.setOwn(this, chip ? "chip" : "day", widgetId, key);
         AppWidgetManager manager = AppWidgetManager.getInstance(this);
         manager.updateAppWidget(widgetId, chip ? ChipWidget.draw(this, widgetId) : DayCountWidget.draw(this, widgetId));
         finish();

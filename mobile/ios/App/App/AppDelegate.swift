@@ -385,9 +385,13 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "WidgetBridge"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "update", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "clear", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "clear", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "widgetStyle", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setWidgetStyle", returnType: CAPPluginReturnPromise)
     ]
     static let group = "group.com.hmblbot.recoverybot"
+    // The widgets' styles (WidgetStyle in RecoveryBotWidgets.swift, lib/widgetStyles.js on the site)
+    static let styles = ["classic", "night", "ocean", "forest", "sunrise", "midnight", "black", "light", "paper", "paperLight", "paperDark"]
 
     private func shared() -> (UserDefaults, URL)? {
         guard let defaults = UserDefaults(suiteName: Self.group),
@@ -426,6 +430,27 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         }
         WidgetCenter.shared.reloadAllTimelines()
         call.resolve()
+    }
+
+    // The style picked in the app (Account settings > Widgets), which every widget left on
+    // "Same as the app" draws in. It belongs to the phone, so signing out keeps it.
+    @objc func widgetStyle(_ call: CAPPluginCall) {
+        let style = UserDefaults(suiteName: Self.group)?.string(forKey: "widgetStyle")
+        call.resolve(["style": style.flatMap { Self.styles.contains($0) ? $0 : nil } ?? "classic"])
+    }
+
+    @objc func setWidgetStyle(_ call: CAPPluginCall) {
+        guard let style = call.getString("style"), Self.styles.contains(style) else {
+            call.reject("Unknown widget style")
+            return
+        }
+        guard let defaults = UserDefaults(suiteName: Self.group) else {
+            call.reject("This build of the app has no widgets")
+            return
+        }
+        defaults.set(style, forKey: "widgetStyle")
+        WidgetCenter.shared.reloadAllTimelines()
+        call.resolve(["style": style])
     }
 
     @objc func clear(_ call: CAPPluginCall) {
