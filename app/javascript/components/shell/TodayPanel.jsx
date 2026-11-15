@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BellRing, CalendarClock, CalendarDays, Check, ChevronRight, Hand, Repeat, RotateCcw, SquareKanban, Sparkles, Video, X } from "lucide-react";
 import { milestoneStatus } from "../../lib/milestones";
 import { dayFacts, TOPIC_ICONS } from "../../lib/dayFacts";
+import { openDayCount } from "../../lib/openDayCount";
 import Avatar from "../groups/Avatar";
 import { soberFor } from "../groups/lib";
 import MeetingPasscode from "../groups/MeetingPasscode";
@@ -30,8 +31,9 @@ const partOfDay = (hour = new Date().getHours()) => {
 };
 
 // "Good afternoon, Colton", and under it their day count with the next milestone (or a nudge
-// to add a sobriety date), which opens their chips. Either can be hidden in Customize
-// (heading / dayCount), or moved apart, when each shows on its own.
+// to add a sobriety date). Clicking it opens the day count modal (DayCount); it stays a link to
+// their chips for middle-click, and as the fallback if the modal isn't on this page. Either can be
+// hidden in Customize (heading / dayCount), or moved apart, when each shows on its own.
 function Greeting({ me, heading = true, dayCount = true }) {
   if (!me || (!heading && !dayCount)) return null;
   const status = milestoneStatus(me.sobriety_date);
@@ -40,7 +42,14 @@ function Greeting({ me, heading = true, dayCount = true }) {
     <section>
       {heading && <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Good {partOfDay()}{me.first_name ? `, ${me.first_name}` : ""}</h2>}
       {!dayCount ? null : status ? (
-        <a href="/recovery" className={`${heading ? "mt-3" : ""} flex items-center gap-3 rounded-2xl bg-accent/10 px-4 py-3 !text-slate-900 hover:bg-accent/15 dark:bg-accent/20 dark:!text-white`}>
+        <a
+          href="/recovery"
+          aria-haspopup="dialog"
+          onClick={(e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+            if (openDayCount()) e.preventDefault();
+          }}
+          className={`${heading ? "mt-3" : ""} flex items-center gap-3 rounded-2xl bg-accent/10 px-4 py-3 !text-slate-900 hover:bg-accent/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent/20 dark:!text-white`}>
           <span className="min-w-0 flex-1">
             <span className="block text-xs font-semibold uppercase tracking-[0.08em] text-accent">Your day count</span>
             <span className="block text-2xl font-bold tabular-nums">

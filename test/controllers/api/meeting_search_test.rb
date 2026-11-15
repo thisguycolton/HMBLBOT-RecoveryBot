@@ -119,7 +119,7 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "starting soon: the next hour, plus meetings that began up to 5 minutes ago" do
+  test "starting soon: the next 15, 30 or 60 minutes (30 by default), plus meetings that began up to 5 minutes ago" do
     sync
     zone = Time.find_zone(PHOENIX)
     travel_to(zone.parse("2026-10-19 17:33")) do
@@ -128,10 +128,18 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
     end
     travel_to(zone.parse("2026-10-19 18:03")) do
       # Happy Hour is still on but began 33 minutes ago; the speaker meeting is 57 minutes out
-      assert_equal %w[oiaa-mon-7pm], keys(find(soon: "1"))
+      assert_equal %w[oiaa-mon-7pm], keys(find(soon: "60"))
+      assert_empty keys(find(soon: "30"))
+      assert_empty keys(find(soon: "1")), "30 minutes by default"
     end
-    travel_to(zone.parse("2026-10-19 18:00")) do
-      assert_empty keys(find(soon: "1")), "an hour out exactly is the next window's"
+    travel_to(zone.parse("2026-10-19 18:40")) do
+      # 20 minutes out
+      assert_equal %w[oiaa-mon-7pm], keys(find(soon: "30"))
+      assert_empty keys(find(soon: "15"))
+      assert_equal %w[oiaa-mon-7pm], keys(find(soon: "45")), "an unknown choice means 30"
+    end
+    travel_to(zone.parse("2026-10-19 18:30")) do
+      assert_empty keys(find(soon: "30")), "30 minutes out exactly is the next window's"
     end
   end
 
