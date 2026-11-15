@@ -19,10 +19,7 @@ class Api::ChipAwardsController < ApplicationController
         { slug: g.slug, title: g.title, logo_url: g.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(g.logo, only_path: true) : nil,
           design: ChipDesign.for_group(g),
           # Special Editions running now that hosts can give
-          editions: g.chip_editions.running_on(Date.current).where(kind: "milestone").select(&:givable?).map do |e|
-            { id: e.id, name: e.name, design: e.chip_design, milestones: e.milestones, window_label: e.window_label,
-              left: e.limited? ? e.limit - e.issued : nil, numbered: e.numbered, limit: e.limit }
-          end }
+          editions: givable_editions(g.chip_editions) }
       } + admin_choice,
       given: given_scope(groups).includes(:group, :user, :given_by).order(created_at: :desc).limit(100).map(&:as_api_json),
     }
@@ -59,8 +56,8 @@ class Api::ChipAwardsController < ApplicationController
 
     award = ChipAward.new(group: group, given_by: current_user, email: member&.email || params[:email].to_s, milestone_key: params[:milestone_key].to_s,
                                   years: params[:years].presence&.to_i, on: StepInventory.parse_day(params[:on]) || Date.current, note: params[:note].to_s.strip)
-    if params[:chip_edition_id].present? && group
-      award.chip_edition = group.chip_editions.running_on(Date.current).find_by(id: params[:chip_edition_id], kind: "milestone")
+    if params[:chip_edition_id].present?
+      award.chip_edition = (group ? group.chip_editions : ChipEdition.site).running_on(Date.current).find_by(id: params[:chip_edition_id], kind: "milestone")
       return render(json: { error: "That Special Edition isn't running now." }, status: :unprocessable_entity) unless award.chip_edition&.givable?
       if award.chip_edition.milestones.any? && !award.chip_edition.milestones.include?(award.milestone_key)
         return render(json: { error: "#{award.chip_edition.name} isn't for #{award.label} chips." }, status: :unprocessable_entity)
@@ -106,7 +103,15 @@ class Api::ChipAwardsController < ApplicationController
   def admin_choice
     return [] unless current_user.suite_admin?
 
-    [{ slug: ADMIN_SLUG, title: "Admin Chips", admin: true, logo_url: nil, design: ChipDesign.for_site, editions: [] }]
+    [{ slug: ADMIN_SLUG, title: "Admin Chips", admin: true, logo_url: nil, design: ChipDesign.for_site, editions: givable_editions(ChipEdition.site) }]
+  end
+
+  # Special Editions running now that can be given (a group's, or RecoveryBot's for Admin Chips)
+  def givable_editions(scope)
+    scope.running_on(Date.current).where(kind: "milestone").select(&:givable?).map do |e|
+      { id: e.id, name: e.name, design: e.chip_design, milestones: e.milestones, window_label: e.window_label,
+        left: e.limited? ? e.limit - e.issued : nil, numbered: e.numbered, limit: e.limit }
+    end
   end
 
   def giving_groups = current_user.groups.includes(logo_attachment: :blob).order(:title).select { |g| g.can_host?(current_user) }

@@ -51,7 +51,7 @@ class Api::RecoveryController < ApplicationController
   # POST /api/recovery/claim { edition_id, slot } -> a Special Edition for a milestone they
   # reached in its window, numbered (they can claim it any time after)
   def claim
-    edition = ChipEdition.published.where(group_id: current_user.groups.select(:id)).find_by(id: params[:edition_id])
+    edition = ChipEdition.published.where(group_id: current_user.groups.select(:id)).or(ChipEdition.published.site).find_by(id: params[:edition_id])
     return render(json: { error: "That edition isn't one you can claim." }, status: :not_found) unless edition
 
     chip = edition.claim!(current_user, params[:slot].to_s, today)

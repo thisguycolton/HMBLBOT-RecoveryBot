@@ -9,10 +9,15 @@
 #   (ChipEdition.award_meeting_makers, when a member's chips load).
 #
 # How many: everyone who qualifies ("everyone"), the first `limit` to claim or earn it
-# ("first_n"), or only `limit`, given by hosts ("given_n", milestone editions). Each one is
+# ("first_n"), or only given by hosts ("given_n", milestone editions; `limit` caps them, or
+# blank for no cap). Claimed (everyone, first_n) or given only is each edition's choice. Each one is
 # numbered in the order it was claimed, earned or given (ChipEditionChip#serial).
 #
 # Minted chips never change: once the first is out (locked_at), the design and name are fixed.
+#
+# RecoveryBot's own Special Editions (Site Admin > Sobriety chips, Api::Admin::ChipEditionsController)
+# have no group: any member can claim one, site admins give them (Give a chip > Admin Chips), and
+# Meeting Maker ones count any meeting.
 class ChipEdition < ApplicationRecord
   moderates_language :name
   KINDS = %w[milestone meeting_maker].freeze
@@ -22,7 +27,7 @@ class ChipEdition < ApplicationRecord
   class SoldOut < StandardError; end
   class NotYours < StandardError; end
 
-  belongs_to :group
+  belongs_to :group, optional: true
   belongs_to :created_by, class_name: "User", optional: true
   has_many :chips, class_name: "ChipEditionChip", dependent: :delete_all
   has_many :chip_awards, dependent: :nullify
@@ -30,6 +35,7 @@ class ChipEdition < ApplicationRecord
   scope :published, -> { where.not(published_at: nil) }
   scope :running_on, ->(date) { published.where("starts_on <= :d AND ends_on >= :d", d: date) }
   scope :ordered, -> { order(starts_on: :desc, id: :desc) }
+  scope :site, -> { where(group_id: nil) }
 
   before_validation { self.design = ChipDesign.pin(design) if design_changed? }
   before_validation { self.milestones = Array(milestones).map(&:to_s) & ChipDesign::ROUND_KEYS }
@@ -39,7 +45,7 @@ class ChipEdition < ApplicationRecord
   validates :how_many, inclusion: { in: HOW_MANY }
   validates :window, inclusion: { in: WINDOWS }
   validates :starts_on, :ends_on, presence: true
-  validates :limit, numericality: { only_integer: true, in: 1..100_000 }, unless: -> { how_many == "everyone" }
+  validates :limit, numericality: { only_integer: true, in: 1..100_000 }, unless: -> { how_many == "everyone" || (how_many == "given_n" && limit.nil?) }
   validates :target_count, numericality: { only_integer: true, in: 1..1000 }, if: -> { kind == "meeting_maker" }
   validate { errors.add(:ends_on, "has to be after it starts") if starts_on && ends_on && ends_on < starts_on }
   validate { errors.add(:ends_on, "can be at most a year after it starts") if starts_on && ends_on && ends_on > starts_on.next_year }
@@ -53,11 +59,16 @@ class ChipEdition < ApplicationRecord
   # Where Special Editions will be part of a paid plan: open to every group for now
   def self.open_to?(_group) = true
 
+  # RecoveryBot's own, for every member
+  def site? = group_id.nil?
+  # Who it's from
+  def from_title = group&.title || ChipAward::SITE_TITLE
+
   def published? = published_at.present?
   def locked? = locked_at.present?
   def covers?(date) = date.between?(starts_on, ends_on)
   def running?(today = Date.current) = published? && covers?(today)
-  def limited? = how_many != "everyone"
+  def limited? = how_many != "everyone" && limit.present?
   def issued = chips.count
   def sold_out? = limited? && issued >= limit
   def claimable? = kind == "milestone" && how_many != "given_n"
@@ -90,7 +101,7 @@ class ChipEdition < ApplicationRecord
 
   # A member taps Claim on a milestone reached in the window (they can, forever after)
   def claim!(user, slot, today = Date.current)
-    raise NotYours unless published? && claimable? && group.members.exists?(user.id)
+    raise NotYours unless published? && claimable? && (site? || group.members.exists?(user.id))
 
     m = qualifying(user, today).find { |x| Chips.round_slot(x[:key], x[:years]) == slot } or raise NotYours
     issue!(user: user, slot: slot, milestone_key: m[:key], years: m[:years], earned_on: m[:on], claimed_at: Time.current)
@@ -112,7 +123,7 @@ class ChipEdition < ApplicationRecord
 
   # Does this Join count toward it: one of its meetings (or any of the group's), inside the window
   def counts?(join)
-    return false unless meeting_ids.empty? ? join.meeting.group_id == group_id : meeting_ids.include?(join.meeting_id)
+    return false unless meeting_ids.empty? ? (site? || join.meeting.group_id == group_id) : meeting_ids.include?(join.meeting_id)
 
     covers?(join.starts_at.in_time_zone(join.meeting.zone).to_date)
   end
@@ -124,7 +135,7 @@ class ChipEdition < ApplicationRecord
     return [] if joins.empty?
 
     have = ChipEditionChip.where(user: user).pluck(:chip_edition_id)
-    published.where(kind: "meeting_maker", group_id: joins.map { |j| j.meeting.group_id }.uniq)
+    published.where(kind: "meeting_maker", group_id: [nil, *joins.map { |j| j.meeting.group_id }.uniq])
       .where("starts_on <= ?", now.to_date).where.not(id: have).includes(:group).filter_map do |edition|
       edition.award_meeting_maker(user, joins)
     end
@@ -136,7 +147,7 @@ class ChipEdition < ApplicationRecord
 
     join = counted[target_count - 1]
     chip = issue!(user: user, slot: "edition-#{id}", count: target_count, earned_on: join.starts_at.in_time_zone(join.meeting.zone).to_date, claimed_at: Time.current)
-    Notification.deliver(user, kind: "chip.edition", title: "You earned #{group.title}'s #{name} chip",
+    Notification.deliver(user, kind: "chip.edition", title: "You earned #{from_title}'s #{name} chip",
                                body: "#{target_count} meetings, #{window_label}", url: "/recovery?chip=edition:#{chip.id}")
     chip
   rescue SoldOut
@@ -148,7 +159,7 @@ class ChipEdition < ApplicationRecord
   def award_everyone!(now = Time.current)
     return unless kind == "meeting_maker" && published?
 
-    meetings = meeting_ids.empty? ? group.meetings.select(:id) : meeting_ids
+    meetings = meeting_ids.empty? ? (site? ? Meeting.select(:id) : group.meetings.select(:id)) : meeting_ids
     users = MeetingJoin.where(meeting_id: meetings, starts_at: starts_on.beginning_of_day - 1.day..[ends_on.end_of_day + 1.day, now].min)
       .where.not(user_id: chips.select(:user_id)).group(:user_id).having("count(*) >= ?", target_count).pluck(:user_id)
     User.where(id: users).find_each { |u| award_meeting_maker(u, MeetingJoin.where(user: u, starts_at: ..now).includes(:meeting).order(:starts_at).to_a) }
@@ -158,11 +169,11 @@ class ChipEdition < ApplicationRecord
     starts_on == ends_on ? starts_on.strftime("%b %-d, %Y") : "#{starts_on.strftime('%b %-d')} to #{ends_on.strftime('%b %-d, %Y')}"
   end
 
-  # Claims waiting for `user`: milestone editions in their groups they reached a milestone in
+  # Claims waiting for `user`: milestone editions in their groups (and RecoveryBot's) they reached a milestone in
   def self.available_for(user, today = Date.current)
     return [] unless user.sobriety_date
 
-    editions = published.where(kind: "milestone", group_id: user.groups.select(:id)).where.not(how_many: "given_n")
+    editions = published.where(kind: "milestone").where(group_id: user.groups.select(:id)).or(published.site.where(kind: "milestone")).where.not(how_many: "given_n")
       .where("starts_on <= ?", today).includes(group: { logo_attachment: :blob })
     return [] if editions.empty?
 
@@ -177,12 +188,12 @@ class ChipEdition < ApplicationRecord
         label = ChipAward.label_for(m[:key], m[:years])
         { edition_id: e.id, slot: slot, shape: "round", kind: "round", label: label, on: m[:on].iso8601, source: "edition",
           milestone: { key: m[:key], years: m[:years], label: label }.compact, design: e.chip_design,
-          group: { title: e.group.title, logo_url: e.logo_url }, edition: e.edition_json(nil).merge(left: e.limited? ? e.limit - e.issued : nil) }
+          group: { title: e.from_title, logo_url: e.logo_url }, edition: e.edition_json(nil).merge(left: e.limited? ? e.limit - e.issued : nil) }
       end
     end
   end
 
-  def logo_url = group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(group.logo, only_path: true) : nil
+  def logo_url = group&.logo&.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(group.logo, only_path: true) : nil
 
   # For the group's dashboard
   def as_api_json
