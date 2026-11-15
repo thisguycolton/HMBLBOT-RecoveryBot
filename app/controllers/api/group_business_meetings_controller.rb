@@ -95,8 +95,14 @@ class Api::GroupBusinessMeetingsController < ApplicationController
       motions: visible.where(business_meeting_id: @meeting.id).includes(:parent, business_meeting: :group).order(:id)
                       .map { |m| m.as_api_json(replacers: replacers, visible: ids, meetings: meetings, keeper: keeper?) },
       can_edit: keeper?, can_delete: @group.manageable_by?(current_user), can_suggest: @meeting.planned?,
-      officer_sections: @meeting.officer_sections
+      officer_sections: @meeting.officer_sections, letterhead: agenda_letterhead
     ).tap { |json| json[:unfinished] = unfinished_json if keeper? && @meeting.planned? }
+  end
+
+  # The agenda's letterhead from the Templates page, when the group has made one
+  def agenda_letterhead
+    template = @group.document_templates.find_by(kind: "agenda")
+    template && !template.blank? ? template.as_api_json : nil
   end
 
   # Motions put off at earlier meetings that this agenda could take up

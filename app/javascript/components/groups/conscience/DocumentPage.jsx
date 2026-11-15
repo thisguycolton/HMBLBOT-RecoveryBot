@@ -25,22 +25,8 @@ import { CommentAnchors, currentAnchors, locate, quoteFor } from "./commentAncho
 import CommentsPane from "./DocumentComments";
 import { HistoryPane, SaveVersionDialog, VersionDiff } from "./DocumentHistory";
 import { diffStats } from "../../../lib/documentDiff";
+import Letterhead from "./Letterhead";
 import { FILE_ACCEPT, KIND_INFO, KINDS, VISIBILITIES, VISIBILITY_LABELS, STATUSES, dateLabel, decisionsPath, documentsPath, fileUrl, motionOptions, sizeLabel } from "./lib";
-
-// The folder's letterhead at the top of the page: its logo or seal, a heading and a line under it
-function Letterhead({ template: t, groupTitle }) {
-  return (
-    <header className={`doc-letterhead doc-letterhead--${t.align}`}>
-      {t.mark_url && <img src={t.mark_url} alt="" className="doc-letterhead-mark" />}
-      {(t.header_text || t.subheader_text) && (
-        <div className="doc-letterhead-text">
-          {t.header_text && <p className="doc-letterhead-heading">{t.header_text.replace("{{group}}", groupTitle)}</p>}
-          {t.subheader_text && <p className="doc-letterhead-sub">{t.subheader_text.replace("{{group}}", groupTitle)}</p>}
-        </div>
-      )}
-    </header>
-  );
-}
 
 // What the editor starts from: the text as HTML (an older Markdown document is converted)
 async function startingHtml(doc) {

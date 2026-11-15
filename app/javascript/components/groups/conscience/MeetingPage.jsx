@@ -6,6 +6,7 @@ import usePrintable, { printTitled } from "../../../lib/usePrintable";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Message, Pill, Tray, dangerButton, primaryButton, quietButton } from "../ui";
 import { ItemPill, PrintAgenda, SuggestForm, agendaText } from "./AgendaParts";
+import Letterhead, { fillLetterhead } from "./Letterhead";
 import DecisionForm from "./DecisionForm";
 import MeetingForm from "./MeetingForm";
 import MinutesEditor from "./MinutesEditor";
@@ -465,9 +466,13 @@ export default function MeetingPage({ group, id }) {
 
       {/* The paper copy: header, agenda, decisions, minutes */}
       <article className="hidden print:block meeting-print">
-        <h1>{group.title} business meeting{printing === "agenda" ? ": agenda" : ""}</h1>
-        <p className="meeting-print__meta">{when}{meeting.meeting ? ` · after ${meeting.meeting.name}` : ""}
-          {[meeting.chair && `Chair: ${meeting.chair}`, meeting.secretary && `Secretary: ${meeting.secretary}`, meeting.attendance_count != null && `${meeting.attendance_count} present`, meeting.quorum_met === false && "No quorum", meeting.called_to_order_time && `Called to order ${clock12(meeting.called_to_order_time)}`, meeting.adjourned_time && `Adjourned ${clock12(meeting.adjourned_time)}`].filter(Boolean).map((t) => ` · ${t}`).join("")}</p>
+        {meeting.letterhead ? <Letterhead template={meeting.letterhead} groupTitle={group.title} date={dateLabel(meeting.held_on)} />
+          : <h1>{group.title} business meeting{printing === "agenda" ? ": agenda" : ""}</h1>}
+        {(() => {
+          const dated = meeting.letterhead && /\{\{date\}\}/.test(`${meeting.letterhead.header_text || ""}${meeting.letterhead.subheader_text || ""}`);
+          const parts = [!dated && when, meeting.meeting && `after ${meeting.meeting.name}`, meeting.chair && `Chair: ${meeting.chair}`, meeting.secretary && `Secretary: ${meeting.secretary}`, meeting.attendance_count != null && `${meeting.attendance_count} present`, meeting.quorum_met === false && "No quorum", meeting.called_to_order_time && `Called to order ${clock12(meeting.called_to_order_time)}`, meeting.adjourned_time && `Adjourned ${clock12(meeting.adjourned_time)}`].filter(Boolean);
+          return parts.length > 0 && <p className={`meeting-print__meta ${meeting.letterhead ? `meeting-print__meta--${meeting.letterhead.align}` : ""}`}>{parts.join(" · ")}</p>;
+        })()}
         <PrintAgenda items={onAgenda} offices={printing === "agenda" ? meeting.officer_sections || [] : []} />
         {printing === "all" && meeting.motions.length > 0 && (
           <>
@@ -481,6 +486,7 @@ export default function MeetingPage({ group, id }) {
             <div className="doc-prose" dangerouslySetInnerHTML={{ __html: canEdit ? minutes : meeting.minutes }} />
           </>
         )}
+        {meeting.letterhead?.footer_text && <footer className="doc-letterhead-footer">{fillLetterhead(meeting.letterhead.footer_text, group.title, dateLabel(meeting.held_on))}</footer>}
       </article>
     </div>
   );

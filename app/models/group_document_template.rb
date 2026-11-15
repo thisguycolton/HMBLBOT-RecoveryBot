@@ -6,13 +6,15 @@ class GroupDocumentTemplate < ApplicationRecord
   MARKS = %w[none group_logo seal].freeze
   ALIGNS = %w[left center right].freeze
   IMAGE_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
+  # The document folders, and the printed business meeting agenda
+  KINDS = (["agenda"] + GroupDocument::KINDS).freeze
 
   belongs_to :group
   has_one_attached :seal
 
   before_validation { %i[header_text subheader_text footer_text].each { |a| self[a] = self[a].to_s.squish.presence } }
 
-  validates :kind, inclusion: { in: GroupDocument::KINDS }, uniqueness: { scope: :group_id }
+  validates :kind, inclusion: { in: KINDS }, uniqueness: { scope: :group_id }
   validates :mark, inclusion: { in: MARKS }
   validates :align, inclusion: { in: ALIGNS }
   validates :header_text, :subheader_text, length: { maximum: 160 }

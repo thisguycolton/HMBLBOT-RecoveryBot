@@ -1,15 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ImagePlus, Save } from "lucide-react";
+import { Gavel, ImagePlus, Save } from "lucide-react";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, primaryButton, quietButton } from "../ui";
 import { KINDS } from "./lib";
+import { fillLetterhead } from "./Letterhead";
+
+// The printed business meeting agenda has a letterhead of its own, alongside the folders'
+const TEMPLATE_KINDS = [{ key: "agenda", label: "Business meeting agenda", note: "Print agenda and Save as PDF. {{date}} is the meeting's date", icon: Gavel }, ...KINDS];
 
 const MARKS = [["none", "No logo"], ["group_logo", "The group's logo"], ["seal", "A seal or logo of its own"]];
 
 // One folder's letterhead: what's at the top of its documents, and a footer
 function TemplateCard({ group, template, hasGroupLogo, canEdit, onSaved }) {
-  const info = KINDS.find((k) => k.key === template.kind);
+  const info = TEMPLATE_KINDS.find((k) => k.key === template.kind);
+  const sampleDate = "Nov 15, 2026";
   const [form, setForm] = useState({ mark: template.mark, header_text: template.header_text || "", subheader_text: template.subheader_text || "", footer_text: template.footer_text || "", align: template.align });
   const [seal, setSeal] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -48,12 +53,12 @@ function TemplateCard({ group, template, hasGroupLogo, canEdit, onSaved }) {
       <div className="rounded-xl bg-white p-4 text-slate-900 ring-1 ring-neutral-200">
         <div className={`flex gap-3 border-b border-slate-200 pb-3 ${form.align === "center" ? "flex-col items-center text-center" : form.align === "right" ? "flex-row-reverse items-center text-right" : "items-center"}`}>
           {markUrl && <img src={markUrl} alt="" className="h-12 w-auto max-w-[120px] rounded-[22%] object-contain" />}
-          <div>
-            <p className="text-sm font-bold">{(form.header_text || (form.mark === "none" ? "No letterhead" : "")).replace("{{group}}", group.title)}</p>
-            {form.subheader_text && <p className="text-xs text-slate-500">{form.subheader_text.replace("{{group}}", group.title)}</p>}
+          <div className={form.align === "center" ? "[&>p]:text-center" : form.align === "right" ? "[&>p]:text-right" : ""}>
+            <p className="text-sm font-bold">{fillLetterhead(form.header_text || (form.mark === "none" ? "No letterhead" : ""), group.title, sampleDate)}</p>
+            {form.subheader_text && <p className="text-xs text-slate-500">{fillLetterhead(form.subheader_text, group.title, sampleDate)}</p>}
           </div>
         </div>
-        <p className="pt-3 text-xs text-slate-400">The document starts here…</p>
+        <p className="pt-3 text-xs text-slate-400">{template.kind === "agenda" ? "I. Chair, II. Secretary…" : "The document starts here…"}</p>
         {form.footer_text && <p className="mt-3 border-t border-slate-200 pt-2 text-center text-[11px] text-slate-500">{form.footer_text}</p>}
       </div>
 
@@ -86,7 +91,7 @@ function TemplateCard({ group, template, hasGroupLogo, canEdit, onSaved }) {
             </div>
             <div>
               <label htmlFor={`t-sub-${template.kind}`} className={labelClass}>Line under it</label>
-              <input id={`t-sub-${template.kind}`} maxLength={160} className={inputClass} value={form.subheader_text} onChange={(e) => set({ subheader_text: e.target.value })} placeholder="A group of Alcoholics Anonymous" />
+              <input id={`t-sub-${template.kind}`} maxLength={160} className={inputClass} value={form.subheader_text} onChange={(e) => set({ subheader_text: e.target.value })} placeholder={template.kind === "agenda" ? "Group Conscience Agenda · {{date}}" : "A group of Alcoholics Anonymous"} />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor={`t-foot-${template.kind}`} className={labelClass}>Footer</label>
@@ -115,7 +120,7 @@ export default function DocumentTemplates({ group }) {
   const onSaved = (t) => setData((d) => ({ ...d, templates: d.templates.map((x) => (x.kind === t.kind ? t : x)) }));
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-600 dark:text-neutral-300">Each folder's documents can open with a letterhead: the group's logo or a seal, a heading and a line under it, and a footer. It shows on the page, in print and in Save as PDF. Write {"{{group}}"} for the group's name.</p>
+      <p className="text-sm text-slate-600 dark:text-neutral-300">Each folder's documents can open with a letterhead: the group's logo or a seal, a heading and a line under it, and a footer. It shows on the page, in print and in Save as PDF. Write {"{{group}}"} for the group's name. The business meeting agenda's letterhead is used by Print agenda; {"{{date}}"} there is the meeting's date.</p>
       <div className="grid gap-4 xl:grid-cols-2">
         {data.templates.map((t) => <TemplateCard key={t.kind} group={group} template={t} hasGroupLogo={data.has_group_logo} canEdit={data.can_edit} onSaved={onSaved} />)}
       </div>

@@ -1,4 +1,4 @@
-# The letterheads for a group's document folders (GroupDocumentTemplate). Members read them
+# The letterheads for a group's document folders and its printed agenda (GroupDocumentTemplate). Members read them
 # (their documents show them); record keepers change them.
 class Api::GroupDocumentTemplatesController < ApplicationController
   include GroupScoped
@@ -9,7 +9,7 @@ class Api::GroupDocumentTemplatesController < ApplicationController
 
   # GET /api/groups/:group_slug/document_templates -> one per folder, saved or not
   def index
-    render json: { templates: GroupDocument::KINDS.map { |k| GroupDocumentTemplate.for(@group, k).as_api_json },
+    render json: { templates: GroupDocumentTemplate::KINDS.map { |k| GroupDocumentTemplate.for(@group, k).as_api_json },
                    has_group_logo: @group.logo.attached?, can_edit: keeper? }
   end
 
