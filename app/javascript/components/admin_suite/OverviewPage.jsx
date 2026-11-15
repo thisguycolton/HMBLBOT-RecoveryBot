@@ -16,6 +16,7 @@ export default function OverviewPage({ notify }) {
   if (!data) return <Skeleton variant="stats" />;
 
   const waiting = [
+    { label: "Groups waiting for approval", count: data.group_requests.pending, to: "/group_requests", tone: "bg-amber-500" },
     { label: "Contact requests to answer", count: data.contact_requests.open, to: "/contact_requests", tone: "bg-sky-600" },
     { label: "TestFlight invites to send", count: data.testflight_requests.new, to: "/testflight_requests", tone: "bg-violet-600" },
     { label: "Open text reports", count: data.text_reports.open, to: "/text_reports", tone: "bg-red-500" },

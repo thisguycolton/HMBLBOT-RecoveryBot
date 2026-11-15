@@ -597,6 +597,10 @@ end
         post :comment, on: :member
       end
       resources :contact_requests, only: %i[index update destroy]
+      # Groups people started from an intergroup listing, waiting for approval
+      resources :group_requests, only: :index do
+        post :approve, :decline, on: :member
+      end
       resources :testflight_requests, only: %i[index update destroy] do
         post :resend, on: :member
         patch :bulk, on: :collection

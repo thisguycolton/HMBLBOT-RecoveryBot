@@ -9,7 +9,8 @@ class Api::GroupsController < ApplicationController
   before_action :set_group, only: %i[update destroy approve regenerate_invite court_verifications]
   before_action :require_manager, only: %i[update regenerate_invite court_verifications]
   # Listing your own groups is open to anyone in one (the My groups window in the nav)
-  before_action :require_feature, only: %i[create find start]
+  # Starting one from an intergroup listing is open to every account (Group.can_start_from_listing?)
+  before_action :require_feature, only: %i[create find]
 
   # GET /api/groups -> your groups and join requests
   def index
@@ -103,14 +104,26 @@ class Api::GroupsController < ApplicationController
     }
   end
 
-  # POST /api/groups/start { oiaa_slug } -> a pending group made from an OIAA listing, run
-  # by whoever started it once a site admin approves it
+  # POST /api/groups/start { oiaa_slug } -> a pending group made from an intergroup listing
+  # (AA Intergroup's or an imported meeting list's), open to any signed-in account. It waits in
+  # Site Admin > Group requests and is run by whoever started it once a site admin approves it.
   def start
+    return render(json: { error: "Sign in to start a group." }, status: :forbidden) unless Group.can_start_from_listing?(current_user)
+
     record = OiaaMeeting.listed.find_by!(slug: params[:oiaa_slug])
     existing = Meeting.find_by(oiaa_slug: record.slug)&.group ||
                Group.find_by("LOWER(title) IN (?)", [record.group_name, record.name].compact.map(&:downcase))
     if existing
-      return render(json: { error: "That meeting already has a group here.", slug: existing.slug }, status: :unprocessable_entity)
+      mine = existing.member?(current_user)
+      error = if existing.pending? && !mine then "Someone already asked to start this group. It's waiting for a site admin."
+              else "That meeting already has a group here."
+              end
+      # only send them to it if they can see it (a pending group shows only to its own people)
+      return render(json: { error: error, slug: existing.page_visible_to?(current_user) ? existing.slug : nil }, status: :unprocessable_entity)
+    end
+    if Group.too_many_pending_starts?(current_user)
+      return render(json: { error: "You have #{Group::PENDING_STARTS_LIMIT} groups waiting for a site admin already. Once one is approved you can start another." },
+                    status: :unprocessable_entity)
     end
 
     @group = Group.new(title: record.group_name.presence || record.name, status: "pending", created_by: current_user,
@@ -123,7 +136,7 @@ class Api::GroupsController < ApplicationController
       record.days.each { |day| @group.meetings.new.apply_oiaa(record, day: day).save! }
     end
     Notification.deliver(User.suite_admins, kind: "group.pending", title: "#{current_user.display_name} started “#{@group.title}”",
-                                            body: "It's waiting for your approval.", url: "/groups/#{@group.slug}")
+                                            body: "It's waiting for your approval.", url: "/admin_panel/group_requests")
     render json: group_json, status: :created
   rescue ActiveRecord::RecordInvalid
     render_errors(@group)
@@ -167,9 +180,7 @@ class Api::GroupsController < ApplicationController
   def approve
     return render(json: { error: "Only site admins can approve groups." }, status: :forbidden) unless current_user.suite_admin?
 
-    @group.update!(status: "active")
-    Notification.deliver(@group.admins, kind: "group.approved", title: "#{@group.title} is approved", url: "/groups/#{@group.slug}")
-    IntergroupFollow.announce!(@group)
+    @group.approve!
     render json: group_json
   end
 
