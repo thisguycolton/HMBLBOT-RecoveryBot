@@ -182,7 +182,7 @@ function SiteStats({ stats }) {
   return (
     <div className="!font-sans [&_*]:!font-sans">
       <button type="button" onClick={toggle} aria-expanded={open}
-        className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-neutral-200">
+        className="flex w-full items-center gap-2 !bg-transparent px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-neutral-200">
         <ChevronDown className={`size-4 transition-transform ${open ? "" : "-rotate-90"}`} />
         Site-wide activity <span className="font-normal text-slate-500 dark:text-neutral-400">· no names, everyone counted</span>
       </button>
@@ -190,34 +190,77 @@ function SiteStats({ stats }) {
         <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 xl:grid-cols-4">
           <WritingCard title="10th steps" w={stats.steps} />
           <WritingCard title="Gratitude lists" w={stats.gratitude} />
-          <StatCard title="Devices" note="People who have signed in from each, and how many were active in the last 30 days">
-            {stats.devices.map((d) => (
-              <p key={d.kind} className="flex justify-between gap-2 py-0.5 text-sm"><span>{d.label}</span>
-                <span className="tabular-nums text-slate-600 dark:text-neutral-300">{formatCount(d.people)} <span className="text-emerald-700 dark:text-emerald-400">· {formatCount(d.active)} active</span></span></p>
-            ))}
+          <StatCard title="Devices" note="People who have signed in from each">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
+                  <th className="pb-1 text-left font-semibold">Device</th>
+                  <th className="pb-1 text-right font-semibold">People</th>
+                  <th className="pb-1 pl-3 text-right font-semibold" title="Used it in the last 30 days">Active</th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums">
+                {stats.devices.map((d) => {
+                  const Icon = DEVICE_ICONS[d.kind] || Monitor;
+                  return (
+                    <tr key={d.kind} className={d.people ? "" : "text-slate-400 dark:text-neutral-500"}>
+                      <td className="py-1"><span className="flex items-center gap-2"><Icon className="size-4 shrink-0 text-slate-400" aria-hidden="true" />{d.label}</span></td>
+                      <td className="py-1 text-right">{formatCount(d.people)}</td>
+                      <td className={`py-1 pl-3 text-right ${d.active ? "text-emerald-700 dark:text-emerald-400" : ""}`}>{formatCount(d.active)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Active means used in the last 30 days</p>
           </StatCard>
-          <StatCard title="Day counts" note={`${formatCount(stats.day_counts.with_date)} members have a sobriety date`}>
+          <StatCard title="Day counts">
+            <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{formatCount(stats.day_counts.with_date)}</p>
+            <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">{stats.day_counts.with_date === 1 ? "member has" : "members have"} a sobriety date</p>
             <Bars rows={stats.day_counts.spans} />
-            {stats.day_counts.facts_this_week.length > 0 && (
-              <div className="mt-2 border-t border-neutral-200 pt-2 dark:border-neutral-700">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Fun facts this week</p>
-                {stats.day_counts.facts_this_week.map((f) => (
-                  <p key={`${f.days}-${f.in_days}`} className="py-0.5 text-sm">
-                    <span aria-hidden="true">{TOPIC_ICONS[f.topic]}</span> {f.title} <span className="text-slate-500 dark:text-neutral-400">· day {formatCount(f.days)} · {formatCount(f.people)} {f.people === 1 ? "member" : "members"} {f.in_days === 0 ? "today" : f.in_days === 1 ? "tomorrow" : `in ${f.in_days} days`}</span>
-                  </p>
-                ))}
-              </div>
-            )}
           </StatCard>
+          {stats.day_counts.facts_this_week.length > 0 && <FunFacts facts={stats.day_counts.facts_this_week} />}
         </div>
       ))}
     </div>
   );
 }
 
-function StatCard({ title, note, children }) {
+// Milestones members reach this week, in its own full-width card so the four cards above stay even.
+// A short list first, the rest behind "Show all".
+const FACTS_SHOWN = 6;
+const inDays = (n) => (n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`);
+function FunFacts({ facts }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? facts : facts.slice(0, FACTS_SHOWN);
   return (
-    <section className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-700">
+    <StatCard title="Fun facts this week" className="sm:col-span-2 xl:col-span-4">
+      <ul className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2 xl:grid-cols-3">
+        {shown.map((f) => (
+          <li key={`${f.days}-${f.in_days}-${f.title}`} className="flex min-w-0 items-start gap-2 text-sm">
+            <span aria-hidden="true" className="w-5 shrink-0 text-center">{TOPIC_ICONS[f.topic]}</span>
+            <span className="min-w-0">
+              <span className="text-slate-900 dark:text-white">{f.title}</span>
+              <span className="block text-xs text-slate-500 dark:text-neutral-400">
+                Day {formatCount(f.days)} · {formatCount(f.people)} {f.people === 1 ? "member" : "members"} {inDays(f.in_days)}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {facts.length > FACTS_SHOWN && (
+        <button type="button" onClick={() => setAll(!all)}
+          className="mt-2 !bg-transparent text-xs font-semibold text-accent-ink hover:underline dark:text-accent-tint">
+          {all ? "Show fewer" : `Show all ${formatCount(facts.length)}`}
+        </button>
+      )}
+    </StatCard>
+  );
+}
+
+function StatCard({ title, note, className = "", children }) {
+  return (
+    <section className={`rounded-2xl border border-neutral-200 p-3 dark:border-neutral-700 ${className}`}>
       <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
       {note && <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">{note}</p>}
       {children}
