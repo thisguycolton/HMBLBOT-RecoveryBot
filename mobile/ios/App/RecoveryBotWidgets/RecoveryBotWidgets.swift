@@ -150,10 +150,10 @@ func plural(_ n: Int, _ one: String, _ many: String) -> String { n == 1 ? one : 
 // MARK: - Day count widget
 
 // The widgets' styles, the same for the day count and the chip (and the same list as the app's
-// picker, lib/widgetStyles.js). "app" follows the style picked in the app; the rest give one
-// widget its own. The setting is "theme" on both widgets, a new name, so widgets placed before
-// the app had a picker (whose old "style" / "background" picks are left behind) all start on
-// Same as the app and change with it.
+// picker, lib/widgetStyles.js, and the Android widgets, WidgetStyles.java). "app" follows the
+// style picked in the app; the rest give one widget its own. The setting is "theme" on both
+// widgets, a new name, so widgets placed before the app had a picker (whose old "style" /
+// "background" picks are left behind) all start on Same as the app and change with it.
 enum WidgetStyle: String, AppEnum {
     case app, classic, night, ocean, forest, sunrise, midnight, black, light, paper, paperLight, paperDark
 

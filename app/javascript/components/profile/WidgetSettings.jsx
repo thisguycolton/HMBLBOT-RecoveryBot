@@ -5,15 +5,21 @@ import { milestoneStatus } from "../../lib/milestones";
 import { DEFAULT_WIDGET_STYLE, WIDGET_STYLES, widgetLook } from "../../lib/widgetStyles";
 import { Card, ErrorNote, Tray } from "../groups/ui";
 
-// Account settings > Widgets, in the iPhone app: pick the style the Home Screen widgets (day count
-// and favorite chip) are drawn in, from little copies of them. The app keeps it in the App Group
-// the widgets share and has them redraw (WidgetBridgePlugin widgetStyle / setWidgetStyle in
-// mobile/ios/App/App/AppDelegate.swift). A widget can still have its own style from touch and
-// hold > Edit Widget; left on "Same as the app" it follows this.
-// Hidden in a browser, on Android (its widgets pick a look when placed) and in iPhone app builds
-// from before the picker.
+// Account settings > Widgets, in the iPhone and Android apps: pick the style the Home Screen
+// widgets (day count and favorite chip) are drawn in, from little copies of them. The app keeps
+// it and has them redraw (WidgetBridgePlugin widgetStyle / setWidgetStyle: in
+// mobile/ios/App/App/AppDelegate.swift, the App Group the widgets share; on Android,
+// WidgetBridgePlugin.java and WidgetStyles.java). A widget can still have its own style from its
+// Edit; left on "Same as the app" it follows this.
+// Hidden in a browser and in app builds from before the picker.
+const HOW = {
+  ios: "To add one, touch and hold an empty spot on the Home Screen, tap Edit, then Add Widget, and find RecoveryBot. To give one widget its own style, touch and hold it and tap Edit Widget.",
+  android: "To add one, touch and hold an empty spot on the Home Screen, tap Widgets, and find RecoveryBot. To give one widget its own style, touch and hold it and tap the pencil (or Settings).",
+};
+
 export default function WidgetSettings() {
-  const shown = nativePlatform() === "ios" && hasPluginMethod("WidgetBridge", "setWidgetStyle");
+  const platform = nativePlatform();
+  const shown = Boolean(HOW[platform]) && hasPluginMethod("WidgetBridge", "setWidgetStyle");
   const [style, setStyle] = useState(null);
   const [error, setError] = useState(null);
   const dark = useDarkMode();
@@ -51,8 +57,7 @@ export default function WidgetSettings() {
             <ChipWidget look={chosen} />
           </div>
           <p className="text-sm text-slate-600 dark:text-neutral-400">
-            How your day count and favorite chip look on your Home Screen. To add one, touch and hold an empty spot on the Home Screen,
-            tap Edit, then Add Widget, and find RecoveryBot. To give one widget its own style, touch and hold it and tap Edit Widget.
+            How your day count and favorite chip look on your Home Screen. {HOW[platform]}
           </p>
           <div role="radiogroup" aria-label="Widget style" className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4">
             {WIDGET_STYLES.map((s) => {

@@ -1,6 +1,7 @@
-// The Home Screen widgets' styles in the iPhone app, for the picker in Account settings > Widgets
-// (components/profile/WidgetSettings.jsx). The same list, colors and type as WidgetStyle and
-// WidgetTheme in mobile/ios/App/RecoveryBotWidgets/RecoveryBotWidgets.swift: change both together.
+// The Home Screen widgets' styles in the iPhone and Android apps, for the picker in Account
+// settings > Widgets (components/profile/WidgetSettings.jsx). The same list, colors and type as
+// WidgetStyle and WidgetTheme in mobile/ios/App/RecoveryBotWidgets/RecoveryBotWidgets.swift and
+// mobile/android/.../WidgetStyles.java (with res/drawable/widget_bg_*): change them together.
 // The key is what the app keeps (WidgetBridgePlugin setWidgetStyle); every widget left on
 // "Same as the app" (touch and hold > Edit Widget) draws in it.
 

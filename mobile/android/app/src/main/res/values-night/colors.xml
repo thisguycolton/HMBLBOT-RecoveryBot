@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="page_background">#0a0a0a</color>
+    <!-- The widgets' Paper style in Dark Mode -->
+    <color name="widget_paper_bg">#29241F</color>
+    <color name="widget_paper_ink">#F2E8D4</color>
+    <color name="widget_paper_soft">#CCF2E8D4</color>
+    <color name="widget_paper_accent">#DE994D</color>
+    <color name="widget_paper_track">#33F2E8D4</color>
 </resources>

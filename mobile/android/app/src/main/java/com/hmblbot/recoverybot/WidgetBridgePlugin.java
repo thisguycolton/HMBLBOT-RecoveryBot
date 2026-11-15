@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Base64;
 
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -50,6 +51,29 @@ public class WidgetBridgePlugin extends Plugin {
         prefs.putBoolean("hasChip", hasChip).apply();
         WidgetData.redrawAll(context);
         call.resolve();
+    }
+
+    // The style picked in the app (Account settings > Widgets), which every widget left on
+    // "Same as the app" draws in (WidgetStyles). It belongs to the phone, so signing out keeps it.
+    @PluginMethod
+    public void widgetStyle(PluginCall call) {
+        JSObject answer = new JSObject();
+        answer.put("style", WidgetStyles.appStyle(getContext()));
+        call.resolve(answer);
+    }
+
+    @PluginMethod
+    public void setWidgetStyle(PluginCall call) {
+        String style = call.getString("style", "");
+        if (!WidgetStyles.known(style)) {
+            call.reject("Unknown widget style");
+            return;
+        }
+        WidgetStyles.setAppStyle(getContext(), style);
+        WidgetData.redrawAll(getContext());
+        JSObject answer = new JSObject();
+        answer.put("style", style);
+        call.resolve(answer);
     }
 
     @PluginMethod
