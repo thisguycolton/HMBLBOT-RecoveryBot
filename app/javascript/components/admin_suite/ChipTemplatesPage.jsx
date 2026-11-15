@@ -122,6 +122,8 @@ function TemplateEditor({ id, notify }) {
   const [base, setBase] = useState(null);
   const [palette, setPalette] = useState(null);
   const [hidden, setHidden] = useState([]); // preview only
+  // How the art editor shows it: "paint" (enamel, the art's own colors) or "heights" (struck)
+  const [editView, setEditView] = useState(null);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [newPalette, setNewPalette] = useState("");
@@ -142,6 +144,13 @@ function TemplateEditor({ id, notify }) {
   const setDefault = (patch) => setDraft({ defaults: { ...defaults, ...patch } });
   const setField = (patch) => { setT({ ...t, ...patch }); setDirty(true); };
   const scene = { finish: defaults.finish || "enamel", metal: defaults.metal || "brass", colors: draft.palettes[palette] || {}, palette, hidden, layout: defaults.layout };
+  // The editor paints the art itself, so it shows the art's own colors: a palette swaps colors
+  // by what they are, so painting through one showed its swap instead of the paint (a shape
+  // painted in an art color turned that color's swap). Struck has nothing to paint, so a
+  // struck template still opens on Paint; Heights shows it struck.
+  const view = editView || "paint";
+  const editScene = { ...scene, colors: {}, palette: undefined, finish: view === "heights" ? "struck" : "enamel" };
+  const swaps = Object.keys(draft.palettes[palette] || {}).length > 0;
   const round = templateDesign(base, { ...t, draft }, { draft: true, scene: { palette, hidden } });
   // The same art on a Meeting Maker chip
   const design = { ...round, meeting: { ...base.meeting, emblem: "scene", scene: round.round.scene, milestone_at: defaults.milestone_at || "badge", edge: defaults.edge || "plain", sides: ["Meeting", "Maker", "Your meeting"] } };
@@ -205,7 +214,17 @@ function TemplateEditor({ id, notify }) {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <Card title="Art" subtitle="Paint shapes with the bucket. Lock a layer to keep groups from repainting it.">
-          <ArtEditor mode="template" value={{ art: draft.art, scene }} base={base} look={applyDefaults({}, defaults)} fits={t.fits}
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <div className="w-56 overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700">
+              <SegmentedControl value={view} onChange={setEditView} options={[{ value: "paint", label: "Paint" }, { value: "heights", label: "Heights (struck)" }]} />
+            </div>
+            <p className="min-w-0 flex-1 text-xs text-slate-500 !font-sans dark:text-neutral-400">
+              {view === "paint"
+                ? `You're painting the art's own colors${swaps ? `. ${palette} swaps some of them, so the preview can look different` : ""}. Palettes, below, swap colors for groups.`
+                : "Struck chips are one metal, raised by layer: set each layer's height. Switch to Paint to change colors."}
+            </p>
+          </div>
+          <ArtEditor mode="template" value={{ art: draft.art, scene: editScene }} base={base} look={applyDefaults({}, defaults)} fits={t.fits}
             onChange={(next) => {
               const patch = {};
               if (next.art !== draft.art) patch.art = next.art;
