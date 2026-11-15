@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronUp, ExternalLink, GripVertical, Pencil, Plus, Printer, Save, Scale, Trash2, Vote, X } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronUp, ClipboardList, Copy, ExternalLink, GripVertical, Pencil, Plus, Printer, Save, Scale, Trash2, Vote, X } from "lucide-react";
 import { inputClass, selectClass } from "../../ui/styles";
 import usePrintable, { printTitled } from "../../../lib/usePrintable";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Message, Pill, Tray, dangerButton, primaryButton, quietButton } from "../ui";
-import { ItemPill, PrintAgenda, SuggestForm } from "./AgendaParts";
+import { ItemPill, PrintAgenda, SuggestForm, agendaText } from "./AgendaParts";
 import DecisionForm from "./DecisionForm";
 import MeetingForm from "./MeetingForm";
 import MinutesEditor from "./MinutesEditor";
@@ -77,7 +77,7 @@ function MotionTree({ slug, motions, canEdit, onEdit, onAbout }) {
 function AgendaItemRow({ item, index, last, canEdit, slug, meeting, reload, setError, drag, onRecord }) {
   const lifted = drag.id === item.id;
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ title: item.title, details: item.details, kind: item.kind, status: item.status });
+  const [form, setForm] = useState({ title: item.title, details: item.details, kind: item.kind, status: item.status, brought_by: item.brought_by || "" });
   const base = `/groups/${slug}/business_meetings/${meeting.id}/agenda_items/${item.id}`;
   const call = async (method, body) => {
     setError(null);
@@ -95,9 +95,10 @@ function AgendaItemRow({ item, index, last, canEdit, slug, meeting, reload, setE
             <option value="on_agenda">On the agenda</option><option value="tabled">Tabled</option><option value="done">Done</option><option value="suggested">Suggested</option>
           </select>}
         </div>
+        {canEdit && <input aria-label="Brought by" maxLength={80} className={inputClass} placeholder={item.submitted_by && !item.brought_by ? `Brought by (now: ${item.submitted_by})` : "Brought by (first name, last initial)"} value={form.brought_by} onChange={(e) => setForm({ ...form, brought_by: e.target.value })} />}
         <textarea aria-label="Details" rows={2} maxLength={2000} className={inputClass} value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} />
         <div className="flex gap-2">
-          <button type="button" className={primaryButton} onClick={async () => { await call("PATCH", form); setEditing(false); }}><Check className="size-4" /> Save</button>
+          <button type="button" className={primaryButton} onClick={async () => { const { brought_by, ...rest } = form; await call("PATCH", canEdit ? form : rest); setEditing(false); }}><Check className="size-4" /> Save</button>
           <button type="button" className={quietButton} onClick={() => setEditing(false)}>Cancel</button>
         </div>
       </li>
@@ -158,6 +159,9 @@ export default function MeetingPage({ group, id }) {
   const [dragId, setDragId] = useState(null);
   // The agenda's order as it would be if let go now, shown live while an item is dragged
   const [preview, setPreview] = useState(null);
+  // What the paper copy holds: just the agenda (to hand out before) or everything (after)
+  const [printing, setPrinting] = useState("agenda");
+  const [params, setParams] = useSearchParams();
 
   const load = useCallback(() => api(`/groups/${slug}/business_meetings/${id}`).then((m) => {
     setMeeting(m);
@@ -173,6 +177,12 @@ export default function MeetingPage({ group, id }) {
     api(`/groups/${slug}/motions`).then((d) => { setAllMotions(d.motions); setMeta({ kinds: d.kinds, groups: d.groups }); }).catch(() => {});
     api(`/groups/${slug}/business_meetings`).then((d) => setRegular(d.regular_meetings)).catch(() => {});
   }, [slug, meeting?.can_edit]);
+  // Opened from "Print agenda" elsewhere: print it as soon as it's here
+  useEffect(() => {
+    if (!meeting || params.get("print") !== "agenda") return;
+    setParams((p) => { p.delete("print"); return p; }, { replace: true });
+    setTimeout(() => printTitled(`Agenda ${meeting.held_on}`), 300);
+  }, [meeting, params, setParams]);
   useEffect(() => {
     const warn = (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } };
     window.addEventListener("beforeunload", warn);
@@ -261,7 +271,28 @@ export default function MeetingPage({ group, id }) {
     },
   };
   const eventPath = meeting.event?.path;
+  const when = `${longDate(meeting.held_on)}${meeting.starts_at ? `, ${meeting.when_label.split(" · ")[1]}` : ""}`;
+  const printPaper = (what) => {
+    setPrinting(what);
+    setTimeout(() => printTitled(`${what === "agenda" ? "Agenda" : "Business meeting"} ${meeting.held_on}`), 50);
+  };
+  const copyAgenda = async () => {
+    try {
+      await navigator.clipboard.writeText(agendaText({ groupTitle: group.title, when, items: onAgenda }));
+      setNotice("Agenda copied. Paste it into an email, a chat or a document.");
+    } catch { setError("Couldn't copy. Use Print agenda and Save as PDF instead."); }
+  };
+  const hasReports = onAgenda.some((i) => i.kind === "report");
+  const addUsualReports = async () => {
+    setError(null);
+    try {
+      const d = await api(`/groups/${slug}/business_meetings/${id}/agenda_items/usual_reports`, { method: "POST" });
+      setMeeting((m) => ({ ...m, agenda: [...d.agenda] }));
+    } catch (e) { setError(e.message); }
+  };
+
   const minutesVisible = canEdit || meeting.minutes_status !== "draft";
+  const hasMore = meeting.motions.length > 0 || (minutesVisible && !!(meeting.minutes || "").trim());
 
   return (
     <div className="space-y-5">
@@ -299,7 +330,8 @@ export default function MeetingPage({ group, id }) {
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className={quietButton} onClick={() => printTitled(`Business meeting ${meeting.held_on}`)}><Printer className="size-4" /> Print</button>
+                <button type="button" className={meeting.status === "planned" ? primaryButton : quietButton} onClick={() => printPaper("agenda")}><Printer className="size-4" /> Print agenda</button>
+                {hasMore && <button type="button" className={quietButton} onClick={() => printPaper("all")}><Printer className="size-4" /> Print with minutes</button>}
                 {canEdit && <button type="button" className={quietButton} onClick={() => setEditing(true)}><Pencil className="size-4" /> Details</button>}
                 {canEdit && meeting.status === "planned" && <button type="button" className={primaryButton} onClick={() => patch({ status: "held" })}><Check className="size-4" /> Mark as held</button>}
                 {canEdit && meeting.status === "planned" && <button type="button" className={quietButton} onClick={() => window.confirm("Cancel this meeting?") && patch({ status: "cancelled" })}>Cancel it</button>}
@@ -311,7 +343,23 @@ export default function MeetingPage({ group, id }) {
 
         <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
           <div className="min-w-0 space-y-5">
-            <Tray label={`Agenda (${onAgenda.length})`}>
+            <Tray label={`Agenda (${onAgenda.length})`} action={onAgenda.length > 0 && (
+              <span className="flex gap-1">
+                <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} onClick={copyAgenda}><Copy className="size-3.5" /> Copy</button>
+                <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} onClick={() => printPaper("agenda")}><Printer className="size-3.5" /> Print / PDF</button>
+              </span>
+            )}>
+              {canEdit && suggested.length > 0 && (
+                <p className="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                  {suggested.length === 1 ? "1 suggestion isn't" : `${suggested.length} suggestions aren't`} on the agenda yet. Add or decline {suggested.length === 1 ? "it" : "them"} below before you print.
+                </p>
+              )}
+              {canEdit && meeting.status === "planned" && !hasReports && (
+                <Card className="mb-2 flex flex-wrap items-center gap-3 border border-dashed border-slate-300 p-3 dark:border-neutral-700">
+                  <span className="min-w-0 flex-1 basis-56 text-sm text-slate-600 dark:text-neutral-300">No reports on this agenda yet. Add the ones the group hears every month: secretary, treasurer, host coordinators and tech admins (or whatever the last agenda had).</span>
+                  <button type="button" className={`${primaryButton} !px-2.5 !py-1 !text-xs`} onClick={addUsualReports}><ClipboardList className="size-3.5" /> Add the usual reports</button>
+                </Card>
+              )}
               <ol className="space-y-1.5" onDragOver={(e) => dragId && e.preventDefault()} onDrop={(e) => { e.preventDefault(); drag.drop(); }}>
                 {onAgenda.length === 0 && <li><Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">{canEdit ? "Nothing on the agenda yet. Add an item below, or approve a suggestion." : "Nothing on the agenda yet. You can suggest an item below."}</Card></li>}
                 {shown.map((item, i) => (
@@ -337,7 +385,7 @@ export default function MeetingPage({ group, id }) {
 
             {(canEdit || meeting.can_suggest) && (
               <Tray label={canEdit ? "Add an item" : "Suggest an item"}>
-                <Card className="p-3"><SuggestForm slug={slug} meetingId={meeting.id} onAdded={load} compact /></Card>
+                <Card className="p-3"><SuggestForm slug={slug} meetingId={meeting.id} onAdded={load} compact keeper={canEdit} /></Card>
                 {!canEdit && <p className="px-2 pb-1 pt-2 text-xs text-slate-500 dark:text-neutral-400">The group's record keepers will see it and put it on the agenda.</p>}
               </Tray>
             )}
@@ -400,17 +448,17 @@ export default function MeetingPage({ group, id }) {
 
       {/* The paper copy: header, agenda, decisions, minutes */}
       <article className="hidden print:block meeting-print">
-        <h1>{group.title} business meeting</h1>
-        <p className="meeting-print__meta">{longDate(meeting.held_on)}{meeting.starts_at ? `, ${meeting.when_label.split(" · ")[1]}` : ""}
+        <h1>{group.title} business meeting{printing === "agenda" ? ": agenda" : ""}</h1>
+        <p className="meeting-print__meta">{when}{meeting.meeting ? ` · after ${meeting.meeting.name}` : ""}
           {[meeting.chair && `Chair: ${meeting.chair}`, meeting.secretary && `Secretary: ${meeting.secretary}`, meeting.attendance_count != null && `${meeting.attendance_count} present`, meeting.quorum_met === false && "No quorum", meeting.called_to_order_time && `Called to order ${clock12(meeting.called_to_order_time)}`, meeting.adjourned_time && `Adjourned ${clock12(meeting.adjourned_time)}`].filter(Boolean).map((t) => ` · ${t}`).join("")}</p>
         <PrintAgenda items={onAgenda} />
-        {meeting.motions.length > 0 && (
+        {printing === "all" && meeting.motions.length > 0 && (
           <>
             <h2>Motions</h2>
             <ul>{meeting.motions.map((m) => <li key={m.id} style={m.parent_id ? { marginLeft: "1.2em" } : undefined}>{motionLine(m)}{(m.amended_text || m.text) && <div className="meeting-print__wording">{m.amended_text || m.text}</div>}</li>)}</ul>
           </>
         )}
-        {minutesVisible && (minutes || meeting.minutes)?.trim() && (
+        {printing === "all" && minutesVisible && (minutes || meeting.minutes)?.trim() && (
           <>
             <h2>Minutes{meeting.minutes_status === "approved" ? " (approved)" : meeting.minutes_status === "draft" ? " (draft)" : ""}</h2>
             <div className="doc-prose" dangerouslySetInnerHTML={{ __html: canEdit ? minutes : meeting.minutes }} />

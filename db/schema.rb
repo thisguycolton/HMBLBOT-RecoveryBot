@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_15_020000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_15_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -117,6 +117,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_15_020000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "motion_id"
+    t.string "brought_by"
     t.index ["business_meeting_id"], name: "index_agenda_items_on_business_meeting_id"
     t.index ["motion_id"], name: "index_agenda_items_on_motion_id"
     t.index ["submitted_by_id"], name: "index_agenda_items_on_submitted_by_id"

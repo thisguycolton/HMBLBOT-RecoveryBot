@@ -27,6 +27,27 @@ class Api::GroupServiceAndTreasuryTest < ActionDispatch::IntegrationTest
   def positions(*rest) = ["/api/groups/#{@group.slug}/service_positions", *rest].join("/")
   def reports(*rest) = ["/api/groups/#{@group.slug}/treasurer_reports", *rest].join("/")
 
+  test "an admin sees when the elected secretary or treasurer can't do the job on the site yet" do
+    secretary = @group.service_positions.create!(title: "Secretary")
+    secretary.terms.create!(user: @member, starts_on: @today - 10)
+    treasurer = @group.service_positions.create!(title: "Treasurer")
+    treasurer.terms.create!(user: @keeper, starts_on: @today - 10)
+
+    sign_in @keeper
+    get positions, as: :json
+    assert body["positions"].none? { |p| p.key?("access") }, "only admins can grant it"
+
+    sign_in @leader
+    get positions, as: :json
+    by_title = body["positions"].index_by { |p| p["title"] }
+    assert_equal %w[can_keep_records record\ keeper Mo], by_title["Secretary"]["access"].values_at("flag", "role", "name")
+    assert_equal %w[can_keep_treasury Kay], by_title["Treasurer"]["access"].values_at("flag", "name")
+
+    patch "/api/groups/#{@group.slug}/memberships/#{by_title["Secretary"]["access"]["membership_id"]}", params: { can_keep_records: true }, as: :json
+    get positions, as: :json
+    assert_nil body["positions"].find { |p| p["title"] == "Secretary" }["access"]
+  end
+
   test "members read service positions; record keepers change them" do
     get positions, as: :json
     assert_response :unauthorized

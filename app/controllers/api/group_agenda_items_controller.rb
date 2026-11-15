@@ -7,7 +7,7 @@ class Api::GroupAgendaItemsController < ApplicationController
   before_action :require_member
   before_action :set_meeting
   before_action :set_item, only: %i[update destroy]
-  before_action :require_keeper, only: :reorder
+  before_action :require_keeper, only: %i[reorder usual_reports]
 
   # POST /api/groups/:group_slug/business_meetings/:business_meeting_id/agenda_items
   def create
@@ -44,6 +44,13 @@ class Api::GroupAgendaItemsController < ApplicationController
     render json: { agenda: @meeting.agenda_items.reload.includes(:submitted_by).map { |i| i.as_api_json(viewer: current_user) } }
   end
 
+  # POST .../agenda_items/usual_reports: the reports this group hears every month (the ones on its
+  # last agenda, or the common ones), put at the top of the agenda where they're missing
+  def usual_reports
+    @meeting.add_usual_reports!
+    render json: { agenda: @meeting.agenda_items.reload.includes(:submitted_by).map { |i| i.as_api_json(viewer: current_user) } }
+  end
+
   private
 
   def set_meeting
@@ -58,7 +65,7 @@ class Api::GroupAgendaItemsController < ApplicationController
   end
 
   def item_params
-    params.require(:agenda_item).permit(:kind, :title, :details, :status, :motion_id)
+    params.require(:agenda_item).permit(:kind, :title, :details, :status, :motion_id, :brought_by)
   end
 
   # Carrying an earlier motion onto the agenda as unfinished business: it names the motion, and

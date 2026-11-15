@@ -87,6 +87,35 @@ class BusinessMeeting < ApplicationRecord
 
   def planned? = status == "planned"
 
+  # The reports most groups hear at every business meeting, for a group whose agendas don't have
+  # any yet
+  COMMON_REPORTS = ["Secretary's report (last meeting's minutes)", "Treasurer's report", "Host Coordinators' report", "Tech Admins' report"].freeze
+
+  # The reports this group heard at its last business meeting that had any, or the common ones
+  def usual_reports
+    earlier = group.business_meetings.where.not(id: id).where("held_on <= ?", held_on).joins(:agenda_items)
+                   .where(agenda_items: { kind: "report" }).where.not(agenda_items: { status: "suggested" }).order(held_on: :desc, id: :desc).first
+    return COMMON_REPORTS unless earlier
+
+    earlier.agenda_items.select { |i| i.kind == "report" && !i.suggested? }.map(&:title).uniq
+  end
+
+  # Puts the usual reports this agenda doesn't have yet at the top of it. `common`: fall back to
+  # the common reports when the group has never had any (a new meeting only copies its own).
+  def add_usual_reports!(common: true)
+    titles = usual_reports
+    return [] if titles.equal?(COMMON_REPORTS) && !common
+
+    have = agenda_items.where(kind: "report").pluck(:title).map { |t| t.downcase.squish }
+    missing = titles.reject { |t| have.include?(t.downcase.squish) }
+    return [] if missing.empty?
+
+    transaction do
+      AgendaItem.where(business_meeting_id: id).update_all(["position = position + ?", missing.size])
+      missing.each_with_index.map { |t, i| agenda_items.create!(title: t, kind: "report", status: "on_agenda", position: i + 1) }
+    end
+  end
+
   # Motions set aside at earlier meetings (tabled, put off, sent to a committee) and not dealt with
   # since, that aren't on this agenda yet
   def unfinished_business

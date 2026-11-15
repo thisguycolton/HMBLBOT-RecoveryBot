@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Archive, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
+import { Archive, KeyRound, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 import { inputClass, labelClass, selectClass } from "../../ui/styles";
 import { api } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, dangerButton, primaryButton, quietButton } from "../ui";
@@ -114,6 +114,15 @@ export default function ServiceView({ group }) {
           {p.current ? (
             <p><span className="font-medium text-slate-900 dark:text-white">{p.current.name}</span> <span className="text-slate-500 dark:text-neutral-400">since {dateLabel(p.current.starts_on)}{p.current.ends_on ? `, until ${dateLabel(p.current.ends_on)}` : ""}</span></p>
           ) : <p className="italic text-slate-500 dark:text-neutral-400">Nobody serves in it now.</p>}
+          {p.access && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              <span className="min-w-0 flex-1 basis-48">{p.access.name} isn't a {p.access.role} on the site yet, so they can't change {p.access.covers}.</span>
+              <button type="button" className={`${primaryButton} !px-2.5 !py-1 !text-xs`} onClick={async () => {
+                setError(null);
+                try { await api(`/groups/${slug}/memberships/${p.access.membership_id}`, { method: "PATCH", body: { [p.access.flag]: true } }); await load(); } catch (e) { setError(e.message); }
+              }}><KeyRound className="size-3.5" /> Make them {p.access.role}</button>
+            </div>
+          )}
           {data.can_edit && !p.archived && placing !== p.id && <button type="button" onClick={() => setPlacing(p.id)} className={`${quietButton} mt-2 !px-2.5 !py-1 !text-xs`}><UserPlus className="size-3.5" /> {p.current ? "Next person" : "Put someone in"}</button>}
           {placing === p.id && <TermForm slug={slug} position={p} members={data.members} onSaved={done} onCancel={() => setPlacing(null)} />}
         </div>

@@ -67,7 +67,7 @@ class Api::GroupConscienceController < ApplicationController
     {
       draft_minutes: meetings.where(status: "held", minutes_status: "draft").newest_first.limit(5).map { |m| { id: m.id, held_on: m.held_on.iso8601 } },
       suggested_items: AgendaItem.joins(:business_meeting).where(business_meetings: { group_id: @group.id, status: "planned" }, status: "suggested")
-                                 .includes(:business_meeting).limit(10).map { |i| { id: i.id, title: i.title, meeting_id: i.business_meeting_id, held_on: i.business_meeting.held_on.iso8601 } },
+                                 .includes(:business_meeting, :submitted_by).limit(10).map { |i| { id: i.id, title: i.title, meeting_id: i.business_meeting_id, held_on: i.business_meeting.held_on.iso8601, submitted_by: i.brought_by_name } },
       draft_documents: @group.documents.where(status: "draft").limit(5).map { |d| { id: d.id, title: d.title } },
       draft_reports: draft_reports,
     }
