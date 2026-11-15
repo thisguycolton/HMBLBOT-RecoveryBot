@@ -6,7 +6,8 @@
 #   time_zone  the viewer's zone; dates and times of day are theirs
 #   date       "2026-10-20": meetings that day (else the coming week, from LEAD_TIME out)
 #   live       "1": meetings going on right now
-#   soon       "1": meetings starting in the next SOON_AHEAD, or that started up to SOON_BEHIND ago
+#   soon       15 | 30 | 60: meetings starting in that many minutes, or that started up to
+#              SOON_BEHIND ago ("1" means SOON_DEFAULT)
 #   from, to   minutes after midnight: starting in that part of the day (to < from wraps)
 #   attendance online | in_person (hybrid meetings are both)
 #   place      a city, region or address, or a time zone ("Pacific", "London")
@@ -21,7 +22,8 @@ class MeetingFinder
   LEAD_TIME = 15.minutes
   # "Starting soon" (the finder's default): meetings someone could still get to on time,
   # or join just after they've begun
-  SOON_AHEAD = 60.minutes
+  SOON_CHOICES = [15, 30, 60].freeze
+  SOON_DEFAULT = 30
   SOON_BEHIND = 5.minutes
   NOTES_MAX = 180
 
@@ -69,7 +71,7 @@ class MeetingFinder
     if live?
       [@now, @now]
     elsif soon?
-      [@now - SOON_BEHIND.to_i, @now + SOON_AHEAD.to_i]
+      [@now - SOON_BEHIND.to_i, @now + soon_minutes.minutes.to_i]
     elsif (date = Date.iso8601(@params[:date].to_s) rescue nil)
       from = zone.local(date.year, date.month, date.day)
       to = (from + 1.day).to_i
@@ -80,7 +82,8 @@ class MeetingFinder
   end
 
   def live? = ActiveModel::Type::Boolean.new.cast(@params[:live])
-  def soon? = !live? && ActiveModel::Type::Boolean.new.cast(@params[:soon])
+  def soon? = !live? && @params[:soon].present? && ActiveModel::Type::Boolean.new.cast(@params[:soon])
+  def soon_minutes = SOON_CHOICES.include?(@params[:soon].to_i) ? @params[:soon].to_i : SOON_DEFAULT
 
   # --- AA Intergroup's listings, plucked: 8,000 of them fit in memory fine ---
 
