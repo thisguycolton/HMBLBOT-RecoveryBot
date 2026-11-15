@@ -12,7 +12,7 @@ import MeetingPasscode from "./MeetingPasscode";
 // /groups/meetings: "Find a meeting". Every meeting AA Intergroup lists and the groups'
 // own, filtered by words, day, time of day (the viewer's), where and type, soonest first.
 // Filters live in the URL, so coming back from a group's page keeps them. With no day chosen it
-// shows what's starting soon (the next hour, or begun in the last 5 minutes). Each result is
+// shows what's starting soon (in the next 15, 30 or 60 minutes, or begun in the last 5). Each result is
 // a small version of the group's page and opens it.
 
 const viewerZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Phoenix";
@@ -43,6 +43,13 @@ const pillSelect = `${selectClass} !h-10 !w-auto shrink-0 !rounded-full !py-0 !p
 
 // A view the viewer picked stays picked; otherwise phones start on the list, wider screens on the grid
 const defaultView = () => (window.matchMedia?.("(max-width: 639px)").matches ? "list" : "grid");
+// How far ahead "Starting soon" looks, in minutes. The viewer's pick is remembered.
+const SOON_CHOICES = [15, 30, 60];
+const loadSoon = () => {
+  try { const v = Number(localStorage.getItem("findMeeting.soon")); return SOON_CHOICES.includes(v) ? v : 30; } catch { return 30; }
+};
+const soonLabel = (m) => (m === 60 ? "1 hour" : `${m} min`);
+
 const loadView = () => {
   try { return localStorage.getItem("findMeeting.view") || defaultView(); } catch { return defaultView(); }
 };
@@ -53,6 +60,7 @@ export default function FindMeeting() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [view, setView] = useState(loadView);
+  const [soonMinutes, setSoonMinutes] = useState(loadSoon);
   const [showFilters, setShowFilters] = useState(false);
   const top = useRef(null);
   const hero = useRef(null);
@@ -102,7 +110,7 @@ export default function FindMeeting() {
     const out = new URLSearchParams({ time_zone: viewerZone() });
     ["q", "date", "live", "attendance", "place", "type", "page"].forEach((k) => params.get(k) && out.set(k, params.get(k)));
     // With no day chosen, the finder shows what's starting soon; "week=1" asks for the coming week
-    if (!params.get("date") && !params.get("live") && !params.get("week")) out.set("soon", "1");
+    if (!params.get("date") && !params.get("live") && !params.get("week")) out.set("soon", String(soonMinutes));
     if (time.key === "custom") {
       if (params.get("from")) out.set("from", params.get("from"));
       if (params.get("to")) out.set("to", params.get("to"));
@@ -111,7 +119,7 @@ export default function FindMeeting() {
       out.set("to", time.to);
     }
     return out.toString();
-  }, [params, time]);
+  }, [params, time, soonMinutes]);
 
   useEffect(() => {
     let current = true;
@@ -126,6 +134,10 @@ export default function FindMeeting() {
 
   useEffect(() => { document.title = "Find a meeting | RecoveryBot"; }, []);
 
+  const chooseSoon = (m) => {
+    setSoonMinutes(m);
+    try { localStorage.setItem("findMeeting.soon", String(m)); } catch { /* private window */ }
+  };
   const chooseView = (v) => {
     setView(v);
     try { localStorage.setItem("findMeeting.view", v); } catch { /* private window */ }
@@ -169,6 +181,20 @@ export default function FindMeeting() {
     </button>
   );
 
+  // While "Starting soon" is on: how far ahead it looks
+  const soonPicker = (
+    <div className="inline-flex shrink-0 rounded-full bg-neutral-100 p-0.5 dark:bg-neutral-800" role="group" aria-labelledby="fm-soon">
+      {SOON_CHOICES.map((m) => (
+        <button key={m} type="button" aria-pressed={soonMinutes === m} onClick={() => chooseSoon(m)}
+          className={`rounded-full px-2.5 py-1 text-xs font-medium ${focusRing} ${
+            soonMinutes === m ? "!bg-white text-slate-900 shadow-sm dark:!bg-white dark:text-neutral-900" : "!bg-transparent text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white"
+          }`}>
+          {soonLabel(m)}
+        </button>
+      ))}
+    </div>
+  );
+
   const filterCount = extraFilters > 0 && (
     <span className="rounded-full bg-accent px-1.5 text-[11px] font-semibold leading-5 text-white">{extraFilters}</span>
   );
@@ -208,6 +234,11 @@ export default function FindMeeting() {
             {filterCount}
           </button>
         </div>
+        {soon && (
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-neutral-400">
+            <span id="fm-soon">Starting within</span>{soonPicker}
+          </div>
+        )}
 
         {showFilters && (
           <>
@@ -322,7 +353,7 @@ export default function FindMeeting() {
         <section className={`space-y-3 transition-opacity ${loading ? "opacity-60" : ""}`} aria-busy={loading}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-slate-600 dark:text-neutral-400">
-              {data.total === 0 ? "No meetings match." : `${data.total.toLocaleString()} ${data.total === 1 ? "meeting" : "meetings"}${live ? " on now" : soon ? " starting in the next hour or in the last 5 minutes" : dayKey === "week" ? " starting 15 minutes from now or later" : ""}, soonest first`}
+              {data.total === 0 ? "No meetings match." : `${data.total.toLocaleString()} ${data.total === 1 ? "meeting" : "meetings"}${live ? " on now" : soon ? ` starting in the next ${soonMinutes === 60 ? "hour" : `${soonMinutes} minutes`} or in the last 5` : dayKey === "week" ? " starting 15 minutes from now or later" : ""}, soonest first`}
               {filtersOn > 0 && (
                 <button type="button" onClick={() => { setQ(""); setPlace(""); setParams(new URLSearchParams()); }}
                   className={`ml-2 inline-flex items-center gap-1 !bg-transparent p-0 font-medium text-accent hover:underline ${focusRing}`}>
@@ -346,7 +377,7 @@ export default function FindMeeting() {
             <div className="rounded-2xl bg-neutral-100 p-8 text-center text-sm text-slate-600 dark:bg-neutral-800/70 dark:text-neutral-400">
               {!data.ready ? "AA Intergroup's list is loading. Try again in a minute." : soon ? (
                 <>
-                  Nothing starts in the next hour{filtersOn > 0 ? " with these filters" : ""}.{" "}
+                  Nothing starts in the next {soonMinutes === 60 ? "hour" : `${soonMinutes} minutes`}{filtersOn > 0 ? " with these filters" : ""}.{" "}
                   <button type="button" onClick={() => chooseDay("week")} className={`!bg-transparent p-0 font-medium text-accent hover:underline ${focusRing}`}>
                     See the coming week
                   </button>
