@@ -634,6 +634,13 @@ end
       resource :chip_design, only: %i[show update] do
         post :relief
       end
+      # RecoveryBot's own Special Editions (ChipEdition without a group)
+      resources :chip_editions, only: %i[index create update destroy] do
+        member do
+          post :publish
+          post :duplicate
+        end
+      end
     end
   end
   resources :readings do

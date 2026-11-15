@@ -134,7 +134,7 @@ export default function MilestoneLooks({ kind, part, base, design, onChange, chi
                 {scene ? (
                   <>
                     {(
-                      <select aria-label={`${m.label}: chip`} className={`${small} !w-32`} value={look.body || SAME} onChange={(e) => setLook(key, { body: e.target.value })}>
+                      <select aria-label={`${m.label}: chip`} className={`${small} !w-36`} value={look.body || SAME} onChange={(e) => setLook(key, { body: e.target.value })}>
                         <option value={SAME}>Same ({usualBody(m) === "colored" ? "Colored" : "Metal"})</option>
                         <option value="metal">Metal</option>
                         <option value="colored">Colored</option>

@@ -5,6 +5,7 @@ import { buttonClass } from "../topicificator_admin/App";
 import { RoundChip } from "../recovery/Chip";
 import { SpinningChip } from "../recovery/ChipModal";
 import RoundPartForm from "../chips/RoundPartForm";
+import ChipEditions from "../groups/ChipEditions";
 import { storedDesign } from "../chips/lib";
 import { Card } from "./App";
 import Skeleton from "../ui/Skeleton";
@@ -18,7 +19,8 @@ const PREVIEWS = [
 // Site Admin > Sobriety chips: how RecoveryBot's own round chips look, the ones every member
 // earns on their own (ChipDesign.for_site, Api::Admin::ChipDesignsController). The same choices
 // as a group's round chips (RoundPartForm), except a group's logo: there's no group. Saving changes chips earned from now on;
-// chips already earned keep the look they were earned in.
+// chips already earned keep the look they were earned in. Below, RecoveryBot's own Special
+// Editions (ChipEditions, site), with the same editor, limits and numbering as a group's.
 export default function ChipDesignPage({ notify }) {
   const [data, setData] = useState(null);
   const [design, setDesign] = useState(null);
@@ -77,6 +79,9 @@ export default function ChipDesignPage({ notify }) {
             </div>
           </Card>
         </div>
+      </div>
+      <div className="mt-8">
+        <ChipEditions site data={data} templates={templates} onTemplates={setTemplates} />
       </div>
     </>
   );

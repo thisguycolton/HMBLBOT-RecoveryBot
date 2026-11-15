@@ -40,7 +40,7 @@ function status(e) {
 
 // A chip as it'll look, for previews: the edition's design, with its mark on the back
 function sample(e, design) {
-  const mark = [e.name, e.numbered ? `No. 001${e.how_many !== "everyone" ? ` of ${e.limit}` : ""}` : null].filter(Boolean).join(" · ").toUpperCase();
+  const mark = [e.name, e.numbered ? `No. 001${e.how_many !== "everyone" && e.limit ? ` of ${e.limit}` : ""}` : null].filter(Boolean).join(" · ").toUpperCase();
   const base = { id: `edition-preview-${e.id || "new"}`, design, on: e.starts_on, edition: { name: e.name, mark }, group: {} };
   if (e.kind === "meeting_maker") {
     const sides = design.meeting.sides;
@@ -54,17 +54,20 @@ function sample(e, design) {
 // the group makes for a year, a month, a week or a holiday, for milestones members reach then
 // (claimed with a tap, or given by hosts) or for making meetings (given on their own). Each is
 // numbered. Once the first one is out, its design is fixed: minted chips never change.
-export default function ChipEditions({ group, data, templates, onTemplates }) {
+// Without a `group` (`site`), RecoveryBot's own (Site Admin > Sobriety chips,
+// Api::Admin::ChipEditionsController): for every member, given by site admins (Admin Chips).
+export default function ChipEditions({ group, site = false, data, templates, onTemplates }) {
   const [list, setList] = useState(null);
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(null);
-  const load = useCallback(() => api(`/groups/${group.slug}/chip_editions`).then(setList).catch((e) => setError(e.message)), [group.slug]);
+  const owner = ownerOf(group, site, data);
+  const load = useCallback(() => api(owner.path).then(setList).catch((e) => setError(e.message)), [owner.path]);
   useEffect(() => { load(); }, [load]);
 
   const start = (kind) => setEditing({ ...blank(kind), design: data.design });
   const duplicate = async (e) => {
     try {
-      const d = await api(`/groups/${group.slug}/chip_editions/${e.id}/duplicate`, { method: "POST" });
+      const d = await api(`${owner.path}/${e.id}/duplicate`, { method: "POST" });
       await load();
       setEditing(d.edition);
     } catch (err) { setError(err.message); }
@@ -76,8 +79,9 @@ export default function ChipEditions({ group, data, templates, onTemplates }) {
         <div className="min-w-0 flex-1 basis-56">
           <h2 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white"><Sparkles className="size-4" /> Special Editions</h2>
           <p className="text-sm text-slate-500 dark:text-neutral-400">
-            Limited chips for a year, a month, a week or a holiday. Milestone editions are for milestones members reach while it runs: they claim it with a tap, any time after, and hosts can give it too.
-            Meeting Maker editions go to members who make enough meetings while it runs. Each one is numbered.
+            {site
+              ? "RecoveryBot's own limited chips, for every member, for a year, a month, a week or a holiday. Milestone editions are for milestones members reach while it runs: they claim it with a tap on their Chips page, any time after, and site admins can give it on Give a chip (Admin Chips). Meeting Maker editions go to members who make enough of any meetings while it runs. Each one is numbered."
+              : "Limited chips for a year, a month, a week or a holiday. Milestone editions are for milestones members reach while it runs: they claim it with a tap, any time after, and hosts can give it too. Meeting Maker editions go to members who make enough meetings while it runs. Each one is numbered."}
           </p>
         </div>
         {list?.open && !editing && (
@@ -89,7 +93,7 @@ export default function ChipEditions({ group, data, templates, onTemplates }) {
       </div>
       <ErrorNote error={error} />
       {!list ? <Loading variant="rows" /> : editing ? (
-        <EditionForm group={group} data={data} meetings={list.meetings} templates={templates} onTemplates={onTemplates} edition={editing}
+        <EditionForm owner={owner} data={data} meetings={list.meetings} templates={templates} onTemplates={onTemplates} edition={editing}
           onDone={() => { setEditing(null); load(); }} />
       ) : list.editions.length === 0 ? (
         <Card className="p-5 text-sm text-slate-500 dark:text-neutral-400">No Special Editions yet.</Card>
@@ -102,7 +106,7 @@ export default function ChipEditions({ group, data, templates, onTemplates }) {
                 <div className="flex flex-wrap items-center gap-2 font-semibold text-slate-900 dark:text-white">{e.name} {status(e)}</div>
                 <p className="text-sm text-slate-500 dark:text-neutral-400">
                   {e.kind === "milestone" ? "Milestones" : `${e.target_count} meetings`}, {e.window_label}
-                  <br />{e.issued.toLocaleString()}{e.limit ? ` of ${e.limit.toLocaleString()}` : ""} out{e.how_many === "given_n" ? ", given by hosts" : ""}
+                  <br />{e.issued.toLocaleString()}{e.limit ? ` of ${e.limit.toLocaleString()}` : ""} out{e.how_many === "given_n" ? `, given by ${owner.givers}` : ""}
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <button type="button" className={quietButton} onClick={() => setEditing(e)}>{e.locked ? "Open" : "Edit"}</button>
@@ -117,7 +121,18 @@ export default function ChipEditions({ group, data, templates, onTemplates }) {
   );
 }
 
-function EditionForm({ group, data, meetings, templates, onTemplates, edition, onDone }) {
+// Whose editions: a group's, or RecoveryBot's (site): where they're saved, whose name and logo
+// they carry, who gives them, and who hears when one's published
+function ownerOf(group, site, data) {
+  if (site) {
+    return { path: "/admin/chip_editions", title: "RecoveryBot", logoUrl: undefined, slug: undefined, givers: "admins", site: true,
+      relief: "/admin/chip_design/relief", publishNote: "Members who reach a milestone it's for can claim it on their Chips page." };
+  }
+  return { path: `/groups/${group.slug}/chip_editions`, title: group.title, logoUrl: group.logo_url || data.logo_url, slug: group.slug, givers: "hosts",
+    relief: `/groups/${group.slug}/chips/relief`, publishNote: `${group.title}'s members get a notification about it.` };
+}
+
+function EditionForm({ owner, data, meetings, templates, onTemplates, edition, onDone }) {
   const [e, setE] = useState(() => {
     const m = edition.design.meeting;
     return { ...edition, design: { ...edition.design, meeting: { ...m, sides: [m.sides[0], m.sides[1], m.sides[2] === edition.name ? "" : m.sides[2]] } } };
@@ -149,11 +164,11 @@ function EditionForm({ group, data, meetings, templates, onTemplates, edition, o
     setError(null);
     try {
       const d = e.id
-        ? await api(`/groups/${group.slug}/chip_editions/${e.id}`, { method: "PATCH", body: body() })
-        : await api(`/groups/${group.slug}/chip_editions`, { method: "POST", body: body() });
+        ? await api(`${owner.path}/${e.id}`, { method: "PATCH", body: body() })
+        : await api(owner.path, { method: "POST", body: body() });
       if (publish) {
-        if (!window.confirm(`Publish ${d.edition.name}? ${group.title}'s members get a notification about it.`)) { set({ id: d.edition.id }); setBusy(false); return; }
-        await api(`/groups/${group.slug}/chip_editions/${d.edition.id}/publish`, { method: "POST" });
+        if (!window.confirm(`Publish ${d.edition.name}? ${owner.publishNote}`)) { set({ id: d.edition.id }); setBusy(false); return; }
+        await api(`${owner.path}/${d.edition.id}/publish`, { method: "POST" });
       }
       onDone();
     } catch (err) { setError(err.message); }
@@ -161,7 +176,7 @@ function EditionForm({ group, data, meetings, templates, onTemplates, edition, o
   };
   const remove = async () => {
     if (!window.confirm(`Delete ${e.name}?`)) return;
-    try { await api(`/groups/${group.slug}/chip_editions/${e.id}`, { method: "DELETE" }); onDone(); } catch (err) { setError(err.message); }
+    try { await api(`${owner.path}/${e.id}`, { method: "DELETE" }); onDone(); } catch (err) { setError(err.message); }
   };
   const toggle = (key, value) => set({ [key]: e[key].includes(value) ? e[key].filter((x) => x !== value) : [...e[key], value] });
 
@@ -173,7 +188,7 @@ function EditionForm({ group, data, meetings, templates, onTemplates, edition, o
         <div>
           <label htmlFor="ed-name" className={labelClass}>Name</label>
           <input id="ed-name" maxLength={40} disabled={locked} className={inputClass} value={e.name} placeholder={milestone ? "2027 Edition" : "30 in 30"} onChange={(x) => set({ name: x.target.value })} />
-          <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Goes on the back with its number, like "{(e.name || "2027 Edition").toUpperCase()} · NO. 014{e.how_many !== "everyone" ? ` OF ${e.limit}` : ""}".</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Goes on the back with its number, like "{(e.name || "2027 Edition").toUpperCase()} · NO. 014{e.how_many !== "everyone" && e.limit ? ` OF ${e.limit}` : ""}".</p>
         </div>
 
         <div>
@@ -231,7 +246,7 @@ function EditionForm({ group, data, meetings, templates, onTemplates, edition, o
               <div className={labelClass}>At</div>
               <div className="flex flex-wrap gap-2">
                 <label className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm ring-1 ring-neutral-200 dark:ring-neutral-700">
-                  <input type="checkbox" checked={e.meeting_ids.length === 0} onChange={() => set({ meeting_ids: [] })} className="accent-[var(--color-accent)]" /> Any of the group's meetings
+                  <input type="checkbox" checked={e.meeting_ids.length === 0} onChange={() => set({ meeting_ids: [] })} className="accent-[var(--color-accent)]" /> {owner.site ? "Any meeting" : "Any of the group's meetings"}
                 </label>
                 {meetings.map((m) => (
                   <label key={m.id} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm ring-1 ring-neutral-200 dark:ring-neutral-700">
@@ -245,16 +260,36 @@ function EditionForm({ group, data, meetings, templates, onTemplates, edition, o
         )}
 
         <div>
-          <div className={labelClass}>How many</div>
-          <fieldset disabled={locked} className={segment}>
-            <SegmentedControl value={e.how_many} onChange={(v) => set({ how_many: v })}
-              options={[{ value: "everyone", label: "Everyone who qualifies" }, { value: "first_n", label: milestone ? "The first to claim" : "The first to earn" },
-                ...(milestone ? [{ value: "given_n", label: "Given by hosts" }] : [])]} />
-          </fieldset>
-          {e.how_many !== "everyone" && (
+          <div className={labelClass}>{milestone ? "Who gets it" : "How many"}</div>
+          {milestone && (
+            <fieldset disabled={locked} className={`${segment} mb-2`}>
+              <SegmentedControl value={e.how_many === "given_n" ? "given" : "claim"}
+                onChange={(v) => set(v === "given" ? { how_many: "given_n", limit: null } : { how_many: "everyone" })}
+                options={[{ value: "claim", label: "Members claim it" }, { value: "given", label: `Only ${owner.givers} give it` }]} />
+            </fieldset>
+          )}
+          {e.how_many !== "given_n" && (
+            <fieldset disabled={locked} className={segment}>
+              <SegmentedControl value={e.how_many} onChange={(v) => set({ how_many: v, limit: e.limit || 50 })}
+                options={[{ value: "everyone", label: "Everyone who qualifies" }, { value: "first_n", label: milestone ? "The first to claim" : "The first to earn" }]} />
+            </fieldset>
+          )}
+          <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">
+            {e.how_many === "given_n"
+              ? `Members can't claim it. ${owner.givers === "admins" ? "Site admins" : "Hosts"} give it on Give a chip${owner.site ? " (Admin Chips)" : ""}, while it runs.`
+              : milestone ? `Members who reach a milestone it's for while it runs claim it with a tap, any time after. ${owner.givers === "admins" ? "Site admins" : "Hosts"} can give it too.` : "Given on its own to members who make enough meetings."}
+          </p>
+          {e.how_many === "first_n" && (
             <div className="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-200">
               Only <input type="number" min={Math.max(1, e.issued || 0)} max={100000} aria-label="How many" className={`${inputClass} !w-28`} value={e.limit || ""} onChange={(x) => set({ limit: Number(x.target.value) })} />
-              {e.how_many === "given_n" ? "chips, and only hosts give them (Give a chip)." : "chips. When they're gone, they're gone."}
+              chips. When they're gone, they're gone.
+            </div>
+          )}
+          {e.how_many === "given_n" && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-700 dark:text-neutral-200">
+              At most <input type="number" min={Math.max(1, e.issued || 0)} max={100000} aria-label="How many" placeholder="No limit" className={`${inputClass} !w-28`} value={e.limit || ""}
+                onChange={(x) => set({ limit: x.target.value ? Number(x.target.value) : null })} />
+              chips. Leave it blank for no limit.
             </div>
           )}
           <label className="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-200">
@@ -267,11 +302,12 @@ function EditionForm({ group, data, meetings, templates, onTemplates, edition, o
           <legend className="sr-only">Its look</legend>
           <div className="font-semibold text-slate-900 dark:text-white">Its look</div>
           {milestone ? (
-            <RoundPartForm id="ed" design={e.design} set={setRound} base={data.default} templates={templates} onTemplates={onTemplates} slug={group.slug}
-              logo logoUrl={group.logo_url || data.logo_url} ringTop={group.title} backNote="Around it go the words below, or the group's name and the day the chip was earned."
-              uploadRelief={(svg) => api(`/groups/${group.slug}/chips/relief`, { method: "POST", body: { svg } })} />
+            <RoundPartForm id="ed" design={e.design} set={setRound} base={data.default} templates={templates} onTemplates={onTemplates} slug={owner.slug}
+              logo={!owner.site} logoUrl={owner.logoUrl} ringTop={owner.site ? "Left blank" : owner.title}
+              backNote={owner.site ? "Around it go the words below, or the day the chip was earned." : "Around it go the words below, or the group's name and the day the chip was earned."}
+              uploadRelief={(svg) => api(owner.relief, { method: "POST", body: { svg } })} />
           ) : (
-            <MeetingPartForm id="edition" slug={group.slug} base={data.default} templates={templates} onTemplates={onTemplates} part={e.design.meeting} set={setMeeting} />
+            <MeetingPartForm id="edition" slug={owner.slug} base={data.default} templates={templates} onTemplates={onTemplates} part={e.design.meeting} set={setMeeting} />
           )}
         </fieldset>
 
@@ -287,7 +323,7 @@ function EditionForm({ group, data, meetings, templates, onTemplates, edition, o
       </Card>
       <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
         <div className="rounded-2xl bg-gradient-to-b from-stone-800 to-stone-950 py-5 text-center text-white">
-          <SpinningChip key={`${e.kind}-${e.design.meeting.shape}`} chip={{ ...sample(e, e.design), group: { title: group.title, logo_url: group.logo_url || data.logo_url } }} size={190} />
+          <SpinningChip key={`${e.kind}-${e.design.meeting.shape}`} chip={{ ...sample(e, e.design), group: { title: owner.title, logo_url: owner.logoUrl } }} size={190} />
           <div className="mt-1 text-xs opacity-60">Drag to spin it. Its number goes on the back.</div>
         </div>
       </aside>

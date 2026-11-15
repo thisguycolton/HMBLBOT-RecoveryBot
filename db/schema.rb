@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_14_220000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_15_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -350,7 +350,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_14_220000) do
   end
 
   create_table "chip_editions", force: :cascade do |t|
-    t.bigint "group_id", null: false
+    t.bigint "group_id"
     t.bigint "created_by_id"
     t.string "name", null: false
     t.string "kind", default: "milestone", null: false

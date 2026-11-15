@@ -12,12 +12,12 @@ class ChipEditionChip < ApplicationRecord
   def as_chip_json
     e = chip_edition
     chip = { id: "edition:#{id}", slot: slot, label: label, on: earned_on.iso8601, source: "edition", design: e.chip_design,
-             group: { title: e.group.title, logo_url: e.logo_url }, edition: e.edition_json(serial) }
+             group: { title: e.from_title, logo_url: e.logo_url }, edition: e.edition_json(serial) }
     if e.kind == "milestone"
       chip.merge(shape: "round", kind: "round", milestone: { key: milestone_key, years: years, label: label }.compact)
     else
       chip.merge(shape: e.chip_design.dig("meeting", "shape") || "triangle", kind: "meeting", count: count, series: "edition-#{e.id}",
-                 meeting: { name: e.name, group_title: e.group.title })
+                 meeting: { name: e.name, group_title: e.from_title })
     end
   end
 end
