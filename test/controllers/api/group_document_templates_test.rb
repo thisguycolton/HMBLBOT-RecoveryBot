@@ -19,7 +19,7 @@ class Api::GroupDocumentTemplatesTest < ActionDispatch::IntegrationTest
   test "record keepers set a folder's letterhead and its documents carry it" do
     sign_in @member
     get path, as: :json
-    assert_equal GroupDocument::KINDS, response.parsed_body["templates"].map { |t| t["kind"] }
+    assert_equal ["agenda", *GroupDocument::KINDS], response.parsed_body["templates"].map { |t| t["kind"] }
     patch path("format"), params: { template: { header_text: "Nope" } }
     assert_response :forbidden
 

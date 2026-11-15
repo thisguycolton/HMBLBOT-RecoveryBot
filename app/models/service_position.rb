@@ -1,7 +1,7 @@
 # A service position in a group (chair, secretary, treasurer, GSR, coffee maker...): what it
 # involves, how long a term lasts, and who has held it (ServiceTerm).
 class ServicePosition < ApplicationRecord
-  moderates_language :title, :description
+  moderates_language :title, :description, :agenda_lines
   belongs_to :group
   has_many :terms, -> { order(starts_on: :desc, id: :desc) }, class_name: "ServiceTerm", dependent: :destroy
 
@@ -10,6 +10,10 @@ class ServicePosition < ApplicationRecord
 
   validates :title, presence: true, length: { maximum: 80 }
   validates :description, length: { maximum: 2000 }
+  validates :agenda_lines, length: { maximum: 2000 }
+  validates :agenda_heading, length: { maximum: 80 }
+  validates :grants, inclusion: { in: OfficeRoles::ROLES.keys }, allow_nil: true
+  before_validation { self.agenda_heading = agenda_heading.to_s.squish.presence; self.grants = grants.presence }
   validates :term_months, numericality: { only_integer: true, in: 1..120 }, allow_nil: true
   validates :sobriety_months, numericality: { only_integer: true, in: 0..600 }, allow_nil: true
 
@@ -30,7 +34,7 @@ class ServicePosition < ApplicationRecord
     term = current_term(today)
     {
       id: id, title: title, description: description.to_s, term_months: term_months, sobriety_months: sobriety_months,
-      position: position, archived: archived, rotation: rotation(today),
+      position: position, archived: archived, on_agenda: on_agenda, agenda_heading: agenda_heading.to_s, agenda_lines: agenda_lines.to_s, grants: grants, rotation: rotation(today),
       current: term&.as_api_json,
       history: terms.reject { |t| t == term }.first(6).map(&:as_api_json),
     }

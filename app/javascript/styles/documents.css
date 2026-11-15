@@ -281,3 +281,15 @@
 .doc-comments-on .doc-comment-anchor.is-active { background: #fde68a; }
 .doc-dark .doc-comments-on .doc-comment-anchor { background: rgb(180 83 9 / 0.3); }
 .doc-dark .doc-comments-on .doc-comment-anchor.is-active { background: rgb(180 83 9 / 0.55); }
+.agenda-print__section ul li { margin-bottom: 0.1em; }
+
+/* A business meeting agenda printed with its letterhead (Templates page) */
+.meeting-print .doc-letterhead { margin: 0 0 12px; }
+.meeting-print__meta--center { text-align: center; }
+.meeting-print__meta--right { text-align: right; }
+/* The page around it sets [&_p]:!text-left (a Tailwind utility), so this lives in the same layer
+   with a more specific selector */
+@layer utilities {
+  .doc-letterhead.doc-letterhead--center .doc-letterhead-text p { text-align: center !important; }
+  .doc-letterhead.doc-letterhead--right .doc-letterhead-text p { text-align: right !important; }
+}

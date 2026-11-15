@@ -252,6 +252,20 @@ class Api::GroupBusinessMeetingsTest < ActionDispatch::IntegrationTest
     assert_equal 4, @next.agenda_items.where("position < ?", business.reload.position).count, "the reports go above the business"
   end
 
+  test "the agenda carries its letterhead from the Templates page" do
+    sign_in @member
+    get path(@next.id), as: :json
+    assert_nil body["letterhead"]
+    get "/api/groups/#{@group.slug}/document_templates", as: :json
+    assert_equal "agenda", body["templates"].first["kind"]
+
+    sign_in @keeper
+    patch "/api/groups/#{@group.slug}/document_templates/agenda", params: { template: { header_text: "{{group}}", subheader_text: "Group Conscience Agenda · {{date}}" } }, as: :json
+    assert_response :success
+    get path(@next.id), as: :json
+    assert_equal ["{{group}}", "Group Conscience Agenda · {{date}}"], body["letterhead"].values_at("header_text", "subheader_text")
+  end
+
   test "a new meeting starts with the reports from the last agenda" do
     sign_in @keeper
     post path, params: { business_meeting: { held_on: (@today + 34).to_s } }, as: :json
