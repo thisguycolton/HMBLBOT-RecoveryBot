@@ -31,7 +31,7 @@ export default function EventPage() {
       </div>
     );
   }
-  if (!event) return <Skeleton variant="document" className="mx-auto max-w-3xl py-6" />;
+  if (!event) return <Skeleton variant="event" />;
 
   const updates = allUpdates ? event.updates : event.updates.slice(0, 1);
 

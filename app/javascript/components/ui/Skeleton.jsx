@@ -293,46 +293,129 @@ export function SkeletonCardGrid({ count = 6, picture = "cover", className = "sm
   );
 }
 
-// A group's page header: the cover band with the name and buttons, then the tabs
-function SkeletonHero() {
+// The cover band at the top of a group's, profile's or event's page, in the same frame as
+// the real one (GroupHero, ProfileHero, EventHero): rounded on wider screens, edge to edge on
+// phones (the same classes as heroBleed in groups/page/GroupHero), shapes sitting at its foot.
+const HERO_BLEED = "max-sm:-mx-4 max-sm:-mt-6 max-sm:rounded-none";
+function SkeletonCover({ className = "", children }) {
   return (
-    <div className="space-y-5">
-      <div className="rounded-4xl bg-neutral-100 p-6 sm:p-8 dark:bg-neutral-800/70">
-        <div className="flex items-center gap-4">
-          <Bone rounded="rounded-2xl" className="size-16 shrink-0" tone="soft" />
-          <span className="flex-1 space-y-3">
-            <Bone rounded="rounded-xl" tone="soft" className="h-7 w-64 max-w-[70%]" />
-            <Bone tone="soft" className="h-3 w-48 max-w-[50%]" />
-          </span>
-        </div>
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Bone rounded="rounded-xl" tone="soft" className="h-9 w-28" />
-          <Bone rounded="rounded-xl" tone="soft" className="h-9 w-24" />
-          <Bone rounded="rounded-xl" tone="soft" className="h-9 w-20" />
-        </div>
-      </div>
-      <div className="flex gap-2 overflow-hidden">
-        {["w-16", "w-20", "w-24", "w-16", "w-20"].map((w, i) => <Bone key={i} className={`h-8 ${w} shrink-0`} />)}
+    <div className={`relative overflow-hidden rounded-3xl bg-neutral-100 dark:bg-neutral-800/70 ${HERO_BLEED}`}>
+      <div className={`relative flex flex-col justify-end ${className}`}>{children}</div>
+    </div>
+  );
+}
+
+// A page's two columns below the cover (LayoutColumns, main_side): the main one, and side
+// cards that only show beside it on wide screens
+function SkeletonColumns({ children }) {
+  return (
+    <div className="grid gap-6 lg:grid-cols-3">
+      <div className="min-w-0 space-y-5 lg:col-span-2">{children}</div>
+      <div className="hidden min-w-0 space-y-4 lg:block">
+        {[0, 1, 2].map((i) => (
+          <SkeletonCard key={i} className="p-4">
+            <span className="flex items-center gap-2.5"><Bone className="size-7 shrink-0" /><Bone rounded="rounded-lg" className="h-4 w-24" /></span>
+            <SkeletonText className="mt-3" lines={2} />
+          </SkeletonCard>
+        ))}
       </div>
     </div>
   );
 }
 
-// Someone's profile: the cover, the round picture, the name, counts, then their notes
+// The underlined tabs under a group's cover
+function SkeletonTabs() {
+  return (
+    <div className="-mx-4 flex gap-4 overflow-hidden border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-800">
+      {["w-16", "w-20", "w-24", "w-16", "w-20"].map((w, i) => <Bone key={i} className={`h-5 ${w} shrink-0`} />)}
+    </div>
+  );
+}
+
+// A group's page (GroupPage / IntergroupPage): the cover with the logo, name, chips and
+// buttons, the tabs, then its page's sections
+function SkeletonGroupPage() {
+  return (
+    <div className="mx-auto max-w-6xl space-y-5">
+      <SkeletonCover className="min-h-[13rem] gap-4 p-6 sm:min-h-[16rem] sm:p-10">
+        <div>
+          <Bone rounded="rounded-xl" tone="soft" className="h-8 w-72 max-w-[80%] sm:h-12" />
+          <span className="block sm:hidden"><Bone rounded="rounded-xl" tone="soft" className="mt-3 h-8 w-48 max-w-[60%]" /></span>
+          <Bone tone="soft" className="mt-3 h-4 w-96 max-w-[90%]" />
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Bone tone="soft" className="h-6 w-28" /><Bone tone="soft" className="h-6 w-24" />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Bone rounded="rounded-xl" tone="soft" className="h-9 w-28" />
+          <Bone rounded="rounded-xl" tone="soft" className="h-9 w-24" />
+        </div>
+      </SkeletonCover>
+      <SkeletonTabs />
+      <SkeletonColumns>
+        <Bone rounded="rounded-xl" className="h-8 w-72 max-w-[80%]" />
+        <SkeletonCard className="p-5"><SkeletonText lines={3} /></SkeletonCard>
+        <SkeletonFeed items={1} composer />
+      </SkeletonColumns>
+    </div>
+  );
+}
+
+// Someone's profile (ProfilePage): the cover with the round picture beside the name, the
+// counts (one glass bar on phones, chips beside the name wider), the button row, then notes
 function SkeletonProfile() {
   return (
-    <div className="space-y-5">
-      <SkeletonCard className="overflow-hidden">
-        <Bone rounded="rounded-none" className="h-32 w-full sm:h-40" />
-        <div className="px-5 pb-5">
-          <SkeletonAvatar size={88} className="-mt-11 ring-4 ring-white dark:ring-neutral-900" />
-          <Bone rounded="rounded-xl" className="mt-4 h-6 w-48" />
-          <Bone className="mt-2.5 h-3 w-28" />
-          <SkeletonText className="mt-4" lines={2} />
-          <div className="mt-4 flex gap-5"><Bone className="h-3.5 w-20" /><Bone className="h-3.5 w-20" /><Bone className="h-3.5 w-16" /></div>
+    <div className="space-y-6">
+      <SkeletonCover className="min-h-[13rem] gap-4 p-5 sm:min-h-[15rem] sm:p-10">
+        <div className="flex items-center gap-4 sm:items-end sm:gap-5">
+          <Bone tone="soft" className="size-[76px] shrink-0 sm:size-24" />
+          <span className="min-w-0 flex-1">
+            <Bone rounded="rounded-xl" tone="soft" className="h-7 w-48 max-w-[85%] sm:h-10 sm:w-64" />
+            <Bone tone="soft" className="mt-2.5 h-3.5 w-24" />
+            <span className="mt-3 hidden gap-2 sm:flex">
+              <Bone tone="soft" className="h-6 w-24" /><Bone tone="soft" className="h-6 w-24" /><Bone tone="soft" className="h-6 w-36" />
+            </span>
+          </span>
         </div>
-      </SkeletonCard>
-      <SkeletonFeed items={2} />
+        <span className="block sm:hidden"><Bone rounded="rounded-2xl" tone="soft" className="h-14 w-full" /></span>
+        <div className="flex gap-2">
+          <Bone rounded="rounded-xl" tone="soft" className="h-10 flex-1 sm:h-9 sm:w-36 sm:flex-none" />
+          <Bone rounded="rounded-xl" tone="soft" className="size-10 sm:h-9 sm:w-28" />
+        </div>
+      </SkeletonCover>
+      <SkeletonColumns>
+        <div className="flex items-center gap-3"><Bone className="size-9 shrink-0" /><Bone rounded="rounded-xl" className="h-6 w-28" /></div>
+        <SkeletonFeed items={2} />
+      </SkeletonColumns>
+    </div>
+  );
+}
+
+// An event's page (EventPage): the tall cover with the group chip, title and chips, the
+// RSVP card beside it on wide screens (under it on phones), then the page's sections
+function SkeletonEventPage() {
+  return (
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:py-8">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-stretch">
+        <SkeletonCover className="h-full min-h-[16rem] p-6 sm:min-h-[20rem] sm:p-10">
+          <Bone tone="soft" className="mb-3 h-6 w-32" />
+          <Bone rounded="rounded-xl" tone="soft" className="h-8 w-72 max-w-[85%] sm:h-12" />
+          <Bone tone="soft" className="mt-3 h-4 w-80 max-w-[90%]" />
+          <div className="mt-4 flex flex-wrap gap-2"><Bone tone="soft" className="h-6 w-40" /><Bone tone="soft" className="h-6 w-28" /></div>
+        </SkeletonCover>
+        <div className="flex flex-col justify-center rounded-3xl bg-neutral-100 p-6 dark:bg-neutral-800/70">
+          <Bone rounded="rounded-lg" tone="soft" className="h-5 w-40" />
+          <Bone tone="soft" className="mt-2 h-3 w-16" />
+          <div className="mt-4 flex gap-2">
+            <Bone rounded="rounded-xl" tone="soft" className="h-10 flex-1" /><Bone rounded="rounded-xl" tone="soft" className="h-10 flex-1" /><Bone rounded="rounded-xl" tone="soft" className="h-10 flex-1" />
+          </div>
+        </div>
+      </div>
+      <SkeletonColumns>
+        {[0, 1].map((i) => (
+          <SkeletonCard key={i} className="p-5"><Bone className={`h-4 ${["w-1/3", "w-1/4"][i]}`} /><SkeletonText className="mt-3" lines={3} /></SkeletonCard>
+        ))}
+      </SkeletonColumns>
     </div>
   );
 }
@@ -441,7 +524,8 @@ function SkeletonAside() {
 //   chat      group chat                  messages  chat messages only
 //   list      rows with pictures          rows      rows only, no title (in a dialog or a card)
 //   cards     a grid of cards             chips     a grid of round chips
-//   group     a group's header and tabs   profile   a person's page
+//   group     a group's page              profile   a person's page
+//   event     an event's page
 //   document  a document to read          form      a form or an editor
 //   schedule  days with meetings          trays     sections of cards in gray trays
 //   stats     number tiles over a list    text      a few lines (inside something else)
@@ -463,7 +547,8 @@ export function Skeleton({ variant = "page", label, className = "", rows, header
     case "rows": body = <div className="divide-y divide-neutral-200/70 dark:divide-neutral-700/60">{Array.from({ length: rows || 3 }, (_, i) => <SkeletonRow key={i} seed={i} />)}</div>; break;
     case "cards": body = titled(<SkeletonCardGrid count={rows || 6} />, { action: true }); break;
     case "chips": body = titled(<SkeletonCardGrid count={rows || 6} picture="round" className="grid-cols-2 sm:grid-cols-3" />, { action: true }); break;
-    case "group": body = <div className="space-y-5"><SkeletonHero /><SkeletonTrays sections={1} /></div>; break;
+    case "group": body = <SkeletonGroupPage />; break;
+    case "event": body = <SkeletonEventPage />; break;
     case "profile": body = <SkeletonProfile />; break;
     case "document": body = <SkeletonDocument />; break;
     case "form": body = titled(<SkeletonForm fields={rows || 4} />); break;
