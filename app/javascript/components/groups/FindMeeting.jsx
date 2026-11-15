@@ -11,7 +11,8 @@ import MeetingPasscode from "./MeetingPasscode";
 
 // /groups/meetings: "Find a meeting". Every meeting AA Intergroup lists and the groups'
 // own, filtered by words, day, time of day (the viewer's), where and type, soonest first.
-// Filters live in the URL, so coming back from a group's page keeps them. Each result is
+// Filters live in the URL, so coming back from a group's page keeps them. With no day chosen it
+// shows what's starting soon (the next hour, or begun in the last 5 minutes). Each result is
 // a small version of the group's page and opens it.
 
 const viewerZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Phoenix";
@@ -40,8 +41,10 @@ const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-
 // A compact <select> for the sticky toolbar
 const pillSelect = `${selectClass} !h-10 !w-auto shrink-0 !rounded-full !py-0 !pl-3 !text-sm`;
 
+// A view the viewer picked stays picked; otherwise phones start on the list, wider screens on the grid
+const defaultView = () => (window.matchMedia?.("(max-width: 639px)").matches ? "list" : "grid");
 const loadView = () => {
-  try { return localStorage.getItem("findMeeting.view") || "grid"; } catch { return "grid"; }
+  try { return localStorage.getItem("findMeeting.view") || defaultView(); } catch { return defaultView(); }
 };
 
 export default function FindMeeting() {
@@ -98,6 +101,8 @@ export default function FindMeeting() {
   const query = useMemo(() => {
     const out = new URLSearchParams({ time_zone: viewerZone() });
     ["q", "date", "live", "attendance", "place", "type", "page"].forEach((k) => params.get(k) && out.set(k, params.get(k)));
+    // With no day chosen, the finder shows what's starting soon; "week=1" asks for the coming week
+    if (!params.get("date") && !params.get("live") && !params.get("week")) out.set("soon", "1");
     if (time.key === "custom") {
       if (params.get("from")) out.set("from", params.get("from"));
       if (params.get("to")) out.set("to", params.get("to"));
@@ -132,15 +137,20 @@ export default function FindMeeting() {
 
   const date = get("date");
   const live = get("live") === "1";
-  const dayKey = live ? "live" : !date ? "week" : date === todayValue() ? "today" : date === tomorrowValue() ? "tomorrow" : "date";
-  const filtersOn = ["q", "date", "live", "time", "attendance", "place", "type"].filter((k) => get(k)).length;
+  const week = get("week") === "1";
+  const dayKey = live ? "live"
+    : date ? (date === todayValue() ? "today" : date === tomorrowValue() ? "tomorrow" : "date")
+    : week ? "week" : "soon";
+  const soon = dayKey === "soon";
+  const filtersOn = ["q", "date", "live", "week", "time", "attendance", "place", "type"].filter((k) => get(k)).length;
 
   const extraFilters = ["time", "attendance", "place", "type"].filter((k) => get(k)).length;
   const days = [
-    ["week", "Coming week", "Week", { date: "", live: "" }],
-    ["live", "Live now", "Live", { date: "", live: "1" }],
-    ["today", "Today", "Today", { date: todayValue(), live: "" }],
-    ["tomorrow", "Tomorrow", "Tomorrow", { date: tomorrowValue(), live: "" }],
+    ["soon", "Starting soon", "Soon", { date: "", live: "", week: "" }],
+    ["live", "Live now", "Live", { date: "", live: "1", week: "" }],
+    ["today", "Today", "Today", { date: todayValue(), live: "", week: "" }],
+    ["tomorrow", "Tomorrow", "Tomorrow", { date: tomorrowValue(), live: "", week: "" }],
+    ["week", "Coming week", "Week", { date: "", live: "", week: "1" }],
   ];
   const chooseDay = (key) => update(days.find((d) => d[0] === key)[3]);
   const openFilters = () => {
@@ -187,7 +197,7 @@ export default function FindMeeting() {
             {days.map(dayChip)}
             <div className="w-40 shrink-0">
               <DateField clearable value={dayKey === "date" ? date : ""} min={todayValue()} placeholder="Pick a date"
-                onChange={(v) => update({ date: v, live: "" })} />
+                onChange={(v) => update({ date: v, live: "", week: "" })} />
             </div>
           </div>
           <button type="button" onClick={() => (showFilters ? setShowFilters(false) : setShowFilters(true))} aria-expanded={showFilters} aria-controls="fm-filters"
@@ -216,7 +226,7 @@ export default function FindMeeting() {
         <div>
           <label htmlFor="fm-time" className={labelClass}>Time of day</label>
           <select id="fm-time" className={selectClass} value={time.key} disabled={live}
-            onChange={(e) => update({ time: e.target.value, from: "", to: "" })}>
+            onChange={(e) => update({ time: e.target.value, from: "", to: "", ...(soon && { week: "1" }) })}>
             {TIMES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
           </select>
           {time.key === "custom" && (
@@ -286,7 +296,7 @@ export default function FindMeeting() {
             {dayKey === "date" && <option value="" disabled>{date}</option>}
             {days.map(([key, , short]) => <option key={key} value={key}>{short}</option>)}
           </select>
-          <select aria-label="Time of day" value={time.key} disabled={live} onChange={(e) => update({ time: e.target.value, from: "", to: "" })}
+          <select aria-label="Time of day" value={time.key} disabled={live} onChange={(e) => update({ time: e.target.value, from: "", to: "", ...(soon && { week: "1" }) })}
             className={`${pillSelect} hidden lg:block`}>
             {TIMES.filter((t) => t.key !== "custom" || time.key === "custom").map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
           </select>
@@ -312,7 +322,7 @@ export default function FindMeeting() {
         <section className={`space-y-3 transition-opacity ${loading ? "opacity-60" : ""}`} aria-busy={loading}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-slate-600 dark:text-neutral-400">
-              {data.total === 0 ? "No meetings match." : `${data.total.toLocaleString()} ${data.total === 1 ? "meeting" : "meetings"}${live ? " on now" : dayKey === "week" ? " starting 15 minutes from now or later" : ""}, soonest first`}
+              {data.total === 0 ? "No meetings match." : `${data.total.toLocaleString()} ${data.total === 1 ? "meeting" : "meetings"}${live ? " on now" : soon ? " starting in the next hour or in the last 5 minutes" : dayKey === "week" ? " starting 15 minutes from now or later" : ""}, soonest first`}
               {filtersOn > 0 && (
                 <button type="button" onClick={() => { setQ(""); setPlace(""); setParams(new URLSearchParams()); }}
                   className={`ml-2 inline-flex items-center gap-1 !bg-transparent p-0 font-medium text-accent hover:underline ${focusRing}`}>
@@ -334,7 +344,14 @@ export default function FindMeeting() {
 
           {data.total === 0 ? (
             <div className="rounded-2xl bg-neutral-100 p-8 text-center text-sm text-slate-600 dark:bg-neutral-800/70 dark:text-neutral-400">
-              {data.ready ? "Try another day or time, or fewer filters." : "AA Intergroup's list is loading. Try again in a minute."}
+              {!data.ready ? "AA Intergroup's list is loading. Try again in a minute." : soon ? (
+                <>
+                  Nothing starts in the next hour{filtersOn > 0 ? " with these filters" : ""}.{" "}
+                  <button type="button" onClick={() => chooseDay("week")} className={`!bg-transparent p-0 font-medium text-accent hover:underline ${focusRing}`}>
+                    See the coming week
+                  </button>
+                </>
+              ) : "Try another day or time, or fewer filters."}
             </div>
           ) : view === "grid" ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

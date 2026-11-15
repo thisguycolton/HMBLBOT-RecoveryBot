@@ -119,6 +119,22 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "starting soon: the next hour, plus meetings that began up to 5 minutes ago" do
+    sync
+    zone = Time.find_zone(PHOENIX)
+    travel_to(zone.parse("2026-10-19 17:33")) do
+      # Happy Hour began 3 minutes ago; Monday Night Speaker is 87 minutes out
+      assert_equal %w[oiaa-mon-530pm], keys(find(soon: "1"))
+    end
+    travel_to(zone.parse("2026-10-19 18:03")) do
+      # Happy Hour is still on but began 33 minutes ago; the speaker meeting is 57 minutes out
+      assert_equal %w[oiaa-mon-7pm], keys(find(soon: "1"))
+    end
+    travel_to(zone.parse("2026-10-19 18:00")) do
+      assert_empty keys(find(soon: "1")), "an hour out exactly is the next window's"
+    end
+  end
+
   test "filters: words, a date, the viewer's time of day, live, where and type" do
     at_monday_evening do
       sync

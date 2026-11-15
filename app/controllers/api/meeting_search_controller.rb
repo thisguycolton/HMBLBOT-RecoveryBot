@@ -5,9 +5,9 @@ class Api::MeetingSearchController < ApplicationController
 
   skip_before_action :authenticate_user!
 
-  # GET /api/meeting_search?q=&time_zone=&date=&live=&from=&to=&attendance=&place=&type=&page=
+  # GET /api/meeting_search?q=&time_zone=&date=&live=&soon=&from=&to=&attendance=&place=&type=&page=
   def index
     OiaaFeed.refresh_if_stale
-    render json: MeetingFinder.new(current_user, params.permit(:q, :time_zone, :date, :live, :from, :to, :attendance, :place, :type, :page))
+    render json: MeetingFinder.new(current_user, params.permit(:q, :time_zone, :date, :live, :soon, :from, :to, :attendance, :place, :type, :page))
   end
 end
