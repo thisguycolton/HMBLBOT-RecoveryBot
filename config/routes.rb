@@ -591,6 +591,7 @@ end
         # Their given and claimed chips, and taking one back (ChipRevocation)
         get :chips, on: :member
         post :revoke_chip, on: :member
+        post :post_chip, on: :member
         get :stats, on: :collection
       end
       resources :readings, only: %i[index update destroy]

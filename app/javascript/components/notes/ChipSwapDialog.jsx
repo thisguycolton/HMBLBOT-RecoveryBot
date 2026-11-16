@@ -9,7 +9,7 @@ import { FlatChip } from "../recovery/ChipModal";
 const SITE = "site";
 
 const source = (c) => {
-  if (c.source === "earned") return "Their own, earned";
+  if (c.source === "earned") return c.kind === "round" ? "Their own, earned" : `${c.label}, earned`;
   const edition = c.edition ? ` ${c.edition.name}${c.edition.serial ? ` No. ${c.edition.serial}` : ""}` : "";
   return c.source === "edition" ? `${c.group?.title}'s${edition}` : `From ${c.group?.title}${edition}${c.given_by ? `, given by ${c.given_by}` : ""}`;
 };
@@ -17,8 +17,12 @@ const source = (c) => {
 // A site admin's "Change this chip" on a post that shares a chip someone was given or claimed
 // by mistake: the same take-back as Site Admin > Members > Chips (ChipRevocation). The chip goes
 // back, another from that milestone's stack goes on top, and the post shows that one instead.
+// When the chip in the post isn't one they have anymore (taken back before, or its edition was
+// deleted), or isn't one that can go back, the admin picks any chip they do have to show in the
+// post instead; only the post changes.
 export default function ChipSwapDialog({ item, onClose, onChange }) {
   const [stack, setStack] = useState(null);
+  const [pick, setPick] = useState(null); // { chips, design, held } when only the post changes
   const [replacement, setReplacement] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState(null);
@@ -27,8 +31,16 @@ export default function ChipSwapDialog({ item, onClose, onChange }) {
 
   useEffect(() => {
     api(`/users/${person.id}/chips`).then((info) => {
-      const found = info.stacks.find((s) => s.chips.some((c) => c.id === item.chip.id));
-      if (!found) return setError("This chip isn't one they still have from being given or claimed, so it can't be changed here.");
+      const found = info.stacks.find((s) => s.chips.some((c) => c.id === item.chip.id && c.revocable));
+      if (!found) {
+        // Theirs now, minus the one in the post: the same milestone first, then other round chips
+        const rank = (c) => (c.slot === item.chip.slot ? 0 : c.shape === "round" ? 1 : 2);
+        const chips = info.all.filter((c) => c.id !== item.chip.id).sort((a, b) => rank(a) - rank(b));
+        if (chips.length === 0) return setError("They don't have any chips to show in its place.");
+        setPick({ chips, design: info.design, held: info.all.some((c) => c.id === item.chip.id) });
+        setReplacement(chips[0].id);
+        return;
+      }
       const others = found.chips.filter((c) => c.id !== item.chip.id);
       setStack({ ...found, others, design: info.design });
       setReplacement(others[0]?.id || (found.site_ok ? SITE : ""));
@@ -39,6 +51,13 @@ export default function ChipSwapDialog({ item, onClose, onChange }) {
     setSaving(true);
     setError(null);
     try {
+      if (pick) {
+        const { chip } = await api(`/users/${person.id}/post_chip`, { method: "POST", body: { note_id: item.id, chip_id: replacement } });
+        onChange?.({ ...item, chip, chip_hidden: false });
+        showToast("Changed.");
+        onClose();
+        return;
+      }
       const { revocation } = await api(`/users/${person.id}/revoke_chip`, { method: "POST", body: { chip_id: item.chip.id, replacement_id: replacement, note } });
       onChange?.(revocation.replacement ? { ...item, chip: revocation.replacement } : { ...item, chip_hidden: true });
       showToast(revocation.replacement ? "Changed." : `Took it back. This post is hidden from others now.`);
@@ -55,10 +74,28 @@ export default function ChipSwapDialog({ item, onClose, onChange }) {
         <>
           <span className="flex-1" />
           <button type="button" className={quietButton} onClick={onClose}>Cancel</button>
-          <button type="button" className={primaryButton} onClick={save} disabled={saving || !stack}><Undo2 className="size-4" /> {saving ? "Changing…" : "Change chip"}</button>
+          <button type="button" className={primaryButton} onClick={save} disabled={saving || !(stack || (pick && replacement))}><Undo2 className="size-4" /> {saving ? "Changing…" : "Change chip"}</button>
         </>
       )}>
       <ErrorNote error={error} />
+      {pick && (
+        <div className="grid gap-3 text-sm">
+          <p className="text-slate-600 dark:text-neutral-300">
+            {pick.held ? "This chip isn't one that can be taken back, but you can show another of theirs in this post." : `${person.name.split(" ")[0]} doesn't have this chip anymore.`}
+            {" "}Pick one of their chips to show in this post instead. Their Chips page doesn't change.
+          </p>
+          <fieldset className="grid max-h-80 gap-2 overflow-y-auto">
+            {pick.chips.map((c) => (
+              <label key={c.id} className="flex items-center gap-2">
+                <input type="radio" name="replacement" checked={replacement === c.id} onChange={() => setReplacement(c.id)} />
+                <FlatChip chip={c} design={pick.design} size={36} />
+                <span><span className="font-medium">{c.label}</span> · {source(c)}</span>
+              </label>
+            ))}
+          </fieldset>
+          <p className="text-slate-500 dark:text-neutral-400">Their words in the post stay as they wrote them.</p>
+        </div>
+      )}
       {stack && (
         <div className="grid gap-3 text-sm">
           <p className="text-slate-600 dark:text-neutral-300">
