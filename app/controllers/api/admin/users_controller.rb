@@ -102,7 +102,36 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
     }
   end
 
+  # GET: the milestone stacks with a chip they were given or claimed (only those can go back),
+  # each with every chip in it, top first, and the chips taken back from them before
+  def chips
+    user = User.find(params[:id])
+    render json: chips_json(user)
+  end
+
+  # POST { chip_id, replacement_id (another chip in its stack, "site", or blank), note }: take a
+  # chip they got by mistake back, put another in the stack on top, and tell them (ChipRevocation)
+  def revoke_chip
+    user = User.find(params[:id])
+    revocation = ChipRevocation.revoke!(user: user, chip_id: params.require(:chip_id), by: current_user,
+                                        replacement_id: params[:replacement_id], note: params[:note])
+    Rails.logger.info("[admin] #{current_user.email} took back chip #{revocation.chip_id} from account ##{user.id}, replaced with #{revocation.replacement_id || 'nothing'}")
+    render json: chips_json(user.reload).merge(revocation: revocation.as_api_json)
+  rescue ChipRevocation::Invalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   private
+
+  def chips_json(user)
+    chips = Chips.ordered(Chips.catalog(user)[:chips], user.chip_tops)
+    stacks = chips.group_by { |c| c[:slot] }.select { |_, list| list.any? { |c| ChipRevocation.revocable?(c) } }.map do |slot, list|
+      round = list.first[:shape] == "round" && list.first[:milestone]
+      { slot: slot, label: list.first[:label], site_ok: !!round,
+        chips: list.map { |c| c.except(:note).merge(revocable: ChipRevocation.revocable?(c)) } }
+    end
+    { design: ChipDesign::DEFAULT, stacks: stacks, history: ChipRevocation.where(user: user).includes(:revoked_by).newest_first.limit(50).map(&:as_api_json) }
+  end
 
   def user_json(user, readings_count = nil, last_seen = nil)
     {

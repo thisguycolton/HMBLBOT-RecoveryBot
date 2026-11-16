@@ -18,7 +18,8 @@ class ChipAward < ApplicationRecord
   belongs_to :chip_edition, optional: true
   has_one :edition_chip, class_name: "ChipEditionChip", dependent: :destroy
 
-  scope :claimed, -> { where.not(claimed_at: nil) }
+  # Theirs, and not taken back by a site admin (ChipRevocation)
+  scope :claimed, -> { where.not(claimed_at: nil).where(revoked_at: nil) }
   scope :unclaimed, -> { where(claimed_at: nil) }
 
   # Open pages show it in a popup straight away (ChipsChannel, ChipArrival)
@@ -39,6 +40,7 @@ class ChipAward < ApplicationRecord
   def label = self.class.label_for(milestone_key, years)
   def slot = Chips.round_slot(milestone_key, years)
   def claimed? = claimed_at.present?
+  def revoked? = revoked_at.present?
   # RecoveryBot's own chip, given by a site admin
   def site? = group_id.nil?
   # Who it's from: the group, or RecoveryBot
@@ -78,7 +80,7 @@ class ChipAward < ApplicationRecord
   # For the giver's list
   def as_api_json
     { id: id, label: label, on: on.iso8601, note: note, email: user ? nil : email, to: user&.display_name || email,
-      claimed: claimed?, group_slug: group&.slug, group_title: from_title, site: site?, given_by: given_by&.display_name, created_at: created_at.iso8601,
+      claimed: claimed?, revoked: revoked?, group_slug: group&.slug, group_title: from_title, site: site?, given_by: given_by&.display_name, created_at: created_at.iso8601,
       edition: chip_edition && edition_chip && chip_edition.edition_json(edition_chip.serial) }
   end
 

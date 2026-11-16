@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_15_230000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_16_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -314,6 +314,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_15_230000) do
     t.jsonb "design"
     t.bigint "chip_edition_id"
     t.datetime "celebrated_at"
+    t.datetime "revoked_at"
     t.index ["chip_edition_id"], name: "index_chip_awards_on_chip_edition_id"
     t.index ["claim_token"], name: "index_chip_awards_on_claim_token", unique: true
     t.index ["email"], name: "index_chip_awards_on_email"
@@ -343,6 +344,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_15_230000) do
     t.datetime "claimed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "revoked_at"
     t.index ["chip_award_id"], name: "index_chip_edition_chips_on_chip_award_id"
     t.index ["chip_edition_id", "serial"], name: "index_chip_edition_chips_on_chip_edition_id_and_serial", unique: true
     t.index ["chip_edition_id", "user_id", "slot"], name: "index_edition_chips_once_per_slot", unique: true, where: "(chip_award_id IS NULL)"
@@ -371,6 +373,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_15_230000) do
     t.datetime "updated_at", null: false
     t.index ["created_by_id"], name: "index_chip_editions_on_created_by_id"
     t.index ["group_id"], name: "index_chip_editions_on_group_id"
+  end
+
+  create_table "chip_revocations", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "revoked_by_id"
+    t.string "chip_id", null: false
+    t.string "slot", null: false
+    t.string "label", default: "", null: false
+    t.jsonb "chip", default: {}, null: false
+    t.string "replacement_id"
+    t.jsonb "replacement"
+    t.text "note", default: "", null: false
+    t.integer "posts_swapped", default: 0, null: false
+    t.integer "posts_hidden", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["revoked_by_id"], name: "index_chip_revocations_on_revoked_by_id"
+    t.index ["user_id"], name: "index_chip_revocations_on_user_id"
   end
 
   create_table "chip_template_versions", force: :cascade do |t|
@@ -2008,6 +2028,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_15_230000) do
   add_foreign_key "chip_edition_chips", "users", on_delete: :cascade
   add_foreign_key "chip_editions", "groups", on_delete: :cascade
   add_foreign_key "chip_editions", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "chip_revocations", "users", column: "revoked_by_id", on_delete: :nullify
+  add_foreign_key "chip_revocations", "users", on_delete: :cascade
   add_foreign_key "chip_template_versions", "chip_templates", on_delete: :cascade
   add_foreign_key "chip_templates", "groups", on_delete: :cascade
   add_foreign_key "chip_templates", "users", column: "created_by_id", on_delete: :nullify

@@ -5,7 +5,9 @@ class ChipEditionChip < ApplicationRecord
   belongs_to :user, optional: true
   belongs_to :chip_award, optional: true
 
-  scope :claimed, -> { where.not(claimed_at: nil) }
+  # Theirs, and not taken back by a site admin (ChipRevocation). A taken-back one keeps its row,
+  # so its number stays used and the edition can't be claimed or earned again.
+  scope :claimed, -> { where.not(claimed_at: nil).where(revoked_at: nil) }
 
   def label = chip_edition.kind == "milestone" ? ChipAward.label_for(milestone_key, years) : "#{count} meetings"
 

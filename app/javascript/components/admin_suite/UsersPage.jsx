@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useState } from "react";
-import { Bell, BellRing, Check, ChevronDown, Monitor, Search, Shield, ShieldOff, Smartphone, Tablet, Trash2, Users } from "lucide-react";
+import { Award, Bell, BellRing, Check, ChevronDown, Monitor, Search, Shield, ShieldOff, Smartphone, Tablet, Trash2, Users } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass } from "../ui/styles";
@@ -8,6 +8,7 @@ import { buttonClass } from "../topicificator_admin/App";
 import { formatCount } from "./App";
 import { InlineSkeleton } from "../ui/Skeleton";
 import { TOPIC_ICONS } from "../../lib/dayFacts";
+import MemberChips from "./MemberChips";
 
 const FILTERS = [
   { value: "", label: "Everyone" },
@@ -21,6 +22,7 @@ export default function UsersPage({ notify }) {
   const [search, setSearch] = useState("");
   const [data, setData] = useState(null);
   const [diag, setDiag] = useState(null); // { id, info } for the member whose notifications are open
+  const [chipsFor, setChipsFor] = useState(null); // the member whose chips are open (MemberChips)
   const [stats, setStats] = useState(null); // the whole site's counts, no names (MemberStats.summary)
   useEffect(() => { api("/users/stats").then(setStats).catch((e) => notify(e.message, "error")); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -119,6 +121,10 @@ export default function UsersPage({ notify }) {
                       aria-label={`${u.email}'s notifications`} title="Notifications and reminders">
                       <Bell className="w-4 h-4" />
                     </button>
+                    <button type="button" className={buttonClass.secondary} onClick={() => setChipsFor(chipsFor === u.id ? null : u.id)} aria-expanded={chipsFor === u.id}
+                      aria-label={`${u.email}'s chips`} title="Chips they were given or claimed">
+                      <Award className="w-4 h-4" />
+                    </button>
                     {!u.confirmed && (
                       <button type="button" className={buttonClass.secondary} onClick={() => approve(u)}>
                         <Check className="w-4 h-4" strokeWidth={2.5} /> Confirm for them
@@ -138,6 +144,9 @@ export default function UsersPage({ notify }) {
                 </tr>
                 {diag?.id === u.id && (
                   <tr><td colSpan={7} className="px-4 pb-4 bg-neutral-50 dark:bg-neutral-900/60">{diag.info ? <NotificationInfo info={diag.info} /> : <InlineSkeleton />}</td></tr>
+                )}
+                {chipsFor === u.id && (
+                  <tr><td colSpan={7} className="px-4 pb-4 bg-neutral-50 dark:bg-neutral-900/60"><MemberChips user={u} notify={notify} /></td></tr>
                 )}
                 </Fragment>
               ))}
