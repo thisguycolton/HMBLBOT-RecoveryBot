@@ -106,10 +106,21 @@ function PostButton({ path, authenticity_token, className, busy, children }) {
 // The apps' own sign-in sheets (NativeSignIn): the page asks the server for a nonce, the app's
 // NativeAuth plugin signs in with Google or Apple and returns an ID token, and the server checks
 // it and signs them in
+const QUICK_CANCEL_MS = 1500;
+
 async function nativeSignIn(provider, options, authenticityToken) {
   const { nonce } = await fetch("/users/auth/native/nonce", { credentials: "same-origin", headers: { Accept: "application/json" } }).then((r) => r.json());
   const args = provider === "google" ? { clientId: options.google_client_id, nonce } : { nonce };
-  const result = await callPlugin("NativeAuth", provider, args);
+  const started = Date.now();
+  const result = await callPlugin("NativeAuth", provider, args).catch((e) => {
+    // Android's picker answers "canceled" at once, without ever showing, when Google won't hand
+    // this copy of the app a sign-in (its signing key isn't on the Google Cloud Android client).
+    // Nobody can close a picker that fast, so say so instead of doing nothing.
+    if (provider === "google" && /cancel/i.test(String(e?.message || e)) && Date.now() - started < QUICK_CANCEL_MS) {
+      throw new Error("Google sign-in didn't open on this phone. Please sign in with your email for now, and let us know so we can fix it.");
+    }
+    throw e;
+  });
   const res = await fetch("/users/auth/native", {
     method: "POST",
     credentials: "same-origin",
