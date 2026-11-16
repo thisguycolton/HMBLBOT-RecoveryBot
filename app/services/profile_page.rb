@@ -78,6 +78,18 @@ class ProfilePage
     merge(notes, highlights, before: before)
   end
 
+  # A site admin's home page with "Everyone's posts" on (User#sees_all_posts?): what every member
+  # shared with Followers or Members, whether they follow them or not, plus their own. Never
+  # "Only me" notes and highlights (a private note shared to a group stays with that group, and
+  # a private note on someone's page stays between the two of them). People they blocked are left out.
+  def everyone_feed(before: nil)
+    shared = %w[followers public]
+    notes = TimelineNote.where(visibility: shared).shown.or(TimelineNote.where(user_id: @viewer.id))
+                        .or(TimelineNote.where(recipient_id: @viewer.id))
+    highlights = UserHighlight.on_timeline.where(visibility: shared).or(UserHighlight.on_timeline.where(user_id: @viewer.id))
+    merge(notes.not_blocked_by(@viewer), highlights.not_blocked_by(@viewer), before: before)
+  end
+
   def feed(person, before: nil)
     notes = TimelineNote.on_profile_of(person, @viewer)
     notes = notes.shown unless @viewer&.id == person.id

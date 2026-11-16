@@ -1,9 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, ChevronRight, LogIn, MapPinned, UserPlus } from "lucide-react";
+import { ArrowLeft, ChevronRight, Eye, LogIn, MapPinned, UserPlus } from "lucide-react";
 import Avatar from "../groups/Avatar";
 import GroupLogo from "../groups/GroupLogo";
-import { followLink, useMedia } from "./useShell";
+import { followLink, refreshNav, useMedia } from "./useShell";
 import { BOTTOM_CATEGORIES, CATEGORIES, activeHref, groupItems, shows } from "./navItems";
 
 const hasGroups = () => document.body.dataset.groups === "true";
@@ -146,6 +146,7 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
             ))}
           </List>
         </section>
+        {isAuthenticated && nav?.site_admin && <AdminFeedSwitch on={!!nav.site_admin.see_all_posts} compact={compact} />}
         {tips.tip}
       </nav>
       {panel && (mode === "rail" ? createPortal(<FloatingCloser onClose={() => close(false)}>{panel}</FloatingCloser>, document.body) : panelTarget && createPortal(
@@ -279,6 +280,52 @@ function Item({ item, active, badge = 0 }) {
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {badge > 0 && <span className="min-w-6 rounded-full bg-accent px-1.5 text-center text-xs font-semibold leading-5 !text-white">{badge}</span>}
     </a>
+  );
+}
+
+// Site admins only (/api/nav's site_admin): switches the home feed between the people they follow
+// and everyone's posts (Api::AdminFeedsController). Saved on their account; the home page hears
+// "hb:admin-feed" and reloads its feed.
+function AdminFeedSwitch({ on, compact }) {
+  const [value, setValue] = useState(on);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setValue(on); }, [on]);
+  const flip = () => {
+    if (busy) return;
+    const next = !value;
+    setValue(next);
+    setBusy(true);
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    fetch("/api/admin_feed", {
+      method: "PUT", credentials: "same-origin",
+      headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRF-Token": token },
+      body: JSON.stringify({ all: next }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+      .then((d) => {
+        setValue(d.see_all_posts);
+        window.dispatchEvent(new CustomEvent("hb:admin-feed", { detail: { everyone: d.see_all_posts } }));
+        return refreshNav();
+      })
+      .catch(() => setValue(!next))
+      .finally(() => setBusy(false));
+  };
+  const label = "Everyone's posts";
+  return (
+    <section aria-label="Site admin" className="border-t border-neutral-300/70 pt-4 dark:border-neutral-800">
+      <h2 className="mb-1 h-5 overflow-hidden whitespace-nowrap px-3 text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-slate-500 transition-opacity duration-150 dark:text-neutral-500" style={{ opacity: compact ? 0 : 1 }} aria-hidden="true">Site admin</h2>
+      <button type="button" role="switch" aria-checked={value} onClick={flip} disabled={busy}
+        data-tip={compact ? `${label}: ${value ? "on" : "off"}` : undefined}
+        title={compact ? undefined : "Show every member's posts on your home feed, not only the people you follow. \"Only me\" posts stay hidden."}
+        className={rowClass(false, false)}>
+        <Eye className={`size-5 shrink-0 ${value ? "text-amber-600 dark:text-amber-400" : "opacity-75"}`} strokeWidth={1.9} />
+        {value && compact && <span className="absolute left-7 top-1.5 size-2.5 rounded-full bg-amber-500 ring-2 ring-[#ececec] dark:ring-neutral-950" />}
+        <span className={fade(compact)}>{label}</span>
+        <span aria-hidden="true" className={`relative h-5 w-9 shrink-0 rounded-full transition-[colors,opacity] duration-150 ${compact ? "opacity-0" : ""} ${value ? "bg-amber-500" : "bg-neutral-300 dark:bg-neutral-700"}`}>
+          <span className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-[left] duration-150 ${value ? "left-[1.125rem]" : "left-0.5"}`} />
+        </span>
+      </button>
+    </section>
   );
 }
 
