@@ -22,7 +22,7 @@ function source(chip) {
 // Site Admin > Members > the chip button: the milestones where they were given or claimed a
 // chip (only those can go back; earned ones come from their own sobriety date or writing).
 // Taking one back puts another chip from the same stack on top, or RecoveryBot's own when
-// nothing else is there, and tells them (ChipRevocation).
+// nothing else is there, without notifying them (ChipRevocation).
 export default function MemberChips({ user, notify }) {
   const [info, setInfo] = useState(null);
   const [taking, setTaking] = useState(null); // { chip, stack, replacement, note }
@@ -46,7 +46,7 @@ export default function MemberChips({ user, notify }) {
       });
       setInfo(next);
       setTaking(null);
-      notify(`Took back ${user.name || user.email}'s ${taking.chip.label} chip. They've been told.`);
+      notify(`Took back ${user.name || user.email}'s ${taking.chip.label} chip.`);
     } catch (err) {
       notify(err.message, "error");
     } finally {
@@ -101,8 +101,8 @@ export default function MemberChips({ user, notify }) {
                 </label>
               </fieldset>
               <label className="grid gap-1">
-                <span className="font-medium text-slate-800 dark:text-neutral-100">Note to them (optional)</span>
-                <textarea className={inputClass} rows={2} maxLength={500} value={taking.note} placeholder="Shows in the notification they get"
+                <span className="font-medium text-slate-800 dark:text-neutral-100">Reason (optional, only site admins see it)</span>
+                <textarea className={inputClass} rows={2} maxLength={500} value={taking.note} placeholder="Kept with the record of this change"
                   onChange={(e) => setTaking({ ...taking, note: e.target.value })} />
               </label>
               <p className="text-slate-500 dark:text-neutral-400">

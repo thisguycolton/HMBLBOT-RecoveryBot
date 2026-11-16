@@ -110,7 +110,7 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
   end
 
   # POST { chip_id, replacement_id (another chip in its stack, "site", or blank), note }: take a
-  # chip they got by mistake back, put another in the stack on top, and tell them (ChipRevocation)
+  # chip they got by mistake back, put another in the stack on top, quietly (ChipRevocation)
   def revoke_chip
     user = User.find(params[:id])
     revocation = ChipRevocation.revoke!(user: user, chip_id: params.require(:chip_id), by: current_user,
