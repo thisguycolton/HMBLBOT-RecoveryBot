@@ -175,7 +175,6 @@ function Repost({ item, readOnly, compact, onChange, onRemove }) {
       {!readOnly && (highlight
         ? <HighlightActions highlight={item.note} onChange={(n) => onChange?.({ ...item, note: n })} />
         : <Social note={item.note} onChange={(n) => onChange?.({ ...item, note: n })} />)}
-      {swapping && <ChipSwapDialog item={item} onChange={onChange} onClose={() => setSwapping(false)} />}
       {reporting && <ReportDialog subject={{ type: "timeline_note", id: item.note.id }} person={item.note.author} onClose={() => setReporting(false)} />}
     </article>
   );
