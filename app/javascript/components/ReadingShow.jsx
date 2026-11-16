@@ -404,6 +404,17 @@ const topicHtml = renderRichContent(topicSource);
                 {reading.source}
               </div>
             )}
+
+            {reading.adopted_from && !share && (
+              <div className="mt-4 text-sm text-neutral-500 dark:text-neutral-400 !font-sans">
+                Adopted from{" "}
+                <a href={reading.adopted_from.path} className="underline underline-offset-2 hover:text-neutral-700 dark:hover:text-neutral-200">
+                  {reading.adopted_from.title}
+                </a>
+                {[reading.adopted_from.meeting_name, reading.adopted_from.meeting_date && formatMeetingDate(reading.adopted_from.meeting_date)]
+                  .filter(Boolean).map((part) => `, ${part}`).join("")}
+              </div>
+            )}
           </article>
 
           {/* POLLS: voting and live results in place; on screen, with a big QR code */}
