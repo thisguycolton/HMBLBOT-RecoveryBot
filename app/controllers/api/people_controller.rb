@@ -21,13 +21,23 @@ class Api::PeopleController < ApplicationController
       me: current_user.as_person_json,
       matches: matches,
       following_count: current_user.follows_given.count,
-      feed: (ProfilePage.new(current_user).following_feed(before: before_param) unless q.present?),
+      feed: (home_feed unless q.present?),
+      # Site admins only: whether the feed is everyone's posts (the sidebar's switch)
+      everyone: (current_user.sees_all_posts? if current_user.suite_admin?),
       coming_up: (PeopleHome.new(current_user).json if q.blank? && before_param.nil?),
       note_max: TimelineNote::BODY_MAX, images_max: TimelineNote::IMAGES_MAX,
       default_note_visibility: current_user.default_note_visibility,
       groups: current_user.groups.order(:title).map { |g| { slug: g.slug, title: g.title } },
     }
   end
+
+  # Your notes and those of the people you follow, or for a site admin with "Everyone's
+  # posts" on, every member's shared notes (ProfilePage#everyone_feed)
+  def home_feed
+    page = ProfilePage.new(current_user)
+    current_user.sees_all_posts? ? page.everyone_feed(before: before_param) : page.following_feed(before: before_param)
+  end
+  private :home_feed
 
   # GET /api/people/:username
   def show

@@ -14,6 +14,8 @@ class Api::NavController < ApplicationController
       groups: memberships.map { |m| group_json(m) },
       hosting: { open_requests: HostCommitments.new(current_user).open_sub_requests.size, host: current_user.host? },
       today: PeopleHome.new(current_user).json,
+      # Site admins only (nil for everyone else): the sidebar's "Everyone's posts" switch
+      site_admin: (current_user.suite_admin? ? { see_all_posts: current_user.see_all_posts } : nil),
     }
   end
 
