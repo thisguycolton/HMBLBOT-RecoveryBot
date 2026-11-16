@@ -29,20 +29,41 @@ final class WidgetStyles {
     }
 
     // Kept apart from what the site hands over, so signing out (which clears that) leaves them.
-    // "app" holds the app's pick; "style.day.<id>" and "style.chip.<id>" a widget's own. (Before the
+    // "app" holds the app's pick for both, "app.day" / "app.chip" one kind's own when the app has
+    // "Same style for both" off; "style.day.<id>" and "style.chip.<id>" a placed widget's own. (Before the
     // app had a picker, picks were kept as "day.<id>" / "chip.<id>"; those are left behind, so every
     // widget placed before starts on Same as the app.)
     static SharedPreferences prefs(Context context) {
         return WidgetData.looks(context);
     }
 
+    // The app's pick for both kinds of widget
     static String appStyle(Context context) {
         String key = prefs(context).getString(APP, DEFAULT);
         return known(key) ? key : DEFAULT;
     }
 
-    static void setAppStyle(Context context, String key) {
-        prefs(context).edit().putString(APP, key).apply();
+    // One kind's own pick ("day" or "chip"), or "" while it follows the one for both
+    static String appStyleOwn(Context context, String widget) {
+        String key = prefs(context).getString(APP + "." + widget, "");
+        return known(key) ? key : "";
+    }
+
+    // The app's pick for a kind of widget
+    static String appStyle(Context context, String widget) {
+        String own = appStyleOwn(context, widget);
+        return own.isEmpty() ? appStyle(context) : own;
+    }
+
+    // For both (which drops each kind's own), or with widget "day" / "chip" for that kind only
+    static void setAppStyle(Context context, String key, String widget) {
+        SharedPreferences.Editor edit = prefs(context).edit();
+        if ("day".equals(widget) || "chip".equals(widget)) {
+            edit.putString(APP + "." + widget, key);
+        } else {
+            edit.putString(APP, key).remove(APP + ".day").remove(APP + ".chip");
+        }
+        edit.apply();
     }
 
     // A widget's own setting: a style, or "app"
@@ -58,7 +79,7 @@ final class WidgetStyles {
     // The style a widget draws in
     static String of(Context context, String widget, int id) {
         String key = own(context, widget, id);
-        return APP.equals(key) ? appStyle(context) : key;
+        return APP.equals(key) ? appStyle(context, widget) : key;
     }
 
     static int background(String key) {

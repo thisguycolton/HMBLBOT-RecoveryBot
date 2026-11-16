@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
 import { Card, ErrorNote } from "../groups/ui";
@@ -23,6 +23,10 @@ export default function PeopleIndex() {
   useEffect(() => {
     document.title = "Home | RecoveryBot";
     api("/people").then(setData).catch((e) => setError(e.message));
+    // A site admin flipped "Everyone's posts" in the sidebar: load the other feed
+    const onSwitch = () => api("/people").then(setData).catch((e) => setError(e.message));
+    window.addEventListener("hb:admin-feed", onSwitch);
+    return () => window.removeEventListener("hb:admin-feed", onSwitch);
   }, []);
 
   useEffect(() => {
@@ -71,6 +75,16 @@ export default function PeopleIndex() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find someone by name"
             className="w-full rounded-xl border-0 bg-white py-2.5 pl-9 pr-3 text-slate-900 shadow-sm ring-1 ring-neutral-200 placeholder:text-slate-400 focus:ring-2 focus:ring-accent dark:bg-neutral-900 dark:text-white dark:ring-neutral-700" />
         </label>
+
+        {data.everyone && !matches && (
+          <div role="status" className="flex items-start gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-100 dark:ring-amber-800/60">
+            <Eye className="mt-0.5 size-4 shrink-0" />
+            <p className="!m-0 min-w-0 flex-1">
+              <strong>Admin view:</strong> you're seeing everyone's posts shared with Followers or Members, not only people you follow.
+              "Only me" posts stay hidden. Turn it off with <em>Everyone's posts</em> in the menu.
+            </p>
+          </div>
+        )}
 
         {matches ? (
           matches.length === 0 ? <Card className="p-5 text-center text-sm text-slate-500">Nobody by that name.</Card> : (

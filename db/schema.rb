@@ -1984,6 +1984,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_16_010000) do
     t.string "apple_client_id"
     t.datetime "onboarded_at"
     t.jsonb "today_layout"
+    t.boolean "see_all_posts", default: false, null: false
     t.index ["apple_uid"], name: "index_users_on_apple_uid", unique: true
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true

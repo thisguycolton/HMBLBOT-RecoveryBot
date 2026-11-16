@@ -18,11 +18,13 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(NativeAuthPlugin.class);
         registerPlugin(AppBarsPlugin.class);
         openTappedNotification(getIntent());
+        super.onCreate(savedInstanceState);
         // Edge to edge on every Android version, the way Android 15 and up already draw apps
         // that target them. The SystemBars plugin (insetsHandling "css") keeps the page clear of
         // the status and navigation bars and the keyboard; AppBarsPlugin colors what's behind them.
+        // After super.onCreate, which swaps the launch theme for AppTheme.NoActionBar: before it,
+        // the window was built with the launch theme's title bar ("Reco…" over a squashed logo).
         EdgeToEdge.enable(this);
-        super.onCreate(savedInstanceState);
         // Server errors (a deploy restarting the server) get the app's own page, not nginx's
         getBridge().setWebViewClient(new AppWebViewClient(getBridge()));
     }

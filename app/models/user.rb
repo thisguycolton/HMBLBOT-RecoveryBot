@@ -133,6 +133,9 @@ class User < ApplicationRecord
     admin? && allowed.include?(email.to_s.downcase)
   end
 
+  # A site admin who switched their home feed to everyone's posts (Api::AdminFeedsController)
+  def sees_all_posts? = see_all_posts? && suite_admin?
+
   def display_name = name.presence || email.to_s.split("@").first
 
   # Served through the app (like book covers) so S3 URLs never reach the page

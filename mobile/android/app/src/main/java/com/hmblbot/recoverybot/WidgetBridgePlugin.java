@@ -53,23 +53,34 @@ public class WidgetBridgePlugin extends Plugin {
         call.resolve();
     }
 
-    // The style picked in the app (Account settings > Widgets), which every widget left on
-    // "Same as the app" draws in (WidgetStyles). It belongs to the phone, so signing out keeps it.
+    // The styles picked in the app (Account settings > Widgets), which every widget left on
+    // "Same as the app" draws in (WidgetStyles): one for both, and the day count's and chip's own
+    // when "Same style for both" is off ("" while they follow the one for both). They belong to
+    // the phone, so signing out keeps them.
     @PluginMethod
     public void widgetStyle(PluginCall call) {
+        Context context = getContext();
         JSObject answer = new JSObject();
-        answer.put("style", WidgetStyles.appStyle(getContext()));
+        answer.put("style", WidgetStyles.appStyle(context));
+        answer.put("day", WidgetStyles.appStyleOwn(context, "day"));
+        answer.put("chip", WidgetStyles.appStyleOwn(context, "chip"));
         call.resolve(answer);
     }
 
+    // { style } sets the one for both; { style, widget: "day" | "chip" } that widget's own
     @PluginMethod
     public void setWidgetStyle(PluginCall call) {
         String style = call.getString("style", "");
+        String widget = call.getString("widget", "");
         if (!WidgetStyles.known(style)) {
             call.reject("Unknown widget style");
             return;
         }
-        WidgetStyles.setAppStyle(getContext(), style);
+        if (!widget.isEmpty() && !"both".equals(widget) && !"day".equals(widget) && !"chip".equals(widget)) {
+            call.reject("Unknown widget");
+            return;
+        }
+        WidgetStyles.setAppStyle(getContext(), style, widget);
         WidgetData.redrawAll(getContext());
         JSObject answer = new JSObject();
         answer.put("style", style);
