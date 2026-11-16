@@ -14,6 +14,8 @@
 # Their posts that shared the revoked chip (TimelineNote#chip_id) stay up with their words as
 # they wrote them. With a replacement the post's chip becomes the replacement; with none, the chip
 # post is hidden from everyone else (chip_hidden), as when a sobriety date change takes one away.
+#
+# The member isn't notified (Colton's call); the optional note is a reason kept for admins.
 class ChipRevocation < ApplicationRecord
   SITE = "site"
   class Invalid < StandardError; end
@@ -43,7 +45,7 @@ class ChipRevocation < ApplicationRecord
   end
 
   # Take `chip_id` back from `user`, put `replacement_id` on top of that stack (another chip
-  # in it, SITE, or nil), and tell them. Raises Invalid with a message for the admin.
+  # in it, SITE, or nil). They aren't notified. Raises Invalid with a message for the admin.
   def self.revoke!(user:, chip_id:, by:, replacement_id: nil, note: "", today: Date.current)
     chip_id = chip_id.to_s
     replacement_id = replacement_id.presence&.to_s
@@ -66,7 +68,6 @@ class ChipRevocation < ApplicationRecord
       revocation = create!(user: user, revoked_by: by, chip_id: chip_id, slot: chip[:slot], label: chip[:label].to_s,
                            chip: snapshot(chip), replacement_id: replacement&.dig(:id), replacement: replacement && snapshot(replacement),
                            note: note, posts_swapped: swapped, posts_hidden: hidden)
-      revocation.tell_member
       revocation
     end
   end
@@ -115,23 +116,6 @@ class ChipRevocation < ApplicationRecord
   end
 
   def self.snapshot(chip) = chip.except(:top, :others, :note).merge(design: chip[:design] || ChipDesign::DEFAULT).deep_stringify_keys
-
-  # A bell notification (and push, under Chips) saying what changed
-  def tell_member
-    from = chip.dig("group", "title")
-    title = "A site admin took back the #{label} chip#{" from #{from}" if from}"
-    lines = []
-    lines << note if note.present?
-    if replacement
-      lines << (replacement["source"] == "earned" ? "Your own #{label} chip is on top now." : "Your #{label} chip from #{replacement.dig('group', 'title') || ChipAward::SITE_TITLE} is on top now.")
-    else
-      lines << "It was given by mistake."
-    end
-    lines << "Posts where you shared it show the new chip." if posts_swapped.positive?
-    lines << "Posts where you shared it are hidden from others now." if posts_hidden.positive?
-    Notification.deliver(user, kind: "chip.revoked", title: title, body: lines.join(" "),
-                               url: replacement_id ? "/recovery?chip=#{replacement_id}" : "/recovery")
-  end
 
   # For Site Admin > Members > Chips
   def as_api_json

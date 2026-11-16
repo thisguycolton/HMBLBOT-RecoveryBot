@@ -41,7 +41,7 @@ export default function ChipSwapDialog({ item, onClose, onChange }) {
     try {
       const { revocation } = await api(`/users/${person.id}/revoke_chip`, { method: "POST", body: { chip_id: item.chip.id, replacement_id: replacement, note } });
       onChange?.(revocation.replacement ? { ...item, chip: revocation.replacement } : { ...item, chip_hidden: true });
-      showToast(revocation.replacement ? `Changed. ${person.name.split(" ")[0]} has been told.` : `Took it back. This post is hidden from others now, and ${person.name.split(" ")[0]} has been told.`);
+      showToast(revocation.replacement ? "Changed." : `Took it back. This post is hidden from others now.`);
       onClose();
     } catch (e) {
       setError(e.message);
@@ -83,9 +83,9 @@ export default function ChipSwapDialog({ item, onClose, onChange }) {
             </label>
           </fieldset>
           <label className="grid gap-1">
-            <span className="font-medium">Note to them (optional)</span>
+            <span className="font-medium">Reason (optional, only site admins see it)</span>
             <textarea className="rounded-xl border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-900" rows={2} maxLength={500} value={note}
-              placeholder="Shows in the notification they get" onChange={(e) => setNote(e.target.value)} />
+              placeholder="Kept with the record of this change" onChange={(e) => setNote(e.target.value)} />
           </label>
           <p className="text-slate-500 dark:text-neutral-400">Their words in the post stay as they wrote them.</p>
         </div>
