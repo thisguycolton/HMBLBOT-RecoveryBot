@@ -34,7 +34,9 @@ echo "==> Exporting $ref ($sha)"
 git archive "$ref" | tar -x -C "$src"
 
 echo "==> Building Vite assets"
-(cd "$src" && npm ci --no-audit --no-fund && npx vite build)
+# A name used but never defined (a typo, or a variable left behind in a move) builds fine and
+# then crashes the page it's on, so stop the deploy on one (npm run lint, .oxlintrc.json)
+(cd "$src" && npm ci --no-audit --no-fund && npm run lint && npx vite build)
 test -f "$src/public/vite/.vite/manifest.json" || { echo "Vite build produced no manifest" >&2; exit 1; }
 # Icons picked by name must keep their file names across deploys, or open pages lose them
 (cd "$src" && node bin/check-icon-chunks public/vite)
