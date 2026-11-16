@@ -55,7 +55,7 @@ public class WidgetSettingsActivity extends Activity {
 
         String widget = chip ? "chip" : "day";
         String current = WidgetStyles.own(this, widget, widgetId);
-        String appStyle = WidgetStyles.appStyle(this);
+        String appStyle = WidgetStyles.appStyle(this, widget);
         list.addView(option("Same as the app", WidgetStyles.APP.equals(current), WidgetStyles.background(appStyle), v -> pick(chip, WidgetStyles.APP)));
         for (int i = 0; i < WidgetStyles.KEYS.length; i++) {
             String key = WidgetStyles.KEYS[i];

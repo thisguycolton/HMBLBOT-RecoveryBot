@@ -14,9 +14,10 @@ import WidgetKit
 // share; signing out of the app clears it. Tapping the day count opens Today; tapping the chip
 // opens that chip full size on the Chips page, where it spins in 3D (a widget can only turn a
 // flat picture). Both share one set of styles (WidgetStyle). They're picked in the app (Account
-// settings > Widgets, components/profile/WidgetSettings.jsx, saved as "widgetStyle" in the App
-// Group by WidgetBridgePlugin); touch and hold > Edit Widget can give one widget its own style,
-// and leaving it on "Same as the app" follows the app's pick.
+// settings > Widgets, components/profile/WidgetSettings.jsx, saved by WidgetBridgePlugin in the
+// App Group: "widgetStyle" for both, or "widgetStyle.day" / "widgetStyle.chip" each); touch and
+// hold > Edit Widget can give one placed widget its own style, and leaving it on "Same as the
+// app" follows the app's pick for that kind of widget.
 
 enum Shared {
     static let group = "group.com.hmblbot.recoverybot"
@@ -24,10 +25,14 @@ enum Shared {
     static var signedIn: Bool { defaults?.bool(forKey: "signedIn") ?? false }
     static var soberSince: String { defaults?.string(forKey: "soberSince") ?? "" }
     static var chipLabel: String { defaults?.string(forKey: "chipLabel") ?? "" }
-    // The style picked in the app (WidgetStyle raw value); Classic blue until one is picked
-    static var appStyle: WidgetStyle {
-        guard let raw = defaults?.string(forKey: "widgetStyle"), let style = WidgetStyle(rawValue: raw), style != .app else { return .classic }
-        return style
+    // The style picked in the app for a widget ("day" or "chip"): its own pick
+    // ("widgetStyle.day" / "widgetStyle.chip") when the app has "Same style for both" off, else
+    // the one for both ("widgetStyle"); Classic blue until one is picked
+    static func appStyle(_ widget: String) -> WidgetStyle {
+        for key in ["widgetStyle.\(widget)", "widgetStyle"] {
+            if let raw = defaults?.string(forKey: key), let style = WidgetStyle(rawValue: raw), style != .app { return style }
+        }
+        return .classic
     }
 
     // The fun day-count facts from the day the site sent them on, in day order
@@ -173,8 +178,8 @@ enum WidgetStyle: String, AppEnum {
         .paperDark: "Paper, dark",
     ]
 
-    // The style to draw: the app's pick for "Same as the app"
-    var resolved: WidgetStyle { self == .app ? Shared.appStyle : self }
+    // The style to draw on a widget ("day" or "chip"): the app's pick for "Same as the app"
+    func resolved(_ widget: String) -> WidgetStyle { self == .app ? Shared.appStyle(widget) : self }
 }
 
 struct DayCountSettings: WidgetConfigurationIntent {
@@ -220,8 +225,8 @@ struct WidgetTheme {
         WidgetTheme(background: background, ink: ink, accent: accent, design: .rounded, weight: .bold)
     }
 
-    static func of(_ style: WidgetStyle, scheme: ColorScheme = .light) -> WidgetTheme {
-        switch style.resolved {
+    static func of(_ style: WidgetStyle, widget: String, scheme: ColorScheme = .light) -> WidgetTheme {
+        switch style.resolved(widget) {
         case .app, .classic:
             return rounded(AnyShapeStyle(dayGradient))
         case .night:
@@ -298,7 +303,7 @@ struct DayCountView: View {
     @Environment(\.widgetFamily) var family
     @Environment(\.colorScheme) var colorScheme
     let entry: DayEntry
-    var theme: WidgetTheme { WidgetTheme.of(entry.style, scheme: colorScheme) }
+    var theme: WidgetTheme { WidgetTheme.of(entry.style, widget: "day", scheme: colorScheme) }
 
     var body: some View {
         content
@@ -502,7 +507,7 @@ struct ChipView: View {
     @Environment(\.widgetFamily) var family
     @Environment(\.colorScheme) var colorScheme
     let entry: ChipEntry
-    var theme: WidgetTheme { WidgetTheme.of(entry.style, scheme: colorScheme) }
+    var theme: WidgetTheme { WidgetTheme.of(entry.style, widget: "chip", scheme: colorScheme) }
 
     var body: some View {
         content
