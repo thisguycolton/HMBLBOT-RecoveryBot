@@ -106,8 +106,7 @@ export default function MemberChips({ user, notify }) {
                   onChange={(e) => setTaking({ ...taking, note: e.target.value })} />
               </label>
               <p className="text-slate-500 dark:text-neutral-400">
-                Posts where they shared it stay up with their words, and show the new chip instead.
-                {" "}If nothing goes on top, those posts are hidden from everyone else.
+                Posts where they shared it aren't changed, but they're hidden from everyone else. They can still see and delete them.
               </p>
               <div className="flex gap-2">
                 <button type="submit" className={buttonClass.primary} disabled={busy}>Take back the {stack.label} chip</button>
@@ -124,7 +123,6 @@ export default function MemberChips({ user, notify }) {
             {info.history.map((r) => (
               <li key={r.id} className="text-slate-600 dark:text-neutral-300">
                 {shortDate(r.created_at)}: {r.revoked_by || "An admin"} took back the {r.label} chip ({source(r.chip)}) and put {r.replacement ? source(r.replacement).replace(/^./, (c) => c.toLowerCase()) : "nothing"} on top.
-                {r.posts_swapped > 0 && ` ${r.posts_swapped} post${r.posts_swapped === 1 ? "" : "s"} now show the new chip.`}
                 {r.posts_hidden > 0 && ` ${r.posts_hidden} post${r.posts_hidden === 1 ? "" : "s"} hidden from others.`}
                 {r.note && <span className="block text-slate-500 dark:text-neutral-400">Note: {r.note}</span>}
               </li>

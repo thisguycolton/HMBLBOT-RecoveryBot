@@ -298,7 +298,9 @@ function SharedChip({ chip, hidden }) {
       </button>
       {hidden && (
         <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400">
-          <EyeOff className="size-3.5" /> Only you see this now: your sobriety date changed, so this chip isn't yours at the moment.
+          <EyeOff className="size-3.5" /> {String(chip.id).startsWith("round:")
+            ? "Only you see this now: your sobriety date changed, so this chip isn't yours at the moment."
+            : "Only you see this now: a site admin took this chip back."}
         </p>
       )}
       {open && <ChipModal chip={chip} design={chip.design} text={chipLine(chip)} onClose={() => setOpen(false)} />}

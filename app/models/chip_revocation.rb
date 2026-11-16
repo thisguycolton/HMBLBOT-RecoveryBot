@@ -11,9 +11,9 @@
 # RecoveryBot's own chip given now ("site") when nothing else is left there. It goes on top, and
 # takes the revoked chip's place in their profile favorites.
 #
-# Their posts that shared the revoked chip (TimelineNote#chip_id) stay up with their words as
-# they wrote them. With a replacement the post's chip becomes the replacement; with none, the chip
-# post is hidden from everyone else (chip_hidden), as when a sobriety date change takes one away.
+# Their posts that shared the revoked chip (TimelineNote#chip_id) are never changed: the chip in a
+# post stays the one they shared. Those posts are hidden from everyone else (chip_hidden), as when
+# a sobriety date change takes a chip away; they still see them, and can delete them.
 class ChipRevocation < ApplicationRecord
   SITE = "site"
   class Invalid < StandardError; end
@@ -61,11 +61,11 @@ class ChipRevocation < ApplicationRecord
 
       replacement = pick_replacement(user, chip, replacement_id, by, today)
       move_choices(user, chip, replacement)
-      swapped, hidden = fix_posts(user, chip, replacement, today)
+      hidden = hide_posts(user, chip)
 
       revocation = create!(user: user, revoked_by: by, chip_id: chip_id, slot: chip[:slot], label: chip[:label].to_s,
                            chip: snapshot(chip), replacement_id: replacement&.dig(:id), replacement: replacement && snapshot(replacement),
-                           note: note, posts_swapped: swapped, posts_hidden: hidden)
+                           note: note, posts_hidden: hidden)
       revocation.tell_member
       revocation
     end
@@ -98,21 +98,9 @@ class ChipRevocation < ApplicationRecord
     user.update_columns(chip_tops: tops, chip_favorites: favorites)
   end
 
-  # Their posts of the revoked chip: now showing the replacement, or hidden from others.
-  # The words they wrote aren't touched. Returns [swapped, hidden].
-  def self.fix_posts(user, chip, replacement, today)
-    notes = user.timeline_notes.where(chip_id: chip[:id])
-    count = notes.count
-    return [0, 0] if count.zero?
-
-    if replacement && (shown = TimelineNote.chip_for(user, replacement[:id], today))
-      notes.update_all(chip_id: replacement[:id], chip: shown, chip_hidden: false)
-      [count, 0]
-    else
-      notes.update_all(chip_hidden: true)
-      [0, count]
-    end
-  end
+  # Their posts of the revoked chip, hidden from others; the chip and words in them aren't
+  # touched. Returns how many.
+  def self.hide_posts(user, chip) = user.timeline_notes.where(chip_id: chip[:id]).update_all(chip_hidden: true)
 
   def self.snapshot(chip) = chip.except(:top, :others, :note).deep_stringify_keys
 
@@ -127,8 +115,7 @@ class ChipRevocation < ApplicationRecord
     else
       lines << "It was given by mistake."
     end
-    lines << "Posts where you shared it show the new chip." if posts_swapped.positive?
-    lines << "Posts where you shared it are hidden from others now." if posts_hidden.positive?
+    lines << "Posts where you shared it are only visible to you now." if posts_hidden.positive?
     Notification.deliver(user, kind: "chip.revoked", title: title, body: lines.join(" "),
                                url: replacement_id ? "/recovery?chip=#{replacement_id}" : "/recovery")
   end

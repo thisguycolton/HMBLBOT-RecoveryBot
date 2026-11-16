@@ -34,7 +34,7 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
     note
   end
 
-  test "takes back a given chip, puts the earned one on top, swaps it in their post, and tells them" do
+  test "takes back a given chip, puts the earned one on top, hides their post without changing it, and tells them" do
     award = give(@kim, "year", years: 1)
     @kim.update!(chip_tops: { "round:year-1" => "award:#{award.id}" }, chip_favorites: ["award:#{award.id}", "round:24h"])
     note = share!(@kim, "award:#{award.id}")
@@ -58,19 +58,19 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
 
     note.reload
     assert_equal "Look what I got!", note.body, "their words aren't touched"
-    assert_equal "round:year-1", note.chip_id
-    assert_equal "earned", note.chip["source"]
-    assert_not note.chip_hidden
+    assert_equal "award:#{award.id}", note.chip_id, "the chip in a post never changes"
+    assert_equal "given", note.chip["source"]
+    assert note.chip_hidden, "hidden from everyone else"
 
     revocation = ChipRevocation.last
-    assert_equal [@admin, "award:#{award.id}", "round:year-1", 1, 0], [revocation.revoked_by, revocation.chip_id, revocation.replacement_id, revocation.posts_swapped, revocation.posts_hidden]
+    assert_equal [@admin, "award:#{award.id}", "round:year-1", 1], [revocation.revoked_by, revocation.chip_id, revocation.replacement_id, revocation.posts_hidden]
     assert_equal "The Acid Test", revocation.chip.dig("group", "title")
     assert_equal "award:#{award.id}", response.parsed_body["history"].first["chip_id"]
 
     told = @kim.notifications.find_by(kind: "chip.revoked")
     assert_equal "A site admin took back the 1 year chip from The Acid Test", told.title
     assert_includes told.body, "That one was meant for someone else."
-    assert_includes told.body, "Posts where you shared it show the new chip."
+    assert_includes told.body, "only visible to you now"
     assert_equal "chips", Notification.push_category("chip.revoked")
   end
 
@@ -107,7 +107,7 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
     assert_empty ChipEdition.available_for(@kim), "they can't claim it again"
     assert note.reload.chip_hidden, "with no replacement, the chip post is hidden from others"
     assert_equal 1, ChipRevocation.last.posts_hidden
-    assert_includes @kim.notifications.find_by(kind: "chip.revoked").body, "hidden from others"
+    assert_includes @kim.notifications.find_by(kind: "chip.revoked").body, "only visible to you"
   end
 
   test "a replacement has to be in the same milestone's stack" do
