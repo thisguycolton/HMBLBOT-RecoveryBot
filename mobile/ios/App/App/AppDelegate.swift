@@ -432,13 +432,19 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve()
     }
 
-    // The style picked in the app (Account settings > Widgets), which every widget left on
-    // "Same as the app" draws in. It belongs to the phone, so signing out keeps it.
+    // The styles picked in the app (Account settings > Widgets), which every widget left on
+    // "Same as the app" draws in: "widgetStyle" for both, and "widgetStyle.day" /
+    // "widgetStyle.chip" when that widget has its own (the app's "Same style for both" off).
+    // They belong to the phone, so signing out keeps them. "day" and "chip" answer "" while
+    // they follow the one for both.
     @objc func widgetStyle(_ call: CAPPluginCall) {
-        let style = UserDefaults(suiteName: Self.group)?.string(forKey: "widgetStyle")
-        call.resolve(["style": style.flatMap { Self.styles.contains($0) ? $0 : nil } ?? "classic"])
+        let defaults = UserDefaults(suiteName: Self.group)
+        func known(_ key: String) -> String? { defaults?.string(forKey: key).flatMap { Self.styles.contains($0) ? $0 : nil } }
+        call.resolve(["style": known("widgetStyle") ?? "classic", "day": known("widgetStyle.day") ?? "", "chip": known("widgetStyle.chip") ?? ""])
     }
 
+    // { style } sets the one for both and drops each widget's own; { style, widget: "day" | "chip" }
+    // gives that widget its own
     @objc func setWidgetStyle(_ call: CAPPluginCall) {
         guard let style = call.getString("style"), Self.styles.contains(style) else {
             call.reject("Unknown widget style")
@@ -448,7 +454,18 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject("This build of the app has no widgets")
             return
         }
-        defaults.set(style, forKey: "widgetStyle")
+        let widget = call.getString("widget") ?? ""
+        switch widget {
+        case "day", "chip":
+            defaults.set(style, forKey: "widgetStyle.\(widget)")
+        case "", "both":
+            defaults.set(style, forKey: "widgetStyle")
+            defaults.removeObject(forKey: "widgetStyle.day")
+            defaults.removeObject(forKey: "widgetStyle.chip")
+        default:
+            call.reject("Unknown widget")
+            return
+        }
         WidgetCenter.shared.reloadAllTimelines()
         call.resolve(["style": style])
     }
