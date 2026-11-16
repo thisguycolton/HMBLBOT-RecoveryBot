@@ -156,7 +156,7 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
     assert_nil note.as_api_json(viewer: @kim)[:chip_admin]
     assert_nil note.as_api_json(viewer: @host)[:chip_admin]
     earned = share!(@kim, "round:year-1")
-    assert_nil earned.as_api_json(viewer: @admin)[:chip_admin], "earned chips can't be changed"
+    assert earned.as_api_json(viewer: @admin)[:chip_admin], "any chip post: the dialog shows another of theirs when it can't go back"
 
     sign_in @admin
     post "/api/admin/users/#{@kim.id}/revoke_chip", params: { chip_id: "award:#{award.id}", replacement_id: "round:year-1" }, as: :json
@@ -164,5 +164,34 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
     assert_equal "round:year-1", response.parsed_body.dig("revocation", "replacement", "id")
     assert response.parsed_body.dig("revocation", "replacement", "design"), "the post can draw it straight away"
     assert_equal "round:year-1", note.reload.chip_id
+  end
+
+  test "a post whose chip they no longer have can show another chip they do have" do
+    edition = ChipEdition.create!(group: @group, name: "2026 Edition", kind: "milestone", starts_on: Date.new(2026, 10, 1), ends_on: Date.new(2026, 12, 31), published_at: Time.current)
+    chip = edition.claim!(@kim, "round:year-1")
+    note = share!(@kim, "edition:#{chip.id}")
+    edition.destroy! # its chips go with it, the post stays
+    assert note.reload.as_api_json(viewer: @admin)[:chip_admin]
+
+    sign_in @admin
+    get "/api/admin/users/#{@kim.id}/chips", as: :json
+    assert_includes response.parsed_body["all"].map { |c| c["id"] }, "round:year-1"
+
+    post "/api/admin/users/#{@kim.id}/post_chip", params: { note_id: note.id, chip_id: "round:9m" }, as: :json
+    assert_response :success, response.body
+    note.reload
+    assert_equal ["round:9m", "earned", "Look what I got!"], [note.chip_id, note.chip["source"], note.body]
+    assert note.chip["design"]
+    assert_not note.chip_hidden
+    assert_equal 0, @kim.notifications.count, "they aren't told"
+
+    post "/api/admin/users/#{@kim.id}/post_chip", params: { note_id: note.id, chip_id: "round:5-years" }, as: :json
+    assert_response :unprocessable_entity, "only chips they have"
+    assert_equal "round:9m", note.reload.chip_id
+
+    sign_in @host
+    post "/api/admin/users/#{@kim.id}/post_chip", params: { note_id: note.id, chip_id: "round:year-1" }, as: :json
+    assert_response :forbidden
+    assert_equal "round:9m", note.reload.chip_id
   end
 end
