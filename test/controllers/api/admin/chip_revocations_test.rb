@@ -152,4 +152,21 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert response.parsed_body["given"].find { |a| a["id"] == award.id }["revoked"]
   end
+
+  test "site admins see Change this chip on a post of a given chip, and nobody else does" do
+    award = give(@kim, "year", years: 1)
+    note = share!(@kim, "award:#{award.id}")
+    assert note.as_api_json(viewer: @admin)[:chip_admin]
+    assert_nil note.as_api_json(viewer: @kim)[:chip_admin]
+    assert_nil note.as_api_json(viewer: @host)[:chip_admin]
+    earned = share!(@kim, "round:year-1")
+    assert_nil earned.as_api_json(viewer: @admin)[:chip_admin], "earned chips can't be changed"
+
+    sign_in @admin
+    post "/api/admin/users/#{@kim.id}/revoke_chip", params: { chip_id: "award:#{award.id}", replacement_id: "round:year-1" }, as: :json
+    assert_response :success
+    assert_equal "round:year-1", response.parsed_body.dig("revocation", "replacement", "id")
+    assert response.parsed_body.dig("revocation", "replacement", "design"), "the post can draw it straight away"
+    assert_equal "round:year-1", note.reload.chip_id
+  end
 end

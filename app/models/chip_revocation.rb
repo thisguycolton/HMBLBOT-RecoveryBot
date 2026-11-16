@@ -114,7 +114,7 @@ class ChipRevocation < ApplicationRecord
     end
   end
 
-  def self.snapshot(chip) = chip.except(:top, :others, :note).deep_stringify_keys
+  def self.snapshot(chip) = chip.except(:top, :others, :note).merge(design: chip[:design] || ChipDesign::DEFAULT).deep_stringify_keys
 
   # A bell notification (and push, under Chips) saying what changed
   def tell_member
