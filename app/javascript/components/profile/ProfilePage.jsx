@@ -7,6 +7,8 @@ import { DateField, todayValue } from "../ui/DateFields";
 import Toggle from "../ui/Toggle";
 import PushSettings from "./PushSettings";
 import WidgetSettings from "./WidgetSettings";
+import AppLockSettings from "./AppLockSettings";
+import { appLockHere } from "../../lib/appLock";
 import { ReminderSetting } from "../recovery/ReminderSetting";
 import { api } from "../groups/lib";
 import Avatar from "../groups/Avatar";
@@ -38,26 +40,28 @@ function squareJpeg(file) {
 }
 
 // Which tabs need the Save button and which save as you go. Profile and Account fields wait
-// for Save (one PATCH for both); Privacy, Notifications and Widgets keep each change at once.
+// for Save (one PATCH for both); Privacy, Notifications and This phone keep each change at once.
 const TABS = [
   { key: "profile", label: "Profile", saves: "button" },
   { key: "account", label: "Account", saves: "button" },
   { key: "privacy", label: "Privacy", saves: "instant" },
   { key: "notifications", label: "Notifications", saves: "instant" },
-  { key: "widgets", label: "Widgets", saves: "instant" },
+  // In the apps: the app lock and the Home Screen widgets (the key stays "widgets" for old links)
+  { key: "widgets", label: "This phone", saves: "instant" },
 ];
 // Old links (reminder emails, the bell) point at a section; open the tab it lives on
-const HASH_TAB = { hosting: "notifications", reminders: "notifications", notifications: "notifications", widgets: "widgets" };
+const HASH_TAB = { hosting: "notifications", reminders: "notifications", notifications: "notifications", widgets: "widgets", "app-lock": "widgets" };
 
-// The same test WidgetSettings uses to show itself: only in the iPhone and Android apps
-const widgetsHere = () => ["ios", "android"].includes(nativePlatform()) && hasPluginMethod("WidgetBridge", "setWidgetStyle");
+// The same tests WidgetSettings and AppLockSettings use to show themselves: only in the iPhone
+// and Android apps
+const widgetsHere = () => (["ios", "android"].includes(nativePlatform()) && hasPluginMethod("WidgetBridge", "setWidgetStyle")) || appLockHere();
 
 const emptyAccount = (p) => ({ email: p.email, password: "", password_confirmation: "", current_password: "" });
 const formFrom = (p) => ({ name: p.name || "", username: p.username || "", bio: p.bio || "", sobriety_date: p.sobriety_date || "", show_sobriety_date: !!p.show_sobriety_date });
 
 // /users/edit, in tabs: Profile (name, picture, blurb, sobriety date, your groups), Account
 // (email, password, delete), Privacy, Notifications (reminders, this device, hosting) and, in
-// the apps, Widgets. A bar above the tabs shows when Profile or Account has changes that
+// the apps, This phone (app lock, widgets). A bar above the tabs shows when Profile or Account has changes that
 // haven't been saved, from any tab, with Save and Discard; leaving the page then asks first.
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -85,7 +89,7 @@ export default function ProfilePage() {
   // /users/edit#hosting (from a reminder email) or #notifications: scroll to it on its tab
   const loaded = Boolean(profile);
   useEffect(() => {
-    if (!loaded || !["#hosting", "#notifications", "#reminders", "#widgets"].includes(location.hash)) return;
+    if (!loaded || !["#hosting", "#notifications", "#reminders", "#widgets", "#app-lock"].includes(location.hash)) return;
     const to = location.hash.slice(1);
     setTimeout(() => document.getElementById(to)?.scrollIntoView(), 300); // the notifications card loads on its own
   }, [loaded]);
@@ -393,7 +397,12 @@ export default function ProfilePage() {
           </>
         )}
 
-        {current.key === "widgets" && <WidgetSettings />}
+        {current.key === "widgets" && (
+          <>
+            <AppLockSettings />
+            <WidgetSettings />
+          </>
+        )}
       </div>
     </div>
   );
