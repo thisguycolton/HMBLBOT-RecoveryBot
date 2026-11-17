@@ -145,6 +145,9 @@ export function drawWidget(canvas, cssW, cssH, opts) {
   const sy = cssH / layout.h;
   const s = Math.min(sx, sy);
   let masks = 0;
+  // How far a title that took more lines than its first ("grow") pushes the ops after it that
+  // "follow" it, in layout points
+  let shift = 0;
 
   for (const op of layout.ops) {
     switch (op.t) {
@@ -177,13 +180,18 @@ export function drawWidget(canvas, cssW, cssH, opts) {
           size = Math.max(size * 0.4, size * (max / ctx.measureText(text).width));
           setFont();
         }
-        const lines = op.fit ? [text] : wrap(text, max, op.lines || 1, (t) => ctx.measureText(t).width);
+        const opY = op.y + (op.follow ? shift : 0);
+        const designLine = op.line || op.size * 1.2;
+        // "until": no line may end below this, however far it was pushed down
+        const most = op.until ? Math.max(1, Math.min(op.lines || 1, Math.floor((op.until - opY) / designLine))) : op.lines || 1;
+        const lines = op.fit ? [text] : wrap(text, max, most, (t) => ctx.measureText(t).width);
+        if (op.grow) shift += (lines.length - 1) * designLine;
         const lh = (op.line || op.size * 1.2) * s * (size / (op.size * s));
         ctx.fillStyle = rgba(op.color, op.a ?? 1);
         ctx.textAlign = op.align || "left";
         ctx.textBaseline = "alphabetic";
         lines.forEach((line, i) => {
-          const top = op.y * sy + i * lh;
+          const top = opY * sy + i * lh;
           ctx.fillText(line, op.x * sx, top + (lh - size) / 2 + size * 0.8);
         });
         break;
@@ -230,7 +238,8 @@ export function drawWidget(canvas, cssW, cssH, opts) {
       case "rule": {
         ctx.fillStyle = rgba(op.color, op.a);
         const n = Math.floor(op.w / 7.1);
-        for (let i = 0; i < n; i++) ctx.fillRect((op.x + i * 7.1) * sx, op.y * sy, 3 * s, 1.5 * s);
+        const y = op.y + (op.follow ? shift : 0);
+        for (let i = 0; i < n; i++) ctx.fillRect((op.x + i * 7.1) * sx, y * sy, 3 * s, 1.5 * s);
         break;
       }
       case "coin":

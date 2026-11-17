@@ -13,7 +13,7 @@
 // Things to draw (`t`), in order:
 //   rect  { x, y, w, h, fill, r, mask }   a box; `mask: true` clips everything after it to its
 //                                          rounded shape (and isn't drawn itself)
-//   text  { x, y, s, font, weight, size, color, a, align, line, spacing, maxW, lines, fit }
+//   text  { x, y, s, font, weight, size, color, a, align, line, spacing, maxW, lines, fit, grow, follow, until }
 //         `s` holds {names} filled in from the widget's values (WIDGET_VALUES); a text whose
 //         values are all empty isn't drawn. y is the top of the first line, `line` its height
 //         (default 1.2 x size). Text wider than maxW wraps, up to `lines` lines (default 1), the
@@ -23,8 +23,11 @@
 //   ring  { cx, cy, r, th, p, color, track }
 //   edge  { th, r, p, color, track }       progress traced around the widget's own edge,
 //                                          clockwise from the top middle
-//   rule  { x, y, w, color, a }            a dotted line
+//   rule  { x, y, w, color, a, follow }    a dotted line
 //   coin  { cx, cy, d }                    their chip
+// A text with `grow` that takes more than one line pushes every later text or rule marked
+// `follow` down by the extra lines; `until` keeps a text's last line from ending below that y
+// (it drops lines instead), however far it was pushed.
 // Bars, rings and edges need a progress; without one (a milestone reached today, nothing ahead)
 // they aren't drawn.
 //
@@ -112,7 +115,7 @@ function build(key, kind, size) {
   const bar = (x, y, w, p, h = 5) => ops.push({ t: "bar", x, y, w, h, p, color: edgeC, track: { c: ink, a: 0.13 } });
   const ring = (cx, cy, r, th, p) => ops.push({ t: "ring", cx, cy, r, th, p, color: edgeC, track: { c: ink, a: 0.13 } });
   const edge = (p) => ops.push({ t: "edge", th: L.edge, r: 26, p, color: edgeC, track: { c: ink, a: 0.13 } });
-  const rule = (x, y, w, a) => ops.push({ t: "rule", x, y, w, color: ink, a });
+  const rule = (x, y, w, a, extra = {}) => ops.push({ t: "rule", x, y, w, color: ink, a, ...extra });
   const coin = (cx, cy, d) => ops.push({ t: "coin", cx, cy, d });
   const YEAR = "year";
   const PROG = "progress";
@@ -218,9 +221,9 @@ function build(key, kind, size) {
       band("{rBand}", YEAR);
     } else if (kind === "reflection" && size === "large") {
       T(24, 16, "“", "serif", 700, 76, hi, 1, { line: 76 });
-      T(24, 84, "{rTitle}", "serif", 600, 27, ink, 1, { line: 33, maxW: 316, fit: true });
-      rule(24, 128, 316, 0.3);
-      T(24, 142, "{rQuote}", "serif", 400, 15, ink, 0.75, { line: 20, maxW: 316, lines: 8 });
+      T(24, 84, "{rTitle}", "serif", 600, 27, ink, 1, { line: 33, maxW: 316, lines: 3, grow: true });
+      rule(24, 128, 316, 0.3, { follow: true });
+      T(24, 142, "{rQuote}", "serif", 400, 15, ink, 0.75, { line: 20, maxW: 316, lines: 8, follow: true, until: 302 });
       caps(24, 310, "{rSourceCaps}", 0.6);
       if (paper) bar(24, 334, 316, YEAR, 4);
       band("{rBand}", YEAR);
@@ -329,10 +332,11 @@ function build(key, kind, size) {
     else if (kindOf === "bar") bar(24, 360, 316, YEAR, 4);
     else ring(324, 50, 22, 5, YEAR);
     T(24, 16, "“", "serif", 700, 76, hi, 1, { line: 76 });
-    // the title on one line (smaller when it's long), so the quote starts right under it
-    T(24, 84, "{rTitle}", "serif", 600, 27, ink, 1, { line: 33, maxW: kindOf === "ring" ? 300 : 316, fit: true });
-    rule(24, 128, 316, 0.3);
-    T(24, 142, "{rQuote}", "serif", 400, 15, ink, 0.75, { line: 20, maxW: 316, lines: 9 });
+    // the title takes up to three lines, only as many as it needs; the divider and quote follow
+    // right under it, and the quote gives up lines to fit above the source
+    T(24, 84, "{rTitle}", "serif", 600, 27, ink, 1, { line: 33, maxW: kindOf === "ring" ? 300 : 316, lines: 3, grow: true });
+    rule(24, 128, 316, 0.3, { follow: true });
+    T(24, 142, "{rQuote}", "serif", 400, 15, ink, 0.75, { line: 20, maxW: 316, lines: 9, follow: true, until: 322 });
     T(24, kindOf === "bar" ? 332 : 336, "{rSourceCaps}", tf, 700, 11, ink, 0.6, { spacing: 8, maxW: 240 });
     T(340, kindOf === "bar" ? 330 : 334, "{rDate}", "serif", 600, 13, ink, 0.6, { align: "right" });
   }

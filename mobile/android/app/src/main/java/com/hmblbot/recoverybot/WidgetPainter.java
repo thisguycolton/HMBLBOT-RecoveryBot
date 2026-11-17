@@ -317,6 +317,9 @@ final class WidgetPainter {
         if (ops == null) return;
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         int saved = 0;
+        // How far a title that took more lines than its first ("grow") pushes the ops after it
+        // that "follow" it, in layout points
+        float shift = 0;
         for (int i = 0; i < ops.length(); i++) {
             JSONObject op = ops.optJSONObject(i);
             if (op == null) continue;
@@ -341,9 +344,11 @@ final class WidgetPainter {
                     p.setShader(null);
                     break;
                 }
-                case "text":
-                    drawText(context, canvas, op, look, values, sx, sy, s);
+                case "text": {
+                    int drawn = drawText(context, canvas, op, look, values, sx, sy, s, op.optBoolean("follow") ? shift : 0);
+                    if (op.optBoolean("grow") && drawn > 1) shift += (drawn - 1) * (float) op.optDouble("line", op.optDouble("size", 12) * 1.2);
                     break;
+                }
                 case "bar": {
                     Double v = progressOf(op, progress);
                     if (v == null) break;
@@ -399,8 +404,9 @@ final class WidgetPainter {
                     p.setStyle(Paint.Style.FILL);
                     p.setColor(color(op.optString("color", "FFFFFF"), op.optDouble("a", 0.35)));
                     int n = (int) (op.optDouble("w") / 7.1);
+                    float ruleY = (float) op.optDouble("y") + (op.optBoolean("follow") ? shift : 0);
                     for (int k = 0; k < n; k++) {
-                        float x = (float) (op.optDouble("x") + k * 7.1) * sx, y = (float) op.optDouble("y") * sy;
+                        float x = (float) (op.optDouble("x") + k * 7.1) * sx, y = ruleY * sy;
                         canvas.drawRect(x, y, x + 3 * s, y + 1.5f * s, p);
                     }
                     break;
@@ -414,9 +420,10 @@ final class WidgetPainter {
         while (saved-- > 0) canvas.restore();
     }
 
-    private static void drawText(Context context, Canvas canvas, JSONObject op, JSONObject look, Map<String, String> values, float sx, float sy, float s) {
+    // Draws a text op moved down by `shift` layout points; gives the number of lines drawn
+    private static int drawText(Context context, Canvas canvas, JSONObject op, JSONObject look, Map<String, String> values, float sx, float sy, float s, float shift) {
         String text = fill(op.optString("s", ""), values);
-        if (text == null || text.isEmpty()) return;
+        if (text == null || text.isEmpty()) return 0;
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         String font = op.optString("font", "rounded");
         p.setTypeface("number".equals(font) ? numberFace(context, look.optString("number", "PublicSans-ExtraBold")) : textFace(font, op.optInt("weight", 400)));
@@ -435,15 +442,20 @@ final class WidgetPainter {
             }
         }
         List<String> lines = new ArrayList<>();
-        if (fit) lines.add(text); else lines = wrap(text, max, op.optInt("lines", 1), p);
+        float opY = (float) op.optDouble("y") + shift;
+        int most = op.optInt("lines", 1);
+        // "until": no line may end below this, however far it was pushed down
+        if (op.has("until")) most = Math.max(1, Math.min(most, (int) Math.floor((op.optDouble("until") - opY) / op.optDouble("line", op.optDouble("size", 12) * 1.2))));
+        if (fit) lines.add(text); else lines = wrap(text, max, most, p);
         float lineHeight = (float) op.optDouble("line", op.optDouble("size", 12) * 1.2) * s * (size / base);
         String align = op.optString("align", "left");
         p.setTextAlign("center".equals(align) ? Paint.Align.CENTER : "right".equals(align) ? Paint.Align.RIGHT : Paint.Align.LEFT);
         float x = (float) op.optDouble("x") * sx;
         for (int i = 0; i < lines.size(); i++) {
-            float top = (float) op.optDouble("y") * sy + i * lineHeight;
+            float top = opY * sy + i * lineHeight;
             canvas.drawText(lines.get(i), x, top + (lineHeight - size) / 2 + size * 0.8f, p);
         }
+        return lines.size();
     }
 
     private static void drawCoin(Canvas canvas, float cx, float cy, float d, Bitmap chip) {

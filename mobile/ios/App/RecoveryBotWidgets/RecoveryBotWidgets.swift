@@ -452,7 +452,11 @@ struct WidgetCanvas: View {
         let lw = num(layout, "w", 170), lh = num(layout, "h", 170)
         let sx = size.width / lw, sy = size.height / lh, s = min(sx, sy)
         let ops = layout["ops"] as? [[String: Any]] ?? []
+        // How far a title that took more lines than its first ("grow") pushes the ops after it
+        // that "follow" it, in layout points
+        var shift: CGFloat = 0
         for op in ops {
+            let follow = (op["follow"] as? Bool) == true
             switch op["t"] as? String ?? "" {
             case "rect":
                 let rect = CGRect(x: num(op, "x") * sx, y: num(op, "y") * sy, width: num(op, "w") * sx, height: num(op, "h") * sy)
@@ -462,7 +466,10 @@ struct WidgetCanvas: View {
                 if (op["mask"] as? Bool) == true { ctx.clip(to: path); continue }
                 ctx.fill(path, with: shading(op["fill"] as? [String: Any] ?? [:], rect))
             case "text":
-                drawText(&ctx, op, sx: sx, sy: sy, s: s)
+                let drawn = drawText(&ctx, op, sx: sx, sy: sy, s: s, shift: follow ? shift : 0)
+                if (op["grow"] as? Bool) == true && drawn > 1 {
+                    shift += CGFloat(drawn - 1) * num(op, "line", num(op, "size", 12) * 1.2)
+                }
             case "bar":
                 guard let p = progress[op["p"] as? String ?? ""] else { continue }
                 let x = num(op, "x") * sx, y = num(op, "y") * sy, w = num(op, "w") * sx, h = num(op, "h") * s
@@ -496,7 +503,7 @@ struct WidgetCanvas: View {
                 let n = Int(num(op, "w") / 7.1)
                 let color = Color(hex: op["color"] as? String ?? "FFFFFF", opacity: Double(num(op, "a", 0.35)))
                 for i in 0..<max(0, n) {
-                    ctx.fill(Path(CGRect(x: (num(op, "x") + CGFloat(i) * 7.1) * sx, y: num(op, "y") * sy, width: 3 * s, height: 1.5 * s)), with: .color(color))
+                    ctx.fill(Path(CGRect(x: (num(op, "x") + CGFloat(i) * 7.1) * sx, y: (num(op, "y") + (follow ? shift : 0)) * sy, width: 3 * s, height: 1.5 * s)), with: .color(color))
                 }
             case "coin":
                 drawCoin(&ctx, center: CGPoint(x: num(op, "cx") * sx, y: num(op, "cy") * sy), d: num(op, "d") * s)
@@ -506,8 +513,10 @@ struct WidgetCanvas: View {
         }
     }
 
-    private func drawText(_ ctx: inout GraphicsContext, _ op: [String: Any], sx: CGFloat, sy: CGFloat, s: CGFloat) {
-        guard let text = Self.fill(op["s"] as? String ?? "", values), !text.isEmpty else { return }
+    // Draws a text op moved down by `shift` layout points; gives the number of lines drawn
+    @discardableResult
+    private func drawText(_ ctx: inout GraphicsContext, _ op: [String: Any], sx: CGFloat, sy: CGFloat, s: CGFloat, shift: CGFloat = 0) -> Int {
+        guard let text = Self.fill(op["s"] as? String ?? "", values), !text.isEmpty else { return 0 }
         let color = Color(hex: op["color"] as? String ?? "FFFFFF", opacity: Double(num(op, "a", 1)))
         let spacing = num(op, "spacing") / 100
         var size = num(op, "size", 12) * s
@@ -524,18 +533,24 @@ struct WidgetCanvas: View {
             let w = width(text)
             if w > max { size = Swift.max(size * 0.4, size * max / w) }
         }
-        let lines = fit ? [text] : Self.wrap(text, max: max, lines: Int(num(op, "lines", 1)), measure: width)
+        let opY = num(op, "y") + shift
+        let designLine = num(op, "line", num(op, "size", 12) * 1.2)
+        var most = Int(num(op, "lines", 1))
+        // "until": no line may end below this, however far it was pushed down
+        if op["until"] != nil { most = Swift.max(1, Swift.min(most, Int(((num(op, "until") - opY) / designLine).rounded(.down)))) }
+        let lines = fit ? [text] : Self.wrap(text, max: max, lines: most, measure: width)
         let lineHeight = num(op, "line", num(op, "size", 12) * 1.2) * s * (size / (num(op, "size", 12) * s))
         let align = op["align"] as? String ?? "left"
         let x = num(op, "x") * sx
         for (i, line) in lines.enumerated() {
             let r = resolved(line, size)
             let measured = r.measure(in: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
-            let baseline = num(op, "y") * sy + CGFloat(i) * lineHeight + (lineHeight - size) / 2 + size * 0.8
+            let baseline = opY * sy + CGFloat(i) * lineHeight + (lineHeight - size) / 2 + size * 0.8
             let top = baseline - r.firstBaseline(in: measured)
             let left = align == "center" ? x - measured.width / 2 : align == "right" ? x - measured.width : x
             ctx.draw(r, in: CGRect(x: left, y: top, width: measured.width + 1, height: measured.height))
         }
+        return lines.count
     }
 
     private func drawCoin(_ ctx: inout GraphicsContext, center: CGPoint, d: CGFloat) {
