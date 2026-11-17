@@ -1,0 +1,14 @@
+<%# The add / edit form: a React page (app/javascript/components/ServiceReadingEditor.jsx) %>
+<% content_for :page_title, "#{service_reading.persisted? ? "Edit #{service_reading.title}" : "New service reading"} | RecoveryBot" %>
+
+<%= vite_client_tag %>
+<%= vite_javascript_tag 'topicificator.jsx' %>
+
+<div id="service-reading-editor-root" class="w-full self-start" data-reading="<%= json_escape({
+    id: service_reading.id,
+    title: service_reading.title,
+    short_title: service_reading.short_title,
+    source: service_reading.source,
+    icon: service_reading.icon,
+    body_html: service_reading.body.to_s
+  }.to_json) %>"></div>
