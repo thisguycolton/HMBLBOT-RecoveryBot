@@ -1,8 +1,8 @@
 // The Home Screen widgets' styles in the iPhone and Android apps, for the picker in This phone >
-// Widgets (components/profile/WidgetSettings.jsx). The same list, colors, fonts and drawings as
-// WidgetStyle and WidgetTheme in mobile/ios/App/RecoveryBotWidgets/RecoveryBotWidgets.swift
-// and mobile/android/.../WidgetStyles.java (with res/drawable/widget_bg_* and the
-// number fonts in each res/layout/widget_day_count_*): change them together.
+// Widgets (components/profile/WidgetSettings.jsx): their keys, names and the swatch colors. The
+// widgets themselves are drawn from lib/widgetLayouts.js (bin/widget-layouts writes it out for the
+// apps, where RecoveryBotWidgets.swift and WidgetPainter.java draw it). Keep the list in step with
+// WidgetStyle in RecoveryBotWidgets.swift and mobile/android/.../WidgetStyles.java.
 // The key is what the app keeps (WidgetBridgePlugin setWidgetStyle).
 //
 // Each style's big number is one of the site's fonts (bundled into the apps' widgets; FONTS_URL

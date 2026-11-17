@@ -88,6 +88,8 @@ Rails.application.routes.draw do
     end
   end
   resource :hosting, controller: "hosting", only: :show
+  # The apps' Daily Reflection widget: each day's reading from a date on (lib/appWidgets.js)
+  resource :widget_reflections, only: :show
   # A member's own recovery tools (/recovery): chips, 10th step inventories, gratitude lists
   resource :recovery, controller: "recovery", only: %i[show update] do
     post :claim

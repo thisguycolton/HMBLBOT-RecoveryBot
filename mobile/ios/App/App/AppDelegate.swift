@@ -383,7 +383,7 @@ public class PrinterPlugin: CAPPlugin, CAPBridgedPlugin {
 // The Home Screen and Lock Screen widgets (RecoveryBotWidgets): the site hands them what they
 // show (lib/appWidgets.js), and this keeps it in the App Group both share, then has them redraw.
 // soberSince "YYYY-MM-DD" (the widget counts the days itself), the chip and its back as PNGs,
-// its name.
+// its name and the day it was earned, and two weeks of Daily Reflections.
 @objc(WidgetBridgePlugin)
 public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "WidgetBridgePlugin"
@@ -414,6 +414,9 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         defaults.set(call.getString("soberSince") ?? "", forKey: "soberSince")
         defaults.set(call.getString("chipLabel") ?? "", forKey: "chipLabel")
         defaults.set(call.getString("chipId") ?? "", forKey: "chipId")
+        defaults.set(call.getString("chipOn") ?? "", forKey: "chipOn")
+        // Two weeks of Daily Reflections (JSON, Api::WidgetReflectionsController); older sites send none
+        if let reflections = call.getString("reflections") { defaults.set(reflections, forKey: "reflections") }
         // The fun day-count facts still ahead (JSON, lib/appWidgets.js); a site from before them sends none
         if let facts = call.getString("funFacts") { defaults.set(facts, forKey: "funFacts") }
         let backFile = chipFile.deletingLastPathComponent().appendingPathComponent("chip-back.png")
@@ -452,7 +455,7 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     // The sizes a placed widget's style is kept by: the system tells the app which kind and size
     // each placed widget is, not which one it is, so two small day counts share a style
     static let sizes = ["small", "medium", "large"]
-    static let placedKeys = ["day", "chip"].flatMap { kind in sizes.map { "\(kind).\($0)" } }
+    static let placedKeys = ["day", "chip", "reflection"].flatMap { kind in sizes.map { "\(kind).\($0)" } }
 
     // { style } sets the one for every widget and drops all the others; { style, widget: "day" |
     // "chip" } a kind's own (older pages); { style, widget: "day.small" } the placed widgets of
@@ -499,6 +502,7 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                 switch info.kind {
                 case "DayCount": kind = "day"
                 case "FavoriteChip": kind = "chip"
+                case "DailyReflection": kind = "reflection"
                 default: continue
                 }
                 let size: String
@@ -522,7 +526,7 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func clear(_ call: CAPPluginCall) {
         if let (defaults, chipFile) = shared() {
-            ["signedIn", "soberSince", "chipLabel", "chipId", "hasChip", "chipFlipped", "chipShownId", "funFacts"].forEach { defaults.removeObject(forKey: $0) }
+            ["signedIn", "soberSince", "chipLabel", "chipId", "chipOn", "hasChip", "chipFlipped", "chipShownId", "funFacts", "reflections"].forEach { defaults.removeObject(forKey: $0) }
             try? FileManager.default.removeItem(at: chipFile)
             try? FileManager.default.removeItem(at: chipFile.deletingLastPathComponent().appendingPathComponent("chip-back.png"))
             WidgetCenter.shared.reloadAllTimelines()

@@ -24,6 +24,7 @@
 		7A10C0DE30B1000100A1B2C2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7A10C0DE30B1000100A1B2C1 /* PrivacyInfo.xcprivacy */; };
 		7A10C0DE30B1000100A1B2C4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7A10C0DE30B1000100A1B2C3 /* PrivacyInfo.xcprivacy */; };
 		7A10C0DE30B1000100A1B2C6 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = 7A10C0DE30B1000100A1B2C5 /* Fonts */; };
+		7A10C0DE30B1000100A1B2C8 /* Layouts in Resources */ = {isa = PBXBuildFile; fileRef = 7A10C0DE30B1000100A1B2C7 /* Layouts */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,6 +75,7 @@
 		7A10C0DE30B1000100A1B2C1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		7A10C0DE30B1000100A1B2C3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		7A10C0DE30B1000100A1B2C5 /* Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fonts; sourceTree = "<group>"; };
+		7A10C0DE30B1000100A1B2C7 /* Layouts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Layouts; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -161,6 +163,7 @@
 				B26ED5483CE20AEEEFB747A9 /* RecoveryBotWidgets.entitlements */,
 				7A10C0DE30B1000100A1B2C3 /* PrivacyInfo.xcprivacy */,
 				7A10C0DE30B1000100A1B2C5 /* Fonts */,
+				7A10C0DE30B1000100A1B2C7 /* Layouts */,
 			);
 			path = RecoveryBotWidgets;
 			sourceTree = "<group>";
@@ -268,6 +271,7 @@
 				50D1F8FBD7069C4CEB1FD89C /* Assets.xcassets in Resources */,
 				7A10C0DE30B1000100A1B2C4 /* PrivacyInfo.xcprivacy in Resources */,
 				7A10C0DE30B1000100A1B2C6 /* Fonts in Resources */,
+				7A10C0DE30B1000100A1B2C8 /* Layouts in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -330,7 +334,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = RecoveryBotWidgets/RecoveryBotWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = RJUT73YPEK;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RecoveryBotWidgets/Info.plist;
@@ -467,7 +471,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = RJUT73YPEK;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -491,7 +495,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = RJUT73YPEK;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -516,7 +520,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = RecoveryBotWidgets/RecoveryBotWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = RJUT73YPEK;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RecoveryBotWidgets/Info.plist;

@@ -1,13 +1,14 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { callPlugin, hasPluginMethod, nativePlatform } from "../../lib/nativeApp";
-import { milestoneStatus } from "../../lib/milestones";
-import { DEFAULT_WIDGET_STYLE, FONTS_URL, WIDGET_STYLES, widgetLook } from "../../lib/widgetStyles";
+import { countValues, drawWidget } from "../../lib/widgetDraw";
+import { DEFAULT_WIDGET_STYLE, FONTS_URL, WIDGET_STYLES } from "../../lib/widgetStyles";
 import { Card, ErrorNote, Tray } from "../groups/ui";
 
 // This phone > Widgets, in the iPhone and Android apps: pick the style the Home Screen widgets
-// (day count and favorite chip) are drawn in, from copies of them drawn the way the phone draws
-// them (the same fonts and colors as RecoveryBotWidgets.swift and WidgetStyles.java).
+// (day count, favorite chip and Daily Reflection) are drawn in, from copies drawn the way the phone
+// draws them: lib/widgetDraw.js draws the same layouts (lib/widgetLayouts.js) as
+// RecoveryBotWidgets.swift and WidgetPainter.java.
 // "All widgets" gives every widget one style; each widget on their Home Screen is listed beside
 // it, to give that one its own. The phone keeps the picks and has the widgets redraw
 // (WidgetBridgePlugin widgetStyle / setWidgetStyle / placedWidgets: in
@@ -22,7 +23,7 @@ const HOW = {
   android: "To add one, touch and hold an empty spot on the Home Screen, tap Widgets, and find RecoveryBot.",
 };
 
-const KIND_NAMES = { day: "Day count", chip: "Favorite chip" };
+const KIND_NAMES = { day: "Day count", chip: "Favorite chip", reflection: "Daily Reflection" };
 const SIZE_NAMES = { small: "small", medium: "medium", large: "large" };
 
 // A widget's size on the phone, in points (an iPhone 15's), which the copies are drawn at and scaled from
@@ -39,6 +40,7 @@ export default function WidgetSettings() {
   const [target, setTarget] = useState("all");
   const [error, setError] = useState(null);
   const dark = useDarkMode();
+  const count = useMemo(sampleCount, []);
   useWidgetFonts(shown);
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function WidgetSettings() {
   // The style a target draws in: its own, else (older builds) its kind's, else the one for all
   const kindStyle = (kind) => styles[kind] || styles.all;
   const styleOf = (t) => (t.id === "all" ? styles.all : t.own || kindStyle(t.kind));
-  const lookOf = (key) => widgetLook(WIDGET_STYLES.find((s) => s.key === key) || WIDGET_STYLES[0], dark);
+  const nameOf = (key) => (WIDGET_STYLES.find((s) => s.key === key) || WIDGET_STYLES[0]).name;
   const anyOwn = placed.some((w) => w.style) || Boolean(styles.day || styles.chip);
 
   // Moves right away; put back if the app couldn't keep it
@@ -110,7 +112,6 @@ export default function WidgetSettings() {
     }
   };
 
-  const count = sampleCount();
   const selected = current.id === "all" ? styles.all : current.own || "";
   const tileKind = current.kind;
   const tileSize = current.id === "all" || current.size === "large" ? "small" : current.size;
@@ -120,7 +121,7 @@ export default function WidgetSettings() {
       <Tray label="Widgets">
         <Card className="space-y-4 p-4">
           <p className="text-sm text-slate-600 dark:text-neutral-400">
-            How your day count and favorite chip look on your Home Screen. Pick one style for all of them, or tap one of your widgets to give it its own. {HOW[platform]}
+            How your day count, favorite chip and Daily Reflection look on your Home Screen. Pick one style for all of them, or tap one of your widgets to give it its own. {HOW[platform]}
           </p>
 
           {targets.length > 1 && (
@@ -133,12 +134,12 @@ export default function WidgetSettings() {
                     <span className={`block rounded-[18px] p-0.5 transition ${on ? "ring-[3px] ring-accent" : "ring-1 ring-transparent"}`}>
                       {t.id === "all" ? (
                         <span className="relative block h-16 w-16">
-                          <span className="absolute left-0 top-0 block w-11"><Widget kind="chip" size="small" look={lookOf(styles.all)} count={count} /></span>
-                          <span className="absolute bottom-0 right-0 block w-11"><Widget kind="day" size="small" look={lookOf(styles.all)} count={count} /></span>
+                          <span className="absolute left-0 top-0 block w-11"><Widget kind="chip" size="small" style={styles.all} dark={dark} count={count} /></span>
+                          <span className="absolute bottom-0 right-0 block w-11"><Widget kind="day" size="small" style={styles.all} dark={dark} count={count} /></span>
                         </span>
                       ) : (
                         <span className={`block ${t.size === "medium" ? "w-[8.5rem]" : "w-16"}`}>
-                          <Widget kind={t.kind} size={t.size === "large" ? "small" : t.size} look={lookOf(styleOf(t))} count={count} />
+                          <Widget kind={t.kind} size={t.size === "large" ? "small" : t.size} style={styleOf(t)} dark={dark} count={count} />
                         </span>
                       )}
                     </span>
@@ -157,12 +158,12 @@ export default function WidgetSettings() {
           <div className="flex items-end justify-center gap-3" aria-hidden="true">
             {current.id === "all" ? (
               <>
-                <span className="block w-[250px] max-w-[66%]"><Widget kind="day" size="medium" look={lookOf(styles.all)} count={count} /></span>
-                <span className="block w-[118px] max-w-[32%]"><Widget kind="chip" size="small" look={lookOf(styles.all)} count={count} /></span>
+                <span className="block w-[250px] max-w-[66%]"><Widget kind="day" size="medium" style={styles.all} dark={dark} count={count} /></span>
+                <span className="block w-[118px] max-w-[32%]"><Widget kind="chip" size="small" style={styles.all} dark={dark} count={count} /></span>
               </>
             ) : (
               <span className={`block ${current.size === "small" ? "w-[150px]" : "w-[300px] max-w-full"}`}>
-                <Widget kind={current.kind} size={current.size} look={lookOf(styleOf(current))} count={count} />
+                <Widget kind={current.kind} size={current.size} style={styleOf(current)} dark={dark} count={count} />
               </span>
             )}
           </div>
@@ -173,13 +174,13 @@ export default function WidgetSettings() {
 
           <div role="radiogroup" aria-label={`${current.label} style`} className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4">
             {current.id !== "all" && perWidget && (
-              <StyleTile name="Same as all" note={lookOf(kindStyle(current.kind)).name} on={selected === ""} onPick={() => pick("")}>
-                <Widget kind={tileKind} size={tileSize} look={lookOf(kindStyle(current.kind))} count={count} />
+              <StyleTile name="Same as all" note={nameOf(kindStyle(current.kind))} on={selected === ""} onPick={() => pick("")}>
+                <Widget kind={tileKind} size={tileSize} style={kindStyle(current.kind)} dark={dark} count={count} />
               </StyleTile>
             )}
             {WIDGET_STYLES.map((s) => (
               <StyleTile key={s.key} name={s.name} note={s.note} on={s.key === (current.id === "all" || perWidget ? selected : styleOf(current))} onPick={() => pick(s.key)}>
-                <Widget kind={tileKind} size={tileSize} look={widgetLook(s, dark)} count={count} />
+                <Widget kind={tileKind} size={tileSize} style={s.key} dark={dark} count={count} />
               </StyleTile>
             ))}
           </div>
@@ -233,156 +234,50 @@ function useDarkMode() {
   return dark;
 }
 
-// Their own count when they have a sobriety date (from the page, NativeAppRequest#native_widget_key), else a sample
+// Their own count when they have a sobriety date (from the page, NativeAppRequest#native_widget_key),
+// else the sample in lib/widgetLayouts.js
 function sampleCount() {
   const since = (document.body?.dataset.widget || "").split("|")[1] || "";
-  const status = since ? milestoneStatus(since) : null;
-  const fact = { emoji: "🐾", when: "In 12 days", title: "Longer than an elephant's pregnancy" };
-  if (!status) return { days: 127, next: "6 months", inDays: 55, progress: 0.6, fact };
-  const next = status.next;
-  return { days: status.days, today: status.today?.label, next: next?.label, inDays: next?.inDays ?? 0, progress: next ? Math.max(0.08, 1 - next.inDays / Math.max(30, next.inDays + 30)) : 1, fact };
+  return countValues(since) || { values: {}, progress: undefined };
 }
 
-// A widget drawn at the phone's size in points, then scaled to fit the width it's given
-function Widget({ kind, size, look, count }) {
+// A widget drawn the way the phone draws it (lib/widgetDraw.js, from the layouts the apps share),
+// at the width it's given
+function Widget({ kind, size, style, dark, count }) {
   const [w, h] = SIZES[size];
   const box = useRef(null);
-  const [scale, setScale] = useState(0);
+  const canvas = useRef(null);
+  const [width, setWidth] = useState(0);
+  const fontsReady = useFontsReady();
   useLayoutEffect(() => {
     const el = box.current;
     if (!el) return undefined;
-    const fit = () => setScale(el.clientWidth / w);
+    const fit = () => setWidth(el.clientWidth);
     fit();
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
     observer?.observe(el);
     return () => observer?.disconnect();
-  }, [w]);
+  }, []);
+  useEffect(() => {
+    if (!width || !canvas.current) return;
+    drawWidget(canvas.current, width, (width * h) / w, { style, kind, size, dark, values: count.values, progress: count.progress });
+  }, [width, style, kind, size, dark, count, fontsReady, w, h]);
   return (
     <span ref={box} className="relative block w-full overflow-hidden shadow-md" style={{ aspectRatio: `${w} / ${h}`, borderRadius: `${(22 / w) * 100}% / ${(22 / h) * 100}%` }}>
-      <span className="absolute left-0 top-0 block origin-top-left overflow-hidden text-left"
-        style={{ width: w, height: h, transform: `scale(${scale})`, background: look.background, color: look.ink, visibility: scale ? "visible" : "hidden" }}>
-        <span className="relative flex h-full w-full flex-col p-4">
-          {kind === "chip" ? <ChipFace look={look} size={size} /> : <DayFace look={look} size={size} count={count} />}
-        </span>
-      </span>
+      <canvas ref={canvas} className="absolute inset-0 block h-full w-full" />
     </span>
   );
 }
 
-const font = (f, px, extra = {}) => ({ fontFamily: f.family, fontWeight: f.weight, fontStyle: f.style, fontStretch: f.stretch, fontSize: px, ...extra });
-// The smaller lines, in the phone's own face for the style
-const small = (look, px, weight, extra = {}) => ({ fontFamily: look.text, fontWeight: weight, fontSize: px, ...extra });
-
-// Laid out like DayCountView in RecoveryBotWidgets.swift, size by size
-function DayFace({ look, size, count }) {
-  const unit = count.days === 1 ? "day" : "days";
-  const days = (n) => `${n} ${n === 1 ? "day" : "days"}`;
-  const number = (px) => (
-    <span className="block truncate" style={font(look.number, px, { lineHeight: 1.05, letterSpacing: look.tracking, color: look.numberInk || look.ink })}>{count.days.toLocaleString()}</span>
-  );
-  const text = (px, extra, weight = 500) => small(look, px, weight, extra);
-  const progress = (
-    <span className="mt-1 block h-1 w-full overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, currentColor 22%, transparent)" }}>
-      <span className="block h-full rounded-full" style={{ width: `${Math.round(count.progress * 100)}%`, background: look.accent }} />
-    </span>
-  );
-  const factLine = count.fact && (
-    <span className="flex items-baseline gap-1.5 truncate" style={text(12, { opacity: 0.9 })}>
-      <span>{count.fact.emoji}</span>
-      <span className="truncate">{count.fact.when}: {count.fact.title.charAt(0).toLowerCase() + count.fact.title.slice(1)}</span>
-    </span>
-  );
-
-  if (size === "medium") {
-    return (
-      <span className="flex h-full flex-col justify-center gap-2">
-        <span className="flex items-center gap-4">
-          <span className="flex min-w-0 flex-1 flex-col">
-            {number(60)}
-            <span style={small(look, 20, 600, { opacity: 0.9 })}>{unit}</span>
-          </span>
-          <span className="flex w-[140px] flex-col gap-1.5">
-            {count.today ? (
-              <>
-                <span style={text(12, { opacity: 0.8 })}>Today</span>
-                <span style={text(20)}>{count.today}</span>
-              </>
-            ) : count.next && (
-              <>
-                <span style={text(12, { opacity: 0.8 })}>Next</span>
-                <span style={text(17)}>{count.next}</span>
-                {progress}
-                <span style={text(12, { opacity: 0.85 })}>in {days(count.inDays)}</span>
-              </>
-            )}
-          </span>
-        </span>
-        {factLine}
-      </span>
-    );
-  }
-  if (size === "large") {
-    return (
-      <span className="flex h-full flex-col">
-        {number(96)}
-        <span style={small(look, 22, 600, { opacity: 0.9 })}>{unit}</span>
-        <span className="flex-1" />
-        {count.today ? <span style={text(22)}>Today: {count.today}</span> : count.next && (
-          <>
-            <span style={text(17)}>Next: {count.next}</span>
-            {progress}
-            <span className="mt-1" style={text(12, { opacity: 0.85 })}>in {days(count.inDays)}</span>
-          </>
-        )}
-        <span className="flex-1" />
-        {count.fact && (
-          <span className="flex items-start gap-2.5">
-            <span style={{ fontSize: 30 }}>{count.fact.emoji}</span>
-            <span className="flex flex-col gap-0.5">
-              <span style={text(12, { opacity: 0.8 })}>{count.fact.when}</span>
-              <span style={text(15)}>{count.fact.title}</span>
-            </span>
-          </span>
-        )}
-      </span>
-    );
-  }
-  const line = count.today ? `Today: ${count.today}` : count.next ? `${count.next} in ${days(count.inDays)}` : null;
-  return (
-    <span className="flex h-full flex-col">
-      {number(54)}
-      <span style={small(look, 17, 600, { opacity: 0.9 })}>{unit}</span>
-      <span className="flex-1" />
-      {line && <span className="line-clamp-2" style={text(12, { opacity: 0.9 })}>{line}</span>}
-      {count.next && !count.today && progress}
-    </span>
-  );
-}
-
-// The favorite chip widget, with the plain brass coin the widget gallery shows
-function ChipFace({ look, size }) {
-  const coin = (px) => (
-    <span className="relative flex shrink-0 items-center justify-center rounded-full"
-      style={{ width: px, height: px, background: "linear-gradient(135deg, rgb(237 204 120), rgb(158 120 51))", boxShadow: "0 3px 0 rgb(99 75 32), 0 8px 14px rgb(0 0 0 / 0.4)" }}>
-      <span className="absolute inset-[8px] rounded-full border-2 border-white/35" />
-      <span className="font-serif font-bold" style={{ color: "rgb(92 66 20)", fontSize: px * 0.36 }}>I</span>
-    </span>
-  );
-  if (size === "medium") {
-    return (
-      <span className="flex h-full items-center gap-3.5">
-        {coin(120)}
-        <span className="flex flex-col gap-1">
-          <span style={{ fontSize: 20, fontWeight: 700 }}>1 year</span>
-          <span style={{ fontSize: 12, opacity: 0.75 }}>Favorite chip</span>
-        </span>
-      </span>
-    );
-  }
-  return (
-    <span className="flex h-full flex-col items-center justify-center gap-1">
-      {coin(size === "large" ? 260 : 120)}
-      {size === "large" && <span style={{ fontSize: 17, fontWeight: 600 }}>1 year</span>}
-    </span>
-  );
+// Bumps once the widget fonts have loaded, so the copies draw again in them
+function useFontsReady() {
+  const [ready, setReady] = useState(0);
+  useEffect(() => {
+    let live = true;
+    document.fonts?.ready.then(() => live && setReady((n) => n + 1));
+    const again = () => live && setReady((n) => n + 1);
+    document.fonts?.addEventListener?.("loadingdone", again);
+    return () => { live = false; document.fonts?.removeEventListener?.("loadingdone", again); };
+  }, []);
+  return ready;
 }
