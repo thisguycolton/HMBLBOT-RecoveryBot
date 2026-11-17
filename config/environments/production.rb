@@ -105,14 +105,21 @@ config.hosts << /.*\.perpetualmulti\.media/
   # Links in emails (sign-in, approvals, password resets) point here
   config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "recoverybot.hmblbot.com"), protocol: "https" }
   config.action_mailer.delivery_method = :smtp
+  # Outgoing mail. iCloud (support@hmblbot.com on Colton's iCloud custom domain) unless SMTP_ADDRESS
+  # names another server, such as MailerSend (smtp.mailersend.net, already in hmblbot.com's SPF and
+  # DKIM), which is built for site mail and shows each message's delivery in its dashboard.
   config.action_mailer.smtp_settings = {
-    address:              'smtp.mail.me.com',
-    port:                 587,
-    domain:               'hmblbot.com',
-    user_name:            ENV['APPLE_SMTP_USERNAME'], # or your @icloud.com
-    password:             ENV['APPLE_PASSWORD'], # app-specific password
-    authentication:       'plain',
+    address:              ENV.fetch("SMTP_ADDRESS", "smtp.mail.me.com"),
+    port:                 ENV.fetch("SMTP_PORT", 587).to_i,
+    domain:               "hmblbot.com",
+    user_name:            ENV["SMTP_USERNAME"].presence || ENV["APPLE_SMTP_USERNAME"], # iCloud: the Apple ID's email
+    password:             ENV["SMTP_PASSWORD"].presence || ENV["APPLE_PASSWORD"], # iCloud: an app-specific password
+    authentication:       "plain",
     enable_starttls_auto: true
   }
+  # Without a login every message would fail, so say so at boot instead of at the first sign-up
+  if ENV["SMTP_USERNAME"].blank? && ENV["APPLE_SMTP_USERNAME"].blank?
+    warn "[mail] No SMTP_USERNAME or APPLE_SMTP_USERNAME: emails (sign-up confirmations too) can't be sent"
+  end
 
 end
