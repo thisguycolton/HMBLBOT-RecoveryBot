@@ -133,10 +133,10 @@ class Api::GroupServiceAndTreasuryTest < ActionDispatch::IntegrationTest
   test "offices with the same agenda heading share a section, with their holders' names filled in" do
     [["9AM Host Coordinator", "9 am: {name}", "AJ"], ["12PM Host Coordinator", "12 pm: {name}", nil]].each do |title, line, name|
       p = @group.service_positions.create!(title: title, on_agenda: true, agenda_heading: "Host Coordinators", agenda_lines: line)
-      p.terms.create!(name: name, starts_on: @today - 1) if name
+      p.terms.create!(name: name, starts_on: Date.new(2026, 11, 1)) if name
     end
     secretary = @group.service_positions.create!(title: "Secretary", on_agenda: true, agenda_lines: "{last_month} minutes\n{month} agenda")
-    secretary.terms.create!(name: "Jillian", starts_on: @today - 1)
+    secretary.terms.create!(name: "Jillian", starts_on: Date.new(2026, 11, 1))
     meeting = @group.business_meetings.create!(held_on: Date.new(2026, 11, 15))
     assert_equal [["Host Coordinators", ["9 am: AJ", "12 pm: (open)"]], ["Secretary", ["Oct minutes", "Nov agenda"]]],
                  meeting.officer_sections.map { |s| [s[:title], s[:lines]] }
