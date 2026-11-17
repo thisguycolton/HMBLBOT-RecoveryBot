@@ -56,6 +56,28 @@ class EmailConfirmationTest < ActionDispatch::IntegrationTest
     assert_equal ["new@example.com"], ActionMailer::Base.deliveries.last.to
   end
 
+  test "signing up again with an unconfirmed address resends the link instead of saying it's taken" do
+    user = sign_up
+    first_password = user.encrypted_password
+    ActionMailer::Base.deliveries.clear
+
+    post "/users", params: { user: { name: "New P.", email: " NEW@example.com ", password: "different456", password_confirmation: "different456" }, **human_check_params }
+    assert_redirected_to "/users/check_email"
+    assert_equal ["new@example.com"], ActionMailer::Base.deliveries.last.to
+    assert_equal 1, User.where(email: "new@example.com").count
+    assert_equal first_password, user.reload.encrypted_password, "a second sign-up can't change the password"
+
+    follow_redirect!
+    assert_includes response.body, "&quot;again&quot;:true"
+  end
+
+  test "signing up with a confirmed address still says it's taken" do
+    User.create!(email: "old@example.com", name: "Old", password: "password123", confirmed: true)
+    post "/users", params: { user: { name: "Old", email: "old@example.com", password: "password123", password_confirmation: "password123" }, **human_check_params }
+    assert_response :unprocessable_entity
+    assert_empty ActionMailer::Base.deliveries
+  end
+
   test "the check-your-email page sends strangers to sign-up" do
     get "/users/check_email"
     assert_redirected_to "/users/sign_up"
