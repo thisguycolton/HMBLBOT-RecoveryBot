@@ -14,8 +14,9 @@ import { Card, ErrorNote, Tray } from "../groups/ui";
 // (WidgetBridgePlugin widgetStyle / setWidgetStyle / placedWidgets: in
 // mobile/ios/App/App/AppDelegate.swift, in the App Group the widgets share; on Android,
 // WidgetBridgePlugin.java and WidgetStyles.java).
-// On the iPhone the system says which kind and size each placed widget is, not which one, so two
-// small day counts share a style; on Android each placed widget is its own.
+// A pick for a widget goes to every size of it on their Home Screen (one call per placed widget);
+// the phones still keep a style per placed widget (on the iPhone per kind and size, since the
+// system doesn't say which one each is; on Android per widget).
 // Hidden in a browser and in app builds from before the picker. App builds from before placed
 // widgets (no placedWidgets) get "All widgets", "Day count" and "Favorite chip" instead.
 const HOW = {
@@ -25,6 +26,7 @@ const HOW = {
 
 const KIND_NAMES = { day: "Day count", chip: "Favorite chip", reflection: "Daily Reflection" };
 const SIZE_NAMES = { small: "small", medium: "medium", large: "large" };
+const SIZE_ORDER = ["small", "medium", "large"];
 
 // A widget's size on the phone, in points (an iPhone 15's), which the copies are drawn at and scaled from
 const SIZES = { small: [170, 170], medium: [364, 170], large: [364, 382] };
@@ -64,14 +66,14 @@ export default function WidgetSettings() {
   // What can be picked for: every widget, then each placed widget (or each kind, on older builds)
   const targets = [{ id: "all", label: "All widgets", kind: "day", size: "small" }];
   if (perWidget) {
-    const counts = {};
-    placed.forEach((w) => { counts[`${w.kind}.${w.size}`] = (counts[`${w.kind}.${w.size}`] || 0) + 1; });
-    const seen = {};
-    placed.forEach((w) => {
-      const same = `${w.kind}.${w.size}`;
-      seen[same] = (seen[same] || 0) + 1;
-      const number = counts[same] > 1 ? ` ${seen[same]}` : "";
-      targets.push({ id: w.id, label: `${KIND_NAMES[w.kind]}${number}`, sub: SIZE_NAMES[w.size], kind: w.kind, size: w.size, own: w.style || "" });
+    // One tile for each kind on their Home Screen: a pick there goes to every size of it
+    Object.keys(KIND_NAMES).forEach((kind) => {
+      const mine = placed.filter((w) => w.kind === kind);
+      if (!mine.length) return;
+      const sizes = [...new Set(mine.map((w) => w.size))].sort((a, b) => SIZE_ORDER.indexOf(a) - SIZE_ORDER.indexOf(b));
+      const shown = sizes.includes("medium") ? "medium" : sizes[0];
+      const own = (mine.find((w) => w.size === shown && w.style) || mine.find((w) => w.style))?.style || "";
+      targets.push({ id: `kind:${kind}`, ids: mine.map((w) => w.id), label: KIND_NAMES[kind], sub: sizes.map((z) => SIZE_NAMES[z]).join(", "), kind, size: shown, own });
     });
   } else if (styles.split) {
     targets.push({ id: "day", label: "Day count", kind: "day", size: "small", own: styles.day }, { id: "chip", label: "Favorite chip", kind: "chip", size: "small", own: styles.chip });
@@ -91,7 +93,8 @@ export default function WidgetSettings() {
     setPlaced(nextPlaced);
     setError(null);
     try {
-      await callPlugin("WidgetBridge", "setWidgetStyle", options);
+      // one call per widget when a pick goes to every size of one
+      for (const o of Array.isArray(options) ? options : [options]) await callPlugin("WidgetBridge", "setWidgetStyle", o);
     } catch (e) {
       setStyles(before[0]);
       setPlaced(before[1]);
@@ -107,8 +110,8 @@ export default function WidgetSettings() {
     } else if (current.id === "day" || current.id === "chip") {
       if (key === styles[current.id]) return;
       save({ ...styles, [current.id]: key }, placed, { style: key, widget: current.id });
-    } else if (key !== current.own) {
-      save(styles, placed.map((w) => (w.id === current.id ? { ...w, style: key } : w)), { style: key, widget: current.id });
+    } else if (key !== current.own || placed.some((w) => current.ids.includes(w.id) && (w.style || "") !== key)) {
+      save(styles, placed.map((w) => (current.ids.includes(w.id) ? { ...w, style: key } : w)), current.ids.map((id) => ({ style: key, widget: id })));
     }
   };
 
