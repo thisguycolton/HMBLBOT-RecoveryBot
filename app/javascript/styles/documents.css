@@ -52,6 +52,15 @@
 .doc-prose h2 { color: #0f172a; font-size: 1.4em; font-weight: 700; line-height: 1.3; margin-top: 1.3em; }
 .doc-prose h3 { color: #0f172a; font-size: 1.15em; font-weight: 700; margin-top: 1.2em; }
 .doc-prose p { font-size: inherit !important; line-height: inherit !important; text-align: inherit; hyphens: none !important; }
+/* The toolbar's alignment (style="text-align: …" on the paragraph) wins over pages that line every
+   <p> up on the left (GroupFrame's [&_p]:!text-left), in table cells too.
+   In Tailwind's utilities layer: an !important outside it loses to the layer's !important */
+@layer utilities {
+.doc-prose p[style*="text-align: left"], .doc-prose p[style*="text-align:left"], .doc-prose h1[style*="text-align: left"], .doc-prose h1[style*="text-align:left"], .doc-prose h2[style*="text-align: left"], .doc-prose h2[style*="text-align:left"], .doc-prose h3[style*="text-align: left"], .doc-prose h3[style*="text-align:left"] { text-align: left !important; }
+.doc-prose p[style*="text-align: center"], .doc-prose p[style*="text-align:center"], .doc-prose h1[style*="text-align: center"], .doc-prose h1[style*="text-align:center"], .doc-prose h2[style*="text-align: center"], .doc-prose h2[style*="text-align:center"], .doc-prose h3[style*="text-align: center"], .doc-prose h3[style*="text-align:center"] { text-align: center !important; }
+.doc-prose p[style*="text-align: right"], .doc-prose p[style*="text-align:right"], .doc-prose h1[style*="text-align: right"], .doc-prose h1[style*="text-align:right"], .doc-prose h2[style*="text-align: right"], .doc-prose h2[style*="text-align:right"], .doc-prose h3[style*="text-align: right"], .doc-prose h3[style*="text-align:right"] { text-align: right !important; }
+.doc-prose p[style*="text-align: justify"], .doc-prose p[style*="text-align:justify"], .doc-prose h1[style*="text-align: justify"], .doc-prose h1[style*="text-align:justify"], .doc-prose h2[style*="text-align: justify"], .doc-prose h2[style*="text-align:justify"], .doc-prose h3[style*="text-align: justify"], .doc-prose h3[style*="text-align:justify"] { text-align: justify !important; }
+}
 .doc-prose ul { list-style: disc; padding-inline-start: 1.6em; }
 .doc-prose ol { list-style: decimal; padding-inline-start: 1.6em; }
 .doc-prose li > p { margin: 0; }
@@ -201,9 +210,7 @@
   .doc-dark .hc-form__mock > span { background: #27272a; border-color: #3f3f46; color: #71717a; }
   .doc-dark .hc-sec__pop { background: #18181b; border-color: #3f3f46; }
   .doc-dark .doc-token { background: #0c4a6e; color: #e0f2fe; }
-  /* The toolbar's black text would vanish: show it light; highlights keep dark text on their pastel */
-  .doc-dark .doc-prose [style*="rgb(15, 23, 42)"], .doc-dark .doc-prose [style*="#0f172a"] { color: #f1f5f9 !important; }
-  .doc-dark .doc-prose mark, .doc-dark .doc-prose mark * { color: #0f172a !important; }
+  /* Colored words, highlights, cell fills and borders take their dark tones from docColors.js */
 }
 /* An old copy in the History panel sits on the panel's own color */
 .dark .doc-prose--small { color: #e5e7eb; }
@@ -223,8 +230,6 @@
 }
 @media (max-width: 720px) { .doc-letterhead { margin-top: 0; } .doc-letterhead-mark { height: 48px; } }
 @media print { body.doc-printing .doc-letterhead { margin-top: 0; } }
-/* A filled table cell keeps dark text on its light fill on the dark page too */
-@media screen { .doc-dark .doc-prose td[style*="background-color"], .doc-dark .doc-prose th[style*="background-color"] { color: #0f172a; } }
 .doc-letterhead--right { flex-direction: row-reverse; text-align: right; }
 
 /* Live editing: the others' cursors, a caret in their color with their name over it
