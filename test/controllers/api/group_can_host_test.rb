@@ -72,6 +72,7 @@ class Api::GroupCanHostTest < ActionDispatch::IntegrationTest
   end
 
   test "the host can say they won't be there, and the members who can host hear about it" do
+    @group.update!(sub_requests_audience: "hosts")
     @spare_membership.update!(can_host: true)
     sign_in @host
     ask "co_host"
@@ -101,6 +102,59 @@ class Api::GroupCanHostTest < ActionDispatch::IntegrationTest
     assert_difference -> { Notification.where(kind: "meeting_host.sub_needed").count }, 4 do
       ask
     end
+  end
+
+  test "who sees sub requests: all members by default, only hosts, or off (coordinators always)" do
+    sign_in @host
+    ask
+    id = response.parsed_body["sub_requests"].sole["id"]
+    seen = ->(user) do
+      sign_in user
+      get "/api/groups/#{@group.slug}/meeting_hosts", as: :json
+      response.parsed_body["sub_requests"].map { |r| r["id"] }.include?(id)
+    end
+    badge = ->(user) { HostCommitments.new(user).open_sub_requests.map(&:id).include?(id) }
+
+    assert_equal "members", @group.sub_requests_audience
+    assert seen.(@member)
+    assert badge.(@member)
+
+    @group.update!(sub_requests_audience: "hosts")
+    assert_not seen.(@member)
+    assert_not badge.(@member)
+    @spare_membership.update!(can_host: true)
+    assert seen.(@spare)
+    assert seen.(@coordinator)
+
+    @group.update!(sub_requests_audience: "off")
+    assert_not seen.(@spare)
+    assert_not badge.(@spare)
+    assert seen.(@coordinator), "coordinators always see their meetings' requests"
+    assert seen.(@host), "whoever asked still sees their own request"
+
+    sign_in @spare
+    post sub_path(id, "take"), as: :json
+    assert_response :forbidden
+    assert_equal "open", HostSubRequest.find(id).status
+  end
+
+  test "turned off, only the meeting's coordinators hear a sub is needed" do
+    @group.update!(sub_requests_audience: "off")
+    sign_in @host
+    ask
+    assert_equal [@admin, @coordinator].map(&:id).sort, Notification.where(kind: "meeting_host.sub_needed").pluck(:user_id).sort
+  end
+
+  test "group admins choose who sees sub requests; members can't" do
+    sign_in @member
+    patch "/api/groups/#{@group.slug}", params: { group: { sub_requests_audience: "off" } }, as: :json
+    assert_response :forbidden
+    sign_in @admin
+    patch "/api/groups/#{@group.slug}", params: { group: { sub_requests_audience: "hosts" } }, as: :json
+    assert_response :success
+    assert_equal "hosts", response.parsed_body["sub_requests_audience"]
+    patch "/api/groups/#{@group.slug}", params: { group: { sub_requests_audience: "everyone" } }, as: :json
+    assert_response :unprocessable_entity
   end
 
   test "members can't call off someone else's request" do

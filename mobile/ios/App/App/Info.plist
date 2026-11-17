@@ -66,6 +66,8 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Take a photo to send in chat or add to your profile.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Unlock RecoveryBot with Face ID when the app lock is on. Your face stays on your iPhone.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Record a video to send in chat.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

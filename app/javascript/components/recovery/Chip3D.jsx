@@ -122,7 +122,8 @@ export default function Chip3D({ front, back, shape = "round", color, metal, siz
           {Array.from({ length: layers }, (_, i) => edge(i))}
           {[front, back].map((face, i) => (
             <div key={i} className="hb-chip3d__face" style={{ transform: `${i ? "rotateY(180deg) " : ""}translateZ(${thick / 2}px)` }}>
-              {face}
+              {/* drawn at the coin's size, so its shadows and lighting are in proportion */}
+              {React.isValidElement(face) ? React.cloneElement(face, { size }) : face}
               <div ref={(el) => { sheenRefs.current[i] = el; }} className="hb-chip3d__sheen" style={clip} />
             </div>
           ))}

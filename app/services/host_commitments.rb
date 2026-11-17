@@ -63,11 +63,12 @@ class HostCommitments
   def open_sub_requests
     @open_sub_requests ||= begin
       mine = @user.group_memberships.active.includes(:group).to_a
-      group_ids = mine.select { |m| m.can_host || !m.group.active_memberships.exists?(can_host: true) }.map(&:group_id)
+      # The ones each group lets them see (Group#sees_sub_requests?)
+      group_ids = mine.select { |m| m.group.sees_sub_requests?(@user) }.map(&:group_id)
       HostSubRequest.open.joins(:meeting).includes(meeting: :group).where(meetings: { group_id: group_ids })
                     .where("host_sub_requests.on >= ?", Date.current)
                     .where("host_sub_requests.requested_by_id IS NULL OR host_sub_requests.requested_by_id <> ?", @user.id)
-                    .order(:on).to_a
+                    .order(:on).to_a.select { |r| r.meeting.group.sees_sub_requests?(@user, r.meeting) }
     end
   end
 

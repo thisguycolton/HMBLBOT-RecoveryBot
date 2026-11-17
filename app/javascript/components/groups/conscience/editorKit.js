@@ -16,6 +16,7 @@ import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { HostForm, HostSection, ValueTokens } from "./hostSection";
 import { Collapsible, CollapsibleSummary } from "./collapsible";
+import { swatches, toneAttrs } from "./docColors";
 
 // Text color, kept as style="color: ..." on a <span> (the server keeps that, DocumentHtml)
 const TextColor = Extension.create({
@@ -27,7 +28,7 @@ const TextColor = Extension.create({
         color: {
           default: null,
           parseHTML: (el) => el.style.color || null,
-          renderHTML: (attrs) => (attrs.color ? { style: `color: ${attrs.color}` } : {}),
+          renderHTML: (attrs) => (attrs.color ? { style: `color: ${attrs.color}`, ...toneAttrs(attrs.color, "text") } : {}),
         },
       },
     }];
@@ -40,19 +41,29 @@ const TextColor = Extension.create({
   },
 });
 
-// The colors the toolbar offers: readable on the white page, and the same in print
-export const TEXT_COLORS = [
-  ["Black", "#0f172a"], ["Gray", "#64748b"], ["Red", "#dc2626"], ["Orange", "#ea580c"], ["Green", "#16a34a"],
-  ["Teal", "#0d9488"], ["Blue", "#2563eb"], ["Purple", "#7c3aed"], ["Pink", "#db2777"],
-];
-export const HIGHLIGHT_COLORS = [
-  ["Yellow", "#fef08a"], ["Green", "#bbf7d0"], ["Blue", "#bfdbfe"], ["Pink", "#fbcfe8"], ["Orange", "#fed7aa"], ["Purple", "#ddd6fe"], ["Gray", "#e2e8f0"],
-];
+// The colors the toolbar offers: readable on the white page, and the same in print. On the dark
+// page each shows in its own dark tone (docColors.js).
+export const TEXT_COLORS = swatches("text");
+export const HIGHLIGHT_COLORS = swatches("mark");
+
+// A highlight also says its tone, for the dark page
+const ToneHighlight = Highlight.extend({
+  addAttributes() {
+    const parent = this.parent?.() || {};
+    return {
+      ...parent,
+      color: {
+        ...parent.color,
+        renderHTML: (attrs) => (attrs.color ? { "data-color": attrs.color, style: `background-color: ${attrs.color}; color: inherit`, ...toneAttrs(attrs.color, "mark") } : {}),
+      },
+    };
+  },
+});
 
 // Table cells keep their own fill, border and width as inline style (the server keeps those)
 const cellStyle = {
-  backgroundColor: { default: null, parseHTML: (el) => el.style.backgroundColor || null, renderHTML: (a) => (a.backgroundColor ? { style: `background-color: ${a.backgroundColor}` } : {}) },
-  borderColor: { default: null, parseHTML: (el) => el.style.borderColor || null, renderHTML: (a) => (a.borderColor ? { style: `border-color: ${a.borderColor}` } : {}) },
+  backgroundColor: { default: null, parseHTML: (el) => el.style.backgroundColor || null, renderHTML: (a) => (a.backgroundColor ? { style: `background-color: ${a.backgroundColor}`, ...toneAttrs(a.backgroundColor, "fill") } : {}) },
+  borderColor: { default: null, parseHTML: (el) => el.style.borderColor || null, renderHTML: (a) => (a.borderColor ? { style: `border-color: ${a.borderColor}`, ...toneAttrs(a.borderColor, "border") } : {}) },
   borderWidth: { default: null, parseHTML: (el) => el.style.borderWidth || null, renderHTML: (a) => (a.borderWidth ? { style: `border-width: ${a.borderWidth}; border-style: ${a.borderWidth === "0px" ? "none" : "solid"}` } : {}) },
   cellWidth: { default: null, parseHTML: (el) => el.style.width || null, renderHTML: (a) => (a.cellWidth ? { style: `width: ${a.cellWidth}` } : {}) },
   verticalAlign: { default: null, parseHTML: (el) => el.style.verticalAlign || null, renderHTML: (a) => (a.verticalAlign ? { style: `vertical-align: ${a.verticalAlign}` } : {}) },
@@ -60,11 +71,9 @@ const cellStyle = {
 const StyledCell = TableCell.extend({ addAttributes() { return { ...this.parent?.(), ...cellStyle }; } });
 const StyledHeader = TableHeader.extend({ addAttributes() { return { ...this.parent?.(), ...cellStyle }; } });
 
-export const CELL_FILLS = [
-  ["None", null], ["Gray", "#f1f5f9"], ["Yellow", "#fef9c3"], ["Green", "#dcfce7"], ["Blue", "#dbeafe"], ["Pink", "#fce7f3"],
-  ["Orange", "#ffedd5"], ["Purple", "#ede9fe"],
-];
-export const BORDER_COLORS = [["Default", null], ["Light gray", "#e2e8f0"], ["Gray", "#94a3b8"], ["Black", "#0f172a"], ["Blue", "#2563eb"], ["Red", "#dc2626"], ["Green", "#16a34a"]];
+// [name, light value, tone]; null takes the color off
+export const CELL_FILLS = [["None", null], ...swatches("fill")];
+export const BORDER_COLORS = [["Default", null], ...swatches("border")];
 export const BORDER_WIDTHS = [["Default", null], ["None", "0px"], ["Thin", "1px"], ["Medium", "2px"], ["Thick", "3px"]];
 export const CELL_WIDTHS = [["Auto", null], ["Narrow", "15%"], ["Medium", "30%"], ["Wide", "50%"]];
 
@@ -95,7 +104,7 @@ export const documentExtensions = (placeholder = "Start typing…", live = []) =
   Underline,
   TextStyle,
   TextColor,
-  Highlight.configure({ multicolor: true }),
+  ToneHighlight.configure({ multicolor: true }),
   MarkdownPaste,
   Link.configure({ openOnClick: false, autolink: true, protocols: ["mailto"], HTMLAttributes: { rel: "noopener noreferrer nofollow", target: "_blank" } }),
   TextAlign.configure({ types: ["heading", "paragraph"] }),

@@ -17,6 +17,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(WidgetBridgePlugin.class);
         registerPlugin(NativeAuthPlugin.class);
         registerPlugin(AppBarsPlugin.class);
+        registerPlugin(AppLockPlugin.class);
         openTappedNotification(getIntent());
         super.onCreate(savedInstanceState);
         // Edge to edge on every Android version, the way Android 15 and up already draw apps

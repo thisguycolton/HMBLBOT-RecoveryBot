@@ -70,6 +70,7 @@ class Group < ApplicationRecord
   before_validation { self.deck_editors = DECK_EDITOR_ROLES & Array(deck_editors).map(&:to_s) }
   validates :time_zone, inclusion: { in: TIME_ZONES }
   validates :status, inclusion: { in: STATUSES }
+  validates :sub_requests_audience, inclusion: { in: %w[members hosts off] }
   validates :description, length: { maximum: 1000 }
   validates :quorum_count, numericality: { only_integer: true, in: 1..9999 }, allow_nil: true
   validates :quorum_percent, numericality: { only_integer: true, in: 1..100 }, allow_nil: true
@@ -219,6 +220,30 @@ class Group < ApplicationRecord
   # admins, host coordinators and the members marked Can host. A record keeper reads what hosts
   # read (can_host?) but gives chips only when they're marked Can host too.
   def gives_chips?(user) = hosts_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_host }
+
+  # Who sees a "Need a sub" request (Manage > Meetings setup, sub_requests_audience): every
+  # member ("members", the default), only the people who can host ("hosts"), or nobody ("off").
+  # The coordinators of that meeting always do. Seeing one is what lets someone take it.
+  def sees_sub_requests?(user, meeting = nil)
+    return false unless member_or_site_admin?(user)
+    return true if hosts_editable_by?(user, meeting)
+
+    case sub_requests_audience
+    when "members" then true
+    when "hosts" then can_host?(user)
+    else false
+    end
+  end
+
+  # Who hears that a sub is needed for this meeting: the same people, and its coordinators
+  def sub_askees(meeting)
+    coordinators = host_schedulers(meeting).to_a
+    case sub_requests_audience
+    when "members" then members.to_a
+    when "hosts" then host_pool.to_a + coordinators
+    else coordinators
+    end.uniq
+  end
   # Who may rearrange the group's HostDecks (the layout editor): its admins always, and the roles
   # it picked in Group settings (deck_editors): host coordinators and record keepers unless it
   # changed that, and everyone who can host if it chose to
