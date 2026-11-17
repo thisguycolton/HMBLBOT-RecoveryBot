@@ -12,9 +12,9 @@ import WidgetKit
 // The app (WidgetBridgePlugin in AppDelegate.swift) keeps what they show in the App Group both
 // share; signing out of the app clears it. Tapping the day count opens Today; tapping the chip
 // opens that chip full size on the Chips page, where it spins in 3D (a widget can only turn a
-// flat picture). Both share one set of styles (WidgetStyle), each with its own colors, the site's
-// fonts (bundled in Fonts/, listed under UIAppFonts in Info.plist) and a backdrop drawing
-// (Ornament). They're picked only in the app (This phone > Widgets,
+// flat picture). Both share one set of styles (WidgetStyle), each with its own colors and one of
+// the site's fonts for the big number (bundled in Fonts/, listed under UIAppFonts in Info.plist).
+// They're picked only in the app (This phone > Widgets,
 // components/profile/WidgetSettings.jsx), never from Edit Widget: WidgetBridgePlugin keeps them
 // in the App Group as "widgetStyle" for every widget, and "widgetStyle.<day|chip>.<size>" for the
 // placed widgets of one kind and size that have their own (Shared.style).
@@ -172,68 +172,33 @@ extension WidgetFamily {
     }
 }
 
-// The drawing behind a style's widgets, faint enough to read over
-enum Ornament {
-    case glow      // Classic: two soft circles of light off the top corner
-    case stars     // Night: a scatter of stars and a crescent moon
-    case waves     // Ocean: two swells along the bottom
-    case pines     // Forest: a row of pines along the bottom
-    case sun       // Sunrise: rings of a sun rising in the corner
-    case grid      // Midnight: a dot grid and an amber cursor, like a terminal
-    case rings     // Charcoal: two hairline rings off the top corner
-    case stripe    // Light: a stripe of blue down the left edge
-    case ruled     // Paper: ruled lines and a margin, like a notebook
-}
-
-// Colors, type and drawing for a style. Each uses the site's fonts (Fonts/): Classic and Light
-// are Public Sans, the site's own; Night is airy Figtree Light; Ocean heavy Montserrat Black;
-// Forest TikTok Sans; Sunrise tall TikTok Sans Condensed; Midnight DM Mono in amber; Charcoal
-// a thin Inter; Paper Gentium Book Plus, the site's reading serif, with "days" in italic.
+// Colors and type for a style. The big number is one of the site's fonts (Fonts/): Classic and
+// Light are Public Sans, the site's own; Night is airy Figtree Light; Ocean heavy Montserrat
+// Black; Forest TikTok Sans; Sunrise tall TikTok Sans Condensed; Midnight DM Mono in amber;
+// Charcoal a thin Inter; Paper Gentium Book Plus, the site's reading serif. The smaller lines
+// stay in the system's faces: rounded, or serif on Paper, monospaced on Midnight, plain on Sunrise.
 struct WidgetTheme {
     let background: AnyShapeStyle
     let ink: Color
     let accent: Color
     var numberInk: Color? = nil
     let numberFont: String
-    let textFont: String
-    var unitFont: String? = nil
+    var design: Font.Design = .rounded
     var numberTracking: CGFloat = 0
-    let ornament: Ornament
 
     func number(_ size: CGFloat) -> Font { .custom(numberFont, fixedSize: size) }
 
-    // One weight of the style's text face for every line under the number (the weight is a hint
-    // kept for the system faces the Lock Screen uses)
     func text(_ style: Font.TextStyle, _ weight: Font.Weight = .regular) -> Font {
-        .custom(textFont, size: Self.size(style), relativeTo: style)
+        Font.system(style, design: design).weight(weight)
     }
 
-    // "days" under the number (italic on Paper)
-    func unit(_ style: Font.TextStyle) -> Font {
-        .custom(unitFont ?? textFont, size: Self.size(style), relativeTo: style)
-    }
-
-    private static func size(_ style: Font.TextStyle) -> CGFloat {
-        switch style {
-        case .largeTitle: return 34
-        case .title: return 28
-        case .title2: return 22
-        case .title3: return 20
-        case .headline, .body: return 17
-        case .callout: return 16
-        case .subheadline: return 15
-        case .footnote: return 13
-        case .caption: return 12
-        default: return 11
-        }
-    }
+    // "days" under the number
+    func unit(_ style: Font.TextStyle) -> Font { text(style, .semibold) }
 
     static let paperLight = WidgetTheme(background: AnyShapeStyle(Color(red: 0.96, green: 0.94, blue: 0.89)), ink: Color(red: 0.23, green: 0.18, blue: 0.13),
-                                        accent: Color(red: 0.72, green: 0.42, blue: 0.16), numberFont: "GentiumBookPlus-Bold", textFont: "GentiumBookPlus",
-                                        unitFont: "GentiumBookPlus-Italic", ornament: .ruled)
+                                        accent: Color(red: 0.72, green: 0.42, blue: 0.16), numberFont: "GentiumBookPlus-Bold", design: .serif)
     static let paperDark = WidgetTheme(background: AnyShapeStyle(Color(red: 0.16, green: 0.14, blue: 0.12)), ink: Color(red: 0.95, green: 0.91, blue: 0.83),
-                                       accent: Color(red: 0.87, green: 0.6, blue: 0.3), numberFont: "GentiumBookPlus-Bold", textFont: "GentiumBookPlus",
-                                       unitFont: "GentiumBookPlus-Italic", ornament: .ruled)
+                                       accent: Color(red: 0.87, green: 0.6, blue: 0.3), numberFont: "GentiumBookPlus-Bold", design: .serif)
 
     private static func radial(_ a: Color, _ b: Color) -> AnyShapeStyle {
         AnyShapeStyle(RadialGradient(colors: [a, b], center: .center, startRadius: 5, endRadius: 220))
@@ -243,25 +208,25 @@ struct WidgetTheme {
         switch style {
         case .classic:
             return WidgetTheme(background: AnyShapeStyle(dayGradient), ink: .white, accent: .white,
-                               numberFont: "PublicSans-ExtraBold", textFont: "PublicSans-SemiBold", numberTracking: -1, ornament: .glow)
+                               numberFont: "PublicSans-ExtraBold", numberTracking: -1)
         case .night:
             return WidgetTheme(background: AnyShapeStyle(chipBackdrop), ink: .white, accent: Color(red: 0.6, green: 0.76, blue: 1),
-                               numberFont: "Figtree-Light", textFont: "Figtree-Medium", numberTracking: -1, ornament: .stars)
+                               numberFont: "Figtree-Light", numberTracking: -1)
         case .ocean:
             return WidgetTheme(background: radial(Color(red: 0.16, green: 0.5, blue: 0.85), Color(red: 0.03, green: 0.2, blue: 0.43)), ink: .white,
-                               accent: Color(red: 0.62, green: 0.86, blue: 1), numberFont: "Montserrat-Black", textFont: "Montserrat-SemiBold", ornament: .waves)
+                               accent: Color(red: 0.62, green: 0.86, blue: 1), numberFont: "Montserrat-Black")
         case .forest:
             return WidgetTheme(background: radial(Color(red: 0.2, green: 0.5, blue: 0.36), Color(red: 0.04, green: 0.2, blue: 0.13)), ink: .white,
-                               accent: Color(red: 0.6, green: 0.9, blue: 0.68), numberFont: "TikTokSans-ExtraBold", textFont: "TikTokSans-SemiBold", ornament: .pines)
+                               accent: Color(red: 0.6, green: 0.9, blue: 0.68), numberFont: "TikTokSans-ExtraBold")
         case .black:
             // a deep charcoal with a little light in the middle, rather than flat black
             return WidgetTheme(background: radial(Color(red: 0.2, green: 0.2, blue: 0.22), Color(red: 0.09, green: 0.09, blue: 0.1)), ink: .white,
-                               accent: Color(red: 0.82, green: 0.82, blue: 0.85), numberFont: "Inter-ExtraLight", textFont: "Inter-Medium",
-                               numberTracking: -2, ornament: .rings)
+                               accent: Color(red: 0.82, green: 0.82, blue: 0.85), numberFont: "Inter-ExtraLight",
+                               numberTracking: -2)
         case .light:
             return WidgetTheme(background: radial(.white, Color(red: 0.89, green: 0.89, blue: 0.87)), ink: Color(red: 0.12, green: 0.14, blue: 0.2),
                                accent: Color(red: 0.23, green: 0.44, blue: 0.65), numberInk: Color(red: 0.23, green: 0.44, blue: 0.65),
-                               numberFont: "PublicSans-ExtraBold", textFont: "PublicSans-SemiBold", numberTracking: -1, ornament: .stripe)
+                               numberFont: "PublicSans-ExtraBold", numberTracking: -1)
         case .paperLight: return paperLight
         case .paperDark: return paperDark
         case .paper:
@@ -269,127 +234,11 @@ struct WidgetTheme {
         case .midnight:
             return WidgetTheme(background: AnyShapeStyle(Color(red: 0.04, green: 0.04, blue: 0.06)), ink: .white,
                                accent: Color(red: 0.96, green: 0.62, blue: 0.04), numberInk: Color(red: 0.96, green: 0.62, blue: 0.04),
-                               numberFont: "DMMono-Light", textFont: "DMMono-Regular", numberTracking: -2, ornament: .grid)
+                               numberFont: "DMMono-Light", design: .monospaced, numberTracking: -2)
         case .sunrise:
             return WidgetTheme(background: AnyShapeStyle(LinearGradient(colors: [Color(red: 0.98, green: 0.45, blue: 0.09), Color(red: 0.86, green: 0.15, blue: 0.47)],
                                                                         startPoint: .topLeading, endPoint: .bottomTrailing)),
-                               ink: .white, accent: .white, numberFont: "TikTokSansCondensed-Black", textFont: "TikTokSans-SemiBold", ornament: .sun)
-        }
-    }
-}
-
-// MARK: - Ornaments
-
-// The same shapes as the app's preview (WidgetSettings.jsx) and the Android backgrounds
-// (res/drawable/widget_orn_*). Points are in percent of the widget, or in points from a corner.
-enum OrnamentShapes {
-    // x %, y %, radius pt
-    static let stars: [(CGFloat, CGFloat, CGFloat)] = [
-        (12, 18, 1.2), (28, 10, 0.8), (44, 22, 1), (63, 12, 1.4), (80, 30, 0.9), (70, 44, 0.7), (22, 40, 0.8),
-        (52, 50, 0.6), (88, 56, 1), (36, 62, 0.7), (8, 64, 0.9), (60, 72, 0.6), (92, 82, 0.8), (16, 86, 0.7),
-    ]
-    // x %, height and width in % of the band, along the bottom 28%
-    static let pines: [(CGFloat, CGFloat, CGFloat)] = [
-        (5, 60, 7), (13, 88, 9), (21, 52, 6), (32, 74, 8), (44, 96, 9), (54, 56, 6), (65, 82, 8), (75, 64, 7), (86, 92, 9), (95, 58, 6),
-    ]
-}
-
-struct OrnamentView: View {
-    let theme: WidgetTheme
-
-    var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width, h = geo.size.height
-            switch theme.ornament {
-            case .glow:
-                ZStack {
-                    Circle().fill(.white.opacity(0.07)).frame(width: 220, height: 220).position(x: w - 6, y: -30)
-                    Circle().fill(.white.opacity(0.07)).frame(width: 130, height: 130).position(x: w - 6, y: -30)
-                }
-            case .stars:
-                ZStack {
-                    Path { p in
-                        for (x, y, r) in OrnamentShapes.stars {
-                            p.addEllipse(in: CGRect(x: x / 100 * w - r, y: y / 100 * h - r, width: r * 2, height: r * 2))
-                        }
-                    }.fill(.white.opacity(0.75))
-                    // a crescent: a disc with a smaller one cut out of its upper right
-                    Circle().fill(Color(red: 0.92, green: 0.94, blue: 1).opacity(0.9))
-                        .overlay(Circle().frame(width: 18, height: 18).offset(x: 6, y: -5).blendMode(.destinationOut))
-                        .compositingGroup()
-                        .frame(width: 20, height: 20).position(x: w - 24, y: 24)
-                }
-            case .waves:
-                let band = h * 0.34
-                ZStack {
-                    wave(w, h, band, [0, 14, 15, 6, 30, 6, 50, 14, 70, 22, 85, 22, 100, 14]).fill(.white.opacity(0.13))
-                    wave(w, h, band, [0, 20, 20, 12, 35, 26, 55, 19, 75, 12, 85, 12, 100, 20]).fill(.white.opacity(0.11))
-                }
-            case .pines:
-                let band = h * 0.28
-                Path { p in
-                    for (x, th, tw) in OrnamentShapes.pines {
-                        let cx = x / 100 * w, half = tw / 100 * w / 2, top = h - band * th / 100
-                        p.move(to: CGPoint(x: cx - half, y: h))
-                        p.addLine(to: CGPoint(x: cx, y: top))
-                        p.addLine(to: CGPoint(x: cx + half, y: h))
-                        p.closeSubpath()
-                    }
-                    p.addRect(CGRect(x: 0, y: h - band * 0.12, width: w, height: band * 0.12))
-                }.fill(theme.accent.opacity(0.2))
-            case .sun:
-                ZStack {
-                    ForEach([(95.0, 0.07), (70.0, 0.1), (45.0, 0.14)], id: \.0) { r, a in
-                        Circle().fill(.white.opacity(a)).frame(width: r * 2, height: r * 2).position(x: w - 4, y: h - 4)
-                    }
-                }
-            case .grid:
-                ZStack {
-                    Path { p in
-                        var y: CGFloat = 8
-                        while y < h {
-                            var x: CGFloat = 8
-                            while x < w {
-                                p.addEllipse(in: CGRect(x: x - 0.7, y: y - 0.7, width: 1.4, height: 1.4))
-                                x += 12
-                            }
-                            y += 12
-                        }
-                    }.fill(.white.opacity(0.12))
-                    Rectangle().fill(theme.accent).frame(width: 7, height: 12).position(x: w - 18, y: 20)
-                }
-            case .rings:
-                ZStack {
-                    Circle().stroke(.white.opacity(0.16), lineWidth: 1).frame(width: 120, height: 120).position(x: w, y: 0)
-                    Circle().stroke(.white.opacity(0.09), lineWidth: 1).frame(width: 190, height: 190).position(x: w, y: 0)
-                }
-            case .stripe:
-                Rectangle().fill(theme.accent).frame(width: 5, height: h).position(x: 2.5, y: h / 2)
-            case .ruled:
-                ZStack {
-                    Path { p in
-                        var y: CGFloat = 34
-                        while y < h - 4 {
-                            p.addRect(CGRect(x: 0, y: y, width: w, height: 0.75))
-                            y += 16
-                        }
-                    }.fill(theme.ink.opacity(0.08))
-                    Rectangle().fill(theme.accent.opacity(0.45)).frame(width: 1, height: h).position(x: 10, y: h / 2)
-                }
-            }
-        }
-    }
-
-    // A swell along the bottom: SVG-style "M x y C ... C ..." in a 100 × 30 box, stretched across
-    private func wave(_ w: CGFloat, _ h: CGFloat, _ band: CGFloat, _ n: [CGFloat]) -> Path {
-        func pt(_ i: Int) -> CGPoint { CGPoint(x: n[i] / 100 * w, y: h - band + n[i + 1] / 30 * band) }
-        return Path { p in
-            p.move(to: pt(0))
-            p.addCurve(to: pt(6), control1: pt(2), control2: pt(4))
-            p.addCurve(to: pt(12), control1: pt(8), control2: pt(10))
-            p.addLine(to: CGPoint(x: w, y: h))
-            p.addLine(to: CGPoint(x: 0, y: h))
-            p.closeSubpath()
+                               ink: .white, accent: .white, numberFont: "TikTokSansCondensed-Black", design: .default)
         }
     }
 }
@@ -679,8 +528,8 @@ struct ChipView: View {
             HStack(spacing: 14) {
                 chip
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(entry.label).font(theme.text(.title3)).lineLimit(2)
-                    Text("Favorite chip").font(theme.text(.caption)).opacity(0.75)
+                    Text(entry.label).font(.title3.weight(.bold)).lineLimit(2)
+                    Text("Favorite chip").font(.caption).opacity(0.75)
                 }
                 Spacer(minLength: 0)
             }
@@ -688,7 +537,7 @@ struct ChipView: View {
             VStack(spacing: 4) {
                 chip
                 if !entry.label.isEmpty && family != .systemSmall {
-                    Text(entry.label).font(theme.text(.headline))
+                    Text(entry.label).font(.headline)
                 }
             }
         }
@@ -697,7 +546,7 @@ struct ChipView: View {
     func empty(_ text: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: "star.circle").font(.title)
-            Text(text).font(theme.text(.footnote)).multilineTextAlignment(.center)
+            Text(text).font(.footnote.weight(.medium)).multilineTextAlignment(.center)
         }
     }
 }
@@ -716,18 +565,13 @@ struct ChipWidget: Widget {
 // MARK: - Shared
 
 extension View {
-    // A Home Screen widget gets its style's backdrop and drawing; a Lock Screen one takes the system's
+    // A Home Screen widget gets its style's backdrop; a Lock Screen one takes the system's
     @ViewBuilder func widgetBackground(_ family: WidgetFamily, _ theme: WidgetTheme) -> some View {
         switch family {
         case .accessoryCircular, .accessoryRectangular, .accessoryInline:
             containerBackground(for: .widget) { Color.clear }
         default:
-            containerBackground(for: .widget) {
-                ZStack {
-                    Rectangle().fill(theme.background)
-                    OrnamentView(theme: theme)
-                }
-            }
+            containerBackground(theme.background, for: .widget)
         }
     }
 }

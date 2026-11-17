@@ -2,12 +2,12 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { callPlugin, hasPluginMethod, nativePlatform } from "../../lib/nativeApp";
 import { milestoneStatus } from "../../lib/milestones";
-import { DEFAULT_WIDGET_STYLE, FONTS_URL, PINES, STARS, WIDGET_STYLES, widgetLook } from "../../lib/widgetStyles";
+import { DEFAULT_WIDGET_STYLE, FONTS_URL, WIDGET_STYLES, widgetLook } from "../../lib/widgetStyles";
 import { Card, ErrorNote, Tray } from "../groups/ui";
 
 // This phone > Widgets, in the iPhone and Android apps: pick the style the Home Screen widgets
 // (day count and favorite chip) are drawn in, from copies of them drawn the way the phone draws
-// them (the same fonts, colors and drawings as RecoveryBotWidgets.swift and WidgetStyles.java).
+// them (the same fonts and colors as RecoveryBotWidgets.swift and WidgetStyles.java).
 // "All widgets" gives every widget one style; each widget on their Home Screen is listed beside
 // it, to give that one its own. The phone keeps the picks and has the widgets redraw
 // (WidgetBridgePlugin widgetStyle / setWidgetStyle / placedWidgets: in
@@ -261,7 +261,6 @@ function Widget({ kind, size, look, count }) {
     <span ref={box} className="relative block w-full overflow-hidden shadow-md" style={{ aspectRatio: `${w} / ${h}`, borderRadius: `${(22 / w) * 100}% / ${(22 / h) * 100}%` }}>
       <span className="absolute left-0 top-0 block origin-top-left overflow-hidden text-left"
         style={{ width: w, height: h, transform: `scale(${scale})`, background: look.background, color: look.ink, visibility: scale ? "visible" : "hidden" }}>
-        <Ornament look={look} w={w} h={h} />
         <span className="relative flex h-full w-full flex-col p-4">
           {kind === "chip" ? <ChipFace look={look} size={size} /> : <DayFace look={look} size={size} count={count} />}
         </span>
@@ -271,6 +270,8 @@ function Widget({ kind, size, look, count }) {
 }
 
 const font = (f, px, extra = {}) => ({ fontFamily: f.family, fontWeight: f.weight, fontStyle: f.style, fontStretch: f.stretch, fontSize: px, ...extra });
+// The smaller lines, in the phone's own face for the style
+const small = (look, px, weight, extra = {}) => ({ fontFamily: look.text, fontWeight: weight, fontSize: px, ...extra });
 
 // Laid out like DayCountView in RecoveryBotWidgets.swift, size by size
 function DayFace({ look, size, count }) {
@@ -279,7 +280,7 @@ function DayFace({ look, size, count }) {
   const number = (px) => (
     <span className="block truncate" style={font(look.number, px, { lineHeight: 1.05, letterSpacing: look.tracking, color: look.numberInk || look.ink })}>{count.days.toLocaleString()}</span>
   );
-  const text = (px, extra) => font(look.text, px, extra);
+  const text = (px, extra, weight = 500) => small(look, px, weight, extra);
   const progress = (
     <span className="mt-1 block h-1 w-full overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, currentColor 22%, transparent)" }}>
       <span className="block h-full rounded-full" style={{ width: `${Math.round(count.progress * 100)}%`, background: look.accent }} />
@@ -298,7 +299,7 @@ function DayFace({ look, size, count }) {
         <span className="flex items-center gap-4">
           <span className="flex min-w-0 flex-1 flex-col">
             {number(60)}
-            <span style={font(look.unit || look.text, 20, { opacity: 0.9 })}>{unit}</span>
+            <span style={small(look, 20, 600, { opacity: 0.9 })}>{unit}</span>
           </span>
           <span className="flex w-[140px] flex-col gap-1.5">
             {count.today ? (
@@ -324,7 +325,7 @@ function DayFace({ look, size, count }) {
     return (
       <span className="flex h-full flex-col">
         {number(96)}
-        <span style={font(look.unit || look.text, 22, { opacity: 0.9 })}>{unit}</span>
+        <span style={small(look, 22, 600, { opacity: 0.9 })}>{unit}</span>
         <span className="flex-1" />
         {count.today ? <span style={text(22)}>Today: {count.today}</span> : count.next && (
           <>
@@ -350,7 +351,7 @@ function DayFace({ look, size, count }) {
   return (
     <span className="flex h-full flex-col">
       {number(54)}
-      <span style={font(look.unit || look.text, 17, { opacity: 0.9 })}>{unit}</span>
+      <span style={small(look, 17, 600, { opacity: 0.9 })}>{unit}</span>
       <span className="flex-1" />
       {line && <span className="line-clamp-2" style={text(12, { opacity: 0.9 })}>{line}</span>}
       {count.next && !count.today && progress}
@@ -372,8 +373,8 @@ function ChipFace({ look, size }) {
       <span className="flex h-full items-center gap-3.5">
         {coin(120)}
         <span className="flex flex-col gap-1">
-          <span style={font(look.text, 20)}>1 year</span>
-          <span style={font(look.text, 12, { opacity: 0.75 })}>Favorite chip</span>
+          <span style={{ fontSize: 20, fontWeight: 700 }}>1 year</span>
+          <span style={{ fontSize: 12, opacity: 0.75 }}>Favorite chip</span>
         </span>
       </span>
     );
@@ -381,72 +382,7 @@ function ChipFace({ look, size }) {
   return (
     <span className="flex h-full flex-col items-center justify-center gap-1">
       {coin(size === "large" ? 260 : 120)}
-      {size === "large" && <span style={font(look.text, 17)}>1 year</span>}
+      {size === "large" && <span style={{ fontSize: 17, fontWeight: 600 }}>1 year</span>}
     </span>
   );
-}
-
-// The drawing behind a style, the same as OrnamentView in RecoveryBotWidgets.swift
-function Ornament({ look, w, h }) {
-  const white = (a) => `rgb(255 255 255 / ${a})`;
-  let shapes = null;
-  switch (look.ornament) {
-    case "glow":
-      shapes = <><circle cx={w - 6} cy={-30} r={110} fill={white(0.07)} /><circle cx={w - 6} cy={-30} r={65} fill={white(0.07)} /></>;
-      break;
-    case "stars":
-      shapes = (
-        <>
-          {STARS.map(([x, y, r]) => <circle key={`${x}-${y}`} cx={(x / 100) * w} cy={(y / 100) * h} r={r} fill={white(0.75)} />)}
-          <path transform={`translate(${w - 34} 14)`} d="M8.44,0.12A10,10 0 1,0 19.43,13.32A9,9 0 0,1 8.44,0.12Z" fill="rgb(235 240 255 / 0.9)" />
-        </>
-      );
-      break;
-    case "waves": {
-      const band = h * 0.34;
-      const wave = (n) => {
-        const p = (i) => `${(n[i] / 100) * w},${h - band + (n[i + 1] / 30) * band}`;
-        return `M${p(0)} C${p(2)} ${p(4)} ${p(6)} C${p(8)} ${p(10)} ${p(12)} L${w},${h} L0,${h} Z`;
-      };
-      shapes = (
-        <>
-          <path d={wave([0, 14, 15, 6, 30, 6, 50, 14, 70, 22, 85, 22, 100, 14])} fill={white(0.13)} />
-          <path d={wave([0, 20, 20, 12, 35, 26, 55, 19, 75, 12, 85, 12, 100, 20])} fill={white(0.11)} />
-        </>
-      );
-      break;
-    }
-    case "pines": {
-      const band = h * 0.28;
-      const d = PINES.map(([x, th, tw]) => {
-        const cx = (x / 100) * w, half = ((tw / 100) * w) / 2, top = h - (band * th) / 100;
-        return `M${cx - half},${h} L${cx},${top} L${cx + half},${h} Z`;
-      }).join(" ");
-      shapes = <g fill={look.accent} opacity={0.2}><path d={d} /><rect x={0} y={h - band * 0.12} width={w} height={band * 0.12} /></g>;
-      break;
-    }
-    case "sun":
-      shapes = <>{[[95, 0.07], [70, 0.1], [45, 0.14]].map(([r, a]) => <circle key={r} cx={w - 4} cy={h - 4} r={r} fill={white(a)} />)}</>;
-      break;
-    case "grid": {
-      const dots = [];
-      for (let y = 8; y < h; y += 12) for (let x = 8; x < w; x += 12) dots.push(<circle key={`${x}-${y}`} cx={x} cy={y} r={0.7} />);
-      shapes = <><g fill={white(0.12)}>{dots}</g><rect x={w - 21.5} y={14} width={7} height={12} fill={look.accent} /></>;
-      break;
-    }
-    case "rings":
-      shapes = <><circle cx={w} cy={0} r={60} fill="none" stroke={white(0.16)} /><circle cx={w} cy={0} r={95} fill="none" stroke={white(0.09)} /></>;
-      break;
-    case "stripe":
-      shapes = <rect x={0} y={0} width={5} height={h} fill={look.accent} />;
-      break;
-    case "ruled": {
-      const lines = [];
-      for (let y = 34; y < h - 4; y += 16) lines.push(<rect key={y} x={0} y={y} width={w} height={0.75} />);
-      shapes = <><g fill={look.ink} opacity={0.08}>{lines}</g><rect x={9.5} y={0} width={1} height={h} fill={look.accent} opacity={0.45} /></>;
-      break;
-    }
-    default:
-  }
-  return <svg className="pointer-events-none absolute inset-0" width={w} height={h} aria-hidden="true">{shapes}</svg>;
 }

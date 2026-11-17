@@ -5,7 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg_sunrise"
-    android:clipToOutline="true"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -24,7 +23,7 @@
         android:id="@+id/day_unit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/tiktok_sans_semi_bold"
+        android:fontFamily="sans-serif-condensed"
         android:text="days"
         android:textColor="#E6FFFFFF"
         android:textSize="16sp" />
@@ -38,7 +37,7 @@
         android:id="@+id/day_next"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/tiktok_sans_semi_bold"
+        android:fontFamily="sans-serif-condensed"
         android:maxLines="3"
         android:text="6 months in 55 days"
         android:textColor="#E6FFFFFF"
@@ -60,8 +59,8 @@
         android:id="@+id/day_fact"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/tiktok_sans_semi_bold"
         android:layout_marginTop="10dp"
+        android:fontFamily="sans-serif-condensed"
         android:ellipsize="end"
         android:maxLines="3"
         android:text="🐾 In 12 days: longer than an elephant's pregnancy"

@@ -7,7 +7,4 @@
     <color name="widget_paper_soft">#CCF2E8D4</color>
     <color name="widget_paper_accent">#DE994D</color>
     <color name="widget_paper_track">#33F2E8D4</color>
-    <!-- Paper's notebook lines and margin (widget_bg_paper) -->
-    <color name="widget_paper_rule">#14F2E8D4</color>
-    <color name="widget_paper_margin">#73DE994D</color>
 </resources>

@@ -1,17 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A widget style's background (WidgetStyles.java), for the day count and the chip: its color, then its drawing.
-     The widget's root clips the drawing to the rounded corners (clipToOutline, Android 12 and up). -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <shape android:shape="rectangle">
-            <solid android:color="#0B0B10" />
-            <corners android:radius="24dp" />
-        </shape>
-    </item>
-    <item android:top="2dp" android:left="2dp">
-        <bitmap android:src="@drawable/widget_tile_dot" android:tileMode="repeat" android:tint="#1FFFFFFF" />
-    </item>
-    <item android:gravity="top|end" android:width="7dp" android:height="12dp" android:top="14dp" android:right="14.5dp">
-        <shape android:shape="rectangle"><solid android:color="#F59E0B" /></shape>
-    </item>
-</layer-list>
+<!-- A widget style's background (WidgetStyles.java), for the day count and the chip -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#0B0B10" />
+    <corners android:radius="24dp" />
+</shape>

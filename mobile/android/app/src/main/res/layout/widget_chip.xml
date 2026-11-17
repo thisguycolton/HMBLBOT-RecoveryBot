@@ -4,7 +4,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg_night"
-    android:clipToOutline="true"
     android:gravity="center"
     android:orientation="vertical"
     android:padding="12dp">
@@ -42,7 +41,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:fontFamily="@font/public_sans_semi_bold"
+        android:fontFamily="sans-serif-medium"
         android:maxLines="1"
         android:text="1 year"
         android:textColor="#FFFFFF"
