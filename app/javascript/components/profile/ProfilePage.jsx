@@ -9,6 +9,7 @@ import PushSettings from "./PushSettings";
 import WidgetSettings from "./WidgetSettings";
 import AppLockSettings from "./AppLockSettings";
 import { appLockHere } from "../../lib/appLock";
+import SignInMethods from "./SignInMethods";
 import { ReminderSetting } from "../recovery/ReminderSetting";
 import { api } from "../groups/lib";
 import Avatar from "../groups/Avatar";
@@ -60,7 +61,7 @@ const emptyAccount = (p) => ({ email: p.email, password: "", password_confirmati
 const formFrom = (p) => ({ name: p.name || "", username: p.username || "", bio: p.bio || "", sobriety_date: p.sobriety_date || "", show_sobriety_date: !!p.show_sobriety_date });
 
 // /users/edit, in tabs: Profile (name, picture, blurb, sobriety date, your groups), Account
-// (email, password, delete), Privacy, Notifications (reminders, this device, hosting) and, in
+// (email, password, ways to sign in, delete), Privacy, Notifications (reminders, this device, hosting) and, in
 // the apps, This phone (app lock, widgets). A bar above the tabs shows when Profile or Account has changes that
 // haven't been saved, from any tab, with Save and Discard; leaving the page then asks first.
 export default function ProfilePage() {
@@ -310,11 +311,8 @@ export default function ProfilePage() {
                     </div>
                   ) : (
                     <p className="text-xs text-slate-500 dark:text-neutral-400">
-                      You sign in with Google. Choose a password here if you'd also like to log in with your email.
+                      You sign in with Google or Apple. Choose a password here if you'd also like to log in with your email.
                     </p>
-                  )}
-                  {profile.google && profile.password_chosen && (
-                    <p className="text-xs text-slate-500 dark:text-neutral-400">You can also sign in with Google.</p>
                   )}
                 </Card>
               </Tray>
@@ -339,6 +337,7 @@ export default function ProfilePage() {
           </Tray>
         )}
 
+        {current.key === "account" && <SignInMethods />}
         {current.key === "account" && <DeleteAccount passwordChosen={profile.password_chosen} />}
 
         {current.key === "privacy" && (
