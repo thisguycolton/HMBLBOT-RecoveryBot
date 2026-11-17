@@ -12,12 +12,12 @@
         android:id="@+id/day_number"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="monospace"
-        android:textStyle="normal"
+        android:fontFamily="@font/dmmono_light"
+        android:letterSpacing="-0.04"
         android:includeFontPadding="false"
         android:maxLines="1"
         android:text="127"
-        android:textColor="#FFFFFF"
+        android:textColor="#F59E0B"
         android:textSize="44sp" />
 
     <TextView

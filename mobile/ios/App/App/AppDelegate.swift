@@ -392,7 +392,8 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "update", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clear", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "widgetStyle", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setWidgetStyle", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setWidgetStyle", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "placedWidgets", returnType: CAPPluginReturnPromise)
     ]
     static let group = "group.com.hmblbot.recoverybot"
     // The widgets' styles (WidgetStyle in RecoveryBotWidgets.swift, lib/widgetStyles.js on the site)
@@ -437,21 +438,30 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve()
     }
 
-    // The styles picked in the app (Account settings > Widgets), which every widget left on
-    // "Same as the app" draws in: "widgetStyle" for both, and "widgetStyle.day" /
-    // "widgetStyle.chip" when that widget has its own (the app's "Same style for both" off).
-    // They belong to the phone, so signing out keeps them. "day" and "chip" answer "" while
-    // they follow the one for both.
+    // The styles picked in the app (This phone > Widgets), which the widgets draw in
+    // (Shared.style in RecoveryBotWidgets.swift): "widgetStyle" for every widget, and
+    // "widgetStyle.day" / "widgetStyle.chip" for a kind (kept by app builds before per-widget
+    // picks; this build only clears them). They belong to the phone, so signing out keeps them.
+    // "day" and "chip" answer "" while they follow the one for every widget.
     @objc func widgetStyle(_ call: CAPPluginCall) {
         let defaults = UserDefaults(suiteName: Self.group)
         func known(_ key: String) -> String? { defaults?.string(forKey: key).flatMap { Self.styles.contains($0) ? $0 : nil } }
         call.resolve(["style": known("widgetStyle") ?? "classic", "day": known("widgetStyle.day") ?? "", "chip": known("widgetStyle.chip") ?? ""])
     }
 
-    // { style } sets the one for both and drops each widget's own; { style, widget: "day" | "chip" }
-    // gives that widget its own
+    // The sizes a placed widget's style is kept by: the system tells the app which kind and size
+    // each placed widget is, not which one it is, so two small day counts share a style
+    static let sizes = ["small", "medium", "large"]
+    static let placedKeys = ["day", "chip"].flatMap { kind in sizes.map { "\(kind).\($0)" } }
+
+    // { style } sets the one for every widget and drops all the others; { style, widget: "day" |
+    // "chip" } a kind's own (older pages); { style, widget: "day.small" } the placed widgets of
+    // that kind and size, and with style "" they go back to the one for every widget
     @objc func setWidgetStyle(_ call: CAPPluginCall) {
-        guard let style = call.getString("style"), Self.styles.contains(style) else {
+        let style = call.getString("style") ?? ""
+        let widget = call.getString("widget") ?? ""
+        let placed = Self.placedKeys.contains(widget)
+        guard Self.styles.contains(style) || (placed && style.isEmpty) else {
             call.reject("Unknown widget style")
             return
         }
@@ -459,20 +469,55 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject("This build of the app has no widgets")
             return
         }
-        let widget = call.getString("widget") ?? ""
         switch widget {
+        case _ where placed:
+            if style.isEmpty { defaults.removeObject(forKey: "widgetStyle.\(widget)") } else { defaults.set(style, forKey: "widgetStyle.\(widget)") }
         case "day", "chip":
             defaults.set(style, forKey: "widgetStyle.\(widget)")
-        case "", "both":
+        case "", "both", "all":
             defaults.set(style, forKey: "widgetStyle")
-            defaults.removeObject(forKey: "widgetStyle.day")
-            defaults.removeObject(forKey: "widgetStyle.chip")
+            (["day", "chip"] + Self.placedKeys).forEach { defaults.removeObject(forKey: "widgetStyle.\($0)") }
         default:
             call.reject("Unknown widget")
             return
         }
         WidgetCenter.shared.reloadAllTimelines()
         call.resolve(["style": style])
+    }
+
+    // The widgets on their Home Screen, one entry for each kind and size (Lock Screen widgets
+    // take the system's look, so they're left out), with the style each has of its own ("" while
+    // it follows the one for every widget): { widgets: [{ id: "day.small", kind: "day",
+    // size: "small", style: "" }] }
+    @objc func placedWidgets(_ call: CAPPluginCall) {
+        let defaults = UserDefaults(suiteName: Self.group)
+        WidgetCenter.shared.getCurrentConfigurations { result in
+            var seen = Set<String>()
+            var widgets: [[String: Any]] = []
+            for info in (try? result.get()) ?? [] {
+                let kind: String
+                switch info.kind {
+                case "DayCount": kind = "day"
+                case "FavoriteChip": kind = "chip"
+                default: continue
+                }
+                let size: String
+                switch info.family {
+                case .systemSmall: size = "small"
+                case .systemMedium: size = "medium"
+                case .systemLarge, .systemExtraLarge: size = "large"
+                default: continue
+                }
+                let id = "\(kind).\(size)"
+                guard seen.insert(id).inserted else { continue }
+                let own = defaults?.string(forKey: "widgetStyle.\(id)") ?? ""
+                widgets.append(["id": id, "kind": kind, "size": size, "style": Self.styles.contains(own) ? own : ""])
+            }
+            // day count first, then small to large
+            let order = Self.placedKeys
+            widgets.sort { order.firstIndex(of: $0["id"] as! String)! < order.firstIndex(of: $1["id"] as! String)! }
+            call.resolve(["widgets": widgets])
+        }
     }
 
     @objc func clear(_ call: CAPPluginCall) {
