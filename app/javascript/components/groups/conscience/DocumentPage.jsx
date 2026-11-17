@@ -12,7 +12,7 @@ import { labelClass, selectClass } from "../../ui/styles";
 import Toggle from "../../ui/Toggle";
 import FilterPick from "../../ui/FilterPick";
 import { api } from "../lib";
-import { ErrorNote, Loading, Message, Pill, dangerButton, primaryButton, quietButton } from "../ui";
+import { ErrorNote, Message, Pill, dangerButton, primaryButton, quietButton } from "../ui";
 import DocumentToolbar from "./DocumentToolbar";
 import PdfViewer from "./PdfViewer";
 import ShareMenu from "./ShareMenu";
@@ -26,6 +26,7 @@ import CommentsPane from "./DocumentComments";
 import { HistoryPane, SaveVersionDialog, VersionDiff } from "./DocumentHistory";
 import { diffStats } from "../../../lib/documentDiff";
 import Letterhead from "./Letterhead";
+import DocumentSkeleton, { chromeClass, deskClass, prefersDarkPaper } from "./DocumentSkeleton";
 import { FILE_ACCEPT, KIND_INFO, KINDS, VISIBILITIES, VISIBILITY_LABELS, STATUSES, dateLabel, decisionsPath, documentsPath, fileUrl, motionOptions, sizeLabel } from "./lib";
 
 // What the editor starts from: the text as HTML (an older Markdown document is converted)
@@ -56,7 +57,7 @@ export default function DocumentPage({ group, id = null, embedded = false }) {
   }, [slug, id, reloads]);
 
   if (error) return <Message title="That document isn't here" text={error}><Link to={documentsPath(slug)} className="mt-4 inline-block text-sm text-accent hover:underline">Back to documents</Link></Message>;
-  if (!loaded) return <Loading variant="document" />;
+  if (!loaded) return <DocumentSkeleton embedded={embedded} toolbar={!!(group.can_keep_records || group.is_site_admin)} />;
   const canEdit = loaded.doc ? loaded.doc.can_edit : !!(group.can_keep_records || group.is_site_admin);
   if (!loaded.doc && !canEdit) return <Message title="You can't write documents here" text="Only this group's record keepers can write or upload documents." />;
   const props = { group, initialDoc: loaded.doc, initialHtml: loaded.html, canEdit, embedded };
@@ -68,7 +69,7 @@ export default function DocumentPage({ group, id = null, embedded = false }) {
 // reader opens one nobody has edited live yet, it's the page as it always was.
 function LiveSheet({ onReload, ...props }) {
   const { live, state } = useLiveDocument({ slug: props.group.slug, doc: props.initialDoc, html: props.initialHtml, canEdit: props.canEdit, onReset: onReload });
-  if (state === "loading") return <Loading variant="document" />;
+  if (state === "loading") return <DocumentSkeleton embedded={props.embedded} toolbar={props.canEdit} />;
   return <DocumentSheet {...props} live={state === "ready" ? live : null} onReload={onReload} />;
 }
 
@@ -99,7 +100,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   const [fullScreen, setFullScreen] = useState(false);
   // The dark page: each person's own pick, kept in this browser; until they pick, it follows the site
   const [paper, setPaper] = useState(() => { try { return localStorage.getItem("doc-paper") || ""; } catch { return ""; } });
-  const darkPaper = paper ? paper === "dark" : document.documentElement.classList.contains("dark");
+  const darkPaper = paper ? paper === "dark" : prefersDarkPaper();
   const flipPaper = () => {
     const next = darkPaper ? "light" : "dark";
     setPaper(next);
@@ -564,11 +565,8 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
   ].filter(Boolean).map((m) => ({ ...m, items: m.items.filter(Boolean) }));
 
   return (
-    <div className={`${darkPaper ? "doc-dark " : ""}${fullScreen
-      ? "doc-desk doc-fullscreen fixed inset-0 z-[2200] overflow-y-auto px-2 pb-16 sm:px-4"
-      : embedded ? "doc-desk min-h-[calc(100dvh-var(--nav-h))] px-2 pb-16 sm:px-4"
-      : "doc-desk -mx-4 -mt-1 rounded-2xl px-2 pb-10 sm:mx-0 sm:px-4"}`}>
-      <div className={`doc-chrome z-20 -mx-2 mb-6 space-y-px border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 print:hidden ${fullScreen ? "sticky top-0 sm:-mx-4" : embedded ? "sticky top-[var(--nav-h)] sm:-mx-4" : "sm:sticky sm:top-[var(--nav-h,56px)] sm:-mx-4 sm:rounded-t-2xl"}`}>
+    <div className={deskClass({ dark: darkPaper, embedded, fullScreen })}>
+      <div className={chromeClass({ embedded, fullScreen })}>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 py-1.5">
           <Link to={folderLink} title={`Back to ${isMember ? KIND_INFO[form.kind].label : "Documents"}`} aria-label="Back to the folder" className="grid size-8 place-items-center rounded-lg text-accent hover:bg-neutral-200/70 dark:hover:bg-neutral-700/60"><ChevronLeft className="size-5" /></Link>
           <MenuBar menus={menus} />
