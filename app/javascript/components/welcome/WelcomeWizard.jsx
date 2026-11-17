@@ -78,7 +78,7 @@ function DoneStep({ name, groupsOpen, done, myGroups, leaving, onTour, onHome })
   const lines = [
     ...done.joined.map((g) => ({ icon: UserPlus, key: `j-${g.slug}`, text: <>You asked to join <b>{g.title}</b>. One of its admins lets you in, and you'll get a notification.</> })),
     ...done.followed.map((g) => ({ icon: BellRing, key: `f-${g.slug}`, text: <>You're following <b>{g.name}</b>. We'll tell you when it comes to RecoveryBot.</> })),
-    ...done.started.map((g) => ({ icon: Sparkles, key: `s-${g.slug}`, text: <>You started <b>{g.title}</b>. Once a site admin approves it, you're its admin and can invite the group.</> })),
+    ...done.started.map((g) => ({ icon: Sparkles, key: `s-${g.slug}`, text: <>You started <b>{g.title}</b>. A site admin approves it, and meanwhile you can <a href={`/groups/${g.group}/setup`} className="font-semibold text-accent hover:underline">set it up</a>: its meetings, offices and invite link.</> })),
   ];
   const inGroup = myGroups.some((g) => g.status === "active");
   const nothing = lines.length === 0;

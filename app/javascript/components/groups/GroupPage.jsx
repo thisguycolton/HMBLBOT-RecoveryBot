@@ -12,6 +12,7 @@ import LiteratureTab from "./LiteratureTab";
 import ReadingsTab from "./ReadingsTab";
 import EventsTab from "./EventsTab";
 import ConscienceTab from "./conscience/ConscienceTab";
+import SetupBanner from "./setup/SetupBanner";
 import ShareButton from "../share/ShareButton";
 import { refreshNav } from "../shell/useShell";
 import { groupMenu, groupPerms } from "../shell/navItems";
@@ -68,7 +69,7 @@ export default function GroupPage({ tab: fixedTab }) {
 
   const isMember = group.is_member || group.is_site_admin;
   if (MOVED[tab]) return <Navigate to={`/${slug}/${MOVED[tab]}`} replace />;
-  if (searchParams.get("new") === "1" && group.can_manage) return <Navigate to={`/${slug}/manage/meetings?new=1`} replace />;
+  if (searchParams.get("new") === "1" && group.can_manage) return <Navigate to={`/${slug}/setup`} replace />;
   const tabs = groupMenu(slug, groupPerms(group));
   // Chat is a page of its own for members; anyone else lands here and sees it locked
   if (tab === "chat" && isMember) return <Navigate to={`/${slug}/messages`} replace />;
@@ -140,6 +141,8 @@ export default function GroupPage({ tab: fixedTab }) {
           Your request is waiting for a group admin. You'll get a notification when they let you in. Until then you can still join any of the group's open meetings.
         </Card>
       )}
+
+      {current.key === "home" && <SetupBanner group={group} setGroup={setGroup} />}
 
       {tabs.length > 1 && (
         <nav className="group-chrome no-scrollbar -mx-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)] border-neutral-200 pl-4 pr-10 dark:border-neutral-800" aria-label="Group sections">

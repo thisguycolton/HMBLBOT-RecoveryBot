@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, useNavigate, useParams } from "react-router-dom";
 import {
   BellRing, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, ClipboardCheck, FileText, Gavel, Landmark,
-  LayoutTemplate, Medal, Repeat, Scale, Settings, Stamp, UserCheck, UserPlus, Users,
+  LayoutTemplate, Medal, Repeat, Scale, Settings, Sparkles, Stamp, UserCheck, UserPlus, Users,
 } from "lucide-react";
 import Layout from "../Layout";
 import { api } from "./lib";
@@ -46,7 +46,7 @@ export function GroupFrame({ group, title, fill = false, error = null, children 
 
 // Loads the group for a page outside the group page (`children(group, setGroup, reload)`);
 // `fallback` when it can't be loaded
-function GroupRoute({ fallback = null, children }) {
+export function GroupRoute({ fallback = null, children }) {
   const { slug } = useParams();
   const [group, setGroup] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -124,11 +124,15 @@ export function SettingsRoute() {
                 <Link to={`/${slug}/page/edit`} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:bg-neutral-50 dark:bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
                   <LayoutTemplate className="size-4" /> Edit the group page
                 </Link>
+                <Link to={`/${slug}/setup`} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:bg-neutral-50 dark:bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
+                  <Sparkles className="size-4" /> Setup guide
+                </Link>
               </nav>
               <select aria-label="Manage" className={`${selectClass} group-chrome sm:hidden`} value={current.key}
-                onChange={(e) => (e.target.value === "page" ? navigate(`/${slug}/page/edit`) : navigate(path({ key: e.target.value })))}>
+                onChange={(e) => (e.target.value === "page" ? navigate(`/${slug}/page/edit`) : e.target.value === "setup" ? navigate(`/${slug}/setup`) : navigate(path({ key: e.target.value })))}>
                 {SETTINGS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                 <option value="page">Edit the group page</option>
+                <option value="setup">Setup guide</option>
               </select>
               {current.key === "" && <GroupSettings group={group} setGroup={setGroup} />}
               {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={reload} isNew={new URLSearchParams(window.location.search).get("new") === "1"} />}

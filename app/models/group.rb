@@ -120,6 +120,25 @@ class Group < ApplicationRecord
   def zone = ActiveSupport::TimeZone[time_zone]
   def pending? = status == "pending"
 
+  # The setup guide (/groups/:slug/setup, components/groups/setup/): its steps in order. A step is
+  # "done" or "skipped" in setup_steps; the guide is over once setup_finished_at is set (finished,
+  # or put away from the group page). Groups made before it came in were marked set up.
+  SETUP_STEPS = %w[details meetings offices invite extras].freeze
+  SETUP_STATES = %w[done skipped].freeze
+
+  def setup_json
+    { steps: setup_steps.slice(*SETUP_STEPS), finished_at: setup_finished_at&.iso8601, order: SETUP_STEPS }
+  end
+
+  # `state` "done"/"skipped" marks a step, nil clears it
+  def mark_setup_step!(step, state)
+    raise ArgumentError, "unknown step" unless SETUP_STEPS.include?(step)
+    raise ArgumentError, "unknown state" unless state.nil? || SETUP_STATES.include?(state)
+
+    steps = setup_steps.merge(step => state).compact
+    update!(setup_steps: steps)
+  end
+
   # A site admin says yes to a group someone started: it goes live, run by whoever started it,
   # and people who followed the listing hear it arrived
   def approve!

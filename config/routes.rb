@@ -169,6 +169,7 @@ Rails.application.routes.draw do
       post :leave
       post :approve
       post :regenerate_invite
+      post :setup
       get :court_verifications
     end
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
