@@ -4,6 +4,7 @@ import WidgetKit
 import AuthenticationServices
 import CryptoKit
 import WebKit
+import LocalAuthentication
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -88,6 +89,7 @@ class AppShellViewController: UIViewController {
         main.view.frame = view.bounds
         view.addSubview(main.view)
         main.didMove(toParent: self)
+        AppLock.shared.attach(to: self)
         if let webView = main.webView {
             // The web view's own ground shows below the page, in the home indicator's strip: it was
             // always the light gray, a white bar under dark pages
@@ -131,6 +133,9 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(AppClipboardPlugin())
         bridge?.registerPluginInstance(WidgetBridgePlugin())
         bridge?.registerPluginInstance(NativeAuthPlugin())
+        bridge?.registerPluginInstance(AppLockPlugin())
+        AppLock.shared.webView = webView
+        AppLock.shared.serverURL = bridge?.config.serverURL
         let curtainPlugin = PageCurtainPlugin()
         bridge?.registerPluginInstance(curtainPlugin)
         // Runs before the first page loads, so even the first one is covered
@@ -623,5 +628,324 @@ public class NativeAuthPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationContr
             }
             call.resolve(["idToken": token])
         }.resume()
+    }
+}
+
+// MARK: - App lock (Face ID / Touch ID)
+
+// Turned on in Account settings > This phone (AppLockSettings.jsx on the site). The app then
+// covers itself whenever it goes to the background, and coming back (or opening it from cold)
+// asks for Face ID or Touch ID, with the phone's passcode as the fallback, before the cover
+// lifts. They stay signed in the whole time: nothing about their account is kept here, only
+// "on", when to lock, and whether the site last said someone is signed in (a signed-out app
+// has nothing to hide). Their face or fingerprint never leaves iOS: the app only hears yes or no.
+// A cover that can't be unlocked offers "Sign out" (the site's own /users/sign_out), which turns
+// the lock off. Android: AppLockPlugin.java.
+final class AppLock {
+    static let shared = AppLock()
+    private let defaults = UserDefaults.standard
+
+    var enabled: Bool {
+        get { defaults.bool(forKey: "appLock.enabled") }
+        set { defaults.set(newValue, forKey: "appLock.enabled") }
+    }
+    // Seconds away before it locks: 0 (right away), 60, 300 or 900
+    var after: Double {
+        get { defaults.double(forKey: "appLock.after") }
+        set { defaults.set(newValue, forKey: "appLock.after") }
+    }
+    // What the site last said (native_app.js, on every page)
+    var signedIn: Bool {
+        get { defaults.bool(forKey: "appLock.signedIn") }
+        set { defaults.set(newValue, forKey: "appLock.signedIn") }
+    }
+    var applies: Bool { enabled && signedIn }
+
+    weak var webView: WKWebView?
+    var serverURL: URL?
+    private weak var host: UIViewController?
+    private var cover: AppLockCover?
+    private var locked = false
+    private var asked = false // asked once by itself for this lock; after a cancel, the Unlock button asks
+    private var authenticating = false
+    private var leftAt: Date?
+    private var loadingObservation: NSKeyValueObservation?
+
+    func attach(to host: UIViewController) {
+        self.host = host
+        let center = NotificationCenter.default
+        center.addObserver(forName: UIScene.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in self?.wentAway() }
+        center.addObserver(forName: UIScene.willEnterForegroundNotification, object: nil, queue: .main) { [weak self] _ in self?.cameBack() }
+        center.addObserver(forName: UIScene.didActivateNotification, object: nil, queue: .main) { [weak self] _ in self?.active() }
+        // Opened from cold: covered before the first page can show
+        if applies { lock() }
+    }
+
+    // MARK: What the phone can check with
+
+    // "faceID", "touchID", "opticID", "biometric", "passcode" (no Face ID or Touch ID set up,
+    // just the passcode) or "none" (no passcode either: nothing to lock with)
+    static func kind() -> String {
+        let context = LAContext()
+        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) {
+            switch context.biometryType {
+            case .faceID: return "faceID"
+            case .touchID: return "touchID"
+            default:
+                if #available(iOS 17.0, *), context.biometryType == .opticID { return "opticID" }
+                return "biometric"
+            }
+        }
+        return LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: nil) ? "passcode" : "none"
+    }
+
+    // Face ID or Touch ID, then the passcode if that fails. done(true) when it's them,
+    // done(false, "Canceled") when they backed out, done(false, "Unavailable") with nothing to
+    // check with.
+    static func check(reason: String, done: @escaping (Bool, String?) -> Void) {
+        let context = LAContext()
+        context.localizedFallbackTitle = "Use Passcode"
+        var problem: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &problem) else {
+            done(false, "Unavailable")
+            return
+        }
+        context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason) { ok, error in
+            DispatchQueue.main.async {
+                if ok { return done(true, nil) }
+                let code = (error as? LAError)?.code
+                switch code {
+                case .passcodeNotSet, .biometryNotAvailable, .biometryNotEnrolled: done(false, "Unavailable")
+                default: done(false, "Canceled")
+                }
+            }
+        }
+    }
+
+    // MARK: Going away and coming back
+
+    private func wentAway() {
+        guard applies, !authenticating else { return }
+        leftAt = Date()
+        // Covered now, so the app switcher's picture of the app shows the cover, not the page
+        showCover()
+    }
+
+    private func cameBack() {
+        guard cover != nil, !locked else { return }
+        let away = leftAt.map { Date().timeIntervalSince($0) } ?? .infinity
+        if applies && away >= after { lock() } else { unlock() }
+    }
+
+    private func active() {
+        guard locked, !asked, !authenticating else { return }
+        asked = true
+        ask()
+    }
+
+    private func lock() {
+        locked = true
+        asked = false
+        showCover()
+    }
+
+    func ask() {
+        guard locked, !authenticating else { return }
+        authenticating = true
+        Self.check(reason: "Unlock RecoveryBot") { [weak self] ok, problem in
+            guard let self else { return }
+            self.authenticating = false
+            if ok {
+                self.unlock()
+            } else if problem == "Unavailable" {
+                // The passcode was turned off since: there's nothing left to check with, and a
+                // phone without one is open to anyone anyway
+                self.enabled = false
+                self.unlock()
+            }
+        }
+    }
+
+    private func unlock() {
+        locked = false
+        leftAt = nil
+        guard let view = cover else { return }
+        cover = nil
+        UIView.animate(withDuration: UIAccessibility.isReduceMotionEnabled ? 0 : 0.2, animations: { view.alpha = 0 }, completion: { _ in view.removeFromSuperview() })
+    }
+
+    // The lock's own way out: sign out on the site (which turns the lock off), and lift the cover
+    // once the signed-out page has loaded
+    func signOut() {
+        enabled = false
+        signedIn = false
+        cover?.showWorking()
+        let base = serverURL ?? URL(string: "https://recoverybot.hmblbot.com")!
+        guard let webView else { return unlock() }
+        webView.load(URLRequest(url: base.appendingPathComponent("users/sign_out")))
+        var started = false
+        loadingObservation = webView.observe(\.isLoading, options: [.new]) { [weak self] web, _ in
+            DispatchQueue.main.async {
+                if web.isLoading { started = true; return }
+                guard started else { return }
+                self?.loadingObservation = nil
+                self?.unlock()
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+            guard self?.loadingObservation != nil else { return }
+            self?.loadingObservation = nil
+            self?.unlock()
+        }
+    }
+
+    private func showCover() {
+        guard cover == nil, let host else { return }
+        let view = AppLockCover(kind: Self.kind())
+        view.frame = host.view.bounds
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.onUnlock = { [weak self] in self?.ask() }
+        view.onSignOut = { [weak self] in self?.signOut() }
+        host.view.addSubview(view)
+        cover = view
+    }
+}
+
+// What shows while the app is locked: the app's own light or dark ground, a lock, and buttons to
+// try again or sign out instead
+final class AppLockCover: UIView {
+    var onUnlock: (() -> Void)?
+    var onSignOut: (() -> Void)?
+    private let stack = UIStackView()
+    private let unlockButton = UIButton(type: .system)
+    private let signOutButton = UIButton(type: .system)
+
+    init(kind: String) {
+        super.init(frame: .zero)
+        backgroundColor = AppShellViewController.ground
+        let accent = UIColor(red: 0x4c / 255, green: 0x7b / 255, blue: 0xa6 / 255, alpha: 1)
+        let (symbol, name): (String, String) = {
+            switch kind {
+            case "faceID": return ("faceid", "Face ID")
+            case "touchID": return ("touchid", "Touch ID")
+            case "opticID": return ("opticid", "Optic ID")
+            default: return ("lock.fill", "Passcode")
+            }
+        }()
+        let icon = UIImageView(image: UIImage(systemName: symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 56, weight: .light)))
+        icon.tintColor = accent
+        let title = UILabel()
+        title.text = "RecoveryBot is locked"
+        title.font = UIFontMetrics(forTextStyle: .title2).scaledFont(for: .systemFont(ofSize: 22, weight: .semibold))
+        title.textColor = .label
+        title.adjustsFontForContentSizeCategory = true
+        let note = UILabel()
+        note.text = "You're still signed in. Unlock to pick up where you left off."
+        note.font = .preferredFont(forTextStyle: .subheadline)
+        note.textColor = .secondaryLabel
+        note.numberOfLines = 0
+        note.textAlignment = .center
+        note.adjustsFontForContentSizeCategory = true
+
+        var filled = UIButton.Configuration.filled()
+        filled.title = "Unlock with \(name)"
+        filled.baseBackgroundColor = accent
+        filled.cornerStyle = .large
+        filled.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 28, bottom: 12, trailing: 28)
+        unlockButton.configuration = filled
+        unlockButton.addAction(UIAction { [weak self] _ in self?.onUnlock?() }, for: .touchUpInside)
+
+        var plain = UIButton.Configuration.plain()
+        plain.title = "Sign out instead"
+        plain.baseForegroundColor = .secondaryLabel
+        signOutButton.configuration = plain
+        signOutButton.addAction(UIAction { [weak self] _ in self?.onSignOut?() }, for: .touchUpInside)
+
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 12
+        [icon, title, note, unlockButton, signOutButton].forEach { stack.addArrangedSubview($0) }
+        stack.setCustomSpacing(20, after: note)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -32)
+        ])
+        accessibilityViewIsModal = true
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func showWorking() {
+        unlockButton.isEnabled = false
+        signOutButton.configuration?.title = "Signing out…"
+        signOutButton.isEnabled = false
+    }
+}
+
+// The site's side of the lock (lib/appLock.js): what the phone can check with, turning it on
+// (only after Face ID / Touch ID says it's them) and off, when to lock, and whether someone is
+// signed in
+@objc(AppLockPlugin)
+public class AppLockPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "AppLockPlugin"
+    public let jsName = "AppLock"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "status", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "enable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "disable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setAfter", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "signedIn", returnType: CAPPluginReturnPromise)
+    ]
+    private static let afters: [Double] = [0, 60, 300, 900]
+
+    private func state() -> [String: Any] {
+        let lock = AppLock.shared
+        let kind = AppLock.kind()
+        return ["available": kind != "none", "kind": kind, "enabled": lock.enabled, "after": Int(lock.after)]
+    }
+
+    @objc func status(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { call.resolve(self.state()) }
+    }
+
+    @objc func enable(_ call: CAPPluginCall) {
+        let after = Double(call.getInt("after") ?? 0)
+        DispatchQueue.main.async {
+            AppLock.check(reason: "Turn on the app lock") { ok, problem in
+                guard ok else { return call.reject(problem ?? "Canceled") }
+                AppLock.shared.enabled = true
+                AppLock.shared.signedIn = true
+                if Self.afters.contains(after) { AppLock.shared.after = after }
+                call.resolve(self.state())
+            }
+        }
+    }
+
+    @objc func disable(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            AppLock.shared.enabled = false
+            call.resolve(self.state())
+        }
+    }
+
+    @objc func setAfter(_ call: CAPPluginCall) {
+        let after = Double(call.getInt("after") ?? -1)
+        guard Self.afters.contains(after) else { return call.reject("Unknown time") }
+        DispatchQueue.main.async {
+            AppLock.shared.after = after
+            call.resolve(self.state())
+        }
+    }
+
+    @objc func signedIn(_ call: CAPPluginCall) {
+        let signedIn = call.getBool("signedIn") ?? false
+        DispatchQueue.main.async {
+            AppLock.shared.signedIn = signedIn
+            call.resolve()
+        }
     }
 }
