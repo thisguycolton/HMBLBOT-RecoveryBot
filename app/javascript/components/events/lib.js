@@ -28,10 +28,15 @@ export const GUIDELINES_TEMPLATE = "## Guidelines\n\n- Arrive a few minutes earl
 
 export const newId = () => Math.random().toString(36).slice(2, 10);
 
-// Blocks a page can have only one of (EventBlocks::ONE_PER_PAGE on the server): a group page's
-// Timeline and a profile's Timeline ("feed"). Pages saved before the rule may have more; only
-// the first shows, and saving keeps just that one (they hold a title and a count, not notes).
-export const ONE_PER_PAGE = ["timeline", "feed"];
+// Blocks a page can have only one of (EventBlocks::ONE_PER_PAGE on the server): the ones that
+// show the same thing wherever they go. People, Documents, Decisions, Agenda and Poll can
+// repeat, since each copy can show something different. Pages saved before the rule may have
+// more; only the first shows, and saving keeps just that one.
+export const ONE_PER_PAGE = [
+  "feed", "about", "groups", "chips",
+  "meetings", "events", "timeline", "join", "members", "literature", "readings", "business_meeting",
+  "guidelines", "conscience_agenda",
+];
 export const onePerPage = (type) => ONE_PER_PAGE.includes(type);
 // The ids of the extra copies: every one-per-page block after the first of its type
 export function extraBlockIds(blocks) {

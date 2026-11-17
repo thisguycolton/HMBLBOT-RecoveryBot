@@ -16,7 +16,7 @@ import { BLOCK_INFO, SPANS, nearestSpan, onePerPage, tone } from "../lib";
 // the list as it goes), so a column lays itself out as it will be, and useFlip slides them
 // there. On a phone (or any touch screen) blocks move with up and down arrows instead.
 //
-// A page has one of each one-per-page block (the Timeline): those can't be duplicated, and
+// A page has one of each one-per-page block (Timeline, About, Meetings...): those can't be duplicated, and
 // `extras` (ids of copies on a page saved before that rule) are marked as not showing.
 export default function Canvas({ layout, blocks, polls, context, blockInfo = BLOCK_INFO, selected, onSelect, onChange, onRemove, onDuplicate, onMove, canMove, onSettings, activeId, extras = new Set() }) {
   const anchor = useRef(null);
@@ -144,7 +144,8 @@ function SortableBlock({ block, layout, polls, context, info, selected, dragging
           <div role="note" className="ev-extra mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
             <span className="min-w-0 flex-1">
               <strong className="font-semibold">A page can have one {info?.label || "of these"} block.</strong>{" "}
-              This one doesn't show on the page, and it goes away when you save. The posts in it stay put.
+              This one doesn't show on the page, and it goes away when you save.
+              {block.markdown?.trim() ? " Its text goes with it, so copy anything you want to keep into the first one." : ""}
             </span>
             <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(); }}
               className="shrink-0 rounded-lg !bg-amber-600 px-3 py-1.5 text-xs font-semibold !text-white hover:opacity-90">

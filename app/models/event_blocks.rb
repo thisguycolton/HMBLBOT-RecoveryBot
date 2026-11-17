@@ -40,10 +40,15 @@
 #   people     title, which (following/followers)
 #   chips      title: up to five favorite chips they picked on their Chips page (Chips.favorites)
 #
-# A page has at most one of each ONE_PER_PAGE block (a group page's timeline, a profile's
-# feed): normalize keeps the first and leaves out the rest. Pages saved before that rule may
+# A page has at most one of each ONE_PER_PAGE block: the ones that show the same thing
+# wherever they are (a profile's feed, about, groups and chips; a group's meetings, events,
+# timeline, join, members, literature, readings and business meeting; an event's guidelines
+# and business agenda). People, documents, decisions, agendas and polls can repeat, since each
+# copy can show something different (followers or following, a folder, a kind of decision...).
+# normalize keeps the first of each and leaves out the rest. Pages saved before that rule may
 # still have extras until they're saved again; the page only shows the first (PageBlocks in
-# EventLayout.jsx). Those blocks only hold a title and a count, so nothing posted is lost.
+# EventLayout.jsx). Those extras only hold settings like a title and a count, not anything
+# posted, apart from the text of an extra Join or Guidelines block.
 #
 # Each block has a smaller view for the side column and a larger one for the main column;
 # size "auto" follows the column it's in, "compact" or "full" picks one.
@@ -51,7 +56,11 @@ module EventBlocks
   TYPES = %w[heading notes agenda guidelines photo gallery poll conscience_agenda].freeze
   GROUP_TYPES = %w[heading notes agenda guidelines photo gallery meetings events timeline literature readings members join documents decisions business_meeting].freeze
   PROFILE_TYPES = %w[heading notes photo gallery about feed groups people chips].freeze
-  ONE_PER_PAGE = %w[timeline feed].freeze
+  ONE_PER_PAGE = %w[
+    feed about groups chips
+    meetings events timeline join members literature readings business_meeting
+    guidelines conscience_agenda
+  ].freeze
   COLORS = %w[default accent brand sky indigo emerald amber rose slate].freeze
   SIZES = %w[auto compact full].freeze
   REGIONS = %w[main side].freeze
