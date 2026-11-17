@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Ban, Check, Copy, RefreshCw, Search, UserPlus, X } from "lucide-react";
 import { iconInputClass, inputClass } from "../ui/styles";
 import { api, ROLE_LABELS, soberFor } from "./lib";
@@ -8,8 +9,12 @@ import SponsorCheck from "../ui/SponsorCheck";
 import { Card, ErrorNote, Pill, Tray, copy, dangerButton, primaryButton, quietButton } from "./ui";
 
 // Members with their pictures and blurbs. Group admins also see join requests, add people
-// by email, share the invite link, change roles and remove people, or block them (they can't
-// ask to join again or use the invite link until they're unblocked).
+// by email, share the invite link, make admins, mark who can host and remove people, or block them (they can't
+// ask to join again or use the invite link until they're unblocked). Other roles come from
+// offices (Manage > Offices): the pills show the offices each person holds.
+
+// Roles given by hand before offices gave them (Manage > Offices lists them to turn into offices)
+const HAND_ROLES = [["can_keep_records", "Record keeper"], ["can_schedule_hosts", "Host coordinator"], ["can_keep_treasury", "Treasurer"]];
 
 // Everything the member search looks at: name, username, email and the roles shown as pills.
 const searchText = (person) => [
@@ -21,6 +26,7 @@ const searchText = (person) => [
   person.can_schedule_hosts && "host coordinator",
   person.can_keep_treasury && "treasurer",
   person.can_host && "can host",
+  ...(person.offices || []).map((o) => o.title),
 ].filter(Boolean).join(" ").toLowerCase();
 
 export default function MembersTab({ group, reload, setGroup }) {
@@ -137,6 +143,11 @@ export default function MembersTab({ group, reload, setGroup }) {
             className={`${inputClass} pl-9`}
           />
         </div>
+        {manage && (
+          <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">
+            Record keepers, treasurers and host coordinators come from offices. Give someone one in <Link to={`/${group.slug}/manage/offices`} className="font-medium text-accent hover:underline">Manage › Offices</Link>.
+          </p>
+        )}
         {members.length === 0 && (
           <Card className="p-4 text-center text-sm text-slate-500 dark:text-neutral-400">
             No one matches “{query.trim()}”.{" "}
@@ -151,9 +162,10 @@ export default function MembersTab({ group, reload, setGroup }) {
                 <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900 dark:text-white">
                   {person.username ? <a href={`/people/${person.username}`} className="!text-slate-900 hover:underline dark:!text-white">{person.name}</a> : person.name}
                   {person.role === "admin" && <Pill tone="accent">{ROLE_LABELS.admin}</Pill>}
-                  {person.can_keep_records && <Pill tone="green">Record keeper</Pill>}
-                  {person.can_schedule_hosts && <Pill tone="green">{person.host_slots_only && person.role !== "admin" ? `Host coordinator · ${person.host_slot_count} ${person.host_slot_count === 1 ? "time slot" : "time slots"}` : "Host coordinator"}</Pill>}
-                  {person.can_keep_treasury && <Pill tone="green">Treasurer</Pill>}
+                  {(person.offices || []).map((o) => <Pill key={o.title} tone="green">{o.title}</Pill>)}
+                  {person.role !== "admin" && HAND_ROLES.filter(([flag]) => person[flag] && !(person.office_roles || []).includes(flag)).map(([flag, label]) => (
+                    <Pill key={flag} tone="green">{flag === "can_schedule_hosts" && person.host_slots_only ? `${label} · ${person.host_slot_count} ${person.host_slot_count === 1 ? "time slot" : "time slots"}` : label}</Pill>
+                  ))}
                   {person.can_host && <Pill tone="green">Can host</Pill>}
                   {person.can_sponsor && <SponsorCheck badge />}
                 </p>
@@ -171,18 +183,6 @@ export default function MembersTab({ group, reload, setGroup }) {
                     <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`}
                       onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { role: person.role === "admin" ? "member" : "admin" } })}>
                       {person.role === "admin" ? "Make member" : "Make admin"}
-                    </button>
-                    <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Record keepers write the group's documents"
-                      onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_keep_records: !person.can_keep_records } })}>
-                      {person.can_keep_records ? "Remove record keeper role" : "Make record keeper"}
-                    </button>
-                    <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Schedules who hosts and co-hosts each meeting"
-                      onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_schedule_hosts: !person.can_schedule_hosts } })}>
-                      {person.can_schedule_hosts ? "Remove host coordinator role" : "Make host coordinator"}
-                    </button>
-                    <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Writes and posts the treasurer's reports"
-                      onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_keep_treasury: !person.can_keep_treasury } })}>
-                      {person.can_keep_treasury ? "Remove treasurer role" : "Make treasurer"}
                     </button>
                     <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Can host or co-host: reads the format kept for hosts and hears when a host won't be there"
                       onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_host: !person.can_host } })}>

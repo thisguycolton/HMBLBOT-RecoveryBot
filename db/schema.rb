@@ -805,6 +805,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
     t.boolean "can_host", default: false, null: false
     t.boolean "host_slots_only", default: false, null: false
     t.bigint "host_meeting_ids", default: [], null: false, array: true
+    t.string "office_roles", default: [], null: false, array: true
     t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
     t.index ["group_id"], name: "index_group_memberships_on_group_id"
     t.index ["user_id"], name: "index_group_memberships_on_user_id"
@@ -867,6 +868,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
     t.jsonb "setup_steps", default: {}, null: false
     t.datetime "setup_finished_at"
     t.string "sub_requests_audience", default: "members", null: false
+    t.date "office_roles_synced_on"
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -1512,6 +1514,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
     t.string "agenda_heading"
     t.text "agenda_lines"
     t.string "grants"
+    t.bigint "host_meeting_ids", default: [], null: false, array: true
     t.index ["group_id"], name: "index_service_positions_on_group_id"
   end
 

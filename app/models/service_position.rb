@@ -1,5 +1,7 @@
 # A service position in a group (chair, secretary, treasurer, GSR, coffee maker...): what it
-# involves, how long a term lasts, and who has held it (ServiceTerm).
+# involves, how long a term lasts, and who has held it (ServiceTerm). An office can give its holder
+# a role (grants, see OfficeRoles); a host coordinator office covers the weekly meetings in
+# host_meeting_ids, or the whole group when that's empty.
 class ServicePosition < ApplicationRecord
   moderates_language :title, :description, :agenda_lines
   belongs_to :group
@@ -35,6 +37,7 @@ class ServicePosition < ApplicationRecord
     {
       id: id, title: title, description: description.to_s, term_months: term_months, sobriety_months: sobriety_months,
       position: position, archived: archived, on_agenda: on_agenda, agenda_heading: agenda_heading.to_s, agenda_lines: agenda_lines.to_s, grants: grants, rotation: rotation(today),
+      host_meeting_ids: grants == "can_schedule_hosts" ? host_meeting_ids : [],
       current: term&.as_api_json,
       history: terms.reject { |t| t == term }.first(6).map(&:as_api_json),
     }

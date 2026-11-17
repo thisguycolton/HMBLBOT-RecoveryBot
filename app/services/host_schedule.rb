@@ -106,11 +106,18 @@ class HostSchedule
     end.first(MY_DATES)
   end
 
-  # The host coordinators an admin can limit to some time slots (admins coordinate them all)
+  # Who coordinates which time slots, for admins (Manage > Meetings setup, read-only): each host
+  # coordinator office and its holder (or nobody), and anyone given the role by hand before offices
+  # gave roles. Empty host_meeting_ids: the whole group. Slots are changed in Manage > Offices.
   def coordinators(memberships)
-    memberships.select { |m| m.can_schedule_hosts && !m.admin? }.sort_by { |m| m.user.display_name.downcase }.map do |m|
-      { membership_id: m.id, name: m.user.display_name, avatar_url: m.user.avatar_url, host_slots_only: m.host_slots_only, host_meeting_ids: m.host_meeting_ids }
+    offices = @group.service_positions.where(grants: "can_schedule_hosts", archived: false).includes(:terms).ordered.map do |p|
+      term = p.current_term(@today)
+      { office: p.title, name: term&.name, host_meeting_ids: p.host_meeting_ids }
     end
+    by_hand = memberships.select { |m| m.can_schedule_hosts && !m.admin? && !m.office_roles.include?("can_schedule_hosts") }
+                         .sort_by { |m| m.user.display_name.downcase }
+                         .map { |m| { office: nil, name: m.user.display_name, host_meeting_ids: m.host_slots_only ? m.host_meeting_ids : [] } }
+    offices + by_hand
   end
 
   def edits?(meeting) = @can_edit && (@my_slot_ids.nil? || @my_slot_ids.include?(meeting.id))

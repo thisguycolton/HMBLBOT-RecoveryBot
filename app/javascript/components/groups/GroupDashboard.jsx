@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, useNavigate, useParams } from "react-router-dom";
 import {
   BellRing, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, ClipboardCheck, FileText, Gavel, Landmark,
-  LayoutTemplate, Medal, Repeat, Scale, Settings, Sparkles, Stamp, UserCheck, UserPlus, Users,
+  LayoutTemplate, Medal, Repeat, Scale, Settings, ShieldCheck, Sparkles, Stamp, UserCheck, UserPlus, Users,
 } from "lucide-react";
 import Layout from "../Layout";
 import { api } from "./lib";
@@ -19,6 +19,8 @@ import ChipDesigner from "./ChipDesigner";
 import DocumentTemplates from "./conscience/DocumentTemplates";
 import SubRequestsSetting from "./SubRequestsSetting";
 import DocumentSkeleton from "./conscience/DocumentSkeleton";
+import ServiceView from "./conscience/ServiceView";
+import { SlotCoverageSection } from "./SlotPicker";
 
 // Who gets the Dashboard: anyone in the group with a role beyond plain member
 export const hasGroupRole = (group) =>
@@ -93,6 +95,7 @@ export function ConscienceRoute({ fallback }) {
 // Manage (/:slug/manage/*, what was Settings at /settings), for group admins: everything about
 // how the group is set up, in one place
 const SETTINGS = [
+  { key: "offices", label: "Offices", icon: ShieldCheck },
   { key: "", label: "Group details", icon: Settings },
   { key: "meetings", label: "Meetings setup", icon: CalendarClock },
   { key: "chips", label: "Chips", icon: Medal },
@@ -140,8 +143,10 @@ export function SettingsRoute() {
                 <option value="page">Edit the group page</option>
                 <option value="setup">Setup guide</option>
               </select>
+              {current.key === "offices" && <ServiceView group={group} manage />}
               {current.key === "" && <GroupSettings group={group} setGroup={setGroup} />}
               {current.key === "meetings" && <SubRequestsSetting group={group} setGroup={setGroup} />}
+              {current.key === "meetings" && <SlotCoverageSection slug={slug} />}
               {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={reload} isNew={new URLSearchParams(window.location.search).get("new") === "1"} />}
               {current.key === "chips" && <ChipDesigner group={group} />}
               {current.key === "literature" && <LiteratureTab group={group} reload={reload} />}

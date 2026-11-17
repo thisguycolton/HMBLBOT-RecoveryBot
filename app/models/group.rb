@@ -177,6 +177,17 @@ class Group < ApplicationRecord
     restore_attributes([:description]) unless saved
     saved
   end
+  # Offices give roles (OfficeRoles), and terms start and end by date. There's no job runner, so
+  # the first time a day anyone opens the group, its office roles are brought up to date (true
+  # when that happened just now).
+  def sync_office_roles!
+    today = zone.today
+    return if office_roles_synced_on == today
+
+    OfficeRoles.sync!(self)
+    update_columns(office_roles_synced_on: today)
+  end
+
   # Who schedules the hosts of its meetings: group admins, and members an admin marked in the
   # Members tab (the person doing that needn't keep the records). A coordinator an admin limited
   # to some time slots (GroupMembership#host_slots_only) schedules only those meetings, so given

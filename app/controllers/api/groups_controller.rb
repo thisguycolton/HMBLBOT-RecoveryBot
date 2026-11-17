@@ -273,8 +273,10 @@ class Api::GroupsController < ApplicationController
     if member
       # The green check (like in the Zoom rooms) on anyone here offering to sponsor
       sponsoring = sponsoring_ids
+      offices = offices_by_user
       json[:members] = @group.active_memberships.includes(user: { avatar_attachment: :blob }).sort_by { |m| [m.admin? ? 0 : 1, m.user.display_name.downcase] }
-                             .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records, can_schedule_hosts: m.can_schedule_hosts, can_keep_treasury: m.can_keep_treasury, can_host: m.can_host, host_slots_only: m.host_slots_only, host_slot_count: m.host_meeting_ids.size, can_sponsor: sponsoring.include?(m.user_id)) }
+                             .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records, can_schedule_hosts: m.can_schedule_hosts, can_keep_treasury: m.can_keep_treasury, can_host: m.can_host, host_slots_only: m.host_slots_only, host_slot_count: m.host_meeting_ids.size, can_sponsor: sponsoring.include?(m.user_id),
+                                                                         office_roles: m.office_roles, offices: offices[m.user_id] || []) }
       json[:books] = @group.group_books.includes(book: { cover_image_attachment: :blob }).order(:created_at).map do |gb|
         { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color, members_only: gb.book.members_only? } }
       end
@@ -296,6 +298,15 @@ class Api::GroupsController < ApplicationController
 
   # Who in this group the viewer sees as available to sponsor (SponsorProfile.visible_to), and
   # the viewer themself when they're offering
+  # The offices each member holds now (Members: "Treasurer", and the role it gives them)
+  def offices_by_user
+    today = @group.zone.today
+    @group.service_positions.where(archived: false).includes(:terms).each_with_object({}) do |p, by_user|
+      user_id = p.current_term(today)&.user_id
+      (by_user[user_id] ||= []) << { title: p.title, grants: p.grants } if user_id
+    end
+  end
+
   def sponsoring_ids
     return [] unless @group.show_sponsors && current_user
 

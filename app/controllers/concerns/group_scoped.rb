@@ -12,7 +12,9 @@ module GroupScoped
 
   def set_group
     @group = Group.find_by!(slug: params[:group_slug] || params[:slug])
-    render json: { error: "Not found." }, status: :not_found unless @group.visible_to?(current_user)
+    return render(json: { error: "Not found." }, status: :not_found) unless @group.visible_to?(current_user)
+
+    @group.sync_office_roles!
   end
 
   # The group's page and asking to join: any active group (Group#page_visible_to?)
