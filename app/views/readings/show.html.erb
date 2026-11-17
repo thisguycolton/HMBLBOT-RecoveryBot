@@ -51,5 +51,8 @@
         group: reading_group_link(@reading, current_user),
         host_url: reading_host_url(@reading, current_user),
         polls: @reading.polls.map(&:token),
+        adopted_from: (from = @reading.adopted_from) && from.visible_to?(current_user) ? {
+          title: from.title, path: reading_path(from), meeting_name: from.meetingName, meeting_date: from.meetingDate&.iso8601
+        } : nil,
         can_add_poll: Poll.attachable_to?(@reading, current_user)
       }.to_json) %>" data-current-user="<%= json_escape(current_user ? { id: current_user.id }.to_json : '{}') %>"></div>

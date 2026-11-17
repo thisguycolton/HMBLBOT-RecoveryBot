@@ -5,6 +5,9 @@ class Reading < ApplicationRecord
   has_rich_text :topic
   belongs_to :user, optional: true
   belongs_to :group, optional: true
+  # The reading this one was adopted from (its words and topics were copied to start it)
+  belongs_to :adopted_from, class_name: "Reading", optional: true
+  has_many :adoptions, class_name: "Reading", foreign_key: :adopted_from_id, inverse_of: :adopted_from, dependent: :nullify
   has_many :reading_tags, dependent: :destroy
   has_many :tags, -> { order(:title) }, through: :reading_tags
   # Polls shown with it (Poll#subject); a poll outlives the reading
@@ -22,6 +25,9 @@ class Reading < ApplicationRecord
   scope :scheduled, -> { where("readings.published_at > ?", Time.current) }
   scope :not_published, -> { where(published_at: nil).or(where("readings.published_at > ?", Time.current)) }
   scope :draft, -> { where(published_at: nil) }
+  # What someone may look up: published readings, plus their own drafts and scheduled ones
+  # (admins can open others' drafts, but these stay out of lists so a draft isn't spread around)
+  scope :listable_for, ->(user) { user ? published.or(where(user_id: user.id)) : published }
   scope :published_now, -> { where("readings.published_at <= ?", Time.current) }
   
   def self.ransackable_attributes(auth_object = nil)
@@ -34,6 +40,10 @@ class Reading < ApplicationRecord
     Arel.sql("(SELECT body FROM action_text_rich_texts WHERE action_text_rich_texts.record_type = 'Reading' AND action_text_rich_texts.record_id = readings.id AND action_text_rich_texts.name = 'richer_content')")
   end
   attr_accessor :hour, :minute, :meridiem
+
+  def visible_to?(user)
+    published? || user&.admin? || (user && user_id == user.id)
+  end
 
   def published?
     # A reading is published if published_at is set and in the past (or exactly at current time)
