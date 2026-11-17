@@ -1,8 +1,9 @@
 # "Need a sub": a host coordinator (a group admin, or a member marked as scheduling hosts), or the
 # host or co-host who won't be there, asks the group to fill a place at one meeting on one date.
-# The members who can host hear about it (every member, if the group hasn't marked any), and the
-# coordinators of that meeting (a coordinator limited to time slots only hears about theirs, and
-# only asks for subs there); any member can take it, which puts them on as a cover for that date.
+# Who hears about it and may take it is the group's choice (Group#sees_sub_requests?: every
+# member, the people who can host, or only the coordinators of that meeting; a coordinator limited
+# to time slots only hears about theirs, and only asks for subs there). Taking one puts them on
+# as a cover for that date.
 class Api::GroupHostSubRequestsController < ApplicationController
   include GroupScoped
 
@@ -26,6 +27,7 @@ class Api::GroupHostSubRequestsController < ApplicationController
   # POST /api/groups/:group_slug/host_sub_requests/:id/take (the member asking covers it)
   def take
     return render(json: { error: "Someone already took that one." }, status: :conflict) unless @request.open?
+    return render(json: { error: "This group's host coordinators fill its subs." }, status: :forbidden) unless @group.sees_sub_requests?(current_user, @request.meeting)
 
     meeting = @request.meeting
     HostSubRequest.transaction do
@@ -66,13 +68,8 @@ class Api::GroupHostSubRequestsController < ApplicationController
     meeting.holder_on(request.role, request.on)&.user_id == current_user.id
   end
 
-  # Who hears that a sub is needed: the members who can host, and the host coordinators (so
-  # they know when a host asked for one); every member when nobody is marked as able to host
-  def sub_askees(meeting)
-    pool = @group.host_pool.to_a
-    people = pool.any? ? pool + @group.host_schedulers(meeting).to_a : @group.members.to_a
-    people.uniq - [current_user]
-  end
+  # Who hears that a sub is needed (Group#sub_askees), but not whoever asked
+  def sub_askees(meeting) = @group.sub_askees(meeting) - [current_user]
 
   def set_request
     @request = HostSubRequest.joins(:meeting).where(meetings: { group_id: @group.id }).find(params[:id])

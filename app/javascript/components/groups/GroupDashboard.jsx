@@ -17,6 +17,7 @@ import CourtTab from "./CourtTab";
 import GroupSettings, { GroupLogo } from "./GroupSettings";
 import ChipDesigner from "./ChipDesigner";
 import DocumentTemplates from "./conscience/DocumentTemplates";
+import SubRequestsSetting from "./SubRequestsSetting";
 import DocumentSkeleton from "./conscience/DocumentSkeleton";
 
 // Who gets the Dashboard: anyone in the group with a role beyond plain member
@@ -140,6 +141,7 @@ export function SettingsRoute() {
                 <option value="setup">Setup guide</option>
               </select>
               {current.key === "" && <GroupSettings group={group} setGroup={setGroup} />}
+              {current.key === "meetings" && <SubRequestsSetting group={group} setGroup={setGroup} />}
               {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={reload} isNew={new URLSearchParams(window.location.search).get("new") === "1"} />}
               {current.key === "chips" && <ChipDesigner group={group} />}
               {current.key === "literature" && <LiteratureTab group={group} reload={reload} />}

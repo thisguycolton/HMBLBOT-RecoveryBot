@@ -39,7 +39,7 @@ class HostSchedule
     days = (start..start + 6).to_a
     meetings = weekly_meetings
     @series_sizes = meetings.group_by { |m| [m.name, m.start_minute, m.end_minute] }.transform_values(&:size)
-    subs = HostSubRequest.open.where(meeting_id: meetings.map(&:id), on: days).includes(:requested_by).to_a.group_by { |r| [r.meeting_id, r.role, r.on] }
+    subs = HostSubRequest.open.where(meeting_id: meetings.map(&:id), on: days).includes(:requested_by).to_a.select { |r| sees?(r) }.group_by { |r| [r.meeting_id, r.role, r.on] }
     json = {
       start: start.iso8601, today: @today.iso8601, can_edit: @can_edit, can_host: @group.can_host?(@viewer),
       days: days.map { |d| { on: d.iso8601, items: meetings.select { |m| m.day_of_week == d.wday }.map { |m| dated(m, d, subs) } } },
@@ -115,6 +115,11 @@ class HostSchedule
 
   def edits?(meeting) = @can_edit && (@my_slot_ids.nil? || @my_slot_ids.include?(meeting.id))
 
+  # A sub request this person may see: the group lets them (Group#sees_sub_requests?), or they asked
+  def sees?(request)
+    (!!@viewer && request.requested_by_id == @viewer.id) || @group.sees_sub_requests?(@viewer, request.meeting)
+  end
+
   # The group's current format and scripts this person may read (a group can keep them for hosts)
   def formats
     GroupDocument.visible_to(@group, @viewer).where(kind: "format", status: "current").ordered
@@ -135,7 +140,7 @@ class HostSchedule
   # Open "Need a sub" requests from today on, soonest first
   def sub_requests(meetings)
     HostSubRequest.open.where(meeting_id: meetings.map(&:id)).where("host_sub_requests.on >= ?", @today)
-                  .includes(:meeting, :requested_by).order(:on).map do |r|
+                  .includes(:meeting, :requested_by).order(:on).select { |r| sees?(r) }.map do |r|
       r.as_api_json.merge(asked_by_me: !!@viewer && r.requested_by_id == @viewer.id, can_edit: edits?(r.meeting), meeting_name: r.meeting.name, start_minute: r.meeting.start_minute, day_of_week: r.meeting.day_of_week)
     end
   end

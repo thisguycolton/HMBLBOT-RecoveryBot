@@ -25,6 +25,21 @@ public class AppWebViewClient extends BridgeWebViewClient {
         this.bridge = bridge;
     }
 
+    // Run once when the next whole page has loaded (AppLockPlugin, signing out from the lock)
+    private static Runnable nextPageFinished;
+
+    static void onNextPageFinished(Runnable run) {
+        nextPageFinished = run;
+    }
+
+    @Override
+    public void onPageFinished(WebView view, String url) {
+        super.onPageFinished(view, url);
+        Runnable run = nextPageFinished;
+        nextPageFinished = null;
+        if (run != null) run.run();
+    }
+
     // Whether an address is the offline page, with or without ?from= / ?reason=
     private boolean isOfflinePage(Uri url) {
         String errorUrl = bridge.getErrorUrl();
