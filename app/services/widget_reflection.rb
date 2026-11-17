@@ -4,7 +4,7 @@
 # the whole reading takes at an easy pace.
 module WidgetReflection
   WORDS_A_MINUTE = 200
-  QUOTE_MAX = 400
+  QUOTE_MAX = 520
 
   module_function
 

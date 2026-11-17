@@ -218,9 +218,9 @@ function build(key, kind, size) {
       band("{rBand}", YEAR);
     } else if (kind === "reflection" && size === "large") {
       T(24, 16, "“", "serif", 700, 76, hi, 1, { line: 76 });
-      T(24, 92, "{rTitle}", "serif", 600, 27, ink, 1, { line: 33, maxW: 316, lines: 3 });
-      rule(24, 206, 316, 0.3);
-      T(24, 222, "{rQuote}", "serif", 400, 14, ink, 0.75, { line: 19, maxW: 316, lines: 4 });
+      T(24, 84, "{rTitle}", "serif", 600, 27, ink, 1, { line: 33, maxW: 316, fit: true });
+      rule(24, 128, 316, 0.3);
+      T(24, 142, "{rQuote}", "serif", 400, 15, ink, 0.75, { line: 20, maxW: 316, lines: 8 });
       caps(24, 310, "{rSourceCaps}", 0.6);
       if (paper) bar(24, 334, 316, YEAR, 4);
       band("{rBand}", YEAR);
@@ -329,9 +329,10 @@ function build(key, kind, size) {
     else if (kindOf === "bar") bar(24, 360, 316, YEAR, 4);
     else ring(324, 50, 22, 5, YEAR);
     T(24, 16, "“", "serif", 700, 76, hi, 1, { line: 76 });
-    T(24, 92, "{rTitle}", "serif", 600, 27, ink, 1, { line: 33, maxW: kindOf === "ring" ? 300 : 316, lines: 3 });
-    rule(24, 206, 316, 0.3);
-    T(24, 222, "{rQuote}", "serif", 400, 14, ink, 0.75, { line: 19, maxW: 316, lines: 4 });
+    // the title on one line (smaller when it's long), so the quote starts right under it
+    T(24, 84, "{rTitle}", "serif", 600, 27, ink, 1, { line: 33, maxW: kindOf === "ring" ? 300 : 316, fit: true });
+    rule(24, 128, 316, 0.3);
+    T(24, 142, "{rQuote}", "serif", 400, 15, ink, 0.75, { line: 20, maxW: 316, lines: 9 });
     T(24, kindOf === "bar" ? 332 : 336, "{rSourceCaps}", tf, 700, 11, ink, 0.6, { spacing: 8, maxW: 240 });
     T(340, kindOf === "bar" ? 330 : 334, "{rDate}", "serif", 600, 13, ink, 0.6, { align: "right" });
   }
