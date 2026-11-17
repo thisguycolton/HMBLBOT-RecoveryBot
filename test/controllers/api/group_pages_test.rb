@@ -164,4 +164,23 @@ class Api::GroupPagesTest < ActionDispatch::IntegrationTest
     assert_equal "find-2", Group.create!(title: "Find").slug
     assert_not Group.new(title: "X", slug: "timeline").valid?
   end
+
+  test "a group page keeps one Timeline block" do
+    sign_in @leader
+    blocks = [{ type: "timeline", title: "First" }, { type: "heading", text: "Hi" }, { type: "timeline", region: "side", title: "Second" }]
+    patch "/api/groups/#{@group.slug}/page", params: { page: { blocks: blocks } }, as: :json
+    assert_response :success
+    assert_equal %w[timeline heading], response.parsed_body["blocks"].map { |b| b["type"] }
+    assert_equal "First", response.parsed_body["blocks"].first["title"]
+  end
+
+  test "a page saved with several Timelines keeps them until it's saved, then only the first" do
+    @group.update_columns(page_blocks: [{ "id" => "a", "type" => "timeline", "title" => "One" }, { "id" => "b", "type" => "timeline", "title" => "Two" }])
+    sign_in @member
+    get "/api/groups/#{@group.slug}/page", as: :json
+    assert_equal %w[a b], response.parsed_body["blocks"].map { |b| b["id"] }
+
+    @group.update!(description: "Mornings")
+    assert_equal %w[a], @group.reload.page_blocks.map { |b| b["id"] }
+  end
 end

@@ -4,7 +4,7 @@ import { useMedia } from "../shell/useShell";
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import BlockView, { isCompact } from "./BlockView";
 import { heroBleed } from "../groups/page/GroupHero";
-import { SPAN_CLASS } from "./lib";
+import { SPAN_CLASS, extraBlockIds } from "./lib";
 
 // The event page's frame, shared by the page and the editor's canvas: the cover and
 // title, an aside (RSVP, flyer), then the blocks in the event's layout.
@@ -74,13 +74,15 @@ export default function EventBlocks({ event }) {
 }
 
 // Blocks in a layout, read-only: an event's, or a group page's (with its `context`).
-// `hidden(block)` leaves out blocks with nothing to show this viewer.
+// `hidden(block)` leaves out blocks with nothing to show this viewer. Extra copies of a
+// one-per-page block (a page saved before the rule) never show; only the first does.
 // With `info`, below lg (where the columns stack) the side column goes in the Info bar, the
 // shell's side panel (PageAside), instead of under the main column.
 export function PageBlocks({ layout, blocks, polls, context, hidden = () => false, info = false }) {
   const stacked = !useMedia("(min-width: 1024px)");
+  const extras = extraBlockIds(blocks);
   const renderRegion = (region) => {
-    const list = blocks.filter((b) => (b.region || "main") === region && !hidden(b));
+    const list = blocks.filter((b) => (b.region || "main") === region && !extras.has(b.id) && !hidden(b));
     if (!list.length) return null;
     return (
       <div className="grid grid-cols-12 gap-x-3 gap-y-5 sm:gap-x-5 sm:gap-y-6">

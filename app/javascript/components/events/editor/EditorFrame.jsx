@@ -5,7 +5,7 @@ import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { ArrowLeft, Check, Eye, GripVertical, Menu, PanelRight, Plus, X } from "lucide-react";
 import { RecoveryBotLogo } from "../../brand/Logo";
 import NotificationBell from "../../NotificationBell";
-import { newId } from "../lib";
+import { extraBlockIds, newId, onePerPage } from "../lib";
 import BlockView, { isCompact } from "../BlockView";
 import Canvas from "./Canvas";
 
@@ -20,6 +20,8 @@ import Canvas from "./Canvas";
 //   settingsTitle          that section's name ("Event", "Page")
 //   blockGroups            the palette: [{ title, items: [{ type, label, note, icon }] }]
 //   blockInfo              type => { label, icon }
+//                          (a page has at most one of each ONE_PER_PAGE block, like the Timeline:
+//                          once it's on the page its palette item jumps to it instead of adding)
 //   makeBlock(type, region) a new block of that type
 //   home, back             { href, label } for the logo and the sidebar's bottom link
 //   crumb, title, badge    the header's breadcrumb, title and status pill
@@ -54,8 +56,12 @@ export default function EditorFrame({
     setBlocks((list) => list.filter((b) => b.id !== id));
     if (selected === id) setSelected(firstSetting);
   };
+  // The block of this type already on the page, for types a page has only one of
+  const onPage = (type) => (onePerPage(type) ? blocks.find((b) => b.type === type) : null);
+  const extras = extraBlockIds(blocks);
   const duplicateBlock = (id) => {
     const i = blocks.findIndex((b) => b.id === id);
+    if (i < 0 || onePerPage(blocks[i].type)) return;
     const copy = { ...structuredClone(blocks[i]), id: newId() };
     setBlocks((list) => [...list.slice(0, i + 1), copy, ...list.slice(i + 1)]);
     setSelected(copy.id);
@@ -73,6 +79,8 @@ export default function EditorFrame({
     return [...list.slice(0, index), block, ...list.slice(index)];
   };
   const addBlock = (type) => {
+    const existing = onPage(type);
+    if (existing) { select(existing.id); return; }
     const after = blocks.find((b) => b.id === selected);
     const block = makeBlock(type, after?.region || "main");
     setBlocks((list) => {
@@ -128,6 +136,8 @@ export default function EditorFrame({
   const onDragEnd = ({ active, over }) => {
     endDrag();
     if (!over || !isNew(active.id)) return;
+    const existing = onPage(active.data.current.type);
+    if (existing) { select(existing.id); return; }
     const block = makeBlock(active.data.current.type, regionOf(over.id) || "main");
     setBlocks((list) => insertAt(list, block, over.id));
     select(block.id);
@@ -185,7 +195,7 @@ export default function EditorFrame({
         </SidebarSection>
         {blockGroups.map((group) => (
           <SidebarSection key={group.title} title={`${group.title} blocks`}>
-            {group.items.map((item) => <PaletteItem key={item.type} item={item} onAdd={() => addBlock(item.type)} />)}
+            {group.items.map((item) => <PaletteItem key={item.type} item={item} taken={!!onPage(item.type)} onAdd={() => addBlock(item.type)} />)}
           </SidebarSection>
         ))}
         <p className="px-3 text-xs text-slate-400 dark:text-neutral-500">Drag a block onto the page, or click to add it after the selected one.</p>
@@ -258,6 +268,7 @@ export default function EditorFrame({
                 onChange={patchBlock}
                 onRemove={removeBlock}
                 onDuplicate={duplicateBlock}
+                extras={extras}
                 onMove={moveBlock}
                 canMove={canMove}
               />
@@ -334,18 +345,26 @@ function SidebarItem({ icon: Icon, label, active, onClick, count }) {
   );
 }
 
-function PaletteItem({ item, onAdd }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `new:${item.type}`, data: { type: item.type } });
+// A block in the palette. `taken`: a one-per-page block that's already on the page; it can't be
+// dragged out again, and clicking it picks the one on the page
+function PaletteItem({ item, taken, onAdd }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `new:${item.type}`, data: { type: item.type }, disabled: taken });
   const Icon = item.icon;
   return (
     <li>
       <button type="button" ref={setNodeRef} {...attributes} {...listeners} onClick={onAdd}
-        className={`flex w-full cursor-grab items-center gap-3 rounded-xl !bg-transparent px-3 py-2 text-left !text-slate-700 hover:!bg-slate-100 active:cursor-grabbing dark:!text-neutral-300 dark:hover:!bg-neutral-800 ${isDragging ? "opacity-50" : ""}`}>
-        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-neutral-800"><Icon className="size-4" /></span>
-        <span className="min-w-0">
+        data-taken={taken || undefined}
+        title={taken ? `A page can have one ${item.label} block. Click to go to it.` : undefined}
+        aria-label={taken ? `${item.label}: already on the page, one per page. Go to it` : undefined}
+        className={`flex w-full items-center gap-3 rounded-xl !bg-transparent px-3 py-2 text-left hover:!bg-slate-100 dark:hover:!bg-neutral-800 ${
+          taken ? "cursor-pointer !text-slate-400 dark:!text-neutral-500" : "cursor-grab !text-slate-700 active:cursor-grabbing dark:!text-neutral-300"
+        } ${isDragging ? "opacity-50" : ""}`}>
+        <span className={`grid size-8 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-neutral-800 ${taken ? "opacity-60" : ""}`}><Icon className="size-4" /></span>
+        <span className="min-w-0 flex-1">
           <span className="block text-sm font-medium">{item.label}</span>
-          <span className="block truncate text-xs text-slate-400 dark:text-neutral-500">{item.note}</span>
+          <span className="block truncate text-xs text-slate-400 dark:text-neutral-500">{taken ? "On the page · one per page" : item.note}</span>
         </span>
+        {taken && <Check className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
       </button>
     </li>
   );

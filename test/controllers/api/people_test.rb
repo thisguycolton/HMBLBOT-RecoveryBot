@@ -177,6 +177,15 @@ class Api::PeopleTest < ActionDispatch::IntegrationTest
     assert_not @mo.reload.custom_page?
   end
 
+  test "a profile page keeps one Timeline block" do
+    sign_in @lee
+    patch "/api/profile_page", params: { page: { blocks: [{ type: "feed", show: "notes" }, { type: "about" }, { type: "feed", show: "highlights" }, { type: "feed" }] } }, as: :json
+    assert_response :success
+    blocks = @lee.reload.page_blocks
+    assert_equal %w[feed about], blocks.map { |b| b["type"] }
+    assert_equal "notes", blocks.first["show"]
+  end
+
   test "the home page shows your own notes and what's coming up in your groups" do
     travel_to Time.zone.local(2026, 10, 17, 9, 0) do
       @mo.update!(sobriety_date: Date.new(2024, 10, 20), show_sobriety_date: true)
