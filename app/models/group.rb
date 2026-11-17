@@ -196,6 +196,10 @@ class Group < ApplicationRecord
   # documents kept for hosts (the format) and are the ones asked when a host won't be there
   def can_host?(user) = hosts_editable_by?(user) || records_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_host }
   def host_pool = User.where(id: active_memberships.where(can_host: true).select(:user_id))
+  # Who gives chips in the group's design and sees its Court verification form in Host tools: its
+  # admins, host coordinators and the members marked Can host. A record keeper reads what hosts
+  # read (can_host?) but gives chips only when they're marked Can host too.
+  def gives_chips?(user) = hosts_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_host }
   # Who may rearrange the group's HostDecks (the layout editor): its admins always, and the roles
   # it picked in Group settings (deck_editors): host coordinators and record keepers unless it
   # changed that, and everyone who can host if it chose to

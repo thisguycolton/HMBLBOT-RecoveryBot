@@ -54,7 +54,7 @@ export default function HostingIndex() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 !font-sans [&_*]:!font-sans">
-      <HostToolsNav slug={slug} />
+      <HostToolsNav slug={slug} canGive={!!data.can_give} />
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1 basis-56">
           <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> Host a meeting</h1>

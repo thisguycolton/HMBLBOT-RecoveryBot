@@ -39,6 +39,19 @@ class Api::NavAndSearchTest < ActionDispatch::IntegrationTest
     assert_equal ["The Acid Test"], body["today"]["meetings"].map { |m| m["name"] }.uniq
   end
 
+  test "record keepers get Give a chip and Court verification only when they can host" do
+    sign_in @me
+    get "/api/nav", as: :json
+    assert response.parsed_body["groups"].find { |g| g["slug"] == @acid.slug }["can_give"]
+
+    @acid.memberships.find_by!(user: @me).update!(can_host: false)
+    get "/api/nav", as: :json
+    assert_not response.parsed_body["groups"].find { |g| g["slug"] == @acid.slug }["can_give"]
+    assert @acid.can_host?(@me), "they still read what hosts read"
+    get "/api/groups/#{@acid.slug}", as: :json
+    assert_not response.parsed_body["can_give"]
+  end
+
   test "a group you asked to join comes back as waiting, not as one of your groups" do
     newcomer = User.find_by!(email: "new@example.com")
     sign_in newcomer

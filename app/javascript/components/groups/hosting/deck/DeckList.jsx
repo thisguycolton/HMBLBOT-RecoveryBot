@@ -81,12 +81,12 @@ function DeckRow({ slug, deck }) {
 // /groups/:slug/decks
 export default function DeckListPage() {
   const { slug } = useParams();
-  const [canHost, setCanHost] = useState(false);
+  const [canGive, setCanGive] = useState(false);
   return (
     <div className="mx-auto max-w-3xl space-y-6 !font-sans [&_*]:!font-sans">
-      <HostToolsNav slug={slug} canHost={canHost} />
+      <HostToolsNav slug={slug} canGive={canGive} />
       <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> Decks</h1>
-      <DeckList slug={slug} onLoad={(d) => setCanHost(!!d.can_host)} />
+      <DeckList slug={slug} onLoad={(d) => setCanGive(!!d.can_give)} />
     </div>
   );
 }
