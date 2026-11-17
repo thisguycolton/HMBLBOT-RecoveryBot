@@ -14,9 +14,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 // What the widgets show, kept by WidgetBridgePlugin, and the day count worked out from it: the
 // same milestones as the site (lib/milestones.js), 24 hours, 30, 60 and 90 days, 6, 9 and 18
@@ -70,6 +75,21 @@ final class WidgetData {
         return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
+    // Tapping the chip widget opens that chip full size on the Chips page, where it spins in 3D
+    static PendingIntent openChip(Context context) {
+        String id = prefs(context).getString("chipId", "");
+        String to = id == null || id.isEmpty() ? "/recovery" : "/recovery?chip=" + Uri.encode(id) + "&from=widget";
+        return openPath(context, to, 0);
+    }
+
+    // Tapping the Daily Reflection opens the day's page (path from the site), else the book
+    static PendingIntent openPath(Context context, String path, int request) {
+        String to = path == null || path.isEmpty() ? "/books/daily-reflections" : path;
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("recoverybot://open" + to), context, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        return PendingIntent.getActivity(context, request, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
     // Tapping the day count opens the Today panel on whatever page the app is on (native_app.js)
     static PendingIntent openToday(Context context) {
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("recoverybot://open/#today"), context, MainActivity.class);
@@ -95,6 +115,7 @@ final class WidgetData {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         redraw(context, manager, DayCountWidget.class);
         redraw(context, manager, ChipWidget.class);
+        redraw(context, manager, ReflectionWidget.class);
     }
 
     static void redraw(Context context, AppWidgetManager manager, Class<?> widget) {
@@ -106,6 +127,7 @@ final class WidgetData {
     }
 
     static final class Count {
+        Calendar start;
         int days;
         String today; // a milestone reached today
         String next;
@@ -137,6 +159,120 @@ final class WidgetData {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    // ---- What the layouts fill in (SAMPLE_VALUES in the site's lib/widgetLayouts.js lists them all)
+
+    static String mediumDate(Calendar c) {
+        return DateFormat.getDateInstance(DateFormat.MEDIUM).format(c.getTime());
+    }
+
+    static Calendar isoDay(String iso) {
+        if (iso == null || !iso.matches("\\d{4}-\\d{2}-\\d{2}.*")) return null;
+        Calendar c = Calendar.getInstance();
+        c.clear();
+        c.set(Integer.parseInt(iso.substring(0, 4)), Integer.parseInt(iso.substring(5, 7)) - 1, Integer.parseInt(iso.substring(8, 10)));
+        return c;
+    }
+
+    static String iso(Calendar c) {
+        return String.format(Locale.US, "%04d-%02d-%02d", c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH));
+    }
+
+    // "6 months" -> "6 MO", "1 year" -> "1 YR", for the small chip's line
+    static String shortLabel(String label) {
+        return label.replace("months", "mo").replace("month", "mo").replace("years", "yrs").replace("year", "yr").toUpperCase(Locale.getDefault());
+    }
+
+    private static String days(int n) {
+        return String.format(Locale.getDefault(), "%,d", n) + (n == 1 ? " day" : " days");
+    }
+
+    // The day count's values; progress (0-1) goes in progress["progress"] when there's one
+    static Map<String, String> dayValues(Context context, Count c, Map<String, Double> progress) {
+        Map<String, String> v = new HashMap<>();
+        String unit = c.days == 1 ? "DAY" : "DAYS";
+        v.put("days", String.format(Locale.getDefault(), "%,d", c.days));
+        v.put("daysCaps", unit);
+        v.put("daysSober", unit + " SOBER");
+        String since = mediumDate(c.start);
+        v.put("since", "Since " + since);
+        v.put("sinceCaps", "SOBER SINCE " + since.toUpperCase(Locale.getDefault()));
+        if (c.today != null) {
+            v.put("nextHead", "Today");
+            v.put("nextName", c.today);
+            v.put("nextIn", "today");
+            v.put("nextLine", "Today: " + c.today);
+            v.put("nextShort", shortLabel(c.today) + " TODAY");
+            v.put("nextBoth", c.today + " today");
+            v.put("nextChip", "Today: your " + c.today + " chip");
+            v.put("nextDaysUnit", "today");
+            v.put("nextTo", c.today);
+            v.put("percent", "100%");
+            progress.put("progress", 1.0);
+        } else if (c.next != null) {
+            String d = days(c.nextIn);
+            v.put("nextHead", "Next chip");
+            v.put("nextName", c.next);
+            v.put("nextIn", "in " + d);
+            v.put("nextLine", d + " to " + c.next);
+            v.put("nextShort", shortLabel(c.next) + " IN " + d.toUpperCase(Locale.getDefault()));
+            v.put("nextBoth", c.next + " in " + d);
+            v.put("nextChip", "Next chip: " + c.next);
+            v.put("nextDays", String.format(Locale.getDefault(), "%,d", c.nextIn));
+            v.put("nextDaysUnit", c.nextIn == 1 ? "day" : "days");
+            v.put("nextTo", "to " + c.next);
+            v.put("percent", c.progress + "%");
+            v.put("chipNext", "Next: " + c.next + " · " + d);
+            progress.put("progress", c.progress / 100.0);
+        }
+        String fact = factLine(context, c.days);
+        if (fact != null) v.put("fact", fact);
+        return v;
+    }
+
+    static Map<String, String> chipValues(Context context) {
+        Map<String, String> v = new HashMap<>();
+        v.put("chipName", chipLabel(context));
+        Calendar on = isoDay(prefs(context).getString("chipOn", ""));
+        if (on != null) v.put("chipEarned", "Earned " + mediumDate(on));
+        return v;
+    }
+
+    // Today's Daily Reflection from the two weeks the site sent, or null
+    static JSONObject reflection(Context context, Calendar now) {
+        String json = prefs(context).getString("reflections", "");
+        if (json == null || json.isEmpty()) return null;
+        String today = iso(now);
+        try {
+            JSONArray list = new JSONArray(json);
+            for (int i = 0; i < list.length(); i++) {
+                JSONObject r = list.getJSONObject(i);
+                if (today.equals(r.optString("date"))) return r;
+            }
+        } catch (Exception ignored) {
+            return null;
+        }
+        return null;
+    }
+
+    static Map<String, String> reflectionValues(JSONObject r, Calendar now, Map<String, Double> progress) {
+        Map<String, String> v = new HashMap<>();
+        int dayOfYear = now.get(Calendar.DAY_OF_YEAR);
+        int daysInYear = now.getActualMaximum(Calendar.DAY_OF_YEAR);
+        String shortDate = new SimpleDateFormat("MMM d", Locale.getDefault()).format(now.getTime());
+        String read = "~" + Math.max(1, r.optInt("minutes", 1)) + " min read";
+        String source = r.optString("source", "");
+        v.put("rDate", shortDate);
+        v.put("rDay", shortDate + " · " + dayOfYear + "/" + daysInYear);
+        v.put("rTitle", r.optString("title", ""));
+        v.put("rQuote", r.optString("quote", ""));
+        v.put("rSource", source);
+        v.put("rSourceCaps", source.toUpperCase(Locale.getDefault()));
+        v.put("rRead", read);
+        v.put("rBand", shortDate + " · " + read);
+        progress.put("year", dayOfYear / (double) daysInYear);
+        return v;
     }
 
     private static final class Milestone {
@@ -185,6 +321,7 @@ final class WidgetData {
         list.sort((a, b) -> a.on.compareTo(b.on));
 
         Count count = new Count();
+        count.start = start;
         count.days = days;
         Calendar last = start;
         Milestone next = null;

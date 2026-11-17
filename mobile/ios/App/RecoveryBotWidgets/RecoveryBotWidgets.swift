@@ -9,15 +9,22 @@ import WidgetKit
 //   The medium and large sizes also show the next fun fact ("🪐 In 12 days: a whole year on
 //   Mars"), or today's, from the list the site hands over (lib/dayFacts.json).
 // - Favorite chip: their first favorite chip (else their newest sobriety chip), drawn by the site.
-// The app (WidgetBridgePlugin in AppDelegate.swift) keeps what they show in the App Group both
-// share; signing out of the app clears it. Tapping the day count opens Today; tapping the chip
-// opens that chip full size on the Chips page, where it spins in 3D (a widget can only turn a
-// flat picture). Both share one set of styles (WidgetStyle), each with its own colors and one of
-// the site's fonts for the big number (bundled in Fonts/, listed under UIAppFonts in Info.plist).
-// They're picked only in the app (This phone > Widgets,
-// components/profile/WidgetSettings.jsx), never from Edit Widget: WidgetBridgePlugin keeps them
-// in the App Group as "widgetStyle" for every widget, and "widgetStyle.<day|chip>.<size>" for the
-// placed widgets of one kind and size that have their own (Shared.style).
+// - Daily Reflection: today's reading (its title, opening quote and where it's from), from the
+//   two weeks of them the site hands over, so it turns over at midnight by itself.
+// The app (WidgetBridgePlugin in AppDelegate.swift) keeps what they show in the App Group they
+// share; signing out of the app clears it. Tapping the day count opens Today, the chip opens it
+// full size on the Chips page, the Daily Reflection opens the day's page.
+//
+// Home Screen widgets are drawn from layouts (Layouts/widget-layouts.json, written from the
+// site's lib/widgetLayouts.js by bin/widget-layouts): one per style, kind and size, the designs
+// from the widgets' Figma file. WidgetCanvas draws them; the site's settings previews
+// (lib/widgetDraw.js) and the Android widgets (WidgetPainter.java) draw the same ones.
+// Each style's big number is one of the site's fonts (Fonts/, listed under UIAppFonts in
+// Info.plist); the smaller lines are the system's faces.
+// Styles are picked only in the app (This phone > Widgets, components/profile/WidgetSettings.jsx),
+// never from Edit Widget: WidgetBridgePlugin keeps them in the App Group as "widgetStyle" for
+// every widget, and "widgetStyle.<day|chip|reflection>.<size>" for the placed widgets of one
+// kind and size that have their own (Shared.style).
 
 enum Shared {
     static let group = "group.com.hmblbot.recoverybot"
@@ -25,10 +32,11 @@ enum Shared {
     static var signedIn: Bool { defaults?.bool(forKey: "signedIn") ?? false }
     static var soberSince: String { defaults?.string(forKey: "soberSince") ?? "" }
     static var chipLabel: String { defaults?.string(forKey: "chipLabel") ?? "" }
-    // The style picked in the app for a widget ("day" or "chip") of a size: that size's own
-    // ("widgetStyle.day.small"), else the kind's own (kept by app builds before per-widget picks,
-    // "widgetStyle.day"), else the one for every widget ("widgetStyle"); Classic blue until one
-    // is picked
+    static var chipOn: String { defaults?.string(forKey: "chipOn") ?? "" }
+    // The style picked in the app for a widget ("day", "chip" or "reflection") of a size: that
+    // size's own ("widgetStyle.day.small"), else the kind's own (kept by app builds before
+    // per-widget picks, "widgetStyle.day"), else the one for every widget ("widgetStyle");
+    // Classic blue until one is picked
     static func style(_ widget: String, _ family: WidgetFamily) -> WidgetStyle {
         for key in ["widgetStyle.\(widget).\(family.styleKey)", "widgetStyle.\(widget)", "widgetStyle"] {
             if let raw = defaults?.string(forKey: key), let style = WidgetStyle(rawValue: raw) { return style }
@@ -42,21 +50,18 @@ enum Shared {
         return (try? JSONDecoder().decode([FunFact].self, from: data)) ?? []
     }
 
+    // The Daily Reflections the site sent, one for each of the next two weeks
+    static func reflections() -> [Reflection] {
+        guard let json = defaults?.string(forKey: "reflections"), let data = json.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([Reflection].self, from: data)) ?? []
+    }
+
     static func chipImage() -> UIImage? {
         guard defaults?.bool(forKey: "hasChip") == true,
               let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)?.appendingPathComponent("chip.png")
         else { return nil }
         return UIImage(contentsOfFile: url.path)
     }
-
-    // The back, drawn by the site beside the front (lib/appWidgets.js); older app builds have none
-    static func chipBackImage() -> UIImage? {
-        guard let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)?.appendingPathComponent("chip-back.png")
-        else { return nil }
-        return UIImage(contentsOfFile: url.path)
-    }
-
-    static var chipFlipped: Bool { defaults?.bool(forKey: "chipFlipped") ?? false }
 
     static let chipsPage = URL(string: "recoverybot://open/recovery")!
 
@@ -69,6 +74,7 @@ enum Shared {
     }
     // native_app.js opens the Today panel for #today, on whatever page the app is on
     static let todayPanel = URL(string: "recoverybot://open/#today")!
+    static let library = URL(string: "recoverybot://open/books/daily-reflections")!
 }
 
 // MARK: - Counting
@@ -106,6 +112,9 @@ struct FactLine {
 
     // "a whole year on Mars", to follow "In 12 days:"
     var lowered: String { title.prefix(1).lowercased() + title.dropFirst() }
+
+    // "🪐 In 12 days: a whole year on Mars"
+    var line: String { "\(emoji) \(when): \(lowered)" }
 }
 
 struct DayCount {
@@ -114,9 +123,11 @@ struct DayCount {
     let next: String?
     let nextIn: Int
     let progress: Double // from the last milestone (or the start) to the next
+    var start: Date = Date()
     var fact: FactLine? = nil
 
-    static let sample = DayCount(days: 127, today: nil, next: "6 months", nextIn: 55, progress: 0.6, fact: .sample)
+    static let sample = DayCount(days: 127, today: nil, next: "6 months", nextIn: 55, progress: 0.6,
+                                 start: Calendar.current.date(byAdding: .day, value: -127, to: Date()) ?? Date(), fact: .sample)
 
     // The milestones most groups give chips for, the same as the site's (lib/milestones.js):
     // 24 hours, 30, 60 and 90 days, 6, 9 and 18 months, then every year
@@ -147,18 +158,45 @@ struct DayCount {
             let span = max(1, cal.dateComponents([.day], from: last, to: next.on).day ?? 1)
             progress = Double(span - nextIn) / Double(span)
         }
-        return DayCount(days: days, today: reached, next: next?.label, nextIn: nextIn, progress: progress)
+        return DayCount(days: days, today: reached, next: next?.label, nextIn: nextIn, progress: progress, start: start)
     }
 }
 
 func plural(_ n: Int, _ one: String, _ many: String) -> String { n == 1 ? one : many }
 
-// MARK: - Day count widget
+// A day's Daily Reflection (Api::WidgetReflectionsController on the site)
+struct Reflection: Decodable {
+    let date: String
+    let title: String
+    let quote: String
+    let source: String
+    let minutes: Int
+    let path: String
 
-// The widgets' styles, the same for the day count and the chip, and the same list as the app's
-// picker (lib/widgetStyles.js) and the Android widgets (WidgetStyles.java): change them together.
+    static let sample = Reflection(date: "", title: "Overcoming Loneliness",
+                                   quote: "Almost without exception, alcoholics are tortured by loneliness. Even before our drinking got bad and people began to cut us off, nearly all of us suffered the feeling that we didn't quite belong.",
+                                   source: "As Bill Sees It, p. 90", minutes: 2, path: "")
+
+    static func isoDay(_ date: Date) -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
+    var link: URL { path.isEmpty ? Shared.library : (URL(string: "recoverybot://open\(path)") ?? Shared.library) }
+}
+
+// MARK: - Styles
+
+// The widgets' styles, the same for every widget, and the same list as the app's picker
+// (lib/widgetStyles.js) and the Android widgets (WidgetStyles.java): change them together.
 enum WidgetStyle: String {
     case classic, night, ocean, forest, sunrise, midnight, black, light, paper, paperLight, paperDark
+
+    // The layout it draws with: Paper follows Light/Dark Mode
+    func layoutKey(_ scheme: ColorScheme) -> String {
+        if self == .paper { return scheme == .dark ? "paperDark" : "paperLight" }
+        return rawValue
+    }
 }
 
 extension WidgetFamily {
@@ -172,76 +210,419 @@ extension WidgetFamily {
     }
 }
 
-// Colors and type for a style. The big number is one of the site's fonts (Fonts/): Classic and
-// Light are Public Sans, the site's own; Night is airy Figtree Light; Ocean heavy Montserrat
-// Black; Forest TikTok Sans; Sunrise tall TikTok Sans Condensed; Midnight DM Mono in amber;
-// Charcoal a thin Inter; Paper Gentium Book Plus, the site's reading serif. The smaller lines
-// stay in the system's faces: rounded, or serif on Paper, monospaced on Midnight, plain on Sunrise.
-struct WidgetTheme {
-    let background: AnyShapeStyle
-    let ink: Color
-    let accent: Color
-    var numberInk: Color? = nil
-    let numberFont: String
-    var design: Font.Design = .rounded
-    var numberTracking: CGFloat = 0
+// MARK: - Layouts
 
-    func number(_ size: CGFloat) -> Font { .custom(numberFont, fixedSize: size) }
+// widget-layouts.json: { version, looks: { style: { number, text, ink } }, layouts: { "classic.day.small": { w, h, ops } } }
+enum Layouts {
+    static let all: [String: Any] = {
+        guard let url = Bundle.main.url(forResource: "widget-layouts", withExtension: "json", subdirectory: "Layouts")
+                ?? Bundle.main.url(forResource: "widget-layouts", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
+        return json
+    }()
 
-    func text(_ style: Font.TextStyle, _ weight: Font.Weight = .regular) -> Font {
-        Font.system(style, design: design).weight(weight)
+    static func layout(_ style: String, _ kind: String, _ size: String) -> [String: Any]? {
+        let layouts = all["layouts"] as? [String: Any]
+        return (layouts?["\(style).\(kind).\(size)"] ?? layouts?["classic.\(kind).\(size)"]) as? [String: Any]
     }
 
-    // "days" under the number
-    func unit(_ style: Font.TextStyle) -> Font { text(style, .semibold) }
+    static func look(_ style: String) -> [String: Any] {
+        ((all["looks"] as? [String: Any])?[style] ?? (all["looks"] as? [String: Any])?["classic"]) as? [String: Any] ?? [:]
+    }
+}
 
-    static let paperLight = WidgetTheme(background: AnyShapeStyle(Color(red: 0.96, green: 0.94, blue: 0.89)), ink: Color(red: 0.23, green: 0.18, blue: 0.13),
-                                        accent: Color(red: 0.72, green: 0.42, blue: 0.16), numberFont: "GentiumBookPlus-Bold", design: .serif)
-    static let paperDark = WidgetTheme(background: AnyShapeStyle(Color(red: 0.16, green: 0.14, blue: 0.12)), ink: Color(red: 0.95, green: 0.91, blue: 0.83),
-                                       accent: Color(red: 0.87, green: 0.6, blue: 0.3), numberFont: "GentiumBookPlus-Bold", design: .serif)
+extension Color {
+    init(hex: String, opacity: Double = 1) {
+        let n = UInt64(hex, radix: 16) ?? 0
+        self.init(.sRGB, red: Double((n >> 16) & 255) / 255, green: Double((n >> 8) & 255) / 255, blue: Double(n & 255) / 255, opacity: opacity)
+    }
+}
 
-    private static func radial(_ a: Color, _ b: Color) -> AnyShapeStyle {
-        AnyShapeStyle(RadialGradient(colors: [a, b], center: .center, startRadius: 5, endRadius: 220))
+// The values a layout's texts fill in (SAMPLE_VALUES in lib/widgetLayouts.js lists them all)
+enum WidgetValues {
+    static func mediumDate(_ date: Date) -> String {
+        date.formatted(.dateTime.month(.abbreviated).day().year())
     }
 
-    static func of(_ style: WidgetStyle, scheme: ColorScheme = .light) -> WidgetTheme {
-        switch style {
-        case .classic:
-            return WidgetTheme(background: AnyShapeStyle(dayGradient), ink: .white, accent: .white,
-                               numberFont: "PublicSans-ExtraBold", numberTracking: -1)
-        case .night:
-            return WidgetTheme(background: AnyShapeStyle(chipBackdrop), ink: .white, accent: Color(red: 0.6, green: 0.76, blue: 1),
-                               numberFont: "Figtree-Light", numberTracking: -1)
-        case .ocean:
-            return WidgetTheme(background: radial(Color(red: 0.16, green: 0.5, blue: 0.85), Color(red: 0.03, green: 0.2, blue: 0.43)), ink: .white,
-                               accent: Color(red: 0.62, green: 0.86, blue: 1), numberFont: "Montserrat-Black")
-        case .forest:
-            return WidgetTheme(background: radial(Color(red: 0.2, green: 0.5, blue: 0.36), Color(red: 0.04, green: 0.2, blue: 0.13)), ink: .white,
-                               accent: Color(red: 0.6, green: 0.9, blue: 0.68), numberFont: "TikTokSans-ExtraBold")
-        case .black:
-            // a deep charcoal with a little light in the middle, rather than flat black
-            return WidgetTheme(background: radial(Color(red: 0.2, green: 0.2, blue: 0.22), Color(red: 0.09, green: 0.09, blue: 0.1)), ink: .white,
-                               accent: Color(red: 0.82, green: 0.82, blue: 0.85), numberFont: "Inter-ExtraLight",
-                               numberTracking: -2)
-        case .light:
-            return WidgetTheme(background: radial(.white, Color(red: 0.89, green: 0.89, blue: 0.87)), ink: Color(red: 0.12, green: 0.14, blue: 0.2),
-                               accent: Color(red: 0.23, green: 0.44, blue: 0.65), numberInk: Color(red: 0.23, green: 0.44, blue: 0.65),
-                               numberFont: "PublicSans-ExtraBold", numberTracking: -1)
-        case .paperLight: return paperLight
-        case .paperDark: return paperDark
-        case .paper:
-            return scheme == .dark ? paperDark : paperLight
-        case .midnight:
-            return WidgetTheme(background: AnyShapeStyle(Color(red: 0.04, green: 0.04, blue: 0.06)), ink: .white,
-                               accent: Color(red: 0.96, green: 0.62, blue: 0.04), numberInk: Color(red: 0.96, green: 0.62, blue: 0.04),
-                               numberFont: "DMMono-Light", design: .monospaced, numberTracking: -2)
-        case .sunrise:
-            return WidgetTheme(background: AnyShapeStyle(LinearGradient(colors: [Color(red: 0.98, green: 0.45, blue: 0.09), Color(red: 0.86, green: 0.15, blue: 0.47)],
-                                                                        startPoint: .topLeading, endPoint: .bottomTrailing)),
-                               ink: .white, accent: .white, numberFont: "TikTokSansCondensed-Black", design: .default)
+    static func isoDate(_ iso: String) -> Date? {
+        let parts = iso.prefix(10).split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return Calendar.current.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+    }
+
+    // "6 months" -> "6 MO", "1 year" -> "1 YR", for the small chip's line
+    static func short(_ label: String) -> String {
+        label.replacingOccurrences(of: "months", with: "mo").replacingOccurrences(of: "month", with: "mo")
+            .replacingOccurrences(of: "years", with: "yrs").replacingOccurrences(of: "year", with: "yr").uppercased()
+    }
+
+    static func day(_ c: DayCount) -> ([String: String], Double?) {
+        var v: [String: String] = [:]
+        let unit = plural(c.days, "DAY", "DAYS")
+        v["days"] = c.days.formatted()
+        v["daysCaps"] = unit
+        v["daysSober"] = "\(unit) SOBER"
+        let since = mediumDate(c.start)
+        v["since"] = "Since \(since)"
+        v["sinceCaps"] = "SOBER SINCE \(since.uppercased())"
+        var progress: Double? = nil
+        if let today = c.today {
+            v["nextHead"] = "Today"
+            v["nextName"] = today
+            v["nextIn"] = "today"
+            v["nextLine"] = "Today: \(today)"
+            v["nextShort"] = "\(short(today)) TODAY"
+            v["nextBoth"] = "\(today) today"
+            v["nextChip"] = "Today: your \(today) chip"
+            v["nextDaysUnit"] = "today"
+            v["nextTo"] = today
+            v["percent"] = "100%"
+            progress = 1
+        } else if let next = c.next {
+            let days = "\(c.nextIn.formatted()) \(plural(c.nextIn, "day", "days"))"
+            v["nextHead"] = "Next chip"
+            v["nextName"] = next
+            v["nextIn"] = "in \(days)"
+            v["nextLine"] = "\(days) to \(next)"
+            v["nextShort"] = "\(short(next)) IN \(days.uppercased())"
+            v["nextBoth"] = "\(next) in \(days)"
+            v["nextChip"] = "Next chip: \(next)"
+            v["nextDays"] = c.nextIn.formatted()
+            v["nextDaysUnit"] = plural(c.nextIn, "day", "days")
+            v["nextTo"] = "to \(next)"
+            v["percent"] = "\(Int((c.progress * 100).rounded()))%"
+            v["chipNext"] = "Next: \(next) · \(days)"
+            progress = c.progress
+        }
+        if let fact = c.fact { v["fact"] = fact.line }
+        return (v, progress)
+    }
+
+    static func chip(label: String, on: String) -> [String: String] {
+        var v: [String: String] = ["chipName": label]
+        if let date = isoDate(on) { v["chipEarned"] = "Earned \(mediumDate(date))" }
+        return v
+    }
+
+    static func reflection(_ r: Reflection, on date: Date) -> ([String: String], Double) {
+        let cal = Calendar.current
+        let dayOfYear = cal.ordinality(of: .day, in: .year, for: date) ?? 1
+        let daysInYear = cal.range(of: .day, in: .year, for: date)?.count ?? 365
+        let short = date.formatted(.dateTime.month(.abbreviated).day())
+        let read = "~\(max(1, r.minutes)) min read"
+        let v: [String: String] = [
+            "rDate": short,
+            "rDay": "\(short) · \(dayOfYear)/\(daysInYear)",
+            "rTitle": r.title,
+            "rQuote": r.quote,
+            "rSource": r.source,
+            "rSourceCaps": r.source.uppercased(),
+            "rRead": read,
+            "rBand": "\(short) · \(read)",
+        ]
+        return (v, Double(dayOfYear) / Double(daysInYear))
+    }
+}
+
+// Draws a layout (see lib/widgetLayouts.js for what each thing is) at the widget's real size,
+// the same way lib/widgetDraw.js does in the browser. iOS rounds a widget's corners itself
+// (about 22 points), so the layout's outer corners and its edge use that.
+struct WidgetCanvas: View {
+    let style: String
+    let layout: [String: Any]
+    let values: [String: String]
+    var progress: [String: Double] = [:]
+    var chip: UIImage? = nil
+
+    static let corner: CGFloat = 22
+
+    var body: some View {
+        Canvas { ctx, size in draw(&ctx, size) }
+    }
+
+    private func num(_ op: [String: Any], _ key: String, _ fallback: CGFloat = 0) -> CGFloat {
+        (op[key] as? NSNumber).map { CGFloat(truncating: $0) } ?? fallback
+    }
+
+    private func shading(_ fill: [String: Any], _ rect: CGRect) -> GraphicsContext.Shading {
+        let kind = fill["k"] as? String ?? "s"
+        if kind == "s" {
+            return .color(Color(hex: fill["c"] as? String ?? "000000", opacity: Double(num(fill, "a", 1))))
+        }
+        let colors = (fill["c"] as? [String]) ?? []
+        let stops = (fill["p"] as? [NSNumber])?.map { CGFloat(truncating: $0) } ?? []
+        let gradient = Gradient(stops: colors.enumerated().map { i, c in
+            Gradient.Stop(color: Color(hex: c), location: min(1, max(0, i < stops.count ? stops[i] : CGFloat(i))))
+        })
+        if kind == "r" {
+            return .radialGradient(gradient, center: CGPoint(x: rect.midX, y: rect.midY), startRadius: 0, endRadius: 0.8 * max(rect.width, rect.height))
+        }
+        let from = (fill["from"] as? [NSNumber])?.map { CGFloat(truncating: $0) } ?? [0, 0]
+        let to = (fill["to"] as? [NSNumber])?.map { CGFloat(truncating: $0) } ?? [1, 1]
+        return .linearGradient(gradient,
+                               startPoint: CGPoint(x: rect.minX + from[0] * rect.width, y: rect.minY + from[1] * rect.height),
+                               endPoint: CGPoint(x: rect.minX + to[0] * rect.width, y: rect.minY + to[1] * rect.height))
+    }
+
+    // "{days} days" filled in; nil when every value it names is empty
+    static func fill(_ template: String, _ values: [String: String]) -> String? {
+        var out = ""
+        var names = 0
+        var any = false
+        var rest = Substring(template)
+        while let open = rest.firstIndex(of: "{"), let close = rest[open...].firstIndex(of: "}") {
+            out += rest[..<open]
+            let name = String(rest[rest.index(after: open)..<close])
+            names += 1
+            let v = values[name] ?? ""
+            if !v.isEmpty { any = true }
+            out += v
+            rest = rest[rest.index(after: close)...]
+        }
+        out += rest
+        return names > 0 && !any ? nil : out
+    }
+
+    // Lines no wider than max, at most `lines`, the last cut with "…" (wrap() in lib/widgetDraw.js)
+    static func wrap(_ text: String, max: CGFloat, lines: Int, measure: (String) -> CGFloat) -> [String] {
+        var out: [String] = []
+        for paragraph in text.components(separatedBy: "\n") {
+            var line = ""
+            for word in paragraph.split(separator: " ", omittingEmptySubsequences: false).map(String.init) {
+                let next = line.isEmpty ? word : "\(line) \(word)"
+                if max <= 0 || measure(next) <= max || line.isEmpty { line = next } else { out.append(line); line = word }
+            }
+            out.append(line)
+        }
+        guard out.count > lines else { return out }
+        var kept = Array(out.prefix(lines))
+        var last = kept[lines - 1]
+        while !last.isEmpty && max > 0 && measure("\(last)…") > max {
+            if let space = last.lastIndex(of: " ") { last = String(last[..<space]) } else { last = "" }
+        }
+        kept[lines - 1] = (last.isEmpty ? kept[lines - 1] : last) + "…"
+        return kept
+    }
+
+    private func font(_ op: [String: Any], _ size: CGFloat) -> Font {
+        let face = op["font"] as? String ?? "rounded"
+        if face == "number" {
+            let name = Layouts.look(style)["number"] as? String ?? "PublicSans-ExtraBold"
+            return .custom(name, fixedSize: size)
+        }
+        let weight: Font.Weight
+        switch Int(num(op, "weight", 400)) {
+        case ..<250: weight = .light
+        case ..<450: weight = .regular
+        case ..<550: weight = .medium
+        case ..<650: weight = .semibold
+        case ..<750: weight = .bold
+        default: weight = .heavy
+        }
+        let design: Font.Design
+        switch face {
+        case "serif": design = .serif
+        case "mono": design = .monospaced
+        case "plain": design = .default
+        default: design = .rounded
+        }
+        return .system(size: size, weight: weight, design: design)
+    }
+
+    // The path around the edge, clockwise from the top middle, inset by `inset`
+    static func edgePath(_ size: CGSize, radius: CGFloat, inset: CGFloat) -> Path {
+        let x0 = inset, y0 = inset, x1 = size.width - inset, y1 = size.height - inset
+        let r = max(0, radius - inset)
+        var p = Path()
+        p.move(to: CGPoint(x: size.width / 2, y: y0))
+        p.addLine(to: CGPoint(x: x1 - r, y: y0))
+        p.addArc(center: CGPoint(x: x1 - r, y: y0 + r), radius: r, startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false)
+        p.addLine(to: CGPoint(x: x1, y: y1 - r))
+        p.addArc(center: CGPoint(x: x1 - r, y: y1 - r), radius: r, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
+        p.addLine(to: CGPoint(x: x0 + r, y: y1))
+        p.addArc(center: CGPoint(x: x0 + r, y: y1 - r), radius: r, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
+        p.addLine(to: CGPoint(x: x0, y: y0 + r))
+        p.addArc(center: CGPoint(x: x0 + r, y: y0 + r), radius: r, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
+        p.addLine(to: CGPoint(x: size.width / 2, y: y0))
+        return p
+    }
+
+    private func draw(_ ctx: inout GraphicsContext, _ size: CGSize) {
+        let lw = num(layout, "w", 170), lh = num(layout, "h", 170)
+        let sx = size.width / lw, sy = size.height / lh, s = min(sx, sy)
+        let ops = layout["ops"] as? [[String: Any]] ?? []
+        for op in ops {
+            switch op["t"] as? String ?? "" {
+            case "rect":
+                let rect = CGRect(x: num(op, "x") * sx, y: num(op, "y") * sy, width: num(op, "w") * sx, height: num(op, "h") * sy)
+                var r = num(op, "r") * s
+                if num(op, "r") >= 24 { r = Self.corner } // the widget's own corners
+                let path = Path(roundedRect: rect, cornerRadius: r, style: .continuous)
+                if (op["mask"] as? Bool) == true { ctx.clip(to: path); continue }
+                ctx.fill(path, with: shading(op["fill"] as? [String: Any] ?? [:], rect))
+            case "text":
+                drawText(&ctx, op, sx: sx, sy: sy, s: s)
+            case "bar":
+                guard let p = progress[op["p"] as? String ?? ""] else { continue }
+                let x = num(op, "x") * sx, y = num(op, "y") * sy, w = num(op, "w") * sx, h = num(op, "h") * s
+                let square = (op["square"] as? Bool) == true
+                let track = op["track"] as? [String: Any] ?? [:]
+                ctx.fill(Path(roundedRect: CGRect(x: x, y: y, width: w, height: h), cornerRadius: square ? 0 : h / 2),
+                         with: .color(Color(hex: track["c"] as? String ?? "FFFFFF", opacity: Double(num(track, "a", 0.13)))))
+                let filled = max(square ? 0 : h, w * CGFloat(p))
+                ctx.fill(Path(roundedRect: CGRect(x: x, y: y, width: filled, height: h), cornerRadius: square ? 0 : h / 2),
+                         with: .color(Color(hex: op["color"] as? String ?? "FFFFFF")))
+            case "ring":
+                guard let p = progress[op["p"] as? String ?? ""] else { continue }
+                let center = CGPoint(x: num(op, "cx") * sx, y: num(op, "cy") * sy)
+                let th = num(op, "th") * s, r = num(op, "r") * s - th / 2
+                let track = op["track"] as? [String: Any] ?? [:]
+                var full = Path()
+                full.addArc(center: center, radius: r, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
+                ctx.stroke(full, with: .color(Color(hex: track["c"] as? String ?? "FFFFFF", opacity: Double(num(track, "a", 0.13)))), lineWidth: th)
+                var arc = Path()
+                arc.addArc(center: center, radius: r, startAngle: .degrees(-90), endAngle: .degrees(-90 + 360 * p), clockwise: false)
+                ctx.stroke(arc, with: .color(Color(hex: op["color"] as? String ?? "FFFFFF")), style: StrokeStyle(lineWidth: th, lineCap: .butt))
+            case "edge":
+                guard let p = progress[op["p"] as? String ?? ""] else { continue }
+                let th = num(op, "th") * s
+                let path = Self.edgePath(size, radius: Self.corner, inset: th / 2)
+                let track = op["track"] as? [String: Any] ?? [:]
+                ctx.stroke(path, with: .color(Color(hex: track["c"] as? String ?? "FFFFFF", opacity: Double(num(track, "a", 0.13)))), lineWidth: th)
+                ctx.stroke(path.trimmedPath(from: 0, to: min(1, max(0, p))), with: .color(Color(hex: op["color"] as? String ?? "FFFFFF")),
+                           style: StrokeStyle(lineWidth: th, lineCap: .butt))
+            case "rule":
+                let n = Int(num(op, "w") / 7.1)
+                let color = Color(hex: op["color"] as? String ?? "FFFFFF", opacity: Double(num(op, "a", 0.35)))
+                for i in 0..<max(0, n) {
+                    ctx.fill(Path(CGRect(x: (num(op, "x") + CGFloat(i) * 7.1) * sx, y: num(op, "y") * sy, width: 3 * s, height: 1.5 * s)), with: .color(color))
+                }
+            case "coin":
+                drawCoin(&ctx, center: CGPoint(x: num(op, "cx") * sx, y: num(op, "cy") * sy), d: num(op, "d") * s)
+            default:
+                continue
+            }
+        }
+    }
+
+    private func drawText(_ ctx: inout GraphicsContext, _ op: [String: Any], sx: CGFloat, sy: CGFloat, s: CGFloat) {
+        guard let text = Self.fill(op["s"] as? String ?? "", values), !text.isEmpty else { return }
+        let color = Color(hex: op["color"] as? String ?? "FFFFFF", opacity: Double(num(op, "a", 1)))
+        let spacing = num(op, "spacing") / 100
+        var size = num(op, "size", 12) * s
+        let base = ctx // a copy for measuring, so nothing below holds on to the inout context
+        func resolved(_ t: String, _ sz: CGFloat) -> GraphicsContext.ResolvedText {
+            base.resolve(Text(t).font(font(op, sz)).tracking(spacing * sz).foregroundColor(color))
+        }
+        func width(_ t: String) -> CGFloat {
+            resolved(t, size).measure(in: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).width
+        }
+        let max = num(op, "maxW") * sx
+        let fit = (op["fit"] as? Bool) == true
+        if fit && max > 0 {
+            let w = width(text)
+            if w > max { size = Swift.max(size * 0.4, size * max / w) }
+        }
+        let lines = fit ? [text] : Self.wrap(text, max: max, lines: Int(num(op, "lines", 1)), measure: width)
+        let lineHeight = num(op, "line", num(op, "size", 12) * 1.2) * s * (size / (num(op, "size", 12) * s))
+        let align = op["align"] as? String ?? "left"
+        let x = num(op, "x") * sx
+        for (i, line) in lines.enumerated() {
+            let r = resolved(line, size)
+            let measured = r.measure(in: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
+            let baseline = num(op, "y") * sy + CGFloat(i) * lineHeight + (lineHeight - size) / 2 + size * 0.8
+            let top = baseline - r.firstBaseline(in: measured)
+            let left = align == "center" ? x - measured.width / 2 : align == "right" ? x - measured.width : x
+            ctx.draw(r, in: CGRect(x: left, y: top, width: measured.width + 1, height: measured.height))
+        }
+    }
+
+    private func drawCoin(_ ctx: inout GraphicsContext, center: CGPoint, d: CGFloat) {
+        let rect = CGRect(x: center.x - d / 2, y: center.y - d / 2, width: d, height: d)
+        if let chip {
+            let image = ctx.resolve(Image(uiImage: chip))
+            ctx.drawLayer { layer in
+                layer.addFilter(.shadow(color: .black.opacity(0.45), radius: d * 0.05, x: 0, y: d * 0.06))
+                layer.addFilter(.brightness(-0.38))
+                layer.draw(image, in: rect.offsetBy(dx: 0, dy: d * 0.03))
+            }
+            ctx.draw(image, in: rect)
+            return
+        }
+        // the widget gallery's preview: a plain brass coin
+        ctx.fill(Path(ellipseIn: rect.offsetBy(dx: 0, dy: d * 0.04)), with: .color(Color(hex: "634B20")))
+        ctx.fill(Path(ellipseIn: rect), with: .linearGradient(Gradient(colors: [Color(hex: "EDCC78"), Color(hex: "9E7833")]),
+                                                             startPoint: CGPoint(x: rect.minX, y: rect.minY), endPoint: CGPoint(x: rect.maxX, y: rect.maxY)))
+        ctx.stroke(Path(ellipseIn: rect.insetBy(dx: d * 0.08, dy: d * 0.08)), with: .color(.white.opacity(0.35)), lineWidth: max(1, d * 0.02))
+        let letter = ctx.resolve(Text("I").font(.system(size: d * 0.38, weight: .bold, design: .serif)).foregroundColor(Color(hex: "5C4214")))
+        ctx.draw(letter, at: CGPoint(x: center.x, y: center.y + d * 0.02), anchor: .center)
+    }
+}
+
+// A style's own background for the container (the corners iOS rounds), and its ink, from the layout
+extension WidgetCanvas {
+    static func baseColor(_ layout: [String: Any]?) -> Color {
+        let first = (layout?["ops"] as? [[String: Any]])?.first { ($0["t"] as? String) == "rect" }
+        guard let fill = first?["fill"] as? [String: Any] else { return Color(hex: "2B4F78") }
+        if let c = fill["c"] as? String { return Color(hex: c) }
+        return Color(hex: (fill["c"] as? [String])?.last ?? "2B4F78")
+    }
+}
+
+// A widget drawn from its layout, filling the whole widget
+struct LayoutWidget: View {
+    @Environment(\.widgetFamily) var family
+    @Environment(\.colorScheme) var colorScheme
+    let kind: String
+    let values: [String: String]
+    var progress: [String: Double] = [:]
+    var chip: UIImage? = nil
+    var message: String? = nil
+
+    var body: some View {
+        let style = Shared.style(kind, family).layoutKey(colorScheme)
+        let layout = Layouts.layout(style, kind, family.styleKey)
+        Group {
+            if let message {
+                MessageCard(style: style, layout: layout, text: message, icon: kind == "chip" ? "star.circle" : kind == "reflection" ? "book" : "calendar")
+            } else if let layout {
+                WidgetCanvas(style: style, layout: layout, values: values, progress: progress, chip: chip)
+            } else {
+                MessageCard(style: style, layout: nil, text: "Open RecoveryBot to finish setting up this widget.")
+            }
+        }
+        .containerBackground(for: .widget) { WidgetCanvas.baseColor(layout) }
+    }
+}
+
+// Signed out, no date yet, nothing to show: a short note on the style's background
+struct MessageCard: View {
+    let style: String
+    let layout: [String: Any]?
+    let text: String
+    var icon = "calendar"
+
+    var body: some View {
+        let ink = Color(hex: Layouts.look(style)["ink"] as? String ?? "FFFFFF")
+        ZStack(alignment: .topLeading) {
+            if let layout {
+                // only the background of the layout
+                WidgetCanvas(style: style, layout: ["w": layout["w"] ?? 170, "h": layout["h"] ?? 170,
+                                                    "ops": Array(((layout["ops"] as? [[String: Any]]) ?? []).prefix { ($0["t"] as? String) == "rect" })],
+                             values: [:])
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Image(systemName: icon).font(.title2).foregroundStyle(ink).opacity(0.9)
+                Spacer(minLength: 0)
+                Text(text).font(.system(.footnote, design: .rounded).weight(.semibold)).foregroundStyle(ink)
+            }
+            .padding(16)
         }
     }
 }
+
+// MARK: - Day count widget
 
 enum DayState {
     case signedOut, noDate, counting(DayCount)
@@ -261,15 +642,7 @@ struct DayProvider: TimelineProvider {
 
     // Now, then each midnight for a week (the app asks for a new one whenever it opens)
     func getTimeline(in context: Context, completion: @escaping (Timeline<DayEntry>) -> Void) {
-        let cal = Calendar.current
-        var entries = [entry(at: Date())]
-        var day = cal.startOfDay(for: Date())
-        for _ in 0..<7 {
-            guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
-            day = next
-            entries.append(entry(at: day))
-        }
-        completion(Timeline(entries: entries, policy: .atEnd))
+        completion(Timeline(entries: midnights().map(entry(at:)), policy: .atEnd))
     }
 
     private func entry(at date: Date) -> DayEntry {
@@ -280,58 +653,43 @@ struct DayProvider: TimelineProvider {
     }
 }
 
-let dayGradient = LinearGradient(colors: [Color(red: 0.36, green: 0.55, blue: 0.73), Color(red: 0.17, green: 0.31, blue: 0.47)],
-                                 startPoint: .topLeading, endPoint: .bottomTrailing)
+// Now and each of the next seven midnights
+func midnights() -> [Date] {
+    let cal = Calendar.current
+    var dates = [Date()]
+    var day = cal.startOfDay(for: Date())
+    for _ in 0..<7 {
+        guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
+        day = next
+        dates.append(day)
+    }
+    return dates
+}
 
 struct DayCountView: View {
     @Environment(\.widgetFamily) var family
-    @Environment(\.colorScheme) var colorScheme
     let entry: DayEntry
-    var theme: WidgetTheme { WidgetTheme.of(Shared.style("day", family), scheme: colorScheme) }
 
     var body: some View {
-        content
-            .widgetURL(Shared.todayPanel)
-            .widgetBackground(family, theme)
+        switch family {
+        case .accessoryInline, .accessoryCircular, .accessoryRectangular:
+            lockScreen.widgetURL(Shared.todayPanel).containerBackground(for: .widget) { Color.clear }
+        default:
+            home.widgetURL(Shared.todayPanel)
+        }
     }
 
-    @ViewBuilder var content: some View {
+    @ViewBuilder var home: some View {
         switch entry.state {
-        case .signedOut: message("Sign in to RecoveryBot to see your day count.", short: "Sign in")
-        case .noDate: message("Add your sobriety date in RecoveryBot to start your count.", short: "Add date")
+        case .signedOut: LayoutWidget(kind: "day", values: [:], message: "Sign in to RecoveryBot to see your day count.")
+        case .noDate: LayoutWidget(kind: "day", values: [:], message: "Add your sobriety date in RecoveryBot to start your count.")
         case .counting(let count): counted(count)
         }
     }
 
-    @ViewBuilder func message(_ text: String, short: String) -> some View {
-        switch family {
-        case .accessoryInline: Text("RecoveryBot: \(short)")
-        case .accessoryCircular:
-            ZStack {
-                AccessoryWidgetBackground()
-                Image(systemName: "calendar").font(.title3)
-            }
-        case .accessoryRectangular:
-            VStack(alignment: .leading) {
-                Text("Day count").font(.headline)
-                Text(text).font(.caption).lineLimit(2)
-            }.frame(maxWidth: .infinity, alignment: .leading)
-        default:
-            VStack(alignment: .leading, spacing: 6) {
-                Image(systemName: "calendar").font(.title2)
-                Spacer(minLength: 0)
-                Text(text).font(theme.text(.footnote, .medium))
-            }
-            .foregroundStyle(theme.ink)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        }
-    }
-
-    // The count, in the style's number face and (on Light and Midnight) its own color
-    func numberText(_ days: Int, _ size: CGFloat) -> some View {
-        Text("\(days)").font(theme.number(size)).tracking(theme.numberTracking)
-            .foregroundStyle(theme.numberInk ?? theme.ink)
-            .minimumScaleFactor(0.4).lineLimit(1)
+    func counted(_ count: DayCount) -> LayoutWidget {
+        let (values, progress) = WidgetValues.day(count)
+        return LayoutWidget(kind: "day", values: values, progress: progress.map { ["progress": $0] } ?? [:])
     }
 
     func nextLine(_ c: DayCount) -> String? {
@@ -340,98 +698,49 @@ struct DayCountView: View {
         return "\(next) in \(c.nextIn) \(plural(c.nextIn, "day", "days"))"
     }
 
-    // "🪐 In 12 days: a whole year on Mars", one line along the bottom of the medium size
-    func factLine(_ f: FactLine) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text(f.emoji)
-            Text("\(f.when): \(f.lowered)").font(theme.text(.caption, .medium)).opacity(0.9).lineLimit(1).minimumScaleFactor(0.85)
-        }
+    var signedOutShort: String {
+        if case .signedOut = entry.state { return "Sign in" }
+        return "Add date"
     }
 
-    @ViewBuilder func counted(_ c: DayCount) -> some View {
-        let unit = plural(c.days, "day", "days")
-        switch family {
-        case .accessoryInline:
-            Text("\(c.days) \(unit)")
-        case .accessoryCircular:
-            ZStack {
-                AccessoryWidgetBackground()
-                VStack(spacing: -2) {
-                    Text("\(c.days)").font(.system(size: 22, weight: .bold, design: .rounded)).minimumScaleFactor(0.5).lineLimit(1)
-                    Text(unit).font(.system(size: 10, weight: .semibold))
-                }.padding(.horizontal, 4)
-            }
-        case .accessoryRectangular:
-            VStack(alignment: .leading, spacing: 1) {
-                Text("\(c.days) \(unit)").font(.system(.headline, design: .rounded))
-                if let line = nextLine(c) { Text(line).font(.caption) }
-                if c.next != nil && c.today == nil { ProgressView(value: c.progress) }
-            }.frame(maxWidth: .infinity, alignment: .leading)
-        case .systemMedium:
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .center, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        numberText(c.days, 60)
-                        Text(unit).font(theme.unit(.title3)).opacity(0.9)
-                    }
-                    Spacer(minLength: 0)
-                    VStack(alignment: .leading, spacing: 6) {
-                        if let today = c.today {
-                            Text("Today").font(theme.text(.caption, .semibold)).opacity(0.8)
-                            Text(today).font(theme.text(.title3, .bold))
-                        } else if let next = c.next {
-                            Text("Next").font(theme.text(.caption, .semibold)).opacity(0.8)
-                            Text(next).font(theme.text(.headline, .semibold))
-                            ProgressView(value: c.progress).tint(theme.accent)
-                            Text("in \(c.nextIn) \(plural(c.nextIn, "day", "days"))").font(theme.text(.caption)).opacity(0.85)
-                        }
-                    }.frame(maxWidth: 140)
+    // The Lock Screen takes the system's look
+    @ViewBuilder var lockScreen: some View {
+        switch entry.state {
+        case .signedOut, .noDate:
+            let short = signedOutShort
+            switch family {
+            case .accessoryInline: Text("RecoveryBot: \(short)")
+            case .accessoryCircular:
+                ZStack {
+                    AccessoryWidgetBackground()
+                    Image(systemName: "calendar").font(.title3)
                 }
-                if let fact = c.fact { factLine(fact) }
+            default:
+                VStack(alignment: .leading) {
+                    Text("Day count").font(.headline)
+                    Text(short).font(.caption).lineLimit(2)
+                }.frame(maxWidth: .infinity, alignment: .leading)
             }
-            .foregroundStyle(theme.ink)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .systemLarge:
-            VStack(alignment: .leading, spacing: 0) {
-                numberText(c.days, 96)
-                Text(unit).font(theme.unit(.title2)).opacity(0.9)
-                Spacer(minLength: 8)
-                if let today = c.today {
-                    Text("Today").font(theme.text(.caption, .semibold)).opacity(0.8)
-                    Text(today).font(theme.text(.title2, .bold))
-                } else if let next = c.next {
-                    Text("Next: \(next)").font(theme.text(.headline, .semibold))
-                    ProgressView(value: c.progress).tint(theme.accent).padding(.vertical, 4)
-                    Text("in \(c.nextIn) \(plural(c.nextIn, "day", "days"))").font(theme.text(.caption)).opacity(0.85)
+        case .counting(let c):
+            let unit = plural(c.days, "day", "days")
+            switch family {
+            case .accessoryInline:
+                Text("\(c.days) \(unit)")
+            case .accessoryCircular:
+                ZStack {
+                    AccessoryWidgetBackground()
+                    VStack(spacing: -2) {
+                        Text("\(c.days)").font(.system(size: 22, weight: .bold, design: .rounded)).minimumScaleFactor(0.5).lineLimit(1)
+                        Text(unit).font(.system(size: 10, weight: .semibold))
+                    }.padding(.horizontal, 4)
                 }
-                if let fact = c.fact {
-                    Spacer(minLength: 8)
-                    HStack(alignment: .top, spacing: 10) {
-                        Text(fact.emoji).font(.system(size: 30))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(fact.when).font(theme.text(.caption, .semibold)).opacity(0.8)
-                            Text(fact.title).font(theme.text(.subheadline, .semibold)).lineLimit(2)
-                            if !fact.detail.isEmpty {
-                                Text(fact.detail).font(theme.text(.caption)).opacity(0.85).lineLimit(3)
-                            }
-                        }
-                    }
-                }
+            default:
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("\(c.days) \(unit)").font(.system(.headline, design: .rounded))
+                    if let line = nextLine(c) { Text(line).font(.caption) }
+                    if c.next != nil && c.today == nil { ProgressView(value: c.progress) }
+                }.frame(maxWidth: .infinity, alignment: .leading)
             }
-            .foregroundStyle(theme.ink)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        default:
-            VStack(alignment: .leading, spacing: 0) {
-                numberText(c.days, 54)
-                Text(unit).font(theme.unit(.headline)).opacity(0.9)
-                Spacer(minLength: 0)
-                if let line = nextLine(c) { Text(line).font(theme.text(.caption, .medium)).opacity(0.9).lineLimit(2) }
-                if c.next != nil && c.today == nil {
-                    ProgressView(value: c.progress).tint(theme.accent).padding(.top, 4)
-                }
-            }
-            .foregroundStyle(theme.ink)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
 }
@@ -444,6 +753,7 @@ struct DayCountWidget: Widget {
         .configurationDisplayName("Day count")
         .description("Your days, counted on your phone, your next milestone and, in the larger sizes, the next fun fact. It shows only the number. Pick its style in RecoveryBot's settings, under Widgets.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryCircular, .accessoryRectangular, .accessoryInline])
+        .contentMarginsDisabled()
     }
 }
 
@@ -453,101 +763,56 @@ struct ChipEntry: TimelineEntry {
     let date: Date
     let signedIn: Bool
     let image: UIImage?
-    var back: UIImage? = nil
-    var flipped = false
     let label: String
+    let on: String
+    var count: DayCount? = nil
     var sample = false
 }
 
 struct ChipProvider: TimelineProvider {
-    func placeholder(in context: Context) -> ChipEntry { ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", sample: true) }
+    static let sample = ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", on: "", count: .sample, sample: true)
+
+    func placeholder(in context: Context) -> ChipEntry { Self.sample }
 
     func getSnapshot(in context: Context, completion: @escaping (ChipEntry) -> Void) {
-        let now = current()
-        completion(context.isPreview && now.image == nil ? ChipEntry(date: Date(), signedIn: true, image: nil, label: "1 year", sample: true) : now)
+        let now = entry(at: Date())
+        completion(context.isPreview && now.image == nil ? Self.sample : now)
     }
 
-    // It only changes when the app hands it a new chip, which asks for a new timeline
+    // The chip only changes when the app hands it a new one (which asks for a new timeline), but
+    // its line about the next chip moves along each midnight
     func getTimeline(in context: Context, completion: @escaping (Timeline<ChipEntry>) -> Void) {
-        completion(Timeline(entries: [current()], policy: .never))
+        completion(Timeline(entries: midnights().map(entry(at:)), policy: .atEnd))
     }
 
-    private func current() -> ChipEntry {
+    private func entry(at date: Date) -> ChipEntry {
         let signedIn = Shared.signedIn
-        return ChipEntry(date: Date(), signedIn: signedIn, image: signedIn ? Shared.chipImage() : nil,
-                         back: signedIn ? Shared.chipBackImage() : nil, flipped: Shared.chipFlipped, label: Shared.chipLabel)
+        return ChipEntry(date: date, signedIn: signedIn, image: signedIn ? Shared.chipImage() : nil, label: Shared.chipLabel, on: Shared.chipOn,
+                         count: signedIn ? DayCount.from(Shared.soberSince, on: date) : nil)
     }
 }
 
-let chipBackdrop = RadialGradient(colors: [Color(red: 0.2, green: 0.25, blue: 0.36), Color(red: 0.06, green: 0.09, blue: 0.16)],
-                                  center: .center, startRadius: 5, endRadius: 220)
-
 struct ChipView: View {
-    @Environment(\.widgetFamily) var family
-    @Environment(\.colorScheme) var colorScheme
     let entry: ChipEntry
-    var theme: WidgetTheme { WidgetTheme.of(Shared.style("chip", family), scheme: colorScheme) }
 
     var body: some View {
-        content
-            .foregroundStyle(theme.ink)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .widgetURL(entry.image == nil ? Shared.chipsPage : Shared.chipLink)
-            .widgetBackground(family, theme)
-    }
-
-    // Depth: a darker copy just below it for the coin's rim, and a soft shadow under the whole chip
-    func coin(_ picture: UIImage) -> some View {
-        ZStack {
-            Image(uiImage: picture).resizable().scaledToFit()
-                .brightness(-0.38).offset(y: 3)
-            Image(uiImage: picture).resizable().scaledToFit()
-        }
-        .shadow(color: .black.opacity(0.45), radius: 7, x: 0, y: 6)
-    }
-
-    @ViewBuilder var chip: some View {
-        if let image = entry.image {
-            coin(image)
-        } else {
-            // the widget gallery's preview: a plain brass coin
-            Circle()
-                .fill(LinearGradient(colors: [Color(red: 0.93, green: 0.8, blue: 0.47), Color(red: 0.62, green: 0.47, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .overlay(Circle().inset(by: 8).stroke(Color.white.opacity(0.35), lineWidth: 2))
-                .overlay(Text("I").font(.system(size: 34, weight: .bold, design: .serif)).foregroundStyle(Color(red: 0.36, green: 0.26, blue: 0.08)))
-                .padding(8)
-        }
+        content.widgetURL(entry.image == nil ? Shared.chipsPage : Shared.chipLink)
     }
 
     @ViewBuilder var content: some View {
         if !entry.signedIn && !entry.sample {
-            empty("Sign in to RecoveryBot to show your chip here.")
+            LayoutWidget(kind: "chip", values: [:], message: "Sign in to RecoveryBot to show your chip here.")
         } else if entry.image == nil && !entry.sample {
-            empty("Star a chip on your Chips page to show it here.")
-        } else if family == .systemMedium {
-            HStack(spacing: 14) {
-                chip
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(entry.label).font(.title3.weight(.bold)).lineLimit(2)
-                    Text("Favorite chip").font(.caption).opacity(0.75)
-                }
-                Spacer(minLength: 0)
-            }
+            LayoutWidget(kind: "chip", values: [:], message: "Star a chip on your Chips page to show it here.")
         } else {
-            VStack(spacing: 4) {
-                chip
-                if !entry.label.isEmpty && family != .systemSmall {
-                    Text(entry.label).font(.headline)
-                }
-            }
+            shown
         }
     }
 
-    func empty(_ text: String) -> some View {
-        VStack(spacing: 8) {
-            Image(systemName: "star.circle").font(.title)
-            Text(text).font(.footnote.weight(.medium)).multilineTextAlignment(.center)
-        }
+    var shown: LayoutWidget {
+        let (dayValues, progress) = entry.count.map { WidgetValues.day($0) } ?? ([:], nil)
+        let values = dayValues.merging(WidgetValues.chip(label: entry.label, on: entry.on)) { _, chip in chip }
+        return LayoutWidget(kind: "chip", values: values, progress: progress.map { ["progress": $0] } ?? [:], chip: entry.image)
     }
 }
 
@@ -557,22 +822,71 @@ struct ChipWidget: Widget {
             ChipView(entry: entry)
         }
         .configurationDisplayName("Favorite chip")
-        .description("The first chip you starred on your Chips page. Tap the chip to turn it over; pick its style in RecoveryBot's settings, under Widgets.")
+        .description("The first chip you starred on your Chips page, and how far it is to your next. Pick its style in RecoveryBot's settings, under Widgets.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .contentMarginsDisabled()
     }
 }
 
-// MARK: - Shared
+// MARK: - Daily Reflection widget
 
-extension View {
-    // A Home Screen widget gets its style's backdrop; a Lock Screen one takes the system's
-    @ViewBuilder func widgetBackground(_ family: WidgetFamily, _ theme: WidgetTheme) -> some View {
-        switch family {
-        case .accessoryCircular, .accessoryRectangular, .accessoryInline:
-            containerBackground(for: .widget) { Color.clear }
-        default:
-            containerBackground(theme.background, for: .widget)
+struct ReflectionEntry: TimelineEntry {
+    let date: Date
+    let signedIn: Bool
+    let reflection: Reflection?
+}
+
+struct ReflectionProvider: TimelineProvider {
+    func placeholder(in context: Context) -> ReflectionEntry { ReflectionEntry(date: Date(), signedIn: true, reflection: .sample) }
+
+    func getSnapshot(in context: Context, completion: @escaping (ReflectionEntry) -> Void) {
+        let now = entry(at: Date())
+        completion(context.isPreview && now.reflection == nil ? placeholder(in: context) : now)
+    }
+
+    // Each midnight for a week: the site sends two weeks of readings whenever the app opens
+    func getTimeline(in context: Context, completion: @escaping (Timeline<ReflectionEntry>) -> Void) {
+        completion(Timeline(entries: midnights().map(entry(at:)), policy: .atEnd))
+    }
+
+    private func entry(at date: Date) -> ReflectionEntry {
+        let today = Reflection.isoDay(date)
+        let reflection = Shared.signedIn ? Shared.reflections().first { $0.date == today } : nil
+        return ReflectionEntry(date: date, signedIn: Shared.signedIn, reflection: reflection)
+    }
+}
+
+struct ReflectionView: View {
+    let entry: ReflectionEntry
+
+    var body: some View {
+        if let r = entry.reflection {
+            reading(r).widgetURL(r.link)
+        } else {
+            LayoutWidget(kind: "reflection", values: [:], message: entry.signedIn
+                         ? "Open RecoveryBot to bring in today's Daily Reflection."
+                         : "Sign in to RecoveryBot to see today's Daily Reflection.")
+                .widgetURL(Shared.library)
         }
+    }
+}
+
+extension ReflectionView {
+    func reading(_ r: Reflection) -> LayoutWidget {
+        let (values, year) = WidgetValues.reflection(r, on: entry.date)
+        return LayoutWidget(kind: "reflection", values: values, progress: ["year": year])
+    }
+}
+
+struct ReflectionWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "DailyReflection", provider: ReflectionProvider()) { entry in
+            ReflectionView(entry: entry)
+        }
+        .configurationDisplayName("Daily Reflection")
+        .description("Today's Daily Reflection: its title and the quote it opens with. Tap it to read the whole page. Pick its style in RecoveryBot's settings, under Widgets.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .contentMarginsDisabled()
     }
 }
 
@@ -581,5 +895,6 @@ struct RecoveryBotWidgets: WidgetBundle {
     var body: some Widget {
         DayCountWidget()
         ChipWidget()
+        ReflectionWidget()
     }
 }

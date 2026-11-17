@@ -58,6 +58,12 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_chip_info" />
         </receiver>
+        <receiver android:name=".ReflectionWidget" android:label="@string/widget_reflection" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_reflection_info" />
+        </receiver>
 
         <!-- Notifications (Firebase Cloud Messaging, @capacitor-firebase/messaging; FcmSender on
              the server). No token is made until they're turned on in account settings, and

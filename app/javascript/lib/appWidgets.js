@@ -1,27 +1,31 @@
-// The iPhone and Android apps' widgets: a day count and a favorite chip, on the Home Screen
-// (and the day count on the Lock Screen). The widgets can't open the site, so the app's script
+// The iPhone and Android apps' widgets: a day count, a favorite chip and the Daily Reflection,
+// on the Home Screen (and the day count on the Lock Screen). The widgets can't open the site, so the app's script
 // (entrypoints/native_app.js) hands them what they show through the app's WidgetBridge plugin
 // (mobile/), which keeps it on the phone:
 //   soberSince  "YYYY-MM-DD", or "" without one (the widget counts the days itself, so it turns
 //               over at midnight without the app being opened)
 //   chipImage   the chip drawn on a clear background, a PNG as base64, or "" without one
-//   chipBackImage  its back, drawn the same way, so tapping the chip on the widget flips it
-//   chipLabel   its name ("1 year"), and chipId
+//   chipBackImage  its back, drawn the same way (app builds before the shared layouts flip the chip to it)
+//   chipLabel   its name ("1 year"), chipId, and chipOn (the day they earned it, "YYYY-MM-DD")
 //   funFacts    JSON: the fun day-count facts from today on (lib/dayFacts.json) as
 //               [{ d: day, e: emoji, t: title, x: detail }], so the larger day count widgets show
 //               the next one (or today's) and keep up as the days pass. Older app builds ignore it.
+//   reflections JSON: the Daily Reflection for each of the next two weeks, as
+//               [{ date, title, quote, source, minutes, path }] (Api::WidgetReflectionsController),
+//               so the widget turns over at midnight by itself. Older app builds ignore it.
+// How each widget is laid out is in lib/widgetLayouts.js (bundled into the apps).
 // The chip is their first favorite (Chips page), else their newest sobriety chip, else their
 // newest chip. It's drawn right here, the same way chip pictures are (chipMotion.js).
 //
 // The page's body carries data-widget (NativeAppRequest#native_widget_key): who's signed in,
-// their sobriety date and their first favorite. The widgets are only redrawn when that, or the
-// number of sobriety chips they've earned, changes; signed out, they're cleared.
+// their sobriety date and their first favorite. The widgets are only redrawn when that, the
+// number of sobriety chips they've earned, or the day changes; signed out, they're cleared.
 import { chipMilestones } from "./milestones";
 import { callPlugin, hasPlugin } from "./nativeApp";
 import FACTS, { TOPIC_ICONS } from "./dayFacts";
 
 const STORE = "hb-widget-key";
-const VERSION = 3; // bump to redraw everyone's widgets after a change to how they're drawn
+const VERSION = 4; // bump to redraw everyone's widgets after a change to how they're drawn
 const SIZE = 600;
 
 const remembered = () => { try { return localStorage.getItem(STORE); } catch { return null; } };
@@ -88,12 +92,18 @@ async function update(force) {
   }
   const since = server.split("|")[1] || "";
   const earned = chipMilestones(since)?.earned.length ?? 0;
-  const key = `${server}|${earned}|${VERSION}`;
+  // the day too, so the two weeks of Daily Reflections keep moving along
+  const key = `${server}|${earned}|${todayIso()}|${VERSION}`;
   if (!force && remembered() === key) return;
 
   const res = await fetch(`/api/recovery?today=${todayIso()}`, { credentials: "same-origin", headers: { Accept: "application/json" } });
   if (!res.ok) return;
   const data = await res.json();
+  let reflections = [];
+  try {
+    const r = await fetch(`/api/widget_reflections?from=${todayIso()}`, { credentials: "same-origin", headers: { Accept: "application/json" } });
+    if (r.ok) reflections = (await r.json()).reflections || [];
+  } catch { /* the widget asks them to open the app */ }
   const chip = pickChip(data);
   let chipImage = "";
   let chipBackImage = "";
@@ -106,6 +116,8 @@ async function update(force) {
     chipBackImage,
     chipLabel: chip?.label || "",
     chipId: chip ? String(chip.id) : "",
+    chipOn: chip?.on ? String(chip.on).slice(0, 10) : "",
+    reflections: JSON.stringify(reflections),
     funFacts: JSON.stringify(widgetFacts(data.sobriety_date)),
   });
   remember(key);

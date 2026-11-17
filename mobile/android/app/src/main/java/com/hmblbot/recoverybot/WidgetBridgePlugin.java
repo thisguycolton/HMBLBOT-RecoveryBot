@@ -17,10 +17,11 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.FileOutputStream;
 
-// The Home Screen widgets (DayCountWidget, ChipWidget): the site hands them what they show
-// (lib/appWidgets.js), and this keeps it in the app's own storage, then has them redraw.
-// soberSince "YYYY-MM-DD" (the widget counts the days itself), the chip and its back as PNGs,
-// its name, and the fun day-count facts still ahead.
+// The Home Screen widgets (DayCountWidget, ChipWidget, ReflectionWidget): the site hands them
+// what they show (lib/appWidgets.js), and this keeps it in the app's own storage, then has them
+// redraw. soberSince "YYYY-MM-DD" (the widget counts the days itself), the chip and its back as
+// PNGs, its name and the day it was earned, the fun day-count facts still ahead, and two weeks
+// of Daily Reflections.
 @CapacitorPlugin(name = "WidgetBridge")
 public class WidgetBridgePlugin extends Plugin {
     @PluginMethod
@@ -33,7 +34,11 @@ public class WidgetBridgePlugin extends Plugin {
             .putBoolean("signedIn", true)
             .putString("soberSince", call.getString("soberSince", ""))
             .putString("chipLabel", call.getString("chipLabel", ""))
-            .putString("chipId", chipId);
+            .putString("chipId", chipId)
+            .putString("chipOn", call.getString("chipOn", ""));
+        // Two weeks of Daily Reflections (JSON, Api::WidgetReflectionsController); older sites send none
+        String reflections = call.getString("reflections", null);
+        if (reflections != null) prefs.putString("reflections", reflections);
         // The fun day-count facts still ahead (JSON, lib/appWidgets.js); a site from before them sends none
         String facts = call.getString("funFacts", null);
         if (facts != null) prefs.putString("funFacts", facts);
@@ -79,7 +84,7 @@ public class WidgetBridgePlugin extends Plugin {
         String style = call.getString("style", "");
         String widget = call.getString("widget", "");
         String[] placed = widget.split("\\.", 2);
-        if (placed.length == 2 && ("day".equals(placed[0]) || "chip".equals(placed[0]))) {
+        if (placed.length == 2 && WidgetStyles.isKind(placed[0])) {
             int id;
             try {
                 id = Integer.parseInt(placed[1]);
@@ -102,7 +107,7 @@ public class WidgetBridgePlugin extends Plugin {
             call.reject("Unknown widget style");
             return;
         }
-        if (!widget.isEmpty() && !"both".equals(widget) && !"all".equals(widget) && !"day".equals(widget) && !"chip".equals(widget)) {
+        if (!widget.isEmpty() && !"both".equals(widget) && !"all".equals(widget) && !WidgetStyles.isKind(widget)) {
             call.reject("Unknown widget");
             return;
         }
@@ -122,8 +127,8 @@ public class WidgetBridgePlugin extends Plugin {
         Context context = getContext();
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         JSArray widgets = new JSArray();
-        String[] kinds = {"day", "chip"};
-        Class<?>[] providers = {DayCountWidget.class, ChipWidget.class};
+        String[] kinds = {"day", "chip", "reflection"};
+        Class<?>[] providers = {DayCountWidget.class, ChipWidget.class, ReflectionWidget.class};
         for (int k = 0; k < kinds.length; k++) {
             for (int id : manager.getAppWidgetIds(new ComponentName(context, providers[k]))) {
                 Bundle options = manager.getAppWidgetOptions(id);
