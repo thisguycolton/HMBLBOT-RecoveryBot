@@ -4,7 +4,7 @@ import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
 import { RecoveryBotLogo } from "../brand/Logo";
 import HumanCheckFields from "../site/HumanCheckFields";
-import { callPlugin, hasPlugin } from "../../lib/nativeApp";
+import { callPlugin, hasPlugin, nativePlatform } from "../../lib/nativeApp";
 import { AppleMark, GoogleMark } from "./ProviderMarks";
 
 // Devise's pages in the house panel style. Each posts a plain HTML form, so Devise
@@ -144,6 +144,11 @@ function NativeButton({ provider, options, authenticity_token, className, busy, 
     } catch (e) {
       const message = String(e?.message || e);
       if (!/cancel/i.test(message)) setError(message);
+      // Android's Google sheet can also flash up and close by itself a little later when Google
+      // won't sign this copy of the app in, which looked like nothing happened. Leave a note.
+      else if (provider === "google" && nativePlatform() === "android") {
+        setError("Google sign-in closed without signing you in. If you didn't close it yourself, please sign in with your email for now.");
+      }
       setGoing(false);
     }
   };
@@ -249,7 +254,7 @@ export function ResendConfirmationPage({ email = "", login_path, ...form }) {
 }
 
 // Right after sign-up: the account can't log in until the emailed link is clicked.
-export function CheckEmailPage({ email = "", login_path, sign_up_path, ...form }) {
+export function CheckEmailPage({ email = "", again = false, forgot_path, login_path, sign_up_path, ...form }) {
   return (
     <AuthFrame icon={Inbox} title="Check your email" subtitle="One more step before you can log in"
       footer={<>
@@ -261,6 +266,12 @@ export function CheckEmailPage({ email = "", login_path, sign_up_path, ...form }
           We sent a confirmation link to <strong className="font-semibold text-slate-900 dark:text-white break-all">{email}</strong>.
           Click it to confirm your address, then log in.
         </p>
+        {again && (
+          <p>
+            You'd already started signing up with this address, so we sent the link again. Once it's confirmed, log in
+            with the password you chose the first time{forgot_path && <>, or <a href={forgot_path} className={linkClass}>reset it</a> if you've forgotten it</>}.
+          </p>
+        )}
         <p className="text-xs text-slate-500 dark:text-neutral-400">
           It can take a minute or two. If it doesn't turn up, check your spam or promotions folder. The link works for 3 days.
         </p>
