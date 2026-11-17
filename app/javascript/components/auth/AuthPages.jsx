@@ -4,7 +4,8 @@ import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { inputClass, labelClass } from "../ui/styles";
 import { RecoveryBotLogo } from "../brand/Logo";
 import HumanCheckFields from "../site/HumanCheckFields";
-import { callPlugin, hasPlugin } from "../../lib/nativeApp";
+import { callPlugin, hasPlugin, nativePlatform } from "../../lib/nativeApp";
+import { AppleMark, GoogleMark } from "./ProviderMarks";
 
 // Devise's pages in the house panel style. Each posts a plain HTML form, so Devise
 // handles the session, redirects and flash (shown as toasts) exactly as before.
@@ -106,10 +107,21 @@ function PostButton({ path, authenticity_token, className, busy, children }) {
 // The apps' own sign-in sheets (NativeSignIn): the page asks the server for a nonce, the app's
 // NativeAuth plugin signs in with Google or Apple and returns an ID token, and the server checks
 // it and signs them in
+const QUICK_CANCEL_MS = 1500;
+
 async function nativeSignIn(provider, options, authenticityToken) {
   const { nonce } = await fetch("/users/auth/native/nonce", { credentials: "same-origin", headers: { Accept: "application/json" } }).then((r) => r.json());
   const args = provider === "google" ? { clientId: options.google_client_id, nonce } : { nonce };
-  const result = await callPlugin("NativeAuth", provider, args);
+  const started = Date.now();
+  const result = await callPlugin("NativeAuth", provider, args).catch((e) => {
+    // Android's picker answers "canceled" at once, without ever showing, when Google won't hand
+    // this copy of the app a sign-in (its signing key isn't on the Google Cloud Android client).
+    // Nobody can close a picker that fast, so say so instead of doing nothing.
+    if (provider === "google" && /cancel/i.test(String(e?.message || e)) && Date.now() - started < QUICK_CANCEL_MS) {
+      throw new Error("Google sign-in didn't open on this phone. Please sign in with your email for now, and let us know so we can fix it.");
+    }
+    throw e;
+  });
   const res = await fetch("/users/auth/native", {
     method: "POST",
     credentials: "same-origin",
@@ -132,6 +144,11 @@ function NativeButton({ provider, options, authenticity_token, className, busy, 
     } catch (e) {
       const message = String(e?.message || e);
       if (!/cancel/i.test(message)) setError(message);
+      // Android's Google sheet can also flash up and close by itself a little later when Google
+      // won't sign this copy of the app in, which looked like nothing happened. Leave a note.
+      else if (provider === "google" && nativePlatform() === "android") {
+        setError("Google sign-in closed without signing you in. If you didn't close it yourself, please sign in with your email for now.");
+      }
       setGoing(false);
     }
   };
@@ -171,27 +188,6 @@ function ProviderButtons({ google_path, apple_path, native_sign_in, authenticity
         <span className="h-px flex-1 bg-slate-200 dark:bg-neutral-700" /> or <span className="h-px flex-1 bg-slate-200 dark:bg-neutral-700" />
       </div>
     </>
-  );
-}
-
-// Apple's logo for the Sign in with Apple button (the outline from Font Awesome Free, CC BY 4.0)
-function AppleMark({ className }) {
-  return (
-    <svg viewBox="0 0 384 512" className={className} aria-hidden="true" fill="currentColor">
-      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
-    </svg>
-  );
-}
-
-// Google's "G", in its own colors as Google's sign-in branding asks
-function GoogleMark({ className }) {
-  return (
-    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-    </svg>
   );
 }
 
@@ -258,7 +254,7 @@ export function ResendConfirmationPage({ email = "", login_path, ...form }) {
 }
 
 // Right after sign-up: the account can't log in until the emailed link is clicked.
-export function CheckEmailPage({ email = "", login_path, sign_up_path, ...form }) {
+export function CheckEmailPage({ email = "", again = false, forgot_path, login_path, sign_up_path, ...form }) {
   return (
     <AuthFrame icon={Inbox} title="Check your email" subtitle="One more step before you can log in"
       footer={<>
@@ -270,6 +266,12 @@ export function CheckEmailPage({ email = "", login_path, sign_up_path, ...form }
           We sent a confirmation link to <strong className="font-semibold text-slate-900 dark:text-white break-all">{email}</strong>.
           Click it to confirm your address, then log in.
         </p>
+        {again && (
+          <p>
+            You'd already started signing up with this address, so we sent the link again. Once it's confirmed, log in
+            with the password you chose the first time{forgot_path && <>, or <a href={forgot_path} className={linkClass}>reset it</a> if you've forgotten it</>}.
+          </p>
+        )}
         <p className="text-xs text-slate-500 dark:text-neutral-400">
           It can take a minute or two. If it doesn't turn up, check your spam or promotions folder. The link works for 3 days.
         </p>

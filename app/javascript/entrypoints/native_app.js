@@ -9,9 +9,11 @@
 // - Print uses the phone's own print screen (window.print does nothing in a web view)
 // - the Home Screen widgets get the day count and favorite chip (lib/appWidgets.js)
 // - notifications: a tap opens its page, logging out stops them (lib/nativePush.js)
+// - the app lock (Face ID and the like) knows whether someone is signed in (lib/appLock.js)
 // Every plugin call checks the app has that plugin, so an older install just skips it.
 import { callPlugin, hasPlugin, nativePlatform, onPlugin } from "../lib/nativeApp";
 import { showToast } from "../lib/toast";
+import { syncAppLock } from "../lib/appLock";
 
 const platform = nativePlatform();
 
@@ -27,6 +29,7 @@ if (platform && !window.__nativeApp) {
   installStatusBar();
   installAppLinks();
   installWidgets();
+  syncAppLock(); // before installPush, which clears the logged-out cookie it reads
   installPush();
   onPlugin("App", "resume", () => window.dispatchEvent(new Event("app:resume")));
   const ready = () => hasPlugin("SplashScreen") && callPlugin("SplashScreen", "hide").catch(() => {});

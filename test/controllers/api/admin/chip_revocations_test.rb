@@ -1,7 +1,7 @@
 require "test_helper"
 
 # Site Admin > Members > Chips: a site admin takes back a chip someone got by mistake, puts
-# another chip from that milestone's stack on top, and the member is told (ChipRevocation)
+# another chip from that milestone's stack on top, without notifying the member (ChipRevocation)
 class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
 
@@ -34,7 +34,7 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
     note
   end
 
-  test "takes back a given chip, puts the earned one on top, swaps it in their post, and tells them" do
+  test "takes back a given chip, puts the earned one on top, swaps it in their post, without notifying them" do
     award = give(@kim, "year", years: 1)
     @kim.update!(chip_tops: { "round:year-1" => "award:#{award.id}" }, chip_favorites: ["award:#{award.id}", "round:24h"])
     note = share!(@kim, "award:#{award.id}")
@@ -67,11 +67,8 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
     assert_equal "The Acid Test", revocation.chip.dig("group", "title")
     assert_equal "award:#{award.id}", response.parsed_body["history"].first["chip_id"]
 
-    told = @kim.notifications.find_by(kind: "chip.revoked")
-    assert_equal "A site admin took back the 1 year chip from The Acid Test", told.title
-    assert_includes told.body, "That one was meant for someone else."
-    assert_includes told.body, "Posts where you shared it show the new chip."
-    assert_equal "chips", Notification.push_category("chip.revoked")
+    assert_equal "That one was meant for someone else.", revocation.note, "kept for admins"
+    assert_equal 1, @kim.notifications.count, "only the original gift's; nothing about taking it back"
   end
 
   test "with nothing else in the stack, gives RecoveryBot's own chip instead, without a second popup" do
@@ -89,7 +86,6 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
     assert_equal ["18m", Date.new(2026, 11, 10), @admin], [site.milestone_key, site.on, site.given_by]
     assert site.celebrated_at, "the swap's notification says it; no confetti popup"
     assert_equal "award:#{site.id}", @kim.reload.chip_tops["round:18m"]
-    assert_equal 1, @kim.notifications.where(kind: "chip.revoked").count
     assert_equal 1, @kim.notifications.where(kind: "chip.given").count, "only the original gift's"
   end
 
@@ -107,7 +103,7 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
     assert_empty ChipEdition.available_for(@kim), "they can't claim it again"
     assert note.reload.chip_hidden, "with no replacement, the chip post is hidden from others"
     assert_equal 1, ChipRevocation.last.posts_hidden
-    assert_includes @kim.notifications.find_by(kind: "chip.revoked").body, "hidden from others"
+    assert_equal 0, @kim.notifications.count, "they aren't told"
   end
 
   test "a replacement has to be in the same milestone's stack" do
@@ -151,5 +147,51 @@ class Api::Admin::ChipRevocationsTest < ActionDispatch::IntegrationTest
     get "/api/chip_awards", as: :json
     assert_response :success
     assert response.parsed_body["given"].find { |a| a["id"] == award.id }["revoked"]
+  end
+
+  test "site admins see Change this chip on a post of a given chip, and nobody else does" do
+    award = give(@kim, "year", years: 1)
+    note = share!(@kim, "award:#{award.id}")
+    assert note.as_api_json(viewer: @admin)[:chip_admin]
+    assert_nil note.as_api_json(viewer: @kim)[:chip_admin]
+    assert_nil note.as_api_json(viewer: @host)[:chip_admin]
+    earned = share!(@kim, "round:year-1")
+    assert earned.as_api_json(viewer: @admin)[:chip_admin], "any chip post: the dialog shows another of theirs when it can't go back"
+
+    sign_in @admin
+    post "/api/admin/users/#{@kim.id}/revoke_chip", params: { chip_id: "award:#{award.id}", replacement_id: "round:year-1" }, as: :json
+    assert_response :success
+    assert_equal "round:year-1", response.parsed_body.dig("revocation", "replacement", "id")
+    assert response.parsed_body.dig("revocation", "replacement", "design"), "the post can draw it straight away"
+    assert_equal "round:year-1", note.reload.chip_id
+  end
+
+  test "a post whose chip they no longer have can show another chip they do have" do
+    edition = ChipEdition.create!(group: @group, name: "2026 Edition", kind: "milestone", starts_on: Date.new(2026, 10, 1), ends_on: Date.new(2026, 12, 31), published_at: Time.current)
+    chip = edition.claim!(@kim, "round:year-1")
+    note = share!(@kim, "edition:#{chip.id}")
+    edition.destroy! # its chips go with it, the post stays
+    assert note.reload.as_api_json(viewer: @admin)[:chip_admin]
+
+    sign_in @admin
+    get "/api/admin/users/#{@kim.id}/chips", as: :json
+    assert_includes response.parsed_body["all"].map { |c| c["id"] }, "round:year-1"
+
+    post "/api/admin/users/#{@kim.id}/post_chip", params: { note_id: note.id, chip_id: "round:9m" }, as: :json
+    assert_response :success, response.body
+    note.reload
+    assert_equal ["round:9m", "earned", "Look what I got!"], [note.chip_id, note.chip["source"], note.body]
+    assert note.chip["design"]
+    assert_not note.chip_hidden
+    assert_equal 0, @kim.notifications.count, "they aren't told"
+
+    post "/api/admin/users/#{@kim.id}/post_chip", params: { note_id: note.id, chip_id: "round:5-years" }, as: :json
+    assert_response :unprocessable_entity, "only chips they have"
+    assert_equal "round:9m", note.reload.chip_id
+
+    sign_in @host
+    post "/api/admin/users/#{@kim.id}/post_chip", params: { note_id: note.id, chip_id: "round:year-1" }, as: :json
+    assert_response :forbidden
+    assert_equal "round:9m", note.reload.chip_id
   end
 end

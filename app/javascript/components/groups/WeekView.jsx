@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BellRing, CalendarX, ChevronLeft, ChevronRight, UserPlus, X } from "lucide-react";
 import Toggle from "../ui/Toggle";
 import SegmentedControl from "../ui/SegmentedControl";
@@ -132,10 +132,18 @@ export default function WeekView({ group, onChanged }) {
   const [start, setStart] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [onlyGaps, setOnlyGaps] = useState(false);
+  // ?gaps=1 (the Dashboard's "host places are open") opens with Gaps only on
+  const [onlyGaps, setOnlyGaps] = useState(() => new URLSearchParams(window.location.search).get("gaps") === "1");
   const [open, setOpen] = useState(null); // { key, kind: "ask" | "fill" }
   const load = useCallback(() => api(`/groups/${slug}/meeting_hosts/week${start ? `?start=${start}` : ""}`).then(setData).catch((e) => setError(e.message)), [slug, start]);
   useEffect(() => { load(); }, [load]);
+  // Opened from "host places are open": once it's drawn, scroll to it
+  const scrolled = useRef(false);
+  useEffect(() => {
+    if (!data || scrolled.current || !onlyGaps) return;
+    scrolled.current = true;
+    requestAnimationFrame(() => document.getElementById("week")?.scrollIntoView({ block: "start" }));
+  }, [data, onlyGaps]);
 
   const changed = () => { setOpen(null); load(); onChanged?.(); };
   const call = async (path, method) => {

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, useNavigate, useParams } from "react-router-dom";
 import {
   BellRing, BookOpen, BookOpenCheck, CalendarClock, CalendarDays, ClipboardCheck, FileText, Gavel, Landmark,
-  LayoutTemplate, Medal, Repeat, Scale, Settings, Stamp, UserCheck, UserPlus, Users,
+  LayoutTemplate, Medal, Repeat, Scale, Settings, ShieldCheck, Sparkles, Stamp, UserCheck, UserPlus, Users,
 } from "lucide-react";
 import Layout from "../Layout";
 import { api } from "./lib";
@@ -16,10 +16,17 @@ import LiteratureTab from "./LiteratureTab";
 import CourtTab from "./CourtTab";
 import GroupSettings, { GroupLogo } from "./GroupSettings";
 import ChipDesigner from "./ChipDesigner";
+import DocumentTemplates from "./conscience/DocumentTemplates";
+import SubRequestsSetting from "./SubRequestsSetting";
+import DocumentSkeleton from "./conscience/DocumentSkeleton";
+import ServiceView from "./conscience/ServiceView";
+import { SlotCoverageSection } from "./SlotPicker";
 
 // Who gets the Dashboard: anyone in the group with a role beyond plain member
 export const hasGroupRole = (group) =>
   !!(group && (group.can_manage || group.can_keep_records || group.can_schedule_hosts || group.can_keep_treasury));
+
+const FRAME_CLASS = "min-w-0 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none";
 
 // A group's working pages on the stage without the group page's header: its name back to the
 // group page, the page's title, then the page. `fill` gives one open document the whole stage.
@@ -27,7 +34,7 @@ export function GroupFrame({ group, title, fill = false, error = null, children 
   useEffect(() => { document.title = `${title} · ${group.title} | RecoveryBot`; }, [title, group.title]);
   return (
     <Layout isAuthenticated>
-      <div className="min-w-0 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
+      <div className={FRAME_CLASS}>
         {fill ? <div className="min-w-0">{children}</div> : (
           <div className="mx-auto min-w-0 max-w-screen-xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
             <Link to={`/${group.slug}`} className="group-chrome mb-3 inline-flex items-center gap-2 text-sm !text-slate-500 hover:!text-accent dark:!text-neutral-400">
@@ -45,21 +52,25 @@ export function GroupFrame({ group, title, fill = false, error = null, children 
 
 // Loads the group for a page outside the group page (`children(group, setGroup, reload)`);
 // `fallback` when it can't be loaded
-function GroupRoute({ fallback = null, children }) {
+// `loading`: what shows while the group loads (a page's own skeleton), instead of the stats
+export function GroupRoute({ fallback = null, loading = null, children }) {
   const { slug } = useParams();
   const [group, setGroup] = useState(null);
   const [failed, setFailed] = useState(false);
   const reload = useCallback(() => api(`/groups/${slug}`).then(setGroup).catch(() => setFailed(true)), [slug]);
   useEffect(() => { setGroup(null); reload(); }, [reload]);
   if (failed) return fallback || <Navigate to={`/${slug}`} replace />;
-  if (!group) return <Layout isAuthenticated><div className="p-6"><Loading variant="stats" /></div></Layout>;
+  if (!group) return <Layout isAuthenticated>{loading || <div className="p-6"><Loading variant="stats" /></div>}</Layout>;
   return children(group, setGroup, reload);
 }
 
 // Where the pages of the old group dashboard (/conscience/<page>) live now
 const MOVED = {
-  hosts: "meetings", schedule: "settings/meetings", settings: "settings", chips: "settings/chips",
-  literature: "settings/literature", court: "settings/court", members: "members", events: "events",
+  hosts: "meetings", schedule: "manage/meetings", settings: "manage", chips: "manage/chips",
+  literature: "manage/literature", court: "manage/court", members: "members", events: "events",
+  // Moved out of Group conscience: decks to Host tools, templates to Manage (record keepers who
+  // aren't admins keep them there)
+  decks: "decks",
 };
 
 // /:slug/conscience/*: Group conscience. Everyone sees the same sections, and a record keeper or
@@ -70,7 +81,8 @@ export function ConscienceRoute({ fallback }) {
   const [view, id] = rest.split("/").filter(Boolean);
   if (MOVED[view]) return <Navigate to={`/${slug}/${MOVED[view]}`} replace />;
   return (
-    <GroupRoute fallback={fallback}>
+    // an open document shows its own page skeleton from the start, not the stats and then the page
+    <GroupRoute fallback={fallback} loading={view === "documents" && id ? <div className={FRAME_CLASS}><DocumentSkeleton embedded /></div> : null}>
       {(group) => (hasGroupRole(group) ? (
         <GroupFrame group={group} title="Group conscience" fill={view === "documents" && !!id}>
           {view === "documents" && id ? <ConscienceBody group={group} view="documents" id={id} embedded /> : <ConscienceTab group={group} embedded />}
@@ -80,15 +92,23 @@ export function ConscienceRoute({ fallback }) {
   );
 }
 
-// Group settings (/:slug/settings/*), for group admins: everything about how the group is set up,
-// in one place
+// Manage (/:slug/manage/*, what was Settings at /settings), for group admins: everything about
+// how the group is set up, in one place
 const SETTINGS = [
-  { key: "", label: "Group", icon: Settings },
-  { key: "meetings", label: "Meeting settings", icon: CalendarClock },
+  { key: "offices", label: "Offices", icon: ShieldCheck },
+  { key: "", label: "Group details", icon: Settings },
+  { key: "meetings", label: "Meetings setup", icon: CalendarClock },
   { key: "chips", label: "Chips", icon: Medal },
   { key: "literature", label: "Approved literature", icon: BookOpen },
-  { key: "court", label: "Court verifications", icon: ClipboardCheck },
+  { key: "court", label: "Court verification", icon: ClipboardCheck },
+  { key: "templates", label: "Document templates", icon: FileText },
 ];
+
+// Settings' old address (/:slug/settings/*) goes to Manage
+export function SettingsRedirect() {
+  const { slug, "*": rest = "" } = useParams();
+  return <Navigate to={`/${slug}/manage${rest ? `/${rest}` : ""}${window.location.search}`} replace />;
+}
 
 export function SettingsRoute() {
   const { slug, "*": rest = "" } = useParams();
@@ -99,11 +119,11 @@ export function SettingsRoute() {
       {(group, setGroup, reload) => {
         if (!group.can_manage) return <Navigate to={`/${slug}`} replace />;
         const current = SETTINGS.find((s) => s.key === key) || SETTINGS[0];
-        const path = (s) => `/${slug}/settings${s.key ? `/${s.key}` : ""}`;
+        const path = (s) => `/${slug}/manage${s.key ? `/${s.key}` : ""}`;
         return (
-          <GroupFrame group={group} title="Settings">
+          <GroupFrame group={group} title="Manage">
             <div className="space-y-5">
-              <nav aria-label="Settings" className="group-chrome hidden flex-wrap gap-1 sm:flex">
+              <nav aria-label="Manage" className="group-chrome hidden flex-wrap gap-1 sm:flex">
                 {SETTINGS.map((s) => (
                   <NavLink key={s.key} to={path(s)} end
                     className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium ${current.key === s.key ? "!bg-accent !text-white" : "bg-white text-slate-700 ring-1 ring-neutral-200 hover:bg-neutral-50 dark:bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700"}`}>
@@ -113,17 +133,25 @@ export function SettingsRoute() {
                 <Link to={`/${slug}/page/edit`} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:bg-neutral-50 dark:bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
                   <LayoutTemplate className="size-4" /> Edit the group page
                 </Link>
+                <Link to={`/${slug}/setup`} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:bg-neutral-50 dark:bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
+                  <Sparkles className="size-4" /> Setup guide
+                </Link>
               </nav>
-              <select aria-label="Settings" className={`${selectClass} group-chrome sm:hidden`} value={current.key}
-                onChange={(e) => (e.target.value === "page" ? navigate(`/${slug}/page/edit`) : navigate(path({ key: e.target.value })))}>
+              <select aria-label="Manage" className={`${selectClass} group-chrome sm:hidden`} value={current.key}
+                onChange={(e) => (e.target.value === "page" ? navigate(`/${slug}/page/edit`) : e.target.value === "setup" ? navigate(`/${slug}/setup`) : navigate(path({ key: e.target.value })))}>
                 {SETTINGS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                 <option value="page">Edit the group page</option>
+                <option value="setup">Setup guide</option>
               </select>
+              {current.key === "offices" && <ServiceView group={group} manage />}
               {current.key === "" && <GroupSettings group={group} setGroup={setGroup} />}
+              {current.key === "meetings" && <SubRequestsSetting group={group} setGroup={setGroup} />}
+              {current.key === "meetings" && <SlotCoverageSection slug={slug} />}
               {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={reload} isNew={new URLSearchParams(window.location.search).get("new") === "1"} />}
               {current.key === "chips" && <ChipDesigner group={group} />}
               {current.key === "literature" && <LiteratureTab group={group} reload={reload} />}
               {current.key === "court" && <CourtTab group={group} setGroup={setGroup} />}
+              {current.key === "templates" && <DocumentTemplates group={group} />}
             </div>
           </GroupFrame>
         );
@@ -149,7 +177,7 @@ function RolePart({ title, items, empty, links }) {
 
 // The Dashboard (/:slug/dashboard), for anyone with a role in the group: the numbers, then what
 // needs them, a part for each role they hold. The pages themselves are the group's own
-// (Meetings, Group conscience, Members, Settings), where their role lets them edit.
+// (Meetings, Group conscience, Members, Manage), where their role lets them edit.
 export default function GroupDashboard() {
   const { slug } = useParams();
   return (
@@ -185,7 +213,7 @@ function DashboardBody({ group }) {
             {group.can_manage && (
               <RolePart title="Group admin" empty="Nobody is waiting to join."
                 items={requests.map((r) => <Row key={r.membership_id} to={`/${slug}/members`} icon={UserPlus} title={`${r.name} asked to join`} note="Let them in, or not, on Members" />)}
-                links={[[`/${slug}/members`, "Members"], [`/${slug}/settings`, "Settings"], [`/${slug}/settings/meetings`, "Meeting settings"], [`/${slug}/page/edit`, "Edit the group page"]]} />
+                links={[[`/${slug}/members`, "Members"], [`/${slug}/manage`, "Manage"], [`/${slug}/manage/meetings`, "Meetings setup"], [`/${slug}/page/edit`, "Edit the group page"]]} />
             )}
             {group.can_keep_records && waiting && (
               <RolePart title="Record keeper" empty="Nothing is waiting on the records."
@@ -195,7 +223,7 @@ function DashboardBody({ group }) {
                   ...waiting.draft_documents.map((d) => <Row key={`d${d.id}`} to={documentsPath(slug, d.id)} icon={FileText} title={d.title} note="A draft document" />),
                   ...(st?.decisions_to_check ? [<Row key="check" to={decisionsPath(slug)} icon={Scale} title={`${st.decisions_to_check} imported decisions to check`} note="Look them over in Decisions" />] : []),
                 ]}
-                links={[[meetingsPath(slug), "Business meetings"], [decisionsPath(slug), "Decisions"], [documentsPath(slug), "Documents"], [`/${slug}/conscience/templates`, "Document templates"], [`/${slug}/conscience/officials`, "Elected officials"]]} />
+                links={[[meetingsPath(slug), "Business meetings"], [decisionsPath(slug), "Decisions"], [documentsPath(slug), "Documents"], [`/${slug}/${group.can_manage ? "manage" : "conscience"}/templates`, "Document templates"], [`/${slug}/conscience/officials`, "Officials"]]} />
             )}
             {group.can_schedule_hosts && (
               <RolePart title="Host coordinator" empty="Every host place is filled and nobody needs a sub."
@@ -203,9 +231,9 @@ function DashboardBody({ group }) {
                   ...(data.covers || []).map((c) => <Row key={`c${c.id}`} to={`/${slug}/meetings`} icon={Repeat} title={c.text} note={dateLabel(c.on)} />),
                   ...(data.sub_requests || []).map((r) => <Row key={`s${r.id}`} to={`/${slug}/meetings`} icon={BellRing} title={`${r.meeting_name}, ${dateLabel(r.on)}: needs a ${r.role === "co_host" ? "co-host" : "host"}`} note={r.requested_by ? `Asked by ${r.requested_by}` : "Nobody has taken it yet"} />),
                   ...(data.hosts_open && data.hosts_open.open_hosts + data.hosts_open.open_co_hosts > 0
-                    ? [<Row key="open" to={`/${slug}/meetings`} icon={UserCheck} title={`${data.hosts_open.open_hosts + data.hosts_open.open_co_hosts} host places are open`} note={`${data.hosts_open.open_hosts} ${data.hosts_open.open_hosts === 1 ? "host" : "hosts"} and ${data.hosts_open.open_co_hosts} ${data.hosts_open.open_co_hosts === 1 ? "co-host" : "co-hosts"} needed across the week`} />] : []),
+                    ? [<Row key="open" to={`/${slug}/meetings?gaps=1#week`} icon={UserCheck} title={`${data.hosts_open.open_hosts + data.hosts_open.open_co_hosts} host places are open`} note={`${data.hosts_open.open_hosts} ${data.hosts_open.open_hosts === 1 ? "host" : "hosts"} and ${data.hosts_open.open_co_hosts} ${data.hosts_open.open_co_hosts === 1 ? "co-host" : "co-hosts"} needed across the week`} />] : []),
                 ]}
-                links={[[`/${slug}/meetings`, "Meetings and hosts"], [`/${slug}/decks`, "HostDecks"]]} />
+                links={[[`/${slug}/meetings`, "Meetings and hosts"], [`/${slug}/decks`, "Decks"]]} />
             )}
             {group.can_keep_treasury && waiting && (
               <RolePart title="Treasurer" empty="No reports in draft."

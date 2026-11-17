@@ -110,7 +110,7 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
   end
 
   # POST { chip_id, replacement_id (another chip in its stack, "site", or blank), note }: take a
-  # chip they got by mistake back, put another in the stack on top, and tell them (ChipRevocation)
+  # chip they got by mistake back, put another in the stack on top, quietly (ChipRevocation)
   def revoke_chip
     user = User.find(params[:id])
     revocation = ChipRevocation.revoke!(user: user, chip_id: params.require(:chip_id), by: current_user,
@@ -119,6 +119,20 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
     render json: chips_json(user.reload).merge(revocation: revocation.as_api_json)
   rescue ChipRevocation::Invalid => e
     render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # POST { note_id, chip_id }: show another of their chips in a post that shares a chip they no
+  # longer have (taken back, or its edition deleted). Only the post changes; their words don't.
+  def post_chip
+    user = User.find(params[:id])
+    note = user.timeline_notes.where.not(chip_id: nil).find(params.require(:note_id))
+    shown = TimelineNote.chip_for(user, params.require(:chip_id))
+    return render(json: { error: "That isn't one of their chips." }, status: :unprocessable_entity) unless shown
+
+    was = note.chip_id
+    note.update_columns(chip_id: shown["id"], chip: shown, chip_hidden: false)
+    Rails.logger.info("[admin] #{current_user.email} changed the chip in post ##{note.id} (account ##{user.id}) from #{was} to #{shown['id']}")
+    render json: { chip: shown }
   end
 
   private
@@ -130,7 +144,7 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
       { slot: slot, label: list.first[:label], site_ok: !!round,
         chips: list.map { |c| c.except(:note).merge(revocable: ChipRevocation.revocable?(c)) } }
     end
-    { design: ChipDesign::DEFAULT, stacks: stacks, history: ChipRevocation.where(user: user).includes(:revoked_by).newest_first.limit(50).map(&:as_api_json) }
+    { design: ChipDesign::DEFAULT, stacks: stacks, all: chips.map { |c| c.except(:note) }, history: ChipRevocation.where(user: user).includes(:revoked_by).newest_first.limit(50).map(&:as_api_json) }
   end
 
   def user_json(user, readings_count = nil, last_seen = nil)

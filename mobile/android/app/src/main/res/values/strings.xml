@@ -6,6 +6,8 @@
     <string name="custom_url_scheme">com.hmblbot.recoverybot</string>
     <string name="widget_day_count">Day count</string>
     <string name="widget_day_count_description">Your days, counted on your phone, and your next milestone. It shows only the number.</string>
+    <string name="widget_reflection">Daily Reflection</string>
+    <string name="widget_reflection_description">Today\'s Daily Reflection: its title and the quote it opens with.</string>
     <string name="widget_chip">Favorite chip</string>
-    <string name="widget_chip_description">The first chip you starred on your Chips page.</string>
+    <string name="widget_chip_description">The first chip you starred on your Chips page, and how far it is to your next.</string>
 </resources>

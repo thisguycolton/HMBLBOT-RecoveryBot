@@ -1,138 +1,224 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { callPlugin, hasPluginMethod, nativePlatform } from "../../lib/nativeApp";
-import { milestoneStatus } from "../../lib/milestones";
-import { DEFAULT_WIDGET_STYLE, WIDGET_STYLES, widgetLook } from "../../lib/widgetStyles";
-import Toggle from "../ui/Toggle";
+import { countValues, drawWidget } from "../../lib/widgetDraw";
+import { DEFAULT_WIDGET_STYLE, FONTS_URL, WIDGET_STYLES } from "../../lib/widgetStyles";
 import { Card, ErrorNote, Tray } from "../groups/ui";
 
-// Account settings > Widgets, in the iPhone and Android apps: pick the style the Home Screen
-// widgets (day count and favorite chip) are drawn in, from little copies of them. By default one
-// style is for both; with "Same style for both" off, each gets its own. The app keeps it and has
-// them redraw (WidgetBridgePlugin widgetStyle / setWidgetStyle: in
-// mobile/ios/App/App/AppDelegate.swift, the App Group the widgets share; on Android,
-// WidgetBridgePlugin.java and WidgetStyles.java). A placed widget can still have its own style
-// from its Edit; left on "Same as the app" it follows this.
-// Hidden in a browser and in app builds from before the picker; app builds from before separate
-// styles (whose widgetStyle answers no "day") get just the one picker.
+// This phone > Widgets, in the iPhone and Android apps: pick the style the Home Screen widgets
+// (day count, favorite chip and Daily Reflection) are drawn in, from copies drawn the way the phone
+// draws them: lib/widgetDraw.js draws the same layouts (lib/widgetLayouts.js) as
+// RecoveryBotWidgets.swift and WidgetPainter.java.
+// "All widgets" gives every widget one style; each widget on their Home Screen is listed beside
+// it, to give that one its own. The phone keeps the picks and has the widgets redraw
+// (WidgetBridgePlugin widgetStyle / setWidgetStyle / placedWidgets: in
+// mobile/ios/App/App/AppDelegate.swift, in the App Group the widgets share; on Android,
+// WidgetBridgePlugin.java and WidgetStyles.java).
+// On the iPhone the system says which kind and size each placed widget is, not which one, so two
+// small day counts share a style; on Android each placed widget is its own.
+// Hidden in a browser and in app builds from before the picker. App builds from before placed
+// widgets (no placedWidgets) get "All widgets", "Day count" and "Favorite chip" instead.
 const HOW = {
-  ios: "To add one, touch and hold an empty spot on the Home Screen, tap Edit, then Add Widget, and find RecoveryBot. To give one placed widget its own style, touch and hold it and tap Edit Widget.",
-  android: "To add one, touch and hold an empty spot on the Home Screen, tap Widgets, and find RecoveryBot. To give one placed widget its own style, touch and hold it and tap the pencil (or Settings).",
+  ios: "To add one, touch and hold an empty spot on the Home Screen, tap Edit, then Add Widget, and find RecoveryBot.",
+  android: "To add one, touch and hold an empty spot on the Home Screen, tap Widgets, and find RecoveryBot.",
 };
 
-const KINDS = [
-  { key: "day", label: "Day count" },
-  { key: "chip", label: "Favorite chip" },
-];
+const KIND_NAMES = { day: "Day count", chip: "Favorite chip", reflection: "Daily Reflection" };
+const SIZE_NAMES = { small: "small", medium: "medium", large: "large" };
+
+// A widget's size on the phone, in points (an iPhone 15's), which the copies are drawn at and scaled from
+const SIZES = { small: [170, 170], medium: [364, 170], large: [364, 382] };
 
 export default function WidgetSettings() {
   const platform = nativePlatform();
   const shown = Boolean(HOW[platform]) && hasPluginMethod("WidgetBridge", "setWidgetStyle");
-  // { both, day, chip, split }: day/chip are "" while they follow both; split = the app can keep them apart
+  const perWidget = shown && hasPluginMethod("WidgetBridge", "placedWidgets");
+  // { all, day, chip, split }: day/chip are "" while they follow all; split = the app keeps kinds apart (older builds)
   const [styles, setStyles] = useState(null);
-  const [editing, setEditing] = useState("day");
+  // The widgets on their Home Screen: [{ id, kind, size, style }], style "" while it follows all
+  const [placed, setPlaced] = useState([]);
+  const [target, setTarget] = useState("all");
   const [error, setError] = useState(null);
   const dark = useDarkMode();
+  const count = useMemo(sampleCount, []);
+  useWidgetFonts(shown);
 
   useEffect(() => {
-    if (!shown) return;
-    const fallback = { both: DEFAULT_WIDGET_STYLE, day: "", chip: "", split: false };
+    if (!shown) return undefined;
+    const fallback = { all: DEFAULT_WIDGET_STYLE, day: "", chip: "", split: false };
     callPlugin("WidgetBridge", "widgetStyle").then(
-      (r) => setStyles({ both: r?.style || DEFAULT_WIDGET_STYLE, day: r?.day || "", chip: r?.chip || "", split: typeof r?.day === "string" }),
+      (r) => setStyles({ all: r?.style || DEFAULT_WIDGET_STYLE, day: r?.day || "", chip: r?.chip || "", split: typeof r?.day === "string" }),
       () => setStyles(fallback),
     );
-  }, [shown]);
+    if (!perWidget) return undefined;
+    // Look again when they come back from the Home Screen, where they may have added one
+    const load = () => callPlugin("WidgetBridge", "placedWidgets").then((r) => setPlaced(Array.isArray(r?.widgets) ? r.widgets : []), () => {});
+    load();
+    const again = () => document.visibilityState === "visible" && load();
+    document.addEventListener("visibilitychange", again);
+    return () => document.removeEventListener("visibilitychange", again);
+  }, [shown, perWidget]);
 
   if (!shown || !styles) return null;
 
-  const together = !styles.day && !styles.chip;
-  const styleOf = (kind) => styles[kind] || styles.both;
+  // What can be picked for: every widget, then each placed widget (or each kind, on older builds)
+  const targets = [{ id: "all", label: "All widgets", kind: "day", size: "small" }];
+  if (perWidget) {
+    const counts = {};
+    placed.forEach((w) => { counts[`${w.kind}.${w.size}`] = (counts[`${w.kind}.${w.size}`] || 0) + 1; });
+    const seen = {};
+    placed.forEach((w) => {
+      const same = `${w.kind}.${w.size}`;
+      seen[same] = (seen[same] || 0) + 1;
+      const number = counts[same] > 1 ? ` ${seen[same]}` : "";
+      targets.push({ id: w.id, label: `${KIND_NAMES[w.kind]}${number}`, sub: SIZE_NAMES[w.size], kind: w.kind, size: w.size, own: w.style || "" });
+    });
+  } else if (styles.split) {
+    targets.push({ id: "day", label: "Day count", kind: "day", size: "small", own: styles.day }, { id: "chip", label: "Favorite chip", kind: "chip", size: "small", own: styles.chip });
+  }
+  const current = targets.find((t) => t.id === target) || targets[0];
+
+  // The style a target draws in: its own, else (older builds) its kind's, else the one for all
+  const kindStyle = (kind) => styles[kind] || styles.all;
+  const styleOf = (t) => (t.id === "all" ? styles.all : t.own || kindStyle(t.kind));
+  const nameOf = (key) => (WIDGET_STYLES.find((s) => s.key === key) || WIDGET_STYLES[0]).name;
+  const anyOwn = placed.some((w) => w.style) || Boolean(styles.day || styles.chip);
 
   // Moves right away; put back if the app couldn't keep it
-  const save = async (next, options) => {
-    const before = styles;
-    setStyles(next);
+  const save = async (nextStyles, nextPlaced, options) => {
+    const before = [styles, placed];
+    setStyles(nextStyles);
+    setPlaced(nextPlaced);
     setError(null);
     try {
       await callPlugin("WidgetBridge", "setWidgetStyle", options);
     } catch (e) {
-      setStyles(before);
+      setStyles(before[0]);
+      setPlaced(before[1]);
       setError(e.message || "The widgets couldn't be changed.");
     }
   };
 
+  // key "" puts a widget back on the style for all
   const pick = (key) => {
-    if (together) {
-      if (key !== styles.both) save({ ...styles, both: key }, { style: key });
-    } else if (key !== styleOf(editing)) {
-      save({ ...styles, [editing]: key }, { style: key, widget: editing });
+    if (current.id === "all") {
+      if (key === styles.all && !anyOwn) return;
+      save({ ...styles, all: key, day: "", chip: "" }, placed.map((w) => ({ ...w, style: "" })), { style: key });
+    } else if (current.id === "day" || current.id === "chip") {
+      if (key === styles[current.id]) return;
+      save({ ...styles, [current.id]: key }, placed, { style: key, widget: current.id });
+    } else if (key !== current.own) {
+      save(styles, placed.map((w) => (w.id === current.id ? { ...w, style: key } : w)), { style: key, widget: current.id });
     }
   };
 
-  // Off: each starts from the style they share; on: both take the day count's
-  const setTogether = (on) => {
-    if (on) save({ ...styles, both: styleOf("day"), day: "", chip: "" }, { style: styleOf("day") });
-    else save({ ...styles, day: styles.both, chip: styles.both }, { style: styles.both, widget: "day" })
-      .then(() => callPlugin("WidgetBridge", "setWidgetStyle", { style: styles.both, widget: "chip" }).catch(() => {}));
-  };
-
-  const count = sampleCount();
-  const lookOf = (key) => widgetLook(WIDGET_STYLES.find((s) => s.key === key) || WIDGET_STYLES[0], dark);
-  const current = together ? styles.both : styleOf(editing);
-  const chipTiles = !together && editing === "chip";
+  const selected = current.id === "all" ? styles.all : current.own || "";
+  const tileKind = current.kind;
+  const tileSize = current.id === "all" || current.size === "large" ? "small" : current.size;
 
   return (
     <section id="widgets" className="scroll-mt-20">
       <Tray label="Widgets">
         <Card className="space-y-4 p-4">
-          <div className="flex items-end justify-center gap-3" aria-hidden="true">
-            <DayWidget look={lookOf(styleOf("day"))} count={count} size="medium" />
-            <ChipWidget look={lookOf(styleOf("chip"))} />
-          </div>
           <p className="text-sm text-slate-600 dark:text-neutral-400">
-            How your day count and favorite chip look on your Home Screen. {HOW[platform]}
+            How your day count, favorite chip and Daily Reflection look on your Home Screen. Pick one style for all of them, or tap one of your widgets to give it its own. {HOW[platform]}
           </p>
-          {styles.split && (
-            <div className="space-y-3">
-              <Toggle checked={together} onChange={setTogether} label="Same style for both"
-                description={together ? "Turn off to pick the day count and the chip separately." : "The day count and the chip each have their own style."} />
-              {!together && (
-                <div role="tablist" aria-label="Widget" className="inline-flex rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
-                  {KINDS.map((k) => (
-                    <button key={k.key} type="button" role="tab" aria-selected={editing === k.key} onClick={() => setEditing(k.key)}
-                      className={`rounded-full px-3 py-1 text-sm font-medium transition ${editing === k.key ? "!bg-white text-slate-900 shadow-sm dark:!bg-neutral-700 dark:text-white" : "!bg-transparent text-slate-600 dark:text-neutral-400"}`}>
-                      {k.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+
+          {targets.length > 1 && (
+            <div role="tablist" aria-label="Widget" className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 pt-1">
+              {targets.map((t) => {
+                const on = t.id === current.id;
+                return (
+                  <button key={t.id} type="button" role="tab" aria-selected={on} onClick={() => setTarget(t.id)}
+                    className="flex shrink-0 flex-col items-center gap-1.5 !bg-transparent p-0 focus:outline-none">
+                    <span className={`block rounded-[18px] p-0.5 transition ${on ? "ring-[3px] ring-accent" : "ring-1 ring-transparent"}`}>
+                      {t.id === "all" ? (
+                        <span className="relative block h-16 w-16">
+                          <span className="absolute left-0 top-0 block w-11"><Widget kind="chip" size="small" style={styles.all} dark={dark} count={count} /></span>
+                          <span className="absolute bottom-0 right-0 block w-11"><Widget kind="day" size="small" style={styles.all} dark={dark} count={count} /></span>
+                        </span>
+                      ) : (
+                        <span className={`block ${t.size === "medium" ? "w-[8.5rem]" : "w-16"}`}>
+                          <Widget kind={t.kind} size={t.size === "large" ? "small" : t.size} style={styleOf(t)} dark={dark} count={count} />
+                        </span>
+                      )}
+                    </span>
+                    <span className={`text-xs leading-tight ${on ? "font-semibold text-slate-900 dark:text-white" : "font-medium text-slate-600 dark:text-neutral-400"}`}>{t.label}</span>
+                    {t.sub && <span className="-mt-1 text-[10px] leading-tight text-slate-500 dark:text-neutral-400">{t.sub}{t.own ? "" : " · same as all"}</span>}
+                  </button>
+                );
+              })}
             </div>
           )}
-          <div role="radiogroup" aria-label={together ? "Widget style" : `${KINDS.find((k) => k.key === editing).label} style`} className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4">
-            {WIDGET_STYLES.map((s) => {
-              const selected = s.key === current;
-              return (
-                <button key={s.key} type="button" role="radio" aria-checked={selected} onClick={() => pick(s.key)}
-                  className="group flex flex-col items-center gap-1.5 rounded-2xl !bg-transparent p-0 text-center focus:outline-none">
-                  <span className={`relative block w-full rounded-[22%] p-0.5 transition ${selected ? "ring-[3px] ring-accent" : "ring-1 ring-transparent group-hover:ring-neutral-300 dark:group-hover:ring-neutral-600"}`}>
-                    {chipTiles ? <ChipWidget look={widgetLook(s, dark)} size="small" /> : <DayWidget look={widgetLook(s, dark)} count={count} size="small" />}
-                    {selected && (
-                      <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white shadow">
-                        <Check className="h-3 w-3" strokeWidth={3} />
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-xs font-medium leading-tight text-slate-800 dark:text-neutral-200">{s.name}</span>
-                  {s.note && <span className="-mt-1 text-[10px] leading-tight text-slate-500 dark:text-neutral-400">{s.note}</span>}
-                </button>
-              );
-            })}
+
+          {perWidget && placed.length === 0 && (
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Your widgets show up here once they're on your Home Screen, so you can give each its own style.</p>
+          )}
+
+          <div className="flex items-end justify-center gap-3" aria-hidden="true">
+            {current.id === "all" ? (
+              <>
+                <span className="block w-[250px] max-w-[66%]"><Widget kind="day" size="medium" style={styles.all} dark={dark} count={count} /></span>
+                <span className="block w-[118px] max-w-[32%]"><Widget kind="chip" size="small" style={styles.all} dark={dark} count={count} /></span>
+              </>
+            ) : (
+              <span className={`block ${current.size === "small" ? "w-[150px]" : "w-[300px] max-w-full"}`}>
+                <Widget kind={current.kind} size={current.size} style={styleOf(current)} dark={dark} count={count} />
+              </span>
+            )}
+          </div>
+
+          {current.id === "all" && anyOwn && (
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Picking here also puts the widgets that have their own style back on this one.</p>
+          )}
+
+          <div role="radiogroup" aria-label={`${current.label} style`} className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-4">
+            {current.id !== "all" && perWidget && (
+              <StyleTile name="Same as all" note={nameOf(kindStyle(current.kind))} on={selected === ""} onPick={() => pick("")}>
+                <Widget kind={tileKind} size={tileSize} style={kindStyle(current.kind)} dark={dark} count={count} />
+              </StyleTile>
+            )}
+            {WIDGET_STYLES.map((s) => (
+              <StyleTile key={s.key} name={s.name} note={s.note} on={s.key === (current.id === "all" || perWidget ? selected : styleOf(current))} onPick={() => pick(s.key)}>
+                <Widget kind={tileKind} size={tileSize} style={s.key} dark={dark} count={count} />
+              </StyleTile>
+            ))}
           </div>
           <ErrorNote error={error} />
         </Card>
       </Tray>
     </section>
   );
+}
+
+function StyleTile({ name, note, on, onPick, children }) {
+  return (
+    <button type="button" role="radio" aria-checked={on} onClick={onPick}
+      className="group flex flex-col items-center gap-1.5 rounded-2xl !bg-transparent p-0 text-center focus:outline-none">
+      <span className={`relative block w-full rounded-[22%] p-0.5 transition ${on ? "ring-[3px] ring-accent" : "ring-1 ring-transparent group-hover:ring-neutral-300 dark:group-hover:ring-neutral-600"}`}>
+        {children}
+        {on && (
+          <span className="absolute -right-1 -top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white shadow">
+            <Check className="h-3 w-3" strokeWidth={3} />
+          </span>
+        )}
+      </span>
+      <span className="text-xs font-medium leading-tight text-slate-800 dark:text-neutral-200">{name}</span>
+      {note && <span className="-mt-1 text-[10px] leading-tight text-slate-500 dark:text-neutral-400">{note}</span>}
+    </button>
+  );
+}
+
+// The site's fonts the widgets use, loaded once for the copies
+function useWidgetFonts(on) {
+  useEffect(() => {
+    if (!on || document.getElementById("widget-fonts")) return;
+    const link = document.createElement("link");
+    link.id = "widget-fonts";
+    link.rel = "stylesheet";
+    link.href = FONTS_URL;
+    document.head.appendChild(link);
+  }, [on]);
 }
 
 // The phone's Light/Dark Mode, which Paper follows on the widget
@@ -148,56 +234,50 @@ function useDarkMode() {
   return dark;
 }
 
-// Their own count when they have a sobriety date (from the page, NativeAppRequest#native_widget_key), else a sample
+// Their own count when they have a sobriety date (from the page, NativeAppRequest#native_widget_key),
+// else the sample in lib/widgetLayouts.js
 function sampleCount() {
   const since = (document.body?.dataset.widget || "").split("|")[1] || "";
-  const status = since ? milestoneStatus(since) : null;
-  if (!status) return { days: 127, next: "6 months", inDays: 55, progress: 0.6 };
-  const next = status.next;
-  return { days: status.days, today: status.today?.label, next: next?.label, inDays: next?.inDays ?? 0, progress: next ? Math.max(0.08, 1 - next.inDays / Math.max(30, next.inDays + 30)) : 1 };
+  return countValues(since) || { values: {}, progress: undefined };
 }
 
-const numberStyle = (look, px) => ({
-  fontFamily: look.font,
-  fontWeight: look.weight,
-  fontSize: px,
-  lineHeight: 1,
-  letterSpacing: look.condensed ? "-0.04em" : look.weight <= 300 ? "-0.02em" : "-0.01em",
-  fontStretch: look.condensed ? "62.5%" : undefined,
-  ...(look.condensed ? { transform: "scaleX(0.82)", transformOrigin: "left" } : null),
-});
-
-// A small (square) or medium (wide) day count widget, laid out like DayCountView
-function DayWidget({ look, count, size }) {
-  const medium = size === "medium";
-  const unit = count.days === 1 ? "day" : "days";
-  const line = count.today ? `Today: ${count.today}` : count.next ? `${count.next} in ${count.inDays} ${count.inDays === 1 ? "day" : "days"}` : null;
+// A widget drawn the way the phone draws it (lib/widgetDraw.js, from the layouts the apps share),
+// at the width it's given
+function Widget({ kind, size, style, dark, count }) {
+  const [w, h] = SIZES[size];
+  const box = useRef(null);
+  const canvas = useRef(null);
+  const [width, setWidth] = useState(0);
+  const fontsReady = useFontsReady();
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return undefined;
+    const fit = () => setWidth(el.clientWidth);
+    fit();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
+    observer?.observe(el);
+    return () => observer?.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!width || !canvas.current) return;
+    drawWidget(canvas.current, width, (width * h) / w, { style, kind, size, dark, values: count.values, progress: count.progress });
+  }, [width, style, kind, size, dark, count, fontsReady, w, h]);
   return (
-    <span className={`flex flex-col overflow-hidden text-left shadow-md ${medium ? "h-[120px] w-[250px] rounded-[26px] p-4" : "aspect-square w-full rounded-[20%] p-[11%]"}`}
-      style={{ background: look.background, color: look.ink, fontFamily: look.font, containerType: medium ? undefined : "inline-size" }}>
-      <span className="truncate" style={numberStyle(look, medium ? 46 : "clamp(20px, 30cqw, 40px)")}>{count.days.toLocaleString()}</span>
-      <span className="font-semibold opacity-90" style={{ fontSize: medium ? 15 : "clamp(9px, 9cqw, 13px)" }}>{unit}</span>
-      <span className="flex-1" />
-      {line && <span className="truncate font-medium opacity-90" style={{ fontSize: medium ? 12 : "clamp(7px, 7cqw, 10px)" }}>{line}</span>}
-      {count.next && !count.today && (
-        <span className="mt-1 block h-[3px] w-full overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, currentColor 25%, transparent)" }}>
-          <span className="block h-full rounded-full" style={{ width: `${Math.round(count.progress * 100)}%`, background: look.accent }} />
-        </span>
-      )}
+    <span ref={box} className="relative block w-full overflow-hidden shadow-md" style={{ aspectRatio: `${w} / ${h}`, borderRadius: `${(22 / w) * 100}% / ${(22 / h) * 100}%` }}>
+      <canvas ref={canvas} className="absolute inset-0 block h-full w-full" />
     </span>
   );
 }
 
-// The favorite chip widget, small, with the plain brass coin the widget gallery shows
-function ChipWidget({ look, size = "medium" }) {
-  const small = size === "small";
-  return (
-    <span className={`flex items-center justify-center shadow-md ${small ? "aspect-square w-full rounded-[20%]" : "h-[120px] w-[120px] rounded-[26px]"}`} style={{ background: look.background }}>
-      <span className={`relative flex items-center justify-center rounded-full ${small ? "h-[62%] w-[62%]" : "h-[78px] w-[78px]"}`}
-        style={{ background: "linear-gradient(135deg, rgb(237 204 120), rgb(158 120 51))", boxShadow: "0 3px 0 rgb(99 75 32), 0 8px 14px rgb(0 0 0 / 0.4)" }}>
-        <span className="absolute inset-[6px] rounded-full border-2 border-white/35" />
-        <span className={`font-serif font-bold ${small ? "text-xl" : "text-3xl"}`} style={{ color: "rgb(92 66 20)" }}>I</span>
-      </span>
-    </span>
-  );
+// Bumps once the widget fonts have loaded, so the copies draw again in them
+function useFontsReady() {
+  const [ready, setReady] = useState(0);
+  useEffect(() => {
+    let live = true;
+    document.fonts?.ready.then(() => live && setReady((n) => n + 1));
+    const again = () => live && setReady((n) => n + 1);
+    document.fonts?.addEventListener?.("loadingdone", again);
+    return () => { live = false; document.fonts?.removeEventListener?.("loadingdone", again); };
+  }, []);
+  return ready;
 }

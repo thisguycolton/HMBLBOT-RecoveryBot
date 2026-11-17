@@ -20,6 +20,18 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- The site's fonts, for each widget style's number (WidgetTheme in RecoveryBotWidgets.swift) -->
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fonts/DMMono-Light.ttf</string>
+		<string>Fonts/Figtree-Light.ttf</string>
+		<string>Fonts/GentiumBookPlus-Bold.ttf</string>
+		<string>Fonts/Inter-ExtraLight.ttf</string>
+		<string>Fonts/Montserrat-Black.ttf</string>
+		<string>Fonts/PublicSans-ExtraBold.ttf</string>
+		<string>Fonts/TikTokSans-CondensedBlack.ttf</string>
+		<string>Fonts/TikTokSans-ExtraBold.ttf</string>
+	</array>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionPointIdentifier</key>

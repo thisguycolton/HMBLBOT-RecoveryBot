@@ -22,6 +22,7 @@ import CourtVerificationForm from "../components/CourtVerificationForm";
 import ScratchPaper from "../components/ScratchPaper";
 import ServiceReadingsIndex from "../components/ServiceReadingsIndex";
 import ServiceReadingShow from "../components/ServiceReadingShow";
+import ServiceReadingEditor from "../components/ServiceReadingEditor";
 import Layout from "../components/Layout";
 
 
@@ -239,6 +240,17 @@ mountReact("service-reading-show-root", (el) => {
         isAdmin={isAdmin}
         isAuthenticated={isAuthenticated}
       />
+    </Layout>
+  );
+});
+
+// ---------------- Service Reading New / Edit ----------------
+mountReact("service-reading-editor-root", (el) => {
+  const reading = JSON.parse(el.dataset.reading || "{}");
+
+  return (
+    <Layout isAuthenticated={isAuthenticated}>
+      <ServiceReadingEditor reading={reading} />
     </Layout>
   );
 });

@@ -1,20 +1,22 @@
 ---
-title: Group settings
-summary: Name, logo, meetings, invite link and privacy choices, for group admins.
+title: Manage your group
+summary: Offices, name, logo, meetings, chips, literature, court verification and templates, for group admins.
 icon: settings
 ---
-Group admins find **Settings** in the group's folder in the sidebar, or on the group page.
+Group admins find **Manage** at the end of the group menu (under Service), in the sidebar folder and the group's tabs. It used to be called Settings, and old links still work.
 
-![Group settings](/docs-images/group-tools/settings.webp)
+![Manage](/docs-images/group-tools/settings.webp)
 
 ## What you can change
 
 Tabs along the top:
 
-- **Group**: logo (a square picture works best: PNG, JPEG, WebP or GIF, under 5 MB), name, description, website, time zone and cover picture.
-- **Meeting settings**: add, edit or remove meetings (**Add a meeting**), or **Import from AA Intergroup** to link a meeting to its listing and keep it in sync.
+- **Offices**: every permission comes from an office. Add offices (or start from a common one), choose what each can do, and put people in. See [Elected officials](/docs/group-tools/elected-officials).
+- **Group details**: logo (a square picture works best: PNG, JPEG, WebP or GIF, under 5 MB), name, description, website, time zone and cover picture.
+- **Meetings setup**: add, edit or remove meetings (**Add a meeting**), or **Import from AA Intergroup** to link a meeting to its listing and keep it in sync. Also here: [who sees sub requests](/docs/group-tools/hosts-and-subs), and **Who coordinates each time slot** (read-only; it comes from the host coordinator offices, and a slot nobody covers shows **Nobody**).
 - **Chips**: the design of the chips your hosts [give](/docs/step-work/give-a-chip).
 - **Approved literature**: the books your group reads, which also unlocks [members-only books](/docs/library/members-only-books) for your members.
+- **Document templates**: starting points for new group documents.
 - **Edit the group page**: opens the [HMBLBOT Editor](/docs/group-tools/group-home-page).
 
 Elsewhere:
@@ -26,9 +28,9 @@ Elsewhere:
 
 ## Example: setting up meetings
 
-Lantern Street's **Meeting settings** list its three weekly meetings, each with its days and time, type tags (Online, Big Book, Step study, Speaker, Open), the Zoom link and passcode or the address, and **Edit** and **Delete**.
+Lantern Street's **Meetings setup** lists its three weekly meetings, each with its days and time, type tags (Online, Big Book, Step study, Speaker, Open), the Zoom link and passcode or the address, and **Edit** and **Delete**.
 
-![Meeting settings](/docs-images/group-tools/settings-meetings.webp)
+![Meetings setup](/docs-images/group-tools/settings-meetings.webp)
 
 To add the Saturday Speaker Meeting, Sam chose **Add a meeting**, picked Saturdays from 10 to 11 AM, added the address of the Riverbend Community Center, Room 4, and the types Speaker and Open. It showed up on the group page, in Find a meeting and on the Meetings page right away.
 

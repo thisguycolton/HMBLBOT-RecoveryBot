@@ -5,11 +5,11 @@ icon: monitor-play
 ---
 A **HostDeck** is a hosting screen made of blocks: the script, timer, chat postings, readings, milestones, the Topicificator and more. The [Hosting Command Center](/docs/group-tools/hosting-command-center) is the built-in deck for hosting a meeting; you can make others.
 
-![A group's HostDecks page before any decks are made](/docs-images/group-tools/decks.webp)
+![A group's Decks page before any decks are made](/docs-images/group-tools/decks.webp)
 
 ## Make a deck
 
-1. Open a group document and choose **File > Create new HostDeck**, or choose **New deck** on your group's HostDeck page.
+1. Open a group document and choose **File > Create new HostDeck**, or choose **New deck** under **Host tools > Decks**.
 2. Pick a layout: sidebars on both sides, left, right, or focus.
 3. Drag blocks into place and give each a size (main, side or bar).
 4. Save. Everyone who opens the deck sees the new layout.

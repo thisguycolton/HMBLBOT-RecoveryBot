@@ -1,9 +1,13 @@
 package com.hmblbot.recoverybot;
 
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
+import android.os.Bundle;
 import android.content.SharedPreferences;
 import android.util.Base64;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -13,10 +17,11 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.FileOutputStream;
 
-// The Home Screen widgets (DayCountWidget, ChipWidget): the site hands them what they show
-// (lib/appWidgets.js), and this keeps it in the app's own storage, then has them redraw.
-// soberSince "YYYY-MM-DD" (the widget counts the days itself), the chip and its back as PNGs,
-// its name, and the fun day-count facts still ahead.
+// The Home Screen widgets (DayCountWidget, ChipWidget, ReflectionWidget): the site hands them
+// what they show (lib/appWidgets.js), and this keeps it in the app's own storage, then has them
+// redraw. soberSince "YYYY-MM-DD" (the widget counts the days itself), the chip and its back as
+// PNGs, its name and the day it was earned, the fun day-count facts still ahead, and two weeks
+// of Daily Reflections.
 @CapacitorPlugin(name = "WidgetBridge")
 public class WidgetBridgePlugin extends Plugin {
     @PluginMethod
@@ -29,7 +34,11 @@ public class WidgetBridgePlugin extends Plugin {
             .putBoolean("signedIn", true)
             .putString("soberSince", call.getString("soberSince", ""))
             .putString("chipLabel", call.getString("chipLabel", ""))
-            .putString("chipId", chipId);
+            .putString("chipId", chipId)
+            .putString("chipOn", call.getString("chipOn", ""));
+        // Two weeks of Daily Reflections (JSON, Api::WidgetReflectionsController); older sites send none
+        String reflections = call.getString("reflections", null);
+        if (reflections != null) prefs.putString("reflections", reflections);
         // The fun day-count facts still ahead (JSON, lib/appWidgets.js); a site from before them sends none
         String facts = call.getString("funFacts", null);
         if (facts != null) prefs.putString("funFacts", facts);
@@ -53,7 +62,7 @@ public class WidgetBridgePlugin extends Plugin {
         call.resolve();
     }
 
-    // The styles picked in the app (Account settings > Widgets), which every widget left on
+    // The styles picked in the app (its settings, Widgets), which every widget left on
     // "Same as the app" draws in (WidgetStyles): one for both, and the day count's and chip's own
     // when "Same style for both" is off ("" while they follow the one for both). They belong to
     // the phone, so signing out keeps them.
@@ -67,16 +76,38 @@ public class WidgetBridgePlugin extends Plugin {
         call.resolve(answer);
     }
 
-    // { style } sets the one for both; { style, widget: "day" | "chip" } that widget's own
+    // { style } sets the one for every widget and drops all the others; { style, widget: "day" |
+    // "chip" } a kind's own (older pages); { style, widget: "day.<id>" } one placed widget's own
+    // (from placedWidgets), and with style "" it goes back to the one for every widget
     @PluginMethod
     public void setWidgetStyle(PluginCall call) {
         String style = call.getString("style", "");
         String widget = call.getString("widget", "");
+        String[] placed = widget.split("\\.", 2);
+        if (placed.length == 2 && WidgetStyles.isKind(placed[0])) {
+            int id;
+            try {
+                id = Integer.parseInt(placed[1]);
+            } catch (NumberFormatException e) {
+                call.reject("Unknown widget");
+                return;
+            }
+            if (!style.isEmpty() && !WidgetStyles.known(style)) {
+                call.reject("Unknown widget style");
+                return;
+            }
+            WidgetStyles.setOwn(getContext(), placed[0], id, style.isEmpty() ? WidgetStyles.APP : style);
+            WidgetData.redrawAll(getContext());
+            JSObject answer = new JSObject();
+            answer.put("style", style);
+            call.resolve(answer);
+            return;
+        }
         if (!WidgetStyles.known(style)) {
             call.reject("Unknown widget style");
             return;
         }
-        if (!widget.isEmpty() && !"both".equals(widget) && !"day".equals(widget) && !"chip".equals(widget)) {
+        if (!widget.isEmpty() && !"both".equals(widget) && !"all".equals(widget) && !WidgetStyles.isKind(widget)) {
             call.reject("Unknown widget");
             return;
         }
@@ -84,6 +115,37 @@ public class WidgetBridgePlugin extends Plugin {
         WidgetData.redrawAll(getContext());
         JSObject answer = new JSObject();
         answer.put("style", style);
+        call.resolve(answer);
+    }
+
+    // The widgets on their Home Screen, each on its own, with its size ("small" up to 2x2,
+    // "medium" when wider, "large" when wider and taller) and the style it has of its own (""
+    // while it follows the one for every widget): { widgets: [{ id: "day.12", kind: "day",
+    // size: "small", style: "" }] }
+    @PluginMethod
+    public void placedWidgets(PluginCall call) {
+        Context context = getContext();
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        JSArray widgets = new JSArray();
+        String[] kinds = {"day", "chip", "reflection"};
+        Class<?>[] providers = {DayCountWidget.class, ChipWidget.class, ReflectionWidget.class};
+        for (int k = 0; k < kinds.length; k++) {
+            for (int id : manager.getAppWidgetIds(new ComponentName(context, providers[k]))) {
+                Bundle options = manager.getAppWidgetOptions(id);
+                int width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
+                int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
+                String size = width >= 220 ? (height >= 220 ? "large" : "medium") : "small";
+                String own = WidgetStyles.own(context, kinds[k], id);
+                JSObject widget = new JSObject();
+                widget.put("id", kinds[k] + "." + id);
+                widget.put("kind", kinds[k]);
+                widget.put("size", size);
+                widget.put("style", WidgetStyles.APP.equals(own) ? "" : own);
+                widgets.put(widget);
+            }
+        }
+        JSObject answer = new JSObject();
+        answer.put("widgets", widgets);
         call.resolve(answer);
     }
 

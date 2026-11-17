@@ -71,6 +71,11 @@ Rails.application.routes.draw do
   get "topicificator_links/:code", to: "topicificator_links#show"
   resources :site_notices, only: :index
   resource :profile, only: %i[show update destroy]
+  # Account settings > Sign-in methods: link and unlink Google and Apple
+  get "sign_in_methods", to: "sign_in_methods#show"
+  post "sign_in_methods/move", to: "sign_in_methods#move"
+  delete "sign_in_methods/move", to: "sign_in_methods#cancel_move"
+  delete "sign_in_methods/:provider", to: "sign_in_methods#destroy", constraints: { provider: /google|apple/ }
   resources :push_subscriptions, only: %i[index create destroy] do
     collection do
       delete "/", action: :destroy
@@ -83,6 +88,8 @@ Rails.application.routes.draw do
     end
   end
   resource :hosting, controller: "hosting", only: :show
+  # The apps' Daily Reflection widget: each day's reading from a date on (lib/appWidgets.js)
+  resource :widget_reflections, only: :show
   # A member's own recovery tools (/recovery): chips, 10th step inventories, gratitude lists
   resource :recovery, controller: "recovery", only: %i[show update] do
     post :claim
@@ -169,6 +176,7 @@ Rails.application.routes.draw do
       post :leave
       post :approve
       post :regenerate_invite
+      post :setup
       get :court_verifications
     end
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
@@ -591,6 +599,7 @@ end
         # Their given and claimed chips, and taking one back (ChipRevocation)
         get :chips, on: :member
         post :revoke_chip, on: :member
+        post :post_chip, on: :member
         get :stats, on: :collection
       end
       resources :readings, only: %i[index update destroy]
@@ -656,6 +665,9 @@ end
   end
   resources :readings do
     get :mine, on: :collection
+    # The new-reading form's title search, and the reading a match adopts
+    get :title_matches, on: :collection
+    get :adoptable, on: :member
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

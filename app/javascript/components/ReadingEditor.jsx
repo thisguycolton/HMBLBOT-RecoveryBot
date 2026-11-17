@@ -5,6 +5,7 @@ import { createDateFromString } from "./ui/DateTimePicker/dateUtils";
 import { Shell, ShellPanel, ShellBand } from "./ui/Shell";
 import SegmentedControl from "./ui/SegmentedControl";
 import TagAutocomplete from "./ui/TagAutocomplete";
+import ReadingTitleMatches from "./ReadingTitleMatches";
 import { inputClass, labelClass, iconInputClass } from "./ui/styles";
 import axios from "axios";
 import {
@@ -508,6 +509,44 @@ useEffect(() => {
   const [availableTags, setAvailableTags] = useState(tags || []);
   const [creatingTag, setCreatingTag] = useState(false);
 
+  // A new reading can adopt an existing one found by its title: its words, source, topics
+  // and themes are copied in (the editors remount to show them) and Undo puts back what was there
+  const [adopted, setAdopted] = useState(null);
+  const [editorsKey, setEditorsKey] = useState(0);
+  const beforeAdoptRef = useRef(null);
+
+  async function adoptReading(match) {
+    const response = await fetch(`/readings/${match.id}/adoptable`, {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const source = await response.json();
+
+    beforeAdoptRef.current = {
+      title: formData.title, content: formData.content, topic: formData.topic,
+      source: formData.source, tagIds: formData.tagIds,
+    };
+    setFormData((f) => ({
+      ...f,
+      title: source.title || f.title,
+      content: renderRichContent(source.content_html) || f.content,
+      topic: renderRichContent(source.topic_html),
+      source: source.source || f.source,
+      tagIds: [...new Set([...f.tagIds, ...(source.tag_ids || []).map(Number)])],
+    }));
+    setAdopted(match);
+    setEditorsKey((k) => k + 1);
+  }
+
+  function undoAdopt() {
+    const before = beforeAdoptRef.current;
+    if (before) setFormData((f) => ({ ...f, ...before }));
+    beforeAdoptRef.current = null;
+    setAdopted(null);
+    setEditorsKey((k) => k + 1);
+  }
+
   // Picking a group also fills in its name and video link when those still hold the
   // previous group's (or are empty)
   function pickGroup(value) {
@@ -640,6 +679,7 @@ async function handleSubmit(e) {
         topic: formData.topic,
         tag_ids: formData.tagIds,
         published_at: publishedAt,
+        ...(adopted && !reading?.id ? { adopted_from_id: adopted.id } : {}),
         ...(formData.groupId ? { group_id: formData.groupId } : {}),
       },
     };
@@ -751,7 +791,7 @@ async function handleSubmit(e) {
                 type="submit"
                 form="reading-form"
                 disabled={submitting}
-                className="px-5 py-3 bg-accent hover:opacity-90 disabled:opacity-60 text-white text-sm font-semibold transition-opacity flex items-center gap-2"
+                className="px-5 py-3 !bg-accent hover:opacity-90 disabled:opacity-60 text-white text-sm font-semibold transition-opacity flex items-center gap-2"
               >
                 <Save className="w-4 h-4" strokeWidth={2.5} />
                 {submitting ? "Saving..." : "Save Reading"}
@@ -865,12 +905,20 @@ async function handleSubmit(e) {
                         className="border-0 bg-transparent p-0 text-3xl font-bold uppercase tracking-widest md:text-5xl ttSans placeholder:text-slate-400/70 focus:outline-none focus:ring-0"
                       />
                       <FieldError id="reading_title_error" message={shownErrors.title} className="!text-sm mt-2" />
+                      <ReadingTitleMatches
+                        title={formData.title}
+                        enabled={!reading?.id}
+                        adopted={adopted}
+                        onAdopt={adoptReading}
+                        onUndo={undoAdopt}
+                      />
                     </div>
 
                     <div data-field="content">
                       <FieldError message={shownErrors.content} className="!text-sm !mt-0 mb-3" />
                       <blockquote className="reading-prose wrap-normal">
                         <BlockEditor
+                          key={`content-${editorsKey}`}
                           namespace="reading-content-editor"
                           value={formData.content}
                           onChange={(value) => updateField("content", value)}
@@ -904,7 +952,13 @@ async function handleSubmit(e) {
                   </h3>
 
                   <div className="mt-8 rounded-[2rem] bg-white px-6 py-8 text-neutral-800 shadow-sm dark:bg-cyan-600 dark:text-neutral-100 md:px-14 md:py-10">
+                    {adopted && (
+                      <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-100/80 !font-sans">
+                        These topics came with the reading you adopted. Add new ones at the end.
+                      </p>
+                    )}
                     <BlockEditor
+                      key={`topic-${editorsKey}`}
                       namespace="reading-topic-editor"
                       value={formData.topic}
                       onChange={(value) => updateField("topic", value)}
@@ -1113,7 +1167,7 @@ async function handleSubmit(e) {
                 key="next"
                 type="button"
                 onClick={() => setStep((s) => s + 1)}
-                className="flex-1 min-h-12 px-4 py-3 bg-accent hover:opacity-90 text-white text-sm font-semibold transition-opacity inline-flex items-center justify-center gap-2"
+                className="flex-1 min-h-12 px-4 py-3 !bg-accent hover:opacity-90 text-white text-sm font-semibold transition-opacity inline-flex items-center justify-center gap-2"
               >
                 Next
                 <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
@@ -1123,7 +1177,7 @@ async function handleSubmit(e) {
                 key="save"
                 type="submit"
                 disabled={submitting}
-                className="flex-1 min-h-12 px-4 py-3 bg-accent hover:opacity-90 disabled:opacity-60 text-white text-sm font-semibold transition-opacity inline-flex items-center justify-center gap-2"
+                className="flex-1 min-h-12 px-4 py-3 !bg-accent hover:opacity-90 disabled:opacity-60 text-white text-sm font-semibold transition-opacity inline-flex items-center justify-center gap-2"
               >
                 <Save className="w-4 h-4" strokeWidth={2.5} />
                 {submitting ? "Saving..." : "Save Reading"}

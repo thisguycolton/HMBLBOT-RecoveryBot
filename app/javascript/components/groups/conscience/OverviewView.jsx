@@ -127,7 +127,7 @@ export default function OverviewView({ group }) {
             </Tray>
           )}
           {data.service.length > 0 && (
-            <Tray label="Elected officials" action={<Link to={officialsPath(slug)} className="text-xs font-medium text-accent hover:underline">All officials</Link>}>
+            <Tray label="Officials" action={<Link to={officialsPath(slug)} className="text-xs font-medium text-accent hover:underline">All officials</Link>}>
               <div className="space-y-1.5">
                 {data.service.map((p) => (
                   <Row key={p.id} to={officialsPath(slug)} icon={HandHelping} title={p.title}

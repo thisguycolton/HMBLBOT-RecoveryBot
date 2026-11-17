@@ -260,6 +260,9 @@ class TimelineNote < ApplicationRecord
              comments_off: comments_off, **social_json(viewer) }
     json[:chip] = chip if chip_id
     json[:chip_hidden] = true if mine && chip_hidden
+    # A site admin can change the chip in it (ChipSwapDialog): take back one given or claimed by
+    # mistake (ChipRevocation), or show another of theirs when they no longer have it
+    json[:chip_admin] = true if chip_id && viewer&.suite_admin?
     json[:recipient] = recipient.as_person_json if recipient
     if group
       json[:can_remove] = mine || group.manageable_by?(viewer)

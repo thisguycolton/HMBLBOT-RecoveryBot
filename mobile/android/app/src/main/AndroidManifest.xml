@@ -58,6 +58,12 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_chip_info" />
         </receiver>
+        <receiver android:name=".ReflectionWidget" android:label="@string/widget_reflection" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_reflection_info" />
+        </receiver>
 
         <!-- Notifications (Firebase Cloud Messaging, @capacitor-firebase/messaging; FcmSender on
              the server). No token is made until they're turned on in account settings, and
@@ -81,4 +87,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Android 13+: asked when notifications are turned on in account settings -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The app lock (AppLockPlugin): Android's fingerprint / face prompt. Never asked for; the
+         fingerprint or face stays with Android, the app only hears whether it matched -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 </manifest>

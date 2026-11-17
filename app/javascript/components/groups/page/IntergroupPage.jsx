@@ -39,7 +39,7 @@ export default function IntergroupPage({ template = false }) {
   // Starting it makes a group here (waiting for a site admin), run by whoever started it
   const onStart = async () => {
     const group = await api("/groups/start", { method: "POST", body: { oiaa_slug: page.context.oiaa_slug } });
-    navigate(`/${group.slug}`);
+    navigate(`/${group.slug}/setup`);
   };
   const context = { ...page.context, kind: page.kind, note_max: page.note_max, onStart };
   // Following it: told when it comes to RecoveryBot

@@ -180,13 +180,16 @@ class Meeting < ApplicationRecord
   private
 
   # A new day of a meeting goes to the host coordinators who have every other day of it among
-  # their time slots (someone coordinating "9:00 AM, every day" keeps every day)
+  # their time slots (someone coordinating "9:00 AM, every day" keeps every day), and so do
+  # host coordinator offices
   def join_coordinators_slots
     others = series.where.not(id: id).ids
     return if others.empty?
 
     group.memberships.where(host_slots_only: true).where("group_memberships.host_meeting_ids @> ARRAY[?]::bigint[]", others)
          .find_each { |m| m.update!(host_meeting_ids: (m.host_meeting_ids + [id]).sort) }
+    group.service_positions.where(grants: "can_schedule_hosts").where("service_positions.host_meeting_ids @> ARRAY[?]::bigint[]", others)
+         .find_each { |p| p.update!(host_meeting_ids: (p.host_meeting_ids + [id]).sort) }
   end
 
   def tidy

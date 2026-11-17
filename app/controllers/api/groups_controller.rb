@@ -6,8 +6,8 @@ class Api::GroupsController < ApplicationController
   # Anyone sees an active group's page, signed in or not; any account may ask to join it
   skip_before_action :authenticate_user!, only: :show
   before_action :set_viewable_group, only: %i[show join leave]
-  before_action :set_group, only: %i[update destroy approve regenerate_invite court_verifications]
-  before_action :require_manager, only: %i[update regenerate_invite court_verifications]
+  before_action :set_group, only: %i[update destroy approve regenerate_invite court_verifications setup]
+  before_action :require_manager, only: %i[update regenerate_invite court_verifications setup]
   # Listing your own groups is open to anyone in one (the My groups window in the nav)
   # Starting one from an intergroup listing is open to every account (Group.can_start_from_listing?)
   before_action :require_feature, only: %i[create find]
@@ -190,6 +190,23 @@ class Api::GroupsController < ApplicationController
     render json: group_json
   end
 
+  # POST /api/groups/:slug/setup (group admins), the setup guide's progress:
+  #   { step: "meetings", state: "done" | "skipped" | "" } marks (or clears) a step
+  #   { finished: true } puts the guide away; { finished: false } brings it back
+  def setup
+    if params.key?(:step)
+      return render(json: { error: "That isn't a setup step." }, status: :unprocessable_entity) unless Group::SETUP_STEPS.include?(params[:step].to_s)
+
+      @group.mark_setup_step!(params[:step].to_s, params[:state].presence)
+    end
+    unless params[:finished].nil?
+      @group.update!(setup_finished_at: ActiveModel::Type::Boolean.new.cast(params[:finished]) ? Time.current : nil)
+    end
+    render json: @group.setup_json
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   # GET /api/groups/:slug/court_verifications (group admins)
   def court_verifications
     rows = @group.court_verifications.includes(:meeting).order(meeting_at: :desc).limit(500)
@@ -214,7 +231,7 @@ class Api::GroupsController < ApplicationController
 
   def group_params
     params.require(:group).permit(:title, :description, :website, :time_zone, :court_email_subject, :court_email_body, :court_email_reply_to,
-                                  :quorum_count, :quorum_percent, :logo, :follows_roberts_rules, :show_hosts_publicly, :show_sponsors, :search_listed, deck_editors: [])
+                                  :quorum_count, :quorum_percent, :logo, :follows_roberts_rules, :show_hosts_publicly, :show_sponsors, :search_listed, :sub_requests_audience, deck_editors: [])
   end
 
   def group_card(group, membership)
@@ -227,6 +244,15 @@ class Api::GroupsController < ApplicationController
     }
   end
 
+  # What someone does in the group, for the badge on its page ("Record keeper", "Can host")
+  def my_roles(membership)
+    return [] unless membership&.active?
+    return ["Group admin"] if membership.admin?
+
+    [("Record keeper" if membership.can_keep_records), ("Treasurer" if membership.can_keep_treasury),
+     ("Host coordinator" if membership.can_schedule_hosts), ("Can host" if membership.can_host)].compact
+  end
+
   def group_json
     membership = @group.membership_for(current_user)
     member = current_user&.suite_admin? || membership&.active?
@@ -235,19 +261,22 @@ class Api::GroupsController < ApplicationController
       slug: @group.slug, title: @group.title, description: @group.description, website: @group.website,
       time_zone: @group.time_zone, status: @group.status,
       role: membership&.role, membership_status: membership&.status,
-      is_member: !!membership&.active?, can_manage: manager, can_keep_records: @group.records_editable_by?(current_user), can_schedule_hosts: @group.hosts_editable_by?(current_user), can_keep_treasury: @group.treasury_editable_by?(current_user), can_host: @group.can_host?(current_user), can_arrange_decks: @group.decks_editable_by?(current_user), is_site_admin: !!current_user&.suite_admin?, signed_in: current_user.present?,
+      my_roles: my_roles(membership),
+      is_member: !!membership&.active?, can_manage: manager, can_keep_records: @group.records_editable_by?(current_user), can_schedule_hosts: @group.hosts_editable_by?(current_user), can_keep_treasury: @group.treasury_editable_by?(current_user), can_host: @group.can_host?(current_user), can_give: @group.gives_chips?(current_user), can_arrange_decks: @group.decks_editable_by?(current_user), is_site_admin: !!current_user&.suite_admin?, signed_in: current_user.present?,
       meetings: @group.meetings.ordered.map(&:as_api_json),
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
       members_count: @group.members.count,
-      follows_roberts_rules: @group.follows_roberts_rules, show_hosts_publicly: @group.show_hosts_publicly, show_sponsors: @group.show_sponsors, search_listed: @group.search_listed, deck_editors: @group.deck_editors,
+      follows_roberts_rules: @group.follows_roberts_rules, show_hosts_publicly: @group.show_hosts_publicly, show_sponsors: @group.show_sponsors, search_listed: @group.search_listed, deck_editors: @group.deck_editors, sub_requests_audience: @group.sub_requests_audience,
       logo_url: @group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.logo, only_path: true) : nil,
       cover_url: @group.cover.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.cover, only_path: true) : nil,
     }
     if member
       # The green check (like in the Zoom rooms) on anyone here offering to sponsor
       sponsoring = sponsoring_ids
+      offices = offices_by_user
       json[:members] = @group.active_memberships.includes(user: { avatar_attachment: :blob }).sort_by { |m| [m.admin? ? 0 : 1, m.user.display_name.downcase] }
-                             .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records, can_schedule_hosts: m.can_schedule_hosts, can_keep_treasury: m.can_keep_treasury, can_host: m.can_host, host_slots_only: m.host_slots_only, host_slot_count: m.host_meeting_ids.size, can_sponsor: sponsoring.include?(m.user_id)) }
+                             .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records, can_schedule_hosts: m.can_schedule_hosts, can_keep_treasury: m.can_keep_treasury, can_host: m.can_host, host_slots_only: m.host_slots_only, host_slot_count: m.host_meeting_ids.size, can_sponsor: sponsoring.include?(m.user_id),
+                                                                         office_roles: m.office_roles, offices: offices[m.user_id] || []) }
       json[:books] = @group.group_books.includes(book: { cover_image_attachment: :blob }).order(:created_at).map do |gb|
         { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color, members_only: gb.book.members_only? } }
       end
@@ -262,12 +291,22 @@ class Api::GroupsController < ApplicationController
       json[:court_form_url] = "#{request.base_url}/court_verifications/new?group=#{@group.slug}"
       json[:court_email] = @group.court_email_json
       json[:quorum] = { count: @group.quorum_count, percent: @group.quorum_percent, needed: @group.quorum_needed }
+      json[:setup] = @group.setup_json
     end
     json
   end
 
   # Who in this group the viewer sees as available to sponsor (SponsorProfile.visible_to), and
   # the viewer themself when they're offering
+  # The offices each member holds now (Members: "Treasurer", and the role it gives them)
+  def offices_by_user
+    today = @group.zone.today
+    @group.service_positions.where(archived: false).includes(:terms).each_with_object({}) do |p, by_user|
+      user_id = p.current_term(today)&.user_id
+      (by_user[user_id] ||= []) << { title: p.title, grants: p.grants } if user_id
+    end
+  end
+
   def sponsoring_ids
     return [] unless @group.show_sponsors && current_user
 

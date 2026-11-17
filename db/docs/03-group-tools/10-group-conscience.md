@@ -3,22 +3,23 @@ title: Group conscience
 summary: "Your group's business: meetings, decisions, documents, officials and treasury."
 icon: scale
 ---
-The **Conscience** pages keep your group's business in one place, so the group's history doesn't live in one person's notebook.
+The **Group conscience** pages keep your group's business in one place, so the group's history doesn't live in one person's notebook.
 
 ![Group conscience overview](/docs-images/group-tools/conscience.webp)
 
 ## What's in it
 
-Tabs along the top:
+Pills along the top (on a phone they scroll sideways). Everyone sees the same sections; your role decides what you can change:
 
 - **Overview**: members, standing decisions, business meetings held and the last treasurer's report, then the next business meeting with its agenda, what's waiting on you, recent decisions and pinned documents.
-- **[Meetings](/docs/group-tools/business-meetings)**: agendas, minutes and attendance.
+- **[Business meetings](/docs/group-tools/business-meetings)**: agendas, minutes and attendance.
 - **[Decisions](/docs/group-tools/decisions-and-roberts-rules)**: every motion and how it was voted.
 - **[Documents](/docs/group-tools/group-documents)**: bylaws, meeting formats, scripts, reports.
-- **HostDecks**: the group's [hosting screens](/docs/group-tools/hostdeck).
-- **[Elected officials](/docs/group-tools/elected-officials)**: who holds each service position and until when.
+- **[Officials](/docs/group-tools/elected-officials)**: who holds each service position and until when.
 - **[Treasury](/docs/group-tools/treasury)**: monthly treasurer's reports.
-- **Templates**: starting points for new documents.
+- **Templates** (record keepers): starting points for new documents. Group admins find them in **Manage > Document templates**.
+
+The group's own decks moved to **Host tools > Decks**.
 
 ## Example: Lantern Street at a glance
 

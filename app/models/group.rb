@@ -70,6 +70,7 @@ class Group < ApplicationRecord
   before_validation { self.deck_editors = DECK_EDITOR_ROLES & Array(deck_editors).map(&:to_s) }
   validates :time_zone, inclusion: { in: TIME_ZONES }
   validates :status, inclusion: { in: STATUSES }
+  validates :sub_requests_audience, inclusion: { in: %w[members hosts off] }
   validates :description, length: { maximum: 1000 }
   validates :quorum_count, numericality: { only_integer: true, in: 1..9999 }, allow_nil: true
   validates :quorum_percent, numericality: { only_integer: true, in: 1..100 }, allow_nil: true
@@ -120,6 +121,25 @@ class Group < ApplicationRecord
   def zone = ActiveSupport::TimeZone[time_zone]
   def pending? = status == "pending"
 
+  # The setup guide (/groups/:slug/setup, components/groups/setup/): its steps in order. A step is
+  # "done" or "skipped" in setup_steps; the guide is over once setup_finished_at is set (finished,
+  # or put away from the group page). Groups made before it came in were marked set up.
+  SETUP_STEPS = %w[details meetings offices invite extras].freeze
+  SETUP_STATES = %w[done skipped].freeze
+
+  def setup_json
+    { steps: setup_steps.slice(*SETUP_STEPS), finished_at: setup_finished_at&.iso8601, order: SETUP_STEPS }
+  end
+
+  # `state` "done"/"skipped" marks a step, nil clears it
+  def mark_setup_step!(step, state)
+    raise ArgumentError, "unknown step" unless SETUP_STEPS.include?(step)
+    raise ArgumentError, "unknown state" unless state.nil? || SETUP_STATES.include?(state)
+
+    steps = setup_steps.merge(step => state).compact
+    update!(setup_steps: steps)
+  end
+
   # A site admin says yes to a group someone started: it goes live, run by whoever started it,
   # and people who followed the listing hear it arrived
   def approve!
@@ -157,6 +177,17 @@ class Group < ApplicationRecord
     restore_attributes([:description]) unless saved
     saved
   end
+  # Offices give roles (OfficeRoles), and terms start and end by date. There's no job runner, so
+  # the first time a day anyone opens the group, its office roles are brought up to date (true
+  # when that happened just now).
+  def sync_office_roles!
+    today = zone.today
+    return if office_roles_synced_on == today
+
+    OfficeRoles.sync!(self)
+    update_columns(office_roles_synced_on: today)
+  end
+
   # Who schedules the hosts of its meetings: group admins, and members an admin marked in the
   # Members tab (the person doing that needn't keep the records). A coordinator an admin limited
   # to some time slots (GroupMembership#host_slots_only) schedules only those meetings, so given
@@ -196,6 +227,34 @@ class Group < ApplicationRecord
   # documents kept for hosts (the format) and are the ones asked when a host won't be there
   def can_host?(user) = hosts_editable_by?(user) || records_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_host }
   def host_pool = User.where(id: active_memberships.where(can_host: true).select(:user_id))
+  # Who gives chips in the group's design and sees its Court verification form in Host tools: its
+  # admins, host coordinators and the members marked Can host. A record keeper reads what hosts
+  # read (can_host?) but gives chips only when they're marked Can host too.
+  def gives_chips?(user) = hosts_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_host }
+
+  # Who sees a "Need a sub" request (Manage > Meetings setup, sub_requests_audience): every
+  # member ("members", the default), only the people who can host ("hosts"), or nobody ("off").
+  # The coordinators of that meeting always do. Seeing one is what lets someone take it.
+  def sees_sub_requests?(user, meeting = nil)
+    return false unless member_or_site_admin?(user)
+    return true if hosts_editable_by?(user, meeting)
+
+    case sub_requests_audience
+    when "members" then true
+    when "hosts" then can_host?(user)
+    else false
+    end
+  end
+
+  # Who hears that a sub is needed for this meeting: the same people, and its coordinators
+  def sub_askees(meeting)
+    coordinators = host_schedulers(meeting).to_a
+    case sub_requests_audience
+    when "members" then members.to_a
+    when "hosts" then host_pool.to_a + coordinators
+    else coordinators
+    end.uniq
+  end
   # Who may rearrange the group's HostDecks (the layout editor): its admins always, and the roles
   # it picked in Group settings (deck_editors): host coordinators and record keepers unless it
   # changed that, and everyone who can host if it chose to

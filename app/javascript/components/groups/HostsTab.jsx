@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BellRing, CalendarClock, CalendarX, Link2, MonitorPlay, Plus, Printer, ScrollText, Trash2, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
-import Avatar from "./Avatar";
+import { SlotCoverage } from "./SlotPicker";
 import Toggle from "../ui/Toggle";
 import SegmentedControl from "../ui/SegmentedControl";
 import usePrintable, { printTitled } from "../../lib/usePrintable";
@@ -184,97 +184,12 @@ function Formats({ slug, formats }) {
   );
 }
 
-// Group admins pick, for each host coordinator, whether they look after the whole group or only
-// some time slots: then the open places, sub requests and schedule changes they see and hear
-// about are those slots', and they change only those
-function HostCoordinators({ slug, coordinators, slots, reload }) {
-  const [error, setError] = useState(null);
-  const save = async (c, body) => {
-    setError(null);
-    try {
-      await api(`/groups/${slug}/memberships/${c.membership_id}`, { method: "PATCH", body });
-      await reload();
-    } catch (e) { setError(e.message); }
-  };
-  const pick = (c, ids, on) => {
-    const rest = c.host_meeting_ids.filter((x) => !ids.includes(x));
-    save(c, { host_meeting_ids: on ? [...rest, ...ids] : rest });
-  };
-  // A meeting that runs on several days is one time slot per day: they're grouped by time, so a
-  // coordinator of "9:00 AM, every day" is one box
-  const times = [];
-  slots.forEach((slot) => {
-    const key = `${slot.start_minute}|${slot.end_minute}|${slot.name}`;
-    let t = times.find((x) => x.key === key);
-    if (!t) times.push(t = { key, name: slot.name, start_minute: slot.start_minute, slots: [] });
-    t.slots.push(slot);
-  });
-  times.sort((x, y) => x.start_minute - y.start_minute || x.name.localeCompare(y.name));
-  return (
-    <Tray label={`Host coordinators (${coordinators.length})`}>
-      <div className="space-y-2">
-        <ErrorNote error={error} />
-        {coordinators.length === 0 && <Card className="p-3 text-sm text-slate-600 dark:text-neutral-300">Make someone a host coordinator on the Members tab, then pick their time slots here. Admins coordinate every meeting.</Card>}
-        {coordinators.map((c) => (
-          <Card key={c.membership_id} className="space-y-3 p-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <Avatar person={{ name: c.name, avatar_url: c.avatar_url }} size={40} />
-              <div className="min-w-0 flex-1 basis-56">
-                <p className="font-medium text-slate-900 dark:text-white">{c.name}</p>
-                <p className="text-xs text-slate-500 dark:text-neutral-400">Host coordinator</p>
-              </div>
-              <label htmlFor={`hc-scope-${c.membership_id}`} className="sr-only">What {c.name} coordinates</label>
-              <select id={`hc-scope-${c.membership_id}`} className={`${selectClass} sm:!w-auto`} value={c.host_slots_only ? "slots" : "group"}
-                onChange={(e) => save(c, { host_slots_only: e.target.value === "slots" })}>
-                <option value="group">Whole group</option>
-                <option value="slots">Only these time slots</option>
-              </select>
-            </div>
-            {c.host_slots_only ? (
-              <>
-                <p className="text-sm text-slate-600 dark:text-neutral-300">Gets open places, sub requests and schedule changes for these slots only.{c.host_meeting_ids.length === 0 && " Pick at least one."}</p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {times.map((t) => {
-                    const ids = t.slots.map((x) => x.id);
-                    const count = ids.filter((id) => c.host_meeting_ids.includes(id)).length;
-                    const all = count === ids.length;
-                    const days = t.slots.length === 7 ? "every day" : t.slots.map((x) => DAYS[x.day_of_week].slice(0, 3)).join(", ");
-                    return (
-                      <div key={t.key} className={`rounded-xl px-3 py-2 ring-1 ${count ? "bg-sky-100 ring-sky-200 dark:bg-sky-900/40 dark:ring-sky-800" : "ring-neutral-200 dark:ring-neutral-700"}`}>
-                        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-900 dark:text-white">
-                          <input type="checkbox" className="size-4" checked={all} ref={(el) => { if (el) el.indeterminate = count > 0 && !all; }} onChange={() => pick(c, ids, !all)} />
-                          <span className="min-w-0 truncate"><span className="font-medium">{clock(t.start_minute)} · {t.name}</span> <span className="text-slate-500 dark:text-neutral-400">{days}</span></span>
-                        </label>
-                        {ids.length > 1 && (
-                          <div className="mt-1.5 flex flex-wrap gap-1 pl-6">
-                            {t.slots.map((x) => {
-                              const on = c.host_meeting_ids.includes(x.id);
-                              return (
-                                <button key={x.id} type="button" aria-pressed={on} title={`${DAYS[x.day_of_week]} ${clock(x.start_minute)}`} onClick={() => pick(c, [x.id], !on)}
-                                  className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${on ? "!bg-accent !text-white ring-transparent" : "!bg-white text-slate-600 ring-neutral-200 dark:!bg-neutral-900 dark:text-neutral-300 dark:ring-neutral-700"}`}>
-                                  {DAYS[x.day_of_week].slice(0, 3)}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : <p className="text-sm text-slate-600 dark:text-neutral-300">Gets open places, sub requests and schedule changes for every meeting.</p>}
-          </Card>
-        ))}
-      </div>
-    </Tray>
-  );
-}
-
 // Host coordinators mark which members can host or co-host: they read the format kept for hosts
 // and are the ones asked when a host won't be there
 function WhoCanHost({ slug, members, reload }) {
   const [error, setError] = useState(null);
+  // Manage > Offices links here (#who-can-host)
+  useEffect(() => { if (window.location.hash === "#who-can-host") document.getElementById("who-can-host")?.scrollIntoView({ block: "start" }); }, []);
   const toggle = async (m) => {
     setError(null);
     try {
@@ -284,6 +199,7 @@ function WhoCanHost({ slug, members, reload }) {
   };
   const count = members.filter((m) => m.can_host).length;
   return (
+    <div id="who-can-host" className="scroll-mt-20">
     <Tray label={`Who can host (${count})`}>
       <Card className="space-y-2 p-3">
         <p className="text-sm text-slate-600 dark:text-neutral-300">Members marked here can read the format kept for hosts, and hear about it when a host or co-host won't be there.</p>
@@ -298,6 +214,7 @@ function WhoCanHost({ slug, members, reload }) {
         </div>
       </Card>
     </Tray>
+    </div>
   );
 }
 
@@ -405,23 +322,23 @@ export default function HostsTab({ group }) {
       <div className="print:hidden space-y-5">
         <div className="flex flex-wrap items-center gap-3">
           <p className="min-w-0 basis-full text-sm text-slate-600 sm:basis-auto sm:flex-1 dark:text-neutral-300">
-            {data.slots.length === 0 ? "The group has no weekly meetings yet. A group admin adds them in Meeting settings, then a host and co-host go on each."
+            {data.slots.length === 0 ? "The group has no weekly meetings yet. A group admin adds them in Manage > Meetings setup, then a host and co-host go on each."
               : openTotal === 0 ? `Every one of the ${s.places} places has someone in it.`
-              : mySlots && s.places === 0 ? "No time slots are picked for you yet. A group admin picks them under Host coordinators."
+              : mySlots && s.places === 0 ? "Your office doesn't cover any time slots yet. A group admin picks them in Manage > Offices."
               : openTotal === 0 ? `Every one of the ${s.places} places${mySlots ? " in your time slots" : ""} has someone in it.`
               : <><strong className="text-slate-900 dark:text-white">{openTotal}</strong> of {s.places} places{mySlots ? " in your time slots" : ""} are open: {s.open_hosts} {s.open_hosts === 1 ? "host" : "hosts"} and {s.open_co_hosts} {s.open_co_hosts === 1 ? "co-host" : "co-hosts"}.</>}
           </p>
           {mySlots && <Toggle checked={onlyMine} onChange={setOnlyMine} label="Only my time slots" />}
           {data.slots.length > 0 && <Toggle checked={onlyOpen} onChange={setOnlyOpen} label="Only meetings with an open place" />}
           {data.slots.length > 0 && <button type="button" className={quietButton} onClick={() => printTitled(`${group.title} hosts`)}><Printer className="size-4" /> Print</button>}
-          {data.can_host && <Link to={`/${slug}/host`} className={primaryButton}><MonitorPlay className="size-4" /> HostDeck</Link>}
+          {data.can_host && <Link to={`/${slug}/host`} className={primaryButton}><MonitorPlay className="size-4" /> Host a meeting</Link>}
         </div>
         <ErrorNote error={error} />
         <SubRequests requests={data.sub_requests} call={call} />
         <Formats slug={slug} formats={data.formats} />
         {days.map((day) => <Tray key={day.d} label={day.name}><div className="space-y-1.5">{day.slots.map(row)}</div></Tray>)}
         {slots.length === 0 && data.slots.length > 0 && <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">{onlyOpen ? "Every place is filled." : "None of the group's meetings are your time slots."}</Card>}
-        {data.coordinators && data.slots.length > 0 && <HostCoordinators slug={slug} coordinators={data.coordinators} slots={data.slots} reload={load} />}
+        {data.coordinators && data.slots.length > 0 && <SlotCoverage slug={slug} coordinators={data.coordinators} slots={data.slots} />}
         {edit && data.members?.length > 0 && <WhoCanHost slug={slug} members={data.members} reload={load} />}
       </div>
 

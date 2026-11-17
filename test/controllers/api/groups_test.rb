@@ -245,6 +245,25 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
     assert_match "waiting for a site admin already", response.parsed_body["error"]
   end
 
+  test "a group's page names the roles you hold, for the badge" do
+    group = create_group
+    get "/api/groups/#{group.slug}", as: :json
+    assert_equal ["Group admin"], response.parsed_body["my_roles"]
+
+    membership = group.memberships.create!(user: @member)
+    sign_in @member
+    get "/api/groups/#{group.slug}", as: :json
+    assert_equal [], response.parsed_body["my_roles"]
+
+    membership.update!(can_keep_records: true, can_host: true)
+    get "/api/groups/#{group.slug}", as: :json
+    assert_equal ["Record keeper", "Can host"], response.parsed_body["my_roles"]
+
+    sign_in @stranger
+    get "/api/groups/#{group.slug}", as: :json
+    assert_equal [], response.parsed_body["my_roles"]
+  end
+
   test "literature and readings show to members" do
     group = create_group
     group.memberships.create!(user: @member)
@@ -303,5 +322,40 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
     patch "/api/groups/#{group.slug}", params: { group: { court_email_body: "Hacked" } }, as: :json
     assert_response :forbidden
     assert_equal "{{attendee}} came.", group.reload.court_email_body
+  end
+
+  test "the setup guide: a new group gets it, its admins mark steps done or skipped and put it away" do
+    OiaaFeed.sync!([{ slug: "s1", name: "Fresh Start", day: [1], time: "07:00", timezone: "America/Phoenix" }].to_json)
+    sign_in @stranger
+    post "/api/groups/start", params: { oiaa_slug: "s1" }, as: :json
+    assert_response :created
+    group = Group.find_by!(slug: response.parsed_body["slug"])
+    get "/api/groups/#{group.slug}", as: :json
+    assert_equal({ "steps" => {}, "finished_at" => nil, "order" => Group::SETUP_STEPS }, response.parsed_body["setup"])
+
+    post "/api/groups/#{group.slug}/setup", params: { step: "meetings", state: "done" }, as: :json
+    assert_response :success
+    post "/api/groups/#{group.slug}/setup", params: { step: "offices", state: "skipped" }, as: :json
+    assert_equal({ "meetings" => "done", "offices" => "skipped" }, response.parsed_body["steps"])
+    post "/api/groups/#{group.slug}/setup", params: { step: "offices", state: "" }, as: :json
+    assert_equal({ "meetings" => "done" }, response.parsed_body["steps"], "a blank state clears the step")
+    post "/api/groups/#{group.slug}/setup", params: { step: "nope", state: "done" }, as: :json
+    assert_response :unprocessable_entity
+    post "/api/groups/#{group.slug}/setup", params: { step: "meetings", state: "maybe" }, as: :json
+    assert_response :unprocessable_entity
+
+    post "/api/groups/#{group.slug}/setup", params: { finished: true }, as: :json
+    assert response.parsed_body["finished_at"].present?
+    post "/api/groups/#{group.slug}/setup", params: { finished: false }, as: :json
+    assert_nil group.reload.setup_finished_at
+
+    # The guide is the admins'; members don't get it or change it
+    group.update!(status: "active")
+    group.memberships.create!(user: @member, role: "member", status: "active")
+    sign_in @member
+    get "/api/groups/#{group.slug}", as: :json
+    assert_nil response.parsed_body["setup"]
+    post "/api/groups/#{group.slug}/setup", params: { finished: true }, as: :json
+    assert_response :forbidden
   end
 end

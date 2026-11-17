@@ -9,9 +9,14 @@ class Api::NavController < ApplicationController
   def show
     memberships = current_user.group_memberships.active.includes(group: { logo_attachment: :blob }).to_a
                               .sort_by { |m| m.group.title.downcase }
+    # Roles from offices whose terms started or ended today (Group#sync_office_roles!)
+    memberships.each { |m| m.reload if m.group.sync_office_roles! }
     render json: {
       me: { name: current_user.display_name, username: current_user.username, avatar_url: current_user.avatar_url },
       groups: memberships.map { |m| group_json(m) },
+      # Groups they asked to join, still waiting for an admin: the sidebar shows them greyed
+      waiting_groups: current_user.group_memberships.requested.includes(group: { logo_attachment: :blob }).map(&:group)
+                                  .select(&:active?).sort_by { |g| g.title.downcase }.map { |g| { slug: g.slug, title: g.title, logo_url: logo_url(g) } },
       hosting: { open_requests: HostCommitments.new(current_user).open_sub_requests.size, host: current_user.host? },
       today: PeopleHome.new(current_user).json,
       # Site admins only (nil for everyone else): the sidebar's "Everyone's posts" switch
@@ -26,7 +31,7 @@ class Api::NavController < ApplicationController
     admin = membership.role == "admin"
     {
       slug: group.slug, title: group.title,
-      logo_url: group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(group.logo, only_path: true) : nil,
+      logo_url: logo_url(group),
       roles: {
         admin: admin,
         record_keeper: admin || membership.can_keep_records,
@@ -38,7 +43,11 @@ class Api::NavController < ApplicationController
       # Messages they haven't read in the group's chat channels they're in
       chat_unread: ChatChannel.unread_counts(group.chat_channels.open.select { |c| c.readable_by?(current_user, membership) }, current_user).values.sum,
       # Give a chip (/recovery/give?group=) is in the folder of each group they host for
-      can_give: group.can_host?(current_user),
+      can_give: group.gives_chips?(current_user),
     }
+  end
+
+  def logo_url(group)
+    group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(group.logo, only_path: true) : nil
   end
 end

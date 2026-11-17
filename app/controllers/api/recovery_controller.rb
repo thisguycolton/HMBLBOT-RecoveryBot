@@ -25,7 +25,7 @@ class Api::RecoveryController < ApplicationController
       shared: current_user.timeline_notes.where.not(chip_id: nil).pluck(:chip_id).uniq,
       # Only drawn on a chip picture if they tick "Add my first name" (ChipPictureShare)
       first_name: current_user.name.to_s.split.first.presence,
-      can_give: current_user.suite_admin? || current_user.groups.any? { |g| g.can_host?(current_user) },
+      can_give: current_user.suite_admin? || current_user.groups.any? { |g| g.gives_chips?(current_user) },
       today: {
         inventory: current_user.step_inventories.exists?(on: today),
         gratitude: current_user.gratitude_lists.exists?(on: today),

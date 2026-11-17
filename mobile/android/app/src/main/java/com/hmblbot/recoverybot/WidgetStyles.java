@@ -2,20 +2,18 @@ package com.hmblbot.recoverybot;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Build;
-import android.widget.RemoteViews;
 
 import java.util.Arrays;
 
-// The widgets' styles, the same for the day count and the chip, and the same list as the
-// iPhone app (WidgetStyle in mobile/ios/App/RecoveryBotWidgets/RecoveryBotWidgets.swift) and the
-// app's picker (lib/widgetStyles.js on the site): change them together. Each has a background
-// (res/drawable/widget_bg_*) and a day count layout (res/layout/widget_day_count_*); Paper
-// follows Light/Dark Mode through res/values-night.
+// The widgets' styles, the same for every widget, and the same list as the iPhone app
+// (WidgetStyle in mobile/ios/App/RecoveryBotWidgets/RecoveryBotWidgets.swift) and the app's
+// picker (lib/widgetStyles.js on the site): change them together. How each style draws each
+// widget is its layout (assets/widget-layouts.json, WidgetPainter); res/drawable/widget_bg_* are
+// only the swatches in WidgetSettingsActivity. Paper follows Light/Dark Mode.
 //
-// The style is picked in the app (Account settings > Widgets, WidgetBridgePlugin.setWidgetStyle)
-// and every widget left on "Same as the app" draws in it. A widget's own Edit
-// (WidgetSettingsActivity) can give that one widget its own style instead.
+// The style is picked in the app (This phone > Widgets, WidgetBridgePlugin.setWidgetStyle), for
+// every widget or for one placed widget (WidgetBridgePlugin.placedWidgets lists them). A widget's
+// own Edit (WidgetSettingsActivity) sets the same per-widget pick.
 final class WidgetStyles {
     private WidgetStyles() {}
 
@@ -23,6 +21,10 @@ final class WidgetStyles {
     static final String DEFAULT = "classic";
     static final String[] KEYS = {"classic", "night", "ocean", "forest", "sunrise", "midnight", "black", "light", "paper", "paperLight", "paperDark"};
     static final String[] NAMES = {"Classic blue", "Night", "Ocean", "Forest", "Sunrise", "Midnight", "Charcoal", "Light", "Paper (follows Light/Dark)", "Paper, light", "Paper, dark"};
+
+    static boolean isKind(String widget) {
+        return "day".equals(widget) || "chip".equals(widget) || "reflection".equals(widget);
+    }
 
     static boolean known(String key) {
         return key != null && Arrays.asList(KEYS).contains(key);
@@ -55,13 +57,17 @@ final class WidgetStyles {
         return own.isEmpty() ? appStyle(context) : own;
     }
 
-    // For both (which drops each kind's own), or with widget "day" / "chip" for that kind only
+    // For every widget (which drops each kind's own and every placed widget's own), or with
+    // widget "day" / "chip" / "reflection" for that kind only
     static void setAppStyle(Context context, String key, String widget) {
         SharedPreferences.Editor edit = prefs(context).edit();
-        if ("day".equals(widget) || "chip".equals(widget)) {
+        if (isKind(widget)) {
             edit.putString(APP + "." + widget, key);
         } else {
-            edit.putString(APP, key).remove(APP + ".day").remove(APP + ".chip");
+            edit.putString(APP, key).remove(APP + ".day").remove(APP + ".chip").remove(APP + ".reflection");
+            for (String name : prefs(context).getAll().keySet()) {
+                if (name.startsWith("style.")) edit.remove(name);
+            }
         }
         edit.apply();
     }
@@ -95,40 +101,6 @@ final class WidgetStyles {
             case "paperLight": return R.drawable.widget_bg_paper_light;
             case "paperDark": return R.drawable.widget_bg_paper_dark;
             default: return R.drawable.widget_bg_classic;
-        }
-    }
-
-    static int dayLayout(String key) {
-        switch (key) {
-            case "night": return R.layout.widget_day_count_night;
-            case "ocean": return R.layout.widget_day_count_ocean;
-            case "forest": return R.layout.widget_day_count_forest;
-            case "sunrise": return R.layout.widget_day_count_sunrise;
-            case "midnight": return R.layout.widget_day_count_midnight;
-            case "black": return R.layout.widget_day_count_black;
-            case "light": return R.layout.widget_day_count_light;
-            case "paper": return R.layout.widget_day_count_paper;
-            case "paperLight": return R.layout.widget_day_count_paper_light;
-            case "paperDark": return R.layout.widget_day_count_paper_dark;
-            default: return R.layout.widget_day_count;
-        }
-    }
-
-    // A text's color on a style's background (the chip's label and empty note)
-    static void ink(Context context, RemoteViews views, int viewId, String key) {
-        switch (key) {
-            case "light": views.setTextColor(viewId, 0xFF1F2433); break;
-            case "paperLight": views.setTextColor(viewId, 0xFF3B2E21); break;
-            case "paperDark": views.setTextColor(viewId, 0xFFF2E8D4); break;
-            case "paper":
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    // the Home Screen picks light or dark itself, so it follows a change without a redraw
-                    views.setColorInt(viewId, "setTextColor", 0xFF3B2E21, 0xFFF2E8D4);
-                } else {
-                    views.setTextColor(viewId, context.getResources().getColor(R.color.widget_paper_ink, context.getTheme()));
-                }
-                break;
-            default: views.setTextColor(viewId, 0xFFFFFFFF);
         }
     }
 }

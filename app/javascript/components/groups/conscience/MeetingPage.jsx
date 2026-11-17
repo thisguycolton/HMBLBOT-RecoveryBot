@@ -374,7 +374,7 @@ export default function MeetingPage({ group, id }) {
               )}
               {canEdit && meeting.status === "planned" && !hasReports && (
                 <Card className="mb-2 flex flex-wrap items-center gap-3 border border-dashed border-slate-300 p-3 dark:border-neutral-700">
-                  <span className="min-w-0 flex-1 basis-56 text-sm text-slate-600 dark:text-neutral-300">No reports on this agenda yet. Add the usual ones (secretary, treasurer, host coordinators, tech admins), or give each office its own section with its holder's name under Elected officials.</span>
+                  <span className="min-w-0 flex-1 basis-56 text-sm text-slate-600 dark:text-neutral-300">No reports on this agenda yet. Add the usual ones (secretary, treasurer, host coordinators, tech admins), or give each office its own section with its holder's name under Officials.</span>
                   <button type="button" className={`${primaryButton} !px-2.5 !py-1 !text-xs`} onClick={addUsualReports}><ClipboardList className="size-3.5" /> Add the usual reports</button>
                 </Card>
               )}

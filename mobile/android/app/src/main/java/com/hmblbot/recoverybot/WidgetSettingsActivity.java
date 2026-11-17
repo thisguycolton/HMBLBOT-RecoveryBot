@@ -15,8 +15,8 @@ import android.widget.TextView;
 
 // Giving one widget its own style: opened when one is placed and from the widget's Edit (Android
 // 12 and up; widgetFeatures reconfigurable|configuration_optional). The same styles for the day
-// count and the chip (WidgetStyles), and first "Same as the app", which follows the style picked
-// in the app (Account settings > Widgets). Leaving without picking keeps the widget as it is.
+// count, the chip and the Daily Reflection (WidgetStyles), and first "Same as the app", which follows the style picked
+// in the app (its settings, Widgets). Leaving without picking keeps the widget as it is.
 public class WidgetSettingsActivity extends Activity {
     private int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
@@ -33,7 +33,8 @@ public class WidgetSettingsActivity extends Activity {
         setResult(RESULT_OK, new Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId));
 
         AppWidgetProviderInfo info = AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId);
-        boolean chip = info != null && info.provider.getClassName().endsWith(".ChipWidget");
+        String cls = info == null ? "" : info.provider.getClassName();
+        String widget = cls.endsWith(".ChipWidget") ? "chip" : cls.endsWith(".ReflectionWidget") ? "reflection" : "day";
 
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
@@ -41,25 +42,24 @@ public class WidgetSettingsActivity extends Activity {
         list.setPadding(pad, pad, pad, pad);
 
         TextView title = new TextView(this);
-        title.setText(chip ? "Chip style" : "Day count style");
+        title.setText("chip".equals(widget) ? "Chip style" : "reflection".equals(widget) ? "Daily Reflection style" : "Day count style");
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setPadding(0, 0, 0, dp(12));
         list.addView(title);
 
         TextView note = new TextView(this);
-        note.setText("Pick the style for all your widgets in RecoveryBot, under Account settings > Widgets, or give this one its own.");
+        note.setText("Pick the style for all your widgets in RecoveryBot, in its settings under Widgets, or give this one its own.");
         note.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         note.setPadding(0, 0, 0, dp(12));
         list.addView(note);
 
-        String widget = chip ? "chip" : "day";
         String current = WidgetStyles.own(this, widget, widgetId);
         String appStyle = WidgetStyles.appStyle(this, widget);
-        list.addView(option("Same as the app", WidgetStyles.APP.equals(current), WidgetStyles.background(appStyle), v -> pick(chip, WidgetStyles.APP)));
+        list.addView(option("Same as the app", WidgetStyles.APP.equals(current), WidgetStyles.background(appStyle), v -> pick(widget, WidgetStyles.APP)));
         for (int i = 0; i < WidgetStyles.KEYS.length; i++) {
             String key = WidgetStyles.KEYS[i];
-            list.addView(option(WidgetStyles.NAMES[i], key.equals(current), WidgetStyles.background(key), v -> pick(chip, key)));
+            list.addView(option(WidgetStyles.NAMES[i], key.equals(current), WidgetStyles.background(key), v -> pick(widget, key)));
         }
 
         ScrollView scroll = new ScrollView(this);
@@ -91,10 +91,11 @@ public class WidgetSettingsActivity extends Activity {
         return row;
     }
 
-    private void pick(boolean chip, String key) {
-        WidgetStyles.setOwn(this, chip ? "chip" : "day", widgetId, key);
+    private void pick(String widget, String key) {
+        WidgetStyles.setOwn(this, widget, widgetId, key);
         AppWidgetManager manager = AppWidgetManager.getInstance(this);
-        manager.updateAppWidget(widgetId, chip ? ChipWidget.draw(this, widgetId) : DayCountWidget.draw(this, widgetId));
+        manager.updateAppWidget(widgetId, "chip".equals(widget) ? ChipWidget.draw(this, widgetId)
+            : "reflection".equals(widget) ? ReflectionWidget.draw(this, widgetId) : DayCountWidget.draw(this, widgetId));
         finish();
     }
 

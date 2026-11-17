@@ -213,6 +213,71 @@ class User < ApplicationRecord
     user
   end
 
+  # The ways they can sign in, for Account settings (Api::SignInMethodsController)
+  def identity_linked?(provider) = self[IDENTITY_COLUMNS.fetch(provider)].present?
+  def sign_in_ways = [(:password if password_chosen), *IDENTITY_COLUMNS.keys.select { |p| identity_linked?(p) }].compact
+
+  # Linking Google or Apple from Account settings, after they signed in with it there.
+  # :linked, :already (this account has it), :other_linked (this account has a different one
+  # of theirs; unlink that first) or :taken (another account has it: see #take_identity_from!)
+  def link_identity(provider, uid)
+    column = IDENTITY_COLUMNS.fetch(provider)
+    uid = uid.to_s
+    return :already if self[column] == uid
+    return :other_linked if self[column].present?
+    return :taken if self.class.where.not(id: id).exists?(column => uid)
+
+    update!(column => uid)
+    :linked
+  end
+
+  # Unlinking, as long as there's still another way in. Unlinking Apple also tells Apple, so
+  # their Apple ID settings stop listing the site. Returns false when it's their last way in.
+  def unlink_identity!(provider)
+    return true unless identity_linked?(provider)
+    return false if sign_in_ways == [provider]
+
+    revoke_apple_sign_in if provider == :apple
+    attrs = { IDENTITY_COLUMNS.fetch(provider) => nil }
+    attrs.merge!(apple_refresh_token: nil, apple_client_id: nil) if provider == :apple
+    update!(attrs)
+    true
+  end
+
+  # Another account has this Google or Apple sign-in, often a second account made by Apple's
+  # "Hide My Email". Having just signed in with it, they can move it here. When it's that
+  # account's only way in, it would be stranded, so it has to be deleted (delete_other: true).
+  # Its Apple refresh token comes along, so deleting it doesn't disconnect the Apple ID.
+  # Returns nil when done, or why not.
+  def take_identity_from!(other, provider, delete_other: false)
+    column = IDENTITY_COLUMNS.fetch(provider)
+    return "That sign-in isn't on the other account anymore." if other.nil? || other == self || other[column].blank?
+    return "Unlink the #{provider.capitalize} account on this one first." if identity_linked?(provider) && self[column] != other[column]
+
+    stranded = other.sign_in_ways == [provider]
+    return "That account has no other way to sign in, so it would have to be deleted." if stranded && !delete_other
+    return "That account still has another way to sign in, so it stays. Sign in to it if you'd like to delete it." if delete_other && !stranded
+    if delete_other && other.readings.exists?
+      return "That account added readings to the archive, so it can't be deleted here. Please use the Contact page and we'll sort it out."
+    end
+
+    transaction do
+      uid = other[column]
+      moved = { column => nil }
+      mine = { column => uid }
+      if provider == :apple
+        moved.merge!(apple_refresh_token: nil, apple_client_id: nil)
+        mine.merge!(apple_refresh_token: other.apple_refresh_token, apple_client_id: other.apple_client_id) if other.apple_refresh_token.present?
+      end
+      other.update!(moved)
+      update!(mine)
+      raise ActiveRecord::Rollback unless !delete_other || other.destroy
+    end
+    return "That account couldn't be deleted. Please use the Contact page and we'll do it for you." if delete_other && !other.destroyed?
+
+    nil
+  end
+
   # First name and last initial, as the sign-up page asks for, from a first and last name
   def self.short_name(first, last)
     first = first.to_s.strip

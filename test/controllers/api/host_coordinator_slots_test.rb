@@ -42,7 +42,9 @@ class Api::HostCoordinatorSlotsTest < ActionDispatch::IntegrationTest
     assert_response :success, response.body[0, 300]
     coordinators = response.parsed_body["coordinators"]
     assert_equal %w[Sam Wes], coordinators.map { |c| c["name"] }
-    assert_equal [true, [@mine.id]], coordinators.first.values_at("host_slots_only", "host_meeting_ids")
+    # Given by hand before offices gave roles: no office, and their own slots
+    assert_equal [nil, [@mine.id]], coordinators.first.values_at("office", "host_meeting_ids")
+    assert_equal [], coordinators.last["host_meeting_ids"]
   end
 
   test "a coordinator can't change their own time slots" do
@@ -85,6 +87,7 @@ class Api::HostCoordinatorSlotsTest < ActionDispatch::IntegrationTest
   end
 
   test "sub requests reach the coordinators of that slot only" do
+    @group.update!(sub_requests_audience: "hosts")
     limit!
     sign_in @whole
     post "/api/groups/#{@group.slug}/host_sub_requests", params: { sub_request: { meeting_id: @theirs.id, role: "host", on: (@today + 8).iso8601 } }, as: :json

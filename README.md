@@ -120,7 +120,7 @@ Everything works locally without these; each one switches on a feature or points
 | `GEMINI_API_KEY` / `OPENROUTER_API_KEY` | AI drafting for The Acid Quest's stories and prompts |
 | `AA_INTERGROUP_FEED_URL` | Overrides the AA Intergroup meeting feed |
 | `MAP_TILE_URL`, `GEOCODER_URL` | Override the OpenStreetMap tiles and Nominatim geocoder used for maps |
-| `APPLE_SMTP_USERNAME`, `APPLE_PASSWORD` | Outgoing mail in production |
+| `APPLE_SMTP_USERNAME`, `APPLE_PASSWORD` | Outgoing mail in production (iCloud). To use another SMTP service such as MailerSend instead, set `SMTP_ADDRESS` (e.g. `smtp.mailersend.net`), `SMTP_USERNAME`, `SMTP_PASSWORD` and optionally `SMTP_PORT` (587) |
 | `POSTGRE_SQL_HOST`, `POSTGRE_SQL_PASSWORD` | Production database |
 | `SECRET_KEY_BASE` | Production secret. Changing it makes encrypted step work unreadable unless the `ACTIVE_RECORD_ENCRYPTION_*` keys are set to the old values first |
 

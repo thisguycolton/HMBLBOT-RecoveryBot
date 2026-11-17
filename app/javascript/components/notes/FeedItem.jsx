@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Ban, BookOpen, EyeOff, Flag, ImageIcon, Lock, MessageSquareOff, MessageSquareText, Pencil, Repeat2, Trash2 } from "lucide-react";
+import { Ban, BookOpen, CircleDot, EyeOff, Flag, ImageIcon, Lock, MessageSquareOff, MessageSquareText, Pencil, Repeat2, Trash2 } from "lucide-react";
 import ReportDialog from "../groups/chat/ReportDialog";
 import Markdown from "../book/Markdown";
 import HighlightNote from "../book/HighlightNote";
@@ -17,6 +17,7 @@ import NoteEditor from "./NoteEditor";
 import PostMenu, { blockPerson, useBlocked } from "./PostMenu";
 import VisibilityPicker from "./VisibilityPicker";
 import ChipModal, { FlatChip } from "../recovery/ChipModal";
+import ChipSwapDialog from "./ChipSwapDialog";
 import { dayLabel, meetingPlace } from "../recovery/lib";
 import { HIGHLIGHT_VISIBILITY, recipientVisibility, saveNote } from "./lib";
 
@@ -38,6 +39,7 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
   const [reporting, setReporting] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [picturing, setPicturing] = useState(false);
+  const [swapping, setSwapping] = useState(false);
   const authorId = item.kind === "repost" ? item.note?.author?.id : item.author?.id;
   useBlocked((id, blocked) => { if (blocked && (id === authorId || id === item.author?.id)) setHidden(true); });
   if (hidden) return null;
@@ -67,15 +69,18 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
   const note = item.kind === "note";
   // A members-only book's words don't go into pictures (they'd go anywhere)
   const picturable = (item.kind === "highlight" && !item.members_only) || (note && !!item.body?.trim());
+  // Site admins: change a chip someone was given or claimed by mistake (ChipSwapDialog)
+  const chipFix = !readOnly && !editing && item.chip_admin && { label: "Change this chip", icon: CircleDot, onClick: () => setSwapping(true) };
   const menu = readOnly || editing ? [] : item.mine ? [
+    chipFix,
     picturable && { label: item.kind === "highlight" ? "Share as a picture or video" : "Share as a picture", icon: ImageIcon, onClick: () => setPicturing(true) },
     note && { label: "Edit", icon: Pencil, onClick: () => setEditing(true) },
     note && { label: item.comments_off ? "Turn comments on" : "Turn comments off", icon: item.comments_off ? MessageSquareText : MessageSquareOff, onClick: toggleComments },
     note && { label: "Delete", icon: Trash2, danger: true, onClick: destroy },
-  ] : othersMenu(item.author, {
+  ] : [chipFix, ...othersMenu(item.author, {
     takeOff: note && item.recipient && item.can_remove && destroy,
     report: note && (() => setReporting(true)),
-  });
+  })];
 
   return (
     <article className={`wb-feed-item ${compact ? "wb-feed-item--compact" : ""}`}>
@@ -86,6 +91,7 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
       {note && !readOnly && !editing && <Social note={item} onChange={onChange} />}
       {item.kind === "highlight" && !readOnly && <HighlightActions highlight={item} onChange={onChange} />}
       {picturing && <PictureShare onClose={() => setPicturing(false)} {...pictureProps(item)} />}
+      {swapping && <ChipSwapDialog item={item} onChange={onChange} onClose={() => setSwapping(false)} />}
       {reporting && <ReportDialog subject={{ type: "timeline_note", id: item.id }} person={item.author} onClose={() => setReporting(false)} />}
     </article>
   );
@@ -298,7 +304,9 @@ function SharedChip({ chip, hidden }) {
       </button>
       {hidden && (
         <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400">
-          <EyeOff className="size-3.5" /> Only you see this now: your sobriety date changed, so this chip isn't yours at the moment.
+          <EyeOff className="size-3.5" /> {String(chip.id).startsWith("round:")
+            ? "Only you see this now: your sobriety date changed, so this chip isn't yours at the moment."
+            : "Only you see this now: a site admin took this chip back."}
         </p>
       )}
       {open && <ChipModal chip={chip} design={chip.design} text={chipLine(chip)} onClose={() => setOpen(false)} />}

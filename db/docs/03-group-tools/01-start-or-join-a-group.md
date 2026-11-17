@@ -9,7 +9,7 @@ A **group** on RecoveryBot is your home group's space: its meetings, members, ch
 
 1. Find it: search for it in the top bar, open **Find your group** (from Find a meeting, or the **Find a group** link in Settings), or open a meeting in [Find a meeting](/docs/meetings/find-a-meeting) and choose its group.
 2. On the group's page, choose **Ask to join**. Not signed in? You'll make an account first and come right back.
-3. A group admin approves you, and the group appears in your sidebar under **Your groups**.
+3. While you wait, the group shows greyed in your sidebar under **Your groups**, marked **Waiting**. When a group admin approves you, it opens up with all its sections.
 
 **Find your group** asks which meeting you go to. Search by name, paste a Zoom link or meeting ID, or pick a day and time:
 
@@ -29,6 +29,18 @@ If your group is listed by AA Intergroup or a local intergroup, it may already h
 2. Choose **Start this group on RecoveryBot**. Its meetings come over from the listing, and listed meetings stay in sync with the intergroup.
 3. A site admin checks it first. Until then the group shows **Waiting for approval** and only you can see it.
 4. Once it's approved you're the group's first **admin**, and anyone following the listing hears it arrived. Invite your members with the invite link from the [Members page](/docs/group-tools/members-and-roles).
+
+### The setup guide
+
+Right after you start a group, the **setup guide** walks you through it one step at a time. You can use it while the group is waiting for approval:
+
+1. **About the group**: its name, a few words about it, its time zone, website and logo.
+2. **Meetings**: check the meetings that came over from the listing, import more from AA Intergroup, or add them by hand.
+3. **Offices**: add the usual offices (Chair, Secretary, Treasurer, Host Coordinator, GSR) or your own, see what each lets its holder do on the site, and say who holds it now. A member you put in an office gets its access right away.
+4. **Invite your group**: copy or share the invite link.
+5. **Extras**: the group page, approved literature, chips, chat and court verification.
+
+Every step can be skipped. Leave any time and pick up where you were from the card on the group's page, or from **Manage > Setup guide**.
 
 If a site admin doesn't approve it, you'll get a notification (with the reason, if they gave one), and you can start it again later.
 

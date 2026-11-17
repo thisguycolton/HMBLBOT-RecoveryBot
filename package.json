@@ -79,6 +79,7 @@
     "@prettier/plugin-ruby": "^4.0.4",
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
+    "oxlint": "^1.94.0",
     "postcss": "^8.5.6",
     "prettier": "3.9.9",
     "tailwindcss": "^4.1.11",
@@ -90,6 +91,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "lint": "oxlint app/javascript/components app/javascript/entrypoints app/javascript/lib app/javascript/channels app/javascript/tiptap app/javascript/utils app/javascript/quest"
   }
 }
