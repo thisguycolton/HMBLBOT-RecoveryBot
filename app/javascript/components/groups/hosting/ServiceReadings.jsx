@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BookText, ChevronRight, Maximize2, X } from "lucide-react";
 import { api } from "../lib";
 import LucideIcon from "../../ui/LucideIcon";
+import { groupIconName } from "../../../lib/readingIcons";
 
 const label = "!text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
 const row = "flex w-full items-center gap-3 rounded-xl !bg-transparent px-2.5 py-2 text-left text-sm text-slate-700 hover:!bg-neutral-100 dark:text-neutral-300 dark:hover:!bg-neutral-800";
@@ -20,7 +21,7 @@ export default function ServiceReadings({ slug, grid = false }) {
     api(`/groups/${slug}/hosting/service_readings`).then((d) => {
       const byTitle = new Map();
       d.readings.forEach((r) => byTitle.set(r.title || "Untitled", [...(byTitle.get(r.title || "Untitled") || []), r]));
-      setGroups([...byTitle.entries()].map(([title, versions]) => ({ title, versions, icon: versions.find((v) => v.icon)?.icon })));
+      setGroups([...byTitle.entries()].map(([title, versions]) => ({ title, versions, icon: groupIconName(versions) })));
     }).catch(() => setGroups([]));
   }, [slug]);
   if (!groups?.length) return null;

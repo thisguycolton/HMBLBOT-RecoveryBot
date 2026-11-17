@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { BookOpen, ChevronRight, Plus, Search } from "lucide-react";
+import LucideIcon from "./ui/LucideIcon";
+import { groupIconName } from "../lib/readingIcons";
 
 // Readings that share a title (How It Works from the Big Book and from a pamphlet, say)
 // show as one card that lists each source.
@@ -18,10 +20,11 @@ function groupByTitle(serviceReadings = []) {
 const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900";
 
-function IconTile() {
+// The icon picked for the reading (BookOpen when none is set or it can't be drawn)
+function IconTile({ name }) {
   return (
     <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-tint text-accent dark:bg-accent/15 dark:text-accent-light">
-      <BookOpen className="size-5" strokeWidth={2.25} />
+      <LucideIcon name={name} fallback={BookOpen} size={20} strokeWidth={2.25} />
     </span>
   );
 }
@@ -31,10 +34,11 @@ function IconTile() {
 // doesn't leave a hole beside a reading with one.
 function ReadingCard({ title, readings }) {
   const count = readings.length;
+  const icon = groupIconName(readings);
   return (
     <div className="mb-5 flex min-w-0 break-inside-avoid flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       <div className="flex items-center gap-4">
-        <IconTile />
+        <IconTile name={icon} />
         <div className="min-w-0 flex-1">
           <div className="text-lg font-semibold leading-snug text-slate-900 break-words dark:text-white">{title}</div>
           <div className="mt-0.5 text-sm text-slate-500 dark:text-neutral-400">

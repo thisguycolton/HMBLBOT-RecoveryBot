@@ -6,28 +6,7 @@ import IconPicker from "./ui/IconPicker";
 import LucideIcon from "./ui/LucideIcon";
 import { Shell, ShellBand, ShellPanel } from "./ui/Shell";
 import { inputClass, labelClass, iconInputClass } from "./ui/styles";
-
-// The old Rails form saved Bootstrap icon classes; the hosting list (groups/hosting/ServiceReadings.jsx)
-// draws Lucide icons by name, so an old reading opens with its Lucide match picked
-const BOOTSTRAP_TO_LUCIDE = {
-  "bi-peace": "bird",
-  "bi-list-ol": "list-ordered",
-  "bi-people": "users",
-  "bi-book": "book",
-  "bi-stars": "sparkles",
-  "bi-calendar-check": "calendar-check",
-  "bi-gear": "settings",
-  "bi-clock": "clock",
-  "bi-trash": "trash",
-  "bi-check-circle": "circle-check",
-  "bi-heart": "heart",
-  "bi-chat-quote": "message-square-quote",
-};
-
-function lucideName(icon) {
-  if (!icon) return null;
-  return BOOTSTRAP_TO_LUCIDE[icon] || icon.replace(/^bi-/, "") || null;
-}
+import { readingIconName } from "../lib/readingIcons";
 
 // ActionText wraps the body in <div class="trix-content">; the editor wants what's inside
 function unwrapTrix(html) {
@@ -61,7 +40,7 @@ export default function ServiceReadingEditor({ reading = {} }) {
     title: reading.title || "",
     shortTitle: reading.short_title || "",
     source: reading.source || "",
-    icon: lucideName(reading.icon),
+    icon: readingIconName(reading.icon),
     body: unwrapTrix(reading.body_html),
   }));
   const [wasValidated, setWasValidated] = useState(false);

@@ -16,6 +16,7 @@
     id: @service_reading.id,
     title: @service_reading.title,
     source: @service_reading.source,
+    icon: @service_reading.icon,
     content_html: @service_reading.body.to_s,
     other_sources: @other_sources.map { |r| { id: r.id, source: r.source } }
   }.to_json) %>" data-notice="<%= notice.to_s %>" data-admin="<%= current_user&.admin? ? 'true' : 'false' %>">

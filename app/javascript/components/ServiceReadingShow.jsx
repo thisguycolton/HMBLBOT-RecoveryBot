@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, Copy, MessageSquareQuote, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, Copy, MessageSquareQuote, Pencil, Trash2 } from "lucide-react";
+import LucideIcon from "./ui/LucideIcon";
 import { TextSizeControl, useReadingTextSize } from "./ui/TextSize";
+import { readingIconName } from "../lib/readingIcons";
 
 const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80";
@@ -79,9 +81,15 @@ export default function ServiceReadingShow({ reading, notice, isAdmin, isAuthent
               Service readings
             </a>
 
-            <h1 className="mt-3 text-4xl font-bold tracking-tight break-words md:text-5xl ttSans">
-              {reading.title}
-            </h1>
+            <div className="mt-3 flex items-center gap-4">
+              {/* The icon picked for the reading (BookOpen when none is set) */}
+              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-white/15 text-white ring-1 ring-white/25 md:size-14">
+                <LucideIcon name={readingIconName(reading.icon)} fallback={BookOpen} size={26} strokeWidth={2.25} />
+              </span>
+              <h1 className="min-w-0 text-4xl font-bold tracking-tight break-words md:text-5xl ttSans">
+                {reading.title}
+              </h1>
+            </div>
 
             {reading.source && (
               <div className="mt-2 text-lg text-sky-50 break-words md:text-xl">{reading.source}</div>
