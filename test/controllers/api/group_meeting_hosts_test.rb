@@ -153,14 +153,11 @@ class Api::GroupMeetingHostsTest < ActionDispatch::IntegrationTest
     assert_empty slot(@monday.id)["covers"]
   end
 
-  test "the Members tab can make someone schedule hosts" do
-    membership = @group.memberships.find_by(user: @member)
-    sign_in @keeper
-    patch "/api/groups/#{@group.slug}/memberships/#{membership.id}", params: { can_schedule_hosts: true }, as: :json
-    assert_response :forbidden
+  test "a host coordinator office makes its holder schedule hosts" do
     sign_in @leader
-    patch "/api/groups/#{@group.slug}/memberships/#{membership.id}", params: { can_schedule_hosts: true }, as: :json
-    assert_response :no_content
+    post "/api/groups/#{@group.slug}/service_positions", params: { service_position: { title: "Host Coordinator", grants: "can_schedule_hosts" } }, as: :json
+    post "/api/groups/#{@group.slug}/service_positions/#{body["id"]}/terms", params: { term: { name: "Mo", user_id: @member.id, starts_on: @group.zone.today.to_s } }, as: :json
+    assert_response :created
     get "/api/groups/#{@group.slug}", as: :json
     assert_equal [true], body["members"].select { |m| m["name"] == "Mo" }.map { |m| m["can_schedule_hosts"] }
     sign_in @member

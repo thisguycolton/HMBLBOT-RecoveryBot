@@ -1,6 +1,6 @@
 ---
 title: Manage your group
-summary: Name, logo, meetings, chips, literature, court verification and templates, for group admins.
+summary: Offices, name, logo, meetings, chips, literature, court verification and templates, for group admins.
 icon: settings
 ---
 Group admins find **Manage** at the end of the group menu (under Service), in the sidebar folder and the group's tabs. It used to be called Settings, and old links still work.
@@ -11,8 +11,9 @@ Group admins find **Manage** at the end of the group menu (under Service), in th
 
 Tabs along the top:
 
+- **Offices**: every permission comes from an office. Add offices (or start from a common one), choose what each can do, and put people in. See [Elected officials](/docs/group-tools/elected-officials).
 - **Group details**: logo (a square picture works best: PNG, JPEG, WebP or GIF, under 5 MB), name, description, website, time zone and cover picture.
-- **Meetings setup**: add, edit or remove meetings (**Add a meeting**), or **Import from AA Intergroup** to link a meeting to its listing and keep it in sync.
+- **Meetings setup**: add, edit or remove meetings (**Add a meeting**), or **Import from AA Intergroup** to link a meeting to its listing and keep it in sync. Also here: [who sees sub requests](/docs/group-tools/hosts-and-subs), and **Who coordinates each time slot** (read-only; it comes from the host coordinator offices, and a slot nobody covers shows **Nobody**).
 - **Chips**: the design of the chips your hosts [give](/docs/step-work/give-a-chip).
 - **Approved literature**: the books your group reads, which also unlocks [members-only books](/docs/library/members-only-books) for your members.
 - **Document templates**: starting points for new group documents.

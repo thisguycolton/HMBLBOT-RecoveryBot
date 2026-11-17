@@ -33,7 +33,7 @@ Below the sub requests, **Your next two weeks** lists your own dates. Sam's show
 - **Gaps only** in the week view shows only the empty spots; tap one to fill it.
 - Under **Regular hosts**, choose **Change** to set who hosts a meeting from a date onward.
 
-> [!TIP] Host coordinators can be limited to some time slots (say, the morning meetings) in Members.
+> [!TIP] A host coordinator office can cover just some time slots (say, the morning meetings). Group admins pick them in Manage > Offices.
 
 ## Who sees sub requests
 

@@ -27,25 +27,67 @@ class Api::GroupServiceAndTreasuryTest < ActionDispatch::IntegrationTest
   def positions(*rest) = ["/api/groups/#{@group.slug}/service_positions", *rest].join("/")
   def reports(*rest) = ["/api/groups/#{@group.slug}/treasurer_reports", *rest].join("/")
 
-  test "an admin sees when the elected secretary or treasurer can't do the job on the site yet" do
-    secretary = @group.service_positions.create!(title: "Secretary", grants: "can_keep_records")
-    secretary.terms.create!(user: @member, starts_on: @today - 10)
-    treasurer = @group.service_positions.create!(title: "Treasurer", grants: "can_keep_treasury")
-    treasurer.terms.create!(user: @keeper, starts_on: @today - 10)
-
+  test "an admin sees roles given by hand before offices, and turns one into an office" do
     sign_in @keeper
     get positions, as: :json
-    assert body["positions"].none? { |p| p.key?("access") }, "only admins can grant it"
+    assert_nil body["hand_grants"], "only admins see them"
 
     sign_in @leader
     get positions, as: :json
-    by_title = body["positions"].index_by { |p| p["title"] }
-    assert_equal %w[can_keep_records record\ keeper Mo], by_title["Secretary"]["access"].values_at("flag", "role", "name")
-    assert_equal %w[can_keep_treasury Kay], by_title["Treasurer"]["access"].values_at("flag", "name")
+    assert_equal [["Kay", "can_keep_records"]], body["hand_grants"].map { |g| g.values_at("name", "grants") }
+    assert_equal ["Lee"], body["admins"]
 
-    patch "/api/groups/#{@group.slug}/memberships/#{by_title["Secretary"]["access"]["membership_id"]}", params: { can_keep_records: true }, as: :json
+    grant = body["hand_grants"].first
+    post positions, params: { service_position: { title: "Secretary", grants: "can_keep_records" }, from_membership_id: grant["membership_id"] }, as: :json
+    assert_response :created
+    assert_equal "Kay", body["current"]["name"]
+    keeper = @group.membership_for(@keeper)
+    assert_equal [true, ["can_keep_records"]], [keeper.can_keep_records, keeper.office_roles]
     get positions, as: :json
-    assert_nil body["positions"].find { |p| p["title"] == "Secretary" }["access"]
+    assert_empty body["hand_grants"]
+  end
+
+  test "roles aren't given in Members any more, and an office's role can't be taken away there" do
+    sign_in @leader
+    member = @group.membership_for(@member)
+    patch "/api/groups/#{@group.slug}/memberships/#{member.id}", params: { can_keep_records: true }, as: :json
+    assert_response :unprocessable_entity
+    assert_match "Offices", body["error"]
+
+    office = @group.service_positions.create!(title: "Treasurer", grants: "can_keep_treasury")
+    post positions(office.id, "terms"), params: { term: { name: "Mo", user_id: @member.id, starts_on: @today.to_s } }, as: :json
+    patch "/api/groups/#{@group.slug}/memberships/#{member.id}", params: { can_keep_treasury: false }, as: :json
+    assert_response :unprocessable_entity
+    assert member.reload.can_keep_treasury
+
+    # A role given by hand before offices can still be taken back
+    keeper = @group.membership_for(@keeper)
+    patch "/api/groups/#{@group.slug}/memberships/#{keeper.id}", params: { can_keep_records: false }, as: :json
+    assert_response :no_content
+    assert_not keeper.reload.can_keep_records
+  end
+
+  test "an office's role ends with the term, the first time the group is opened that day" do
+    office = @group.service_positions.create!(title: "Treasurer", grants: "can_keep_treasury")
+    sign_in @leader
+    post positions(office.id, "terms"), params: { term: { name: "Mo", user_id: @member.id, starts_on: (@today - 30).to_s, ends_on: (@today + 1).to_s } }, as: :json
+    assert @group.membership_for(@member).can_keep_treasury
+
+    office.terms.first.update!(ends_on: @today - 1) # time passes
+    @group.update_columns(office_roles_synced_on: @today - 1)
+    get positions, as: :json
+    assert_not @group.membership_for(@member).can_keep_treasury
+    assert_equal @today, @group.reload.office_roles_synced_on
+    assert @group.membership_for(@keeper).can_keep_records, "a role given by hand stays"
+  end
+
+  test "retiring an office takes its role from the holder" do
+    office = @group.service_positions.create!(title: "Secretary", grants: "can_keep_records")
+    sign_in @leader
+    post positions(office.id, "terms"), params: { term: { name: "Mo", user_id: @member.id, starts_on: @today.to_s } }, as: :json
+    assert @group.membership_for(@member).can_keep_records
+    patch positions(office.id), params: { service_position: { archived: true } }, as: :json
+    assert_not @group.membership_for(@member).can_keep_records
   end
 
   test "an office gives its holder its role, and the role passes to the next person" do
@@ -64,23 +106,37 @@ class Api::GroupServiceAndTreasuryTest < ActionDispatch::IntegrationTest
     assert_not @group.membership_for(@member).can_keep_records, "the one before loses it"
   end
 
-  test "a host coordinator office named for a time covers just the meetings at that time" do
+  test "a host coordinator office named for a time starts with the meetings at that time; admins change its slots" do
     nine = @group.meetings.create!(name: "Morning", recurrence: "weekly", day_of_week: 1, start_minute: 540)
-    @group.meetings.create!(name: "Night", recurrence: "weekly", day_of_week: 1, start_minute: 1260)
-    office = @group.service_positions.create!(title: "9AM Host Coordinator", grants: "can_schedule_hosts")
+    night = @group.meetings.create!(name: "Night", recurrence: "weekly", day_of_week: 1, start_minute: 1260)
     sign_in @leader
+    post positions, params: { service_position: { title: "9AM Host Coordinator", grants: "can_schedule_hosts" } }, as: :json
+    assert_equal [nine.id], body["host_meeting_ids"]
+    office = @group.service_positions.find(body["id"])
     post positions(office.id, "terms"), params: { term: { name: "Mo", user_id: @member.id, starts_on: @today.to_s } }, as: :json
     m = @group.membership_for(@member)
     assert_equal [true, true, [nine.id]], [m.can_schedule_hosts, m.host_slots_only, m.host_meeting_ids]
+
+    patch positions(office.id), params: { service_position: { host_meeting_ids: [nine.id, night.id, 0] } }, as: :json
+    assert_equal [nine.id, night.id].sort, m.reload.host_meeting_ids
+    patch positions(office.id), params: { service_position: { host_meeting_ids: [""] } }, as: :json
+    assert_equal [true, false], [m.reload.can_schedule_hosts, m.host_slots_only], "no slots: the whole group"
+
+    patch "/api/groups/#{@group.slug}/memberships/#{m.id}", params: { host_slots_only: true }, as: :json
+    assert_response :unprocessable_entity, "an office's slots are changed on the office"
+
+    sign_in @keeper
+    patch positions(office.id), params: { service_position: { host_meeting_ids: [nine.id] } }, as: :json
+    assert_equal [], office.reload.host_meeting_ids, "only admins choose an office's slots"
   end
 
   test "offices with the same agenda heading share a section, with their holders' names filled in" do
     [["9AM Host Coordinator", "9 am: {name}", "AJ"], ["12PM Host Coordinator", "12 pm: {name}", nil]].each do |title, line, name|
       p = @group.service_positions.create!(title: title, on_agenda: true, agenda_heading: "Host Coordinators", agenda_lines: line)
-      p.terms.create!(name: name, starts_on: @today - 1) if name
+      p.terms.create!(name: name, starts_on: Date.new(2026, 11, 1)) if name
     end
     secretary = @group.service_positions.create!(title: "Secretary", on_agenda: true, agenda_lines: "{last_month} minutes\n{month} agenda")
-    secretary.terms.create!(name: "Jillian", starts_on: @today - 1)
+    secretary.terms.create!(name: "Jillian", starts_on: Date.new(2026, 11, 1))
     meeting = @group.business_meetings.create!(held_on: Date.new(2026, 11, 15))
     assert_equal [["Host Coordinators", ["9 am: AJ", "12 pm: (open)"]], ["Secretary", ["Oct minutes", "Nov agenda"]]],
                  meeting.officer_sections.map { |s| [s[:title], s[:lines]] }
@@ -151,19 +207,17 @@ class Api::GroupServiceAndTreasuryTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "a member an admin makes treasurer writes and posts reports, and sees drafts" do
+  test "the treasurer office's holder writes and posts reports, and sees drafts" do
     treasurer = User.create!(email: "treasurer@example.com", name: "Tess", password: "password123", confirmed: true)
     membership = @group.memberships.create!(user: treasurer, role: "member")
     sign_in treasurer
     post reports, params: { treasurer_report: { period_on: "2026-08-01" } }, as: :json
     assert_response :forbidden
 
-    sign_in @member
-    patch "/api/groups/#{@group.slug}/memberships/#{membership.id}", params: { can_keep_treasury: true }, as: :json
-    assert_response :forbidden
     sign_in @leader
-    patch "/api/groups/#{@group.slug}/memberships/#{membership.id}", params: { can_keep_treasury: true }, as: :json
-    assert_response :no_content
+    office = @group.service_positions.create!(title: "Treasurer", grants: "can_keep_treasury")
+    post positions(office.id, "terms"), params: { term: { name: "Tess", user_id: treasurer.id, starts_on: @today.to_s } }, as: :json
+    assert membership.reload.can_keep_treasury
 
     sign_in treasurer
     post reports, params: { treasurer_report: { period_on: "2026-08-01" } }, as: :json

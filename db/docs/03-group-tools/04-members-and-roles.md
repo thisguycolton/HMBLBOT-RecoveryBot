@@ -18,7 +18,7 @@ The **Members** page lists everyone in the group. Group admins also see requests
 | **Host** (**Can host**) | Hosting meetings: the Hosting Command Center and giving chips. |
 | **Member** | Chat, events, the group's members-only documents and pages. |
 
-A person can hold several roles; each one shows as a tag next to their name. Each role adds pages to that group's [dashboard](/docs/group-tools/group-dashboard).
+Record keeper, host coordinator and treasurer come from **offices**: whoever holds the Secretary office is a record keeper, and so on (see [Elected officials](/docs/group-tools/elected-officials)). On Members, each person shows the offices they hold as tags next to their name. Each role adds pages to that group's [dashboard](/docs/group-tools/group-dashboard).
 
 ## Example: who does what at Lantern Street
 
@@ -40,7 +40,11 @@ New requests show at the top of Members with a count in the sidebar. Choose **Ap
 
 ## Change someone's roles (admins)
 
-Open the member, tick the roles they hold, and save. They'll see the new pages the next time they open the group.
+- **Make admin** or **Make member** on their card.
+- **Add to hosts** or **Remove from hosts** for Can host. Host coordinators can change this too.
+- Everything else comes from an office. Give them one in **Manage > Offices**, and they lose it when their term ends or passes to the next person.
+
+> [!NOTE] Roles given in Members before offices did this still work. Manage > Offices lists them under **Given by hand** with **Make it an office**.
 
 ## Sponsors in this group
 

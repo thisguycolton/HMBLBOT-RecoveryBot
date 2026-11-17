@@ -180,15 +180,11 @@ class Api::GroupDocumentsTest < ActionDispatch::IntegrationTest
     assert_not GroupDocument.exists?(@members.id)
   end
 
-  test "an admin makes a member a record keeper" do
-    membership = @group.memberships.find_by(user: @member)
-    sign_in @member
-    patch "/api/groups/#{@group.slug}/memberships/#{membership.id}", params: { can_keep_records: true }, as: :json
-    assert_response :forbidden
-
+  test "an admin makes a member a record keeper with an office" do
     sign_in @leader
-    patch "/api/groups/#{@group.slug}/memberships/#{membership.id}", params: { can_keep_records: true }, as: :json
-    assert_response :no_content
+    post "/api/groups/#{@group.slug}/service_positions", params: { service_position: { title: "Secretary", grants: "can_keep_records" } }, as: :json
+    post "/api/groups/#{@group.slug}/service_positions/#{response.parsed_body["id"]}/terms", params: { term: { name: "Mo", user_id: @member.id, starts_on: @group.zone.today.to_s } }, as: :json
+    assert_response :created
     assert @group.reload.records_editable_by?(@member)
 
     get "/api/groups/#{@group.slug}", as: :json

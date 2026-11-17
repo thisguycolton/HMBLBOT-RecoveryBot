@@ -9,6 +9,8 @@ class Api::NavController < ApplicationController
   def show
     memberships = current_user.group_memberships.active.includes(group: { logo_attachment: :blob }).to_a
                               .sort_by { |m| m.group.title.downcase }
+    # Roles from offices whose terms started or ended today (Group#sync_office_roles!)
+    memberships.each { |m| m.reload if m.group.sync_office_roles! }
     render json: {
       me: { name: current_user.display_name, username: current_user.username, avatar_url: current_user.avatar_url },
       groups: memberships.map { |m| group_json(m) },
