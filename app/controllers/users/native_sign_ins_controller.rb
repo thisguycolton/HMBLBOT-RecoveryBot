@@ -2,7 +2,11 @@
 # signs in with Google or Apple and returns an ID token carrying it, and the page posts the
 # token here. A good token signs them in (kept signed in: it's their phone) and says where to
 # go next, the same place a normal log in would (a group invite, a chip claim, and so on).
+#
+# With link: true from Account settings, by someone signed in, the account is linked to
+# theirs instead (LinksIdentities) and the answer is { result, message }.
 class Users::NativeSignInsController < ApplicationController
+  include LinksIdentities
   NONCE_TTL = 10.minutes
 
   # GET /users/auth/native/nonce
@@ -24,6 +28,12 @@ class Users::NativeSignInsController < ApplicationController
 
     audiences = provider == "google" ? NativeSignIn.google_audiences : NativeSignIn.apple_audiences
     claims = IdentityToken.verify(params[:id_token], provider: provider.to_sym, audiences: audiences, nonce: stored["value"])
+    if params[:link].present? && user_signed_in?
+      result, message = link_identity_for(current_user, provider.to_sym, claims["sub"])
+      current_user.remember_apple_sign_in(params[:authorization_code], client_id: AppleSignIn.bundle_id) if provider == "apple" && result == :linked
+      return render json: { result: result, message: message }
+    end
+
     name = provider == "google" ? User.short_name(claims["given_name"], claims["family_name"]) : User.short_name(params[:given_name], params[:family_name])
     user = User.from_identity(provider.to_sym, uid: claims["sub"], email: claims["email"], email_verified: claims["email_verified"], name: name)
     unless user

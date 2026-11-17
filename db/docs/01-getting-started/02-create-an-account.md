@@ -30,6 +30,12 @@ Every account gets a username made from your name. Jordan K. becomes `@jordan-k`
 
 Open your account menu (your picture, top right) and choose **Settings**, then scroll to **Account**. Enter your current password to change either one. A new email address starts working once you confirm it from the email we send there.
 
+## Sign in with Google or Apple
+
+You can sign up and log in with **Continue with Google** or **Sign in with Apple** instead of a password. To add one to the account you already have, open **Settings**, choose the **Account** tab and, under **Ways to sign in**, choose **Link Google** or **Link Apple**. **Unlink** takes one off again, as long as you keep another way to sign in.
+
+> [!TIP] If you chose Apple's **Hide My Email**, Apple gives us a different address from yours, and signing in with Apple makes a second account. Link Apple from your main account instead. If you already have that second account, linking Apple offers to delete it and move Apple over.
+
 ## Delete your account
 
 In **Settings**, at the bottom, choose **Delete account…** and enter your password. Your profile, notes, highlights, follows, RSVPs and group memberships go with it. Records your groups keep, like minutes or a document you edited, stay with the group. If you've published readings to the Reading Archive, we'll ask you to [contact us](/contact) first so they can be handed over or removed properly.

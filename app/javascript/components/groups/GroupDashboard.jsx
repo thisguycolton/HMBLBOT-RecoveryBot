@@ -17,10 +17,14 @@ import CourtTab from "./CourtTab";
 import GroupSettings, { GroupLogo } from "./GroupSettings";
 import ChipDesigner from "./ChipDesigner";
 import DocumentTemplates from "./conscience/DocumentTemplates";
+import SubRequestsSetting from "./SubRequestsSetting";
+import DocumentSkeleton from "./conscience/DocumentSkeleton";
 
 // Who gets the Dashboard: anyone in the group with a role beyond plain member
 export const hasGroupRole = (group) =>
   !!(group && (group.can_manage || group.can_keep_records || group.can_schedule_hosts || group.can_keep_treasury));
+
+const FRAME_CLASS = "min-w-0 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none";
 
 // A group's working pages on the stage without the group page's header: its name back to the
 // group page, the page's title, then the page. `fill` gives one open document the whole stage.
@@ -28,7 +32,7 @@ export function GroupFrame({ group, title, fill = false, error = null, children 
   useEffect(() => { document.title = `${title} · ${group.title} | RecoveryBot`; }, [title, group.title]);
   return (
     <Layout isAuthenticated>
-      <div className="min-w-0 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
+      <div className={FRAME_CLASS}>
         {fill ? <div className="min-w-0">{children}</div> : (
           <div className="mx-auto min-w-0 max-w-screen-xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
             <Link to={`/${group.slug}`} className="group-chrome mb-3 inline-flex items-center gap-2 text-sm !text-slate-500 hover:!text-accent dark:!text-neutral-400">
@@ -46,14 +50,15 @@ export function GroupFrame({ group, title, fill = false, error = null, children 
 
 // Loads the group for a page outside the group page (`children(group, setGroup, reload)`);
 // `fallback` when it can't be loaded
-export function GroupRoute({ fallback = null, children }) {
+// `loading`: what shows while the group loads (a page's own skeleton), instead of the stats
+export function GroupRoute({ fallback = null, loading = null, children }) {
   const { slug } = useParams();
   const [group, setGroup] = useState(null);
   const [failed, setFailed] = useState(false);
   const reload = useCallback(() => api(`/groups/${slug}`).then(setGroup).catch(() => setFailed(true)), [slug]);
   useEffect(() => { setGroup(null); reload(); }, [reload]);
   if (failed) return fallback || <Navigate to={`/${slug}`} replace />;
-  if (!group) return <Layout isAuthenticated><div className="p-6"><Loading variant="stats" /></div></Layout>;
+  if (!group) return <Layout isAuthenticated>{loading || <div className="p-6"><Loading variant="stats" /></div>}</Layout>;
   return children(group, setGroup, reload);
 }
 
@@ -74,7 +79,8 @@ export function ConscienceRoute({ fallback }) {
   const [view, id] = rest.split("/").filter(Boolean);
   if (MOVED[view]) return <Navigate to={`/${slug}/${MOVED[view]}`} replace />;
   return (
-    <GroupRoute fallback={fallback}>
+    // an open document shows its own page skeleton from the start, not the stats and then the page
+    <GroupRoute fallback={fallback} loading={view === "documents" && id ? <div className={FRAME_CLASS}><DocumentSkeleton embedded /></div> : null}>
       {(group) => (hasGroupRole(group) ? (
         <GroupFrame group={group} title="Group conscience" fill={view === "documents" && !!id}>
           {view === "documents" && id ? <ConscienceBody group={group} view="documents" id={id} embedded /> : <ConscienceTab group={group} embedded />}
@@ -135,6 +141,7 @@ export function SettingsRoute() {
                 <option value="setup">Setup guide</option>
               </select>
               {current.key === "" && <GroupSettings group={group} setGroup={setGroup} />}
+              {current.key === "meetings" && <SubRequestsSetting group={group} setGroup={setGroup} />}
               {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={reload} isNew={new URLSearchParams(window.location.search).get("new") === "1"} />}
               {current.key === "chips" && <ChipDesigner group={group} />}
               {current.key === "literature" && <LiteratureTab group={group} reload={reload} />}
