@@ -5,7 +5,7 @@ import { ArrowDown, ArrowLeftRight, ArrowUp, Copy, GripVertical, Settings2, Tras
 import useFlip from "../../ui/useFlip";
 import BlockView, { HeadingView, isCompact } from "../BlockView";
 import { LayoutColumns, blockWrapClass } from "../EventLayout";
-import { BLOCK_INFO, SPANS, nearestSpan, tone } from "../lib";
+import { BLOCK_INFO, SPANS, nearestSpan, onePerPage, tone } from "../lib";
 
 // The editor's canvas: the event's regions as drop zones, each block a sortable card that
 // can be selected, dragged (within or between columns), resized by its right edge, and,
@@ -15,7 +15,10 @@ import { BLOCK_INFO, SPANS, nearestSpan, tone } from "../lib";
 // While a block is dragged the others really do trade places with it (EditorFrame moves it in
 // the list as it goes), so a column lays itself out as it will be, and useFlip slides them
 // there. On a phone (or any touch screen) blocks move with up and down arrows instead.
-export default function Canvas({ layout, blocks, polls, context, blockInfo = BLOCK_INFO, selected, onSelect, onChange, onRemove, onDuplicate, onMove, canMove, onSettings, activeId }) {
+//
+// A page has one of each one-per-page block (Timeline, About, Meetings...): those can't be duplicated, and
+// `extras` (ids of copies on a page saved before that rule) are marked as not showing.
+export default function Canvas({ layout, blocks, polls, context, blockInfo = BLOCK_INFO, selected, onSelect, onChange, onRemove, onDuplicate, onMove, canMove, onSettings, activeId, extras = new Set() }) {
   const anchor = useRef(null);
   const flip = useFlip(blocks.map((b) => `${b.id}:${b.region}`).join(","), anchor);
   const move = (id, step) => { anchor.current = id; onMove(id, step); };
@@ -36,7 +39,8 @@ export default function Canvas({ layout, blocks, polls, context, blockInfo = BLO
             onSelect={() => onSelect(block.id)}
             onChange={(patch) => onChange(block.id, patch)}
             onRemove={() => onRemove(block.id)}
-            onDuplicate={() => onDuplicate(block.id)}
+            onDuplicate={onePerPage(block.type) ? null : () => onDuplicate(block.id)}
+            extra={extras.has(block.id)}
             onSettings={() => onSettings(block.id)}
             onUp={canMove(block.id, -1) ? () => move(block.id, -1) : null}
             onDown={canMove(block.id, 1) ? () => move(block.id, 1) : null}
@@ -77,7 +81,7 @@ function Region({ region, layout, ids, children }) {
   );
 }
 
-function SortableBlock({ block, layout, polls, context, info, selected, dragging, onSelect, onChange, onRemove, onDuplicate, onSettings, onUp, onDown }) {
+function SortableBlock({ block, layout, polls, context, info, selected, dragging, extra, onSelect, onChange, onRemove, onDuplicate, onSettings, onUp, onDown }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef } = useSortable({ id: block.id, animateLayoutChanges: keepStill });
   const wrapRef = useRef(null);
   const compact = isCompact(block, layout);
@@ -132,11 +136,28 @@ function SortableBlock({ block, layout, polls, context, info, selected, dragging
           <button type="button" className={tool} onClick={(e) => { e.stopPropagation(); onChange({ region: otherRegion }); }} title={`Move to the ${otherRegion === "main" ? "main" : "side"} column`} aria-label="Move to the other column">
             <ArrowLeftRight className="size-3.5" />
           </button>
-          <button type="button" className={tool} onClick={(e) => { e.stopPropagation(); onDuplicate(); }} title="Duplicate" aria-label="Duplicate"><Copy className="size-3.5" /></button>
+          {onDuplicate && <button type="button" className={tool} onClick={(e) => { e.stopPropagation(); onDuplicate(); }} title="Duplicate" aria-label="Duplicate"><Copy className="size-3.5" /></button>}
           <button type="button" className={`${tool} hover:!text-rose-600`} onClick={(e) => { e.stopPropagation(); onRemove(); }} title="Delete" aria-label="Delete"><Trash2 className="size-3.5" /></button>
         </div>
 
-        <InlineBlock block={block} compact={compact} polls={polls} context={context} selected={selected} onChange={onChange} />
+        {extra && (
+          <div role="note" className="ev-extra mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+            <span className="min-w-0 flex-1">
+              <strong className="font-semibold">A page can have one {info?.label || "of these"} block.</strong>{" "}
+              This one doesn't show on the page, and it goes away when you save.
+              {block.markdown?.trim() ? " Its text goes with it, so copy anything you want to keep into the first one." : ""}
+            </span>
+            <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="shrink-0 rounded-lg !bg-amber-600 px-3 py-1.5 text-xs font-semibold !text-white hover:opacity-90">
+              Remove it now
+            </button>
+          </div>
+        )}
+        {extra ? (
+          <div className="pointer-events-none opacity-40"><BlockView block={block} compact={compact} editing polls={polls} context={context} /></div>
+        ) : (
+          <InlineBlock block={block} compact={compact} polls={polls} context={context} selected={selected} onChange={onChange} />
+        )}
 
         <div
           role="separator"
