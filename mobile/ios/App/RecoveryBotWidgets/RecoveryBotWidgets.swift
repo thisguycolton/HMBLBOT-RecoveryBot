@@ -339,6 +339,33 @@ struct WidgetCanvas: View {
 
     var body: some View {
         Canvas { ctx, size in draw(&ctx, size) }
+            .overlay {
+                if let op = edgeOp, let p = progress[op["p"] as? String ?? ""] {
+                    GeometryReader { geo in edge(op, p, geo.size) }
+                }
+            }
+    }
+
+    private var edgeOp: [String: Any]? {
+        (layout["ops"] as? [[String: Any]])?.first { ($0["t"] as? String) == "edge" }
+    }
+
+    // The progress edge has to sit on the widget's real corners, which iOS draws itself: a
+    // continuous curve whose size differs by device, so a 22-point arc pokes out of it. The track
+    // is ContainerRelativeShape's own border; the filled part is a wide stroke along edgePath (for
+    // where it starts and how far it goes), cut down to that same border.
+    private func edge(_ op: [String: Any], _ p: Double, _ size: CGSize) -> some View {
+        let s = min(size.width / num(layout, "w", 170), size.height / num(layout, "h", 170))
+        let th = num(op, "th") * s
+        let track = op["track"] as? [String: Any] ?? [:]
+        return ZStack {
+            ContainerRelativeShape()
+                .strokeBorder(Color(hex: track["c"] as? String ?? "FFFFFF", opacity: Double(num(track, "a", 0.13))), lineWidth: th)
+            Self.edgePath(size, radius: Self.corner, inset: 0)
+                .trimmedPath(from: 0, to: min(1, max(0, p)))
+                .stroke(Color(hex: op["color"] as? String ?? "FFFFFF"), style: StrokeStyle(lineWidth: th * 2 + 16, lineCap: .butt))
+                .mask(ContainerRelativeShape().strokeBorder(lineWidth: th))
+        }
     }
 
     private func num(_ op: [String: Any], _ key: String, _ fallback: CGFloat = 0) -> CGFloat {
@@ -492,13 +519,7 @@ struct WidgetCanvas: View {
                 arc.addArc(center: center, radius: r, startAngle: .degrees(-90), endAngle: .degrees(-90 + 360 * p), clockwise: false)
                 ctx.stroke(arc, with: .color(Color(hex: op["color"] as? String ?? "FFFFFF")), style: StrokeStyle(lineWidth: th, lineCap: .butt))
             case "edge":
-                guard let p = progress[op["p"] as? String ?? ""] else { continue }
-                let th = num(op, "th") * s
-                let path = Self.edgePath(size, radius: Self.corner, inset: th / 2)
-                let track = op["track"] as? [String: Any] ?? [:]
-                ctx.stroke(path, with: .color(Color(hex: track["c"] as? String ?? "FFFFFF", opacity: Double(num(track, "a", 0.13)))), lineWidth: th)
-                ctx.stroke(path.trimmedPath(from: 0, to: min(1, max(0, p))), with: .color(Color(hex: op["color"] as? String ?? "FFFFFF")),
-                           style: StrokeStyle(lineWidth: th, lineCap: .butt))
+                continue // drawn over the canvas, on the widget's own corners (see edge())
             case "rule":
                 let n = Int(num(op, "w") / 7.1)
                 let color = Color(hex: op["color"] as? String ?? "FFFFFF", opacity: Double(num(op, "a", 0.35)))
