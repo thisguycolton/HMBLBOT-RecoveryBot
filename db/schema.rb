@@ -866,6 +866,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
     t.boolean "search_listed", default: true, null: false
     t.jsonb "setup_steps", default: {}, null: false
     t.datetime "setup_finished_at"
+    t.string "sub_requests_audience", default: "members", null: false
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
