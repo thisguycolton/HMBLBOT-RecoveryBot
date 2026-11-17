@@ -13,13 +13,14 @@ const ROLES = [["", "Nothing extra"], ["can_keep_records", "Record keeper: the a
 const ROLE_LABELS = { can_keep_records: "record keeper", can_keep_treasury: "treasurer", can_schedule_hosts: "host coordinator" };
 const ROLE_TITLES = { can_keep_records: "Record keeper", can_keep_treasury: "Treasurer", can_schedule_hosts: "Host coordinator" };
 
-// Common offices to start from (Manage > Offices): each fills in the form, to change before saving
+// Common offices to start from (Manage > Offices, and the setup guide's Offices step through
+// setup/offices.js): each fills in the form, to change before saving
 export const PRESETS = [
-  { label: "Secretary", hint: "record keeper", form: { title: "Secretary", description: "Keeps the minutes and the agenda for business meetings, and the group's documents.", term_months: 6, sobriety_months: 6, grants: "can_keep_records", on_agenda: true, agenda_lines: "Report: {name}\n{last_month} minutes" } },
-  { label: "Treasurer", hint: "treasurer's reports", form: { title: "Treasurer", description: "Counts the basket, pays the rent and the group's bills, and gives the treasurer's report.", term_months: 12, sobriety_months: 12, grants: "can_keep_treasury", on_agenda: true, agenda_lines: "Report: {name}" } },
-  { label: "Host Coordinator", hint: "pick time slots", form: { title: "Host Coordinator", description: "Finds hosts and co-hosts for the meetings and fills the empty places.", term_months: 6, sobriety_months: 3, grants: "can_schedule_hosts", host_meeting_ids: null } },
-  { label: "GSR", hint: "nothing extra", form: { title: "GSR", description: "General Service Representative: takes the group's voice to district and area meetings and brings the news back.", term_months: 24, sobriety_months: 12, grants: "", on_agenda: true, agenda_lines: "GSR report: {name}" } },
-  { label: "Chair", hint: "nothing extra", form: { title: "Chair", description: "Chairs the business meetings.", term_months: 6, sobriety_months: 6, grants: "" } },
+  { label: "Secretary", hint: "record keeper", about: "Keeps the agenda, minutes and the group's documents.", form: { title: "Secretary", description: "Keeps the minutes and the agenda for business meetings, and the group's documents.", term_months: 6, sobriety_months: 6, grants: "can_keep_records", on_agenda: true, agenda_lines: "Report: {name}\n{last_month} minutes" } },
+  { label: "Treasurer", hint: "treasurer's reports", about: "Keeps the money and posts a report each month.", form: { title: "Treasurer", description: "Counts the basket, pays the rent and the group's bills, and gives the treasurer's report.", term_months: 12, sobriety_months: 12, grants: "can_keep_treasury", on_agenda: true, agenda_lines: "Report: {name}" } },
+  { label: "Host Coordinator", hint: "pick time slots", about: "Fills the host schedule and finds subs.", form: { title: "Host Coordinator", description: "Finds hosts and co-hosts for the meetings and fills the empty places.", term_months: 6, sobriety_months: 3, grants: "can_schedule_hosts", host_meeting_ids: null } },
+  { label: "GSR", hint: "nothing extra", about: "Carries the group's voice to the district.", form: { title: "GSR", description: "General Service Representative: takes the group's voice to district and area meetings and brings the news back.", term_months: 24, sobriety_months: 12, grants: "", on_agenda: true, agenda_lines: "GSR report: {name}" } },
+  { label: "Chair", hint: "nothing extra", about: "Runs the business meeting.", form: { title: "Chair", description: "Chairs the business meetings.", term_months: 6, sobriety_months: 6, grants: "" } },
   { label: "Blank office", hint: "", form: {} },
 ];
 

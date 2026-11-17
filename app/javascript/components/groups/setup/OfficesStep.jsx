@@ -12,7 +12,8 @@ const sameTitle = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 // Step 3 of the setup guide: pick the group's offices from the usual ones (or make your own),
 // see what each lets its holder do on the site, and say who holds it now. Uses the same API as
-// Group conscience > Elected officials (ServicePosition, ServiceTerm), so it all shows up there.
+// Manage > Offices and Group conscience > Officials (ServicePosition, ServiceTerm), so it all
+// shows up there. The pre-made offices are Manage > Offices' own (setup/offices.js).
 export default function OfficesStep({ group, footer }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -67,8 +68,8 @@ export default function OfficesStep({ group, footer }) {
       <CustomOffice busy={!!busy} onAdd={(fields) => add(fields)} />
 
       <p className="text-xs text-slate-500 dark:text-neutral-400">
-        Terms, sobriety minimums and agenda reports can be changed later in{" "}
-        <Link to={`/${slug}/conscience/officials`} className="text-accent hover:underline">Group conscience &gt; Elected officials</Link>.
+        Terms, sobriety minimums, agenda reports and a host coordinator's time slots can be changed later in{" "}
+        <Link to={`/${slug}/manage/offices`} className="text-accent hover:underline">Manage &gt; Offices</Link>.
       </p>
       {footer({ canContinue: positions.length > 0 })}
     </div>
@@ -141,7 +142,7 @@ function HolderForm({ slug, zone, position, members, onCancel, onSaved }) {
         )}
       </div>
       <p className="text-xs text-slate-500 dark:text-neutral-400">
-        {userId ? "They get the office's access from today." : "Once they join, connect their account in Elected officials and they get its access."}
+        {userId ? "They get the office's access from today." : "Once they join, connect their account in Manage > Offices and they get its access."}
       </p>
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel} className={quietButton}>Cancel</button>
