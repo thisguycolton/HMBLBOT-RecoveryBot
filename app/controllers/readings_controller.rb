@@ -1,8 +1,8 @@
 class ReadingsController < ApplicationController
   include KeepsRobotsOut
   keep_robots_out except: :show
-  before_action :authenticate_user!, only: %i[ mine new create edit update destroy ]
-  before_action :set_reading, only: %i[ show edit update destroy ]
+  before_action :authenticate_user!, only: %i[ mine new create edit update destroy title_matches adoptable ]
+  before_action :set_reading, only: %i[ show edit update destroy adoptable ]
   before_action :authorize_owner!, only: %i[ edit update destroy ]
   # A shared reading's link shows its title and card in Messages and the like; its card shows the opening lines and the full text stays for people
   before_action :answer_robots, only: :show
@@ -63,6 +63,42 @@ class ReadingsController < ApplicationController
     end
   end
 
+  # GET /readings/title_matches?q=…
+  # The new-reading form's title search: every reading the user may see whose title has the
+  # words typed (in any group), newest meeting first, with when its meeting was held
+  TITLE_MATCHES_LIMIT = 30
+  def title_matches
+    query = params[:q].to_s.squish
+    return render(json: { matches: [], total: 0 }) if query.length < 2
+
+    like = "%#{Reading.sanitize_sql_like(query)}%"
+    scope = Reading.listable_for(current_user).where("readings.title ILIKE ?", like)
+    scope = scope.where.not(id: params[:except]) if params[:except].present?
+    total = scope.count
+    readings = scope.includes(:group, :rich_text_topic)
+                    .order(Arel.sql("readings.\"meetingDate\" DESC NULLS LAST, readings.created_at DESC"))
+                    .limit(TITLE_MATCHES_LIMIT)
+
+    render json: { total: total, matches: readings.map { |reading| title_match_json(reading) } }
+  end
+
+  # GET /readings/1/adoptable
+  # What "Adopt" copies into the new-reading form: the words, source, topics and themes
+  def adoptable
+    return head(:not_found) unless @reading.visible_to?(current_user)
+
+    # The older rich text, else the newer editor's (matching how the form loads an edit)
+    content = @reading.content.to_plain_text.strip.present? ? @reading.content.body.to_s : @reading.richer_content&.body.to_s
+    render json: {
+      id: @reading.id,
+      title: @reading.title,
+      source: @reading.source,
+      content_html: content.to_s,
+      topic_html: @reading.topic&.body&.to_s,
+      tag_ids: @reading.tag_ids,
+    }
+  end
+
   # GET /readings/1 or /readings/1.json
   def show
     # Drafts and future-scheduled readings are only visible to their owner and admins
@@ -95,6 +131,8 @@ class ReadingsController < ApplicationController
 def create
   @reading = Reading.new(reading_params)
   @reading.user = current_user
+  # Only a reading the author could see can be the one it was adopted from
+  @reading.adopted_from = nil unless @reading.adopted_from&.visible_to?(current_user)
   @reading.group_id = reading_group_id(@reading.group_id) || default_group_id
   remember_group(@reading.group_id)
 
@@ -106,7 +144,7 @@ def create
 end
 
 def update
-  @reading.assign_attributes(reading_params)
+  @reading.assign_attributes(reading_params.except(:adopted_from_id))
   @reading.group_id = reading_group_id(@reading.group_id) if @reading.group_id_changed?
   remember_group(@reading.group_id) if @reading.group_id_changed?
 
@@ -195,6 +233,26 @@ end
       end
     end
 
+    # One match in the title search: enough to tell readings with the same title apart
+    def title_match_json(reading)
+      group = reading.group&.page_visible_to?(current_user) ? reading.group : nil
+      topics = reading.topic&.to_plain_text.to_s.lines.map { |line| line.sub(/\A\s*(?:[•*\-]|\d+[.)])\s*/, "").strip }.reject(&:blank?)
+      {
+        id: reading.id,
+        title: reading.title,
+        source: reading.source,
+        meeting_name: reading.meetingName.presence || group&.title,
+        group_title: group&.title,
+        meeting_date: reading.meetingDate&.iso8601,
+        meeting_time: reading.meetingTime&.strftime("%H:%M"),
+        status: reading_status(reading),
+        mine: reading.user_id == current_user.id,
+        topics: topics.first(3),
+        topic_count: topics.size,
+        path: reading_path(reading),
+      }
+    end
+
     def reading_card_json(reading)
       text = reading.plain_text
 
@@ -218,6 +276,6 @@ end
 
     # Only allow a list of trusted parameters through.
     def reading_params
-      params.require(:reading).permit(:title, :content, :topic, :meetingTime, :meetingDate, :source, :meetingName, :meetingUrl, :host, :hour, :minute, :meridiem, :group_id, :richer_content, :published_at, tag_ids: [])
+      params.require(:reading).permit(:title, :adopted_from_id, :content, :topic, :meetingTime, :meetingDate, :source, :meetingName, :meetingUrl, :host, :hour, :minute, :meridiem, :group_id, :richer_content, :published_at, tag_ids: [])
     end
 end

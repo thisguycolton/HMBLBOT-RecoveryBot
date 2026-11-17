@@ -61,6 +61,10 @@ export default function FindMeeting() {
   const [error, setError] = useState(null);
   const [view, setView] = useState(loadView);
   const [soonMinutes, setSoonMinutes] = useState(loadSoon);
+  // When the remembered 15 minutes finds nothing, the finder looks 30 ahead instead (for that search only).
+  // A tap on the picker during this visit is taken as meant, and isn't widened.
+  const [widenedFor, setWidenedFor] = useState(null);
+  const pickedSoon = useRef(false);
   const [showFilters, setShowFilters] = useState(false);
   const top = useRef(null);
   const hero = useRef(null);
@@ -106,11 +110,11 @@ export default function FindMeeting() {
 
   const timeKey = get("time");
   const time = TIMES.find((t) => t.key === timeKey) || TIMES[0];
-  const query = useMemo(() => {
+  const buildQuery = (minutes) => {
     const out = new URLSearchParams({ time_zone: viewerZone() });
     ["q", "date", "live", "attendance", "place", "type", "page"].forEach((k) => params.get(k) && out.set(k, params.get(k)));
     // With no day chosen, the finder shows what's starting soon; "week=1" asks for the coming week
-    if (!params.get("date") && !params.get("live") && !params.get("week")) out.set("soon", String(soonMinutes));
+    if (!params.get("date") && !params.get("live") && !params.get("week")) out.set("soon", String(minutes));
     if (time.key === "custom") {
       if (params.get("from")) out.set("from", params.get("from"));
       if (params.get("to")) out.set("to", params.get("to"));
@@ -119,14 +123,20 @@ export default function FindMeeting() {
       out.set("to", time.to);
     }
     return out.toString();
-  }, [params, time, soonMinutes]);
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const baseQuery = useMemo(() => buildQuery(soonMinutes), [params, time, soonMinutes]);
+  const widened = widenedFor === baseQuery;
+  const shownSoon = widened ? 30 : soonMinutes;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const query = useMemo(() => (widened ? buildQuery(30) : baseQuery), [baseQuery, widened]);
 
   useEffect(() => {
     let current = true;
     setLoading(true);
     setError(null);
     api(`/meeting_search?${query}`)
-      .then((d) => current && setData(d))
+      .then((d) => current && setData({ ...d, query }))
       .catch((e) => current && setError(e.message))
       .finally(() => current && setLoading(false));
     return () => { current = false; };
@@ -135,6 +145,8 @@ export default function FindMeeting() {
   useEffect(() => { document.title = "Find a meeting | RecoveryBot"; }, []);
 
   const chooseSoon = (m) => {
+    pickedSoon.current = true;
+    setWidenedFor(null);
     setSoonMinutes(m);
     try { localStorage.setItem("findMeeting.soon", String(m)); } catch { /* private window */ }
   };
@@ -154,6 +166,12 @@ export default function FindMeeting() {
     : date ? (date === todayValue() ? "today" : date === tomorrowValue() ? "tomorrow" : "date")
     : week ? "week" : "soon";
   const soon = dayKey === "soon";
+  // Nothing in the next 15 minutes (and 15 wasn't just tapped): look 30 ahead instead
+  useEffect(() => {
+    if (soon && soonMinutes === 15 && !pickedSoon.current && data?.query === baseQuery && data.ready && data.total === 0) {
+      setWidenedFor(baseQuery);
+    }
+  }, [data, baseQuery, soon, soonMinutes]);
   const filtersOn = ["q", "date", "live", "week", "time", "attendance", "place", "type"].filter((k) => get(k)).length;
 
   const extraFilters = ["time", "attendance", "place", "type"].filter((k) => get(k)).length;
@@ -185,9 +203,9 @@ export default function FindMeeting() {
   const soonPicker = (
     <div className="inline-flex shrink-0 rounded-full bg-neutral-100 p-0.5 dark:bg-neutral-800" role="group" aria-labelledby="fm-soon">
       {SOON_CHOICES.map((m) => (
-        <button key={m} type="button" aria-pressed={soonMinutes === m} onClick={() => chooseSoon(m)}
+        <button key={m} type="button" aria-pressed={shownSoon === m} onClick={() => chooseSoon(m)}
           className={`rounded-full px-2.5 py-1 text-xs font-medium ${focusRing} ${
-            soonMinutes === m ? "!bg-white text-slate-900 shadow-sm dark:!bg-white dark:text-neutral-900" : "!bg-transparent text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white"
+            shownSoon === m ? "!bg-white text-slate-900 shadow-sm dark:!bg-white dark:text-neutral-900" : "!bg-transparent text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white"
           }`}>
           {soonLabel(m)}
         </button>
@@ -237,6 +255,7 @@ export default function FindMeeting() {
         {soon && (
           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-neutral-400">
             <span id="fm-soon">Starting within</span>{soonPicker}
+            {widened && <span className="text-xs">Nothing in the next 15 minutes, so showing 30.</span>}
           </div>
         )}
 
@@ -353,7 +372,7 @@ export default function FindMeeting() {
         <section className={`space-y-3 transition-opacity ${loading ? "opacity-60" : ""}`} aria-busy={loading}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-slate-600 dark:text-neutral-400">
-              {data.total === 0 ? "No meetings match." : `${data.total.toLocaleString()} ${data.total === 1 ? "meeting" : "meetings"}${live ? " on now" : soon ? ` starting in the next ${soonMinutes === 60 ? "hour" : `${soonMinutes} minutes`} or in the last 5` : dayKey === "week" ? " starting 15 minutes from now or later" : ""}, soonest first`}
+              {data.total === 0 ? "No meetings match." : `${data.total.toLocaleString()} ${data.total === 1 ? "meeting" : "meetings"}${live ? " on now" : soon ? ` starting in the next ${shownSoon === 60 ? "hour" : `${shownSoon} minutes`} or in the last 5` : dayKey === "week" ? " starting 15 minutes from now or later" : ""}, soonest first`}
               {filtersOn > 0 && (
                 <button type="button" onClick={() => { setQ(""); setPlace(""); setParams(new URLSearchParams()); }}
                   className={`ml-2 inline-flex items-center gap-1 !bg-transparent p-0 font-medium text-accent hover:underline ${focusRing}`}>
@@ -377,7 +396,7 @@ export default function FindMeeting() {
             <div className="rounded-2xl bg-neutral-100 p-8 text-center text-sm text-slate-600 dark:bg-neutral-800/70 dark:text-neutral-400">
               {!data.ready ? "AA Intergroup's list is loading. Try again in a minute." : soon ? (
                 <>
-                  Nothing starts in the next {soonMinutes === 60 ? "hour" : `${soonMinutes} minutes`}{filtersOn > 0 ? " with these filters" : ""}.{" "}
+                  Nothing starts in the next {shownSoon === 60 ? "hour" : `${shownSoon} minutes`}{filtersOn > 0 ? " with these filters" : ""}.{" "}
                   <button type="button" onClick={() => chooseDay("week")} className={`!bg-transparent p-0 font-medium text-accent hover:underline ${focusRing}`}>
                     See the coming week
                   </button>

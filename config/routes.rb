@@ -658,6 +658,9 @@ end
   end
   resources :readings do
     get :mine, on: :collection
+    # The new-reading form's title search, and the reading a match adopts
+    get :title_matches, on: :collection
+    get :adoptable, on: :member
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

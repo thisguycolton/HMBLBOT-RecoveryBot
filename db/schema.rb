@@ -1410,6 +1410,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
     t.string "host"
     t.bigint "group_id"
     t.datetime "published_at"
+    t.bigint "adopted_from_id"
+    t.index ["adopted_from_id"], name: "index_readings_on_adopted_from_id"
     t.index ["group_id"], name: "index_readings_on_group_id"
     t.index ["user_id"], name: "index_readings_on_user_id"
   end
@@ -2148,6 +2150,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
   add_foreign_key "reading_tags", "readings"
   add_foreign_key "reading_tags", "tags"
   add_foreign_key "readings", "groups"
+  add_foreign_key "readings", "readings", column: "adopted_from_id", on_delete: :nullify
   add_foreign_key "readings", "users"
   add_foreign_key "schedule_poll_ballots", "schedule_polls"
   add_foreign_key "schedule_poll_ballots", "users"
