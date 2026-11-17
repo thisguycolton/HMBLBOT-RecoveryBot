@@ -9,7 +9,7 @@ The **Meetings** page of a group opens on what's next: each meeting with its tim
 
 ## Next up and the week
 
-- **Next up** shows the next meeting with its countdown, host and co-host, a **HostDeck** button for hosts, the passcode and **Join**.
+- **Next up** shows the next meeting with its countdown, host and co-host, a **Host it** button for hosts, the passcode and **Join meeting**.
 - **Week by week** shows every meeting date with its host and co-host. Use ‹ and › to move between weeks; today's meetings are marked **Today**.
 - **Your dates** lists the dates you're hosting, with a one-tap **I can't make it** that asks for a sub.
 
@@ -33,6 +33,6 @@ A group keeps its meetings in its own time zone (Lantern Street uses Arizona tim
 
 ## Changing meetings
 
-Group admins add, edit and remove meetings in [Group settings](/docs/group-tools/group-settings) under **Meeting settings**. A meeting held on several days is one **series**: change it once and every day follows.
+Group admins add, edit and remove meetings in [Manage](/docs/group-tools/group-settings) under **Meetings setup**. A meeting held on several days is one **series**: change it once and every day follows.
 
 See [Hosts and subs](/docs/group-tools/hosts-and-subs) for the host schedule itself.

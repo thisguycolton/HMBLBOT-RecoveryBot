@@ -7,7 +7,7 @@ icon: clipboard-list
 
 ## Plan a business meeting (record keepers)
 
-1. Open **Conscience > Meetings** and choose **Schedule a meeting**.
+1. Open **Group conscience > Business meetings** and choose **Schedule a meeting**.
 2. Set the date and time, and link it to one of the group's meetings or an event if you like ("After Saturday Speaker Meeting").
 3. Members are notified that it's scheduled.
 

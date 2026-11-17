@@ -1,5 +1,5 @@
 import { CircleHelp } from "lucide-react";
-import { EXPLORE_ITEMS, EXTRA_ITEMS, YOU_ITEMS, activeHref, groupItems } from "./navItems";
+import { EXPLORE_ITEMS, EXTRA_ITEMS, YOU_ITEMS, activeHref, groupMenu, hostTools } from "./navItems";
 
 // What the Info bar says on a page that brings no side panel of its own (PageAside): what the
 // page is for and how to use it, by the sidebar item the page belongs to.
@@ -30,12 +30,15 @@ const GROUP_ABOUT = {
   chat: "The group's chat, in channels. Type @ to mention someone or a role like @hosts; only mentions send a notification.",
   court: "Send a court verification letter for someone who came to one of this group's meetings. Pick the meeting and day, then sign.",
   events: "The group's events. RSVP, see who's going, and look back at past ones. Admins start new ones here.",
-  conscience: "Group conscience: business meetings, decisions, documents, the group's elected officials and the treasury. Record keepers and treasurers edit right here.",
+  conscience: "Group conscience: business meetings, decisions, documents, the group's officials and the treasury. Record keepers and treasurers edit right here.",
+  reading: "The group's reading: the literature it approved, and readings members tagged to the group.",
   members: "The group's members. Admins approve requests to join and give people roles here.",
-  decks: "HostDeck: what a host runs the meeting from, with the script, readings, timer and more.",
+  hosttools: "Host tools: open HostDeck for the meeting you're hosting, the group's own decks, Give a chip and Court verification.",
+  host: "Pick the meeting you're hosting to open its HostDeck, with the script, readings, timer and more.",
+  decks: "The group's own decks, for business meetings, host onboarding and more, each run from one of its documents.",
   give: "Give someone a chip in your group's design. Members get it right away; anyone else gets an email to claim it.",
   dashboard: "What needs you in this group, a part for each role you hold, with the way to each.",
-  settings: "How the group is set up: its name and logo, meeting times, chips, approved literature and court verifications.",
+  manage: "How the group is set up: its name and logo, meeting times, chips, approved literature, court verification and document templates.",
 };
 
 const FALLBACK = { title: "RecoveryBot", icon: CircleHelp, about: "Free tools for meetings, readings and service. Open the menu to get around, or search from the top." };
@@ -45,7 +48,7 @@ export function pageInfo(path = window.location.pathname) {
   const items = [...EXPLORE_ITEMS, ...YOU_ITEMS, ...EXTRA_ITEMS].map((i) => ({ href: i.href, exact: i.exact, title: i.label, icon: i.icon, about: ABOUT[i.key] }));
   const slug = path.match(/^\/groups\/([^/]+)/)?.[1] || new URLSearchParams(window.location.search).get("group");
   if (slug) {
-    items.push(...groupItems(slug).map((i) => ({ href: i.href, exact: i.exact, title: i.key === "home" ? "Group page" : i.label, icon: i.icon, about: GROUP_ABOUT[i.key] })));
+    items.push(...[...groupMenu(slug), ...hostTools(slug)].map((i) => ({ href: i.href, exact: i.exact, title: i.key === "home" ? "Group page" : i.label, icon: i.icon || groupMenu(slug).find((m) => m.key === "hosttools").icon, about: GROUP_ABOUT[i.key] })));
   }
   const href = activeHref(items, path);
   const item = href && items.find((i) => i.href === href && i.about);

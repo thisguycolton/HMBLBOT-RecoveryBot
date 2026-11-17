@@ -20,7 +20,8 @@ const EXIT_MS = 220;
 // - "rail": the column collapsed to icons (useRail). A sub menu floats over the page beside it.
 // - "sheet": the phone menu. A sub menu slides in over the list, with a back arrow.
 export default function Sidebar({ nav, isAuthenticated, onNavigate, path = window.location.pathname, mode = "sheet", panelTarget = null, onSubmenu }) {
-  const groups = nav?.groups || [];
+  // Your groups, then the ones you asked to join (shown greyed, "Waiting")
+  const groups = [...(nav?.groups || []), ...(nav?.waiting_groups || []).map((g) => ({ ...g, waiting: true }))];
   const who = { auth: isAuthenticated, groups: hasGroups(), host: !!(nav?.hosting?.host || nav?.hosting?.open_requests > 0) };
   const hosting = nav?.hosting?.open_requests || 0;
   const keep = (list) => list.filter((c) => shows(c, who)).map((c) => (c.items ? { ...c, items: c.items.filter((i) => shows(i, who)) } : c));
@@ -36,15 +37,15 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
   [...top, ...bottom].forEach((c) => {
     if (c.items) menus[c.key] = { key: c.key, label: c.label, items: c.items.map((i) => (i.key === "hosting" ? { ...i, badge: hosting } : i)) };
   });
-  groups.forEach((g) => {
+  groups.filter((g) => !g.waiting).forEach((g) => {
     menus[`g:${g.slug}`] = { key: `g:${g.slug}`, label: g.title, group: g, items: groupItems(g.slug, g).map((i) => ({ ...i, badge: i.count ? g[i.count] : 0 })) };
   });
 
   const links = [...Object.values(menus).flatMap((m) => m.items), ...[...top, ...bottom].filter((c) => c.href)];
-  const here = activeHref(links.map((i) => ({ href: i.href, exact: i.exact })), path);
+  const here = activeHref(links.map((i) => ({ href: i.href, exact: i.exact, also: i.also })), path);
   // The sub menu this page is in (Give a chip and Court verification name their group in the address)
   const giving = ["/recovery/give", "/court_verifications/new"].includes(path) && new URLSearchParams(window.location.search).get("group");
-  const currentGroup = groups.find((g) => path === `/groups/${g.slug}` || path.startsWith(`/groups/${g.slug}/`) || g.slug === giving)?.slug;
+  const currentGroup = groups.find((g) => !g.waiting && (path === `/groups/${g.slug}` || path.startsWith(`/groups/${g.slug}/`) || g.slug === giving))?.slug;
   const currentKey = currentGroup ? `g:${currentGroup}` : Object.values(menus).find((m) => m.items.some((i) => i.href === here))?.key || null;
 
   const [open, setOpen] = useState(() => (mode === "column" ? currentKey : null));
@@ -130,11 +131,11 @@ export default function Sidebar({ nav, isAuthenticated, onNavigate, path = windo
           <section aria-label="Your groups" className="border-t border-neutral-300/70 pt-4 dark:border-neutral-800">
             <h2 className={`mb-1 h-5 overflow-hidden whitespace-nowrap px-3 text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-slate-500 transition-opacity duration-150 dark:text-neutral-500`} style={{ opacity: compact ? 0 : 1 }} aria-hidden="true">Your groups</h2>
             <List>
-              {groups.length === 0 && <Row cat={{ key: "findgroup", label: "Find your group", href: "/groups/find", icon: MapPinned }} active={false} compact={compact} />}
-              {groups.map((g) => (
+              {groups.every((g) => g.waiting) && <Row cat={{ key: "findgroup", label: groups.length ? "Find another group" : "Find your group", href: "/groups/find", icon: MapPinned }} active={false} compact={compact} />}
+              {groups.map((g) => (g.waiting ? <WaitingRow key={g.slug} group={g} current={path === `/groups/${g.slug}` || path.startsWith(`/groups/${g.slug}/`)} compact={compact} /> : (
                 <GroupRow key={g.slug} group={g} current={g.slug === currentGroup} {...rowProps(`g:${g.slug}`)}
                   waiting={menus[`g:${g.slug}`].items.reduce((n, i) => n + (i.badge || 0), 0)} />
-              ))}
+              )))}
             </List>
           </section>
         )}
@@ -236,6 +237,18 @@ function Row({ cat, active, expanded = false, compact, onClick, badge = 0 }) {
   );
 }
 
+// A group they asked to join, waiting for its admins: greyed, a link to its page
+function WaitingRow({ group, current, compact }) {
+  return (
+    <a href={`/groups/${group.slug}`} aria-current={current ? "page" : undefined} data-tip={compact ? `${group.title} (waiting)` : undefined}
+      className={`${rowClass(false, false)} !px-1.5 !py-1.5`}>
+      <GroupLogo group={group} className="size-8 shrink-0 text-[0.6rem] opacity-50" />
+      <span className={`${fade(compact)} text-slate-500 dark:text-neutral-400`}>{group.title}</span>
+      {!compact && <span className="shrink-0 rounded-full bg-slate-400 px-1.5 text-xs font-semibold leading-5 !text-white dark:bg-neutral-600">Waiting</span>}
+    </a>
+  );
+}
+
 function GroupRow({ group, current, expanded, compact, onClick, waiting }) {
   return (
     <button type="button" onClick={onClick} aria-expanded={expanded} aria-controls={expanded ? PANEL_ID : undefined} data-menu={`g:${group.slug}`}
@@ -261,7 +274,15 @@ function SubMenu({ menu, here, onBack, className = "" }) {
         <span className="min-w-0 flex-1 truncate">{menu.label}</span>
       </button>
       <ul key={menu.key} className="space-y-0.5 motion-safe:animate-[side-fade_160ms_ease-out]">
-        {menu.items.map((item) => <li key={item.key}><Item item={item} active={item.href === here} badge={item.badge || 0} /></li>)}
+        {menu.items.map((item, i) => (
+          <li key={item.key}>
+            {/* A group's Host tools, Dashboard and Manage, for people with a role, under a divider */}
+            {item.service && !menu.items[i - 1]?.service && (
+              <p className="mx-3 mb-1 mt-3 border-t border-neutral-300/70 pt-3 text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-slate-500 dark:border-neutral-800 dark:text-neutral-500">Service</p>
+            )}
+            <Item item={item} active={item.href === here} badge={item.badge || 0} />
+          </li>
+        ))}
       </ul>
     </nav>
   );

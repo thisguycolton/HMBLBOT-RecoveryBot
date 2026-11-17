@@ -9,7 +9,7 @@ A **group** on RecoveryBot is your home group's space: its meetings, members, ch
 
 1. Find it: search for it in the top bar, open **Find your group** (from Find a meeting, or the **Find a group** link in Settings), or open a meeting in [Find a meeting](/docs/meetings/find-a-meeting) and choose its group.
 2. On the group's page, choose **Ask to join**. Not signed in? You'll make an account first and come right back.
-3. A group admin approves you, and the group appears in your sidebar under **Your groups**.
+3. While you wait, the group shows greyed in your sidebar under **Your groups**, marked **Waiting**. When a group admin approves you, it opens up with all its sections.
 
 **Find your group** asks which meeting you go to. Search by name, paste a Zoom link or meeting ID, or pick a day and time:
 

@@ -3,11 +3,11 @@ title: Your group dashboard
 summary: What needs you in each role you hold, in one place.
 icon: layout-dashboard
 ---
-If you hold a role in a group, its **Dashboard** collects what needs you, one box per role:
+If you hold a role in a group, its **Dashboard** (in the group menu, under Service) collects what needs you, one box per role:
 
 ![A group dashboard for someone with every role](/docs-images/group-tools/dashboard.webp)
 
-- **Group admin**: join requests and settings that need attention, with links to Members, Settings, Meeting settings and the group page.
+- **Group admin**: join requests and settings that need attention, with links to Members, Manage, Meetings setup and the group page.
 - **Record keeper**: suggested agenda items, minutes waiting to be posted, draft documents and terms ending.
 - **Host coordinator**: open sub requests, gaps in the schedule, who's covering for whom.
 - **Treasurer**: whether last month's report is in.

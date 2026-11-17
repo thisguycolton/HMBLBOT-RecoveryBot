@@ -19,7 +19,7 @@ import { registerRouter } from "../components/shell/useShell";
 import GroupsIndex from "../components/groups/GroupsIndex";
 import GroupForm from "../components/groups/GroupForm";
 import GroupPage from "../components/groups/GroupPage";
-import GroupDashboard, { ConscienceRoute, SettingsRoute } from "../components/groups/GroupDashboard";
+import GroupDashboard, { ConscienceRoute, SettingsRedirect, SettingsRoute } from "../components/groups/GroupDashboard";
 import FindGroup from "../components/groups/FindGroup";
 import FindMeeting from "../components/groups/FindMeeting";
 import IntergroupPage from "../components/groups/page/IntergroupPage";
@@ -69,8 +69,10 @@ const router = createBrowserRouter(
     { path: "/:slug/messages/:channelId", element: <ChatPage /> },
     // What needs you, a part for each role you hold in the group
     { path: "/:slug/dashboard", element: <GroupDashboard /> },
-    // Group admins' settings: the group, its meetings, chips, literature, court verifications
-    { path: "/:slug/settings/*", element: <SettingsRoute /> },
+    // Manage, for group admins: the group, its meetings, chips, literature, court verification,
+    // document templates (Settings' old address goes there)
+    { path: "/:slug/manage/*", element: <SettingsRoute /> },
+    { path: "/:slug/settings/*", element: <SettingsRedirect /> },
     {
       path: "/",
       element: <Shell />,

@@ -58,29 +58,55 @@ export const BOTTOM_CATEGORIES = [
 // Whether an item or category shows for this member. `who`: { auth, groups, host }
 export const shows = (item, who) => (!item.auth || who.auth) && (!item.groups || who.groups) && (!item.host || who.host);
 
-// A group's pages in its folder: the same pages for everyone in it, a role deciding what they
-// can change there (so no page of its own per role), plus Court verification (the group's form,
-// never linked publicly) and Give a chip for its hosts, Settings
-// for its admins and the Dashboard (what needs you) for anyone with a role. `group` is the
-// group from /api/nav (its roles and can_give); without one, every page (pageInfo.js).
-export function groupItems(slug, group = null) {
-  const roles = group?.roles;
-  const all = !group;
-  const anyRole = roles && (roles.admin || roles.record_keeper || roles.host_coordinator || roles.treasurer);
+// A group's menu: the same list in its sidebar folder (Sidebar.jsx) and as the tabs on its pages
+// (GroupPage.jsx), so there's one thing to learn. Everyone in the group gets the seven main
+// sections; below a "Service" divider, Host tools for its hosts (Host a meeting, Decks, Give a
+// chip and Court verification, the group's form, never linked publicly), the Dashboard (what
+// needs you) for anyone with a role and Manage for its admins. `who`: { member, host, anyRole,
+// admin } (groupPerms / navPerms below); without it, every section (pageInfo.js). Signed-out
+// visitors and people waiting to join see the members' sections `locked`.
+export function groupMenu(slug, who = null) {
+  const all = !who;
+  const locked = !all && !who.member;
+  const base = `/groups/${slug}`;
   return [
-    { key: "home", label: "Home", href: `/groups/${slug}`, icon: House, exact: true },
-    { key: "meetings", label: "Meetings", href: `/groups/${slug}/meetings`, icon: CalendarClock },
-    { key: "chat", label: "Chat", href: `/groups/${slug}/messages`, icon: MessagesSquare, count: "chat_unread" },
-    (all || group.can_give) && { key: "court", label: "Court verification", href: `/court_verifications/new?group=${slug}`, icon: FileCheck2 },
-    { key: "events", label: "Events", href: `/groups/${slug}/events`, icon: CalendarRange },
-    { key: "conscience", label: "Conscience", href: `/groups/${slug}/conscience`, icon: Scale },
-    { key: "members", label: "Members", href: `/groups/${slug}/members`, icon: Users, count: "requests" },
-    { key: "decks", label: "HostDeck", href: `/groups/${slug}/decks`, icon: MonitorPlay },
-    (all || group.can_give) && { key: "give", label: "Give a chip", href: `/recovery/give?group=${slug}`, icon: Gift },
-    (all || anyRole) && { key: "dashboard", label: "Dashboard", href: `/groups/${slug}/dashboard`, icon: LayoutDashboard },
-    (all || roles?.admin) && { key: "settings", label: "Settings", href: `/groups/${slug}/settings`, icon: Settings },
+    { key: "home", label: "Home", href: base, icon: House, exact: true },
+    { key: "meetings", label: "Meetings", href: `${base}/meetings`, icon: CalendarClock },
+    { key: "chat", label: "Chat", href: `${base}/messages`, icon: MessagesSquare, count: "chat_unread", locked },
+    { key: "events", label: "Events", href: `${base}/events`, icon: CalendarRange },
+    { key: "conscience", label: "Group conscience", href: `${base}/conscience`, icon: Scale, locked },
+    { key: "reading", label: "Reading", href: `${base}/reading`, icon: BookOpen, locked },
+    { key: "members", label: "Members", href: `${base}/members`, icon: Users, count: "requests", locked },
+    (all || who.host) && { key: "hosttools", label: "Host tools", href: `${base}/host`, icon: MonitorPlay, service: true, also: [`${base}/decks`] },
+    (all || who.anyRole) && { key: "dashboard", label: "Dashboard", href: `${base}/dashboard`, icon: LayoutDashboard, service: true },
+    (all || who.admin) && { key: "manage", label: "Manage", href: `${base}/manage`, icon: Settings, service: true },
   ].filter(Boolean);
 }
+
+// `who` for a group from /api/nav (its roles and can_give)
+export const navPerms = (group) => {
+  const r = group.roles || {};
+  return { member: !group.waiting, host: !!group.can_give, anyRole: !!(r.admin || r.record_keeper || r.host_coordinator || r.treasurer), admin: !!r.admin };
+};
+
+// `who` for a group from /api/groups/:slug (GroupsController#group_json)
+export const groupPerms = (group) => ({
+  member: !!(group.is_member || group.is_site_admin),
+  host: !!group.can_host,
+  anyRole: !!(group.can_manage || group.can_keep_records || group.can_schedule_hosts || group.can_keep_treasury),
+  admin: !!group.can_manage,
+});
+
+// The sidebar folder's items: the menu without the sections a member can't open yet
+export const groupItems = (slug, group = null) => groupMenu(slug, group && navPerms(group)).filter((i) => !i.locked);
+
+// Host tools' own pages, as pills along the top of each (HostToolsNav)
+export const hostTools = (slug) => [
+  { key: "host", label: "Host a meeting", href: `/groups/${slug}/host` },
+  { key: "decks", label: "Decks", href: `/groups/${slug}/decks` },
+  { key: "give", label: "Give a chip", href: `/recovery/give?group=${slug}`, icon: Gift, away: true },
+  { key: "court", label: "Court verification", href: `/court_verifications/new?group=${slug}`, icon: FileCheck2, away: true },
+];
 
 const matches = (href, path, exact) => {
   // Give a chip and Court verification are in every group's folder (?group=): only the group in the address lights up
@@ -93,5 +119,7 @@ const matches = (href, path, exact) => {
 // Meetings and not the group's Home
 export function activeHref(hrefs, path = window.location.pathname) {
   if (path.startsWith("/books/")) path = "/library"; // the reader belongs to the library
-  return hrefs.filter(({ href, exact }) => matches(href, path, exact)).sort((a, b) => b.href.length - a.href.length)[0]?.href || null;
+  // `also`: other pages that light the same item up (Host tools' Decks)
+  const hits = hrefs.flatMap(({ href, exact, also = [] }) => [href, ...also].filter((h) => matches(h, path, exact)).map((h) => ({ href, length: h.length })));
+  return hits.sort((a, b) => b.length - a.length)[0]?.href || null;
 }

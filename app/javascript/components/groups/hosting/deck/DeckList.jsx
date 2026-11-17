@@ -5,19 +5,19 @@ import { api } from "../../lib";
 import { Card, ErrorNote, Loading, Tray, quietButton } from "../../ui";
 import { inputClass } from "../../../ui/styles";
 import { documentsPath } from "../../conscience/lib";
+import HostToolsNav from "../HostToolsNav";
 
 export const PURPOSE_LABELS = { business_meeting: "Business meetings", onboarding: "Host onboarding", event: "Event days", general: "Other decks" };
 const ORDER = ["business_meeting", "onboarding", "event", "general"];
 const updatedLabel = (iso) => new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 
 // The group's HostDecks of their own (business meetings, onboarding, event days...), by what
-// they're for, each with the document it runs from. In the group dashboard (HostDecks) and at
-// /groups/:slug/decks for everyone else in the group.
-export function DeckList({ slug }) {
+// they're for, each with the document it runs from: Host tools > Decks (/groups/:slug/decks).
+export function DeckList({ slug, onLoad }) {
   const [decks, setDecks] = useState(null);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
-  useEffect(() => { api(`/groups/${slug}/decks`).then((d) => setDecks(d.decks)).catch((e) => setError(e.message)); }, [slug]);
+  useEffect(() => { api(`/groups/${slug}/decks`).then((d) => { setDecks(d.decks); onLoad?.(d); }).catch((e) => setError(e.message)); }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -32,7 +32,7 @@ export function DeckList({ slug }) {
       <Card className="flex flex-wrap items-center gap-3 p-4">
         <MonitorPlay className="size-6 shrink-0 text-accent" />
         <p className="min-w-0 flex-1 !text-left text-sm text-slate-600 dark:text-neutral-300">
-          Hosting a meeting? Its HostDeck is under <Link to={`/${slug}/host`} className="font-medium text-accent hover:underline">Host a meeting</Link>.
+          Hosting a meeting? Its HostDeck is in Host tools under <Link to={`/${slug}/host`} className="font-medium text-accent hover:underline">Host a meeting</Link>.
           To make a new deck, open one of the group's documents and pick <span className="font-semibold">File &gt; Create New HostDeck</span>.
         </p>
         <Link to={`/${slug}/host`} className={`${quietButton} max-sm:!hidden`}>Host a meeting</Link>
@@ -81,10 +81,12 @@ function DeckRow({ slug, deck }) {
 // /groups/:slug/decks
 export default function DeckListPage() {
   const { slug } = useParams();
+  const [canHost, setCanHost] = useState(false);
   return (
     <div className="mx-auto max-w-3xl space-y-6 !font-sans [&_*]:!font-sans">
-      <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> HostDecks</h1>
-      <DeckList slug={slug} />
+      <HostToolsNav slug={slug} canHost={canHost} />
+      <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> Decks</h1>
+      <DeckList slug={slug} onLoad={(d) => setCanHost(!!d.can_host)} />
     </div>
   );
 }

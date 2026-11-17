@@ -405,7 +405,7 @@ export default function HostsTab({ group }) {
       <div className="print:hidden space-y-5">
         <div className="flex flex-wrap items-center gap-3">
           <p className="min-w-0 basis-full text-sm text-slate-600 sm:basis-auto sm:flex-1 dark:text-neutral-300">
-            {data.slots.length === 0 ? "The group has no weekly meetings yet. A group admin adds them in Meeting settings, then a host and co-host go on each."
+            {data.slots.length === 0 ? "The group has no weekly meetings yet. A group admin adds them in Manage > Meetings setup, then a host and co-host go on each."
               : openTotal === 0 ? `Every one of the ${s.places} places has someone in it.`
               : mySlots && s.places === 0 ? "No time slots are picked for you yet. A group admin picks them under Host coordinators."
               : openTotal === 0 ? `Every one of the ${s.places} places${mySlots ? " in your time slots" : ""} has someone in it.`
@@ -414,7 +414,7 @@ export default function HostsTab({ group }) {
           {mySlots && <Toggle checked={onlyMine} onChange={setOnlyMine} label="Only my time slots" />}
           {data.slots.length > 0 && <Toggle checked={onlyOpen} onChange={setOnlyOpen} label="Only meetings with an open place" />}
           {data.slots.length > 0 && <button type="button" className={quietButton} onClick={() => printTitled(`${group.title} hosts`)}><Printer className="size-4" /> Print</button>}
-          {data.can_host && <Link to={`/${slug}/host`} className={primaryButton}><MonitorPlay className="size-4" /> HostDeck</Link>}
+          {data.can_host && <Link to={`/${slug}/host`} className={primaryButton}><MonitorPlay className="size-4" /> Host a meeting</Link>}
         </div>
         <ErrorNote error={error} />
         <SubRequests requests={data.sub_requests} call={call} />

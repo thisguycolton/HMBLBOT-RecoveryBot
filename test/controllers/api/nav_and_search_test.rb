@@ -39,6 +39,22 @@ class Api::NavAndSearchTest < ActionDispatch::IntegrationTest
     assert_equal ["The Acid Test"], body["today"]["meetings"].map { |m| m["name"] }.uniq
   end
 
+  test "a group you asked to join comes back as waiting, not as one of your groups" do
+    newcomer = User.find_by!(email: "new@example.com")
+    sign_in newcomer
+    get "/api/nav", as: :json
+    body = response.parsed_body
+    assert_empty body["groups"]
+    assert_equal [@step.slug], body["waiting_groups"].map { |g| g["slug"] }
+    assert_equal ["slug", "title", "logo_url"].sort, body["waiting_groups"].first.keys.sort
+
+    # A pending group (not approved yet) isn't shown
+    pending = Group.create!(title: "Not yet", time_zone: "America/Phoenix", status: "pending")
+    pending.memberships.create!(user: newcomer, role: "member", status: "requested")
+    get "/api/nav", as: :json
+    assert_equal [@step.slug], response.parsed_body["waiting_groups"].map { |g| g["slug"] }
+  end
+
   test "asking for a sub yourself doesn't count toward your badge, and signed out there's no nav" do
     sign_in @jo
     get "/api/nav", as: :json

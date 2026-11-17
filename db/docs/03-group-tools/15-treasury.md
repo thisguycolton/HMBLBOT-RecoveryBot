@@ -9,7 +9,7 @@ icon: piggy-bank
 
 ## Write a report (treasurers)
 
-1. Open **Conscience > Treasury** and choose **New report**, then the month.
+1. Open **Group conscience > Treasury** and choose **New report**, then the month.
 2. Enter the opening balance, the money in (**Income**) and out (**Expenses**), and your **prudent reserve**.
 3. Set how anything above the reserve is shared (for example, between district, area and the General Service Office). RecoveryBot does the sums in the panel on the right.
 4. Choose who can see it, save it as a draft, then **Post** it for members.

@@ -5,6 +5,7 @@ import { DAYS, api, clock } from "../lib";
 import { Card, ErrorNote, Loading, Pill, Tray, primaryButton, quietButton } from "../ui";
 import { inputClass } from "../../ui/styles";
 import { timeOf, useNow } from "./parts";
+import HostToolsNav from "./HostToolsNav";
 
 const short = (days) => (days.length === 7 ? "Every day" : days.map((d) => DAYS[d].slice(0, 3)).join(", "));
 const dayLabel = (on, today, tomorrow) => {
@@ -24,7 +25,7 @@ const hostsOf = (o) => [o.host && `Host: ${o.host}`, o.co_host && `Co-host: ${o.
 const openPath = (slug, o) => `/${slug}/host/${o.meeting_id}?on=${o.on}`;
 const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-// /groups/:slug/host: pick the meeting (and date) to open HostDeck on, or one of the group's own decks. What's on
+// /groups/:slug/host, Host tools > Host a meeting: pick the meeting (and date) to open HostDeck on, or one of the group's own decks. What's on
 // now comes first, then the next one you host, then the group's meetings day by day for the week,
 // each opening on its own date (to get ready for one ahead). Every meeting is at the bottom too.
 export default function HostingIndex() {
@@ -53,9 +54,10 @@ export default function HostingIndex() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 !font-sans [&_*]:!font-sans">
+      <HostToolsNav slug={slug} />
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1 basis-56">
-          <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> HostDeck</h1>
+          <h1 className="flex items-center gap-2 !text-2xl font-bold text-slate-900 dark:text-white"><MonitorPlay className="size-6 text-accent" /> Host a meeting</h1>
           <p className="mt-1 !text-left text-sm text-slate-600 dark:text-neutral-300">Pick the meeting you're hosting. Each date opens on its own, so you can get one ready ahead of time.</p>
         </div>
         <Link to={`/${slug}/host/capsule`} className={quietButton}><History className="size-4" /> Time Capsule</Link>
@@ -136,7 +138,7 @@ function OtherDecks({ slug, decks }) {
     <section className="space-y-2">
       <div className="flex items-center gap-2">
         <h2 className="flex-1 !text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Other decks</h2>
-        {decks.length > 0 && <Link to={`/${slug}/decks`} className="text-xs font-medium text-accent hover:underline">All HostDecks</Link>}
+        {decks.length > 0 && <Link to={`/${slug}/decks`} className="text-xs font-medium text-accent hover:underline">All decks</Link>}
       </div>
       {decks.map((d) => (
         <Link key={d.id} to={`/${slug}/decks/${d.id}`} className="block">

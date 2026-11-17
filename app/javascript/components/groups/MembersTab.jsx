@@ -174,19 +174,19 @@ export default function MembersTab({ group, reload, setGroup }) {
                     </button>
                     <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Record keepers write the group's documents"
                       onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_keep_records: !person.can_keep_records } })}>
-                      {person.can_keep_records ? "Not a record keeper" : "Make record keeper"}
+                      {person.can_keep_records ? "Remove record keeper role" : "Make record keeper"}
                     </button>
                     <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Schedules who hosts and co-hosts each meeting"
                       onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_schedule_hosts: !person.can_schedule_hosts } })}>
-                      {person.can_schedule_hosts ? "Not a host coordinator" : "Make host coordinator"}
+                      {person.can_schedule_hosts ? "Remove host coordinator role" : "Make host coordinator"}
                     </button>
                     <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Writes and posts the treasurer's reports"
                       onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_keep_treasury: !person.can_keep_treasury } })}>
-                      {person.can_keep_treasury ? "Not treasurer" : "Make treasurer"}
+                      {person.can_keep_treasury ? "Remove treasurer role" : "Make treasurer"}
                     </button>
                     <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Can host or co-host: reads the format kept for hosts and hears when a host won't be there"
                       onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_host: !person.can_host } })}>
-                      {person.can_host ? "Can't host" : "Can host"}
+                      {person.can_host ? "Remove from hosts" : "Add to hosts"}
                     </button>
                     <button type="button" className={`${dangerButton} !px-2 !py-1 !text-xs`}
                       onClick={() => window.confirm(`Remove ${person.name} from ${group.title}?`) && call(`/memberships/${person.membership_id}`, { method: "DELETE" })}>

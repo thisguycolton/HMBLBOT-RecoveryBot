@@ -9,7 +9,7 @@ icon: gavel
 
 ## Record a decision (record keepers)
 
-1. Open **Conscience > Decisions** and choose **Record a motion**.
+1. Open **Group conscience > Decisions** and choose **Record a motion**.
 2. Pick the **kind of motion**: a main motion, an amendment, to table, to refer, to reconsider…
 3. Fill in who moved and seconded it, how it was voted, and the counts.
 4. Link it to the business meeting and agenda item it came from.

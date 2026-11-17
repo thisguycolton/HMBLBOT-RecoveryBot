@@ -11,11 +11,11 @@ A group's **Home** is what newcomers see first: when you meet, how to join, and 
 
 - The group's name, description, time zone, member count and website.
 - **Next meeting** with a countdown ("in 1 day 11h"), a **Join** button and the meeting passcode with a copy button.
-- Tabs for **Home**, **Meetings**, **Events**, **Readings**, **Literature**, **Group conscience** and **Members**.
+- The group menu as tabs: **Home**, **Meetings**, **Chat**, **Events**, **Group conscience**, **Reading** and **Members**. It's the same list as the group's folder in the sidebar. People with a role also get **Host tools**, **Dashboard** and **Manage** after a divider. Visitors see the members' tabs with a lock.
 - Every meeting the group holds, with a map for groups that meet in person.
 - A **Join us** card, upcoming events (**Coming up**) and the group's timeline.
 
-Members also see buttons for what they can do: **Dashboard**, **Edit page** and **Settings** for admins, **Leave** and **Share** for everyone.
+Members see a badge with their roles (for example **Record keeper · Can host**), plus **Leave** and **Share**. Admins change the page with **Edit the group page** at the top of Home.
 
 ## What a newcomer sees
 
