@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { showToast } from "../lib/toast";
 import LavaOverlay from "./LavaOverlay";
 import axios from "axios";
 import { Copy, Hash, Shuffle, History, UserCheck, Settings } from 'lucide-react';
@@ -16,7 +17,18 @@ function formatTime(seconds) {
   return `${min}:${sec}`;
 }
 
+// /topicificator?live=CODE: the page follows a HostDeck (the code of its hosting session) instead of
+// running on its own. The hosts draw topics and set the timer from their deck and this window,
+// shared in Zoom, shows them. It asks every couple of seconds and counts down on the server's clock.
+const LIVE_POLL_MS = 2000;
+const liveCodeFromUrl = () => {
+  try { return new URLSearchParams(window.location.search).get("live")?.trim() || null; } catch { return null; }
+};
+
 function TopicificatorApp() {
+  const liveCode = useMemo(liveCodeFromUrl, []);
+  const [liveError, setLiveError] = useState(null);
+  const [liveState, setLiveState] = useState(null); // the last answer, and how far the server's clock is from ours
   const [topicSets, setTopicSets] = useState([]);
   const [selectedTopicSetId, setSelectedTopicSetId] = useState(null);
   const [topic, setTopic] = useState(null);
@@ -64,19 +76,40 @@ const handleCopyTopics = () => {
   // Strip the HTML for plain-text fallback
   const contentText = contentHTML.replace(/<\/?[^>]+(>|$)/g, "");
 
-  navigator.clipboard
-    .write([
+  // Formatted where the browser allows it; phones that refuse get the plain words, and old
+  // ones the hidden-textarea way, so the button always copies something
+  const plain = () => {
+    if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(contentText);
+    const box = document.createElement("textarea");
+    box.value = contentText;
+    box.setAttribute("readonly", "");
+    box.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(box);
+    box.select();
+    const ok = document.execCommand("copy");
+    box.remove();
+    return ok ? Promise.resolve() : Promise.reject(new Error("copy refused"));
+  };
+  const rich = () =>
+    navigator.clipboard.write([
       new ClipboardItem({
         "text/html": new Blob([contentHTML], { type: "text/html" }),
         "text/plain": new Blob([contentText], { type: "text/plain" }),
       }),
-    ])
-    .then(() => {})
-    .catch((err) => {});
+    ]);
+  let copying;
+  try {
+    copying = typeof ClipboardItem === "function" && navigator.clipboard?.write ? rich().catch(plain) : plain();
+  } catch {
+    copying = Promise.resolve().then(plain);
+  }
+  copying
+    .then(() => showToast("Topics copied.", { tone: "success" }))
+    .catch(() => showToast("Couldn't copy the topics on this device.", { tone: "error" }));
 };
 
   useEffect(() => {
-    if (timer === 0 || timer === null) return;
+    if (liveCode || timer === 0 || timer === null) return;
     const interval = setInterval(() => {
       setTimer((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
@@ -87,6 +120,41 @@ const handleCopyTopics = () => {
     setMode(mode);
     setTimer(timerDuration);
   };
+
+// Live mode: follow the deck
+useEffect(() => {
+  if (!liveCode) return undefined;
+  let gone = false;
+  const poll = () => axios.get(`${window.location.origin}/api/topicificator_links/${encodeURIComponent(liveCode)}`)
+    .then((res) => {
+      if (gone) return;
+      setLiveError(null);
+      setLiveState({ ...res.data, offset: Date.parse(res.data.server_now) - Date.now() });
+    })
+    .catch((err) => !gone && setLiveError(err.response?.status === 404 ? "That Topicificator link isn't right. Open it again from HostDeck." : "Can't reach HostDeck right now. Trying again…"));
+  poll();
+  const t = setInterval(poll, LIVE_POLL_MS);
+  return () => { gone = true; clearInterval(t); };
+}, [liveCode]);
+
+useEffect(() => {
+  if (!liveCode || !liveState) return undefined;
+  const apply = () => {
+    if (!liveState.active) { setTopic(null); setTimer(null); setHasStarted(false); return; }
+    const { seconds, started_at: startedAt } = liveState.timer;
+    setTimerDuration(seconds);
+    setTopic(liveState.topic || null);
+    setCoveredTopics(liveState.covered || []);
+    setMode(liveState.free ? "free" : "random");
+    setHasStarted(!!liveState.topic);
+    if (!startedAt) { setTimer(null); return; }
+    const elapsed = (Date.now() + liveState.offset - Date.parse(startedAt)) / 1000;
+    setTimer(Math.max(0, Math.ceil(seconds - Math.max(elapsed, 0))));
+  };
+  apply();
+  const t = setInterval(apply, 1000);
+  return () => clearInterval(t);
+}, [liveCode, liveState]);
 
 useEffect(() => {
   axios
@@ -181,7 +249,7 @@ const fetchTopicByNumber = async () => {
       </motion.div>
     )}
   </AnimatePresence>
-  <div className="fixed bottom-0 left-0 bg-transparent p-2 z-20">
+  <div className={`fixed bottom-0 left-0 bg-transparent p-2 z-20 ${liveCode ? "hidden" : ""}`}>
     <div className="flex flex-wrap gap-2 justify-center mt-4 md:bg-cyan-950/50 rounded-lg p-4 md:shadow-lg hidden md:block">
       <button
         onClick={() => setShowSettingsModal(true)}
@@ -191,7 +259,7 @@ const fetchTopicByNumber = async () => {
       </button>
     </div>
   </div>
-  <div className="fixed bottom-0 w-full bg-transparent p-2 flex justify-center gap-4 z-5">
+  <div className={`fixed bottom-0 w-full bg-transparent p-2 flex justify-center gap-4 z-5 ${liveCode ? "hidden" : ""}`}>
   <div className="flex flex-wrap gap-2 justify-center mt-4 bg-cyan-950/50 rounded-lg p-4 shadow-lg">
 
     {/* Random Topic */}
@@ -254,43 +322,53 @@ const fetchTopicByNumber = async () => {
 </div>
     <div className="fixed inset-x-0 top-14 bottom-0 z-0 bg-neutral-50 dark:bg-gray-900 text-white flex items-center justify-center">
       <div
-  className="
+  className={`
     relative
     w-full
     h-full
-    md:h-auto
-    md:aspect-video
-    md:max-w-5xl
     bg-gray-800
-    md:rounded-lg
     overflow-hidden
     flex
     flex-col
     items-center
     justify-between
     px-0
-    md:px-6 py-0 md:py-8 mx-0 md:mx-auto shadow-lg
-  "
+    py-0
+    ${liveCode
+      ? ""
+      : "md:h-auto md:aspect-video md:max-w-5xl md:rounded-lg md:px-6 md:py-8 mx-0 md:mx-auto shadow-lg"}
+  `}
 >
         {/* Timer */}
         <LavaOverlay progress={(timerDuration - timer) / timerDuration} />
         {timer !== null && mode !== "free" && (
           <button
-            onClick={() => startTimer(mode)}
-            title="Restart Timer"
-            className="!text-2xl fw-bold !rounded-none !rounded-bl-lg !md:rounded-tr-lg shadow-md absolute top-0 end-0 w-30 text-center ttSans !bg-cyan-950/70 !p-3 hover:bg-cyan-950/90 transition"
+            onClick={() => !liveCode && startTimer(mode)}
+            title={liveCode ? "The host runs the timer from HostDeck" : "Restart Timer"}
+            className="!text-2xl fw-bold !rounded-none !rounded-bl-lg !md:rounded-tr-lg shadow-md absolute top-0 end-0 z-10 w-30 text-center ttSans !bg-cyan-950/70 !p-3 hover:bg-cyan-950/90 transition"
           >
             {formatTime(timer)}
           </button>
         )}
-        <div className="text-2xl fw-bold rounded-br-lg shadow-md absolute top-0 start-0 w-20 text-center ttSans bg-cyan-950/70 p-0">
+        {/* z-10 here and on the timer: on phones the topic below fills the whole stage (z-3) and
+            took every tap meant for these two */}
+        <div className="text-2xl fw-bold rounded-br-lg shadow-md absolute top-0 start-0 z-10 w-20 text-center ttSans bg-cyan-950/70 p-0">
           <button
+            type="button"
             onClick={handleCopyTopics}
+            aria-label="Copy the topics covered"
+            title="Copy the topics covered"
             className="!bg-transparent text-white px-4 py-3 rounded-none rounded-br-lg md:rounded-tl-lg hover:text-gray-200 transition-colors duration-300"
           >
             <Copy className="w-5 h-5" />
           </button>
         </div>
+
+        {liveCode && (
+          <div role="status" className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-cyan-950/70 px-4 py-1.5 text-sm ftSans text-gray-200">
+            {liveError || "Live: the host runs this from HostDeck"}
+          </div>
+        )}
 
         {/* Topic Display */}
         <div className="text-center px-2 md:px-4 flex-1 min-h-0 flex flex-col items-center justify-center z-3">
@@ -302,7 +380,7 @@ const fetchTopicByNumber = async () => {
           ) : (
             <>
               <div className="font-bold mb-4 ttSans text-3xl md:text-5xl">THE TOPICIFICATOR <span className="!text-cyan-500">9002</span></div>
-              <p className="text-2xl text-center! ftSans">Press a button to get started</p>
+              <p className="text-2xl text-center! ftSans">{liveCode ? "Waiting for the host to draw a topic" : "Press a button to get started"}</p>
             </>
           )}
         </div>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_16_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -56,6 +56,71 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.string "icon"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "admin_task_activities", force: :cascade do |t|
+    t.bigint "admin_task_id", null: false
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.text "body"
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["admin_task_id"], name: "index_admin_task_activities_on_admin_task_id"
+    t.index ["user_id"], name: "index_admin_task_activities_on_user_id"
+  end
+
+  create_table "admin_task_columns", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "kind", default: "doing", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "admin_tasks", force: :cascade do |t|
+    t.bigint "admin_task_column_id", null: false
+    t.integer "position", default: 0, null: false
+    t.string "title", null: false
+    t.text "notes"
+    t.jsonb "checklist", default: [], null: false
+    t.string "priority", default: "normal", null: false
+    t.date "due_on"
+    t.string "link_path"
+    t.bigint "creator_id"
+    t.bigint "assignee_id"
+    t.boolean "for_all_admins", default: false, null: false
+    t.datetime "completed_at"
+    t.bigint "completed_by_id"
+    t.datetime "archived_at"
+    t.date "due_reminded_on"
+    t.date "overdue_reminded_on"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "tags", default: [], null: false, array: true
+    t.index ["admin_task_column_id", "position"], name: "index_admin_tasks_on_admin_task_column_id_and_position"
+    t.index ["admin_task_column_id"], name: "index_admin_tasks_on_admin_task_column_id"
+    t.index ["assignee_id"], name: "index_admin_tasks_on_assignee_id"
+    t.index ["completed_by_id"], name: "index_admin_tasks_on_completed_by_id"
+    t.index ["creator_id"], name: "index_admin_tasks_on_creator_id"
+    t.index ["due_on"], name: "index_admin_tasks_on_due_on", where: "(completed_at IS NULL)"
+  end
+
+  create_table "agenda_items", force: :cascade do |t|
+    t.bigint "business_meeting_id", null: false
+    t.bigint "submitted_by_id"
+    t.integer "position", default: 0, null: false
+    t.string "kind", default: "new_business", null: false
+    t.string "title", null: false
+    t.text "details"
+    t.string "status", default: "on_agenda", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "motion_id"
+    t.string "brought_by"
+    t.index ["business_meeting_id"], name: "index_agenda_items_on_business_meeting_id"
+    t.index ["motion_id"], name: "index_agenda_items_on_motion_id"
+    t.index ["submitted_by_id"], name: "index_agenda_items_on_submitted_by_id"
   end
 
   create_table "ahoy_events", force: :cascade do |t|
@@ -121,8 +186,36 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.string "language", default: "en", null: false
     t.jsonb "meta", default: {}, null: false
     t.string "cover_color"
+    t.boolean "members_only", default: false, null: false
     t.index ["slug"], name: "index_books_on_slug", unique: true
     t.index ["work_key", "edition", "language"], name: "index_books_on_work_key_and_edition_and_language", unique: true
+  end
+
+  create_table "business_meetings", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.bigint "event_id"
+    t.bigint "meeting_id"
+    t.date "held_on", null: false
+    t.datetime "starts_at"
+    t.string "status", default: "planned", null: false
+    t.string "chair_name"
+    t.string "secretary_name"
+    t.integer "attendance_count"
+    t.text "minutes"
+    t.string "minutes_status", default: "draft", null: false
+    t.datetime "minutes_posted_at"
+    t.datetime "minutes_approved_at"
+    t.string "visibility", default: "members", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "called_to_order_at"
+    t.datetime "adjourned_at"
+    t.index ["created_by_id"], name: "index_business_meetings_on_created_by_id"
+    t.index ["event_id"], name: "index_business_meetings_on_event_id"
+    t.index ["group_id", "held_on"], name: "index_business_meetings_on_group_id_and_held_on"
+    t.index ["group_id"], name: "index_business_meetings_on_group_id"
+    t.index ["meeting_id"], name: "index_business_meetings_on_meeting_id"
   end
 
   create_table "chapters", force: :cascade do |t|
@@ -145,6 +238,208 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.index ["book_id"], name: "index_chapters_on_book_id"
   end
 
+  create_table "chat_channels", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.string "name", null: false
+    t.string "topic", default: "", null: false
+    t.string "access_roles", default: ["members"], null: false, array: true
+    t.bigint "access_user_ids", default: [], null: false, array: true
+    t.boolean "archived", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.bigint "created_by_id"
+    t.datetime "last_message_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "group_id, lower((name)::text)", name: "index_chat_channels_on_group_and_name", unique: true
+    t.index ["created_by_id"], name: "index_chat_channels_on_created_by_id"
+    t.index ["group_id"], name: "index_chat_channels_on_group_id"
+  end
+
+  create_table "chat_messages", force: :cascade do |t|
+    t.bigint "chat_channel_id", null: false
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.datetime "edited_at"
+    t.jsonb "mentions", default: {}, null: false
+    t.bigint "mentioned_user_ids", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "reply_to_id"
+    t.datetime "pinned_at"
+    t.bigint "pinned_by_id"
+    t.bigint "moved_from_channel_id"
+    t.datetime "moved_at"
+    t.jsonb "link_preview"
+    t.bigint "document_ids", default: [], null: false, array: true
+    t.index ["chat_channel_id", "id"], name: "index_chat_messages_on_chat_channel_id_and_id"
+    t.index ["chat_channel_id", "pinned_at"], name: "index_chat_messages_pinned", where: "(pinned_at IS NOT NULL)"
+    t.index ["pinned_by_id"], name: "index_chat_messages_on_pinned_by_id"
+    t.index ["reply_to_id"], name: "index_chat_messages_on_reply_to_id"
+    t.index ["user_id"], name: "index_chat_messages_on_user_id"
+  end
+
+  create_table "chat_reactions", force: :cascade do |t|
+    t.bigint "chat_message_id", null: false
+    t.bigint "user_id", null: false
+    t.string "emoji", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chat_message_id", "emoji", "user_id"], name: "index_chat_reactions_on_chat_message_id_and_emoji_and_user_id", unique: true
+    t.index ["user_id"], name: "index_chat_reactions_on_user_id"
+  end
+
+  create_table "chat_reads", force: :cascade do |t|
+    t.bigint "chat_channel_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "last_read_message_id", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chat_channel_id", "user_id"], name: "index_chat_reads_on_chat_channel_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_chat_reads_on_user_id"
+  end
+
+  create_table "chip_awards", force: :cascade do |t|
+    t.bigint "group_id"
+    t.bigint "given_by_id"
+    t.bigint "user_id"
+    t.string "email", null: false
+    t.string "milestone_key", null: false
+    t.integer "years"
+    t.date "on", null: false
+    t.text "note", default: "", null: false
+    t.string "claim_token", null: false
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "design"
+    t.bigint "chip_edition_id"
+    t.datetime "celebrated_at"
+    t.datetime "revoked_at"
+    t.index ["chip_edition_id"], name: "index_chip_awards_on_chip_edition_id"
+    t.index ["claim_token"], name: "index_chip_awards_on_claim_token", unique: true
+    t.index ["email"], name: "index_chip_awards_on_email"
+    t.index ["given_by_id"], name: "index_chip_awards_on_given_by_id"
+    t.index ["group_id"], name: "index_chip_awards_on_group_id"
+    t.index ["user_id"], name: "index_chip_awards_on_user_id"
+  end
+
+  create_table "chip_design_versions", force: :cascade do |t|
+    t.string "owner_type", null: false
+    t.bigint "owner_id", null: false
+    t.jsonb "design", null: false
+    t.datetime "created_at", null: false
+    t.index ["owner_type", "owner_id", "created_at"], name: "idx_on_owner_type_owner_id_created_at_7d14f4e150"
+  end
+
+  create_table "chip_edition_chips", force: :cascade do |t|
+    t.bigint "chip_edition_id", null: false
+    t.bigint "user_id"
+    t.bigint "chip_award_id"
+    t.string "slot", null: false
+    t.string "milestone_key"
+    t.integer "years"
+    t.integer "count"
+    t.date "earned_on", null: false
+    t.integer "serial", null: false
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "revoked_at"
+    t.index ["chip_award_id"], name: "index_chip_edition_chips_on_chip_award_id"
+    t.index ["chip_edition_id", "serial"], name: "index_chip_edition_chips_on_chip_edition_id_and_serial", unique: true
+    t.index ["chip_edition_id", "user_id", "slot"], name: "index_edition_chips_once_per_slot", unique: true, where: "(chip_award_id IS NULL)"
+    t.index ["chip_edition_id"], name: "index_chip_edition_chips_on_chip_edition_id"
+    t.index ["user_id"], name: "index_chip_edition_chips_on_user_id"
+  end
+
+  create_table "chip_editions", force: :cascade do |t|
+    t.bigint "group_id"
+    t.bigint "created_by_id"
+    t.string "name", null: false
+    t.string "kind", default: "milestone", null: false
+    t.jsonb "design", default: {}, null: false
+    t.date "starts_on", null: false
+    t.date "ends_on", null: false
+    t.string "window", default: "custom", null: false
+    t.string "milestones", default: [], null: false, array: true
+    t.bigint "meeting_ids", default: [], null: false, array: true
+    t.integer "target_count"
+    t.string "how_many", default: "everyone", null: false
+    t.integer "limit"
+    t.boolean "numbered", default: true, null: false
+    t.datetime "published_at"
+    t.datetime "locked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_chip_editions_on_created_by_id"
+    t.index ["group_id"], name: "index_chip_editions_on_group_id"
+  end
+
+  create_table "chip_revocations", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "revoked_by_id"
+    t.string "chip_id", null: false
+    t.string "slot", null: false
+    t.string "label", default: "", null: false
+    t.jsonb "chip", default: {}, null: false
+    t.string "replacement_id"
+    t.jsonb "replacement"
+    t.text "note", default: "", null: false
+    t.integer "posts_swapped", default: 0, null: false
+    t.integer "posts_hidden", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["revoked_by_id"], name: "index_chip_revocations_on_revoked_by_id"
+    t.index ["user_id"], name: "index_chip_revocations_on_user_id"
+  end
+
+  create_table "chip_template_versions", force: :cascade do |t|
+    t.bigint "chip_template_id", null: false
+    t.integer "number", null: false
+    t.jsonb "art", default: {}, null: false
+    t.jsonb "palettes", default: {}, null: false
+    t.jsonb "defaults", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chip_template_id", "number"], name: "index_chip_template_versions_on_chip_template_id_and_number", unique: true
+    t.index ["chip_template_id"], name: "index_chip_template_versions_on_chip_template_id"
+  end
+
+  create_table "chip_templates", force: :cascade do |t|
+    t.bigint "group_id"
+    t.bigint "created_by_id"
+    t.string "title", null: false
+    t.string "fits", default: "round", null: false
+    t.string "status", default: "draft", null: false
+    t.string "source", default: "", null: false
+    t.string "license", default: "", null: false
+    t.boolean "hidden", default: false, null: false
+    t.jsonb "art", default: {}, null: false
+    t.jsonb "palettes", default: {}, null: false
+    t.jsonb "defaults", default: {}, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_chip_templates_on_created_by_id"
+    t.index ["group_id"], name: "index_chip_templates_on_group_id"
+  end
+
+  create_table "contact_requests", force: :cascade do |t|
+    t.string "name"
+    t.string "email", null: false
+    t.string "topic", default: "general", null: false
+    t.text "message", null: false
+    t.bigint "user_id"
+    t.string "status", default: "open", null: false
+    t.datetime "handled_at"
+    t.bigint "handled_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["handled_by_id"], name: "index_contact_requests_on_handled_by_id"
+    t.index ["status", "created_at"], name: "index_contact_requests_on_status_and_created_at"
+    t.index ["user_id"], name: "index_contact_requests_on_user_id"
+  end
+
   create_table "court_verifications", force: :cascade do |t|
     t.string "respondent_name", null: false
     t.string "respondent_email", null: false
@@ -160,6 +455,121 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.index ["meeting_at"], name: "index_court_verifications_on_meeting_at"
     t.index ["meeting_id"], name: "index_court_verifications_on_meeting_id"
     t.index ["respondent_email"], name: "index_court_verifications_on_respondent_email"
+  end
+
+  create_table "daily_story_posts", force: :cascade do |t|
+    t.date "on", null: false
+    t.string "status", null: false
+    t.string "chapter_title"
+    t.integer "clips", default: 0, null: false
+    t.jsonb "facebook_ids", default: [], null: false
+    t.jsonb "instagram_ids", default: [], null: false
+    t.text "error"
+    t.string "triggered_by", null: false
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["on"], name: "index_daily_story_posts_on_on"
+    t.index ["user_id"], name: "index_daily_story_posts_on_user_id"
+  end
+
+  create_table "deck_templates", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.string "name", null: false
+    t.string "description"
+    t.string "purpose", default: "general", null: false
+    t.jsonb "arrangement", default: {}, null: false
+    t.string "gallery", default: "none", null: false
+    t.bigint "created_by_id"
+    t.bigint "reviewed_by_id"
+    t.datetime "published_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_deck_templates_on_created_by_id"
+    t.index ["gallery"], name: "index_deck_templates_on_gallery"
+    t.index ["group_id"], name: "index_deck_templates_on_group_id"
+    t.index ["reviewed_by_id"], name: "index_deck_templates_on_reviewed_by_id"
+  end
+
+  create_table "decks", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.string "name", null: false
+    t.string "purpose", default: "general", null: false
+    t.bigint "script_document_id"
+    t.jsonb "arrangement"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "intro_title"
+    t.string "share_code"
+    t.string "guest_access", default: "off", null: false
+    t.boolean "guest_script", default: true, null: false
+    t.index ["created_by_id"], name: "index_decks_on_created_by_id"
+    t.index ["group_id"], name: "index_decks_on_group_id"
+    t.index ["script_document_id"], name: "index_decks_on_script_document_id"
+    t.index ["share_code"], name: "index_decks_on_share_code", unique: true
+  end
+
+  create_table "device_tokens", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "token", null: false
+    t.string "platform", null: false
+    t.string "app_version"
+    t.datetime "last_sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token"], name: "index_device_tokens_on_token", unique: true
+    t.index ["user_id"], name: "index_device_tokens_on_user_id"
+  end
+
+  create_table "doc_page_versions", force: :cascade do |t|
+    t.bigint "doc_page_id", null: false
+    t.string "title", null: false
+    t.text "body", default: "", null: false
+    t.bigint "saved_by_id"
+    t.datetime "created_at", null: false
+    t.index ["doc_page_id"], name: "index_doc_page_versions_on_doc_page_id"
+    t.index ["saved_by_id"], name: "index_doc_page_versions_on_saved_by_id"
+  end
+
+  create_table "doc_pages", force: :cascade do |t|
+    t.bigint "doc_section_id", null: false
+    t.string "slug", null: false
+    t.string "title", null: false
+    t.text "summary"
+    t.string "icon"
+    t.text "body", default: "", null: false
+    t.integer "position", default: 0, null: false
+    t.string "status", default: "published", null: false
+    t.string "audience", default: "everyone", null: false
+    t.string "path_alias"
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "featured", default: false, null: false
+    t.datetime "published_at"
+    t.string "news_kind"
+    t.string "cover_image"
+    t.index ["doc_section_id", "slug"], name: "index_doc_pages_on_doc_section_id_and_slug", unique: true
+    t.index ["doc_section_id"], name: "index_doc_pages_on_doc_section_id"
+    t.index ["featured", "published_at"], name: "index_doc_pages_on_featured_and_published_at"
+    t.index ["path_alias"], name: "index_doc_pages_on_path_alias", unique: true, where: "(path_alias IS NOT NULL)"
+    t.index ["reviewed_by_id"], name: "index_doc_pages_on_reviewed_by_id"
+    t.index ["updated_by_id"], name: "index_doc_pages_on_updated_by_id"
+  end
+
+  create_table "doc_sections", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "title", null: false
+    t.text "summary"
+    t.string "icon"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "kind", default: "guides", null: false
+    t.index ["slug"], name: "index_doc_sections_on_slug", unique: true
   end
 
   create_table "event_collaborators", force: :cascade do |t|
@@ -225,6 +635,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.index ["token"], name: "index_events_on_token", unique: true
   end
 
+  create_table "facebook_page_connections", force: :cascade do |t|
+    t.string "page_id"
+    t.string "page_name"
+    t.text "page_token"
+    t.string "instagram_id"
+    t.string "instagram_username"
+    t.text "page_choices"
+    t.bigint "connected_by_id"
+    t.datetime "connected_at"
+    t.boolean "enabled", default: false, null: false
+    t.boolean "instagram_enabled", default: false, null: false
+    t.string "post_at", default: "06:00", null: false
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.string "look", default: "night", null: false
+    t.date "posted_on"
+    t.datetime "posting_started_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connected_by_id"], name: "index_facebook_page_connections_on_connected_by_id"
+  end
+
   create_table "follows", force: :cascade do |t|
     t.bigint "follower_id", null: false
     t.bigint "followed_id", null: false
@@ -233,6 +664,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.index ["followed_id"], name: "index_follows_on_followed_id"
     t.index ["follower_id", "followed_id"], name: "index_follows_on_follower_id_and_followed_id", unique: true
     t.index ["follower_id"], name: "index_follows_on_follower_id"
+  end
+
+  create_table "gratitude_lists", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.date "on", null: false
+    t.string "items", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "on"], name: "index_gratitude_lists_on_user_id_and_on", unique: true
+    t.index ["user_id"], name: "index_gratitude_lists_on_user_id"
+  end
+
+  create_table "group_blocks", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "blocked_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["blocked_by_id"], name: "index_group_blocks_on_blocked_by_id"
+    t.index ["group_id", "user_id"], name: "index_group_blocks_on_group_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_group_blocks_on_user_id"
   end
 
   create_table "group_books", force: :cascade do |t|
@@ -246,6 +698,100 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.index ["group_id"], name: "index_group_books_on_group_id"
   end
 
+  create_table "group_document_comments", force: :cascade do |t|
+    t.bigint "group_document_id", null: false
+    t.bigint "user_id"
+    t.bigint "parent_id"
+    t.bigint "version_id"
+    t.text "body", null: false
+    t.text "quote"
+    t.string "prefix"
+    t.string "suffix"
+    t.datetime "resolved_at"
+    t.bigint "resolved_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_document_id"], name: "index_group_document_comments_on_group_document_id"
+    t.index ["parent_id"], name: "index_group_document_comments_on_parent_id"
+    t.index ["resolved_by_id"], name: "index_group_document_comments_on_resolved_by_id"
+    t.index ["user_id"], name: "index_group_document_comments_on_user_id"
+    t.index ["version_id"], name: "index_group_document_comments_on_version_id"
+  end
+
+  create_table "group_document_live_updates", force: :cascade do |t|
+    t.bigint "group_document_id", null: false
+    t.bigint "user_id"
+    t.bigint "seq", null: false
+    t.binary "data", null: false
+    t.datetime "created_at", null: false
+    t.index ["group_document_id", "seq"], name: "index_group_document_live_updates_on_group_document_id_and_seq", unique: true
+    t.index ["user_id"], name: "index_group_document_live_updates_on_user_id"
+  end
+
+  create_table "group_document_templates", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.string "kind", null: false
+    t.string "mark", default: "none", null: false
+    t.string "header_text"
+    t.string "subheader_text"
+    t.string "footer_text"
+    t.string "align", default: "center", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id", "kind"], name: "index_group_document_templates_on_group_id_and_kind", unique: true
+    t.index ["group_id"], name: "index_group_document_templates_on_group_id"
+  end
+
+  create_table "group_document_versions", force: :cascade do |t|
+    t.bigint "group_document_id", null: false
+    t.bigint "user_id"
+    t.string "title", null: false
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "body_format", default: "html", null: false
+    t.integer "number", null: false
+    t.string "message", limit: 280
+    t.string "kind", default: "saved", null: false
+    t.bigint "restored_from_id"
+    t.bigint "contributor_ids", default: [], null: false, array: true
+    t.integer "words_added", default: 0, null: false
+    t.integer "words_removed", default: 0, null: false
+    t.string "sections_changed", default: [], null: false, array: true
+    t.index ["group_document_id", "number"], name: "index_group_document_versions_on_group_document_id_and_number", unique: true
+    t.index ["group_document_id"], name: "index_group_document_versions_on_group_document_id"
+    t.index ["user_id"], name: "index_group_document_versions_on_user_id"
+  end
+
+  create_table "group_documents", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.string "title", null: false
+    t.string "kind", default: "other", null: false
+    t.text "body"
+    t.string "visibility", default: "members", null: false
+    t.string "status", default: "current", null: false
+    t.boolean "pinned", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "approved_by_motion_id"
+    t.string "body_format", default: "html", null: false
+    t.binary "live_state"
+    t.bigint "live_state_seq", default: 0, null: false
+    t.bigint "live_seq", default: 0, null: false
+    t.integer "live_epoch", default: 0, null: false
+    t.boolean "live_unversioned", default: false, null: false
+    t.bigint "live_contributor_ids", default: [], null: false, array: true
+    t.string "comment_mode", default: "off", null: false
+    t.index ["approved_by_motion_id"], name: "index_group_documents_on_approved_by_motion_id"
+    t.index ["created_by_id"], name: "index_group_documents_on_created_by_id"
+    t.index ["group_id", "kind", "position"], name: "index_group_documents_on_group_id_and_kind_and_position"
+    t.index ["group_id"], name: "index_group_documents_on_group_id"
+    t.index ["updated_by_id"], name: "index_group_documents_on_updated_by_id"
+  end
+
   create_table "group_memberships", force: :cascade do |t|
     t.bigint "group_id", null: false
     t.bigint "user_id", null: false
@@ -253,6 +799,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.string "status", default: "active", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "can_keep_records", default: false, null: false
+    t.boolean "can_schedule_hosts", default: false, null: false
+    t.boolean "can_keep_treasury", default: false, null: false
+    t.boolean "can_host", default: false, null: false
+    t.boolean "host_slots_only", default: false, null: false
+    t.bigint "host_meeting_ids", default: [], null: false, array: true
     t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
     t.index ["group_id"], name: "index_group_memberships_on_group_id"
     t.index ["user_id"], name: "index_group_memberships_on_user_id"
@@ -267,6 +819,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_group_page_templates_on_key", unique: true
     t.index ["updated_by_id"], name: "index_group_page_templates_on_updated_by_id"
+  end
+
+  create_table "group_step_tools", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.string "name", null: false
+    t.integer "step", null: false
+    t.string "tool_key"
+    t.text "summary"
+    t.jsonb "definition", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_group_step_tools_on_created_by_id"
+    t.index ["group_id"], name: "index_group_step_tools_on_group_id"
   end
 
   create_table "groups", force: :cascade do |t|
@@ -288,9 +854,31 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.string "court_email_reply_to"
     t.string "page_layout", default: "main_side", null: false
     t.jsonb "page_blocks"
+    t.integer "quorum_count"
+    t.integer "quorum_percent"
+    t.boolean "follows_roberts_rules", default: true, null: false
+    t.boolean "show_hosts_publicly", default: true, null: false
+    t.string "deck_editors", default: ["host_coordinators", "record_keepers"], null: false, array: true
+    t.jsonb "chip_design"
+    t.string "chat_creator_roles", default: [], null: false, array: true
+    t.bigint "chat_creator_user_ids", default: [], null: false, array: true
+    t.boolean "show_sponsors", default: true, null: false
+    t.boolean "search_listed", default: true, null: false
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
+  end
+
+  create_table "host_chat_postings", force: :cascade do |t|
+    t.bigint "hosting_kit_id", null: false
+    t.string "title", null: false
+    t.string "icon"
+    t.integer "minute", default: 0, null: false
+    t.text "body", default: "", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hosting_kit_id"], name: "index_host_chat_postings_on_hosting_kit_id"
   end
 
   create_table "host_props", force: :cascade do |t|
@@ -300,6 +888,36 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["hostificator_id"], name: "index_host_props_on_hostificator_id"
+  end
+
+  create_table "host_script_templates", force: :cascade do |t|
+    t.string "key"
+    t.string "name", null: false
+    t.string "description"
+    t.text "body"
+    t.boolean "hidden", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_host_script_templates_on_key", unique: true, where: "(key IS NOT NULL)"
+    t.index ["updated_by_id"], name: "index_host_script_templates_on_updated_by_id"
+  end
+
+  create_table "host_sub_requests", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.bigint "requested_by_id"
+    t.bigint "filled_by_id"
+    t.string "role", null: false
+    t.date "on", null: false
+    t.string "note"
+    t.string "status", default: "open", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["filled_by_id"], name: "index_host_sub_requests_on_filled_by_id"
+    t.index ["meeting_id", "role", "on", "status"], name: "idx_on_meeting_id_role_on_status_9ed0303692"
+    t.index ["meeting_id"], name: "index_host_sub_requests_on_meeting_id"
+    t.index ["requested_by_id"], name: "index_host_sub_requests_on_requested_by_id"
   end
 
   create_table "host_votes", force: :cascade do |t|
@@ -321,12 +939,174 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "hosting_kits", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "meeting_id"
+    t.bigint "script_document_id"
+    t.jsonb "readings", default: [], null: false
+    t.text "activity_anchor"
+    t.jsonb "service_roles"
+    t.boolean "public_postings", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "allowed_values"
+    t.string "intro_title"
+    t.index ["group_id"], name: "index_hosting_kits_on_group_id"
+    t.index ["group_id"], name: "index_hosting_kits_one_default", unique: true, where: "(meeting_id IS NULL)"
+    t.index ["meeting_id"], name: "index_hosting_kits_one_per_meeting", unique: true, where: "(meeting_id IS NOT NULL)"
+    t.index ["script_document_id"], name: "index_hosting_kits_on_script_document_id"
+  end
+
+  create_table "hosting_layouts", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "meeting_id"
+    t.jsonb "arrangement", default: {}, null: false
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id"], name: "index_hosting_layouts_on_group_default", unique: true, where: "(meeting_id IS NULL)"
+    t.index ["group_id"], name: "index_hosting_layouts_on_group_id"
+    t.index ["meeting_id"], name: "index_hosting_layouts_on_meeting_id", unique: true
+    t.index ["updated_by_id"], name: "index_hosting_layouts_on_updated_by_id"
+  end
+
+  create_table "hosting_presences", force: :cascade do |t|
+    t.bigint "hosting_session_id", null: false
+    t.bigint "user_id", null: false
+    t.string "activity"
+    t.integer "section_index"
+    t.datetime "last_seen_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hosting_session_id", "user_id"], name: "index_hosting_presences_on_hosting_session_id_and_user_id", unique: true
+    t.index ["hosting_session_id"], name: "index_hosting_presences_on_hosting_session_id"
+    t.index ["user_id"], name: "index_hosting_presences_on_user_id"
+  end
+
+  create_table "hosting_sessions", force: :cascade do |t|
+    t.bigint "meeting_id"
+    t.date "on", null: false
+    t.integer "section_index", default: 0, null: false
+    t.jsonb "completed", default: [], null: false
+    t.jsonb "posted", default: {}, null: false
+    t.jsonb "log", default: [], null: false
+    t.jsonb "activity"
+    t.jsonb "service", default: {}, null: false
+    t.jsonb "milestones", default: [], null: false
+    t.datetime "timer_started_at"
+    t.integer "timer_banked", default: 0, null: false
+    t.integer "version", default: 0, null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "deck_id"
+    t.jsonb "block_state", default: {}, null: false
+    t.datetime "topicificator_seen_at"
+    t.index ["code"], name: "index_hosting_sessions_on_code", unique: true
+    t.index ["deck_id", "on"], name: "index_hosting_sessions_on_deck_id_and_on", unique: true
+    t.index ["meeting_id", "on"], name: "index_hosting_sessions_on_meeting_id_and_on", unique: true
+    t.index ["meeting_id"], name: "index_hosting_sessions_on_meeting_id"
+    t.check_constraint "(meeting_id IS NULL) <> (deck_id IS NULL)", name: "hosting_sessions_meeting_or_deck"
+  end
+
   create_table "icons", force: :cascade do |t|
     t.string "name"
     t.string "file_path"
     t.string "category"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "intergroup_follows", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "group_name", null: false
+    t.string "oiaa_slug", null: false
+    t.datetime "notified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_name"], name: "index_intergroup_follows_on_group_name"
+    t.index ["user_id", "group_name"], name: "index_intergroup_follows_on_user_id_and_group_name", unique: true
+    t.index ["user_id"], name: "index_intergroup_follows_on_user_id"
+  end
+
+  create_table "language_rules", force: :cascade do |t|
+    t.string "kind", null: false
+    t.string "term", null: false
+    t.string "note"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_language_rules_on_created_by_id"
+    t.index ["kind", "term"], name: "index_language_rules_on_kind_and_term", unique: true
+  end
+
+  create_table "meeting_directories", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "key", null: false
+    t.string "feed_url"
+    t.string "website"
+    t.string "time_zone", default: "America/Phoenix", null: false
+    t.datetime "imported_at"
+    t.bigint "imported_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "auto_refresh", default: true, null: false
+    t.datetime "refresh_started_at"
+    t.datetime "refreshed_at"
+    t.string "refresh_status"
+    t.text "refresh_error"
+    t.jsonb "refresh_result", default: {}, null: false
+    t.index ["imported_by_id"], name: "index_meeting_directories_on_imported_by_id"
+    t.index ["key"], name: "index_meeting_directories_on_key", unique: true
+  end
+
+  create_table "meeting_host_covers", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.bigint "user_id"
+    t.string "role", null: false
+    t.string "name", null: false
+    t.date "on", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_id", "role", "on"], name: "index_meeting_host_covers_on_meeting_id_and_role_and_on", unique: true
+    t.index ["meeting_id"], name: "index_meeting_host_covers_on_meeting_id"
+    t.index ["user_id"], name: "index_meeting_host_covers_on_user_id"
+  end
+
+  create_table "meeting_host_reminders", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "meeting_id", null: false
+    t.string "role", null: false
+    t.date "on", null: false
+    t.datetime "created_at", null: false
+    t.index ["meeting_id"], name: "index_meeting_host_reminders_on_meeting_id"
+    t.index ["user_id", "meeting_id", "role", "on"], name: "index_meeting_host_reminders_once", unique: true
+    t.index ["user_id"], name: "index_meeting_host_reminders_on_user_id"
+  end
+
+  create_table "meeting_hosts", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.bigint "user_id"
+    t.string "role", null: false
+    t.string "name", null: false
+    t.date "starts_on", null: false
+    t.date "ends_on"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_id", "role", "starts_on"], name: "index_meeting_hosts_on_meeting_id_and_role_and_starts_on"
+    t.index ["meeting_id"], name: "index_meeting_hosts_on_meeting_id"
+    t.index ["user_id"], name: "index_meeting_hosts_on_user_id"
+  end
+
+  create_table "meeting_joins", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "meeting_id", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_id"], name: "index_meeting_joins_on_meeting_id"
+    t.index ["user_id", "meeting_id", "starts_at"], name: "index_meeting_joins_on_user_id_and_meeting_id_and_starts_at", unique: true
+    t.index ["user_id"], name: "index_meeting_joins_on_user_id"
   end
 
   create_table "meetings", force: :cascade do |t|
@@ -357,8 +1137,76 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.string "oiaa_url"
     t.datetime "oiaa_synced_at"
     t.boolean "oiaa_missing", default: false, null: false
+    t.jsonb "chip_design"
+    t.decimal "latitude", precision: 9, scale: 6
+    t.decimal "longitude", precision: 9, scale: 6
     t.index ["group_id"], name: "index_meetings_on_group_id"
     t.index ["oiaa_slug"], name: "index_meetings_on_oiaa_slug"
+  end
+
+  create_table "motions", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.string "title", null: false
+    t.text "text"
+    t.string "moved_by_name"
+    t.string "seconded_by_name"
+    t.string "status", default: "passed", null: false
+    t.integer "votes_for"
+    t.integer "votes_against"
+    t.integer "abstentions"
+    t.text "minority_opinion"
+    t.date "decided_on"
+    t.string "category", default: "other", null: false
+    t.bigint "supersedes_id"
+    t.string "visibility", default: "members", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "business_meeting_id"
+    t.bigint "agenda_item_id"
+    t.string "kind", default: "main", null: false
+    t.bigint "parent_id"
+    t.string "vote_method"
+    t.string "required_vote"
+    t.boolean "previous_notice", default: false, null: false
+    t.string "committee"
+    t.string "postponed_to"
+    t.text "amended_text"
+    t.text "note"
+    t.boolean "needs_review", default: false, null: false
+    t.boolean "ignore_rules", default: false, null: false
+    t.boolean "imported", default: false, null: false
+    t.boolean "one_time", default: false, null: false
+    t.index ["agenda_item_id"], name: "index_motions_on_agenda_item_id"
+    t.index ["business_meeting_id"], name: "index_motions_on_business_meeting_id"
+    t.index ["created_by_id"], name: "index_motions_on_created_by_id"
+    t.index ["group_id", "decided_on"], name: "index_motions_on_group_id_and_decided_on"
+    t.index ["group_id"], name: "index_motions_on_group_id"
+    t.index ["parent_id"], name: "index_motions_on_parent_id"
+    t.index ["supersedes_id"], name: "index_motions_on_supersedes_id"
+  end
+
+  create_table "note_comments", force: :cascade do |t|
+    t.bigint "timeline_note_id", null: false
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "mentions", default: {}, null: false
+    t.bigint "mentioned_user_ids", default: [], null: false, array: true
+    t.index ["timeline_note_id", "created_at"], name: "index_note_comments_on_timeline_note_id_and_created_at"
+    t.index ["user_id"], name: "index_note_comments_on_user_id"
+  end
+
+  create_table "note_reactions", force: :cascade do |t|
+    t.string "reactable_type", null: false
+    t.bigint "reactable_id", null: false
+    t.bigint "user_id", null: false
+    t.string "kind", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reactable_type", "reactable_id", "user_id"], name: "index_note_reactions_on_reactable_and_user", unique: true
+    t.index ["user_id"], name: "index_note_reactions_on_user_id"
   end
 
   create_table "notifications", force: :cascade do |t|
@@ -397,8 +1245,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.string "location"
     t.string "formatted_address"
     t.string "region"
+    t.bigint "meeting_directory_id"
+    t.string "source_slug"
+    t.text "location_notes"
+    t.datetime "hidden_at"
+    t.decimal "latitude", precision: 9, scale: 6
+    t.decimal "longitude", precision: 9, scale: 6
+    t.text "group_notes"
     t.index ["conference_id"], name: "index_oiaa_meetings_on_conference_id"
     t.index ["last_seen_at"], name: "index_oiaa_meetings_on_last_seen_at"
+    t.index ["meeting_directory_id"], name: "index_oiaa_meetings_on_meeting_directory_id"
     t.index ["slug"], name: "index_oiaa_meetings_on_slug", unique: true
   end
 
@@ -408,6 +1264,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.string "topic_title"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "label"
+    t.integer "position", default: 0, null: false
     t.index ["poll_id"], name: "index_options_on_poll_id"
   end
 
@@ -420,11 +1278,57 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.index ["book_id"], name: "index_pages_on_book_id"
   end
 
+  create_table "poll_ballots", force: :cascade do |t|
+    t.bigint "poll_id", null: false
+    t.bigint "user_id"
+    t.string "voter_token", null: false
+    t.string "voter_name"
+    t.string "ip_digest"
+    t.bigint "option_ids", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["poll_id", "user_id"], name: "index_poll_ballots_on_poll_id_and_user_id", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["poll_id", "voter_token"], name: "index_poll_ballots_on_poll_id_and_voter_token", unique: true
+    t.index ["poll_id"], name: "index_poll_ballots_on_poll_id"
+    t.index ["user_id"], name: "index_poll_ballots_on_user_id"
+  end
+
   create_table "polls", force: :cascade do |t|
     t.datetime "closeDate"
     t.datetime "closeTime"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "token"
+    t.string "question"
+    t.text "details"
+    t.bigint "user_id"
+    t.bigint "group_id"
+    t.integer "max_choices", default: 1, null: false
+    t.string "audience", default: "signed_in", null: false
+    t.string "results_visibility", default: "always", null: false
+    t.string "voters_visibility", default: "managers", null: false
+    t.string "guest_names", default: "optional", null: false
+    t.datetime "closes_at"
+    t.datetime "closed_at"
+    t.string "subject_type"
+    t.bigint "subject_id"
+    t.index ["group_id"], name: "index_polls_on_group_id"
+    t.index ["subject_type", "subject_id"], name: "index_polls_on_subject"
+    t.index ["token"], name: "index_polls_on_token", unique: true
+    t.index ["user_id"], name: "index_polls_on_user_id"
+  end
+
+  create_table "push_subscriptions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "endpoint", null: false
+    t.string "p256dh", null: false
+    t.string "auth", null: false
+    t.string "user_agent"
+    t.datetime "last_sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["endpoint"], name: "index_push_subscriptions_on_endpoint", unique: true
+    t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
   end
 
   create_table "quest_inventories", force: :cascade do |t|
@@ -589,6 +1493,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.index ["user_id"], name: "index_schedule_polls_on_user_id"
   end
 
+  create_table "service_positions", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.integer "term_months"
+    t.integer "sobriety_months"
+    t.integer "position", default: 0, null: false
+    t.boolean "archived", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "on_agenda", default: false, null: false
+    t.string "agenda_heading"
+    t.text "agenda_lines"
+    t.string "grants"
+    t.index ["group_id"], name: "index_service_positions_on_group_id"
+  end
+
   create_table "service_readings", force: :cascade do |t|
     t.string "title"
     t.string "short_title"
@@ -596,6 +1517,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "icon"
+  end
+
+  create_table "service_terms", force: :cascade do |t|
+    t.bigint "service_position_id", null: false
+    t.bigint "user_id"
+    t.string "name", null: false
+    t.date "starts_on", null: false
+    t.date "ends_on"
+    t.datetime "reminded_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["service_position_id"], name: "index_service_terms_on_service_position_id"
+    t.index ["user_id"], name: "index_service_terms_on_user_id"
   end
 
   create_table "sharing_modes", force: :cascade do |t|
@@ -629,6 +1563,142 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.index ["user_id"], name: "index_site_notices_on_user_id"
   end
 
+  create_table "sponsor_profiles", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.boolean "available", default: false, null: false
+    t.text "note"
+    t.string "picks", default: [], null: false, array: true
+    t.string "languages"
+    t.boolean "show_time_sober", default: false, null: false
+    t.integer "max_sponsees"
+    t.datetime "stopped_at"
+    t.bigint "stopped_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["stopped_by_id"], name: "index_sponsor_profiles_on_stopped_by_id"
+    t.index ["user_id"], name: "index_sponsor_profiles_on_user_id", unique: true
+  end
+
+  create_table "sponsorship_shares", force: :cascade do |t|
+    t.bigint "sponsorship_id", null: false
+    t.string "kind", null: false
+    t.date "on", null: false
+    t.string "title", null: false
+    t.text "body", null: false
+    t.datetime "seen_at"
+    t.text "reply"
+    t.datetime "replied_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sponsorship_id", "created_at"], name: "index_sponsorship_shares_on_sponsorship_id_and_created_at"
+    t.index ["sponsorship_id"], name: "index_sponsorship_shares_on_sponsorship_id"
+  end
+
+  create_table "sponsorships", force: :cascade do |t|
+    t.bigint "sponsor_id", null: false
+    t.bigint "sponsee_id", null: false
+    t.string "status", default: "pending", null: false
+    t.text "note"
+    t.date "started_on"
+    t.datetime "ended_at"
+    t.bigint "ended_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "current_step"
+    t.datetime "nudged_at"
+    t.string "nudge_note"
+    t.index ["ended_by_id"], name: "index_sponsorships_on_ended_by_id"
+    t.index ["sponsee_id"], name: "index_sponsorships_on_sponsee_id"
+    t.index ["sponsor_id", "sponsee_id"], name: "index_sponsorships_open_pair", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('active'::character varying)::text]))"
+    t.index ["sponsor_id"], name: "index_sponsorships_on_sponsor_id"
+  end
+
+  create_table "step_inventories", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.date "on", null: false
+    t.jsonb "answers", default: {}, null: false
+    t.text "notes", default: "", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "questions"
+    t.index ["user_id", "on"], name: "index_step_inventories_on_user_id_and_on", unique: true
+    t.index ["user_id"], name: "index_step_inventories_on_user_id"
+  end
+
+  create_table "step_suggestions", force: :cascade do |t|
+    t.bigint "sponsorship_id", null: false
+    t.string "name", null: false
+    t.integer "step", null: false
+    t.string "tool_key"
+    t.text "note"
+    t.jsonb "definition", default: {}, null: false
+    t.datetime "started_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sponsorship_id"], name: "index_step_suggestions_on_sponsorship_id"
+  end
+
+  create_table "step_template_versions", force: :cascade do |t|
+    t.bigint "step_template_id", null: false
+    t.integer "number", null: false
+    t.string "name", null: false
+    t.jsonb "definition", null: false
+    t.bigint "published_by_id"
+    t.datetime "created_at", null: false
+    t.index ["published_by_id"], name: "index_step_template_versions_on_published_by_id"
+    t.index ["step_template_id", "number"], name: "index_step_template_versions_on_step_template_id_and_number", unique: true
+    t.index ["step_template_id"], name: "index_step_template_versions_on_step_template_id"
+  end
+
+  create_table "step_templates", force: :cascade do |t|
+    t.string "key", null: false
+    t.integer "step", null: false
+    t.integer "steps", default: [], null: false, array: true
+    t.string "name", null: false
+    t.text "summary"
+    t.string "credit"
+    t.boolean "default", default: false, null: false
+    t.boolean "hidden", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.jsonb "definition"
+    t.jsonb "draft", default: {}, null: false
+    t.integer "version", default: 0, null: false
+    t.datetime "published_at"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_step_templates_on_created_by_id"
+    t.index ["key"], name: "index_step_templates_on_key", unique: true
+  end
+
+  create_table "step_works", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.integer "step", null: false
+    t.string "tool_key"
+    t.string "name", null: false
+    t.jsonb "definition", default: {}, null: false
+    t.text "answers"
+    t.jsonb "settings", default: {}, null: false
+    t.string "status", default: "in_progress", null: false
+    t.datetime "done_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "remind_at"
+    t.integer "remind_days", default: [], null: false, array: true
+    t.date "reminded_on"
+    t.boolean "auto_send", default: false, null: false
+    t.datetime "auto_sent_at"
+    t.string "share_token"
+    t.string "share_password_digest"
+    t.datetime "shared_at"
+    t.datetime "share_viewed_at"
+    t.integer "tool_version"
+    t.index ["remind_at"], name: "index_step_works_on_remind_at", where: "(remind_at IS NOT NULL)"
+    t.index ["share_token"], name: "index_step_works_on_share_token", unique: true
+    t.index ["user_id", "step", "updated_at"], name: "index_step_works_on_user_id_and_step_and_updated_at"
+    t.index ["user_id"], name: "index_step_works_on_user_id"
+  end
+
   create_table "tags", force: :cascade do |t|
     t.string "title"
     t.text "description"
@@ -637,6 +1707,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "icon_name"
+  end
+
+  create_table "testflight_requests", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "email", null: false
+    t.text "note"
+    t.bigint "user_id"
+    t.string "status", default: "new", null: false
+    t.datetime "invited_at"
+    t.bigint "handled_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "platform", default: "ios", null: false
+    t.index ["email"], name: "index_testflight_requests_on_email"
+    t.index ["handled_by_id"], name: "index_testflight_requests_on_handled_by_id"
+    t.index ["status", "created_at"], name: "index_testflight_requests_on_status_and_created_at"
+    t.index ["user_id"], name: "index_testflight_requests_on_user_id"
   end
 
   create_table "text_report_comments", force: :cascade do |t|
@@ -682,8 +1769,34 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "visibility", default: "private", null: false
+    t.bigint "repost_of_id"
+    t.jsonb "link_preview"
+    t.string "hashtags", default: [], null: false, array: true
+    t.string "chip_id"
+    t.jsonb "chip"
+    t.boolean "chip_hidden", default: false, null: false
+    t.bigint "recipient_id"
+    t.boolean "comments_off", default: false, null: false
+    t.jsonb "mentions", default: {}, null: false
+    t.bigint "mentioned_user_ids", default: [], null: false, array: true
+    t.bigint "repost_of_highlight_id"
+    t.index ["hashtags"], name: "index_timeline_notes_on_hashtags", using: :gin
+    t.index ["recipient_id"], name: "index_timeline_notes_on_recipient_id"
+    t.index ["repost_of_highlight_id", "user_id"], name: "index_timeline_notes_on_repost_of_highlight_id_and_user_id", unique: true, where: "(repost_of_highlight_id IS NOT NULL)"
+    t.index ["repost_of_id", "user_id"], name: "index_timeline_notes_on_repost_of_id_and_user_id", unique: true, where: "(repost_of_id IS NOT NULL)"
+    t.index ["user_id", "chip_id"], name: "index_timeline_notes_on_user_id_and_chip_id", where: "(chip_id IS NOT NULL)"
     t.index ["user_id", "created_at"], name: "index_timeline_notes_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_timeline_notes_on_user_id"
+  end
+
+  create_table "today_dismissals", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "key", null: false
+    t.string "title", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "key"], name: "index_today_dismissals_on_user_id_and_key", unique: true
+    t.index ["user_id"], name: "index_today_dismissals_on_user_id"
   end
 
   create_table "topic_categories", force: :cascade do |t|
@@ -743,6 +1856,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.index ["topic_set_id"], name: "index_topics_on_topic_set_id"
   end
 
+  create_table "treasurer_reports", force: :cascade do |t|
+    t.bigint "group_id", null: false
+    t.bigint "created_by_id"
+    t.date "period_on", null: false
+    t.bigint "opening_cents", default: 0, null: false
+    t.bigint "reserve_cents", default: 0, null: false
+    t.jsonb "lines", default: [], null: false
+    t.jsonb "splits", default: [], null: false
+    t.text "notes"
+    t.string "status", default: "draft", null: false
+    t.string "visibility", default: "members", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_treasurer_reports_on_created_by_id"
+    t.index ["group_id", "period_on"], name: "index_treasurer_reports_on_group_id_and_period_on", unique: true
+    t.index ["group_id"], name: "index_treasurer_reports_on_group_id"
+  end
+
   create_table "user_active_groups", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "group_id", null: false
@@ -750,6 +1881,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.datetime "updated_at", null: false
     t.index ["group_id"], name: "index_user_active_groups_on_group_id"
     t.index ["user_id"], name: "index_user_active_groups_on_user_id"
+  end
+
+  create_table "user_blocks", force: :cascade do |t|
+    t.bigint "blocker_id", null: false
+    t.bigint "blocked_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["blocked_id"], name: "index_user_blocks_on_blocked_id"
+    t.index ["blocker_id", "blocked_id"], name: "index_user_blocks_on_blocker_id_and_blocked_id", unique: true
   end
 
   create_table "user_highlights", force: :cascade do |t|
@@ -761,10 +1901,40 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "visibility", default: "private", null: false
+    t.datetime "shared_at"
+    t.string "hashtags", default: [], null: false, array: true
+    t.jsonb "mentions", default: {}, null: false
+    t.bigint "mentioned_user_ids", default: [], null: false, array: true
+    t.bigint "adopted_from_id"
+    t.datetime "adopted_at"
+    t.index ["adopted_from_id"], name: "index_user_highlights_on_adopted_from_id"
     t.index ["chapter_id"], name: "index_user_highlights_on_chapter_id"
+    t.index ["hashtags"], name: "index_user_highlights_on_hashtags", using: :gin
     t.index ["user_id", "chapter_id"], name: "index_user_highlights_on_user_id_and_chapter_id"
     t.index ["user_id", "created_at"], name: "index_user_highlights_on_user_id_and_created_at"
+    t.index ["user_id", "shared_at"], name: "index_user_highlights_on_user_id_and_shared_at"
     t.index ["user_id"], name: "index_user_highlights_on_user_id"
+  end
+
+  create_table "user_reports", force: :cascade do |t|
+    t.bigint "reporter_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "group_id"
+    t.string "subject_type"
+    t.bigint "subject_id"
+    t.text "quote", default: "", null: false
+    t.string "where_label", default: "", null: false
+    t.text "reason", null: false
+    t.string "status", default: "open", null: false
+    t.bigint "resolved_by_id"
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_id"], name: "index_user_reports_on_group_id"
+    t.index ["reporter_id"], name: "index_user_reports_on_reporter_id"
+    t.index ["resolved_by_id"], name: "index_user_reports_on_resolved_by_id"
+    t.index ["status"], name: "index_user_reports_on_status"
+    t.index ["user_id"], name: "index_user_reports_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -792,17 +1962,95 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
     t.jsonb "page_blocks"
     t.string "default_highlight_visibility", default: "private", null: false
     t.string "default_note_visibility", default: "private", null: false
+    t.boolean "host_reminders", default: false, null: false
+    t.integer "host_reminder_hours", default: 24, null: false
+    t.boolean "host_reminder_email", default: true, null: false
+    t.string "push_off", default: [], null: false, array: true
+    t.jsonb "chip_tops", default: {}, null: false
+    t.string "chip_favorites", default: [], null: false, array: true
+    t.boolean "gratitude_reminder", default: false, null: false
+    t.string "gratitude_reminder_at", default: "12:00", null: false
+    t.date "gratitude_reminded_on"
+    t.boolean "step_reminder", default: false, null: false
+    t.string "step_reminder_at", default: "18:00", null: false
+    t.date "step_reminded_on"
+    t.string "time_zone"
+    t.string "sponsor_invite_token"
+    t.jsonb "inventory_questions"
+    t.string "google_uid"
+    t.boolean "password_chosen", default: true, null: false
+    t.string "apple_uid"
+    t.text "apple_refresh_token"
+    t.string "apple_client_id"
+    t.datetime "onboarded_at"
+    t.jsonb "today_layout"
+    t.boolean "see_all_posts", default: false, null: false
+    t.index ["apple_uid"], name: "index_users_on_apple_uid", unique: true
+    t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["google_uid"], name: "index_users_on_google_uid", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["share_token"], name: "index_users_on_share_token", unique: true
+    t.index ["sponsor_invite_token"], name: "index_users_on_sponsor_invite_token", unique: true
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "admin_task_activities", "admin_tasks", on_delete: :cascade
+  add_foreign_key "admin_task_activities", "users", on_delete: :nullify
+  add_foreign_key "admin_tasks", "admin_task_columns"
+  add_foreign_key "admin_tasks", "users", column: "assignee_id", on_delete: :nullify
+  add_foreign_key "admin_tasks", "users", column: "completed_by_id", on_delete: :nullify
+  add_foreign_key "admin_tasks", "users", column: "creator_id", on_delete: :nullify
+  add_foreign_key "agenda_items", "business_meetings", on_delete: :cascade
+  add_foreign_key "agenda_items", "motions", on_delete: :nullify
+  add_foreign_key "agenda_items", "users", column: "submitted_by_id", on_delete: :nullify
+  add_foreign_key "business_meetings", "events", on_delete: :nullify
+  add_foreign_key "business_meetings", "groups", on_delete: :cascade
+  add_foreign_key "business_meetings", "meetings", on_delete: :nullify
+  add_foreign_key "business_meetings", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "chapters", "books"
+  add_foreign_key "chat_channels", "groups"
+  add_foreign_key "chat_channels", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "chat_messages", "chat_channels"
+  add_foreign_key "chat_messages", "users"
+  add_foreign_key "chat_messages", "users", column: "pinned_by_id", on_delete: :nullify
+  add_foreign_key "chat_reactions", "chat_messages", on_delete: :cascade
+  add_foreign_key "chat_reactions", "users", on_delete: :cascade
+  add_foreign_key "chat_reads", "chat_channels"
+  add_foreign_key "chat_reads", "users"
+  add_foreign_key "chip_awards", "chip_editions", on_delete: :nullify
+  add_foreign_key "chip_awards", "groups", on_delete: :cascade
+  add_foreign_key "chip_awards", "users", column: "given_by_id", on_delete: :nullify
+  add_foreign_key "chip_awards", "users", on_delete: :cascade
+  add_foreign_key "chip_edition_chips", "chip_awards", on_delete: :cascade
+  add_foreign_key "chip_edition_chips", "chip_editions", on_delete: :cascade
+  add_foreign_key "chip_edition_chips", "users", on_delete: :cascade
+  add_foreign_key "chip_editions", "groups", on_delete: :cascade
+  add_foreign_key "chip_editions", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "chip_revocations", "users", column: "revoked_by_id", on_delete: :nullify
+  add_foreign_key "chip_revocations", "users", on_delete: :cascade
+  add_foreign_key "chip_template_versions", "chip_templates", on_delete: :cascade
+  add_foreign_key "chip_templates", "groups", on_delete: :cascade
+  add_foreign_key "chip_templates", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "contact_requests", "users", column: "handled_by_id", on_delete: :nullify
+  add_foreign_key "contact_requests", "users", on_delete: :nullify
   add_foreign_key "court_verifications", "groups"
   add_foreign_key "court_verifications", "meetings", on_delete: :nullify
+  add_foreign_key "daily_story_posts", "users", on_delete: :nullify
+  add_foreign_key "deck_templates", "groups", on_delete: :cascade
+  add_foreign_key "deck_templates", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "deck_templates", "users", column: "reviewed_by_id", on_delete: :nullify
+  add_foreign_key "decks", "group_documents", column: "script_document_id", on_delete: :nullify
+  add_foreign_key "decks", "groups", on_delete: :cascade
+  add_foreign_key "decks", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "device_tokens", "users"
+  add_foreign_key "doc_page_versions", "doc_pages", on_delete: :cascade
+  add_foreign_key "doc_page_versions", "users", column: "saved_by_id", on_delete: :nullify
+  add_foreign_key "doc_pages", "doc_sections", on_delete: :cascade
+  add_foreign_key "doc_pages", "users", column: "reviewed_by_id", on_delete: :nullify
+  add_foreign_key "doc_pages", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "event_collaborators", "events"
   add_foreign_key "event_collaborators", "users"
   add_foreign_key "event_collaborators", "users", column: "added_by_id", on_delete: :nullify
@@ -812,21 +2060,83 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
   add_foreign_key "event_updates", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "events", "groups"
   add_foreign_key "events", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "facebook_page_connections", "users", column: "connected_by_id", on_delete: :nullify
   add_foreign_key "follows", "users", column: "followed_id"
   add_foreign_key "follows", "users", column: "follower_id"
+  add_foreign_key "gratitude_lists", "users", on_delete: :cascade
+  add_foreign_key "group_blocks", "groups"
+  add_foreign_key "group_blocks", "users"
+  add_foreign_key "group_blocks", "users", column: "blocked_by_id", on_delete: :nullify
   add_foreign_key "group_books", "books"
   add_foreign_key "group_books", "groups"
+  add_foreign_key "group_document_comments", "group_document_comments", column: "parent_id", on_delete: :cascade
+  add_foreign_key "group_document_comments", "group_document_versions", column: "version_id", on_delete: :nullify
+  add_foreign_key "group_document_comments", "group_documents"
+  add_foreign_key "group_document_comments", "users", column: "resolved_by_id", on_delete: :nullify
+  add_foreign_key "group_document_comments", "users", on_delete: :nullify
+  add_foreign_key "group_document_live_updates", "group_documents", on_delete: :cascade
+  add_foreign_key "group_document_live_updates", "users", on_delete: :nullify
+  add_foreign_key "group_document_templates", "groups"
+  add_foreign_key "group_document_versions", "group_documents", on_delete: :cascade
+  add_foreign_key "group_document_versions", "users", on_delete: :nullify
+  add_foreign_key "group_documents", "groups", on_delete: :cascade
+  add_foreign_key "group_documents", "motions", column: "approved_by_motion_id", on_delete: :nullify
+  add_foreign_key "group_documents", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "group_documents", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_page_templates", "users", column: "updated_by_id"
+  add_foreign_key "group_step_tools", "groups", on_delete: :cascade
+  add_foreign_key "group_step_tools", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "groups", "users", column: "created_by_id"
+  add_foreign_key "host_chat_postings", "hosting_kits", on_delete: :cascade
   add_foreign_key "host_props", "hostificators"
+  add_foreign_key "host_script_templates", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "host_sub_requests", "meetings"
+  add_foreign_key "host_sub_requests", "users", column: "filled_by_id"
+  add_foreign_key "host_sub_requests", "users", column: "requested_by_id"
   add_foreign_key "host_votes", "host_props"
   add_foreign_key "host_votes", "hostificators"
+  add_foreign_key "hosting_kits", "group_documents", column: "script_document_id", on_delete: :nullify
+  add_foreign_key "hosting_kits", "groups"
+  add_foreign_key "hosting_kits", "meetings", on_delete: :cascade
+  add_foreign_key "hosting_layouts", "groups", on_delete: :cascade
+  add_foreign_key "hosting_layouts", "meetings", on_delete: :cascade
+  add_foreign_key "hosting_layouts", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "hosting_presences", "hosting_sessions", on_delete: :cascade
+  add_foreign_key "hosting_presences", "users", on_delete: :cascade
+  add_foreign_key "hosting_sessions", "decks", on_delete: :cascade
+  add_foreign_key "hosting_sessions", "meetings", on_delete: :cascade
+  add_foreign_key "intergroup_follows", "users"
+  add_foreign_key "language_rules", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "meeting_directories", "users", column: "imported_by_id", on_delete: :nullify
+  add_foreign_key "meeting_host_covers", "meetings", on_delete: :cascade
+  add_foreign_key "meeting_host_covers", "users", on_delete: :nullify
+  add_foreign_key "meeting_host_reminders", "meetings", on_delete: :cascade
+  add_foreign_key "meeting_host_reminders", "users", on_delete: :cascade
+  add_foreign_key "meeting_hosts", "meetings", on_delete: :cascade
+  add_foreign_key "meeting_hosts", "users", on_delete: :nullify
+  add_foreign_key "meeting_joins", "meetings", on_delete: :cascade
+  add_foreign_key "meeting_joins", "users", on_delete: :cascade
   add_foreign_key "meetings", "groups"
+  add_foreign_key "motions", "agenda_items", on_delete: :nullify
+  add_foreign_key "motions", "business_meetings", on_delete: :nullify
+  add_foreign_key "motions", "groups", on_delete: :cascade
+  add_foreign_key "motions", "motions", column: "parent_id", on_delete: :nullify
+  add_foreign_key "motions", "motions", column: "supersedes_id", on_delete: :nullify
+  add_foreign_key "motions", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "note_comments", "timeline_notes", on_delete: :cascade
+  add_foreign_key "note_comments", "users", on_delete: :cascade
+  add_foreign_key "note_reactions", "users", on_delete: :cascade
   add_foreign_key "notifications", "users"
+  add_foreign_key "oiaa_meetings", "meeting_directories"
   add_foreign_key "options", "polls"
   add_foreign_key "pages", "books"
+  add_foreign_key "poll_ballots", "polls"
+  add_foreign_key "poll_ballots", "users"
+  add_foreign_key "polls", "groups"
+  add_foreign_key "polls", "users"
+  add_foreign_key "push_subscriptions", "users"
   add_foreign_key "quest_inventories", "quest_sessions"
   add_foreign_key "quest_log_entries", "quest_sessions"
   add_foreign_key "quest_log_entries", "topics"
@@ -843,7 +2153,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
   add_foreign_key "schedule_poll_members", "users"
   add_foreign_key "schedule_polls", "events"
   add_foreign_key "schedule_polls", "users"
+  add_foreign_key "service_positions", "groups", on_delete: :cascade
+  add_foreign_key "service_terms", "service_positions", on_delete: :cascade
+  add_foreign_key "service_terms", "users", on_delete: :nullify
   add_foreign_key "site_notices", "users", on_delete: :nullify
+  add_foreign_key "sponsor_profiles", "users", column: "stopped_by_id", on_delete: :nullify
+  add_foreign_key "sponsor_profiles", "users", on_delete: :cascade
+  add_foreign_key "sponsorship_shares", "sponsorships", on_delete: :cascade
+  add_foreign_key "sponsorships", "users", column: "ended_by_id", on_delete: :nullify
+  add_foreign_key "sponsorships", "users", column: "sponsee_id", on_delete: :cascade
+  add_foreign_key "sponsorships", "users", column: "sponsor_id", on_delete: :cascade
+  add_foreign_key "step_inventories", "users", on_delete: :cascade
+  add_foreign_key "step_suggestions", "sponsorships", on_delete: :cascade
+  add_foreign_key "step_template_versions", "step_templates", on_delete: :cascade
+  add_foreign_key "step_template_versions", "users", column: "published_by_id", on_delete: :nullify
+  add_foreign_key "step_templates", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "step_works", "users", on_delete: :cascade
+  add_foreign_key "testflight_requests", "users", column: "handled_by_id", on_delete: :nullify
+  add_foreign_key "testflight_requests", "users", on_delete: :nullify
   add_foreign_key "text_report_comments", "text_reports"
   add_foreign_key "text_report_comments", "users"
   add_foreign_key "text_reports", "chapters"
@@ -851,15 +2178,28 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_17_010000) do
   add_foreign_key "text_reports", "users", column: "resolved_by_id"
   add_foreign_key "timeline_note_shares", "groups"
   add_foreign_key "timeline_note_shares", "timeline_notes"
+  add_foreign_key "timeline_notes", "timeline_notes", column: "repost_of_id", on_delete: :cascade
+  add_foreign_key "timeline_notes", "user_highlights", column: "repost_of_highlight_id", on_delete: :cascade
   add_foreign_key "timeline_notes", "users"
+  add_foreign_key "timeline_notes", "users", column: "recipient_id", on_delete: :cascade
+  add_foreign_key "today_dismissals", "users", on_delete: :cascade
   add_foreign_key "topic_sharing_prompts", "sharing_modes"
   add_foreign_key "topic_sharing_prompts", "topics"
   add_foreign_key "topic_tags", "tags"
   add_foreign_key "topic_tags", "topics"
   add_foreign_key "topics", "topic_categories"
   add_foreign_key "topics", "topic_sets"
+  add_foreign_key "treasurer_reports", "groups", on_delete: :cascade
+  add_foreign_key "treasurer_reports", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "user_active_groups", "groups"
   add_foreign_key "user_active_groups", "users"
+  add_foreign_key "user_blocks", "users", column: "blocked_id", on_delete: :cascade
+  add_foreign_key "user_blocks", "users", column: "blocker_id", on_delete: :cascade
   add_foreign_key "user_highlights", "chapters"
+  add_foreign_key "user_highlights", "user_highlights", column: "adopted_from_id", on_delete: :nullify
   add_foreign_key "user_highlights", "users"
+  add_foreign_key "user_reports", "groups", on_delete: :nullify
+  add_foreign_key "user_reports", "users", column: "reporter_id", on_delete: :cascade
+  add_foreign_key "user_reports", "users", column: "resolved_by_id", on_delete: :nullify
+  add_foreign_key "user_reports", "users", on_delete: :cascade
 end

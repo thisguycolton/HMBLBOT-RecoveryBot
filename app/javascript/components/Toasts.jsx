@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { swipeToDismiss } from "../lib/swipe";
 import { dismissToast, useToasts } from "../lib/toast";
 import { NoticeCard, NoticeModal, useSiteNotices } from "./SiteNotices";
 import "../styles/toasts.css";
@@ -29,6 +30,22 @@ function ToastCard({ toast }) {
   );
 }
 
+// On phones a toast or notice can be swiped away, sideways or up, the way a phone's own
+// notifications are; the drag carries it along and lets go of it past a third of its width
+function SwipeAway({ onDismiss, children }) {
+  const ref = useRef(null);
+  const dismiss = useRef(onDismiss);
+  dismiss.current = onDismiss;
+  useEffect(() => swipeToDismiss(ref.current, {
+    directions: ["left", "right", "up"],
+    targets: () => [ref.current],
+    flyOut: true,
+    fade: true,
+    onDismiss: () => dismiss.current(),
+  }), []);
+  return <div ref={ref} className="hb-toast-swipe">{children}</div>;
+}
+
 // Top center on phones (under the nav), top right on wider screens. Admins' site
 // notices sit on top and stay until dismissed.
 export default function Toasts() {
@@ -39,8 +56,16 @@ export default function Toasts() {
   return (
     <>
       <div aria-live="polite" className="hb-toasts">
-        {notices.map((notice) => <NoticeCard key={notice.id} notice={notice} onDismiss={dismissNotice} onOpen={setReading} />)}
-        {toasts.map((toast) => <ToastCard key={toast.id} toast={toast} />)}
+        {notices.map((notice) => (
+          <SwipeAway key={`n${notice.id}`} onDismiss={() => dismissNotice(notice)}>
+            <NoticeCard notice={notice} onDismiss={dismissNotice} onOpen={setReading} />
+          </SwipeAway>
+        ))}
+        {toasts.map((toast) => (
+          <SwipeAway key={toast.id} onDismiss={() => dismissToast(toast.id)}>
+            <ToastCard toast={toast} />
+          </SwipeAway>
+        ))}
       </div>
       {reading && <NoticeModal notice={reading} onClose={() => setReading(null)} onDismiss={dismissNotice} />}
     </>

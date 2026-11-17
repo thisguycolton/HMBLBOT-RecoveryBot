@@ -1,0 +1,205 @@
+# A group's business (group conscience) meeting: when it is, its agenda (AgendaItem), who
+# chaired and kept the minutes, and the minutes themselves, which are posted for members when
+# they're ready and approved at the next one. Decisions made at it (Motion) link back to it.
+# It can have an Event announcing it, so RSVPs, the flyer and a date poll come with Events.
+class BusinessMeeting < ApplicationRecord
+  moderates_language :chair_name, :secretary_name, :minutes
+  STATUSES = %w[planned held cancelled].freeze
+  MINUTES_STATUSES = %w[draft posted approved].freeze
+  VISIBILITIES = %w[members keepers].freeze
+  MINUTES_MAX = 300_000
+
+  belongs_to :group
+  belongs_to :created_by, class_name: "User", optional: true
+  belongs_to :event, optional: true
+  belongs_to :meeting, optional: true
+  has_many :agenda_items, -> { order(:position, :id) }, dependent: :destroy
+  has_many :motions, dependent: :nullify
+
+  before_validation { self.minutes = DocumentHtml.sanitize(minutes) if minutes.present? }
+  before_validation { %i[chair_name secretary_name].each { |a| self[a] = self[a].to_s.squish.presence } }
+  before_save :stamp_minutes
+
+  validates :held_on, presence: true
+  validates :status, inclusion: { in: STATUSES }
+  validates :minutes_status, inclusion: { in: MINUTES_STATUSES }
+  validates :visibility, inclusion: { in: VISIBILITIES }
+  validates :chair_name, :secretary_name, length: { maximum: 80 }
+  validates :attendance_count, numericality: { only_integer: true, in: 0..9999 }, allow_nil: true
+  validates :minutes, length: { maximum: MINUTES_MAX }
+  validate :belongs_with_group
+
+  scope :newest_first, -> { order(held_on: :desc, id: :desc) }
+
+  # Keepers see every meeting; members the ones for members. Nobody else sees any (an
+  # announced one is shown through its public Event).
+  def self.visible_to(group, user)
+    return group.business_meetings if group.records_editable_by?(user)
+
+    group.member_or_site_admin?(user) ? group.business_meetings.where(visibility: "members") : none
+  end
+
+  # The next one still ahead (today counts), in the group's own time zone
+  def self.next_for(group, user)
+    visible_to(group, user).where(status: "planned").where("held_on >= ?", group.zone.today).order(:held_on, :id).first
+  end
+
+  # The meetings in `meetings` that have every word of `query` somewhere in them: their minutes
+  # (draft ones only for keepers), agenda, the decisions made there that `motions` lets this
+  # person see, who chaired and the date. Returns { meeting id => up to 3 hits }, newest first,
+  # each hit { where:, label:, text: } with `text` a short stretch around the words.
+  def self.search(meetings, query, motions:, keeper: false)
+    words = query.to_s.downcase.scan(/[[:alnum:]'’&$#-]+/).uniq.first(8)
+    return {} if words.empty?
+
+    seen = motions.where.not(business_meeting_id: nil).select(:business_meeting_id, :title, :text).group_by(&:business_meeting_id)
+    meetings.includes(:agenda_items).each_with_object({}) do |m, found|
+      parts = m.search_parts(keeper, seen[m.id] || [])
+      next unless words.all? { |w| parts.any? { |p| p[:text].downcase.include?(w) } }
+
+      hits = parts.filter_map do |p|
+        n = words.count { |w| p[:text].downcase.include?(w) }
+        [n, p] if n.positive? && p[:where] != "meeting"
+      end
+      found[m.id] = hits.sort_by { |n, _| -n }.first(3).map { |_, p| p.merge(text: snippet(p[:text], words)) }
+    end
+  end
+
+  # ~180 characters around the first word found, cut at word edges
+  def self.snippet(text, words, size = 180)
+    down = text.downcase
+    at = words.filter_map { |w| down.index(w) }.min || 0
+    from = [at - (size / 3), 0].max
+    from = (text.rindex(" ", from) || -1) + 1 if from.positive?
+    piece = text[from, size].to_s
+    piece = piece.sub(/\s+\S*\z/, "") if from + size < text.length
+    "#{"…" if from.positive?}#{piece.strip}#{"…" if from + size < text.length}"
+  end
+
+  # The text a search looks through, labelled by where it came from
+  def search_parts(keeper, motions)
+    parts = [{ where: "meeting", label: "Meeting", text: [held_on.strftime("%A %B %-d %Y %b"), chair_name, secretary_name].compact.join(" ") }]
+    parts << { where: "minutes", label: "Minutes", text: DocumentHtml.text(minutes) } if minutes.present? && (keeper || minutes_status != "draft")
+    agenda_items.each { |i| parts << { where: "agenda", label: "Agenda", text: [i.title, i.details].compact_blank.join(" — ") } }
+    motions.each { |mo| parts << { where: "decision", label: "Decision", text: [mo.title, mo.text].compact_blank.join(" — ") } }
+    parts
+  end
+
+  def planned? = status == "planned"
+
+  # The agenda's sections from the group's elected offices that asked for one, in the offices'
+  # order: a heading (the office's title, or the agenda heading offices share, like "Host
+  # Coordinators") and the lines under it with the blanks filled in. {name} is whoever holds the
+  # office on the meeting's day, {month} and {last_month} the meeting's month and the one before
+  # ("Nov", "Oct").
+  def officer_sections
+    positions = group.service_positions.where(on_agenda: true, archived: false).includes(:terms).order(:position, :id)
+    positions.group_by { |p| (p.agenda_heading || p.title).downcase }.values.map do |offices|
+      first = offices.first
+      lines = offices.flat_map do |p|
+        name = p.current_term(held_on)&.name
+        p.agenda_lines.to_s.lines.map(&:strip).compact_blank.map { |line| fill_in(line, name) }
+      end
+      { id: first.id, title: first.agenda_heading || first.title, lines: lines }
+    end
+  end
+
+  # The reports most groups hear at every business meeting, for a group whose agendas don't have
+  # any yet
+  COMMON_REPORTS = ["Secretary's report (last meeting's minutes)", "Treasurer's report", "Host Coordinators' report", "Tech Admins' report"].freeze
+
+  # The reports this group heard at its last business meeting that had any, or the common ones
+  def usual_reports
+    earlier = group.business_meetings.where.not(id: id).where("held_on <= ?", held_on).joins(:agenda_items)
+                   .where(agenda_items: { kind: "report" }).where.not(agenda_items: { status: "suggested" }).order(held_on: :desc, id: :desc).first
+    return COMMON_REPORTS unless earlier
+
+    earlier.agenda_items.select { |i| i.kind == "report" && !i.suggested? }.map(&:title).uniq
+  end
+
+  # Puts the usual reports this agenda doesn't have yet at the top of it. `common`: fall back to
+  # the common reports when the group has never had any (a new meeting only copies its own).
+  def add_usual_reports!(common: true)
+    titles = usual_reports
+    return [] if titles.equal?(COMMON_REPORTS) && !common
+
+    have = agenda_items.where(kind: "report").pluck(:title).map { |t| t.downcase.squish }
+    missing = titles.reject { |t| have.include?(t.downcase.squish) }
+    return [] if missing.empty?
+
+    transaction do
+      AgendaItem.where(business_meeting_id: id).update_all(["position = position + ?", missing.size])
+      missing.each_with_index.map { |t, i| agenda_items.create!(title: t, kind: "report", status: "on_agenda", position: i + 1) }
+    end
+  end
+
+  # Motions set aside at earlier meetings (tabled, put off, sent to a committee) and not dealt with
+  # since, that aren't on this agenda yet
+  def unfinished_business
+    on_agenda = agenda_items.where.not(motion_id: nil).select(:motion_id)
+    group.motions.unfinished.where.not(id: on_agenda).where("motions.business_meeting_id IS NULL OR motions.business_meeting_id <> ?", id).includes(:business_meeting).newest_first
+  end
+  def zone = group.zone
+
+  # starts_at in the group's zone as "HH:MM", and back from it
+  def starts_time = starts_at&.in_time_zone(zone)&.strftime("%H:%M")
+
+  def called_to_order_time = called_to_order_at&.in_time_zone(zone)&.strftime("%H:%M")
+  def adjourned_time = adjourned_at&.in_time_zone(zone)&.strftime("%H:%M")
+
+  # Whether enough people came, by the group's quorum; nil when the group has set none or no one
+  # counted
+  def quorum_met?
+    needed = group.quorum_needed
+    needed && attendance_count ? attendance_count >= needed : nil
+  end
+
+  def set_times(called_to_order: nil, adjourned: nil)
+    self.called_to_order_at = clock(called_to_order, called_to_order_at) unless called_to_order.nil?
+    self.adjourned_at = clock(adjourned, adjourned_at) unless adjourned.nil?
+  end
+
+  def set_start(time)
+    self.starts_at = time.present? && held_on ? zone.parse("#{held_on} #{time}") : nil
+  end
+
+  def when_label
+    day = held_on.strftime("%a, %b %-d")
+    starts_at ? "#{day} · #{starts_at.in_time_zone(zone).strftime("%-l:%M %p %Z")}" : day
+  end
+
+  # `keeper`: sees draft minutes. Minutes stay out of the JSON until they're posted.
+  def as_api_json(keeper: false, events: false)
+    {
+      id: id, held_on: held_on.iso8601, starts_at: starts_at&.iso8601, starts_time: starts_time, when_label: when_label,
+      status: status, visibility: visibility, chair: chair_name, secretary: secretary_name, attendance_count: attendance_count,
+      minutes_status: minutes_status, minutes: (minutes.to_s if keeper || minutes_status != "draft"),
+      minutes_posted_at: minutes_posted_at&.iso8601, minutes_approved_at: minutes_approved_at&.iso8601,
+      event: event && { token: event.token, title: event.title, status: event.status, path: event.path },
+      meeting: meeting && { id: meeting.id, name: meeting.name },
+      agenda_count: agenda_items.size, motions_count: motions.size,
+      called_to_order_time: called_to_order_time, adjourned_time: adjourned_time,
+      quorum_needed: group.quorum_needed, quorum_met: quorum_met?,
+    }
+  end
+
+  private
+
+  def fill_in(line, name)
+    line.gsub(/\{name\}/i, name || "(open)").gsub(/\{month\}/i, held_on.strftime("%b")).gsub(/\{last_month\}/i, held_on.prev_month.strftime("%b"))
+  end
+
+  # "19:05" on this meeting's day, in the group's zone; blank clears it
+  def clock(time, _was) = time.present? && held_on ? zone.parse("#{held_on} #{time}") : nil
+
+  def belongs_with_group
+    errors.add(:event, "must be one of this group's events") if event && event.group_id != group_id
+    errors.add(:meeting, "must be one of this group's meetings") if meeting && meeting.group_id != group_id
+  end
+
+  def stamp_minutes
+    self.minutes_posted_at ||= Time.current if minutes_status.in?(%w[posted approved])
+    self.minutes_approved_at ||= Time.current if minutes_status == "approved"
+    self.minutes_approved_at = nil if minutes_status != "approved"
+  end
+end

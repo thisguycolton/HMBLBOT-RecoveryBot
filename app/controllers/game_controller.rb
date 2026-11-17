@@ -1,4 +1,5 @@
 class GameController < ApplicationController
+  layout "reader"
   def game
   end
 

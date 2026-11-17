@@ -1,0 +1,111 @@
+key: step6-7-12-and-12
+step: 6
+steps: [6, 7]
+name: "12&12: Steps 6 and 7"
+summary: "Steps 6 and 7 in the spirit of the 12&12 chapters: which defects we're glad to lose and which we cling to, aiming for progress rather than perfection, and humility."
+intro: >
+  The 12&12 gives Steps Six and Seven a chapter each. Step Six is about willingness: some defects we'd gladly be rid
+  of, and some we hold onto because they still give us something. The aim isn't perfection, it's being willing to
+  keep moving toward it. Step Seven is about humility: seeing ourselves as we really are, no bigger and no smaller,
+  and asking for help with what we can't change alone.
+
+  **Am I willing to keep reaching for something better, even where I'm not ready to give everything up today?**
+credit: "Follows Steps Six and Seven in Twelve Steps and Twelve Traditions. The wording here is our own; read the chapters alongside it."
+sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    items:
+      - { id: r1, label: "Step Six in the 12&12" }
+      - { id: r2, label: "Step Seven in the 12&12" }
+      - { id: r3, label: "The Big Book, page 76" }
+  # Step Six
+  - id: defects
+    part: "Step Six · Entirely ready"
+    kind: picker
+    title: "My defects"
+    help: "Bring in your part from your 4th step, or tap the ones you recognize. The 12&12 looks at the seven below; add your own."
+    suggest_from: { step: 4, role: my_part, label: "From my 4th step" }
+    groups:
+      - { label: "The seven", options: ["Pride", "Greed", "Lust", "Anger", "Gluttony", "Envy", "Sloth"] }
+      - { label: "Others", options: ["Fear", "Resentment", "Dishonesty", "Self-pity", "Intolerance", "Selfishness", "Impatience"] }
+  - id: glad-or-cling
+    kind: each
+    title: "Glad to lose, or still clinging?"
+    help: "One at a time. Some defects we'd happily see go. Others we quietly hang on to because they still pay us something."
+    from: defects
+    items:
+      - { id: feel, label: "How do I feel about losing this one?", type: choice, options: ["Glad to be rid of it", "Mixed", "I'd rather keep it"] }
+      - { id: pays, label: "What does it still give me? Comfort, excuses, a sense of being right?" }
+      - { id: never, label: "Do I tell myself I'll never be free of it, or that I'll never give it up?" }
+      - { id: toward, label: "What would moving toward its opposite look like, even a little?" }
+  - id: perfection
+    kind: questions
+    title: "Progress, not perfection"
+    items:
+      - { id: settle, label: "Where am I settling for less of a defect instead of being willing to let it go entirely?" }
+      - { id: excuse, label: "Where do I use \"I'm only human\" as a reason not to try?" }
+      - { id: ideal, label: "What's the ideal I'm aiming for? Can I keep reaching for it without beating myself up for falling short?" }
+      - { id: never, label: "Is there anything I've said \"never\" about? What would it take to say \"not yet\" instead?" }
+  - id: ready
+    kind: scale
+    title: "How ready am I?"
+    help: "Willingness grows. Come back and change these; your earlier answers are kept."
+    from: defects
+    options: ["Not yet", "Willing to become willing", "Entirely ready"]
+  - id: sponsor-1
+    kind: note
+    tone: sponsor
+    body: "Talk over the defects you'd rather keep with your sponsor. The 12&12 treats being honest about them as part of the step, not a failure of it."
+  # Step Seven
+  - id: humility
+    part: "Step Seven · Humbly asked"
+    kind: questions
+    title: "What humility means to me"
+    help: "Humility isn't the same as humiliation. It's an honest picture of who we are, and a real wish to become who we could be."
+    items:
+      - { id: means, label: "What does humility mean to me? How is it different from feeling worthless?" }
+      - { id: clearly, label: "Where do I see myself bigger than I am? Where smaller?" }
+      - { id: first, label: "What have I been putting first, ahead of character? Comfort, money, approval, being in control?" }
+      - { id: pain, label: "What has pain taught me that nothing else could?" }
+      - { id: want, label: "Do I mostly want to be rid of the pain, or do I want to grow? What's the difference for me?" }
+  - id: asking
+    kind: each
+    title: "Asking for help with each one"
+    from: defects
+    items:
+      - { id: alone, label: "Where have I tried to fix this on my own?" }
+      - { id: ask, label: "What am I asking {{higher_power}} to help me with here?" }
+  - id: prayer-reference
+    kind: reference
+    title: "The Seventh Step Prayer"
+    help: "The 12&12 doesn't give a prayer of its own. Many people use the Big Book's (page 76):"
+    body: >
+      My Creator, I am now willing that you should have all of me, good and bad. I pray that you now remove from me every
+      single defect of character which stands in the way of my usefulness to you and my fellows. Grant me strength, as I
+      go out from here, to do your bidding. Amen.
+  - id: prayer
+    kind: questions
+    title: "My Seventh Step Prayer"
+    items:
+      - { id: prayer, label: "My prayer", placeholder: "{{higher_power}}, I humbly ask you to…", rows: 8 }
+  - id: daily
+    kind: days
+    title: "A week of humility"
+    help: "One question a night. Start another week whenever you like; each week is kept."
+    items:
+      - { id: d1, label: "Where did I see myself honestly today, no bigger and no smaller?" }
+      - { id: d2, label: "Where did I want to be right more than I wanted to be kind?" }
+      - { id: d3, label: "Where did I ask for help instead of forcing it?" }
+      - { id: d4, label: "Which defect showed up, and what did I do?" }
+      - { id: d5, label: "Where did I put someone else first?" }
+      - { id: d6, label: "What did I learn from something that hurt today?" }
+      - { id: d7, label: "What am I grateful to have been given this week?" }
+    review:
+      - { id: noticed, label: "What did I notice about myself?" }
+      - { id: growing, label: "Where am I starting to change?" }
+      - { id: next, label: "What do I want to keep asking for help with?" }
+  - id: closing
+    kind: note
+    tone: sponsor
+    body: "Read your prayer to your sponsor if you're willing, and share the week. Steps Six and Seven are something we keep coming back to, not something we finish."

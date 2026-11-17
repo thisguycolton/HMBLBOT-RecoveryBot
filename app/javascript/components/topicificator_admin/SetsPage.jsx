@@ -44,7 +44,7 @@ export default function SetsPage({ meta, reloadMeta, notify }) {
             <SetForm set={set} onSave={(v) => save(set.id, v)} onCancel={() => setEditing(null)} />
           ) : (
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 basis-56">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white !font-sans">{set.name}</p>
                 {set.description && <p className="text-sm text-slate-600 dark:text-neutral-400 !font-sans">{set.description}</p>}
               </div>

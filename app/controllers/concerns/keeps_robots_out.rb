@@ -16,6 +16,13 @@ module KeepsRobotsOut
     curl|wget|python|httpx|aiohttp|go-http|java\/|okhttp|axios|node-fetch|undici|ruby|libwww|httpclient|scrapy
   /xi
 
+  # The apps that fetch a link to show its preview card (iMessage sends facebookexternalhit's).
+  # A controller can answer them with just the title and picture (`link_preview`).
+  LINK_PREVIEW_AGENT = /
+    facebookexternalhit|facebot|twitterbot|slackbot-linkexpanding|discordbot|whatsapp|telegrambot|
+    linkedinbot|skypeuripreview|redditbot|mastodon|pinterestbot|iframely|embedly|viber
+  /xi
+
   ROBOTS_TAG = "noindex, nofollow, noarchive, nosnippet, noimageindex, noai, noimageai"
 
   class_methods do
@@ -29,7 +36,18 @@ module KeepsRobotsOut
     request.user_agent.to_s.match?(ROBOT_AGENT)
   end
 
+  def link_preview_request?
+    request.user_agent.to_s.match?(LINK_PREVIEW_AGENT)
+  end
+
   private
+
+  # The preview card's tags and nothing else (application/_share_meta), for a link-preview fetcher
+  def link_preview(share)
+    @share = share
+    response.headers["X-Robots-Tag"] = ROBOTS_TAG
+    render "application/link_preview", layout: false, formats: [:html], content_type: "text/html"
+  end
 
   def turn_robots_away
     return unless robot_request?

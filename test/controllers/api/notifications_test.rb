@@ -27,9 +27,9 @@ class Api::NotificationsTest < ActionDispatch::IntegrationTest
     assert_equal ["text_report.resolved", "/books/daily-reflections/chapters/january-10"], [n.kind, n.url]
   end
 
-  test "sign-ups waiting for approval notify admins" do
+  test "sign-ups confirm their own email, so admins aren't asked to approve them" do
     User.create!(email: "new@example.com", password: "password123")
-    assert_equal ["user.pending"], @admin.notifications.pluck(:kind)
+    assert_empty @admin.notifications
   end
 
   test "readers list their notifications and mark them read" do
@@ -52,5 +52,45 @@ class Api::NotificationsTest < ActionDispatch::IntegrationTest
 
     post "/api/notifications/read_all", as: :json
     assert_equal 0, @reader.notifications.unread.count
+  end
+
+  test "readers remove one notification or clear them all, only their own" do
+    Notification.deliver(@reader, kind: "follow.created", title: "One")
+    Notification.deliver(@reader, kind: "test", title: "Two")
+    Notification.deliver(@reader, kind: "test", title: "Three")
+    Notification.deliver(@admin, kind: "test", title: "Not yours")
+    sign_in @reader
+
+    get "/api/notifications", as: :json
+    assert_equal "follows", response.parsed_body["notifications"].find { |n| n["title"] == "One" }["category"]
+
+    delete "/api/notifications/#{@admin.notifications.sole.id}", as: :json
+    assert_response :not_found
+    delete "/api/notifications/#{@reader.notifications.find_by(title: 'One').id}", as: :json
+    assert_response :no_content
+    assert_equal %w[Three Two], @reader.notifications.recent.pluck(:title)
+
+    delete "/api/notifications/clear", as: :json
+    assert_response :no_content
+    assert_empty @reader.notifications.reload
+    assert_equal 1, @admin.notifications.count
+  end
+
+  test "opening the page a notification leads to marks it read, with or without its query or anchor" do
+    sign_in @reader
+    Notification.deliver(@reader, kind: "test", title: "Exact", url: "/service_readings")
+    Notification.deliver(@reader, kind: "test", title: "Anchored", url: "/service_readings#how-it-works")
+    Notification.deliver(@reader, kind: "test", title: "Query", url: "/service_readings?comment=4")
+    Notification.deliver(@reader, kind: "test", title: "Elsewhere", url: "/service_readings/new")
+    Notification.deliver(@reader, kind: "test", title: "Nowhere")
+    Notification.deliver(@admin, kind: "test", title: "Not yours", url: "/service_readings")
+
+    get "/api/notifications", as: :json
+    assert_equal 5, response.parsed_body["unread"], "an API call isn't a visit"
+
+    get "/service_readings"
+    assert_response :success
+    assert_equal %w[Elsewhere Nowhere], @reader.notifications.unread.order(:id).pluck(:title)
+    assert_equal 1, @admin.notifications.unread.count
   end
 end

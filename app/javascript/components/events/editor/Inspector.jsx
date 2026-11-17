@@ -4,6 +4,7 @@ import { inputClass, labelClass } from "../../ui/styles";
 import Toggle from "../../ui/Toggle";
 import { api, BLOCK_INFO, COLORS, updateTitle } from "../lib";
 import { ActivitiesEditor, PhotosEditor } from "./ListEditors";
+import Skeleton from "../../ui/Skeleton";
 
 export function Field({ label, hint, children }) {
   return (
@@ -122,6 +123,10 @@ export default function BlockInspector({ block, uploadPath, pollsFor, announces 
         </>
       )}
 
+      {block.type === "conscience_agenda" && (
+        <Field label="Title" hint="Shows the agenda of the business meeting this event is linked to, to the group's members."><input className={inputClass} value={block.title || ""} onChange={(e) => set("title")(e.target.value)} maxLength={120} /></Field>
+      )}
+
       {block.type === "poll" && pollsFor && <PollPicker token={pollsFor} value={block.poll_token} onChange={set("poll_token")} />}
 
       {extraFields?.(block, set)}
@@ -183,7 +188,7 @@ function PollPicker({ token, value, onChange }) {
     <Field label="Poll" hint="Picking a poll you run makes it this event's poll; voting in it with an account follows the event.">
       {error && <p className="text-sm text-rose-600">{error}</p>}
       {!polls ? (
-        <p className="text-sm text-slate-500">Loading polls…</p>
+        <Skeleton variant="text" rows={2} label="Loading polls" />
       ) : (
         <div className="space-y-1.5">
           {polls.length === 0 && <p className="text-sm text-slate-500 dark:text-neutral-400">No polls yet.</p>}

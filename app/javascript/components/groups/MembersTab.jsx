@@ -1,17 +1,44 @@
-import React, { useState } from "react";
-import { Check, Copy, RefreshCw, UserPlus, X } from "lucide-react";
-import { inputClass } from "../ui/styles";
+import React, { useMemo, useState } from "react";
+import { Ban, Check, Copy, RefreshCw, Search, UserPlus, X } from "lucide-react";
+import { iconInputClass, inputClass } from "../ui/styles";
 import { api, ROLE_LABELS, soberFor } from "./lib";
 import Avatar from "./Avatar";
+import { FindSponsor } from "../recovery/SponsorAvailability";
+import SponsorCheck from "../ui/SponsorCheck";
 import { Card, ErrorNote, Pill, Tray, copy, dangerButton, primaryButton, quietButton } from "./ui";
 
 // Members with their pictures and blurbs. Group admins also see join requests, add people
-// by email, share the invite link, change roles and remove people.
+// by email, share the invite link, change roles and remove people, or block them (they can't
+// ask to join again or use the invite link until they're unblocked).
+
+// Everything the member search looks at: name, username, email and the roles shown as pills.
+const searchText = (person) => [
+  person.name,
+  person.username,
+  person.email,
+  ROLE_LABELS[person.role],
+  person.can_keep_records && "record keeper",
+  person.can_schedule_hosts && "host coordinator",
+  person.can_keep_treasury && "treasurer",
+  person.can_host && "can host",
+].filter(Boolean).join(" ").toLowerCase();
+
 export default function MembersTab({ group, reload, setGroup }) {
   const manage = group.can_manage;
   const [email, setEmail] = useState("");
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [query, setQuery] = useState("");
+
+  // Every word typed has to match somewhere, so "host coordinator" or "eli gmail" narrow it down.
+  const members = useMemo(() => {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return group.members;
+    return group.members.filter((person) => {
+      const text = searchText(person);
+      return words.every((word) => text.includes(word));
+    });
+  }, [group.members, query]);
 
   const call = async (path, options) => {
     setError(null);
@@ -22,6 +49,9 @@ export default function MembersTab({ group, reload, setGroup }) {
       setError(e.message);
     }
   };
+
+  const block = (person) => window.confirm(`Block ${person.name} from ${group.title}? They're taken out of the group and can't ask to join again or use the invite link until you unblock them.`)
+    && call("/blocks", { method: "POST", body: { user_id: person.id } });
 
   const add = async (e) => {
     e.preventDefault();
@@ -41,6 +71,7 @@ export default function MembersTab({ group, reload, setGroup }) {
   return (
     <div className="space-y-5">
       <ErrorNote error={error} />
+      {group.show_sponsors !== false && <FindSponsor group={group.slug} />}
 
       {manage && group.requests?.length > 0 && (
         <Tray label={`Asking to join (${group.requests.length})`}>
@@ -49,7 +80,7 @@ export default function MembersTab({ group, reload, setGroup }) {
               <Card key={person.membership_id} className="flex flex-wrap items-center gap-3 p-3">
                 <Avatar person={person} />
                 <div className="min-w-[12rem] flex-1">
-                  <p className="font-medium text-slate-900 dark:text-white">{person.name}</p>
+                  <p className="font-medium text-slate-900 dark:text-white">{person.username ? <a href={`/people/${person.username}`} className="!text-slate-900 hover:underline dark:!text-white">{person.name}</a> : person.name}</p>
                   <p className="text-xs text-slate-500 dark:text-neutral-400">{person.email}</p>
                   {person.bio && <p className="mt-0.5 text-sm text-slate-600 dark:text-neutral-300">{person.bio}</p>}
                 </div>
@@ -59,6 +90,9 @@ export default function MembersTab({ group, reload, setGroup }) {
                 </button>
                 <button type="button" onClick={() => call(`/memberships/${person.membership_id}`, { method: "DELETE" })} className={quietButton}>
                   <X className="h-4 w-4" /> Turn down
+                </button>
+                <button type="button" onClick={() => block(person)} className={dangerButton} title="Turn down, and don't let them ask again">
+                  <Ban className="h-4 w-4" /> Block
                 </button>
                 </div>
               </Card>
@@ -90,15 +124,38 @@ export default function MembersTab({ group, reload, setGroup }) {
         </Tray>
       )}
 
-      <Tray label={`Members (${group.members.length})`}>
+      <Tray label={query.trim() ? `Members (${members.length} of ${group.members.length})` : `Members (${group.members.length})`}>
+        <div className="relative mb-2">
+          <Search className={iconInputClass} />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && setQuery("")}
+            placeholder="Search members by name, email or role…"
+            aria-label="Search members"
+            className={`${inputClass} pl-9`}
+          />
+        </div>
+        {members.length === 0 && (
+          <Card className="p-4 text-center text-sm text-slate-500 dark:text-neutral-400">
+            No one matches “{query.trim()}”.{" "}
+            <button type="button" onClick={() => setQuery("")} className="font-medium text-blue-600 hover:underline dark:text-blue-400">Clear search</button>
+          </Card>
+        )}
         <div className="grid gap-1.5 sm:grid-cols-2">
-          {group.members.map((person) => (
+          {members.map((person) => (
             <Card key={person.membership_id} className="flex gap-3 p-3">
-              <Avatar person={person} size={48} />
+              <a href={person.username ? `/people/${person.username}` : undefined} className="relative h-fit shrink-0" aria-label={`${person.name}'s profile`}><Avatar person={person} size={48} />{person.can_sponsor && <SponsorCheck on size={18} />}</a>
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900 dark:text-white">
-                  {person.name}
+                  {person.username ? <a href={`/people/${person.username}`} className="!text-slate-900 hover:underline dark:!text-white">{person.name}</a> : person.name}
                   {person.role === "admin" && <Pill tone="accent">{ROLE_LABELS.admin}</Pill>}
+                  {person.can_keep_records && <Pill tone="green">Record keeper</Pill>}
+                  {person.can_schedule_hosts && <Pill tone="green">{person.host_slots_only && person.role !== "admin" ? `Host coordinator · ${person.host_slot_count} ${person.host_slot_count === 1 ? "time slot" : "time slots"}` : "Host coordinator"}</Pill>}
+                  {person.can_keep_treasury && <Pill tone="green">Treasurer</Pill>}
+                  {person.can_host && <Pill tone="green">Can host</Pill>}
+                  {person.can_sponsor && <SponsorCheck badge />}
                 </p>
                 {person.email && <p className="truncate text-xs text-slate-500 dark:text-neutral-400">{person.email}</p>}
                 {person.sobriety_date && (
@@ -115,9 +172,29 @@ export default function MembersTab({ group, reload, setGroup }) {
                       onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { role: person.role === "admin" ? "member" : "admin" } })}>
                       {person.role === "admin" ? "Make member" : "Make admin"}
                     </button>
+                    <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Record keepers write the group's documents"
+                      onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_keep_records: !person.can_keep_records } })}>
+                      {person.can_keep_records ? "Not a record keeper" : "Make record keeper"}
+                    </button>
+                    <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Schedules who hosts and co-hosts each meeting"
+                      onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_schedule_hosts: !person.can_schedule_hosts } })}>
+                      {person.can_schedule_hosts ? "Not a host coordinator" : "Make host coordinator"}
+                    </button>
+                    <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Writes and posts the treasurer's reports"
+                      onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_keep_treasury: !person.can_keep_treasury } })}>
+                      {person.can_keep_treasury ? "Not treasurer" : "Make treasurer"}
+                    </button>
+                    <button type="button" className={`${quietButton} !px-2 !py-1 !text-xs`} title="Can host or co-host: reads the format kept for hosts and hears when a host won't be there"
+                      onClick={() => call(`/memberships/${person.membership_id}`, { method: "PATCH", body: { can_host: !person.can_host } })}>
+                      {person.can_host ? "Can't host" : "Can host"}
+                    </button>
                     <button type="button" className={`${dangerButton} !px-2 !py-1 !text-xs`}
                       onClick={() => window.confirm(`Remove ${person.name} from ${group.title}?`) && call(`/memberships/${person.membership_id}`, { method: "DELETE" })}>
                       Remove
+                    </button>
+                    <button type="button" className={`${dangerButton} !px-2 !py-1 !text-xs`} title="Remove them, and don't let them ask to join again or use the invite link"
+                      onClick={() => block(person)}>
+                      Block
                     </button>
                   </div>
                 )}
@@ -126,6 +203,20 @@ export default function MembersTab({ group, reload, setGroup }) {
           ))}
         </div>
       </Tray>
+
+      {manage && group.blocked?.length > 0 && (
+        <Tray label={`Blocked (${group.blocked.length})`}>
+          <div className="space-y-1.5">
+            {group.blocked.map((person) => (
+              <Card key={person.id} className="flex flex-wrap items-center gap-3 p-3">
+                <Avatar person={person} size={32} />
+                <p className="min-w-[10rem] flex-1 font-medium text-slate-900 dark:text-white">{person.name}</p>
+                <button type="button" className={quietButton} onClick={() => call(`/blocks/${person.id}`, { method: "DELETE" })}>Unblock</button>
+              </Card>
+            ))}
+          </div>
+        </Tray>
+      )}
     </div>
   );
 }

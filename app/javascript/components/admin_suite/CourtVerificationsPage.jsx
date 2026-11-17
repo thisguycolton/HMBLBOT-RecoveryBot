@@ -5,6 +5,7 @@ import { inputClass, labelClass } from "../ui/styles";
 import { DateField } from "../ui/DateFields";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
+import Skeleton, { InlineSkeleton } from "../ui/Skeleton";
 
 // Look up court attendance verifications by name, email and meeting dates, then hand the
 // matches over as a printable PDF, a CSV, or one email. Filters live in the URL so a lookup
@@ -70,7 +71,7 @@ export default function CourtVerificationsPage({ notify }) {
       <Shell>
         <ShellBand
           icon={FileCheck}
-          title={result ? `${total} ${total === 1 ? "verification" : "verifications"}` : "Loading…"}
+          title={result ? `${total} ${total === 1 ? "verification" : "verifications"}` : <InlineSkeleton className="w-28" />}
           subtitle={result && total > result.limit ? `Showing the newest ${result.limit}. Print, CSV and email include every match.` : "Newest meeting first"}
         />
         <ShellPanel position="middle" className="p-4 flex flex-wrap gap-2">
@@ -104,7 +105,7 @@ function Field({ label, onChange, type, ...props }) {
 }
 
 function Results({ result }) {
-  if (!result) return <p className="p-8 text-center text-sm text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>;
+  if (!result) return <Skeleton variant="rows" rows={5} className="p-2" />;
   if (!result.court_verifications.length) {
     return <p className="p-8 text-center text-sm text-slate-500 dark:text-neutral-400 !font-sans">No verifications match these filters.</p>;
   }

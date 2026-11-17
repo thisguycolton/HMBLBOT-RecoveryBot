@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from "react";
-import { Check, Search, Shield, ShieldOff, Users } from "lucide-react";
+import React, { Fragment, useEffect, useState } from "react";
+import { Award, Bell, BellRing, Check, ChevronDown, Monitor, Search, Shield, ShieldOff, Smartphone, Tablet, Trash2, Users } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import SegmentedControl from "../ui/SegmentedControl";
 import { inputClass } from "../ui/styles";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { formatCount } from "./App";
+import { InlineSkeleton } from "../ui/Skeleton";
+import { TOPIC_ICONS } from "../../lib/dayFacts";
+import MemberChips from "./MemberChips";
 
 const FILTERS = [
   { value: "", label: "Everyone" },
-  { value: "pending", label: "Waiting for approval" },
+  { value: "pending", label: "Email not confirmed" },
   { value: "admins", label: "Admins" },
 ];
 
@@ -18,6 +21,23 @@ export default function UsersPage({ notify }) {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [data, setData] = useState(null);
+  const [diag, setDiag] = useState(null); // { id, info } for the member whose notifications are open
+  const [chipsFor, setChipsFor] = useState(null); // the member whose chips are open (MemberChips)
+  const [stats, setStats] = useState(null); // the whole site's counts, no names (MemberStats.summary)
+  useEffect(() => { api("/users/stats").then(setStats).catch((e) => notify(e.message, "error")); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Why someone isn't getting reminders or push: opens under their row
+  async function showNotifications(user) {
+    if (diag?.id === user.id) return setDiag(null);
+    setDiag({ id: user.id, info: null });
+    try {
+      const info = await api(`/users/${user.id}/notifications`);
+      setDiag((d) => (d?.id === user.id ? { id: user.id, info } : d));
+    } catch (e) {
+      setDiag(null);
+      notify(e.message, "error");
+    }
+  }
 
   async function load() {
     try {
@@ -38,16 +58,32 @@ export default function UsersPage({ notify }) {
     }
   }
 
-  const approve = (user) => change(user, "/confirm", null, `Approved ${user.email}. They've been emailed.`);
+  // People confirm their own email; this is for someone whose email never arrives
+  const approve = (user) => window.confirm(`Confirm ${user.email} without the email link? Only do this if you know the address is theirs.`) &&
+    change(user, "/confirm", null, `Confirmed ${user.email}. They've been emailed that they can log in.`);
   function toggleAdmin(user) {
     const verb = user.admin ? "Remove admin access from" : "Make";
     if (!window.confirm(`${verb} ${user.email}${user.admin ? "?" : " an admin?"}`)) return;
     change(user, "", { admin: !user.admin }, user.admin ? `${user.email} is no longer an admin.` : `${user.email} is now an admin.`);
   }
 
+  // For good, like deleting your own account: typing their email is the confirmation
+  async function remove(user) {
+    const typed = window.prompt(`Delete ${user.email}'s account for good? Their notes, step work, chips and messages go with it, and it can't be undone.${user.readings_count ? ` Their ${user.readings_count} archive reading${user.readings_count === 1 ? "" : "s"} move to you.` : ""}\n\nType their email address to confirm:`);
+    if (typed === null) return;
+    try {
+      await api(`/users/${user.id}`, { method: "DELETE", body: { confirm_email: typed } });
+      notify(`Deleted ${user.email}'s account.`);
+      await load();
+    } catch (e) {
+      notify(e.message, "error");
+    }
+  }
+
   return (
     <Shell>
-      <ShellBand icon={Users} title="Members" subtitle={data ? `${formatCount(data.total)} ${data.total === 1 ? "account" : "accounts"}${data.total > data.limit ? `, showing the newest ${data.limit}` : ""}` : "Loading…"} />
+      <ShellBand icon={Users} title="Members" subtitle={data ? `${formatCount(data.total)} ${data.total === 1 ? "account" : "accounts"}${data.total > data.limit ? `, showing the newest ${data.limit}` : ""}` : <InlineSkeleton className="w-40" />} />
+      <ShellPanel position="middle"><SiteStats stats={stats} /></ShellPanel>
       <ShellPanel position="middle" className="p-4 flex flex-wrap items-center gap-3">
         <SegmentedControl options={FILTERS} value={filter} onChange={setFilter} />
         <form className="flex gap-2 flex-1 min-w-[16rem]" onSubmit={(e) => { e.preventDefault(); setSearch(query.trim()); }}>
@@ -61,27 +97,37 @@ export default function UsersPage({ notify }) {
         ) : (
           <table className="w-full text-sm !font-sans [&_*]:!font-sans">
             <thead className="border-b border-neutral-200 dark:border-neutral-700">
-              <tr>{["Member", "Joined", "Last seen", "Readings", "Status", ""].map((h) => <th key={h} className={th}>{h}</th>)}</tr>
+              <tr>{["Member", "Joined", "Last seen", "Devices", "Readings", "Status", ""].map((h) => <th key={h} className={th}>{h}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {data.users.map((u) => (
-                <tr key={u.id}>
+                <Fragment key={u.id}>
+                <tr>
                   <td className={td}>
                     <p className="font-medium text-slate-900 dark:text-white">{u.name || u.email}</p>
                     {u.name && <p className="text-slate-500">{u.email}</p>}
                   </td>
                   <td className={`${td} whitespace-nowrap`}>{shortDate(u.created_at)}</td>
                   <td className={`${td} whitespace-nowrap`}>{u.last_seen_at ? shortDate(u.last_seen_at) : "—"}</td>
+                  <td className={td}><DeviceList devices={u.devices} /></td>
                   <td className={`${td} tabular-nums`}>{formatCount(u.readings_count)}</td>
                   <td className={td}>
-                    {!u.confirmed && <Badge tone="warn">Waiting</Badge>}
+                    {!u.confirmed && <Badge tone="warn">Unconfirmed</Badge>}
                     {u.admin && <Badge>Admin</Badge>}
                     {u.is_you && <Badge>You</Badge>}
                   </td>
                   <td className={`${td} text-right whitespace-nowrap`}>
+                    <button type="button" className={buttonClass.secondary} onClick={() => showNotifications(u)} aria-expanded={diag?.id === u.id}
+                      aria-label={`${u.email}'s notifications`} title="Notifications and reminders">
+                      <Bell className="w-4 h-4" />
+                    </button>
+                    <button type="button" className={buttonClass.secondary} onClick={() => setChipsFor(chipsFor === u.id ? null : u.id)} aria-expanded={chipsFor === u.id}
+                      aria-label={`${u.email}'s chips`} title="Chips they were given or claimed">
+                      <Award className="w-4 h-4" />
+                    </button>
                     {!u.confirmed && (
-                      <button type="button" className={buttonClass.primary} onClick={() => approve(u)}>
-                        <Check className="w-4 h-4" strokeWidth={2.5} /> Approve
+                      <button type="button" className={buttonClass.secondary} onClick={() => approve(u)}>
+                        <Check className="w-4 h-4" strokeWidth={2.5} /> Confirm for them
                       </button>
                     )}
                     {!u.is_you && (
@@ -89,14 +135,212 @@ export default function UsersPage({ notify }) {
                         {u.admin ? <><ShieldOff className="w-4 h-4" /> Remove admin</> : <><Shield className="w-4 h-4" /> Make admin</>}
                       </button>
                     )}
+                    {!u.is_you && !u.admin && (
+                      <button type="button" className={buttonClass.danger} onClick={() => remove(u)} aria-label={`Delete ${u.email}'s account`} title="Delete account">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
+                {diag?.id === u.id && (
+                  <tr><td colSpan={7} className="px-4 pb-4 bg-neutral-50 dark:bg-neutral-900/60">{diag.info ? <NotificationInfo info={diag.info} /> : <InlineSkeleton />}</td></tr>
+                )}
+                {chipsFor === u.id && (
+                  <tr><td colSpan={7} className="px-4 pb-4 bg-neutral-50 dark:bg-neutral-900/60"><MemberChips user={u} notify={notify} /></td></tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>
         )}
       </ShellPanel>
     </Shell>
+  );
+}
+
+const DEVICE_ICONS = { ios_app: Smartphone, android_app: Smartphone, phone_web: Smartphone, tablet_web: Tablet, computer_web: Monitor };
+
+// The kinds of devices someone has signed in from (app or browser), a green dot when they used
+// it in the last 30 days, and a bell when it gets notifications
+function DeviceList({ devices }) {
+  if (!devices?.length) return <span className="text-slate-400">—</span>;
+  return (
+    <ul className="flex flex-wrap gap-1">
+      {devices.map((d) => {
+        const Icon = DEVICE_ICONS[d.kind] || Monitor;
+        const app = d.kind.endsWith("_app");
+        const tip = `${d.label}: ${d.active ? "active" : "not active"}, last seen ${d.last_seen_at ? shortDate(d.last_seen_at) : "never"}${d.push ? ", gets notifications" : ""}`;
+        return (
+          <li key={d.kind} title={tip} aria-label={tip}
+            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${app ? "bg-accent-tint text-accent-ink dark:bg-accent/30 dark:text-white" : "bg-neutral-100 text-slate-700 dark:bg-neutral-800 dark:text-neutral-200"} ${d.active ? "" : "opacity-60"}`}>
+            <span className={`size-1.5 rounded-full ${d.active ? "bg-emerald-500" : "bg-neutral-400"}`} aria-hidden="true" />
+            <Icon className="size-3.5" aria-hidden="true" />
+            {d.label}
+            {d.push && <BellRing className="size-3" aria-hidden="true" />}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// Site-wide figures above the list, never tied to a name and never narrowed by the search
+function SiteStats({ stats }) {
+  const [open, setOpen] = useState(true);
+  const toggle = () => setOpen(!open);
+  return (
+    <div className="!font-sans [&_*]:!font-sans">
+      <button type="button" onClick={toggle} aria-expanded={open}
+        className="flex w-full items-center gap-2 !bg-transparent px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-neutral-200">
+        <ChevronDown className={`size-4 transition-transform ${open ? "" : "-rotate-90"}`} />
+        Site-wide activity <span className="font-normal text-slate-500 dark:text-neutral-400">· no names, everyone counted</span>
+      </button>
+      {open && (!stats ? <div className="px-4 pb-4"><InlineSkeleton className="w-64" /></div> : (
+        <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 xl:grid-cols-4">
+          <WritingCard title="10th steps" w={stats.steps} />
+          <WritingCard title="Gratitude lists" w={stats.gratitude} />
+          <StatCard title="Devices" note="People who have signed in from each">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
+                  <th className="pb-1 text-left font-semibold">Device</th>
+                  <th className="pb-1 text-right font-semibold">People</th>
+                  <th className="pb-1 pl-3 text-right font-semibold" title="Used it in the last 30 days">Active</th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums">
+                {stats.devices.map((d) => {
+                  const Icon = DEVICE_ICONS[d.kind] || Monitor;
+                  return (
+                    <tr key={d.kind} className={d.people ? "" : "text-slate-400 dark:text-neutral-500"}>
+                      <td className="py-1"><span className="flex items-center gap-2"><Icon className="size-4 shrink-0 text-slate-400" aria-hidden="true" />{d.label}</span></td>
+                      <td className="py-1 text-right">{formatCount(d.people)}</td>
+                      <td className={`py-1 pl-3 text-right ${d.active ? "text-emerald-700 dark:text-emerald-400" : ""}`}>{formatCount(d.active)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Active means used in the last 30 days</p>
+          </StatCard>
+          <StatCard title="Day counts">
+            <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{formatCount(stats.day_counts.with_date)}</p>
+            <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">{stats.day_counts.with_date === 1 ? "member has" : "members have"} a sobriety date</p>
+            <Bars rows={stats.day_counts.spans} />
+          </StatCard>
+          {stats.day_counts.facts_this_week.length > 0 && <FunFacts facts={stats.day_counts.facts_this_week} />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Milestones members reach this week, in its own full-width card so the four cards above stay even.
+// A short list first, the rest behind "Show all".
+const FACTS_SHOWN = 6;
+const inDays = (n) => (n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`);
+function FunFacts({ facts }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? facts : facts.slice(0, FACTS_SHOWN);
+  return (
+    <StatCard title="Fun facts this week" className="sm:col-span-2 xl:col-span-4">
+      <ul className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2 xl:grid-cols-3">
+        {shown.map((f) => (
+          <li key={`${f.days}-${f.in_days}-${f.title}`} className="flex min-w-0 items-start gap-2 text-sm">
+            <span aria-hidden="true" className="w-5 shrink-0 text-center">{TOPIC_ICONS[f.topic]}</span>
+            <span className="min-w-0">
+              <span className="text-slate-900 dark:text-white">{f.title}</span>
+              <span className="block text-xs text-slate-500 dark:text-neutral-400">
+                Day {formatCount(f.days)} · {formatCount(f.people)} {f.people === 1 ? "member" : "members"} {inDays(f.in_days)}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {facts.length > FACTS_SHOWN && (
+        <button type="button" onClick={() => setAll(!all)}
+          className="mt-2 !bg-transparent text-xs font-semibold text-accent-ink hover:underline dark:text-accent-tint">
+          {all ? "Show fewer" : `Show all ${formatCount(facts.length)}`}
+        </button>
+      )}
+    </StatCard>
+  );
+}
+
+function StatCard({ title, note, className = "", children }) {
+  return (
+    <section className={`rounded-2xl border border-neutral-200 p-3 dark:border-neutral-700 ${className}`}>
+      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+      {note && <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">{note}</p>}
+      {children}
+    </section>
+  );
+}
+
+// Totals, then how many each person has written as a histogram: "12 people wrote 2–4"
+function WritingCard({ title, w }) {
+  return (
+    <StatCard title={title}>
+      <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{formatCount(w.total)}</p>
+      <p className="mb-2 text-xs text-slate-500 dark:text-neutral-400">
+        {formatCount(w.last_30_days)} in the last 30 days · by {formatCount(w.people)} {w.people === 1 ? "person" : "people"} ({formatCount(w.people_last_30_days)} lately)
+      </p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">How many each person wrote</p>
+      <Bars rows={w.buckets.map((b) => ({ label: `${b.label} each`, people: b.people }))} />
+      <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Typical: {formatCount(w.median)} · Most by one person: {formatCount(w.most)}</p>
+    </StatCard>
+  );
+}
+
+function Bars({ rows }) {
+  const max = Math.max(1, ...rows.map((r) => r.people));
+  return (
+    <div className="space-y-1">
+      {rows.map((r) => (
+        <div key={r.label} className="flex items-center gap-2 text-xs">
+          <span className="w-28 shrink-0 text-slate-600 dark:text-neutral-300">{r.label}</span>
+          <span className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+            <span className="block h-full rounded-full bg-accent" style={{ width: `${(r.people / max) * 100}%` }} />
+          </span>
+          <span className="w-8 shrink-0 text-right tabular-nums text-slate-600 dark:text-neutral-300">{formatCount(r.people)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const when = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "never");
+
+// Site Admin > Members > the bell button: their reminders, time zone and notification devices
+function NotificationInfo({ info }) {
+  const row = "flex gap-2 py-0.5";
+  const label = "w-40 shrink-0 text-slate-500 dark:text-neutral-400";
+  const names = { gratitude: "Gratitude reminder", step: "10th step reminder" };
+  return (
+    <div className="grid gap-4 pt-3 text-sm sm:grid-cols-2">
+      <div>
+        <p className={row}><span className={label}>Their time</span><span>{info.local_time} ({info.time_zone}{info.time_zone_saved ? "" : ", site default"})</span></p>
+        {Object.entries(info.reminders).map(([k, r]) => (
+          <p key={k} className={row}><span className={label}>{names[k] || k}</span>
+            <span>{r.on ? `On at ${r.at}` : "Off"}{r.on && ` · last sent ${r.reminded_on || "never"}`}{r.on && r.written_today && " · already written today (skipped)"}</span></p>
+        ))}
+        <p className={row}><span className={label}>Reminders pushed</span><span>{info.reminders_pushed ? "Yes" : "No, they turned reminder pushes off"}</span></p>
+        {info.turned_off.length > 0 && <p className={row}><span className={label}>Push turned off for</span><span>{info.turned_off.join(", ")}</span></p>}
+        {!info.app_push_ready && <p className="py-0.5 text-amber-700 dark:text-amber-300">App notifications aren't set up on the server (FIREBASE_SERVICE_ACCOUNT).</p>}
+      </div>
+      <div>
+        <p className="font-semibold text-slate-700 dark:text-neutral-200">Devices getting notifications</p>
+        {info.apps.length + info.browsers.length === 0 && <p className="py-0.5 text-amber-700 dark:text-amber-300">None. Push can't reach them until they open the app signed in, or turn notifications on in a browser.</p>}
+        {[...info.apps.map((d) => ({ ...d, label: `${d.label}${d.app_version ? ` ${d.app_version}` : ""}` })), ...info.browsers].map((d, i) => (
+          <p key={i} className={row}><span className="min-w-0 flex-1">{d.label}</span><span className="text-slate-500 dark:text-neutral-400">added {when(d.created_at)} · last sent {when(d.last_sent_at)}</span></p>
+        ))}
+        <p className="mt-3 font-semibold text-slate-700 dark:text-neutral-200">Latest in their bell</p>
+        {info.recent.length === 0 && <p className="py-0.5 text-slate-500">Nothing yet.</p>}
+        {info.recent.map((n, i) => (
+          <p key={i} className={row}><span className="min-w-0 flex-1 truncate">{n.title}</span><span className="text-slate-500 dark:text-neutral-400">{when(n.created_at)}</span></p>
+        ))}
+      </div>
+    </div>
   );
 }
 

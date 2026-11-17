@@ -9,9 +9,11 @@ import { PageBreak } from "../tiptap/PageBreak";
 import TextAlign from '@tiptap/extension-text-align';
 import ReaderBubbleMenu from "../components/ReaderBubbleMenu";
 import HighlightsModal from "../components/HighlightsModal";
-import { ReaderBar, ReaderFooter, ChaptersDialog, ModeSwitch, useChapterHotkeys, chapterHref, tocHref, isAdminViewer } from "./book/ReaderChrome";
+import { ReaderBar, ReaderFooter, ChaptersDialog, ModeSwitch, useChapterHotkeys, chapterHref, tocHref, isAdminViewer, DAILY_BOOKS } from "./book/ReaderChrome";
+import PictureShare from "./share/PictureShare";
 import { SearchDialog, SearchBanner, useInTextSearch, useSearchHotkey } from "./book/BookSearch";
 import { rememberLastRead } from "./book/readingProgress";
+import { isShareView } from "./shell/shareView";
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
@@ -28,7 +30,7 @@ import { Indent } from "../tiptap/Indent";
 import { HBHighlight } from '../tiptap/HBHighlight';
 import HighlightCard, { HIGHLIGHT_PALETTE as PALETTE, highlightCss } from "./book/HighlightCard";
 import { highlightUrl, allHighlightsUrl, shareLink, useToast } from "./book/highlightSharing";
-import { MessageSquareText, TriangleAlert } from "lucide-react";
+import { MessageSquareText, TriangleAlert, X } from "lucide-react";
 import TextReportDialog from "./book/TextReportDialog";
 
 function offsetToPos(doc, target) {
@@ -301,6 +303,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const [chapter, setChapter] = useState(null);
   const [highlights, setHighlights] = useState([]);
   const [color, setColor] = useState("yellow");
+  const [sharingDay, setSharingDay] = useState(false);
   const [toast, toastNode] = useToast();
   const signedIn = document.body.dataset.currentUser === "true";
 
@@ -542,15 +545,18 @@ export default function ChapterViewer({ bookSlug, slug }) {
         if (isMounted) setChapter(ch.data);
 
         const { hl, share } = sharedParams;
-        const hls = await axios.get(`/api/highlights`, {
-          params: {
-            chapter_slug: slug,
-            book_slug: bookSlug,
-            ...(hl ? { hl } : share ? { share } : {}),
-          }
-        });
+        const base = { chapter_slug: slug, book_slug: bookSlug };
+        const list = (r) => (Array.isArray(r?.data) ? r.data : []);
+        // A shared link shows that highlight (or reader's highlights) and, signed in, your own
+        // too, so you can keep highlighting the page and see what you already marked.
+        const [shared, own] = await Promise.all([
+          axios.get(`/api/highlights`, { params: { ...base, ...(hl ? { hl } : share ? { share } : {}) } }),
+          sharedView && signedIn ? axios.get(`/api/highlights`, { params: base }).catch(() => null) : null,
+        ]);
+        const seen = new Set(list(shared).map((h) => String(h.id)));
+        const merged = [...list(shared), ...list(own).filter((h) => !seen.has(String(h.id)))];
 
-        if (isMounted) setHighlights(Array.isArray(hls.data) ? hls.data : []);
+        if (isMounted) setHighlights(merged);
       } catch (e) {
         console.error("Failed to load chapter", e);
       }
@@ -566,10 +572,13 @@ export default function ChapterViewer({ bookSlug, slug }) {
   // The last text selection inside the chapter, kept so a tap on the
   // popover (which can collapse the selection on phones) still knows what to highlight.
   const lastSelectionRef = useRef(null);
-  const [selectionPop, setSelectionPop] = useState(null); // { x, y } in page coordinates
+  const [selectionPop, setSelectionPop] = useState(null); // { x, y } in page coordinates, or { docked: true }
+  // Set while a finger is down on the bar: phones drop the text selection the
+  // moment you touch anything else, and the bar has to stay put for the tap to land.
+  const popPressRef = useRef(false);
 
   useEffect(() => {
-    if (!editor || sharedView) return;
+    if (!editor) return;
     let raf = 0;
     const onSelectionChange = () => {
       cancelAnimationFrame(raf);
@@ -578,7 +587,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
         try { view = editor.view; } catch { return; }
         const sel = window.getSelection();
         if (!view?.dom || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
-          setSelectionPop(null);
+          if (!popPressRef.current) setSelectionPop(null);
           return;
         }
         const range = sel.getRangeAt(0);
@@ -593,11 +602,16 @@ export default function ChapterViewer({ bookSlug, slug }) {
         } catch {
           return;
         }
+        // On touch screens the phone's own Copy / Look Up menu and the selection
+        // handles crowd the text, so the bar docks at the bottom of the screen instead.
+        if (window.matchMedia?.("(pointer: coarse)").matches) {
+          setSelectionPop({ docked: true });
+          return;
+        }
         const rect = range.getBoundingClientRect();
         const half = 150;
         const x = Math.min(Math.max(rect.left + rect.width / 2, half), window.innerWidth - half);
-        const below = window.matchMedia?.("(pointer: coarse)").matches;
-        setSelectionPop({ x: x + window.scrollX, y: (below ? rect.bottom : rect.top) + window.scrollY, below });
+        setSelectionPop({ x: x + window.scrollX, y: rect.top + window.scrollY });
       });
     };
     document.addEventListener("selectionchange", onSelectionChange);
@@ -605,7 +619,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
       cancelAnimationFrame(raf);
       document.removeEventListener("selectionchange", onSelectionChange);
     };
-  }, [editor, sharedView]);
+  }, [editor]);
 
   // The current selection as a W3C-style selector (text offsets + quote), or null.
   function selectionSelector() {
@@ -636,6 +650,11 @@ export default function ChapterViewer({ bookSlug, slug }) {
     const selector = selectionSelector();
     if (!selector) return;
     setReporting(selector);
+    clearSelection();
+  }
+
+  function clearSelection() {
+    popPressRef.current = false;
     lastSelectionRef.current = null;
     window.getSelection()?.removeAllRanges();
     setSelectionPop(null);
@@ -667,9 +686,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
       const created = { ...payload.highlight, mine: true, ...data, id: String(data.id) };
       setHighlights((prev) => [...prev, created]);
       setColor(name);
-      lastSelectionRef.current = null;
-      window.getSelection()?.removeAllRanges();
-      setSelectionPop(null);
+      clearSelection();
       if (withNote) openCard(created.id, { edit: true });
     } catch (error) {
       if (error?.response?.status === 401) toast("Sign in to save highlights", { tone: "error" });
@@ -695,6 +712,31 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const updateHighlight = useCallback((next) => {
     setHighlights((prev) => prev.map((h) => (String(h.id) === String(next.id) ? { ...h, ...next, id: h.id } : h)));
   }, []);
+
+  // Your copy of someone else's highlight, if you adopted it
+  const adoptedCopyOf = useCallback(
+    (h) => (h && !h.mine ? highlights.find((x) => x.mine && x.adopted_from?.id != null && String(x.adopted_from.id) === String(h.id)) || null : null),
+    [highlights]
+  );
+
+  // Adopt someone else's highlight: a private copy, same words and color, in your highlights.
+  async function adoptHighlight(h) {
+    if (!signedIn) {
+      toast("Sign in to adopt highlights", { tone: "error" });
+      return;
+    }
+    const params = sharedParams.hl ? { hl: sharedParams.hl } : sharedParams.share ? { share: sharedParams.share, id: h.id } : { id: h.id };
+    try {
+      const { data } = await axios.post("/api/highlights/adopt", params);
+      const copy = { ...data, id: String(data.id) };
+      setHighlights((prev) => (prev.some((x) => String(x.id) === copy.id) ? prev : [...prev, copy]));
+      openCard(copy.id);
+      toast(`Added to your highlights`);
+    } catch (error) {
+      if (error?.response?.status === 401) toast("Sign in to adopt highlights", { tone: "error" });
+      else toast(error?.response?.data?.error || "Couldn't adopt that highlight", { tone: "error" });
+    }
+  }
 
   async function shareOne(h) {
     const quote = h.selector?.quote?.exact || "";
@@ -802,6 +844,29 @@ export default function ChapterViewer({ bookSlug, slug }) {
   const [pageEl, setPageEl] = useState(null);
   const inText = useInTextSearch(pageEl, searchQuery);
 
+  // A #page-N in the URL (from "Go to page" on the book's page) scrolls to printed page N
+  // once the chapter's text is drawn. The chapter's first page is already at the top.
+  useEffect(() => {
+    if (!pageEl || !chapter) return;
+    const m = location.hash.match(/^#page-(\d+)$/);
+    if (!m || String(chapter.first_page) === m[1]) return;
+    let tries = 0;
+    let timer = null;
+    const seek = () => {
+      const el = pageEl.querySelector(`[data-page="${m[1]}"]`);
+      if (!el) {
+        if (++tries < 40) timer = setTimeout(seek, 100);
+        return;
+      }
+      const top = window.scrollY + el.getBoundingClientRect().top - nudgeForSticky(90);
+      window.scrollTo({ top, left: 0, behavior: "auto" });
+      el.classList.add("wb-page-target");
+      timer = setTimeout(() => el.classList.remove("wb-page-target"), 2500);
+    };
+    seek();
+    return () => clearTimeout(timer);
+  }, [pageEl, chapter]);
+
   // Tapping a highlight opens its card (note, share, color, delete). Listening on
   // the page rather than the editor survives TipTap swapping its DOM on load.
   useEffect(() => {
@@ -832,10 +897,13 @@ export default function ChapterViewer({ bookSlug, slug }) {
 
   /* ------------------ UI ------------------ */
 
+  // Shared on screen from HostDeck (shell/shareView.js): the text alone, no reader bar or menus
+  const share = isShareView();
+
   return (
-    <div className="wb wb-reader">
+    <div className={`wb wb-reader ${share ? "wb-reader--share" : ""}`}>
       {/* Progress bar */}
-      <div className="fixed top-14 left-0 w-full h-0.5 z-50 overflow-hidden pointer-events-none">
+      <div className={`fixed top-[var(--nav-h)] left-0 w-full h-0.5 z-50 overflow-hidden pointer-events-none ${share ? "" : "lg:left-[var(--side-w)]"}`}>
         <div
           ref={progRef}
           className="h-0.5 bg-[oklch(70%_0.2_44)] origin-left will-change-transform"
@@ -843,7 +911,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
         />
       </div>
 
-      <ReaderBar
+      {!share && <ReaderBar
         bookSlug={bookSlug}
         bookTitle={bookTitle}
         chapterTitle={chapter?.title}
@@ -851,7 +919,7 @@ export default function ChapterViewer({ bookSlug, slug }) {
         next={nextChapter}
         onOpenChapters={() => setOpenChaptersModal(true)}
         onOpenSearch={() => setOpenSearch(true)}
-      />
+      />}
 
       {searchQuery && (
         <SearchBanner
@@ -870,14 +938,22 @@ export default function ChapterViewer({ bookSlug, slug }) {
             {sharedMine
               ? `You're viewing your shared ${sharedParams.hl ? "highlight" : "highlights"}.`
               : `You're viewing ${sharedBy ? `${sharedBy}'s` : "a shared"} ${sharedParams.hl ? "highlight" : "highlights"}.`}
-            {sharedParams.hl && highlights.some((h) => h.note) && " Tap it to read the note."}
+            {sharedParams.hl && highlights.some((h) => !h.mine && h.note && !adoptedCopyOf(h)) && " Tap it to read the note."}
           </span>
+          {sharedParams.hl && signedIn && !sharedMine && (() => {
+            const theirs = highlights.find((h) => !h.mine);
+            if (!theirs) return null;
+            const copy = adoptedCopyOf(theirs);
+            return copy
+              ? <button type="button" className="wb-shared-banner__btn" onClick={() => openCard(copy.id)}>In your highlights</button>
+              : <button type="button" className="wb-shared-banner__btn" onClick={() => adoptHighlight(theirs)}>Adopt it</button>;
+          })()}
           {signedIn && <a href={location.pathname}>Show mine</a>}
           {sharedParams.share && <a href={`/library/highlights/${encodeURIComponent(sharedParams.share)}`}>See them all</a>}
         </div>
       )}
 
-      {isAdminViewer() && (
+      {isAdminViewer() && !share && (
         <div className="wb-reader__mode">
           <ModeSwitch bookSlug={bookSlug} chapterSlug={slug} editing={false} />
         </div>
@@ -893,10 +969,19 @@ export default function ChapterViewer({ bookSlug, slug }) {
         </div>
       </article>
 
-      {listReady && <ReaderFooter bookSlug={bookSlug} bookTitle={bookTitle} next={nextChapter} />}
+      {listReady && !share && <ReaderFooter bookSlug={bookSlug} bookTitle={bookTitle} next={nextChapter}
+        onShareDay={DAILY_BOOKS.includes(bookSlug) ? () => (signedIn ? setSharingDay(true) : toast("Sign in to share this day")) : null} />}
 
-      {/* Reader bubble menu for highlights */}
-      <ReaderBubbleMenu
+      {/* "Share this day": the whole reading as a picture, or a video whose lines fade in */}
+      {sharingDay && (
+        <PictureShare onClose={() => setSharingDay(false)} kind="day" canVideo heading="Share this day"
+          cardUrl={`/api/books/${encodeURIComponent(bookSlug)}/chapters/${encodeURIComponent(slug)}/card`}
+          link={`${window.location.origin}${chapterHref(bookSlug, { slug })}`}
+          title={[chapter?.title, bookTitle].filter(Boolean).join(" · ")} />
+      )}
+
+      {/* Reader bubble menu for highlights (out of the way while the docked bar shows) */}
+      {!selectionPop?.docked && !share && <ReaderBubbleMenu
         colors={PALETTE}
         value={cssFromStored(color)}
         onChangeColor={(css) => setColor(css)}
@@ -905,15 +990,18 @@ export default function ChapterViewer({ bookSlug, slug }) {
         onOpenChapters={() => setOpenChaptersModal(true)}
         onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
         isDark={document.documentElement.classList.contains('dark')}
-      />
+      />}
 
-      {/* Over selected text: tap a color to highlight, or start a note */}
+      {/* Over selected text (docked at the bottom on phones): tap a color to highlight, or start a note */}
       {selectionPop && (
         <div
-          className={`wb wb-selection-pop ${selectionPop.below ? "wb-selection-pop--below" : ""}`}
-          style={{ left: selectionPop.x, top: selectionPop.y }}
-          onPointerDown={(e) => e.preventDefault()}
+          className={`wb wb-selection-pop ${selectionPop.docked ? "wb-selection-pop--docked" : ""}`}
+          style={selectionPop.docked ? undefined : { left: selectionPop.x, top: selectionPop.y }}
+          onPointerDown={(e) => { popPressRef.current = true; e.preventDefault(); }}
+          onPointerUp={() => { setTimeout(() => { popPressRef.current = false; }, 400); }}
+          onPointerCancel={() => { popPressRef.current = false; }}
           onMouseDown={(e) => e.preventDefault()}
+          onContextMenu={(e) => e.preventDefault()}
           role="toolbar"
           aria-label="Highlight selection"
         >
@@ -947,6 +1035,11 @@ export default function ChapterViewer({ bookSlug, slug }) {
           ) : (
             <a className="wb-selection-pop__btn" href="/users/sign_in">Sign in to highlight</a>
           )}
+          {selectionPop.docked && (
+            <button type="button" className="wb-selection-pop__btn wb-selection-pop__close" aria-label="Cancel" onClick={clearSelection}>
+              <X size={16} aria-hidden="true" />
+            </button>
+          )}
         </div>
       )}
 
@@ -972,6 +1065,9 @@ export default function ChapterViewer({ bookSlug, slug }) {
         chapterSlug={slug}
         onChange={updateHighlight}
         onDelete={deleteHighlight}
+        onAdopt={signedIn ? adoptHighlight : null}
+        adoptedCopy={adoptedCopyOf(cardHighlight)}
+        onOpen={openCard}
         toast={toast}
       />
 

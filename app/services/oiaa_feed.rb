@@ -16,6 +16,10 @@ module OiaaFeed
   MATCH_THRESHOLD = 35
 
   class Error < StandardError; end
+  # The site answers servers with a "verify you're human" page (Cloudflare and the like)
+  # instead of the feed. No server can get past that; the feed has to be saved from a
+  # browser and imported as a file.
+  class Blocked < Error; end
 
   module_function
 
@@ -26,12 +30,14 @@ module OiaaFeed
   def fetch_feed(url = feed_url)
     body = get(url)
     return body if body.lstrip.start_with?("[", "{")
+    raise Blocked, blocked_message(url) if challenge_page?(body)
 
     href = body[/href=["']([^"']+\.json[^"']*)["']/i, 1] or raise Error, "#{url} didn't link to a JSON feed."
     get(URI.join(url, CGI.unescapeHTML(href)).to_s)
   end
 
-  def last_synced_at = OiaaMeeting.maximum(:last_seen_at)
+  # AA Intergroup's own listings only; imported meeting lists keep their own dates
+  def last_synced_at = OiaaMeeting.aa_intergroup.maximum(:last_seen_at)
   def stale? = last_synced_at.nil? || last_synced_at < OiaaMeeting::STALE_AFTER.ago
 
   def sync!(json = nil)
@@ -63,16 +69,21 @@ module OiaaFeed
     end
   end
 
-  # Copy the feed onto every linked meeting; flag the ones OIAA no longer lists
+  # Copy the feed onto every linked meeting (and its group notes onto a group with no
+  # description yet); flag the ones OIAA no longer lists. Meetings
+  # linked to an imported list's listings refresh when that list is imported (MeetingListImport).
   def refresh_linked_meetings(synced_at = last_synced_at)
     listings = OiaaMeeting.where(slug: Meeting.linked_to_oiaa.select(:oiaa_slug)).index_by(&:slug)
     Meeting.linked_to_oiaa.includes(:group).find_each do |meeting|
       record = listings[meeting.oiaa_slug]
+      next if record&.imported?
+
       if record.nil? || record.last_seen_at < synced_at
         meeting.update_columns(oiaa_missing: true) unless meeting.oiaa_missing
       else
         meeting.apply_oiaa(record)
         meeting.save || Rails.logger.warn("[oiaa] couldn't refresh meeting #{meeting.id}: #{meeting.errors.full_messages.to_sentence}")
+        meeting.group&.adopt_listing_description(record)
       end
     end
   end
@@ -90,6 +101,7 @@ module OiaaFeed
       conference_phone: record["conference_phone"].to_s.presence&.first(255),
       conference_id: conference_id(record["conference_url"]),
       types: Array(record["types"]).map(&:to_s).first(40), notes: clean(record["notes"]).presence&.first(4000),
+      group_notes: clean_paragraphs(record["group_notes"]).presence&.first(4000),
       url: record["url"].to_s.presence&.first(1000), last_seen_at: seen_at, created_at: seen_at, updated_at: seen_at,
       **place(record),
     }
@@ -106,10 +118,31 @@ module OiaaFeed
     {
       attendance_option: (option if %w[online in_person hybrid inactive].include?(option)),
       location: clean(record["location"]).presence&.first(255), formatted_address: address&.first(255), region: region&.first(255),
+      latitude: coordinate(record["latitude"], 90), longitude: coordinate(record["longitude"], 180),
     }
   end
 
-  def clean(text) = ActionController::Base.helpers.strip_tags(text.to_s).strip
+  # A feed's latitude or longitude, when it's a real one (0 is what some feeds put for none)
+  def coordinate(value, limit)
+    number = Float(value.to_s.strip, exception: false)
+    number.round(6) if number && number.abs <= limit && !number.zero?
+  end
+
+  # Plain text: tags dropped and entities turned back into characters ("&amp;" -> "&"; some
+  # feeds encode twice). strip_tags leaves its result HTML-escaped, which showed as "&amp;".
+  # It's shown as text everywhere, so a "<" stays a "<".
+  def clean(text)
+    plain = ActionController::Base.helpers.strip_tags(text.to_s)
+    2.times { plain = CGI.unescapeHTML(plain) }
+    plain.tr("\u00a0", " ").strip
+  end
+
+  # Like #clean, but it keeps the text's paragraphs and line breaks (a <br> or </p> becomes a
+  # new line), for longer text such as a group's description
+  def clean_paragraphs(text)
+    marked = text.to_s.gsub(%r{<br\s*/?>|</(?:p|div|li|h[1-6])>}i, "\n")
+    clean(marked).gsub(/\r\n?/, "\n").split("\n").map(&:squish).join("\n").gsub(/\n{3,}/, "\n\n").strip
+  end
 
   # The same video meeting written different ways: a Zoom meeting ID (from a link or typed
   # with spaces), or the link's host and path for anything else.
@@ -202,6 +235,8 @@ module OiaaFeed
     response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 30, read_timeout: 600) do |http|
       http.request(Net::HTTP::Get.new(uri, "User-Agent" => USER_AGENT, "Accept" => "application/json, text/html"))
     end
+    raise Blocked, blocked_message(url) if bot_challenge?(response)
+
     case response
     when Net::HTTPSuccess then response.body.to_s.force_encoding("UTF-8")
     when Net::HTTPRedirection
@@ -209,5 +244,30 @@ module OiaaFeed
       get(URI.join(url, response["location"]).to_s, redirects: redirects - 1)
     else raise Error, "#{url} answered #{response.code}"
     end
+  end
+
+  # A bot-protection page instead of what was asked for: Cloudflare marks its challenges
+  # with cf-mitigated, and they (and others) say so in the page.
+  def bot_challenge?(response)
+    return true if response["cf-mitigated"].to_s.casecmp?("challenge")
+    return false unless response.code.to_i.in?([403, 429, 503]) || response["content-type"].to_s.include?("html")
+
+    challenge_page?(response.body.to_s)
+  end
+
+  CHALLENGE_MARKERS = [
+    "challenge-platform", "cf-turnstile", "Performing security verification", "Just a moment...",
+    "Checking your browser", "Attention Required! | Cloudflare", "verify you are human", "sgcaptcha", "Incapsula",
+  ].freeze
+
+  def challenge_page?(body)
+    head = body.to_s.first(20_000)
+    CHALLENGE_MARKERS.any? { |marker| head.downcase.include?(marker.downcase) }
+  end
+
+  def blocked_message(url)
+    host = (URI(url).host rescue nil).to_s.delete_prefix("www.").presence || "That site"
+    "#{host} has bot protection that won't let a server read this link (it asks a person to prove they're human). " \
+      "Open the link in your browser, save the page as a .json file, and import it with \"JSON or CSV file\"."
   end
 end

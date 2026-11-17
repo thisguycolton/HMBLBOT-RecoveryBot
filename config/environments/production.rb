@@ -89,7 +89,11 @@ config.hosts << /.*\.perpetualmulti\.media/
   # require "syslog/logger"
   # config.logger = ActiveSupport::TaggedLogging.new(Syslog::Logger.new "app-name")
 
-  if ENV["RAILS_LOG_TO_STDOUT"].present?
+  # Logs go to STDOUT, where CapRover's app logs (docker logs) show them. Before, they went
+  # to log/production.log inside the container unless RAILS_LOG_TO_STDOUT was set, so the
+  # dashboard showed only Puma's start-up lines. RAILS_LOG_TO_FILE=1 keeps the old file.
+  unless ENV["RAILS_LOG_TO_FILE"].present?
+    $stdout.sync = true
     logger           = ActiveSupport::Logger.new(STDOUT)
     logger.formatter = config.log_formatter
     config.logger    = ActiveSupport::TaggedLogging.new(logger)

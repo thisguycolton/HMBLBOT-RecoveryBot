@@ -7,6 +7,7 @@ import Toggle from "../ui/Toggle";
 import { showToast } from "../../lib/toast";
 import WeekGrid, { buildHeat } from "./WeekGrid";
 import { VISIBILITY_LABELS, api, clock, dayParts, describeStart, makeNow, parseStart } from "./lib";
+import Skeleton from "../ui/Skeleton";
 
 const REFRESH_MS = 20_000;
 
@@ -55,7 +56,7 @@ export default function PollPage() {
   const heat = useMemo(() => (poll && showHeat ? buildHeat(poll, poll.results) : null), [poll, showHeat]);
 
   if (error) return <Message title="Couldn't open this poll" text={error} />;
-  if (!poll) return <p className="py-16 text-center !font-sans text-sm text-slate-500">Loading…</p>;
+  if (!poll) return <Skeleton variant="page" />;
 
   const voted = !!poll.my_ballot;
   const open = !poll.closed;

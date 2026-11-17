@@ -1,0 +1,135 @@
+import React, { useEffect, useRef, useState } from "react";
+import { confetti } from "../lib/confetti";
+import { milestoneStatus } from "../lib/milestones";
+import { DAY_COUNT_OPEN_EVENT as OPEN_EVENT } from "../lib/openDayCount";
+import { dayFacts, TOPIC_ICONS } from "../lib/dayFacts";
+import { api, soberFor } from "./groups/lib";
+import { SpinningChip } from "./recovery/ChipModal";
+import "../styles/day-count.css";
+
+// The member's day count, in a modal when they sign in (the server marks a fresh sign-in:
+// config/initializers/day_count.rb, and the toasts partial passes it in data-day-count-login
+// with their sobriety date). On a milestone day it also opens on their first page of the day
+// if they stayed signed in, with confetti. Plain CSS (day-count.css), since this mounts with
+// the toasts on the older Bootstrap pages too. On a milestone day the new chip shows at the
+// top (/api/recovery: the one they put on top, if a group gave them one too), and it links to all
+// their chips. Anything can open it again with openDayCount() (lib/openDayCount.js; the day count card on Today uses it).
+const SEEN_KEY = "hb-day-count-seen"; // the local date it last opened, "YYYY-MM-DD"
+
+const localDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+function seenToday() {
+  try { return localStorage.getItem(SEEN_KEY) === localDate(); } catch { return false; }
+}
+
+function markSeen() {
+  try { localStorage.setItem(SEEN_KEY, localDate()); } catch { /* private mode */ }
+}
+
+export default function DayCount({ since, signedIn }) {
+  const [status] = useState(() => milestoneStatus(since));
+  const [open, setOpen] = useState(() => Boolean(status && (signedIn || (status.today && !seenToday()))));
+  const closeRef = useRef(null);
+  const [chip, setChip] = useState(null); // { chip, design } on a milestone day
+  const [moreFacts, setMoreFacts] = useState(false); // some days have several fun facts; two show at first
+
+  useEffect(() => {
+    if (!status) return undefined;
+    const onOpen = (e) => { e.preventDefault(); setOpen(true); };
+    window.addEventListener(OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_EVENT, onOpen);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const opener = document.activeElement; // focus goes back here on close
+    markSeen();
+    if (status.today) {
+      const m = status.today;
+      const slot = m.key === "year" ? `round:year-${m.years}` : `round:${m.key}`;
+      api(`/recovery?today=${localDate()}`).then((r) => {
+        const own = r.chips.find((c) => c.slot === slot && c.top);
+        setChip({ design: r.design, chip: own || { id: slot, shape: "round", kind: "round", milestone: m, label: m.label, on: localDate() } });
+      }).catch(() => {});
+    }
+    closeRef.current?.focus();
+    const timer = status.today ? setTimeout(() => confetti(), 250) : null;
+    // capture, so Escape closes only this and not a sheet underneath (the Today sheet on phones)
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      setOpen(false);
+    };
+    window.addEventListener("keydown", onKey, true);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("keydown", onKey, true);
+      document.body.style.overflow = overflow;
+      if (opener?.isConnected && opener !== document.body) opener.focus?.();
+    };
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!open) return null;
+  const { days, today, next } = status;
+  const facts = dayFacts(days);
+  const close = () => setOpen(false);
+  const sinceLabel = new Date(`${since}T00:00:00`).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" });
+
+  return (
+    <div className="hb-daycount" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="hb-daycount-title" className={`hb-daycount__panel ${today ? "hb-daycount__panel--milestone hb-daycount__panel--chip" : ""}`}>
+        <button type="button" aria-label="Close" className="hb-daycount__close" onClick={close}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+        <div className="hb-daycount__head">
+          {today && chip && <div className="hb-daycount__chip"><SpinningChip chip={chip.chip} design={chip.design} size={180} /></div>}
+          <div className="hb-daycount__meta">{today ? "Milestone" : "Your day count"}</div>
+          {today && <h2 id="hb-daycount-title" className="hb-daycount__title">Happy {today.label}!</h2>}
+          <div className="hb-daycount__number" {...(today ? {} : { id: "hb-daycount-title" })}>
+            {days === 0 ? "Day one" : days.toLocaleString()}
+            {days > 0 && <span className="hb-daycount__unit">{days === 1 ? " day" : " days"}</span>}
+          </div>
+          <div className="hb-daycount__since">
+            {days >= 90 && <>{soberFor(since)} · </>}since {sinceLabel}
+          </div>
+        </div>
+        <div className="hb-daycount__body">
+          {today ? (
+            <p>Today you celebrate {today.label}. Congratulations, and thank you for showing the way for the rest of us.</p>
+          ) : days === 0 ? (
+            <p>Today is day one. One day at a time, and we're glad you're here.</p>
+          ) : (
+            <p>One day at a time. Keep coming back.</p>
+          )}
+          {facts.today.slice(0, moreFacts ? undefined : 2).map((f) => (
+            <div key={f.title} className="hb-daycount__fact">
+              <span className="hb-daycount__fact-icon" aria-hidden="true">{TOPIC_ICONS[f.topic]}</span>
+              <span><strong>{f.title}</strong><span className="hb-daycount__fact-detail">{f.detail}</span></span>
+            </div>
+          ))}
+          {!moreFacts && facts.today.length > 2 && (
+            <button type="button" className="hb-daycount__more" onClick={() => setMoreFacts(true)}>{facts.today.length - 2} more fun {facts.today.length === 3 ? "fact" : "facts"} for today</button>
+          )}
+          {next && (
+            <p className="hb-daycount__next">
+              Next milestone: <strong>{next.label}</strong> {next.inDays === 1 ? "tomorrow" : `in ${next.inDays.toLocaleString()} days`}
+            </p>
+          )}
+          {facts.next && (
+            <p className="hb-daycount__next">
+              {facts.next.inDays === 1 ? "Tomorrow" : `In ${facts.next.inDays.toLocaleString()} days`}: {TOPIC_ICONS[facts.next.topic]} {facts.next.title.charAt(0).toLowerCase() + facts.next.title.slice(1)}
+            </p>
+          )}
+        </div>
+        <div className="hb-daycount__foot">
+          {today ? <a className="hb-daycount__link" href="/recovery">See all my chips</a> : <a className="hb-daycount__link" href="/users/edit">Change my sobriety date</a>}
+          {today && chip && <a className="hb-daycount__link" href={`/recovery?chip=${encodeURIComponent(chip.chip.id)}&share=1`}>Share it</a>}
+          {today && <button type="button" className="hb-daycount__button" onClick={() => confetti()}>Celebrate again</button>}
+          <button ref={closeRef} type="button" className="hb-daycount__button hb-daycount__button--primary" onClick={close}>Thanks</button>
+        </div>
+      </div>
+    </div>
+  );
+}

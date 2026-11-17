@@ -1,10 +1,19 @@
 class ApplicationController < ActionController::Base
+    # Every page is noindex unless it opts in (SearchEngines)
+    include SearchEngines
+    # The iPhone and Android apps (native_app?)
+    include NativeAppRequest
 	 #before_action :authenticate_user!
 	  after_action :track_action
+    before_action :read_notifications_here
 
     protect_from_forgery with: :exception
 
     before_action :configure_permitted_parameters, if: :devise_controller?
+
+    # A save the API didn't expect to fail (e.g. it has a slur in it, see BlockedLanguage)
+    # answers with why, instead of a 500
+    rescue_from ActiveRecord::RecordInvalid, with: :render_record_invalid
 
   protected
 
@@ -17,6 +26,14 @@ class ApplicationController < ActionController::Base
       group = JoinsGroupFromInvite.call(resource, token)
       return "/groups/#{group.slug}" if group
     end
+    # A chip's claim link opened while signed out (ChipsController#claim)
+    claim = cookies.signed[:chip_claim]
+    if claim.present? && resource.is_a?(User)
+      cookies.delete(:chip_claim)
+      award = ChipAward.find_by(claim_token: claim)
+      path = award && ClaimsChip.call(resource, award)
+      return path if path
+    end
     # "Ask to join" while signed out (GroupsController#ask): back to that group to send it
     slug = cookies.signed[:group_ask]
     if slug.present? && resource.is_a?(User)
@@ -25,10 +42,30 @@ class ApplicationController < ActionController::Base
     end
     # Where they were headed, or the home page (notes and what's coming up) once profiles are open to them
     stored = resource.is_a?(User) && stored_location_for(resource)
+    # A new account goes through the welcome wizard first (finding their group, a short tour),
+    # then on to wherever they were headed
+    return WelcomeController.path(next_path: stored) if resource.is_a?(User) && resource.onboarding_due?
     return stored if stored
     return "/people" if resource.is_a?(User) && User.profiles_open_to?(resource)
 
     super
+  end
+
+  # Opening a page marks the bell's notifications that lead to it as read: the same path, with
+  # or without its ?query or #anchor (pages are full loads, so this runs before the bell asks)
+  def read_notifications_here
+    return unless request.get? && request.format.html? && !request.xhr? && user_signed_in?
+
+    current_user.notifications.unread
+                .where("split_part(split_part(url, '#', 1), '?', 1) = :path", path: request.path)
+                .update_all(read_at: Time.current)
+  end
+
+  def render_record_invalid(error)
+    raise error unless request.path.start_with?("/api/") || request.format.json?
+
+    messages = error.record.errors.full_messages
+    render json: { error: messages.to_sentence, errors: messages }, status: :unprocessable_entity
   end
 
   def track_action

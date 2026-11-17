@@ -3,8 +3,10 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { Link2, Trash2 } from "lucide-react";
 import HighlightNote from "./HighlightNote";
-import { highlightCss } from "./HighlightCard";
+import { AdoptedFrom, highlightCss } from "./HighlightCard";
+import ShareToTimeline from "./ShareToTimeline";
 import { allHighlightsUrl, highlightUrl, shareLink, useToast } from "./highlightSharing";
+import Skeleton from "../ui/Skeleton";
 
 // /library/highlights         every highlight you've made, across books (notes editable)
 // /library/highlights/:token  someone's shared highlights (notes read-only)
@@ -108,7 +110,7 @@ export default function HighlightsPage() {
     );
   }
 
-  if (!data) return <div className="wb wb-hl-page opacity-70">Loading…</div>;
+  if (!data) return <div className="wb wb-hl-page"><Skeleton variant="notes" /></div>;
 
   return (
     <div className="wb wb-hl-page">
@@ -150,11 +152,13 @@ export default function HighlightsPage() {
                       <a className="wb-hl-quote" href={linkFor(h)} title="Read it in context">
                         <mark style={{ "--hl": highlightCss(h.style?.color) }}>{h.quote || "…"}</mark>
                       </a>
+                      {mine && <AdoptedFrom from={h.adopted_from} className="wb-hl-item__from" />}
                       <HighlightNote highlight={h} onChange={update} compact />
                     </div>
                     {mine && (
                       <div className="wb-hl-actions">
-                        <button type="button" className="wb-btn wb-btn--icon" onClick={() => shareOne(h)} aria-label="Share this highlight" title="Share">
+                        <ShareToTimeline highlight={h} onChange={update} toast={toast} iconOnly />
+                        <button type="button" className="wb-btn wb-btn--icon" onClick={() => shareOne(h)} aria-label="Copy a link to this highlight" title="Copy link">
                           <Link2 size={15} />
                         </button>
                         <button type="button" className="wb-btn wb-btn--icon" onClick={() => remove(h)} aria-label="Delete this highlight" title="Delete">

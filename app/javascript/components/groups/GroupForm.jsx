@@ -29,7 +29,7 @@ export default function GroupForm() {
   }, [slug]);
 
   if (loadError) return <Message title="Can't edit this group" text={loadError} />;
-  if (!form) return <Loading />;
+  if (!form) return <Loading variant="form" />;
   if (group && !group.can_manage) return <Message title="Only this group's admins can edit it" />;
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));

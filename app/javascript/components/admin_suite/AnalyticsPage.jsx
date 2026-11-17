@@ -4,6 +4,7 @@ import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import SegmentedControl from "../ui/SegmentedControl";
 import { api } from "../topicificator_admin/api";
 import { StatTile, formatCount } from "./App";
+import { InlineSkeleton } from "../ui/Skeleton";
 
 const RANGES = [
   { value: 7, label: "7 days" },
@@ -26,7 +27,7 @@ export default function AnalyticsPage({ notify }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-600 dark:text-neutral-400 !font-sans">
-          {data ? `Since ${formatDay(data.since)} (Phoenix time)` : "Loading…"}
+          {data ? `Since ${formatDay(data.since)} (Phoenix time)` : <InlineSkeleton className="w-48" />}
         </p>
         <div className="shrink-0 [&_button]:whitespace-nowrap">
           <SegmentedControl options={RANGES} value={days} onChange={setDays} />

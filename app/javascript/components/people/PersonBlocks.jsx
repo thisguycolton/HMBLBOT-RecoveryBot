@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { CalendarHeart, Lock, MessagesSquare, UserRound, Users, UsersRound } from "lucide-react";
+import { Award, CalendarHeart, Lock, MessagesSquare, UserRound, Users, UsersRound } from "lucide-react";
 import Avatar from "../groups/Avatar";
+import GroupLogo from "../groups/GroupLogo";
 import { api } from "../groups/lib";
 import { Card, Empty } from "../groups/page/GroupBlocks";
 import FeedItem from "../notes/FeedItem";
 import NoteEditor from "../notes/NoteEditor";
+import ProfileChips from "./ProfileChips";
 import { soberFor } from "./lib";
 
 // How a profile's own blocks look (EventBlocks::PROFILE_TYPES), filled in from `context`
@@ -16,6 +18,7 @@ export default function PersonBlockView({ block, compact, editing, context }) {
     case "feed": return <FeedBlock {...props} />;
     case "groups": return <GroupsBlock {...props} />;
     case "people": return <PeopleBlock {...props} />;
+    case "chips": return <ChipsBlock {...props} />;
     default: return null;
   }
 }
@@ -42,8 +45,9 @@ function AboutBlock({ block, compact, editing, context, title }) {
 
 const SHOW = { all: null, notes: "note", highlights: "highlight" };
 
-// Their notes and highlights, newest first, as far as the viewer may see them. On your
-// own profile you write notes right here.
+// Their notes and highlights, and notes written on their page, newest first, as far as the
+// viewer may see them. On your own profile you write notes right here; on the page of
+// someone you follow or who follows you, you write a note on their page.
 function FeedBlock({ block, compact, editing, context, title }) {
   const [items, setItems] = useState(context.feed || []);
   const [more, setMore] = useState((context.feed || []).length >= 40);
@@ -53,7 +57,7 @@ function FeedBlock({ block, compact, editing, context, title }) {
   useEffect(() => { setLimit(block.limit || 10); }, [block.limit]);
 
   const kind = SHOW[block.show];
-  const shown = items.filter((i) => !kind || i.kind === kind);
+  const shown = items.filter((i) => !kind || i.kind === kind || (kind === "note" && i.kind === "repost"));
   const me = context.viewer?.is_me;
   const replace = (item) => setItems((list) => list.map((i) => (i.kind === item.kind && i.id === item.id ? { ...i, ...item } : i)));
   const remove = (kindOf) => (id) => setItems((list) => list.filter((i) => !(i.kind === kindOf && i.id === id)));
@@ -77,12 +81,18 @@ function FeedBlock({ block, compact, editing, context, title }) {
     : "Nothing shared here yet.";
 
   return (
-    <Card block={block} compact={compact} title={title} icon={MessagesSquare}>
+    <Card block={block} compact={compact} title={title} icon={MessagesSquare} bleed={!compact && !editing}>
       <div className="wb">
         {me && !editing && kind !== "highlight" && (
           <div className="mb-4">
             <NoteEditor groups={context.viewer.groups} defaultVisibility={context.viewer.default_note_visibility} max={context.note_max} imagesMax={context.images_max}
-              placeholder="What's on your mind today? Markdown works, and you can add photos."
+              onSaved={(note) => setItems((list) => [note, ...list])} />
+          </div>
+        )}
+        {context.viewer?.can_write && !editing && kind !== "highlight" && (
+          <div className="mb-4">
+            <NoteEditor to={context.person} defaultVisibility={context.viewer.default_note_visibility} max={context.note_max} imagesMax={context.images_max}
+              placeholder={`Write something to ${context.person.name.split(" ")[0]}. They'll get a notification.`}
               onSaved={(note) => setItems((list) => [note, ...list])} />
           </div>
         )}
@@ -109,6 +119,20 @@ function FeedBlock({ block, compact, editing, context, title }) {
   );
 }
 
+// Their favorite chips (Chips.favorites), picked with the stars on their Chips page
+function ChipsBlock({ block, compact, editing, context, title }) {
+  const chips = context.chips || [];
+  return (
+    <Card block={block} compact={compact} title={title} icon={Award}>
+      {chips.length === 0 ? (
+        <Empty>{context.viewer?.is_me ? <>Star up to five chips on <a href={context.chips_path || "/recovery"} className="text-accent hover:underline">your Chips page</a> and they show here.</> : "No chips yet."}</Empty>
+      ) : (
+        <ProfileChips chips={chips} design={context.chip_design} person={context.person} isMe={context.viewer?.is_me} size={compact ? 64 : 84} disabled={editing} />
+      )}
+    </Card>
+  );
+}
+
 function GroupsBlock({ block, compact, editing, context, title }) {
   const groups = context.groups || [];
   return (
@@ -117,9 +141,14 @@ function GroupsBlock({ block, compact, editing, context, title }) {
       <ul className="space-y-1">
         {groups.map((g) => (
           <li key={g.slug}>
-            <a href={`/groups/${g.slug}`} onClick={(e) => editing && e.preventDefault()} className="block rounded-xl p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800/60">
-              <span className="block truncate font-semibold text-slate-900 dark:text-white">{g.title}</span>
-              {g.description && !compact && <span className="block truncate text-sm text-slate-500 dark:text-neutral-400">{g.description}</span>}
+            <a href={`/groups/${g.slug}`} onClick={(e) => editing && e.preventDefault()} className="flex items-center gap-3 rounded-xl p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800/60">
+              <GroupLogo group={g} className="size-10 text-xs" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold text-slate-900 dark:text-white">{g.title}</span>
+                <span className="block truncate text-sm text-slate-500 dark:text-neutral-400">
+                  {g.members_count} {g.members_count === 1 ? "member" : "members"}{g.description && !compact ? ` · ${g.description}` : ""}
+                </span>
+              </span>
             </a>
           </li>
         ))}

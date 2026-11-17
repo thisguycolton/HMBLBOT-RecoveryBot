@@ -34,6 +34,28 @@ class Api::SiteNoticesTest < ActionDispatch::IntegrationTest
     assert_equal %w[Members Everyone], titles
   end
 
+  test "the iPhone and Android apps don't get notices about getting the app" do
+    SiteNotice.create!(title: "Try the app", link_url: "/testflight")
+    SiteNotice.create!(title: "Android testers", link_url: "/testflight?platform=android")
+    SiteNotice.create!(title: "Join the beta", link_url: "https://testflight.apple.com/join/abc")
+    SiteNotice.create!(title: "On Google Play", link_url: "https://play.google.com/store/apps/details?id=x")
+    SiteNotice.create!(title: "Home screen", link_url: "/install")
+    SiteNotice.create!(title: "We're on TestFlight now")
+    SiteNotice.create!(title: "Install-ish", link_url: "/installations") # not the install page
+    SiteNotice.create!(title: "Meeting change", link_url: "/groups/meetings")
+
+    app = "Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 RecoveryBotApp/1.0 (iOS)"
+    get "/api/site_notices", as: :json, headers: { "User-Agent" => app }
+    assert_equal ["Meeting change", "Install-ish"], response.parsed_body.map { |n| n["title"] }
+
+    assert_includes titles, "Home screen" # a browser still gets them (the newest five)
+
+    sign_in @admin
+    get "/api/admin/site_notices", as: :json
+    hidden = response.parsed_body.select { |n| n["hidden_in_app"] }.map { |n| n["title"] }
+    assert_equal 6, hidden.size
+  end
+
   test "a notice carries its write-up for the modal, and the admin's link" do
     SiteNotice.create!(title: "Story", body: "The **long** version", link_url: "/library", link_label: "Open the library")
     SiteNotice.create!(title: "Link", link_url: "https://example.com", link_label: "Go")

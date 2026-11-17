@@ -4,6 +4,7 @@ import { CalendarClock, ChevronRight, Lock, Plus, Users } from "lucide-react";
 import { Shell, ShellBand, ShellPanel } from "../ui/Shell";
 import { api, clock, dayParts, parseStart } from "./lib";
 import { Message } from "./PollPage";
+import Skeleton from "../ui/Skeleton";
 
 const ROLE_LABELS = { organizer: "Organizer", collaborator: "Collaborator", invitee: "Invited to vote" };
 
@@ -16,7 +17,7 @@ export default function PollsIndex() {
   }, []);
 
   if (error) return <Message title="Couldn't load your polls" text={error} />;
-  if (!data) return <p className="py-16 text-center !font-sans text-sm text-slate-500">Loading…</p>;
+  if (!data) return <Skeleton variant="list" />;
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 !font-sans [&_*]:!font-sans">

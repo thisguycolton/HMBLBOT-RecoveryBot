@@ -8,6 +8,7 @@ import Toggle from "../ui/Toggle";
 import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { NoticeCard, NoticeModal } from "../SiteNotices";
+import Skeleton from "../ui/Skeleton";
 
 const TONES = [
   { value: "info", label: "Info" },
@@ -88,7 +89,7 @@ export default function NoticesPage({ notify }) {
     }
   }
 
-  if (!notices) return <p className="py-16 text-center text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>;
+  if (!notices) return <Skeleton variant="list" className="max-w-3xl" />;
 
   const live = notices.filter((n) => n.live).length;
   return (
@@ -112,7 +113,7 @@ export default function NoticesPage({ notify }) {
             {editing === notice.id ? (
               <NoticeForm notice={notice} onSave={(v) => save(notice.id, v)} onCancel={() => setEditing(null)} />
             ) : (
-              <div className="flex items-start gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <div className="flex-1 min-w-0 !font-sans">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="text-sm font-semibold text-slate-900 dark:text-white">{notice.title}</div>
@@ -124,22 +125,25 @@ export default function NoticesPage({ notify }) {
                     {notice.ends_at && ` · until ${when(notice.ends_at)}`}
                     {notice.body ? " · has a write-up" : notice.link_url ? " · links out" : ""}
                     {notice.author && ` · by ${notice.author}`}
+                    {notice.hidden_in_app && " · not shown in the iPhone and Android apps (it's about getting the app)"}
                   </div>
                 </div>
-                {notice.body && (
-                  <button type="button" onClick={() => setPreviewing(notice)} className={buttonClass.secondary} aria-label="View the write-up" title="View the write-up">
-                    <Eye className="w-4 h-4" />
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {notice.body && (
+                    <button type="button" onClick={() => setPreviewing(notice)} className={buttonClass.secondary} aria-label="View the write-up" title="View the write-up">
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button type="button" className={buttonClass.secondary} onClick={() => toggle(notice)}>
+                    {notice.active ? "Turn off" : "Turn on"}
                   </button>
-                )}
-                <button type="button" className={buttonClass.secondary} onClick={() => toggle(notice)}>
-                  {notice.active ? "Turn off" : "Turn on"}
-                </button>
-                <button type="button" className={buttonClass.secondary} onClick={() => setEditing(notice.id)} aria-label={`Edit ${notice.title}`}>
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button type="button" className={buttonClass.danger} onClick={() => destroy(notice)} aria-label={`Delete ${notice.title}`}>
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  <button type="button" className={buttonClass.secondary} onClick={() => setEditing(notice.id)} aria-label={`Edit ${notice.title}`}>
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button type="button" className={buttonClass.danger} onClick={() => destroy(notice)} aria-label={`Delete ${notice.title}`}>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             )}
           </ShellPanel>

@@ -2,10 +2,13 @@
 <html>
   <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <%= render "layouts/early_theme" %>
+    <%= render "application/viewport" %>
     <title><%= content_for(:page_title) || "RecoveryBot" %></title>
 
     <%= render "application/favicon" %>
+    <%= render "application/share_meta" %>
+    <%= render "application/search_meta" %>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
@@ -44,10 +47,14 @@
     -->
 <%= vite_client_tag %>
   <%= vite_react_refresh_tag if Rails.env.development? %>
-  <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="hmblbot" data-description="Support me on Buy me a coffee!" data-message="Thanks for supporting the site!" data-color="#5F7FFF" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
+  <%= vite_javascript_tag 'pull_to_refresh' %>
+  <%= vite_javascript_tag 'native_app' if native_app? %>
+  <% unless native_platform == "ios" %><script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="hmblbot" data-description="Support me on Buy me a coffee!" data-message="Thanks for supporting the site!" data-color="#5F7FFF" data-position="Right" data-x_margin="18" data-y_margin="18"></script><% end %>
+    <%= render "layouts/app_launch_head" %>
   </head>
 
-  <body data-layout="application">
+  <body data-layout="application"<% if native_app? %> data-native-app="<%= native_platform %>" data-widget="<%= native_widget_key %>"<% end %>>
+    <%= render "layouts/app_launch_body" %>
     <div id="scroll-progress"></div>
     <div class="container-fluid bg-body-tertiary nav-container">
 
@@ -124,7 +131,10 @@
     <div class="container-fluid m-0 bg-dark text-light">
       <div class="container">
         <footer class="d-flex flex-wrap justify-content-between align-items-end py-5 ">
-        <p class="col-12 col-md-4 mb-0 text-body-secondary montserrat justify-content-sm-center justify-content-md-start text-center text-md-left">© 2026 <span class="fw-bold">HMBLBOT</span></p>
+        <div class="col-12 col-md-4 text-center text-md-start">
+          <p class="mb-1 text-body-secondary montserrat">© 2026 <span class="fw-bold">HMBLBOT</span></p>
+          <p class="mb-0 small"><%= link_to "Privacy", privacy_path, class: "link-light link-underline-opacity-25 me-3" %><%= link_to "Terms", terms_path, class: "link-light link-underline-opacity-25 me-3" %><%= link_to "Contact", contact_path, class: "link-light link-underline-opacity-25" %></p>
+        </div>
 
         <a href="/" class=" col-12 col-md-4 d-flex align-items-center justify-content-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none mt-4 mt-md-0 mb-2 mb-md-0">
           <div class="text-center text-light pb-2">

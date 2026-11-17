@@ -21,7 +21,27 @@ class Api::Admin::OverviewController < Api::Admin::SuiteController
       },
       tags: Tag.count,
       text_reports: { open: TextReport.unresolved.count, resolved: TextReport.resolved.count },
+      contact_requests: { open: ContactRequest.unhandled.count, total: ContactRequest.count },
+      group_requests: { pending: Group.where(status: "pending").count },
+      testflight_requests: { new: TestflightRequest.waiting.count, total: TestflightRequest.count },
+      user_reports: { open: UserReport.unresolved.count, total: UserReport.count },
       notices: { live: SiteNotice.live.count, total: SiteNotice.count },
+      tasks: tasks_json,
+    }
+  end
+
+  private
+
+  # "Tasks that need you" on the Dashboard and the Task board's sidebar count (AdminTask.urgent_for)
+  def tasks_json
+    urgent = AdminTask.by_urgency(AdminTask.urgent_for(current_user).includes(:assignee, :creator).to_a)
+    comments = AdminTaskActivity.where(kind: "comment", admin_task_id: urgent.map(&:id)).group(:admin_task_id).count
+    {
+      urgent: urgent.first(12).map { |t| t.as_api_json(comments: comments[t.id].to_i) },
+      urgent_count: urgent.size,
+      open_count: AdminTask.open.count,
+      columns: AdminTaskColumn.ordered.map(&:as_api_json),
+      me: current_user.id,
     }
   end
 end

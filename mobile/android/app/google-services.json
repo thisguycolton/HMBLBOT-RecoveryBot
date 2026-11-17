@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "5547873896",
+    "project_id": "recoverybot-hmblbot",
+    "storage_bucket": "recoverybot-hmblbot.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:5547873896:android:4bc15a06f2c50d8eb6cddd",
+        "android_client_info": {
+          "package_name": "com.hmblbot.recoverybot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNgaMHiycZ_3Ph3zbpjoI7D_n5qnPawFU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,236 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ChevronLeft, FileDown, FileText, Globe, Lock, Pin, Plus, Search, Upload, UserCheck } from "lucide-react";
+import { inputClass } from "../../ui/styles";
+import { IMPORT_ACCEPT, importDocument, isImportable } from "../../../lib/documentImport";
+import { api } from "../lib";
+import { Card, ErrorNote, Loading, Pill, Tray, primaryButton } from "../ui";
+import { FILE_ACCEPT, KINDS, KIND_INFO, VISIBILITY_LABELS, dateLabel, documentsPath } from "./lib";
+import BulkBar, { RowCheck } from "./BulkBar";
+
+export function StatusPills({ doc }) {
+  return (
+    <>
+      {doc.visibility === "public" && <Pill tone="green"><Globe className="size-3" /> Public</Pill>}
+      {doc.visibility === "hosts" && <Pill tone="accent"><UserCheck className="size-3" /> {VISIBILITY_LABELS.hosts}</Pill>}
+      {doc.visibility === "keepers" && <Pill tone="amber"><Lock className="size-3" /> {VISIBILITY_LABELS.keepers}</Pill>}
+      {doc.status !== "current" && <Pill tone="slate">{doc.status === "draft" ? "Draft" : "Archived"}</Pill>}
+    </>
+  );
+}
+
+function DocRow({ slug, doc, showKind, selected, onSelect }) {
+  const Icon = KIND_INFO[doc.kind]?.icon || FileText;
+  const link = (
+    <Link to={documentsPath(slug, doc.id)} className={`flex min-w-0 flex-1 items-start gap-3 rounded-xl bg-white p-3 shadow-panel hover:ring-1 hover:ring-accent/40 dark:bg-neutral-900 ${selected ? "ring-2 ring-accent/60" : ""}`}>
+      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-accent/10 text-accent"><Icon className="size-4" /></span>
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {doc.pinned && <Pin className="size-3.5 text-amber-600" aria-label="Pinned" />}
+          <span className="font-medium text-slate-900 dark:text-white">{doc.title}</span>
+          <StatusPills doc={doc} />
+        </span>
+        {doc.excerpt && <span className="mt-0.5 block truncate text-sm text-slate-600 dark:text-neutral-300">{doc.excerpt}</span>}
+        <span className="mt-0.5 block text-xs text-slate-500 dark:text-neutral-400">
+          {showKind && `${KIND_INFO[doc.kind]?.label} · `}{doc.file ? `${doc.file.name} · ` : ""}Updated {dateLabel(doc.updated_at)}{doc.updated_by ? ` by ${doc.updated_by}` : ""}
+        </span>
+      </span>
+    </Link>
+  );
+  if (!onSelect) return link;
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className="pt-3"><RowCheck checked={selected} onChange={onSelect} label={`Select “${doc.title}”`} /></span>
+      {link}
+    </div>
+  );
+}
+
+// The group's documents as folders (their kinds). Record keepers can also drag a file
+// onto the page to upload it into the open folder.
+export default function DocumentsView({ group }) {
+  const slug = group.slug;
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const folder = KIND_INFO[params.get("folder")] ? params.get("folder") : null;
+  const [query, setQuery] = useState("");
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileRef = useRef(null);
+  const importRef = useRef(null);
+  const [notice, setNotice] = useState(null);
+  const [selected, setSelected] = useState(() => new Set());
+
+  const load = useCallback(() => {
+    const q = query.trim();
+    return api(`/groups/${slug}/documents${q ? `?q=${encodeURIComponent(q)}` : ""}`).then(setData).catch((e) => setError(e.message));
+  }, [slug, query]);
+  useEffect(() => {
+    const t = setTimeout(load, query ? 250 : 0);
+    return () => clearTimeout(t);
+  }, [load, query]);
+
+  const canEdit = data?.can_edit;
+  // Word and RTF files become documents to edit; everything else (PDFs...) is kept as a file
+  const upload = async (files) => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const made = [];
+    const notes = [];
+    try {
+      for (const file of files) {
+        const form = new FormData();
+        if (isImportable(file)) {
+          // A RecoveryBot JSON file goes back to its own folder, unless one is open
+          const { title, html, notes: n, kind } = await importDocument(file);
+          form.append("document[kind]", folder || (KIND_INFO[kind] ? kind : "other"));
+          form.append("document[title]", title);
+          form.append("document[body]", html);
+          form.append("document[body_format]", "html");
+          notes.push(...n);
+        } else {
+          form.append("document[kind]", folder || "other");
+          form.append("document[file]", file);
+        }
+        made.push(await api(`/groups/${slug}/documents`, { method: "POST", form }));
+      }
+      if (made.length === 1 && isImportable(files[0])) { navigate(documentsPath(slug, made[0].id)); return; }
+      setNotice(`${made.length === 1 ? "Added 1 document" : `Added ${made.length} documents`}.${notes.length ? ` ${[...new Set(notes)].join(" ")}` : ""}`);
+      await load();
+    } catch (e) {
+      setError(made.length ? `${e.message} (${made.length} of ${files.length} were added.)` : e.message);
+      if (made.length) await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+  const onDrop = (e) => {
+    setDragging(false);
+    if (!canEdit || !e.dataTransfer.files.length) return;
+    e.preventDefault();
+    upload([...e.dataTransfer.files]);
+  };
+
+  if (!data) return error ? <ErrorNote error={error} /> : <Loading variant="list" />;
+
+  const docs = data.documents;
+  const searching = query.trim().length > 0;
+  const inFolder = folder ? docs.filter((d) => d.kind === folder) : [];
+  const counts = Object.fromEntries(KINDS.map((k) => [k.key, docs.filter((d) => d.kind === k.key).length]));
+  const folders = KINDS.filter((k) => canEdit || counts[k.key] > 0);
+  const pinned = docs.filter((d) => d.pinned);
+  // What the ticked boxes can reach: the folder or search results on screen
+  const listed = searching ? docs : folder ? inFolder : pinned;
+  const picked = listed.filter((d) => selected.has(d.id));
+  const toggle = (id, on) => setSelected((s) => { const n = new Set(s); on ? n.add(id) : n.delete(id); return n; });
+  const row = (d, showKind) => <DocRow key={d.id} slug={slug} doc={d} showKind={showKind} selected={selected.has(d.id)} onSelect={canEdit ? (on) => toggle(d.id, on) : null} />;
+  const runBulk = async (action, value) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await api(`/groups/${slug}/documents/bulk`, { method: "POST", body: { ids: picked.map((d) => d.id), do: action, value } });
+      setNotice(`Done: ${res.updated} ${res.updated === 1 ? "document" : "documents"}.`);
+      setSelected(new Set());
+      await load();
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+  const bulkActions = [
+    { key: "move", label: "Move to a folder…", values: KINDS.map((k) => [k.key, k.label]) },
+    { key: "visibility", label: "Who can see them…", values: Object.entries(VISIBILITY_LABELS) },
+    { key: "pin", label: "Pin" },
+    { key: "unpin", label: "Unpin" },
+    { key: "archive", label: "Archive" },
+    { key: "unarchive", label: "Bring back from the archive" },
+    ...(group.can_manage ? [{ key: "delete", label: "Delete", danger: true, confirm: (n) => `Delete ${n} ${n === 1 ? "document" : "documents"} and their history? This can't be undone.` }] : []),
+  ];
+
+  return (
+    <div
+      className={`space-y-5 rounded-2xl ${dragging ? "outline-dashed outline-2 outline-offset-4 outline-accent" : ""}`}
+      onDragOver={(e) => { if (canEdit && e.dataTransfer.types.includes("Files")) { e.preventDefault(); setDragging(true); } }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false); }}
+      onDrop={onDrop}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[12rem] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+          <input type="search" aria-label="Search documents" className={`${inputClass} !pl-9`} placeholder="Search documents" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
+        {canEdit && (
+          <>
+            <input ref={importRef} type="file" multiple hidden accept={IMPORT_ACCEPT} onChange={(e) => { upload([...e.target.files]); e.target.value = ""; }} />
+            <input ref={fileRef} type="file" multiple hidden accept={FILE_ACCEPT} onChange={(e) => { upload([...e.target.files]); e.target.value = ""; }} />
+            <button type="button" disabled={busy} onClick={() => importRef.current?.click()} title="Turn a Word (.docx), RTF, Markdown (.md) or RecoveryBot JSON file into a document you can edit" className="inline-flex items-center gap-1.5 rounded-xl !bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:!bg-neutral-50 disabled:opacity-50 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
+              <FileDown className="size-4" /> {busy ? "Working…" : "Import Word / RTF / Markdown / JSON"}
+            </button>
+            <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} title="Keep a PDF, Excel file or picture as it is" className="inline-flex items-center gap-1.5 rounded-xl !bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-neutral-200 hover:!bg-neutral-50 disabled:opacity-50 dark:!bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
+              <Upload className="size-4" /> Upload a file
+            </button>
+            <Link to={`${documentsPath(slug, "new")}${folder ? `?kind=${folder}` : ""}`} className={primaryButton}><Plus className="size-4" /> New document</Link>
+          </>
+        )}
+      </div>
+      <ErrorNote error={error} />
+      {canEdit && <BulkBar count={picked.length} total={listed.length} onSelectAll={() => setSelected(new Set(listed.map((d) => d.id)))} onClear={() => setSelected(new Set())} actions={bulkActions} onRun={runBulk} busy={busy} />}
+      {notice && <p role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{notice}</p>}
+
+      {searching ? (
+        <Tray label={`${docs.length} ${docs.length === 1 ? "document" : "documents"}`}>
+          <div className="space-y-1.5">
+            {docs.length === 0 && <Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">Nothing matches “{query.trim()}”.</Card>}
+            {docs.map((d) => row(d, true))}
+          </div>
+        </Tray>
+      ) : folder ? (
+        <>
+          <button type="button" onClick={() => { setSelected(new Set()); setParams({}); }} className="inline-flex items-center gap-1 !bg-transparent p-0 text-sm font-medium text-accent hover:underline">
+            <ChevronLeft className="size-4" /> All folders
+          </button>
+          <Tray label={KIND_INFO[folder].label}>
+            <div className="space-y-1.5">
+              {inFolder.length === 0 && (
+                <Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">
+                  {canEdit ? "Nothing here yet. Write a document, or drop a file on this page." : "Nothing here yet."}
+                </Card>
+              )}
+              {inFolder.map((d) => row(d, false))}
+            </div>
+          </Tray>
+        </>
+      ) : (
+        <>
+          {docs.length === 0 && (
+            <Card className="p-5 text-sm text-slate-600 dark:text-neutral-300">
+              {canEdit
+                ? "No documents yet. Start with your meeting format or your group's guidelines: write one here, import a Word or RTF file, or upload a PDF. You can drop files on this page. Everything starts for Members only."
+                : "The group hasn't shared any documents yet."}
+            </Card>
+          )}
+          {pinned.length > 0 && (
+            <Tray label="Pinned">
+              <div className="space-y-1.5">{pinned.map((d) => row(d, true))}</div>
+            </Tray>
+          )}
+          <Tray label="Folders">
+            <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+              {folders.map(({ key, label, note, icon: Icon }) => (
+                <button key={key} type="button" onClick={() => { setSelected(new Set()); setParams({ folder: key }); }} className="flex items-start gap-3 rounded-2xl !bg-white p-3 text-left shadow-panel hover:ring-1 hover:ring-accent/40 dark:!bg-neutral-900">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent"><Icon className="size-5" /></span>
+                  <span className="min-w-0">
+                    <span className="block font-medium text-slate-900 dark:text-white">{label}</span>
+                    <span className="block text-xs text-slate-500 dark:text-neutral-400">{note}</span>
+                    <span className="mt-1 block text-xs font-semibold text-accent">{counts[key]} {counts[key] === 1 ? "document" : "documents"}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </Tray>
+        </>
+      )}
+    </div>
+  );
+}

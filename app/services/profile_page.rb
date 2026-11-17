@@ -1,7 +1,8 @@
 # What a profile page (/people/:username) shows, for the page and its HMBLBOT Editor
 # (/people/me/edit): its owner's layout and blocks (theirs, or DEFAULT_BLOCKS until they
 # save their own) and, as `context`, what its own blocks list (EventBlocks::PROFILE_TYPES):
-# their notes and highlights as far as the viewer may see them (Visibility), the groups
+# their notes (and those written on their page) and highlights as far as the viewer may see
+# them (Visibility, TimelineNote.on_profile_of), the groups
 # they share with the viewer, and who they follow and who follows them.
 #
 # Profiles are only for signed-in people who can use Groups (User.profiles_open_to?);
@@ -44,7 +45,11 @@ class ProfilePage
         viewer: {
           signed_in: @viewer.present?, is_me: me, following: !me && !!@viewer&.following?(person),
           follows_you: !me && !!person.following?(@viewer),
-          default_note_visibility: (@viewer.default_note_visibility if me),
+          # Whether they blocked this person (UserBlock): their notes are hidden from them
+          blocked: !me && !!@viewer&.blocked?(person),
+          # Whether they can write a note on this page (TimelineNote.writable_by?)
+          can_write: !me && TimelineNote.writable_by?(@viewer, person),
+          default_note_visibility: @viewer&.default_note_visibility,
           # Groups their notes can go to, for the note composer
           groups: (me ? @viewer.groups.order(:title).map { |g| { slug: g.slug, title: g.title } } : nil),
         },
@@ -52,22 +57,48 @@ class ProfilePage
         groups: groups(person, me),
         following: people(person.following),
         followers: people(person.followers),
+        # Their favorite chips, when their page has a Chips block (Chips.favorites)
+        chips: person.show_chips_on_profile ? Chips.favorites(person) : [],
+        chips_path: ("/recovery" if me),
+        chip_design: ChipDesign::DEFAULT,
       },
     }
   end
 
-  # The viewer's own notes and highlights and what people they follow shared with
-  # followers or members, newest first (the home page, /people)
+  # The viewer's own notes and shared highlights, notes written on their page, and what
+  # people they follow shared with followers or members, newest first (the home page, /people)
   def following_feed(before: nil)
     ids = @viewer.follows_given.select(:followed_id)
     shared = %w[followers public]
-    notes = TimelineNote.where(user_id: ids, visibility: shared).or(TimelineNote.where(user_id: @viewer.id))
-    highlights = UserHighlight.where(user_id: ids, visibility: shared).or(UserHighlight.where(user_id: @viewer.id))
+    notes = TimelineNote.where(user_id: ids, visibility: shared).shown.or(TimelineNote.where(user_id: @viewer.id))
+                        .or(TimelineNote.where(recipient_id: @viewer.id))
+    notes = notes.not_blocked_by(@viewer)
+    highlights = UserHighlight.on_timeline.where(user_id: ids, visibility: shared).or(UserHighlight.on_timeline.where(user_id: @viewer.id))
+    highlights = highlights.where.not(user_id: @viewer.blocked_ids) if @viewer.blocked_ids.any?
     merge(notes, highlights, before: before)
   end
 
+  # A site admin's home page with "Everyone's posts" on (User#sees_all_posts?): what every member
+  # shared with Followers or Members, whether they follow them or not, plus their own. Never
+  # "Only me" notes and highlights (a private note shared to a group stays with that group, and
+  # a private note on someone's page stays between the two of them). People they blocked are left out.
+  def everyone_feed(before: nil)
+    shared = %w[followers public]
+    notes = TimelineNote.where(visibility: shared).shown.or(TimelineNote.where(user_id: @viewer.id))
+                        .or(TimelineNote.where(recipient_id: @viewer.id))
+    highlights = UserHighlight.on_timeline.where(visibility: shared).or(UserHighlight.on_timeline.where(user_id: @viewer.id))
+    merge(notes.not_blocked_by(@viewer), highlights.not_blocked_by(@viewer), before: before)
+  end
+
   def feed(person, before: nil)
-    merge(TimelineNote.visible_to(@viewer, owner: person), UserHighlight.visible_to(@viewer, owner: person), before: before)
+    notes = TimelineNote.on_profile_of(person, @viewer)
+    notes = notes.shown unless @viewer&.id == person.id
+    merge(notes, UserHighlight.visible_to(@viewer, owner: person).on_timeline.not_blocked_by(@viewer), before: before)
+  end
+
+  # Followers or following, newest first
+  def people(scope, limit: PEOPLE_MAX)
+    scope.includes(avatar_attachment: :blob).order("follows.created_at DESC").limit(limit).map(&:as_person_json)
   end
 
   private
@@ -75,10 +106,10 @@ class ProfilePage
   def merge(notes, highlights, before: nil)
     if before
       notes = notes.where(created_at: ...before)
-      highlights = highlights.where(created_at: ...before)
+      highlights = highlights.where(shared_at: ...before)
     end
-    notes = notes.includes(:groups, images_attachments: :blob, user: { avatar_attachment: :blob }).newest_first.limit(FEED_MAX)
-    highlights = highlights.includes(chapter: :book, user: { avatar_attachment: :blob }).order(created_at: :desc, id: :desc).limit(FEED_MAX)
+    notes = notes.for_feed.newest_first.limit(FEED_MAX)
+    highlights = highlights.includes(:reposts, reactions: { user: { avatar_attachment: :blob } }, chapter: :book, user: { avatar_attachment: :blob }).order(shared_at: :desc, id: :desc).limit(FEED_MAX)
     (notes.map { |n| n.as_api_json(viewer: @viewer) } + highlights.map { |h| h.as_feed_json(viewer: @viewer) })
       .sort_by { |item| item[:created_at] }.reverse.first(FEED_MAX)
   end
@@ -87,11 +118,11 @@ class ProfilePage
   def groups(person, me)
     scope = person.groups.order(:title)
     scope = scope.where(id: @viewer.groups.select(:id)) unless me || @viewer&.suite_admin?
-    scope.map { |g| { slug: g.slug, title: g.title, description: g.description } }
-  end
-
-  def people(scope)
-    scope.includes(avatar_attachment: :blob).order("follows.created_at DESC").limit(PEOPLE_MAX).map(&:as_person_json)
+    list = scope.includes(logo_attachment: :blob).to_a
+    counts = GroupMembership.active.where(group_id: list.map(&:id)).group(:group_id).count
+    list.map do |g|
+      { slug: g.slug, title: g.title, description: g.description, logo_url: image_path(g.logo), members_count: counts[g.id] || 0 }
+    end
   end
 
   def image_path(attachment)

@@ -1,9 +1,15 @@
 import React from "react";
 
 // Equal-width segmented bar, like the Today / Tomorrow / ✓ row in the DateTimePicker.
+// Four or more choices with longer names are two to a row on a phone, so their words aren't
+// squeezed a word a line.
+const ONE_ROW = "flex items-stretch divide-x divide-neutral-200 dark:divide-neutral-700";
+const TWO_A_ROW = "grid grid-cols-2 sm:flex sm:items-stretch sm:divide-x sm:divide-neutral-200 sm:dark:divide-neutral-700 [&>*]:border-neutral-200 dark:[&>*]:border-neutral-700 max-sm:[&>*:nth-child(even)]:border-l max-sm:[&>*:nth-child(n+3)]:border-t max-sm:[&>*:last-child:nth-child(odd)]:col-span-2";
+
 export default function SegmentedControl({ options, value, onChange, onConfirm, confirmIcon: ConfirmIcon, confirmLabel = "Apply" }) {
+  const crowded = !onConfirm && options.length >= 4 && options.some((o) => typeof o.label === "string" && o.label.length > 9);
   return (
-    <div className="flex items-stretch divide-x divide-neutral-200 dark:divide-neutral-700">
+    <div className={crowded ? TWO_A_ROW : ONE_ROW}>
       {options.map((option) => {
         const isActive = option.value === value;
         return (

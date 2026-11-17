@@ -6,14 +6,10 @@ import { createRoot } from "react-dom/client";
 import "../styles/tailwind.css";
 import "../styles/reader.css";
 
-import Layout from "../components/Layout";
 import TopicificatorAdmin from "../components/topicificator_admin/App";
 
 const root = document.getElementById("topicificator-admin");
 if (root) {
-  createRoot(root).render(
-    <Layout isAuthenticated={document.body.dataset.currentUser === "true"} showFooter={false}>
-      <TopicificatorAdmin />
-    </Layout>
-  );
+  // the admin's own chrome (sidebar and top bar, like the admin suite) instead of the site nav
+  createRoot(root).render(<TopicificatorAdmin />);
 }

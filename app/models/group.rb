@@ -5,6 +5,7 @@
 # everything, and anyone already in a group sees that group. An active group's page is
 # open to everyone, signed in or not (.viewable_by), for Find a meeting.
 class Group < ApplicationRecord
+  moderates_language :title, :description, :location, :court_email_subject, :court_email_body, :page_blocks
   TIME_ZONES = SchedulePoll::TIME_ZONES
   STATUSES = %w[active pending].freeze
   # Paths in the Groups app (app/javascript/entrypoints/groups.jsx) a group can't be named
@@ -14,18 +15,43 @@ class Group < ApplicationRecord
   has_many :memberships, class_name: "GroupMembership", dependent: :destroy
   has_many :active_memberships, -> { active }, class_name: "GroupMembership"
   has_many :members, through: :active_memberships, source: :user
+  has_many :step_tools, class_name: "GroupStepTool", dependent: :delete_all
   has_many :meetings, dependent: :destroy
   has_many :group_books, dependent: :destroy
   has_many :books, through: :group_books
   has_many :readings, dependent: :nullify
   has_many :court_verifications, dependent: :nullify
   has_many :events, dependent: :destroy
+  has_many :documents, class_name: "GroupDocument", dependent: :destroy
+  has_many :motions, dependent: :destroy
+  has_many :polls, dependent: :destroy
+  has_many :business_meetings, dependent: :destroy
+  has_many :service_positions, dependent: :destroy
+  has_many :treasurer_reports, dependent: :destroy
   has_many :timeline_note_shares, dependent: :destroy
   has_many :timeline_notes, through: :timeline_note_shares
+  # Its chat (ChatChannel) and the people its admins blocked (GroupBlock)
+  has_many :chat_channels, dependent: :destroy
+  has_many :blocks, class_name: "GroupBlock", dependent: :delete_all
 
   # The group's page (Api::GroupPagesController): page_blocks stays nil until the group
   # saves its own, and until then it shows the default page (GroupPageTemplate)
   has_one_attached :cover
+  # The group's logo, shown in a rounded square (Group settings)
+  has_one_attached :logo
+  has_many :document_templates, class_name: "GroupDocumentTemplate", dependent: :destroy
+  # The Hosting Command Center: the default kit (meeting_id nil) and each meeting's own
+  has_many :hosting_kits, dependent: :destroy
+  has_many :hosting_layouts, dependent: :destroy
+  has_many :decks, dependent: :destroy
+  has_many :deck_templates, dependent: :delete_all
+  # Chips its hosts gave (ChipAward)
+  has_many :chip_awards, dependent: :delete_all
+  has_many :chip_templates, dependent: :destroy
+  has_many :chip_editions, dependent: :destroy
+  LOGO_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
+  validate { errors.add(:logo, "has to be a PNG, JPEG, WebP or GIF image") if logo.attached? && !LOGO_TYPES.include?(logo.blob.content_type) }
+  validate { errors.add(:logo, "has to be under 5 MB") if logo.attached? && logo.blob.byte_size > 5.megabytes }
   # Pictures placed in the page's blocks
   has_many_attached :page_images
 
@@ -41,9 +67,12 @@ class Group < ApplicationRecord
   validates :title, presence: true, length: { maximum: 120 }
   validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9-]+\z/ }, exclusion: { in: RESERVED_SLUGS }
   validates :page_layout, inclusion: { in: Event::LAYOUTS }
+  before_validation { self.deck_editors = DECK_EDITOR_ROLES & Array(deck_editors).map(&:to_s) }
   validates :time_zone, inclusion: { in: TIME_ZONES }
   validates :status, inclusion: { in: STATUSES }
   validates :description, length: { maximum: 1000 }
+  validates :quorum_count, numericality: { only_integer: true, in: 1..9999 }, allow_nil: true
+  validates :quorum_percent, numericality: { only_integer: true, in: 1..100 }, allow_nil: true
   validates :court_email_subject, length: { maximum: 200 }
   validates :court_email_body, length: { maximum: 5000 }
   validates :court_email_reply_to, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
@@ -59,6 +88,17 @@ class Group < ApplicationRecord
     ActiveModel::Type::Boolean.new.cast(ENV["GROUPS_FOR_EVERYONE"]) || user.suite_admin?
   end
 
+  # Starting a group from an intergroup listing (POST /api/groups/start) is open to every
+  # signed-in account, even while the rest of Groups is admin-only: the group stays pending
+  # until a site admin approves it (Site Admin > Group requests). Someone who isn't a site
+  # admin may have a few waiting at once.
+  PENDING_STARTS_LIMIT = 3
+  def self.can_start_from_listing?(user) = user.present?
+
+  def self.too_many_pending_starts?(user)
+    !user.suite_admin? && where(status: "pending", created_by: user).count >= PENDING_STARTS_LIMIT
+  end
+
   # Anyone may see an active group's page and ask to join it, signed in or not: Find a
   # meeting is open to everyone. The rest of Groups stays behind .visible_to.
   def self.viewable_by(user) = user ? active.or(visible_to(user)) : active
@@ -70,23 +110,134 @@ class Group < ApplicationRecord
     feature_open_to?(user) ? scope.or(active) : scope
   end
 
+  # The approved groups `user` is an active member of: their literature is what a members-only
+  # book's readers come from (Book.readable_by)
+  def self.reading_groups_of(user)
+    active.where(id: GroupMembership.active.where(user: user).select(:group_id)).select(:id)
+  end
+
   def to_param = slug
   def zone = ActiveSupport::TimeZone[time_zone]
   def pending? = status == "pending"
+
+  # A site admin says yes to a group someone started: it goes live, run by whoever started it,
+  # and people who followed the listing hear it arrived
+  def approve!
+    update!(status: "active")
+    Notification.deliver(admins, kind: "group.approved", title: "#{title} is approved", url: "/groups/#{slug}")
+    IntergroupFollow.announce!(self)
+  end
+
+  # A site admin says no: whoever started it is told why (if the admin said) and the pending
+  # group is removed, so the listing can be started again
+  def decline!(reason = nil)
+    listing = meetings.linked_to_oiaa.pick(:oiaa_slug)
+    Notification.deliver(admins.to_a, kind: "group.declined", title: "“#{title}” wasn't approved",
+                                      body: reason.to_s.strip.presence&.truncate(500) || "A site admin didn't approve it this time.",
+                                      url: listing ? "/groups/find/#{CGI.escape(listing)}" : "/groups")
+    destroy!
+  end
 
   def membership_for(user) = user && memberships.find_by(user: user)
   def member?(user) = !!membership_for(user)&.active?
   def admin?(user) = !!membership_for(user)&.then { |m| m.active? && m.admin? }
   def manageable_by?(user) = !!user && (user.suite_admin? || admin?(user))
+
+  # Takes its description from a linked listing (AA Intergroup's or an imported list's
+  # group notes) while it has none of its own, so a description a group admin wrote is never
+  # replaced. Saves only the description; text the blocked-language check refuses is skipped.
+  def adopt_listing_description(record)
+    text = record&.group_notes.to_s.strip
+    return false if text.empty? || description.present?
+
+    self.description = text.truncate(1000, separator: " ")
+    return true if new_record?
+
+    saved = save
+    restore_attributes([:description]) unless saved
+    saved
+  end
+  # Who schedules the hosts of its meetings: group admins, and members an admin marked in the
+  # Members tab (the person doing that needn't keep the records). A coordinator an admin limited
+  # to some time slots (GroupMembership#host_slots_only) schedules only those meetings, so given
+  # a meeting this asks about that one; without one, about the host schedule as a whole.
+  def hosts_editable_by?(user, meeting = nil)
+    return true if manageable_by?(user)
+
+    !!membership_for(user)&.then { |m| m.active? && m.can_schedule_hosts && (meeting.nil? || m.coordinates?(meeting)) }
+  end
+
+  # A coordinator for every meeting (not limited to time slots): sets up the group's default kit
+  def all_hosts_editable_by?(user) = manageable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_schedule_hosts && !m.host_slots_only }
+
+  # The weekly meetings a slot-limited coordinator looks after (nil: all of them)
+  def coordinated_meeting_ids(user)
+    return if manageable_by?(user)
+
+    m = membership_for(user)
+    m.host_meeting_ids if m&.active? && m.slot_coordinator?
+  end
+
+  # Who hears about a meeting's hosts: admins and the coordinators of the whole group, and those
+  # whose time slots include the meeting (all of them when no meeting is given)
+  def host_schedulers(meeting = nil)
+    coordinators = active_memberships.where(can_schedule_hosts: true)
+    coordinators = coordinators.coordinating(meeting) if meeting
+    User.where(id: active_memberships.admins.select(:user_id)).or(User.where(id: coordinators.select(:user_id)))
+  end
+
+  # The coordinators limited to time slots that include this meeting: they hear about every
+  # change to its schedule (the whole group's coordinators don't, as there'd be too many)
+  def slot_coordinators(meeting)
+    User.where(id: active_memberships.where(can_schedule_hosts: true, host_slots_only: true).where.not(role: "admin")
+                                     .where("? = ANY(group_memberships.host_meeting_ids)", meeting.id).select(:user_id))
+  end
+  # Members marked as able to host or co-host (by an admin or a host coordinator): they read the
+  # documents kept for hosts (the format) and are the ones asked when a host won't be there
+  def can_host?(user) = hosts_editable_by?(user) || records_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_host }
+  def host_pool = User.where(id: active_memberships.where(can_host: true).select(:user_id))
+  # Who may rearrange the group's HostDecks (the layout editor): its admins always, and the roles
+  # it picked in Group settings (deck_editors): host coordinators and record keepers unless it
+  # changed that, and everyone who can host if it chose to
+  DECK_EDITOR_ROLES = %w[host_coordinators record_keepers hosts].freeze
+  def decks_editable_by?(user)
+    return false unless user
+    return true if manageable_by?(user)
+
+    roles = Array(deck_editors)
+    (roles.include?("host_coordinators") && hosts_editable_by?(user)) || (roles.include?("record_keepers") && records_editable_by?(user)) ||
+      (roles.include?("hosts") && can_host?(user))
+  end
+
+  def member_or_site_admin?(user) = !!user && (user.suite_admin? || member?(user))
+  # Record keepers write the group's documents (and, later, minutes and decisions): group
+  # admins, site admins, and members an admin marked in the Members tab
+  def records_editable_by?(user) = manageable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_keep_records }
+  # Who keeps the group's records: its admins and the members they marked (told when members
+  # suggest agenda items, or a term is up)
+  # Who writes the treasurer's reports: record keepers, and members an admin marked as treasurer
+  def treasury_editable_by?(user) = records_editable_by?(user) || !!membership_for(user)&.then { |m| m.active? && m.can_keep_treasury }
+  def treasurers = User.where(id: active_memberships.where(can_keep_treasury: true).select(:user_id))
+  def record_keepers = User.where(id: active_memberships.where("group_memberships.role = 'admin' OR group_memberships.can_keep_records").select(:user_id))
+  # How many people make a quorum, from the bylaws: a number, or a share of the members
+  def quorum_needed
+    return (active_memberships.count * quorum_percent / 100.0).ceil if quorum_percent&.positive?
+
+    quorum_count if quorum_count&.positive?
+  end
+
   def visible_to?(user) = !!user && (user.suite_admin? || member?(user) || (active? && self.class.feature_open_to?(user)))
   def active? = status == "active"
   def page_visible_to?(user) = active? || visible_to?(user)
+  # Search engines may list the group's public page and meetings (groups.search_listed, on by default)
+  def search_listed? = active? && search_listed
+  scope :listed_in_search, -> { active.where(search_listed: true) }
   def admins = members.merge(GroupMembership.admins)
   def custom_page? = !page_blocks.nil?
 
   # Notes members shared to the group, newest first; a note stops showing when its author
   # leaves
-  def shared_notes = timeline_notes.where(user_id: members.select(:id)).includes(user: { avatar_attachment: :blob }).newest_first
+  def shared_notes = timeline_notes.shown.where(user_id: members.select(:id)).includes(user: { avatar_attachment: :blob }).newest_first
 
   # Readings members tagged to this group; drafts and scheduled ones stay with their author
   def shared_readings = readings.published.includes(:user).order(published_at: :desc)
@@ -101,6 +252,39 @@ class Group < ApplicationRecord
       default_body: CourtLetter.default_body(self),
       fields: CourtLetter::FIELDS,
     }
+  end
+
+  def blocked?(user) = !!user && blocks.exists?(user_id: user.id)
+
+  # Whether `user` holds a role a chat channel can be open to (ChatChannel::ROLES)
+  def holds_chat_role?(user, role, membership = membership_for(user))
+    return false unless membership&.active?
+
+    case role
+    when "members" then true
+    when "hosts" then can_host?(user)
+    when "record_keepers" then records_editable_by?(user)
+    when "host_coordinators" then hosts_editable_by?(user)
+    when "treasurers" then treasury_editable_by?(user)
+    else false
+    end
+  end
+
+  # Who may add chat channels: its admins, and the roles and people they picked
+  def chat_creatable_by?(user)
+    return true if manageable_by?(user)
+
+    membership = membership_for(user)
+    return false unless membership&.active?
+
+    chat_creator_user_ids.include?(user.id) || chat_creator_roles.any? { |r| holds_chat_role?(user, r, membership) }
+  end
+
+  # #general, made the first time anyone opens the chat
+  def general_channel
+    chat_channels.find_by(name: "general") || chat_channels.create!(name: "general", access_roles: ["members"], topic: "Everyone in #{title}")
+  rescue ActiveRecord::RecordNotUnique
+    chat_channels.find_by!(name: "general")
   end
 
   def notify_admins(kind:, title:, body: nil, url: "/groups/#{slug}")

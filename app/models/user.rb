@@ -1,11 +1,25 @@
 class User < ApplicationRecord
+  moderates_language :name, :username, :bio, :page_blocks, :inventory_questions
   # Include default devise modules. Others available are:
-  # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
+  # :lockable, :timeoutable and :trackable
+  # :confirmable: new accounts confirm their email address before they can sign in
+  # :omniauthable: "Continue with Google" (GoogleSignIn, Users::OmniauthCallbacksController);
+  #   Sign in with Apple and the apps' native sheets sign in through User.from_identity
   devise :database_authenticatable, :registerable,
-         :recoverable, :rememberable, :validatable
+         :recoverable, :rememberable, :validatable, :confirmable,
+         :omniauthable, omniauth_providers: [:google_oauth2]
 
   has_one :user_active_group, -> { order(updated_at: :desc) }, dependent: :destroy
   has_many :group_memberships, dependent: :destroy
+  # The member's own recovery tools, only ever seen by them (Api::RecoveryController)
+  has_many :step_inventories, dependent: :delete_all
+  has_many :gratitude_lists, dependent: :delete_all
+  has_many :step_works, dependent: :delete_all
+  # Chips their groups' hosts gave them (and ones they gave), and the meetings they clicked
+  # Join on, for Meeting Maker chips (Chips)
+  has_many :chip_awards, dependent: :delete_all
+  has_many :chip_awards_given, class_name: "ChipAward", foreign_key: :given_by_id, dependent: :nullify, inverse_of: :given_by
+  has_many :meeting_joins, dependent: :delete_all
   has_many :created_groups, class_name: "Group", foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
   has_many :groups, -> { merge(GroupMembership.active) }, through: :group_memberships
   has_one_attached :avatar
@@ -19,7 +33,7 @@ class User < ApplicationRecord
   has_many :followers, through: :follows_received, source: :follower
 
   USERNAME = /\A[a-z0-9][a-z0-9-]{1,29}\z/
-  RESERVED_USERNAMES = %w[me edit].freeze
+  RESERVED_USERNAMES = %w[me edit tags].freeze
 
   before_validation :assign_username, on: :create
   before_validation { self.page_blocks = EventBlocks.normalize(page_blocks, types: EventBlocks::PROFILE_TYPES) unless page_blocks.nil? }
@@ -27,6 +41,23 @@ class User < ApplicationRecord
                        format: { with: USERNAME, message: "can use lowercase letters, numbers and dashes (2 to 30)" }
   validates :page_layout, inclusion: { in: Event::LAYOUTS }
   validates :default_highlight_visibility, :default_note_visibility, inclusion: { in: Visibility::LEVELS }
+  # How long before a meeting they host a reminder goes out (HostReminders), when they turn it on
+  HOST_REMINDER_HOURS = [2, 6, 12, 24, 48].freeze
+  validates :host_reminder_hours, inclusion: { in: HOST_REMINDER_HOURS }
+  # The daily gratitude and 10th step reminders (RecoveryReminders): a time of day, "HH:MM",
+  # in their own time zone (an IANA name their browser sends when they turn one on)
+  validates :gratitude_reminder_at, :step_reminder_at, format: { with: /\A([01]\d|2[0-3]):[0-5]\d\z/, message: "should be a time like 18:00" }
+  validate { errors.add(:time_zone, "isn't one we know") if time_zone.present? && ActiveSupport::TimeZone[time_zone].nil? }
+  # Turning one on, or moving it, after today's time has passed starts it tomorrow rather than
+  # sending it right away
+  before_save do
+    %w[gratitude step].each do |which|
+      next unless public_send("#{which}_reminder") && (will_save_change_to_attribute?("#{which}_reminder") || will_save_change_to_attribute?("#{which}_reminder_at"))
+
+      now = Time.current.in_time_zone(zone)
+      public_send("#{which}_reminded_on=", now.to_date) if now.hour * 60 + now.min >= RecoveryReminders.minutes(public_send("#{which}_reminder_at"))
+    end
+  end
 
   AVATAR_TYPES = %w[image/jpeg image/png image/webp].freeze
   validates :bio, length: { maximum: 280 }
@@ -36,33 +67,56 @@ class User < ApplicationRecord
   has_many :user_highlights, dependent: :destroy
   has_many :text_reports, dependent: :destroy
   has_many :notifications, dependent: :destroy
+  has_many :today_dismissals, dependent: :delete_all
+  has_many :push_subscriptions, dependent: :delete_all
+  has_many :device_tokens, dependent: :delete_all # the apps' notification tokens (FcmSender)
   has_many :text_report_comments, dependent: :destroy
   has_many :resolved_text_reports, class_name: "TextReport", foreign_key: :resolved_by_id, dependent: :nullify
   has_many :schedule_polls, dependent: :destroy
   has_many :schedule_poll_members, dependent: :destroy
   has_many :schedule_poll_ballots, dependent: :nullify
+  # A poll and its votes stay (a group may rely on the count); the account just comes off them
+  has_many :polls, dependent: :nullify
+  has_many :poll_ballots, dependent: :nullify
   has_many :event_collaborators, dependent: :destroy
   has_many :timeline_notes, dependent: :destroy
+  has_many :notes_received, class_name: "TimelineNote", foreign_key: :recipient_id, dependent: :destroy, inverse_of: :recipient
+  has_many :note_reactions, dependent: :delete_all
+  has_many :note_comments, dependent: :destroy
+  has_many :chat_messages, dependent: :delete_all
+  has_many :chat_reads, dependent: :delete_all
+  has_many :group_blocks, dependent: :delete_all
+  has_many :blocks_given, class_name: "UserBlock", foreign_key: :blocker_id, dependent: :delete_all, inverse_of: :blocker
+  has_many :blocks_received, class_name: "UserBlock", foreign_key: :blocked_id, dependent: :delete_all, inverse_of: :blocked
+  # Sponsorship: the people they sponsor, and their sponsors
+  has_many :sponsorships_as_sponsor, class_name: "Sponsorship", foreign_key: :sponsor_id, dependent: :destroy, inverse_of: :sponsor
+  has_one :sponsor_profile, dependent: :destroy
+  has_many :sponsorships_as_sponsee, class_name: "Sponsorship", foreign_key: :sponsee_id, dependent: :destroy, inverse_of: :sponsee
   has_many :event_rsvps, dependent: :destroy
+  has_many :intergroup_follows, dependent: :destroy
+  has_many :host_sub_requests_made, class_name: "HostSubRequest", foreign_key: :requested_by_id, dependent: :nullify, inverse_of: :requested_by
+  has_many :host_sub_requests_filled, class_name: "HostSubRequest", foreign_key: :filled_by_id, dependent: :nullify, inverse_of: :filled_by
+  has_many :meeting_host_reminders, dependent: :delete_all
+  has_many :page_templates_updated, class_name: "GroupPageTemplate", foreign_key: :updated_by_id, dependent: :nullify, inverse_of: :updated_by
+  # Readings are shared with everyone, so an account that added some isn't deleted on its own
+  # (Api::ProfilesController#destroy says to get in touch instead)
+  has_many :readings, dependent: :restrict_with_error
+  # Analytics stay as anonymous counts when an account is deleted
+  has_many :visits, class_name: "Ahoy::Visit", dependent: :nullify
+  has_many :ahoy_events, class_name: "Ahoy::Event", dependent: :nullify
 
   # Set default values for new users
   after_initialize :set_defaults, unless: :persisted?
-  after_create_commit :notify_admins_of_signup, unless: :confirmed?
+  before_save :sync_confirmed
+  # A password they typed (sign-up, profile, a reset link) is theirs; the random one an
+  # account gets from Google sign-in isn't (see .from_google)
+  before_save { self.password_chosen = true if will_save_change_to_encrypted_password? && persisted? && !@random_password }
+  # Sobriety chips they shared show only while they have them
+  after_update_commit -> { TimelineNote.sync_chips(self) }, if: :saved_change_to_sobriety_date?
 
   def set_defaults
     self.admin ||= false
     self.confirmed ||= false
-  end
-
-  # New sign-ups wait for an admin to approve them in the admin suite's Users page
-  def notify_admins_of_signup
-    Notification.deliver(User.suite_admins, kind: "user.pending", title: "#{name.presence || email} is waiting for approval",
-                                            url: "/admin_panel/users")
-  end
-
-  # Only allow confirmed users to sign in
-  def active_for_authentication?
-    super && confirmed?
   end
 
   # The admin suite (/admin_panel) shows members' attendance records, visits and accounts, so
@@ -79,6 +133,9 @@ class User < ApplicationRecord
     admin? && allowed.include?(email.to_s.downcase)
   end
 
+  # A site admin who switched their home feed to everyone's posts (Api::AdminFeedsController)
+  def sees_all_posts? = see_all_posts? && suite_admin?
+
   def display_name = name.presence || email.to_s.split("@").first
 
   # Served through the app (like book covers) so S3 URLs never reach the page
@@ -91,8 +148,147 @@ class User < ApplicationRecord
   def self.profiles_open_to?(user) = !!user && (Group.feature_open_to?(user) || user.group_memberships.exists?)
 
   def profile_path = "/people/#{username}"
+
+  # Devise, once the email address is confirmed: chips sent to it are theirs
+  def after_confirmation
+    super if defined?(super)
+    ChipAward.claim_for(self)
+  end
+
+  # "Continue with Google": the account for this Google sign-in (an OmniAuth auth hash), or nil
+  # when Google hasn't verified the address (User.from_identity)
+  def self.from_google(auth)
+    from_identity(:google, uid: auth.uid, email: auth.info&.email, email_verified: auth.extra&.raw_info&.email_verified,
+                           name: google_name(auth.info))
+  end
+
+  IDENTITY_COLUMNS = { google: :google_uid, apple: :apple_uid }.freeze
+
+  # A Google or Apple sign-in (the web's OmniAuth, Sign in with Apple, or the apps' native
+  # sheets): the account for it, or nil when the provider hasn't verified the address. Already
+  # linked: that account, whatever its email is now. Otherwise an account with the same address
+  # is linked (and confirmed, since the provider vouches for the address), or a new one is made,
+  # already confirmed, with a random password they can replace from their profile. Apple may
+  # give a private relay address (…@privaterelay.appleid.com) and, after the first time, no name.
+  # Sign in with Apple's refresh token (AppleSignIn): kept so deleting the account revokes it
+  encrypts :apple_refresh_token
+  before_destroy :revoke_apple_sign_in
+
+  # After a Sign in with Apple: trades the sign-in's authorization code for a refresh token and
+  # keeps it, with the client ID it belongs to (the app's bundle ID or the website's Services ID)
+  def remember_apple_sign_in(code, client_id:, redirect_uri: nil)
+    token = AppleSignIn.refresh_token_for(code, client_id: client_id, redirect_uri: redirect_uri)
+    update_columns(apple_refresh_token: token, apple_client_id: client_id) if token
+  end
+
+  def self.from_identity(provider, uid:, email:, email_verified:, name: nil)
+    column = IDENTITY_COLUMNS.fetch(provider)
+    uid = uid.to_s
+    return if uid.blank?
+
+    linked = find_by(column => uid)
+    return linked if linked
+
+    email = email.to_s.strip.downcase
+    return unless email.present? && ActiveModel::Type::Boolean.new.cast(email_verified)
+
+    user = find_by("lower(email) = ?", email)
+    if user
+      user[column] = uid
+      unless user.confirmed?
+        # Someone else could have signed up with this address and never confirmed it, so the
+        # password on it isn't proven to be theirs: it goes, and they can choose one
+        user.random_password!
+        user.skip_confirmation!
+      end
+      user.save!
+      user.after_confirmation if user.saved_change_to_confirmed_at?
+    else
+      user = new(email: email, name: name.to_s.strip.presence, column => uid)
+      user.random_password!
+      user.skip_confirmation!
+      user.save!
+      ChipAward.claim_for(user)
+    end
+    user
+  end
+
+  # First name and last initial, as the sign-up page asks for, from a first and last name
+  def self.short_name(first, last)
+    first = first.to_s.strip
+    last = last.to_s.strip
+    return if first.blank?
+
+    [first, ("#{last[0]}." if last.present?)].compact.join(" ")
+  end
+
+  # First name and last initial, as the sign-up page asks for, not the full name on the Google account
+  def self.google_name(info)
+    first = info&.first_name.to_s.strip
+    last = info&.last_name.to_s.strip
+    return info&.name.to_s.strip.split.first.presence if first.blank?
+
+    [first, ("#{last[0]}." if last.present?)].compact.join(" ")
+  end
+
+  def random_password!
+    @random_password = true
+    self.password = Devise.friendly_token(32)
+    self.password_chosen = false
+  end
+
+  # Their invite link for someone they're sponsoring (/sponsor/:token), made the first time
+  def sponsor_invite_token!
+    return sponsor_invite_token if sponsor_invite_token.present?
+
+    update_column(:sponsor_invite_token, SecureRandom.urlsafe_base64(12))
+    sponsor_invite_token
+  end
+
   def following?(other) = !!other && follows_given.exists?(followed_id: other.id)
+
+  # The ids of the people they blocked (UserBlock), whose things are hidden from them
+  def blocked_ids = @blocked_ids ||= blocks_given.pluck(:blocked_id)
+  def blocked?(other) = !!other && blocked_ids.include?(other.id)
   def custom_page? = !page_blocks.nil?
+
+  # Their favorite chips show on their profile when it has a Chips block (EventBlocks); the
+  # switch on the Chips page adds one under About (making the default page theirs) or takes it off
+  def show_chips_on_profile = !!page_blocks&.any? { |b| b["type"] == "chips" }
+
+  def show_chips_on_profile=(on)
+    on = ActiveModel::Type::Boolean.new.cast(on)
+    return if on == show_chips_on_profile
+
+    blocks = (page_blocks || ProfilePage.default_blocks).map(&:dup)
+    if on
+      about = blocks.index { |b| b["type"] == "about" }
+      blocks.insert(about ? about + 1 : blocks.size, { "type" => "chips", "region" => about ? blocks[about]["region"] : "side" })
+    else
+      blocks.reject! { |b| b["type"] == "chips" }
+    end
+    self.page_blocks = blocks
+  end
+
+  # Their hosting: the groups they can host for, their meetings and coming dates
+  def host_commitments = @host_commitments ||= HostCommitments.new(self)
+  def host? = host_commitments.host?
+
+  # Whether a notification of this kind goes to their devices too (account settings >
+  # Notifications on this device). Kinds outside Notification::PUSH_CATEGORIES always do.
+  # Their own time zone, or the site's (Arizona) until their browser has told us
+  def zone = (time_zone.presence && ActiveSupport::TimeZone[time_zone]) || Time.zone
+
+  def wants_push?(kind)
+    category = Notification.push_category(kind)
+    category.nil? || !push_off.include?(category)
+  end
+
+  # The push categories offered to them, each with whether it's on
+  def push_categories
+    Notification::PUSH_CATEGORIES.reject { |_, c| c[:admin_only] && !suite_admin? }
+                                 .map { |key, c| { key: key, label: c[:label], description: c[:description], on: !push_off.include?(key) } }
+  end
 
   # Enough to show and link to them anywhere
   def as_person_json = { id: id, name: display_name, username: username, avatar_url: avatar_url }
@@ -103,6 +299,14 @@ class User < ApplicationRecord
       sobriety_date: (sobriety_date&.iso8601 if show_sobriety_date) }.compact
   end
 
+  # The welcome wizard (/welcome, WelcomeController) hasn't been finished or skipped: only
+  # accounts made after it arrived (the migration marked everyone before as done)
+  def onboarding_due? = onboarded_at.nil?
+
+  def finish_onboarding!
+    update_column(:onboarded_at, Time.current) if onboarding_due?
+  end
+
   # The "You're not in a group yet" nudge: Groups is open to them, they aren't in (or
   # waiting on) one, and they haven't waved it off in the last 30 days.
   def needs_group?
@@ -110,12 +314,15 @@ class User < ApplicationRecord
       (group_prompt_dismissed_at.nil? || group_prompt_dismissed_at < 30.days.ago)
   end
 
-  # Provide a message if user is not confirmed
-  def inactive_message
-    confirmed? ? super : :unconfirmed
-  end
-
   private
+
+  # `confirmed` (the old admin-approval flag, still what queries use) and Devise's
+  # `confirmed_at` say the same thing: confirming the email sets the flag, and an account
+  # made or approved with confirmed: true (an admin, a test) counts as confirmed.
+  def sync_confirmed
+    self.confirmed = true if confirmed_at.present?
+    self.confirmed_at ||= Time.current if self[:confirmed]
+  end
 
   def sobriety_date_is_past
     errors.add(:sobriety_date, "can't be in the future") if sobriety_date && sobriety_date > Date.current + 1
@@ -137,5 +344,14 @@ class User < ApplicationRecord
     n = 1
     candidate = "#{base}-#{n += 1}" while self.class.where.not(id: id).exists?(username: candidate)
     self.username = candidate
+  end
+
+  # Deleting the account tells Apple too (App Store rule 5.1.1(v)). The account goes either way:
+  # an old sign-in with no token kept, or Apple not answering, doesn't stop it.
+  def revoke_apple_sign_in
+    return if apple_refresh_token.blank?
+
+    AppleSignIn.revoke(apple_refresh_token, client_id: apple_client_id) ||
+      Rails.logger.warn("[apple sign-in] user #{id}: Apple didn't confirm the revoke")
   end
 end

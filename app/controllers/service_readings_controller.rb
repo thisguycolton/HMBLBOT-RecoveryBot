@@ -5,12 +5,13 @@ class ServiceReadingsController < ApplicationController
   layout "reader", only: %i[index show]
   # GET /service_readings or /service_readings.json
   def index
-    @service_readings = ServiceReading.all
-
+    @service_readings = ServiceReading.order(:id)
   end
 
   # GET /service_readings/1 or /service_readings/1.json
   def show
+    # The same reading from its other sources (How It Works from the Big Book and a pamphlet)
+    @other_sources = ServiceReading.where(title: @service_reading.title).where.not(id: @service_reading.id).order(:id).select(:id, :source)
   end
 
   # GET /service_readings/new

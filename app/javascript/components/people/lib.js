@@ -1,6 +1,6 @@
 // Profile pages in the HMBLBOT Editor: the blocks a profile can have
 // (EventBlocks::PROFILE_TYPES on the server), its own and a few of the event page's.
-import { AlignLeft, Heading, Image, LayoutGrid, MessagesSquare, UserRound, Users, UsersRound } from "lucide-react";
+import { AlignLeft, Award, Heading, Image, LayoutGrid, MessagesSquare, UserRound, Users, UsersRound } from "lucide-react";
 import { newBlock } from "../events/lib";
 
 export const PROFILE_BLOCK_GROUPS = [
@@ -11,6 +11,7 @@ export const PROFILE_BLOCK_GROUPS = [
       { type: "about", label: "About", note: "Your picture, blurb and sobriety date", icon: UserRound },
       { type: "groups", label: "Groups", note: "Groups you're in", icon: UsersRound },
       { type: "people", label: "People", note: "Who you follow, or who follows you", icon: Users },
+      { type: "chips", label: "Chips", note: "Up to five favorite chips", icon: Award },
     ],
   },
   {
@@ -35,6 +36,7 @@ const DEFAULTS = {
   about: { title: "About" },
   groups: { title: "Groups" },
   people: { title: "Following", which: "following" },
+  chips: { title: "Chips" },
 };
 
 export function newProfileBlock(type, region = "main") {
@@ -50,6 +52,7 @@ export function hiddenFor(block, context) {
     case "groups": return !context.groups?.length;
     case "people": return !(block.which === "followers" ? context.followers : context.following)?.length;
     case "about": return !context.person?.bio && !context.person?.sobriety_date;
+    case "chips": return !context.chips?.length;
     default: return false;
   }
 }

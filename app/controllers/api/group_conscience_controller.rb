@@ -1,0 +1,84 @@
+# GET /api/groups/:group_slug/conscience: the Overview of the Group conscience tab, for members
+# in one go: the next business meeting with its agenda, recent decisions, pinned documents, who
+# serves and whose term is nearly up, and what is waiting on a record keeper, a treasurer or a
+# host coordinator (the group's Dashboard, GroupDashboard.jsx, reads the same).
+class Api::GroupConscienceController < ApplicationController
+  include GroupScoped
+
+  before_action :set_group
+  before_action :require_member
+
+  def show
+    ServiceRotation.remind_group!(@group)
+    today = @group.zone.today
+    json = {
+      can_edit: keeper?,
+      next_meeting: next_meeting_json,
+      recent_decisions: recent_decisions,
+      pinned_documents: GroupDocument.visible_to(@group, current_user).where(pinned: true).with_attached_file.ordered.limit(6)
+                                     .map { |d| d.as_api_json.slice(:id, :title, :kind, :excerpt, :updated_at, :file) },
+      service: @group.service_positions.includes(:terms).ordered.map { |p| p.as_api_json(today: today) }
+                     .select { |p| p[:rotation] }.map { |p| p.slice(:id, :title, :rotation, :current) },
+    }
+    json[:waiting] = waiting if keeper?
+    json[:waiting] ||= { draft_minutes: [], suggested_items: [], draft_documents: [], draft_reports: draft_reports } if @group.treasury_editable_by?(current_user)
+    if @group.hosts_editable_by?(current_user)
+      json[:hosts_open] = HostSchedule.new(@group, current_user).summary
+      json[:sub_requests] = open_sub_requests(today)
+      json[:covers] = TodayDuties.new(current_user).covers(group: @group)
+    end
+    json[:stats] = stats if keeper? || @group.hosts_editable_by?(current_user) || @group.treasury_editable_by?(current_user)
+    render json: json
+  end
+
+  private
+
+  def next_meeting_json
+    meeting = BusinessMeeting.next_for(@group, current_user)
+    return unless meeting
+
+    meeting.as_api_json(keeper: keeper?).merge(agenda: meeting.agenda_items.includes(:submitted_by).map { |i| i.as_api_json(viewer: current_user) })
+  end
+
+  def recent_decisions
+    scope = Motion.visible_to(@group, current_user)
+    replacers = Motion.replacers_for(@group)
+    ids = scope.pluck(:id)
+    meetings = BusinessMeeting.visible_to(@group, current_user).pluck(:id)
+    scope.decisions.where(status: %w[passed failed]).newest_first.limit(5).map { |m| m.as_api_json(replacers: replacers, visible: ids, meetings: meetings) }
+  end
+
+  # The numbers across the top of the group dashboard (GroupDashboard.jsx)
+  def stats
+    last_report = @group.treasurer_reports.where(status: "posted").order(period_on: :desc).first
+    {
+      members: @group.active_memberships.count,
+      requests: @group.memberships.requested.count,
+      standing_decisions: @group.motions.standing.where(needs_review: false).count,
+      decisions_to_check: keeper? ? @group.motions.where(needs_review: true).count : 0,
+      business_meetings: @group.business_meetings.where(status: "held").count,
+      last_report_on: last_report&.period_on&.iso8601,
+    }
+  end
+
+  # Things only a record keeper can move along
+  def waiting
+    meetings = @group.business_meetings
+    {
+      draft_minutes: meetings.where(status: "held", minutes_status: "draft").newest_first.limit(5).map { |m| { id: m.id, held_on: m.held_on.iso8601 } },
+      suggested_items: AgendaItem.joins(:business_meeting).where(business_meetings: { group_id: @group.id, status: "planned" }, status: "suggested")
+                                 .includes(:business_meeting, :submitted_by).limit(10).map { |i| { id: i.id, title: i.title, meeting_id: i.business_meeting_id, held_on: i.business_meeting.held_on.iso8601, submitted_by: i.brought_by_name } },
+      draft_documents: @group.documents.where(status: "draft").limit(5).map { |d| { id: d.id, title: d.title } },
+      draft_reports: draft_reports,
+    }
+  end
+
+  def draft_reports = @group.treasurer_reports.where(status: "draft").newest_first.limit(5).map { |r| { id: r.id, period_on: r.period_on.iso8601 } }
+
+  # "Need a sub" requests nobody has taken yet, in the meetings this coordinator schedules
+  def open_sub_requests(today)
+    meetings = @group.meetings.select { |m| @group.hosts_editable_by?(current_user, m) }
+    HostSubRequest.open.where(meeting_id: meetings.map(&:id)).where("host_sub_requests.on >= ?", today)
+                  .includes(:meeting).order(:on).limit(10).map { |r| r.as_api_json.merge(meeting_name: r.meeting.name) }
+  end
+end

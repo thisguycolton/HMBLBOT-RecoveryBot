@@ -38,7 +38,8 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
     assert group.admin?(@admin)
     get "/groups/#{group.slug}"
     assert_response :success
-    assert_equal "noindex, nofollow", response.headers["X-Robots-Tag"]
+    # An approved group's page may be listed by search engines (SearchEnginesTest)
+    assert_nil response.headers["X-Robots-Tag"]
   end
 
   test "the invite link puts people in the group, even if they sign up first" do
@@ -143,7 +144,7 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
   test "find your group: groups here, and OIAA meetings that could start one" do
     group = create_group("Sunrise Crew")
     OiaaFeed.sync!([{ slug: "x1", name: "Sunrise Zoom", day: [1], time: "07:00", timezone: "America/Phoenix" },
-                    { slug: "y1", name: "Sunset Study", group: "Sunset Folks", day: [2], time: "19:00", timezone: "America/Phoenix" }].to_json)
+                    { slug: "y1", name: "Sunset Study", group: "Sunset Folks", day: [2], time: "19:00", timezone: "America/Phoenix", group_notes: "Sunset readings, all welcome." }].to_json)
     group.meetings.new.apply_oiaa(OiaaMeeting.find_by!(slug: "x1")).save!
 
     get "/api/groups/find", params: { q: "sun" }, as: :json
@@ -162,9 +163,86 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
     assert_response :created
     started = Group.find_by!(slug: response.parsed_body["slug"])
     assert_equal ["Sunset Folks", "pending", 1], [started.title, started.status, started.meetings.count]
+    assert_equal "Sunset readings, all welcome.", started.description
 
     post "/api/groups/start", params: { oiaa_slug: "x1" }, as: :json
     assert_response :unprocessable_entity
+  end
+
+  test "anyone signed in can start a group from an intergroup listing; it waits for a site admin" do
+    OiaaFeed.sync!([{ slug: "z1", name: "Quiet Cactus Zoom", group: "Quiet Cactus", day: [3], time: "21:00", timezone: "America/Phoenix" },
+                    { slug: "z2", name: "Noon Step", day: [4], time: "12:00", timezone: "America/Phoenix" }].to_json)
+
+    # Signed out: the listing page asks them to make an account
+    get "/api/intergroup_pages/z1", as: :json
+    assert_not response.parsed_body.dig("context", "viewer", "can_start")
+    post "/api/groups/start", params: { oiaa_slug: "z1" }, as: :json
+    assert_response :unauthorized
+
+    sign_in @stranger
+    get "/api/intergroup_pages/z1", as: :json
+    assert response.parsed_body.dig("context", "viewer", "can_start"), "Groups isn't open to them, but starting from a listing is"
+    post "/api/groups/start", params: { oiaa_slug: "z1" }, as: :json
+    assert_response :created
+    group = Group.find_by!(slug: response.parsed_body["slug"])
+    assert_equal ["Quiet Cactus", "pending", @stranger], [group.title, group.status, group.created_by]
+    assert group.admin?(@stranger)
+    note = Notification.find_by!(user: @admin, kind: "group.pending")
+    assert_equal "/admin_panel/group_requests", note.url
+
+    # They see their own pending group; nobody else does yet
+    get "/groups/#{group.slug}"
+    assert_response :success
+    get "/api/groups/#{group.slug}", as: :json
+    assert_response :success
+    sign_in @member
+    get "/api/groups/#{group.slug}", as: :json
+    assert_response :not_found
+    post "/api/groups/start", params: { oiaa_slug: "z1" }, as: :json
+    assert_response :unprocessable_entity
+    assert_match "waiting for a site admin", response.parsed_body["error"]
+    assert_nil response.parsed_body["slug"]
+
+    # Only site admins see the queue
+    get "/api/admin/group_requests", as: :json
+    assert_response :forbidden
+    get "/api/admin/overview", as: :json
+    assert_response :forbidden
+
+    sign_in @admin
+    get "/api/admin/overview", as: :json
+    assert_equal 1, response.parsed_body.dig("group_requests", "pending")
+    get "/api/admin/group_requests", as: :json
+    row = response.parsed_body["group_requests"].sole
+    assert_equal ["Quiet Cactus", "Sam", "z1", "AA Intergroup", 1], [row["title"], row.dig("started_by", "name"), row.dig("listing", "slug"), row.dig("listing", "source"), row["meetings"].size]
+
+    post "/api/admin/group_requests/#{group.id}/approve", as: :json
+    assert_response :success
+    assert group.reload.active?
+    assert Notification.exists?(user: @stranger, kind: "group.approved")
+    assert_empty Group.where(status: "pending")
+
+    # A declined request is removed, so the listing can be started again
+    sign_in @stranger
+    post "/api/groups/start", params: { oiaa_slug: "z2" }, as: :json
+    second = Group.find_by!(slug: response.parsed_body["slug"])
+    sign_in @admin
+    post "/api/admin/group_requests/#{second.id}/decline", params: { reason: "Please add your group's website first." }, as: :json
+    assert_response :no_content
+    assert_not Group.exists?(second.id)
+    declined = Notification.find_by!(user: @stranger, kind: "group.declined")
+    assert_equal ["Please add your group's website first.", "/groups/find/z2"], [declined.body, declined.url]
+    post "/api/admin/group_requests/#{group.id}/decline", as: :json
+    assert_response :not_found, "an approved group can't be declined from the queue"
+  end
+
+  test "someone who isn't a site admin can have only a few groups waiting at once" do
+    OiaaFeed.sync!((1..4).map { |i| { slug: "w#{i}", name: "Group #{i}", day: [i], time: "18:00", timezone: "America/Phoenix" } }.to_json)
+    sign_in @stranger
+    3.times { |i| post "/api/groups/start", params: { oiaa_slug: "w#{i + 1}" }, as: :json; assert_response :created }
+    post "/api/groups/start", params: { oiaa_slug: "w4" }, as: :json
+    assert_response :unprocessable_entity
+    assert_match "waiting for a site admin already", response.parsed_body["error"]
   end
 
   test "literature and readings show to members" do

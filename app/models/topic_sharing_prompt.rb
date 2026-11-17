@@ -2,6 +2,7 @@
 # or that mode switched off for the topic (enabled: false). Only approved rows reach ACID
 # QUEST; drafts (human or, later, AI) wait on the curation page.
 class TopicSharingPrompt < ApplicationRecord
+  moderates_language :text
   STATUSES = %w[draft approved rejected].freeze
   SOURCES = %w[human ai].freeze
 

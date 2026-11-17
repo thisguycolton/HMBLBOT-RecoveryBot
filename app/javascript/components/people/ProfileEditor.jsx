@@ -9,6 +9,7 @@ import { api } from "../groups/lib";
 import ProfileHero from "./ProfileHero";
 import { PROFILE_BLOCK_GROUPS, PROFILE_BLOCK_INFO, newProfileBlock } from "./lib";
 import { CoverField } from "../groups/page/GroupPageEditor";
+import Skeleton from "../ui/Skeleton";
 
 const PANELS = [
   { key: "page", label: "Page", icon: FileText, note: "The cover across the top" },
@@ -16,7 +17,7 @@ const PANELS = [
 ];
 
 const formFrom = (p) => ({ layout: p.layout, blocks: p.blocks || [] });
-const OWN = ["about", "feed", "groups", "people"];
+const OWN = ["about", "feed", "groups", "people", "chips"];
 
 // Your profile page in the HMBLBOT Editor (/people/me/edit), laid out like a group's page.
 // Changes stay local until Save.
@@ -87,7 +88,7 @@ export default function ProfileEditor() {
       </div>
     );
   }
-  if (!draft) return <p className="py-24 text-center text-sm text-slate-500">Loading the editor…</p>;
+  if (!draft) return <Skeleton variant="form" label="Loading the editor" className="mx-auto max-w-3xl py-6" />;
 
   const { person, viewer } = saved.context;
   const context = { ...saved.context, kind: saved.kind, note_max: saved.note_max, images_max: saved.images_max };
@@ -150,6 +151,7 @@ export default function ProfileEditor() {
           <Field label="Who"><Choice value={block.which} onChange={(which) => { set("which")(which); if (["Following", "Followers"].includes(block.title)) set("title")(which === "followers" ? "Followers" : "Following"); }} options={[["following", "Who you follow"], ["followers", "Your followers"]]} /></Field>
         )}
         {block.type === "groups" && <p className="text-xs text-slate-500 dark:text-neutral-400">You see all your groups. Others only see the ones they're in too.</p>}
+        {block.type === "chips" && <p className="text-xs text-slate-500 dark:text-neutral-400">The chips you star on your Chips page, up to five. Members who visit your profile see them.</p>}
         {block.type === "about" && <p className="text-xs text-slate-500 dark:text-neutral-400">Your blurb, and your sobriety date if you show it (both in settings).</p>}
       </>
     );

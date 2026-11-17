@@ -1,4 +1,5 @@
 class Topic < ApplicationRecord
+  moderates_language :title, :subtitle
   # How deep a topic goes, curated by hand for ACID QUEST (nil reads as standard)
   DIFFICULTIES = %w[gentle standard deep].freeze
 

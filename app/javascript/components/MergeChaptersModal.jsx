@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import Skeleton from "./ui/Skeleton";
 
 function tiptapToPlain(doc, limit = 300) {
   if (!doc || typeof doc !== "object") return "";
@@ -114,7 +115,7 @@ export default function MergeChaptersModal({
 
         <div className="p-4 space-y-4">
           {loading ? (
-            <div>Loading preview…</div>
+            <Skeleton variant="text" rows={5} label="Loading preview" />
           ) : (
             <>
               {!!error && (

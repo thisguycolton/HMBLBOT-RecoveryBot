@@ -1,4 +1,10 @@
 module ApplicationHelper
+  # vite_rails links a page's stylesheets as media="screen" unless told otherwise, which leaves
+  # every @media print rule (the paper agenda, Save as PDF, court verification) unloaded
+  def vite_javascript_tag(*names, **options)
+    super(*names, **{ media: "all" }.merge(options))
+  end
+
   def dynamic_fields_for form, association, name = "Add"
     # stimulus:      controller v
     tag.div data: {controller: "dynamic-fields"} do

@@ -151,7 +151,7 @@ Devise.setup do |config|
   # their account can't be confirmed with the token any more.
   # Default is nil, meaning there is no restriction on how long a user can take
   # before confirming their account.
-  # config.confirm_within = 3.days
+  config.confirm_within = 3.days
 
   # If true, requires any email changes to be confirmed (exactly the same way as
   # initial account confirmation) to be applied. Requires additional unconfirmed_email
@@ -164,13 +164,17 @@ Devise.setup do |config|
 
   # ==> Configuration for :rememberable
   # The time the user will be remembered without asking for credentials again.
-  # config.remember_for = 2.weeks
+  # Three months from the last visit (extend_remember_period below): people kept getting logged
+  # out, mostly iPhone Safari and home-screen apps dropping the session cookie
+  config.remember_for = 3.months
 
   # Invalidates all the remember me tokens when the user signs out.
   config.expire_all_remember_me_on_sign_out = true
 
   # If true, extends the user's remember period when remembered via cookie.
-  # config.extend_remember_period = false
+  # Each visit starts the three months again, so someone who keeps using the app (or ticked
+  # "Remember me") stays signed in
+  config.extend_remember_period = true
 
   # Options to be passed to the created cookie. For instance, you can set
   # secure: true in order to force SSL only cookies.
@@ -272,6 +276,14 @@ Devise.setup do |config|
   # Add a new OmniAuth provider. Check the wiki for more information on setting
   # up on your models and hooks.
   # config.omniauth :github, 'APP_ID', 'APP_SECRET', scope: 'user,public_repo'
+  #
+  # "Continue with Google" (GoogleSignIn): on only when GOOGLE_CLIENT_ID and
+  # GOOGLE_CLIENT_SECRET are set (a Google Cloud OAuth client; redirect URI
+  # https://<host>/users/auth/google_oauth2/callback). Tests use OmniAuth's test mode.
+  if (ENV["GOOGLE_CLIENT_ID"].present? && ENV["GOOGLE_CLIENT_SECRET"].present?) || Rails.env.test?
+    config.omniauth :google_oauth2, ENV.fetch("GOOGLE_CLIENT_ID", "test"), ENV.fetch("GOOGLE_CLIENT_SECRET", "test"),
+                    scope: "email,profile", prompt: "select_account", access_type: "online"
+  end
 
   # ==> Warden configuration
   # If you want to use other strategies, that are not supported by Devise, or

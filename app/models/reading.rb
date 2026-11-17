@@ -1,4 +1,5 @@
 class Reading < ApplicationRecord
+  moderates_language :title, :host, :meetingName, :content, :topic
   has_rich_text :content
   has_richer_text :richer_content, store_as: :json
   has_rich_text :topic
@@ -6,6 +7,8 @@ class Reading < ApplicationRecord
   belongs_to :group, optional: true
   has_many :reading_tags, dependent: :destroy
   has_many :tags, -> { order(:title) }, through: :reading_tags
+  # Polls shown with it (Poll#subject); a poll outlives the reading
+  has_many :polls, -> { order(:created_at) }, as: :subject, dependent: :nullify
 
   # Publishing scopes
   # Visibility is computed from published_at at query time, so a scheduled reading
@@ -71,6 +74,19 @@ class Reading < ApplicationRecord
   def cancel_schedule!
     # Remove a future publish time
     unpublish!
+  end
+
+  # The reading's words as plain text (from the newer editor's JSON, or the older rich text)
+  # (an untouched newer editor saves an empty doc, so its words win only when there are some)
+  def plain_text
+    newer = richer_text_richer_content&.to_plain_text.to_s
+    newer.strip.present? ? newer : content.to_plain_text.to_s
+  end
+
+  # Its opening, ending on a whole word with "…" when it goes on (the link preview's card)
+  def summary(length = 260)
+    text = plain_text.squish
+    text.size <= length ? text : "#{text.first(length - 1).sub(/\s+\S*\z/, '')}…"
   end
 
   after_validation :parse_time

@@ -1,4 +1,5 @@
 import React from "react";
+import Skeleton from "../ui/Skeleton";
 
 // Small pieces shared by the Groups pages
 
@@ -12,7 +13,9 @@ export function Message({ title, text, children }) {
   );
 }
 
-export const Loading = () => <p className="py-16 text-center !font-sans text-sm text-slate-500">Loading…</p>;
+// While a page's data loads: gray shapes in its layout (ui/Skeleton). variant says which
+// layout ("feed", "list", "chat", "document", "form"…; a title over cards by default).
+export const Loading = ({ variant = "page", ...rest }) => <Skeleton variant={variant} {...rest} />;
 
 // !bg: the reader styles give every <button> a gray fill
 export const primaryButton =
@@ -35,7 +38,7 @@ export function Pill({ children, tone = "slate" }) {
     amber: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
     green: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
   };
-  return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>{children}</span>;
+  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>{children}</span>;
 }
 
 // The open Writebook-style section: an uppercase label over a soft gray tray
@@ -48,13 +51,14 @@ export function Tray({ label, action, children, className = "" }) {
           {action}
         </div>
       )}
-      <div className="rounded-2xl bg-neutral-100 p-1.5 dark:bg-neutral-800/70">{children}</div>
+      <div className="nest-tray rounded-3xl bg-neutral-100 p-1.5 dark:bg-neutral-800/70">{children}</div>
     </section>
   );
 }
 
-export function Card({ children, className = "" }) {
-  return <div className={`rounded-xl bg-white shadow-panel dark:bg-neutral-900 ${className}`}>{children}</div>;
+// On the shell's white stage a card is set off by a hairline as much as by its shadow
+export function Card({ children, className = "", ref, ...rest }) {
+  return <div ref={ref} {...rest} className={`rounded-2xl bg-white shadow-panel ring-1 ring-neutral-200/80 dark:bg-neutral-900 dark:ring-neutral-800 ${className}`}>{children}</div>;
 }
 
 export function copy(text, done) {

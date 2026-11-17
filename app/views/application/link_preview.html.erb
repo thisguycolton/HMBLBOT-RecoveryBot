@@ -1,0 +1,13 @@
+<%# For link-preview fetchers on pages whose text is for people (KeepsRobotsOut#link_preview) %>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title><%= @share.title %> | RecoveryBot</title>
+  <%= render "application/share_meta" %>
+</head>
+<body>
+  <h1><%= @share.title %></h1>
+  <p><%= @share.description %></p>
+</body>
+</html>

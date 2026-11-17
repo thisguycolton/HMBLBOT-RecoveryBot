@@ -1,0 +1,6 @@
+<%= render "devise/shared/auth_page", page: "check_email", title: "Check your email", props: {
+      email: resource.email,
+      action: confirmation_path(resource_name),
+      login_path: new_session_path(resource_name),
+      sign_up_path: new_registration_path(resource_name),
+    } %>

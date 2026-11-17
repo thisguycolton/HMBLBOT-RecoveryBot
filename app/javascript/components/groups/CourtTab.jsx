@@ -3,6 +3,7 @@ import { Copy, ExternalLink, Plus, RotateCcw } from "lucide-react";
 import { api } from "./lib";
 import { Card, ErrorNote, Tray, copy, primaryButton, quietButton } from "./ui";
 import CourtLetterPreview from "../CourtLetterPreview";
+import Skeleton from "../ui/Skeleton";
 
 // Group admins: this group's court verification form link (not linked anywhere public)
 // and the verifications sent from it
@@ -24,7 +25,7 @@ export default function CourtTab({ group, setGroup }) {
             It isn't linked anywhere on the site, so share it only with the people who sign.
           </p>
           <div className="flex flex-wrap gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-xl bg-neutral-100 px-3 py-2 text-xs dark:bg-neutral-800">{group.court_form_url}</code>
+            <code className="min-w-0 flex-1 truncate rounded-xl bg-neutral-100 px-3 py-2 text-xs dark:bg-neutral-800 basis-56">{group.court_form_url}</code>
             <button type="button" onClick={() => copy(group.court_form_url, () => { setCopied(true); setTimeout(() => setCopied(false), 1500); })} className={quietButton}>
               <Copy className="h-4 w-4" /> {copied ? "Copied" : "Copy"}
             </button>
@@ -38,7 +39,7 @@ export default function CourtTab({ group, setGroup }) {
       <ErrorNote error={error} />
       <Tray label="Sent from this group">
         {!rows ? (
-          <Card className="p-4 text-sm text-slate-500">Loading…</Card>
+          <Card><Skeleton variant="rows" /></Card>
         ) : rows.length === 0 ? (
           <Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">None yet.</Card>
         ) : (

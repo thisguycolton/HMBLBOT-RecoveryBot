@@ -1,4 +1,5 @@
-# Accounts for the admin suite: search, approve pending sign-ups, grant or remove admin.
+# Accounts for the admin suite: search, confirm someone whose email never arrived, grant or remove
+# admin, delete an account.
 class Api::Admin::UsersController < Api::Admin::SuiteController
   LIMIT = 200
 
@@ -17,12 +18,19 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
     ids = users.map(&:id)
     readings = Reading.where(user_id: ids).group(:user_id).count
     last_seen = Ahoy::Visit.where(user_id: ids).group(:user_id).maximum(:started_at)
+    devices = MemberStats.devices_for(ids)
 
     render json: {
       total: total,
       limit: LIMIT,
-      users: users.map { |u| user_json(u, readings[u.id].to_i, last_seen[u.id]) },
+      users: users.map { |u| user_json(u, readings[u.id].to_i, last_seen[u.id]).merge(devices: devices[u.id] || []) },
     }
+  end
+
+  # GET: the whole site's 10th step and gratitude list counts, devices and day counts, with no
+  # names attached (MemberStats.summary). Never filtered by the search, on purpose.
+  def stats
+    render json: MemberStats.summary
   end
 
   # PATCH { admin: true|false }. You can't change your own admin flag.
@@ -34,10 +42,10 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
     render json: user_json(user)
   end
 
-  # PATCH: approve a pending sign-up and email them
+  # PATCH: confirm a sign-up by hand (their confirmation email never arrived) and email them
   def confirm
     user = User.find(params[:id])
-    if user.update(confirmed: true)
+    if user.confirm
       UserMailer.approval_notification(user).deliver_later
       Notification.deliver(user, kind: "user.approved", title: "Your account was approved. Welcome to HumbleBot!")
       render json: user_json(user)
@@ -46,7 +54,84 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
     end
   end
 
+  # DELETE { confirm_email }: delete someone's account for good, the same as deleting their own
+  # (User#destroy, which also revokes Sign in with Apple). Readings they added to the archive are
+  # used by others, so they move to the admin doing this instead of blocking it. Not yourself, and
+  # not another admin (remove their admin access first).
+  def destroy
+    user = User.find(params[:id])
+    return render json: { error: "You can't delete your own account here. Use Account settings." }, status: :unprocessable_entity if user == current_user
+    return render json: { error: "Remove their admin access first." }, status: :unprocessable_entity if user.admin
+    unless params[:confirm_email].to_s.strip.casecmp?(user.email)
+      return render json: { error: "Type their email address to confirm." }, status: :unprocessable_entity
+    end
+
+    deleted = User.transaction do
+      user.readings.update_all(user_id: current_user.id)
+      user.destroy || raise(ActiveRecord::Rollback)
+    end
+    return render_errors(user) unless deleted
+
+    Rails.logger.info("[admin] #{current_user.email} deleted account ##{user.id} (#{user.email})")
+    head :no_content
+  end
+
+  # GET: why someone isn't getting a reminder or push. Their reminders and time zone, which app
+  # installs and browsers are signed up for notifications (and when each was last sent one), what
+  # kinds they turned off, and their latest bell notifications. Nothing they wrote.
+  def notifications
+    user = User.find(params[:id])
+    local = Time.current.in_time_zone(user.zone)
+    today = local.to_date
+    reminders = RecoveryReminders::KINDS.to_h do |which, k|
+      [which, { on: !!user.public_send("#{which}_reminder"), at: user.public_send("#{which}_reminder_at"),
+                reminded_on: user.public_send("#{which}_reminded_on")&.iso8601,
+                written_today: k[:model].where(user: user, on: today).exists? }]
+    end
+    render json: {
+      time_zone: user.zone.tzinfo.name, time_zone_saved: user.time_zone.present?, local_time: local.strftime("%a %b %-d, %-l:%M %p"),
+      reminders: reminders,
+      app_push_ready: FcmSender.configured?, web_push_ready: WebPushSender.configured?,
+      reminders_pushed: user.wants_push?("recovery.step_reminder"),
+      turned_off: user.push_categories.reject { |c| c[:on] }.map { |c| c[:label] },
+      apps: user.device_tokens.order(created_at: :desc).map do |d|
+        { label: d.label, app_version: d.app_version, created_at: d.created_at.iso8601, updated_at: d.updated_at.iso8601, last_sent_at: d.last_sent_at&.iso8601 }
+      end,
+      browsers: user.push_subscriptions.order(created_at: :desc).map { |s| s.as_api_json.slice(:label, :created_at, :last_sent_at) },
+      recent: user.notifications.recent.limit(8).map { |n| n.as_api_json.slice(:title, :kind, :read, :created_at) },
+    }
+  end
+
+  # GET: the milestone stacks with a chip they were given or claimed (only those can go back),
+  # each with every chip in it, top first, and the chips taken back from them before
+  def chips
+    user = User.find(params[:id])
+    render json: chips_json(user)
+  end
+
+  # POST { chip_id, replacement_id (another chip in its stack, "site", or blank), note }: take a
+  # chip they got by mistake back, put another in the stack on top, and tell them (ChipRevocation)
+  def revoke_chip
+    user = User.find(params[:id])
+    revocation = ChipRevocation.revoke!(user: user, chip_id: params.require(:chip_id), by: current_user,
+                                        replacement_id: params[:replacement_id], note: params[:note])
+    Rails.logger.info("[admin] #{current_user.email} took back chip #{revocation.chip_id} from account ##{user.id}, replaced with #{revocation.replacement_id || 'nothing'}")
+    render json: chips_json(user.reload).merge(revocation: revocation.as_api_json)
+  rescue ChipRevocation::Invalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   private
+
+  def chips_json(user)
+    chips = Chips.ordered(Chips.catalog(user)[:chips], user.chip_tops)
+    stacks = chips.group_by { |c| c[:slot] }.select { |_, list| list.any? { |c| ChipRevocation.revocable?(c) } }.map do |slot, list|
+      round = list.first[:shape] == "round" && list.first[:milestone]
+      { slot: slot, label: list.first[:label], site_ok: !!round,
+        chips: list.map { |c| c.except(:note).merge(revocable: ChipRevocation.revocable?(c)) } }
+    end
+    { design: ChipDesign::DEFAULT, stacks: stacks, history: ChipRevocation.where(user: user).includes(:revoked_by).newest_first.limit(50).map(&:as_api_json) }
+  end
 
   def user_json(user, readings_count = nil, last_seen = nil)
     {

@@ -4,8 +4,10 @@
 #
 #   q          words in the meeting's or group's name, or a Zoom link or meeting ID
 #   time_zone  the viewer's zone; dates and times of day are theirs
-#   date       "2026-10-20": meetings that day (else the coming week)
+#   date       "2026-10-20": meetings that day (else the coming week, from LEAD_TIME out)
 #   live       "1": meetings going on right now
+#   soon       15 | 30 | 60: meetings starting in that many minutes, or that started up to
+#              SOON_BEHIND ago ("1" means SOON_DEFAULT)
 #   from, to   minutes after midnight: starting in that part of the day (to < from wraps)
 #   attendance online | in_person (hybrid meetings are both)
 #   place      a city, region or address, or a time zone ("Pacific", "London")
@@ -15,6 +17,14 @@
 # page; the rest link to their default page (/groups/find/:oiaa_slug).
 class MeetingFinder
   PER_PAGE = 24
+  # The coming week starts this far out, so every meeting it lists leaves time to get there
+  # early (to set up, greet, make coffee). Live now and a chosen day still show what's on.
+  LEAD_TIME = 15.minutes
+  # "Starting soon" (the finder's default): meetings someone could still get to on time,
+  # or join just after they've begun
+  SOON_CHOICES = [15, 30, 60].freeze
+  SOON_DEFAULT = 30
+  SOON_BEHIND = 5.minutes
   NOTES_MAX = 180
 
   # starts_at and ends_at are Unix times: there can be thousands of these
@@ -56,20 +66,24 @@ class MeetingFinder
   private
 
   # [from, to) as Unix times: when a meeting may start, or nil when the date is past.
-  # Meetings going on now count too, unless the date is another day.
+  # On a chosen day, meetings going on now count too; the coming week starts LEAD_TIME out.
   def window
     if live?
       [@now, @now]
+    elsif soon?
+      [@now - SOON_BEHIND.to_i, @now + soon_minutes.minutes.to_i]
     elsif (date = Date.iso8601(@params[:date].to_s) rescue nil)
       from = zone.local(date.year, date.month, date.day)
       to = (from + 1.day).to_i
       to > @now ? [from.to_i, to] : nil
     else
-      [@now, @now + 7.days.to_i]
+      [@now + LEAD_TIME.to_i, @now + 7.days.to_i]
     end
   end
 
   def live? = ActiveModel::Type::Boolean.new.cast(@params[:live])
+  def soon? = !live? && @params[:soon].present? && ActiveModel::Type::Boolean.new.cast(@params[:soon])
+  def soon_minutes = SOON_CHOICES.include?(@params[:soon].to_i) ? @params[:soon].to_i : SOON_DEFAULT
 
   # --- AA Intergroup's listings, plucked: 8,000 of them fit in memory fine ---
 
@@ -164,6 +178,7 @@ class MeetingFinder
   def fits?(start, finish, (from, to))
     return false unless finish > @now
     return start <= @now if live?
+    return start >= from && start < to if soon?
     on_now = from <= @now && start <= @now
     (on_now || (start >= from && start < to)) && in_time_of_day?(start)
   end
@@ -216,7 +231,7 @@ class MeetingFinder
   # --- what a page of results shows ---
 
   def hydrate(hits)
-    listings = OiaaMeeting.where(id: hits.select { |h| h.kind == "oiaa" }.map(&:id)).index_by(&:id)
+    listings = OiaaMeeting.where(id: hits.select { |h| h.kind == "oiaa" }.map(&:id)).includes(:meeting_directory).index_by(&:id)
     meetings = Meeting.where(id: hits.select { |h| h.kind == "meeting" }.map(&:id)).includes(group: { cover_attachment: :blob }).index_by(&:id)
     groups = groups_for(listings.values)
     template_cover = image_path(GroupPageTemplate.current.cover)
@@ -226,10 +241,12 @@ class MeetingFinder
       if hit.kind == "oiaa"
         record = listings[hit.id] or next
         group = groups[record.slug]
-        listing_json(record, hit, group ? group_json(group, counts) : intergroup_json(record, template_cover))
+        linked = @linked[record.slug]
+        share = linked && linked.group == group ? share_json(linked) : group ? share_json(group) : share_json(record)
+        listing_json(record, hit, group ? group_json(group, counts) : intergroup_json(record, template_cover)).merge(share: share)
       else
         meeting = meetings[hit.id] or next
-        meeting_json(meeting, hit, group_json(meeting.group, counts))
+        meeting_json(meeting, hit, group_json(meeting.group, counts)).merge(share: share_json(meeting))
       end
     end
   end
@@ -237,7 +254,8 @@ class MeetingFinder
   # The group here that a listing belongs to: one of its meetings is linked to it, or it
   # has the listing's name; only groups whose page the viewer may see
   def groups_for(records)
-    linked = Meeting.where(oiaa_slug: records.map(&:slug)).includes(group: { cover_attachment: :blob }).to_h { |m| [m.oiaa_slug, m.group] }
+    @linked = Meeting.where(oiaa_slug: records.map(&:slug)).includes(group: { cover_attachment: :blob }).index_by(&:oiaa_slug)
+    linked = @linked.transform_values(&:group)
     names = records.flat_map { |r| [r.group_name, r.name] }.compact.map(&:downcase).uniq
     by_title = Group.where("LOWER(title) IN (?)", names.presence || [""]).includes(cover_attachment: :blob).index_by { |g| g.title.downcase }
     records.each_with_object({}) do |r, found|
@@ -252,16 +270,18 @@ class MeetingFinder
   end
 
   def intergroup_json(record, cover)
-    { title: record.group_name.presence || record.name, cover_url: cover, members_count: 0,
-      href: "/find/#{ERB::Util.url_encode(record.slug)}", here: false }
+    { title: record.group_name.presence || record.name, description: record.group_notes&.squish&.truncate(NOTES_MAX),
+      cover_url: cover, members_count: 0,
+      href: "/find/#{ERB::Util.url_encode(record.slug)}", here: false, source: record.source_name }
   end
 
   def listing_json(record, hit, group)
     occurrence_json(hit).merge(
       key: "oiaa-#{record.slug}", name: record.name, group: group, days: record.days.sort, recurrence: "weekly",
       schedule_label: record.schedule_label, time_zone: record.zone.tzinfo.name, types: record.types,
-      attendance: record.attendance, place: record.place, region: record.region, conference_url: record.conference_url,
-      notes: record.notes&.squish&.truncate(NOTES_MAX),
+      attendance: record.attendance, place: record.place, region: record.region, conference_url: record.conference_url, conference_url_notes: record.conference_url_notes,
+      notes: record.notes&.squish&.truncate(NOTES_MAX), location_notes: record.location_notes&.squish&.truncate(NOTES_MAX),
+      source: record.source_name,
     )
   end
 
@@ -269,9 +289,17 @@ class MeetingFinder
     occurrence_json(hit).merge(
       key: "meeting-#{meeting.id}", name: meeting.name, group: group, days: meeting.weekly? ? [meeting.day_of_week] : [],
       recurrence: meeting.recurrence, schedule_label: meeting.schedule_label, time_zone: meeting.time_zone, types: meeting.types,
-      attendance: meeting.attendance, place: meeting.place, region: nil, conference_url: meeting.conference_url,
+      attendance: meeting.attendance, place: meeting.place, region: nil, conference_url: meeting.conference_url, conference_url_notes: meeting.conference_url_notes,
       notes: meeting.notes&.squish&.truncate(NOTES_MAX),
     )
+  end
+
+  # The link the card's Share button sends (ShareMeta's path), and its picture when the
+  # group's page is for everyone
+  def share_json(record)
+    meta = ShareMeta.path_for(record)
+    image = record.is_a?(OiaaMeeting) || (record.is_a?(Group) ? record : record.group).active?
+    { path: meta[:path], image: image ? "/share_cards/#{meta[:kind]}/#{ERB::Util.url_encode(meta[:id].to_s)}.png" : nil }
   end
 
   def occurrence_json(hit)

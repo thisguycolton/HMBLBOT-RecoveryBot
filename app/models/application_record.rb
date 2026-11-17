@@ -1,5 +1,6 @@
 class ApplicationRecord < ActiveRecord::Base
   primary_abstract_class
+  include ModeratesLanguage
   def ransackable_attributes(auth_object = nil)
     column_names + _ransackers.keys
   end

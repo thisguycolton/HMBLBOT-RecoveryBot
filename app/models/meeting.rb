@@ -5,6 +5,7 @@
 # A meeting linked to OIAA (oiaa_slug) takes its schedule, links and types from OIAA's
 # directory (OiaaMeeting) and refreshes when that does; unlinking makes it editable again.
 class Meeting < ApplicationRecord
+  moderates_language :name, :host, :notes, :conference_url_notes, :location
   RECURRENCES = %w[weekly once].freeze
   DAY_MINUTES = 24 * 60
   DAY_NAMES = Date::DAYNAMES
@@ -14,8 +15,15 @@ class Meeting < ApplicationRecord
 
   belongs_to :group
   has_many :court_verifications, dependent: :nullify
+  # Who hosts and co-hosts it (weekly meetings), and who is covering on a given date
+  has_many :hosts, class_name: "MeetingHost", dependent: :destroy
+  has_many :host_covers, class_name: "MeetingHostCover", dependent: :destroy
+  has_many :host_sub_requests, dependent: :destroy
+  # Join clicks before it started, for its Meeting Maker chips (MeetingJoin)
+  has_many :meeting_joins, dependent: :delete_all
 
   before_validation :tidy
+  after_create :join_coordinators_slots, if: :weekly?
 
   validates :name, presence: true, length: { maximum: 255 }
   validates :recurrence, inclusion: { in: RECURRENCES }
@@ -30,6 +38,19 @@ class Meeting < ApplicationRecord
   scope :ordered, -> { order(Arel.sql("recurrence DESC, day_of_week, start_minute, starts_at")) }
   scope :weekly, -> { where(recurrence: "weekly") }
   scope :linked_to_oiaa, -> { where.not(oiaa_slug: nil) }
+
+  # The same meeting on its other days (it is stored once per weekday), this one included
+  def series
+    return group.meetings.where(id: id) unless weekly?
+
+    group.meetings.weekly.where(name: name, start_minute: start_minute, end_minute: end_minute)
+  end
+
+  # The assignment in place on `date` (the latest to have started), for "host" or "co_host"
+  def host_on(role, date) = hosts.select { |h| h.role == role && h.active_on?(date) }.max_by { |h| [h.starts_on, h.id] }
+  def cover_on(role, date) = host_covers.find { |c| c.role == role && c.on == date }
+  # Who is in that place on that date: someone covering it, or whoever holds it then
+  def holder_on(role, date) = cover_on(role, date) || host_on(role, date)
 
   def weekly? = recurrence == "weekly"
   def once? = recurrence == "once"
@@ -94,6 +115,15 @@ class Meeting < ApplicationRecord
     end
   end
 
+  # The schedule across the series' days, for a shared link: "Mon, Wed, Fri, 7:00–8:00 PM MST"
+  def share_schedule_label
+    days = weekly? ? series.pluck(:day_of_week).uniq.sort : []
+    return schedule_label if days.size < 2
+
+    label = days.size == 7 ? "Every day" : days.map { |d| Date::ABBR_DAYNAMES[d] }.join(", ")
+    "#{label}, #{self.class.clock(start_minute)}#{end_minute ? "–#{self.class.clock(end_minute)}" : ""} #{next_start.strftime('%Z')}"
+  end
+
   def self.clock(minutes)
     minutes = minutes.to_i % DAY_MINUTES
     Time.utc(2000, 1, 1).advance(minutes: minutes).strftime("%-I:%M %p")
@@ -102,7 +132,10 @@ class Meeting < ApplicationRecord
   # Copy OIAA's listing onto this meeting (for the given weekday, when it lists several)
   def apply_oiaa(record, day: nil)
     day ||= day_of_week.presence_in(record.days) || record.days.first
-    self.attributes = record.meeting_attributes(day).slice(*OIAA_FIELDS)
+    attrs = record.meeting_attributes(day)
+    self.attributes = attrs.slice(*OIAA_FIELDS)
+    # An in-person listing brings its place too, unless the group already gave this meeting one
+    self.attributes = attrs.slice(:location, :formatted_address, :latitude, :longitude) if record.place.present? && place.blank?
     self.recurrence = "weekly"
     self.oiaa_slug = record.slug
     self.source = "oiaa"
@@ -132,15 +165,35 @@ class Meeting < ApplicationRecord
       schedule_label: schedule_label, conference_url: conference_url, conference_url_notes: conference_url_notes,
       conference_phone: conference_phone, location: location, formatted_address: formatted_address,
       types: types, notes: notes, oiaa_slug: oiaa_slug, oiaa_url: oiaa_url, oiaa_missing: oiaa_missing,
-      oiaa_synced_at: oiaa_synced_at&.iso8601,
+      oiaa_synced_at: oiaa_synced_at&.iso8601, **map_json,
     }
+  end
+
+  # Its little map (MeetingMap) and where it is, for an in-person meeting
+  def map_json
+    return { map_url: nil } if place.blank?
+
+    { map_url: "/meeting_maps/meeting/#{id}.png?v=#{Digest::SHA256.hexdigest(place).first(8)}",
+      latitude: latitude&.to_f, longitude: longitude&.to_f }
   end
 
   private
 
+  # A new day of a meeting goes to the host coordinators who have every other day of it among
+  # their time slots (someone coordinating "9:00 AM, every day" keeps every day)
+  def join_coordinators_slots
+    others = series.where.not(id: id).ids
+    return if others.empty?
+
+    group.memberships.where(host_slots_only: true).where("group_memberships.host_meeting_ids @> ARRAY[?]::bigint[]", others)
+         .find_each { |m| m.update!(host_meeting_ids: (m.host_meeting_ids + [id]).sort) }
+  end
+
   def tidy
     self.time_zone = group&.time_zone if time_zone.blank?
     self.types = Array(types).map(&:to_s).map(&:strip).reject(&:blank?).uniq
+    # A new address is looked up again for its map (MeetingMap), unless it came with its spot
+    self.latitude = self.longitude = nil if (location_changed? || formatted_address_changed?) && !latitude_changed? && persisted?
     if once?
       self.day_of_week = self.start_minute = self.end_minute = nil
       self.ends_at ||= starts_at && starts_at + 1.hour

@@ -1,5 +1,5 @@
 // Shared by the event page and the HMBLBOT Editor (/events/:token and /events/:token/edit).
-import { AlignLeft, BarChart3, CalendarRange, GalleryHorizontalEnd, Heading, Image, LayoutGrid, ListChecks, ShieldCheck } from "lucide-react";
+import { Gavel, AlignLeft, BarChart3, CalendarRange, GalleryHorizontalEnd, Heading, Image, LayoutGrid, ListChecks, ShieldCheck } from "lucide-react";
 export { api } from "../groups/lib";
 import { api } from "../groups/lib";
 
@@ -43,6 +43,7 @@ export const BLOCK_GROUPS = [
       { type: "agenda", label: "Agenda", note: "What's on the agenda, in order", icon: ListChecks },
       { type: "guidelines", label: "Guidelines", note: "What's expected of everyone", icon: ShieldCheck },
       { type: "poll", label: "Poll", note: "A schedule poll to vote in", icon: BarChart3 },
+      { type: "conscience_agenda", label: "Business agenda", note: "The live agenda of a business meeting", icon: Gavel },
     ],
   },
   {
@@ -67,6 +68,7 @@ export function newBlock(type, region = "main") {
     case "photo": return { ...base, photos: [] };
     case "gallery": return { ...base, title: "", photos: [] };
     case "poll": return { ...base, poll_token: null };
+    case "conscience_agenda": return { ...base, title: "Agenda" };
     default: return base;
   }
 }

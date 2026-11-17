@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { MapPin, Video } from "lucide-react";
+import MeetingPasscode from "./MeetingPasscode";
 
 // "Next meeting in 2h 14m" or "Live now", with a Join button, from meetings that carry
 // upcoming_start/upcoming_end (Meeting#upcoming and OiaaMeeting#upcoming on the server: the
@@ -69,7 +70,7 @@ export function LiveBadge({ start, end, now, className = "" }) {
     return (
       <span className={`inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm ${className}`}>
         <span className="relative flex size-2">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/80" />
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/80 motion-reduce:hidden" />
           <span className="relative inline-flex size-2 rounded-full bg-white" />
         </span>
         Live now
@@ -108,12 +109,13 @@ export default function NextMeeting({ meetings, buttonClass, quietClass }) {
         <span className="hidden truncate font-normal text-white/80 sm:inline">· {live ? title : `${whenLabel(start, now)} ${viewerZoneName()}`}</span>
       </span>
       {meeting.conference_url ? (
-        <a href={meeting.conference_url} target="_blank" rel="noreferrer" className={live ? buttonClass : quietClass}>
+        <a href={meeting.conference_url} data-meeting-join={meeting.id} target="_blank" rel="noreferrer" className={live ? buttonClass : quietClass}>
           <Video className="h-4 w-4" /> Join{live ? " now" : ""}
         </a>
       ) : meeting.place || meeting.location ? (
         <span className={quietClass}><MapPin className="h-4 w-4" /> {meeting.place || meeting.location}</span>
       ) : null}
+      {meeting.conference_url && <MeetingPasscode notes={meeting.conference_url_notes} copy className={quietClass} />}
     </div>
   );
 }

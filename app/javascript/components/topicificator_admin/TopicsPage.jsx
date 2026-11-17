@@ -7,6 +7,7 @@ import { api, topicTitle } from "./api";
 import { buttonClass, selectClass } from "./App";
 import TopicEditor, { DifficultyBadge } from "./TopicEditor";
 import LucideIcon from "../ui/LucideIcon";
+import Skeleton from "../ui/Skeleton";
 
 // Filters live in the query string, so a set or category page can link straight to its topics
 const FILTERS = ["q", "topic_set_id", "category_id", "difficulty", "tag_id", "prompts"];
@@ -107,7 +108,7 @@ export default function TopicsPage({ meta, reloadMeta, notify }) {
         <Shell>
           <ShellPanel position="single" className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {!result ? (
-              <p className="p-6 text-sm text-slate-500 !font-sans">Loading…</p>
+              <Skeleton variant="rows" rows={6} className="p-2" />
             ) : result.topics.length === 0 ? (
               <p className="p-6 text-sm text-slate-500 dark:text-neutral-400 !font-sans">No topics match these filters.</p>
             ) : (
@@ -162,8 +163,8 @@ export default function TopicsPage({ meta, reloadMeta, notify }) {
         )}
       </div>
 
-      {/* Editor */}
-      <div className={editing ? "" : "hidden lg:block"}>
+      {/* Editor: on wide screens it keeps its own scroll and stays in view while the list scrolls */}
+      <div className={`lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:rounded-panel ${editing ? "" : "hidden lg:block"}`}>
         {editing ? (
           <TopicEditor
             key={editing}

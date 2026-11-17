@@ -3,31 +3,36 @@ import { NavLink } from "react-router-dom";
 import { ClipboardCheck, Eye, NotebookPen, Users } from "lucide-react";
 import { api } from "../topicificator_admin/api";
 import { Card, ExternalTool, OTHER_TOOLS, StatTile, formatCount } from "./App";
+import Skeleton from "../ui/Skeleton";
+import UrgentTasks from "./tasks/UrgentTasks";
 
 // Admin home, metr-style: metric cards, what's waiting on you, and the other admin tools
 export default function OverviewPage({ notify }) {
   const [data, setData] = useState(null);
 
-  useEffect(() => {
-    api("/overview").then(setData).catch((e) => notify(e.message, "error"));
-  }, []);
+  const load = () => api("/overview").then(setData).catch((e) => notify(e.message, "error"));
+  useEffect(() => { load(); }, []);
 
-  if (!data) return <p className="py-16 text-center text-slate-500 dark:text-neutral-400 !font-sans">Loading…</p>;
+  if (!data) return <Skeleton variant="stats" />;
 
   const waiting = [
-    { label: "Members waiting for approval", count: data.users.pending, to: "/users?filter=pending", tone: "bg-amber-500" },
+    { label: "Groups waiting for approval", count: data.group_requests.pending, to: "/group_requests", tone: "bg-amber-500" },
+    { label: "Contact requests to answer", count: data.contact_requests.open, to: "/contact_requests", tone: "bg-sky-600" },
+    { label: "TestFlight invites to send", count: data.testflight_requests.new, to: "/testflight_requests", tone: "bg-violet-600" },
     { label: "Open text reports", count: data.text_reports.open, to: "/text_reports", tone: "bg-red-500" },
     { label: "Site notices showing", count: data.notices.live, to: "/notices", tone: "bg-emerald-600" },
   ];
 
   return (
     <>
+      <UrgentTasks data={data.tasks} notify={notify} onChanged={load} />
+
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile to="/analytics" icon={Eye} label="Visits today" value={formatCount(data.visits.today)}
           detail={`${formatCount(data.visits.last_7_days)} visits, ${formatCount(data.visits.visitors_7_days)} visitors in 7 days`} />
         <StatTile to="/users" icon={Users} label="Members" value={formatCount(data.users.total)}
           detail={`${formatCount(data.users.admins)} admins`}
-          badge={data.users.pending ? <Pill>{data.users.pending} waiting</Pill> : null} />
+          badge={data.users.pending ? <Pill>{data.users.pending} unconfirmed</Pill> : null} />
         <StatTile to="/readings" icon={NotebookPen} label="Published readings" value={formatCount(data.readings.published)}
           detail={`${formatCount(data.readings.scheduled)} scheduled, ${formatCount(data.readings.drafts)} drafts`} />
         <StatTile to="/court_verifications" icon={ClipboardCheck} label="Verifications this month" value={formatCount(data.court_verifications.this_month)}

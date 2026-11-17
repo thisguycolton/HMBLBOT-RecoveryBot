@@ -4,6 +4,7 @@
 # that one event. A published event is public to anyone with its link (so people without
 # an account can RSVP with just an email); drafts are seen only by the people editing.
 class Event < ApplicationRecord
+  moderates_language :title, :short_description, :location, :blocks
   LAYOUTS = %w[main_side centered side_main].freeze
   STATUSES = %w[draft published].freeze
   IMAGE_TYPES = %w[image/jpeg image/png image/webp image/gif].freeze
@@ -17,6 +18,8 @@ class Event < ApplicationRecord
   has_many :rsvps, class_name: "EventRsvp", dependent: :destroy
   has_many :updates, class_name: "EventUpdate", dependent: :destroy
   has_many :schedule_polls, dependent: :nullify
+  # The business meeting this event announces, if it does
+  has_one :business_meeting, dependent: :nullify
 
   has_one_attached :cover
   has_one_attached :flyer
@@ -39,6 +42,12 @@ class Event < ApplicationRecord
 
   scope :published, -> { where(status: "published") }
   scope :upcoming_first, -> { order(Arel.sql("starts_at IS NULL, starts_at ASC"), created_at: :desc) }
+  scope :latest_first, -> { order(starts_at: :desc, created_at: :desc) }
+  # Over once it ends; one with only a start time is over OVER_AFTER later. No date yet: never over.
+  OVER_AFTER = 12.hours
+  ENDED_AT_SQL = "COALESCE(events.ends_at, events.starts_at + interval '#{OVER_AFTER.to_i} seconds')".freeze
+  scope :past, -> { where("#{ENDED_AT_SQL} < ?", Time.current) }
+  scope :not_past, -> { where("events.starts_at IS NULL OR #{ENDED_AT_SQL} >= ?", Time.current) }
 
   def to_param = token
   def path = "/events/#{token}"
@@ -52,6 +61,7 @@ class Event < ApplicationRecord
   def collaborator?(user) = !!user && collaborators.exists?(user_id: user.id)
   def editable_by?(user) = manager?(user) || collaborator?(user)
   def visible_to?(user) = published? || editable_by?(user)
+  def past? = !!starts_at && (ends_at || starts_at + OVER_AFTER) < Time.current
 
   # Group admins only: everyone who edits it is told about updates by the editor itself
   def editors = (group.admins.to_a + collaborator_users.to_a).uniq
@@ -111,7 +121,7 @@ class Event < ApplicationRecord
     {
       token: token, title: title, short_description: short_description, status: status,
       starts_at: starts_at&.iso8601, when_label: when_label, location: location,
-      cover_url: image_path(cover), going_count: rsvps.going.count,
+      cover_url: image_path(cover), going_count: rsvps.going.count, past: past?,
     }
   end
 

@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { Link2, NotebookText, X } from "lucide-react";
 import Markdown from "./book/Markdown";
+import { AdoptedFrom } from "./book/HighlightCard";
 
 // The highlights in this chapter. Tapping one jumps to it in the text; the
 // reader who made them can also share one, or every highlight they've made.
@@ -29,7 +30,7 @@ export default function HighlightsModal({
   const title = sharedBy !== undefined && !mine ? `${sharedBy || "Shared"}${sharedBy ? "'s" : ""} highlights` : "Your highlights";
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="wb wb-hl-card relative w-full sm:max-w-2xl max-h-[85vh] overflow-auto shadow-xl bg-white dark:bg-neutral-900">
         <div className="wb-hl-card__head">
@@ -51,6 +52,8 @@ export default function HighlightsModal({
                 >
                   <mark style={{ "--hl": swatchOf(h) }}>{h.selector?.quote?.exact || "…"}</mark>
                 </a>
+                {h.mine ? <AdoptedFrom from={h.adopted_from} className="wb-hl-item__from" />
+                  : mine && <p className="wb-hl-item__from">{h.by ? `${h.by}'s highlight` : "Shared highlight"}</p>}
                 {h.note && <Markdown source={h.note} className="wb-hl-item__note" />}
               </div>
               {h.mine && onShare && (

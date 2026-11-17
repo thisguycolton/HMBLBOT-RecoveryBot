@@ -1,12 +1,16 @@
 import React, { useState } from "react";
-import { BookOpen, CalendarClock, CalendarDays, ExternalLink, Lock, MessagesSquare, Trash2, UserPlus, Users, Video } from "lucide-react";
+import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Gavel, Lock, MapPin, MessagesSquare, Mic, Navigation, Pin, Scale, Trash2, UserPlus, Users, Video } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { tone } from "../../events/lib";
 import Avatar from "../Avatar";
+import MeetingPasscode from "../MeetingPasscode";
 import FeedItem from "../../notes/FeedItem";
 import NoteEditor from "../../notes/NoteEditor";
 import { api, typeLabel } from "../lib";
 import { scheduleLabel, toSeries } from "../MeetingsTab";
+import { AgendaList, SuggestForm } from "../conscience/AgendaParts";
+import { CATEGORY_INFO, KIND_INFO, countLabel, dateLabel, longDate } from "../conscience/lib";
+import { decisionsFor, documentsFor } from "./lib";
 
 // How a group page's own blocks look (EventBlocks::GROUP_TYPES), filled in from `context`
 // (app/services/group_page.rb). Like the event blocks, each has a smaller view for the side
@@ -19,6 +23,9 @@ export default function GroupBlockView({ block, compact, editing, context, fill 
     case "timeline": return <TimelineBlock {...props} />;
     case "literature": return <LiteratureBlock {...props} />;
     case "readings": return <ReadingsBlock {...props} />;
+    case "documents": return <DocumentsBlock {...props} />;
+    case "decisions": return <DecisionsBlock {...props} />;
+    case "business_meeting": return <BusinessMeetingBlock {...props} />;
     case "members": return <MembersBlock {...props} />;
     case "join": return <JoinBlock {...props} markdown={fill(block.markdown)} />;
     default: return null;
@@ -26,10 +33,11 @@ export default function GroupBlockView({ block, compact, editing, context, fill 
 }
 
 // A block's card in its palette color, with its title; profile blocks use it too
-export function Card({ block, compact, title, icon: Icon, action, children }) {
+// A `bleed` card (a profile's or group's timeline) runs edge to edge on phones, so what's in it has room
+export function Card({ block, compact, title, icon: Icon, action, bleed = false, children }) {
   const t = tone(block);
   return (
-    <section className={`rounded-2xl ${t.card} ${compact ? "p-4" : "p-5 sm:p-6"}`}>
+    <section className={`rounded-2xl ${t.card} ${compact ? "p-4" : "p-5 sm:p-6"} ${bleed ? "max-sm:-mx-4 max-sm:rounded-none max-sm:px-4 max-sm:shadow-none max-sm:ring-0" : ""}`}>
       {(title || action) && (
         <div className="mb-3 flex items-center gap-2">
           {Icon && <span className={`grid size-7 shrink-0 place-items-center rounded-lg ${t.soft}`}><Icon className="size-4" /></span>}
@@ -44,28 +52,126 @@ export function Card({ block, compact, title, icon: Icon, action, children }) {
 
 export const Empty = ({ children }) => <p className="text-sm italic text-slate-400 dark:text-neutral-500">{children}</p>;
 
-// Weekly meetings are a row per day; the same meeting on several days is one line
+// Weekly meetings are a row per day; the same meeting on several days is one line, showing who
+// hosts the soonest of its days
 function meetingRows(meetings) {
   const weekly = meetings.filter((m) => m.recurrence === "weekly");
   const rest = meetings.filter((m) => m.recurrence !== "weekly");
+  const soonest = (series) => [...series].sort((a, b) => (a.upcoming_start || a.next_start || "").localeCompare(b.upcoming_start || b.next_start || ""))[0];
   return [
-    ...toSeries(weekly).map((series) => ({ ...series[0], id: series.map((m) => m.id).join("-"), label: scheduleLabel(series) })),
+    ...toSeries(weekly).map((series) => {
+      const next = soonest(series);
+      return { ...series[0], id: series.map((m) => m.id).join("-"), label: scheduleLabel(series), hosts: next.hosts, hosts_on: series.length > 1 ? next.hosts_on : null };
+    }),
     ...rest.map((m) => ({ ...m, label: m.schedule_label })),
   ];
+}
+
+const placeOf = (m) => [m.location, m.formatted_address].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ");
+const placeKey = (m) => (m.formatted_address || m.location || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+// The place every in-person meeting of the group is at, when it's always the same one
+export function sharedPlace(meetings) {
+  const placed = meetings.filter((m) => placeKey(m));
+  if (placed.length === 0) return null;
+  return placed.every((m) => placeKey(m) === placeKey(placed[0])) ? (placed.find((m) => m.map_url) || placed[0]) : null;
+}
+
+// A link that opens the visitor's own maps app: Apple Maps on iPhones, iPads and Macs, the
+// map app they picked on Android (geo:), Google Maps in other browsers
+export function mapsLink(m) {
+  const address = m.formatted_address || m.location || "";
+  const spot = m.latitude != null && m.longitude != null ? `${m.latitude},${m.longitude}` : null;
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  if (/iPhone|iPad|iPod|Macintosh/.test(ua)) {
+    return `https://maps.apple.com/?${new URLSearchParams(spot ? { q: address || m.name, sll: spot } : { q: address })}`;
+  }
+  if (/Android/.test(ua)) return `geo:${spot || "0,0"}?q=${encodeURIComponent(address || spot)}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || spot)}`;
+}
+
+// The little map of where the group meets (MeetingMap, drawn by our server from
+// OpenStreetMap), showing the main cross streets; tapping it opens their own maps app
+function MeetingMapCard({ meeting, editing, compact }) {
+  const [failed, setFailed] = useState(false);
+  const place = placeOf(meeting);
+  const href = mapsLink(meeting);
+  const stop = (e) => editing && e.preventDefault();
+  return (
+    <div className={compact ? "mb-3" : "mb-4"}>
+      {meeting.map_url && !failed && (
+        <a href={href} target="_blank" rel="noreferrer" onClick={stop} className="group/map relative block overflow-hidden rounded-xl ring-1 ring-neutral-200 dark:ring-neutral-700" aria-label={`Open ${place} in your maps app`}>
+          <img src={meeting.map_url} alt={`Map of the streets around ${place}`} loading="lazy" width="720" height="360"
+            className="block aspect-[2/1] w-full object-cover transition group-hover/map:scale-[1.02]" onError={() => setFailed(true)} />
+          <span className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1 text-xs font-semibold text-slate-900 shadow-sm dark:bg-neutral-900/90 dark:text-white">
+            <Navigation className="size-3.5" /> Open in Maps
+          </span>
+        </a>
+      )}
+      <p className="mt-2 text-sm text-slate-700 dark:text-neutral-200">
+        <MapPin className="mr-1 inline size-3.5 align-[-2px]" />
+        <span className="font-medium">We meet at </span>
+        <a href={href} target="_blank" rel="noreferrer" onClick={stop} className="hover:underline">{place}</a>
+        {meeting.location_notes && <span className="block text-xs text-slate-500 dark:text-neutral-400">{meeting.location_notes}</span>}
+      </p>
+    </div>
+  );
+}
+
+// Where an in-person meeting is: its place and address, opening their maps app
+function MeetingPlace({ meeting, editing }) {
+  const place = placeOf(meeting);
+  if (!place) return null;
+  const map = mapsLink(meeting);
+  return (
+    <p className="mt-0.5 text-sm text-slate-600 dark:text-neutral-300">
+      <MapPin className="mr-1 inline size-3.5 align-[-2px]" />
+      <a href={map} target="_blank" rel="noreferrer" onClick={(e) => editing && e.preventDefault()} className="hover:underline">{place}</a>
+      {meeting.location_notes && <span className="block text-xs text-slate-500 dark:text-neutral-400">{meeting.location_notes}</span>}
+    </p>
+  );
+}
+
+const HOST_ROLE = { host: "Host", co_host: "Co-host" };
+
+// "Host Sam R. · Co-host Alex P.", for the next meeting (and which day, when it meets on several)
+function MeetingHosts({ hosts, on, editing }) {
+  if (!hosts?.length) return null;
+  const local = (d) => d.toLocaleDateString("en-CA");
+  const now = new Date();
+  const day = on && (on === local(now) ? "Today" : on === local(new Date(now.getTime() + 864e5)) ? "Tomorrow" : new Date(`${on}T12:00:00`).toLocaleDateString(undefined, { weekday: "short" }));
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-slate-600 dark:text-neutral-300 [&>span+span]:ml-1.5">
+      <Mic className="size-3.5 shrink-0 text-slate-400" aria-hidden />
+      {day && <span className="text-slate-500 dark:text-neutral-400">{day}:</span>}
+      {hosts.map((h) => (
+        <span key={h.role} className="whitespace-nowrap">
+          <span className="text-slate-500 dark:text-neutral-400">{HOST_ROLE[h.role]} </span>
+          {h.username && !editing
+            ? <a href={`/people/${h.username}`} className="font-medium text-slate-800 hover:text-accent hover:underline dark:text-neutral-100">{h.name}</a>
+            : <span className="font-medium text-slate-800 dark:text-neutral-100">{h.name}</span>}
+        </span>
+      ))}
+    </p>
+  );
 }
 
 function MeetingsBlock({ block, compact, editing, context, title }) {
   const rows = meetingRows(context.meetings || []);
   const t = tone(block);
+  const shared = sharedPlace(context.meetings || []);
   return (
     <Card block={block} compact={compact} title={title} icon={CalendarClock}>
+      {shared && <MeetingMapCard meeting={shared} editing={editing} compact={compact} />}
       {rows.length === 0 && <Empty>{editing ? "The group's meetings show here." : "No meetings listed yet."}</Empty>}
       <ul className={compact ? "space-y-3" : "divide-y divide-neutral-200/70 dark:divide-neutral-700/60"}>
         {rows.map((m) => (
           <li key={m.id} className={compact ? "" : "flex flex-wrap items-center gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0"}>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 basis-56">
               <p className="font-semibold text-slate-900 dark:text-white">{m.name}</p>
               <p className="text-sm text-slate-600 dark:text-neutral-300">{m.label}</p>
+              {!shared && <MeetingPlace meeting={m} editing={editing} />}
+              <MeetingHosts hosts={m.hosts} on={m.hosts_on} editing={editing} />
               {m.types?.length > 0 && (
                 <p className="mt-1 flex flex-wrap gap-1">
                   {m.types.slice(0, compact ? 3 : 6).map((code) => (
@@ -75,10 +181,13 @@ function MeetingsBlock({ block, compact, editing, context, title }) {
               )}
             </div>
             {m.conference_url && (
-              <a href={m.conference_url} target="_blank" rel="noreferrer" onClick={(e) => editing && e.preventDefault()}
-                className={`inline-flex items-center gap-1.5 rounded-xl font-semibold shadow-sm hover:opacity-90 ${t.button} ${compact ? "mt-2 px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm"}`}>
-                <Video className="size-4" /> Join online
-              </a>
+              <div className={`flex flex-col gap-1 ${compact ? "mt-2 items-start" : "items-end"}`}>
+                <a href={m.conference_url} data-meeting-join={editing ? undefined : m.id} target="_blank" rel="noreferrer" onClick={(e) => editing && e.preventDefault()}
+                  className={`inline-flex items-center gap-1.5 rounded-xl font-semibold shadow-sm hover:opacity-90 ${t.button} ${compact ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm"}`}>
+                  <Video className="size-4" /> Join online
+                </a>
+                <MeetingPasscode notes={m.conference_url_notes} copy={!editing} className="!text-xs text-slate-500 dark:text-neutral-400" />
+              </div>
             )}
           </li>
         ))}
@@ -96,7 +205,7 @@ function EventsBlock({ block, compact, editing, context, title }) {
         {events.map((e) => (
           <a key={e.token} href={`/events/${e.token}`} onClick={(ev) => editing && ev.preventDefault()}
             className={`group flex overflow-hidden rounded-xl bg-white ring-1 ring-neutral-200 hover:ring-accent/50 dark:bg-neutral-900 dark:ring-neutral-700 ${compact ? "items-center gap-3 p-2" : "flex-col"}`}>
-            <div className={`${compact ? "size-12 shrink-0 rounded-lg" : "h-24"} overflow-hidden ${e.cover_url ? "" : "bg-gradient-to-br from-accent via-sky-600 to-indigo-700"}`}>
+            <div className={`${compact ? "size-12 shrink-0 rounded-lg" : "h-24"} overflow-hidden ${e.cover_url ? "" : "cover-default"}`}>
               {e.cover_url && <img src={e.cover_url} alt="" className="size-full object-cover" />}
             </div>
             <div className={`min-w-0 ${compact ? "" : "p-3"}`}>
@@ -128,13 +237,13 @@ function TimelineBlock({ block, compact, editing, context, title }) {
   };
 
   return (
-    <Card block={block} compact={compact} title={title} icon={MessagesSquare}
+    <Card block={block} compact={compact} title={title} icon={MessagesSquare} bleed={!compact && !editing}
       action={context.viewer?.is_member && !editing && <a href="/people/me" className="shrink-0 text-xs font-medium text-accent hover:underline">Your timeline</a>}>
       <div className="wb">
         {canPost && (
           <div className="mb-4">
             <NoteEditor shareTo={context.group.slug} max={context.note_max} defaultVisibility={context.viewer.default_note_visibility}
-              placeholder={`Share something with ${context.group.title}… Markdown and photos work.`} onSaved={() => context.reload?.()} />
+              placeholder={`Share something with ${context.group.title}… You can add photos too.`} onSaved={() => context.reload?.()} />
           </div>
         )}
         {!notes ? (
@@ -215,6 +324,104 @@ function ReadingsBlock({ block, compact, editing, context, title }) {
   );
 }
 
+// The group's documents this viewer may see: visitors only get the Public ones, which is how
+// a group puts its format and guidelines on its page. Record keepers get a hint when empty.
+function DocumentsBlock({ block, compact, editing, context, title }) {
+  const docs = documentsFor(block, context);
+  const slug = context.group?.slug;
+  return (
+    <Card block={block} compact={compact} title={title} icon={FileText}>
+      {docs.length === 0 && (
+        <Empty>{editing || context.viewer?.can_keep_records ? "Documents you mark Public show here to everyone; members also see the Members ones." : "No documents yet."}</Empty>
+      )}
+      <ul className="space-y-1">
+        {docs.map((d) => {
+          const Icon = KIND_INFO[d.kind]?.icon || FileText;
+          return (
+            <li key={d.id}>
+              <a href={`/groups/${slug}/conscience/documents/${d.id}`} onClick={(e) => (editing || !slug) && e.preventDefault()}
+                className="flex items-center gap-3 rounded-xl p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800/60">
+                <Icon className="size-4 shrink-0 text-slate-500 dark:text-neutral-400" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-white">
+                    {d.pinned && <Pin className="size-3 shrink-0 text-amber-600" aria-label="Pinned" />}
+                    <span className="truncate">{d.title}</span>
+                  </span>
+                  {!compact && (d.excerpt || d.file) && <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{d.excerpt || d.file.name}</span>}
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+// The group's standing decisions this viewer may see. Visitors only get Public ones, so a group
+// can say "this meeting is closed" on its page.
+function DecisionsBlock({ block, compact, editing, context, title }) {
+  const decisions = decisionsFor(block, context);
+  const slug = context.group?.slug;
+  return (
+    <Card block={block} compact={compact} title={title} icon={Scale}>
+      {decisions.length === 0 && (
+        <Empty>{editing || context.viewer?.can_keep_records ? "The group's standing decisions show here. Public ones show to everyone; members also see the Members ones." : "No decisions yet."}</Empty>
+      )}
+      <ul className="space-y-1">
+        {decisions.map((d) => {
+          const Icon = CATEGORY_INFO[d.category]?.icon || Scale;
+          return (
+            <li key={d.id}>
+              <a href={`/groups/${slug}/conscience/decisions?open=${d.id}`} onClick={(e) => (editing || !slug) && e.preventDefault()}
+                className="flex items-center gap-3 rounded-xl p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800/60">
+                <Icon className="size-4 shrink-0 text-slate-500 dark:text-neutral-400" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{d.title}</span>
+                  {!compact && <span className="block truncate text-xs text-slate-500 dark:text-neutral-400">{[d.decided_on && dateLabel(d.decided_on), countLabel(d)].filter(Boolean).join(" · ")}</span>}
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+// The next business meeting. Everyone sees when it is (when a published event announces it);
+// members also see its agenda and can suggest an item.
+function BusinessMeetingBlock({ block, compact, editing, context, title }) {
+  const m = context.business_meeting;
+  const slug = context.group?.slug;
+  const [sent, setSent] = useState(false);
+  return (
+    <Card block={block} compact={compact} title={title} icon={Gavel}>
+      {!m ? (
+        <Empty>{editing || context.viewer?.can_keep_records ? "When a business meeting is scheduled, its date and agenda show here to members." : "No business meeting is scheduled."}</Empty>
+      ) : (
+        <div className="space-y-3">
+          <p className="font-semibold text-slate-900 dark:text-white">{m.when_label || longDate(m.held_on)}</p>
+          {m.event && (
+            <a href={m.event.path} onClick={(e) => editing && e.preventDefault()} className="inline-flex items-center gap-1 text-sm text-accent hover:underline">The event <ExternalLink className="size-3.5" /></a>
+          )}
+          {m.agenda && (
+            <>
+              <AgendaList items={m.agenda} empty="The agenda isn't set yet." />
+              {m.can_suggest && !editing && (
+                <div className="border-t border-neutral-200/70 pt-3 dark:border-neutral-700/60">
+                  <SuggestForm slug={slug} meetingId={m.id} compact onAdded={() => setSent(true)} />
+                </div>
+              )}
+              {m.id && !editing && <a href={`/groups/${slug}/conscience/meetings/${m.id}`} className="inline-block text-sm font-medium text-accent hover:underline">Open the meeting</a>}
+            </>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function MembersBlock({ block, compact, editing, context, title }) {
   const members = context.members;
   const count = context.group?.members_count || 0;
@@ -280,9 +487,9 @@ function JoinBlock({ block, compact, editing, context, title, markdown }) {
     <Card block={block} compact={compact} title={title} icon={UserPlus}>
       {markdown?.trim() && <Markdown source={markdown} className={`ev-md mb-4 ${compact ? "text-sm" : ""}`} />}
       {action}
-      {context.kind === "intergroup" && context.meetings?.[0]?.oiaa_url && (
-        <a href={context.meetings[0].oiaa_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">
-          See it on AA Intergroup <ExternalLink className="size-3" />
+      {context.kind === "intergroup" && (context.meetings?.[0]?.oiaa_url || context.group?.source_url) && (
+        <a href={context.meetings?.[0]?.oiaa_url || context.group.source_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">
+          See it on {context.group?.source || "AA Intergroup"} <ExternalLink className="size-3" />
         </a>
       )}
     </Card>

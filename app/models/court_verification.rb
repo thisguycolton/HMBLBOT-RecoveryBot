@@ -1,4 +1,5 @@
 class CourtVerification < ApplicationRecord
+  moderates_language :respondent_name, :host_name, :signer_name, :topic
   # Meetings are in Phoenix; letters, filters and exports all use its time
   TIME_ZONE = "America/Phoenix".freeze
 

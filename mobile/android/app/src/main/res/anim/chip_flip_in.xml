@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The chip widget's flip, second half: the other face widens from its edge (ChipWidget) -->
+<scale xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="200"
+    android:fromXScale="0"
+    android:fromYScale="1"
+    android:interpolator="@android:anim/decelerate_interpolator"
+    android:pivotX="50%"
+    android:pivotY="50%"
+    android:startOffset="200"
+    android:toXScale="1"
+    android:toYScale="1" />

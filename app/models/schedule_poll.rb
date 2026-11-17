@@ -3,6 +3,7 @@
 # the link ranks their top few start times on a week grid, and the results show as a
 # heat map. Every time is wall-clock time in the poll's time zone (Phoenix by default).
 class SchedulePoll < ApplicationRecord
+  moderates_language :title, :description, :blocks
   VISIBILITIES = %w[always after_vote after_close].freeze
   TIME_ZONES = %w[America/Phoenix America/Los_Angeles America/Denver America/Chicago America/New_York].freeze
   MAX_DAYS = 14

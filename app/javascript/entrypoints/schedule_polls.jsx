@@ -7,28 +7,26 @@ import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import "../styles/tailwind.css";
 import "../styles/reader.css";
 
-import Navbar from "../components/Navbar";
+import Layout from "../components/Layout";
 import PollsIndex from "../components/schedule_polls/PollsIndex";
 import PollForm from "../components/schedule_polls/PollForm";
 import PollPage from "../components/schedule_polls/PollPage";
+import { withScrollManager } from "../components/shell/ScrollManager";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
 function Shell() {
   return (
-    <>
-      <Navbar isAuthenticated={isAuthenticated} />
-      <main className="w-full pt-[var(--nav-h,56px)]">
-        <div className="mx-auto max-w-7xl px-4 py-6">
-          <Outlet />
-        </div>
-      </main>
-    </>
+    <Layout isAuthenticated={isAuthenticated}>
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <Outlet />
+      </div>
+    </Layout>
   );
 }
 
 const router = createBrowserRouter(
-  [
+  withScrollManager([
     {
       path: "/",
       element: <Shell />,
@@ -39,7 +37,7 @@ const router = createBrowserRouter(
         { path: ":token/edit", element: <PollForm /> },
       ],
     },
-  ],
+  ]),
   { basename: "/schedule_polls" }
 );
 

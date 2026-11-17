@@ -1,0 +1,80 @@
+/* The Hosting Command Center (CommandCenter.jsx): the script reads big, and follows the size
+   buttons (the inline font-size) instead of documents.css's fixed one */
+.hc-script { line-height: 1.6; max-width: 70ch; }
+.hc-script p, .hc-script li { font-size: inherit !important; }
+.dark .hc-script { color: #e5e7eb; }
+.dark .hc-script h1, .dark .hc-script h2, .dark .hc-script h3, .dark .hc-script h4 { color: #f8fafc; }
+.dark .hc-script blockquote { border-color: #4b5563; color: #cbd5e1; }
+.dark .hc-script li::marker { color: #9ca3af; }
+.dark .hc-script th { background: #262626; }
+.dark .hc-script th, .dark .hc-script td, .dark .hc-script hr { border-color: #404040; }
+.dark .hc-script a { color: #7dd3fc; }
+.dark .hc-script mark { background-color: #854d0e; color: #fef9c3; }
+
+/* reader.css sets every p and h1 in serif, justified */
+.hc-root p, .hc-root h1, .hc-root h2, .hc-root h3 { font-family: inherit; hyphens: none; text-align: inherit; }
+
+/* A {{ service_KEY }} in the script: the name the hosts typed under "Before we begin", or the
+   role, dashed, while nobody has it yet */
+.hc-role { font-weight: 600; background: rgb(8 145 178 / 0.12); color: #155e75; border-radius: 4px; padding: 0 3px; }
+.hc-role--empty { background: transparent; border: 1px dashed #94a3b8; color: #64748b; font-weight: 500; }
+.dark .hc-role { background: rgb(34 211 238 / 0.15); color: #a5f3fc; }
+.dark .hc-role--empty { background: transparent; border-color: #525252; color: #a3a3a3; }
+
+/* A chat posting's text box (MarkdownTextarea): grows with the text, and a pill of format buttons
+   floats over the selection. writebook.css styles the same pill for notes, under .wb */
+.hc-root .wb-md-input { position: relative; }
+.hc-root .wb-md-input__text { min-height: 0; overflow: hidden; resize: none; }
+.hc-root .wb-md-input__bar {
+  align-items: center;
+  background: #1f2937;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.45);
+  color: #f9fafb;
+  display: flex;
+  gap: 0.1rem;
+  padding: 0.2rem;
+  position: absolute;
+  transform: translateY(calc(-100% - 0.35rem));
+  z-index: 40;
+}
+.hc-root .wb-md-input__btn {
+  align-items: center;
+  background: transparent !important;
+  border: 0;
+  border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  height: 1.9rem;
+  justify-content: center;
+  padding: 0;
+  width: 1.9rem;
+}
+.hc-root .wb-md-input__btn:hover { background: rgb(255 255 255 / 0.18) !important; }
+.hc-root .wb-md-input__btn--text { font-size: 0.8rem; font-weight: 700; padding: 0 0.7rem; width: auto; }
+.hc-root .wb-md-input__swatch {
+  border: 2px solid rgb(255 255 255 / 0.55);
+  border-radius: 999px;
+  cursor: pointer;
+  height: 1.4rem;
+  margin: 0 0.1rem;
+  padding: 0;
+  width: 1.4rem;
+}
+.hc-root .wb-md-input__swatch:hover { border-color: #fff; }
+.hc-root .wb-md-input__bar input {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  padding: 0 0.6rem;
+  width: 13rem;
+}
+
+/* A chat posting as it will paste (chatFormat.js's postingHtml): the formatting, line by line */
+.hc-posting { overflow-wrap: anywhere; }
+.hc-posting a { color: #2563eb; text-decoration: underline; }
+.dark .hc-posting a { color: #7dd3fc; }
+.hc-posting code { background: rgb(100 116 139 / 0.18); border-radius: 4px; font-size: 0.9em; padding: 0 3px; }

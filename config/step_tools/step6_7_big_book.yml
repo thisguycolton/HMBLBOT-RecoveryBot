@@ -1,0 +1,95 @@
+key: step6-7-big-book
+step: 6
+steps: [6, 7]
+name: "Big Book: Steps 6 and 7"
+summary: "Steps 6 and 7 the way the Big Book lays them out on pages 75 and 76: the hour of review, becoming ready, the Seventh Step Prayer, and asking again each day."
+intro: >
+  The Big Book gives Steps Six and Seven one short paragraph on page 76, right after the hour of quiet review that
+  closes the 5th step. Short isn't the same as small. This follows the book's order: look back over the first five
+  steps, see whether you're ready to let go of everything you found, ask, and then keep asking each day as the
+  defects crop up.
+
+  **Can I let go of all of them, every one, or am I still holding something back?**
+credit: "Follows the Big Book (Alcoholics Anonymous), pages 75 and 76, and the 10th step practice on page 84. The questions are our own."
+sections:
+  - id: readings
+    kind: reference
+    title: "Read first"
+    items:
+      - { id: r1, label: "The Big Book, pages 75 and 76" }
+      - { id: r2, label: "The Big Book, pages 84 and 85" }
+  - id: review
+    kind: questions
+    title: "The hour after the 5th step"
+    help: "The Big Book suggests finding a quiet place for an hour after the 5th step and carefully going back over what we've done. If that hour is behind you, write what you remember of it."
+    items:
+      - { id: thanks, label: "What am I grateful for, now that I've said it all out loud?" }
+      - { id: omitted, label: "Looking back over the first five steps, have I left anything out?" }
+      - { id: solid, label: "Is the foundation solid? Have I skimped anywhere, or done any of it halfway?" }
+  - id: step6-reference
+    kind: reference
+    title: "Step Six: entirely ready"
+    help: "From the Big Book (page 76):"
+    body: >
+      Are we now ready to let God remove from us all the things which we have admitted are objectionable? Can He now take
+      them all, every one? If we still cling to something we will not let go, we ask God to help us be willing.
+  - id: defects
+    kind: picker
+    title: "What I've admitted is objectionable"
+    help: "Bring in your part from your 4th step, or tap the ones you recognize. The Big Book keeps coming back to the first four."
+    suggest_from: { step: 4, role: my_part, label: "From my 4th step" }
+    groups:
+      - { label: "The Big Book's four", options: ["Selfishness", "Dishonesty", "Resentment", "Fear"] }
+      - { label: "Also in my 4th step", options: ["Self-seeking", "Inconsiderateness", "Self-pity", "Self-will", "Jealousy", "Intolerance", "Pride", "Impatience"] }
+  - id: ready
+    kind: scale
+    title: "Can I let go of each one?"
+    help: "Honest, not perfect. Come back and change it as it grows; your earlier answers are kept."
+    from: defects
+    options: ["Still clinging", "Becoming willing", "Ready"]
+  - id: clinging
+    kind: questions
+    title: "What I'm still clinging to"
+    items:
+      - { id: which, label: "Which of these am I not ready to let go of yet?" }
+      - { id: why, label: "What do I think I'd lose without it? What has it done for me?" }
+      - { id: help, label: "Am I willing to ask for help to become willing? What would that prayer sound like?", placeholder: "{{higher_power}}, help me be willing to…" }
+  - id: sponsor-1
+    kind: note
+    tone: sponsor
+    body: "Go over the list with your sponsor, especially anything you marked Still clinging. You don't have to be ready for all of it today to take the next step."
+  - id: step7-reference
+    kind: reference
+    title: "Step Seven: humbly asked"
+    help: "When ready, the Big Book suggests saying something like this (page 76):"
+    body: >
+      My Creator, I am now willing that you should have all of me, good and bad. I pray that you now remove from me every
+      single defect of character which stands in the way of my usefulness to you and my fellows. Grant me strength, as I
+      go out from here, to do your bidding. Amen.
+  - id: prayer
+    kind: questions
+    title: "Saying it"
+    items:
+      - { id: when, label: "When and where did I say the Seventh Step Prayer? Who was with me?", rows: 2 }
+      - { id: own, label: "The prayer in my own words, if I want them", placeholder: "{{higher_power}}, I'm willing that you should have all of me…", rows: 6 }
+      - { id: usefulness, label: "Which defects get most in the way of being useful to others?" }
+  - id: daily
+    kind: days
+    title: "Asking again each day"
+    help: "The Big Book's 10th step practice (page 84): keep watching for selfishness, dishonesty, resentment and fear, and when they crop up, ask right away for them to be removed. One night at a time."
+    items:
+      - { id: d1, label: "Where did selfishness, dishonesty, resentment or fear crop up today? Did I ask?" }
+      - { id: d2, label: "Where did selfishness, dishonesty, resentment or fear crop up today? Did I ask?" }
+      - { id: d3, label: "Where did selfishness, dishonesty, resentment or fear crop up today? Did I ask?" }
+      - { id: d4, label: "Where did selfishness, dishonesty, resentment or fear crop up today? Did I ask?" }
+      - { id: d5, label: "Where did selfishness, dishonesty, resentment or fear crop up today? Did I ask?" }
+      - { id: d6, label: "Where did selfishness, dishonesty, resentment or fear crop up today? Did I ask?" }
+      - { id: d7, label: "Where did selfishness, dishonesty, resentment or fear crop up today? Did I ask?" }
+    review:
+      - { id: asked, label: "What happened when I asked?" }
+      - { id: most, label: "Which one came up most this week?" }
+      - { id: someone, label: "Did I talk it over with someone, or try to handle it alone?" }
+  - id: closing
+    kind: note
+    tone: sponsor
+    body: "The Big Book goes straight on to the 8th step from here. Share your week with your sponsor and talk about starting your amends list."

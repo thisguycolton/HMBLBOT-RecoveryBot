@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The tint of the notification icon (the widgets' blue) -->
+    <color name="notification_tint">#2C4F78</color>
+    <!-- The site's page color, behind the status and navigation bars (styles.xml) -->
+    <color name="page_background">#f5f5f4</color>
+    <!-- The widgets' Paper style, which follows Light/Dark Mode (values-night has the dark one) -->
+    <color name="widget_paper_bg">#F5EFE3</color>
+    <color name="widget_paper_ink">#3B2E21</color>
+    <color name="widget_paper_soft">#CC3B2E21</color>
+    <color name="widget_paper_accent">#B86B29</color>
+    <color name="widget_paper_track">#333B2E21</color>
+</resources>

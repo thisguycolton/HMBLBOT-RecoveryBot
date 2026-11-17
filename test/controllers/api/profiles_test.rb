@@ -30,12 +30,26 @@ class Api::ProfilesTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the gratitude and 10th step reminders save with the browser's time zone" do
+    get "/api/profile", as: :json
+    assert_equal({ "gratitude" => { "on" => false, "at" => "12:00" }, "step" => { "on" => false, "at" => "18:00" }, "time_zone" => nil },
+                 response.parsed_body["reminders"])
+
+    patch "/api/profile", params: { profile: { step_reminder: true, step_reminder_at: "21:15", time_zone: "America/Chicago" } }, as: :json
+    assert_response :success
+    assert_equal({ "on" => true, "at" => "21:15" }, response.parsed_body.dig("reminders", "step"))
+    assert_equal "America/Chicago", @user.reload.time_zone
+
+    patch "/api/profile", params: { profile: { gratitude_reminder_at: "noon" } }, as: :json
+    assert_response :unprocessable_entity
+  end
+
   test "changing email or password needs the current password" do
     patch "/api/profile", params: { profile: { email: "new@example.com" } }, as: :json
     assert_response :unprocessable_entity
     patch "/api/profile", params: { profile: { email: "new@example.com", current_password: "password123" } }, as: :json
     assert_response :success
-    assert_equal "new@example.com", @user.reload.email
+    assert_equal "new@example.com", @user.reload.unconfirmed_email # it changes once they confirm it
   end
 
   test "sobriety date is private unless they show it to their groups" do
@@ -49,5 +63,41 @@ class Api::ProfilesTest < ActionDispatch::IntegrationTest
 
     patch "/api/profile", params: { profile: { sobriety_date: (Date.current + 10).iso8601 } }
     assert_response :unprocessable_entity
+  end
+
+  test "deleting the account takes the password and removes what's only theirs" do
+    group = Group.create!(title: "Sunrise Crew", time_zone: "America/Phoenix")
+    group.memberships.create!(user: @user, role: "admin")
+    other = User.create!(email: "o@example.com", name: "O", password: "password123", confirmed: true)
+    Follow.create!(follower: @user, followed: other)
+    Follow.create!(follower: other, followed: @user)
+    meeting = group.meetings.create!(name: "Sunrise", recurrence: "weekly", day_of_week: 1, start_minute: 420)
+    sub = HostSubRequest.new(meeting: meeting, requested_by: @user, filled_by: @user, role: "host", status: "open", on: Date.current)
+    sub.save!(validate: false)
+    IntergroupFollow.create!(user: @user, group_name: "desert dawn group", oiaa_slug: "desert-dawn")
+    visit = Ahoy::Visit.create!(visit_token: "v1", visitor_token: "u1", user: @user, started_at: Time.current)
+
+    delete "/api/profile", params: { current_password: "wrong" }, as: :json
+    assert_response :unprocessable_entity
+    assert User.exists?(@user.id)
+
+    delete "/api/profile", params: { current_password: "password123" }, as: :json
+    assert_response :no_content
+    refute User.exists?(@user.id)
+    assert_empty Follow.where(follower_id: @user.id).or(Follow.where(followed_id: @user.id))
+    assert_nil visit.reload.user_id
+    assert_nil sub.reload.requested_by_id
+    assert Group.exists?(group.id)
+
+    get "/api/profile", as: :json
+    assert_response :unauthorized
+  end
+
+  test "an account that added readings is pointed to the contact page instead" do
+    Reading.new(user: @user, title: "Just for today").save!(validate: false)
+    delete "/api/profile", params: { current_password: "password123" }, as: :json
+    assert_response :unprocessable_entity
+    assert_includes response.parsed_body["error"], "Contact page"
+    assert User.exists?(@user.id)
   end
 end

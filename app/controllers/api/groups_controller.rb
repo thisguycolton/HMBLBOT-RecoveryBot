@@ -8,7 +8,9 @@ class Api::GroupsController < ApplicationController
   before_action :set_viewable_group, only: %i[show join leave]
   before_action :set_group, only: %i[update destroy approve regenerate_invite court_verifications]
   before_action :require_manager, only: %i[update regenerate_invite court_verifications]
-  before_action :require_feature, only: %i[index create find start]
+  # Listing your own groups is open to anyone in one (the My groups window in the nav)
+  # Starting one from an intergroup listing is open to every account (Group.can_start_from_listing?)
+  before_action :require_feature, only: %i[create find]
 
   # GET /api/groups -> your groups and join requests
   def index
@@ -42,6 +44,7 @@ class Api::GroupsController < ApplicationController
 
   # PATCH /api/groups/:slug
   def update
+    @group.logo.purge_later if ActiveModel::Type::Boolean.new.cast(params.dig(:group, :remove_logo)) && params.dig(:group, :logo).blank?
     @group.update(group_params) ? render(json: group_json) : render_errors(@group)
   end
 
@@ -101,25 +104,39 @@ class Api::GroupsController < ApplicationController
     }
   end
 
-  # POST /api/groups/start { oiaa_slug } -> a pending group made from an OIAA listing, run
-  # by whoever started it once a site admin approves it
+  # POST /api/groups/start { oiaa_slug } -> a pending group made from an intergroup listing
+  # (AA Intergroup's or an imported meeting list's), open to any signed-in account. It waits in
+  # Site Admin > Group requests and is run by whoever started it once a site admin approves it.
   def start
+    return render(json: { error: "Sign in to start a group." }, status: :forbidden) unless Group.can_start_from_listing?(current_user)
+
     record = OiaaMeeting.listed.find_by!(slug: params[:oiaa_slug])
     existing = Meeting.find_by(oiaa_slug: record.slug)&.group ||
                Group.find_by("LOWER(title) IN (?)", [record.group_name, record.name].compact.map(&:downcase))
     if existing
-      return render(json: { error: "That meeting already has a group here.", slug: existing.slug }, status: :unprocessable_entity)
+      mine = existing.member?(current_user)
+      error = if existing.pending? && !mine then "Someone already asked to start this group. It's waiting for a site admin."
+              else "That meeting already has a group here."
+              end
+      # only send them to it if they can see it (a pending group shows only to its own people)
+      return render(json: { error: error, slug: existing.page_visible_to?(current_user) ? existing.slug : nil }, status: :unprocessable_entity)
+    end
+    if Group.too_many_pending_starts?(current_user)
+      return render(json: { error: "You have #{Group::PENDING_STARTS_LIMIT} groups waiting for a site admin already. Once one is approved you can start another." },
+                    status: :unprocessable_entity)
     end
 
     @group = Group.new(title: record.group_name.presence || record.name, status: "pending", created_by: current_user,
                        time_zone: Group::TIME_ZONES.include?(record.zone.tzinfo.name) ? record.zone.tzinfo.name : "America/Phoenix")
+    @group.adopt_listing_description(record)
+    @group.description = nil if @group.description.present? && BlockedLanguage.found?(@group.description)
     Group.transaction do
       @group.save!
       @group.memberships.create!(user: current_user, role: "admin")
       record.days.each { |day| @group.meetings.new.apply_oiaa(record, day: day).save! }
     end
     Notification.deliver(User.suite_admins, kind: "group.pending", title: "#{current_user.display_name} started “#{@group.title}”",
-                                            body: "It's waiting for your approval.", url: "/groups/#{@group.slug}")
+                                            body: "It's waiting for your approval.", url: "/admin_panel/group_requests")
     render json: group_json, status: :created
   rescue ActiveRecord::RecordInvalid
     render_errors(@group)
@@ -127,6 +144,8 @@ class Api::GroupsController < ApplicationController
 
   # POST /api/groups/:slug/join -> ask to join (a group admin approves)
   def join
+    return blocked if @group.blocked?(current_user)
+
     membership = @group.memberships.find_or_initialize_by(user: current_user)
     if membership.new_record?
       membership.update!(role: "member", status: "requested")
@@ -138,6 +157,8 @@ class Api::GroupsController < ApplicationController
   # POST /api/groups/join_with_token { token } -> the invite link
   def join_with_token
     @group = Group.find_by!(join_token: params[:token].to_s)
+    return blocked if @group.blocked?(current_user)
+
     membership = @group.memberships.find_or_initialize_by(user: current_user)
     membership.update!(status: "active", role: membership.role.presence || "member")
     render json: group_json
@@ -159,8 +180,7 @@ class Api::GroupsController < ApplicationController
   def approve
     return render(json: { error: "Only site admins can approve groups." }, status: :forbidden) unless current_user.suite_admin?
 
-    @group.update!(status: "active")
-    Notification.deliver(@group.admins, kind: "group.approved", title: "#{@group.title} is approved", url: "/groups/#{@group.slug}")
+    @group.approve!
     render json: group_json
   end
 
@@ -184,18 +204,24 @@ class Api::GroupsController < ApplicationController
 
   private
 
+  def blocked
+    render json: { error: "You can't join this group." }, status: :forbidden
+  end
+
   def require_feature
     render json: { error: "Groups isn't open yet." }, status: :forbidden unless Group.feature_open_to?(current_user)
   end
 
   def group_params
-    params.require(:group).permit(:title, :description, :website, :time_zone, :court_email_subject, :court_email_body, :court_email_reply_to)
+    params.require(:group).permit(:title, :description, :website, :time_zone, :court_email_subject, :court_email_body, :court_email_reply_to,
+                                  :quorum_count, :quorum_percent, :logo, :follows_roberts_rules, :show_hosts_publicly, :show_sponsors, :search_listed, deck_editors: [])
   end
 
   def group_card(group, membership)
     upcoming = group.meetings.sort_by { |m| m.next_start || Time.current }.reject { |m| m.once? && m.next_start < Time.current }
     {
       slug: group.slug, title: group.title, description: group.description, status: group.status,
+      logo_url: group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(group.logo, only_path: true) : nil,
       role: membership&.role, membership_status: membership&.status,
       meetings_count: group.meetings.size, next_meeting: upcoming.first&.then { |m| { name: m.name, schedule_label: m.schedule_label, next_start: m.next_start.iso8601 } },
     }
@@ -209,17 +235,21 @@ class Api::GroupsController < ApplicationController
       slug: @group.slug, title: @group.title, description: @group.description, website: @group.website,
       time_zone: @group.time_zone, status: @group.status,
       role: membership&.role, membership_status: membership&.status,
-      is_member: !!membership&.active?, can_manage: manager, is_site_admin: !!current_user&.suite_admin?, signed_in: current_user.present?,
+      is_member: !!membership&.active?, can_manage: manager, can_keep_records: @group.records_editable_by?(current_user), can_schedule_hosts: @group.hosts_editable_by?(current_user), can_keep_treasury: @group.treasury_editable_by?(current_user), can_host: @group.can_host?(current_user), can_arrange_decks: @group.decks_editable_by?(current_user), is_site_admin: !!current_user&.suite_admin?, signed_in: current_user.present?,
       meetings: @group.meetings.ordered.map(&:as_api_json),
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
       members_count: @group.members.count,
+      follows_roberts_rules: @group.follows_roberts_rules, show_hosts_publicly: @group.show_hosts_publicly, show_sponsors: @group.show_sponsors, search_listed: @group.search_listed, deck_editors: @group.deck_editors,
+      logo_url: @group.logo.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.logo, only_path: true) : nil,
       cover_url: @group.cover.attached? ? Rails.application.routes.url_helpers.rails_storage_proxy_path(@group.cover, only_path: true) : nil,
     }
     if member
+      # The green check (like in the Zoom rooms) on anyone here offering to sponsor
+      sponsoring = sponsoring_ids
       json[:members] = @group.active_memberships.includes(user: { avatar_attachment: :blob }).sort_by { |m| [m.admin? ? 0 : 1, m.user.display_name.downcase] }
-                             .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id) }
+                             .map { |m| m.user.as_member_json(email: manager).merge(role: m.role, membership_id: m.id, can_keep_records: m.can_keep_records, can_schedule_hosts: m.can_schedule_hosts, can_keep_treasury: m.can_keep_treasury, can_host: m.can_host, host_slots_only: m.host_slots_only, host_slot_count: m.host_meeting_ids.size, can_sponsor: sponsoring.include?(m.user_id)) }
       json[:books] = @group.group_books.includes(book: { cover_image_attachment: :blob }).order(:created_at).map do |gb|
-        { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color } }
+        { id: gb.id, note: gb.note, book: { slug: gb.book.slug, title: gb.book.title, author: gb.book.author, cover_url: gb.book.cover_url, cover_color: gb.book.cover_color, members_only: gb.book.members_only? } }
       end
       json[:readings] = @group.shared_readings.includes(user: { avatar_attachment: :blob }).limit(50).map do |r|
         { id: r.id, title: r.title, meeting_date: r.meetingDate&.iso8601, published_at: r.published_at&.iso8601, author: r.user&.as_member_json }
@@ -227,10 +257,22 @@ class Api::GroupsController < ApplicationController
     end
     if manager
       json[:requests] = @group.memberships.requested.includes(user: { avatar_attachment: :blob }).map { |m| m.user.as_member_json(email: true).merge(membership_id: m.id) }
+      json[:blocked] = @group.blocks.includes(user: { avatar_attachment: :blob }).order(created_at: :desc).map { |b| b.user.as_person_json.merge(blocked_at: b.created_at.iso8601) }
       json[:invite_url] = "#{request.base_url}/groups/join/#{@group.join_token}"
       json[:court_form_url] = "#{request.base_url}/court_verifications/new?group=#{@group.slug}"
       json[:court_email] = @group.court_email_json
+      json[:quorum] = { count: @group.quorum_count, percent: @group.quorum_percent, needed: @group.quorum_needed }
     end
     json
+  end
+
+  # Who in this group the viewer sees as available to sponsor (SponsorProfile.visible_to), and
+  # the viewer themself when they're offering
+  def sponsoring_ids
+    return [] unless @group.show_sponsors && current_user
+
+    ids = SponsorProfile.visible_to(current_user).select { |_, groups| groups.include?(@group.title) }.keys.map(&:user_id)
+    ids << current_user.id if current_user.sponsor_profile&.listed?
+    ids
   end
 end

@@ -11,6 +11,7 @@ import Footer from "../components/Footer";
 import TopicificatorApp from "../components/TopicificatorApp";
 import ChapterEditor from "../components/ChapterEditor";
 import ChapterViewer from "../components/ChapterViewer";
+import MembersOnlyPage from "../components/book/MembersOnlyPage";
 import ChapterAdmin from "../components/ChapterAdmin";
 import ReadingArchive from "../components/ReadingArchive";
 import ReadingEditor from "../components/ReadingEditor";
@@ -29,13 +30,14 @@ import Layout from "../components/Layout";
 const body = document.body;
 const isAuthenticated = body.dataset.currentUser === "true";
 
+// The Topicificator takes the whole window: the shell's top bar only, the sidebar behind its menu
 mountReact("topicificator-root", () => (
-  <Layout
-    isAuthenticated={isAuthenticated}
-    showFooter={false}
-  >
-    <TopicificatorApp />
-  </Layout>
+  <div className="w-full">
+    <Navbar isAuthenticated={isAuthenticated} />
+    <main className="pt-[var(--nav-h)]">
+      <TopicificatorApp />
+    </main>
+  </div>
 ));
 
 const csrf = document
@@ -61,6 +63,16 @@ function mountReact(id, renderFn) {
 
 // ---------------- Chapter Viewer ----------------
 mountReact("chapter-viewer", (mount) => {
+  // A members-only book this reader can't open (PagesController#reader): how to get access
+  if (mount.dataset.membersOnly) {
+    const info = JSON.parse(mount.dataset.membersOnly);
+    return (
+      <Layout isAuthenticated={isAuthenticated}>
+        <MembersOnlyPage info={info} backHref={`/library/${info.book_slug}`} />
+      </Layout>
+    );
+  }
+
   let bookSlug = mount.dataset.bookSlug;
   let chapterSlug = mount.dataset.chapterSlug;
 
@@ -91,12 +103,11 @@ mountReact("chapter-viewer", (mount) => {
   }
 
   return (
-    <>
-      <Navbar isAuthenticated={isAuthenticated} />
-      <main className="pt-[var(--nav-h,56px)] prose-headings:my-1 md:prose-headings:my-2 xl:prose-headings:my-2 prose-p:my-0 md:prose-p:my-1 xl:prose-p:my-1">
+    <Layout isAuthenticated={isAuthenticated}>
+      <div className="prose-headings:my-1 md:prose-headings:my-2 xl:prose-headings:my-2 prose-p:my-0 md:prose-p:my-1 xl:prose-p:my-1">
         <ChapterViewer bookSlug={bookSlug} slug={chapterSlug} className="pt-16" />
-      </main>
-    </>
+      </div>
+    </Layout>
   );
 });
 
@@ -120,10 +131,9 @@ mountReact("chapter-admin", (admin) => (
 
 // ---------------- Court Verification ----------------
 mountReact("court-verification-root", (rootEl) => (
-  <>
-  <Navbar isAuthenticated={isAuthenticated} />
-  <CourtVerificationForm group={rootEl.dataset.group ? JSON.parse(rootEl.dataset.group) : null} />
-  </>
+  <Layout isAuthenticated={isAuthenticated}>
+    <CourtVerificationForm group={rootEl.dataset.group ? JSON.parse(rootEl.dataset.group) : null} />
+  </Layout>
 ));
 
 // ---------------- Reading Archive ----------------
@@ -152,10 +162,9 @@ mountReact("my-readings-root", (rootEl) => {
   const readings = JSON.parse(rootEl.dataset.readings || "[]");
 
   return (
-    <>
-    <Navbar isAuthenticated={isAuthenticated} />
-    <MyReadings readings={readings} />
-    </>
+    <Layout isAuthenticated={isAuthenticated}>
+      <MyReadings readings={readings} />
+    </Layout>
   );
 });
 
@@ -226,6 +235,7 @@ mountReact("service-reading-show-root", (el) => {
     <Layout isAuthenticated={isAuthenticated}>
       <ServiceReadingShow
         reading={reading}
+        notice={el.dataset.notice}
         isAdmin={isAdmin}
         isAuthenticated={isAuthenticated}
       />

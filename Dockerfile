@@ -6,7 +6,9 @@ RUN apt-get update -qq && apt-get install -y \
   libpq-dev \
   curl \
   git \
-  gnupg
+  gnupg \
+  imagemagick \
+  ffmpeg
 
 # Install Node.js 20.x and Yarn
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
@@ -21,8 +23,8 @@ COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
 # Install node modules before copying the rest
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
 # Copy the rest of the app
 COPY . .

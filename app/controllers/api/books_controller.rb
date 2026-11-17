@@ -5,6 +5,8 @@ class Api::BooksController < ApplicationController
   keep_robots_out
   before_action :set_book, only: [:show, :update, :export, :search]
   before_action :hide_private_book!, only: [:show, :export, :search]
+  # A members-only book's page says so (show: locked); its words stay behind Book#readable_by?
+  before_action :refuse_locked_book!, only: [:export, :search]
   before_action :authenticate_user!, only: [:create, :update, :import_json]
   before_action :require_admin!, only: [:create, :update, :import_json]
 
@@ -12,6 +14,7 @@ class Api::BooksController < ApplicationController
 
   def index
     books = Book.visible_to(current_user).includes(:chapters, cover_image_attachment: :blob).order(:title)
+    locked = Book.locked_for(current_user).pluck(:id).to_set
     render json: books.map { |b|
       {
         slug: b.slug,
@@ -21,6 +24,8 @@ class Api::BooksController < ApplicationController
         image_url: b.cover_url,
         cover_color: b.cover_color,
         public: b.public?,
+        members_only: b.members_only?,
+        locked: locked.include?(b.id),
         chapter_count: b.chapters.size,
         first_chapter_slug: b.chapters.min_by { |c| [c.index.to_i, c.id] }&.slug
       }
@@ -28,6 +33,8 @@ class Api::BooksController < ApplicationController
   end
 
   def show
+    # Signed out at a members-only book: back here once they sign in
+    store_location_for(:user, "/library/#{@book.slug}") if !user_signed_in? && @book.locked_for?(nil)
     render json: book_json(@book)
   end
 
@@ -68,7 +75,7 @@ class Api::BooksController < ApplicationController
     query = params[:q].to_s.squish
     return render json: { query: query, results: [] } if query.length < 2
 
-    results = Book.visible_to(current_user).order(:title).filter_map do |book|
+    results = Book.readable_by(current_user).order(:title).filter_map do |book|
       chapters = book.search(query, snippets: 2)
       next if chapters.empty?
 
@@ -218,6 +225,10 @@ class Api::BooksController < ApplicationController
     head :not_found unless @book.visible_to?(current_user)
   end
 
+  def refuse_locked_book!
+    render json: MembersOnly.json(@book, current_user), status: :forbidden if @book.locked_for?(current_user)
+  end
+
   def book_json(book)
     {
       id: book.id,
@@ -229,8 +240,9 @@ class Api::BooksController < ApplicationController
       has_uploaded_cover: book.cover_image.attached?,
       cover_color: book.cover_color,
       public: book.public?,
+      members_only: book.members_only?,
       chapter_count: book.chapters.count
-    }
+    }.merge(book.locked_for?(current_user) ? MembersOnly.json(book, current_user) : { locked: false })
   end
 
   def require_admin!
@@ -239,7 +251,7 @@ class Api::BooksController < ApplicationController
 
   def book_params
     params.require(:book).permit(:title, :slug, :description, :image_url, :author, :published_at, :cover_color,
-                                 :publicly_accessible)
+                                 :publicly_accessible, :members_only)
   end
 
   def normalize_imported_chapters(chapters)

@@ -2,6 +2,7 @@
 # anyone else can leave a name and email to hear about updates. Voting in one of the
 # event's schedule polls with an account follows the event ("following").
 class EventRsvp < ApplicationRecord
+  moderates_language :name
   STATUSES = %w[going maybe following not_going].freeze
   SUBSCRIBED = %w[going maybe following].freeze
 

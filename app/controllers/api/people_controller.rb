@@ -3,6 +3,8 @@
 class Api::PeopleController < ApplicationController
   include GroupScoped
 
+  FOLLOW_LIST_MAX = 1000
+
   before_action :require_profiles
   before_action :set_person, except: :index
 
@@ -19,13 +21,23 @@ class Api::PeopleController < ApplicationController
       me: current_user.as_person_json,
       matches: matches,
       following_count: current_user.follows_given.count,
-      feed: (ProfilePage.new(current_user).following_feed(before: before_param) unless q.present?),
+      feed: (home_feed unless q.present?),
+      # Site admins only: whether the feed is everyone's posts (the sidebar's switch)
+      everyone: (current_user.sees_all_posts? if current_user.suite_admin?),
       coming_up: (PeopleHome.new(current_user).json if q.blank? && before_param.nil?),
       note_max: TimelineNote::BODY_MAX, images_max: TimelineNote::IMAGES_MAX,
       default_note_visibility: current_user.default_note_visibility,
       groups: current_user.groups.order(:title).map { |g| { slug: g.slug, title: g.title } },
     }
   end
+
+  # Your notes and those of the people you follow, or for a site admin with "Everyone's
+  # posts" on, every member's shared notes (ProfilePage#everyone_feed)
+  def home_feed
+    page = ProfilePage.new(current_user)
+    current_user.sees_all_posts? ? page.everyone_feed(before: before_param) : page.following_feed(before: before_param)
+  end
+  private :home_feed
 
   # GET /api/people/:username
   def show
@@ -37,6 +49,16 @@ class Api::PeopleController < ApplicationController
     render json: { feed: ProfilePage.new(current_user).feed(@person, before: before_param) }
   end
 
+  # GET /api/people/:username/followers and /following -> everyone on that list, newest first
+  # (the profile's follower counts open these)
+  def followers
+    render json: { people: ProfilePage.new(current_user).people(@person.followers, limit: FOLLOW_LIST_MAX) }
+  end
+
+  def following
+    render json: { people: ProfilePage.new(current_user).people(@person.following, limit: FOLLOW_LIST_MAX) }
+  end
+
   # POST /api/people/:username/follow
   def follow
     return render(json: { error: "You can't follow yourself." }, status: :unprocessable_entity) if @person == current_user
@@ -44,7 +66,7 @@ class Api::PeopleController < ApplicationController
     follow = current_user.follows_given.find_or_create_by!(followed: @person)
     if follow.previously_new_record?
       Notification.deliver(@person, kind: "follow.created", title: "#{current_user.display_name} followed you",
-                                    body: "They'll see what you share with followers.", url: current_user.profile_path)
+                                    body: "They'll see what you share with followers.", url: current_user.profile_path, from: current_user)
     end
     render json: follow_json
   rescue ActiveRecord::RecordNotUnique
@@ -55,6 +77,23 @@ class Api::PeopleController < ApplicationController
   def unfollow
     current_user.follows_given.where(followed: @person).destroy_all
     render json: follow_json
+  end
+
+  # POST /api/people/:username/block -> their notes, comments and chat messages are hidden
+  # from you and you aren't told what they do (UserBlock). They aren't told.
+  def block
+    return render(json: { error: "You can't block yourself." }, status: :unprocessable_entity) if @person == current_user
+
+    current_user.blocks_given.find_or_create_by!(blocked: @person)
+    render json: { blocked: true }
+  rescue ActiveRecord::RecordNotUnique
+    render json: { blocked: true }
+  end
+
+  # DELETE /api/people/:username/block
+  def unblock
+    current_user.blocks_given.where(blocked: @person).delete_all
+    render json: { blocked: false }
   end
 
   private

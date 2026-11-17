@@ -1,7 +1,13 @@
 class PagesController < ApplicationController
   include KeepsRobotsOut
-  keep_robots_out(only: %i[library reader])
+  keep_robots_out(only: :library)
+  # The reader is for people too, but a highlight's share link (?hl=) shows link-preview
+  # fetchers its quote and picture (ShareMeta.highlight)
+  before_action :answer_robots, only: :reader
+  after_action :tag_noindex, only: :reader
   before_action :set_page, only: %i[ edit update destroy ]
+  # The home page and the Topicificator say nothing about anyone: search engines may list them
+  allow_search_engines only: %i[home topicificator]
   layout "reader", only: %i[topicificator library home reader]
 
   # GET /pages or /pages.json
@@ -10,6 +16,15 @@ class PagesController < ApplicationController
   def reader
     @book_slug = params[:book_slug]
     @chapter_slug = params[:chapter_slug]
+    @share = shared_highlight_meta
+    # A members-only book someone can't open (Book#locked_for?): the reader says how to get in
+    # (MembersOnlyPage) in place of the chapter. HostDeck's ?screen=1 window lands here too.
+    book = Book.find_by(slug: @book_slug)
+    return unless book&.visible_to?(current_user) && book.locked_for?(current_user)
+
+    store_location_for(:user, request.fullpath) unless user_signed_in?
+    @members_only = MembersOnly.json(book, current_user)
+    render :reader, status: :forbidden
   end
   def library; end
 
@@ -90,6 +105,24 @@ class PagesController < ApplicationController
   end
 
   private
+
+  def answer_robots
+    return unless robot_request?
+
+    share = link_preview_request? && shared_highlight_meta
+    share ? link_preview(share) : turn_robots_away
+  end
+
+  # The link preview of the highlight a ?hl= link opens, when it's in this chapter
+  def shared_highlight_meta
+    return if params[:hl].blank?
+
+    @shared_highlight_meta ||= ShareMeta.safely do
+      highlight = UserHighlight.find_signed(params[:hl].to_s, purpose: :share)
+      ShareMeta.highlight(highlight, look: params[:look], note: params[:note] != "0") if highlight && highlight.chapter.slug == params[:chapter_slug] && highlight.chapter.book.slug == params[:book_slug]
+    end
+  end
+
     # Use callbacks to share common setup or constraints between actions.
     def set_page
       @page = Page.find(params[:id])

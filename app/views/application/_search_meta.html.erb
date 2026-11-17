@@ -1,0 +1,6 @@
+<%# Pages search engines may list (SearchEngines) get a canonical address; views add their own
+    structured data with content_for(:head) %>
+<% if search_listed? %>
+<link rel="canonical" href="<%= (Rails.env.production? ? "https://#{request.host}" : request.base_url) + request.path %>">
+<% end %>
+<%= yield :head %>

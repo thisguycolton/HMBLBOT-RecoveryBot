@@ -1,0 +1,8 @@
+<% if native_app? %><div id="app-launch" aria-hidden="true"><i></i></div>
+<%# The shell from the last page (native_app.js keeps a copy as the app leaves a page), drawn
+    before the new page's scripts have run, so the top bar, bottom bar and stage stay put while
+    only the page changes. Layout.jsx takes it away as the real shell draws (or native_app.js,
+    on pages without the shell). Taps on it do nothing; it's only up for a moment. %>
+<div id="shell-ghost" class="shell" style="position:absolute;left:0;top:0;width:100%" aria-hidden="true" inert></div>
+<script>try { var g = sessionStorage.getItem("hb-shell"); if (g) document.getElementById("shell-ghost").innerHTML = g; } catch (e) {}</script>
+<% end %>

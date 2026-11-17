@@ -104,8 +104,18 @@ group :test do
 end
 
 gem "devise", "~> 4.9"
+# Sign up and log in with Google (Users::OmniauthCallbacksController)
+gem "omniauth-google-oauth2", "~> 1.2"
+gem "omniauth-rails_csrf_protection", "~> 1.0"
+# json 3 (pulled in by omniauth-google-oauth2) breaks an older gem here (unknown keyword: quirks_mode)
+gem "json", "~> 2.7"
 gem "bootstrap"
 gem "sassc-rails"
 gem "richer_text"
 gem 'vite_rails'
 gem 'psych', '~> 5.2'
+
+# Web Push notifications (WebPushSender)
+gem "web-push", "~> 3.0"
+# web-push needs openssl 3+; keep the one Ruby 3.2 ships with rather than 4.0, which changes APIs other gems use
+gem "openssl", "~> 3.1.0"

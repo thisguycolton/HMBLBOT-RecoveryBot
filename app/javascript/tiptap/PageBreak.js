@@ -38,6 +38,7 @@ export const PageBreak = Node.create({
       "div",
       {
         "data-page-break": "true",
+        ...(page != null ? { "data-page": page } : {}),
         class: `my-8 page-break ${variant}`,
       },
       ["div", { class: "relative flex items-center justify-center text-center" },

@@ -1,5 +1,11 @@
 Rails.application.routes.draw do
   get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+  # The service worker (app/views/pwa/service-worker.js.erb) shows Web Push notifications; it
+  # has to live at the root so it covers the whole site
+  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+  # Putting RecoveryBot on your home screen, and turning on notifications
+  get "/install", to: "install#show", as: :install
+  get "/notifications/:id/open", to: "notifications#open", as: :open_notification
   resources :topic_sets
   resources :hostificators do
     member do
@@ -16,12 +22,34 @@ Rails.application.routes.draw do
   end
 
   get "/topicificator", to: "pages#topicificator"
+  get "/sitemap.xml", to: "sitemaps#show", as: :sitemap, format: false
+  get "/privacy", to: "privacy#show", as: :privacy
+  get "/terms", to: "terms#show", as: :terms
+  get "/delete-account", to: "delete_accounts#show", as: :delete_account
+  # The Docs: tutorials for every tool (DocsController, entrypoints/docs.jsx); About and History are docs pages too
+  get "/docs(/*path)", to: "docs#app", as: :docs, format: false
+  get "/about", to: "docs#app", defaults: { alias: "about" }, as: :about
+  get "/history", to: "docs#app", defaults: { alias: "history" }, as: :history
+  get "/contact", to: "contacts#new", as: :contact
+  post "/contact", to: "contacts#create"
+  # Ask for an invite to the iPhone app's TestFlight beta (linked from a site notice)
+  get "/testflight", to: "testflight_requests#new", as: :testflight
+  post "/testflight", to: "testflight_requests#create"
+  # A reading in a step worksheet ("Chapter 4, We Agnostics, in the Big Book", "page 63"):
+  # finds that book, chapter or printed page in the library and goes there (LibraryLinksController)
+  get "/library/go", to: "library_links#show", as: :library_go
   get "/library(/*path)", to: "pages#library"
 
   # Schedule polls: a React app (app/javascript/entrypoints/schedule_polls.jsx)
   get "/schedule_polls", to: "schedule_polls#app", as: :schedule_polls
   get "/schedule_polls/:token(/*path)", to: "schedule_polls#app", as: :schedule_poll
 
+  # The picture a shared link shows (og:image)
+  get "/share_cards/:kind/:id.png", to: "share_cards#show", as: :share_card, format: false,
+      constraints: { kind: /document|reading|event|group|meeting|listing|highlight|site/, id: %r{[^/]+} }
+  # The little map of where an in-person meeting is (MeetingMap)
+  get "/meeting_maps/:kind/:id.png", to: "meeting_maps#show", as: :meeting_map, format: false,
+      constraints: { kind: /meeting|listing/, id: %r{[^/]+} }
   # Events: a React app (app/javascript/entrypoints/events.jsx) with the HMBLBOT Editor
   get "/events/:token/unsubscribe", to: "events#unsubscribe", as: :event_unsubscribe
   get "/events/:token(/*path)", to: "events#app", as: :event, format: false
@@ -34,8 +62,97 @@ Rails.application.routes.draw do
             resources :court_verifications, only: :create
 
   resources :text_reports, only: :create
+  # How far along a share picture or video being drawn is (CardProgress), for its progress ring
+  get "card_progress/:token", to: "card_progress#show", format: false
+  get "hosting_links/:code", to: "hosting_links#show"
+  # A shared HostDeck of its own, followed without an account; the live Topicificator window
+  get "deck_links/:code", to: "deck_links#show"
+  get "deck_links/:code/live", to: "deck_links#live"
+  get "topicificator_links/:code", to: "topicificator_links#show"
   resources :site_notices, only: :index
-  resource :profile, only: %i[show update]
+  resource :profile, only: %i[show update destroy]
+  resources :push_subscriptions, only: %i[index create destroy] do
+    collection do
+      delete "/", action: :destroy
+      post :test
+      post :renew
+      patch :categories
+      # The iPhone and Android apps' Firebase tokens (FcmSender)
+      post :app, action: :app_create
+      delete :app, action: :app_destroy
+    end
+  end
+  resource :hosting, controller: "hosting", only: :show
+  # A member's own recovery tools (/recovery): chips, 10th step inventories, gratitude lists
+  resource :recovery, controller: "recovery", only: %i[show update] do
+    post :claim
+  end
+  resources :chip_awards, only: %i[index create destroy] do
+    get :lookup, on: :collection
+  end
+  resources :meeting_joins, only: :create
+  resource :inventory_questions, only: %i[show update]
+  resources :step_inventories, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
+  resources :gratitude_lists, param: :on, only: %i[index show update destroy], constraints: { on: /\d{4}-\d{2}-\d{2}/ }
+  # Sponsors and sponsees, and what a sponsee sends their sponsor
+  resources :sponsorships, only: %i[index create update destroy] do
+    member do
+      post :accept
+      post :decline
+      post :nudge
+      get :shares
+    end
+    collection do
+      post :invite
+      get "invite/:token", action: :show_invite
+      post "invite/:token", action: :accept_invite
+    end
+  end
+  resources :sponsorship_shares, only: %i[create update destroy]
+  # Available to sponsor: your own offer, and who's offering in your groups
+  resources :step_suggestions, only: %i[create destroy] do
+    post :start, on: :member
+  end
+  resources :group_step_tools, only: %i[create destroy]
+  resource :sponsor_profile, only: %i[show update] do
+    get :find
+  end
+  # Working the steps: worksheets (StepTool) and a member's own work on them
+  resources :step_works, only: %i[index show create update destroy] do
+    get :pull, on: :collection
+    member do
+      post :link
+      delete :link, action: :unlink
+      post :print_link
+    end
+  end
+  # A worksheet's password-protected link: reading it (anyone with the link and password)
+  post "shared_worksheets/:token", to: "shared_worksheets#create", as: :open_shared_worksheet
+  # The shell: your groups and roles, the Hosting badge, Today; and the search box
+  resource :nav, controller: "nav", only: :show
+  # Clearing "Needs your attention" items from Today, and restoring them
+  resource :today_dismissals, only: %i[create destroy]
+  resource :today_layout, only: %i[update destroy]
+  # Site admins: home feed shows everyone's posts (the sidebar's switch)
+  resource :admin_feed, only: :update
+  get "search", to: "search#index"
+  # The Docs (Api::DocsController): reading is public, writing for site admins
+  scope "docs", controller: "docs", as: "docs" do
+    get "/", action: :index
+    get "page", action: :show
+    get "search", action: :search
+    post "pages", action: :create
+    patch "pages/:id", action: :update
+    delete "pages/:id", action: :destroy
+    get "pages/:id/versions", action: :versions
+    get "pages/:id/versions/:version_id", action: :version
+    post "pages/:id/restore", action: :restore
+    post "pages/:id/images", action: :images
+    post "pages/:id/videos", action: :videos
+    post "sections", action: :create_section
+    patch "sections/:id", action: :update_section
+    delete "sections/:id", action: :destroy_section
+  end
   get "oiaa/search", to: "oiaa#search"
   get "oiaa/matches", to: "oiaa#matches"
   get "groups/find", to: "groups#find"
@@ -43,6 +160,9 @@ Rails.application.routes.draw do
   post "groups/start", to: "groups#start"
   post "groups/join_with_token", to: "groups#join_with_token"
   post "groups/dismiss_prompt", to: "groups#dismiss_prompt"
+  # The welcome wizard after sign-up (WelcomeController): finding a group, then done
+  get "welcome/groups", to: "welcome#groups"
+  post "welcome/finish", to: "welcome#finish"
   resources :groups, param: :slug, only: %i[index show create update destroy] do
     member do
       post :join
@@ -52,8 +172,118 @@ Rails.application.routes.draw do
       get :court_verifications
     end
     resources :memberships, controller: "group_memberships", only: %i[create update destroy]
+    # Its chat (ChatChannel): channels, messages, who may add channels; and who its admins blocked
+    resource :chat, controller: "group_chat", only: %i[show update] do
+      patch :order
+    end
+    resources :chat_channels, controller: "group_chat_channels", only: %i[create update destroy] do
+      member do
+        get :messages
+        post :messages, action: :post_message
+        get :pins
+        post :read
+      end
+    end
+    resources :chat_messages, controller: "group_chat_messages", only: %i[show update destroy] do
+      member do
+        post :reactions, action: :react
+        delete :reactions, action: :unreact
+        post :pin
+        delete :pin, action: :unpin
+        post :move
+        get "files/:file_id", action: :file, as: :file
+        delete :link, action: :hide_link
+      end
+    end
+    resources :blocks, controller: "group_blocks", only: %i[index create destroy]
     resources :books, controller: "group_books", only: %i[create update destroy]
     resources :events, controller: "group_events", only: %i[index create]
+    resource :conscience, controller: "group_conscience", only: :show
+    resource :chips, controller: "group_chips", only: %i[show update] do
+      put "meetings/:meeting_id", action: :meeting
+      post :relief
+      post :templates, action: :create_template
+      delete "templates/:id", action: :destroy_template
+    end
+    # Special Editions (ChipEdition), in Group dashboard > Chips
+    resources :chip_editions, controller: "group_chip_editions", only: %i[index create update destroy] do
+      member do
+        post :publish
+        post :duplicate
+      end
+    end
+    resources :meeting_hosts, controller: "group_meeting_hosts", only: %i[index create update destroy] do
+      post :link, on: :collection
+      get :week, on: :collection
+    end
+    resources :meeting_host_covers, controller: "group_meeting_host_covers", only: %i[create destroy]
+    # The Hosting Command Center (/groups/:slug/host/:meeting_id)
+    resources :hosting, controller: "group_hosting", only: %i[index show], param: :meeting_id do
+      collection do
+        get :capsule
+        get :values
+        # Site Admin's HostDeck scripts, to copy into the group's documents
+        get :script_templates
+        post :script_templates, action: :copy_script_template
+        get :service_readings
+        get "service_readings/:reading_id", action: :service_reading, as: :service_reading
+      end
+      member do
+        post :ping
+        post :act
+        get :my_readings
+        get :reading
+        put :kit
+        delete :kit, action: :reset_kit
+        put :arrangement
+        delete :arrangement, action: :reset_arrangement
+        put :script
+      end
+    end
+    # HostDeck's templates: the group's own and the site-wide gallery
+    resources :deck_templates, only: %i[index create update destroy]
+    # HostDeck's decks of their own (/groups/:slug/decks/:id)
+    resources :decks, only: %i[index create show update destroy] do
+      member do
+        put :arrangement
+        post :ping
+        post :act
+        post :reshare
+      end
+    end
+    resources :host_sub_requests, controller: "group_host_sub_requests", only: %i[create destroy] do
+      post :take, on: :member
+    end
+    resources :business_meetings, controller: "group_business_meetings", only: %i[index show create update destroy] do
+      resources :agenda_items, controller: "group_agenda_items", only: %i[create update destroy] do
+        post :reorder, on: :collection
+        post :usual_reports, on: :collection
+      end
+    end
+    resources :service_positions, controller: "group_service_positions", only: %i[index create update destroy] do
+      resources :terms, controller: "group_service_terms", only: %i[create update destroy]
+    end
+    resources :treasurer_reports, controller: "group_treasurer_reports", only: %i[index create update destroy]
+    resources :minutes_imports, controller: "group_minutes_imports", only: :create
+    resources :document_templates, controller: "group_document_templates", only: %i[index update]
+    resources :motions, controller: "group_motions", only: %i[index create update destroy] do
+      post :check, on: :collection
+      post :bulk, on: :collection
+      get :export, on: :collection
+      post :import, on: :collection
+    end
+    resources :documents, controller: "group_documents", only: %i[index show create update destroy] do
+      member do
+        get :file
+        get :versions
+        get "versions/:version_id", action: :version
+        post "versions/:version_id/restore", action: :restore
+        get :live
+        post :live, action: :live_save
+      end
+      post :bulk, on: :collection
+      resources :comments, controller: "group_document_comments", only: %i[index create update destroy]
+    end
     resource :page, controller: "group_pages", only: %i[show update] do
       post :images
       delete "timeline/:note_id", action: :remove_note
@@ -70,13 +300,41 @@ Rails.application.routes.draw do
     post :images
   end
   get "intergroup_pages/:oiaa_slug", to: "intergroup_pages#show", constraints: { oiaa_slug: %r{[^/]+} }, format: false
-  resources :timeline_notes, only: %i[index create update destroy]
+  post "intergroup_pages/:oiaa_slug/follow", to: "intergroup_pages#follow", constraints: { oiaa_slug: %r{[^/]+} }, format: false
+  delete "intergroup_pages/:oiaa_slug/follow", to: "intergroup_pages#unfollow", constraints: { oiaa_slug: %r{[^/]+} }, format: false
+  resources :timeline_notes, only: %i[index create update destroy] do
+    member do
+      put :reaction, action: :react
+      delete :reaction, action: :unreact
+      post :repost
+      delete :repost, action: :unrepost
+      # A picture of your note to post anywhere (ShareCard.note)
+      get :card
+    end
+    resources :comments, controller: :note_comments, only: :create
+  end
+  resources :note_comments, only: %i[update destroy] do
+    member do
+      put :reaction, action: :react
+      delete :reaction, action: :unreact
+    end
+  end
+  resources :hashtags, only: %i[index show], param: :tag
+  # What typing @ offers (Mentions), and reporting someone to the site admins
+  get "mentions", to: "mentions#index"
+  resources :user_reports, only: :create
+  get "link_preview", to: "link_previews#show"
+  get "link_preview/image", to: "link_previews#image", as: :link_preview_image
   get "people", to: "people#index"
   resources :people, param: :username, only: :show, constraints: { username: %r{[^/]+} } do
     member do
       get :feed
+      get :followers
+      get :following
       post :follow
       delete :follow, action: :unfollow
+      post :block
+      delete :block, action: :unblock
     end
   end
   resource :profile_page, only: :update do
@@ -95,6 +353,17 @@ Rails.application.routes.draw do
       delete :rsvp, action: :unrsvp
     end
   end
+  get "polls/groups", to: "polls#groups"
+  get "polls/subject", to: "polls#subject"
+  resources :polls, only: %i[index show create update destroy], param: :token do
+    member do
+      post :close
+      post :reopen
+      put :ballot, action: :vote
+      delete :ballot, action: :unvote
+      delete "ballots/:id", action: :remove_ballot
+    end
+  end
   get "schedule_polls/people", to: "schedule_polls#people"
   resources :schedule_polls, only: %i[index show create update destroy], param: :token do
     member do
@@ -105,14 +374,31 @@ Rails.application.routes.draw do
       delete "ballots/:id", action: :remove_ballot
     end
   end
-  resources :notifications, only: :index do
+  resources :notifications, only: [:index, :destroy] do
     post :read, on: :member
     post :read_all, on: :collection
+    delete :clear, on: :collection
+  end
+  # Chips given to them that the "you got a chip" popup hasn't shown yet
+  resources :chip_arrivals, only: :index do
+    post :seen, on: :member
   end
   resources :highlights, only: [:index, :create, :update, :destroy] do
     collection do
       post :share
       get :collection
+      # Copy someone else's highlight you can see into your own highlights
+      post :adopt
+    end
+    member do
+      # Like, Love or Hugs on a highlight shared to a timeline
+      put :reaction, action: :react
+      delete :reaction, action: :unreact
+      # Others repost a highlight shared with Members to their own timeline
+      post :repost
+      delete :repost, action: :unrepost
+      # A picture of your highlight to post anywhere (ShareCard.highlight)
+      get :card
     end
   end
 
@@ -132,6 +418,9 @@ Rails.application.routes.draw do
       collection do
         post :merge
         post :reorder
+      end
+      member do
+        get :card # => GET /api/books/:book_slug/chapters/:slug/card ("Share this day")
       end
     end
 
@@ -191,6 +480,8 @@ end
   get 'game/world', to: 'game#world' # generated-world overview for tuning (?seed=N)
   get 'topics/by_category', to: 'topics#by_category'
   # Groups: a React app (app/javascript/entrypoints/groups.jsx); invite links join on the server
+  # A meeting date's short link for its hosts (and the chat postings, for anyone)
+  get "/h/:code", to: "hosting_links#show", as: :hosting_link
   get "/groups/join/:token", to: "groups#join", as: :join_group
   get "/groups/:slug/ask", to: "groups#ask", as: :ask_to_join_group
   get "/groups", to: "groups#app", as: :groups
@@ -198,18 +489,31 @@ end
   # Your timeline moved to your profile
   get "/groups/timeline", to: redirect("/people/me")
   get "/groups/*path", to: "groups#app", format: false
+  # The welcome wizard a new account sees once after signing in (entrypoints/welcome.jsx)
+  get "/welcome", to: "welcome#show", as: :welcome
   # Profiles: a React app (app/javascript/entrypoints/people.jsx)
   get "/people", to: "people#app", as: :people
   get "/people/*path", to: "people#app", format: false
+  # A member's own chips, 10th step and gratitude lists: a React app (entrypoints/recovery.jsx)
+  get "/recovery", to: "recovery#app", as: :recovery
+  get "/chips/claim/:token", to: "chips#claim", as: :claim_chip
+  # The link on a shared gratitude list or 10th step: your own, or sign up to start one
+  get "/start/:tool", to: "start_tools#show", as: :start_tool, constraints: { tool: /gratitude|10th-step/ }
+  get "/sponsor/:token", to: "sponsor_invites#show", as: :sponsor_invite
+  # A worksheet someone shared with a password (StepWork#share!): a small page that asks for it
+  get "/worksheet/print/:token", to: "step_work_prints#show", as: :step_work_print
+  get "/worksheet/:token", to: "shared_worksheets#show", as: :shared_worksheet
+  get "/recovery/*path", to: "recovery#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb
   get "/books/:book_slug/chapters/:chapter_slug", to: "pages#reader"
   # A book's own page lives in the library; /books/<slug> used to 404.
   get "/books", to: redirect("/library")
   get "/books/:slug", to: redirect("/library/%{slug}"), constraints: { slug: /(?!new\z)[^\/]+/ }
-  resources :polls do
-    resources :options
-  end
+  # Polls: a React app (app/javascript/entrypoints/polls.jsx); /p/:token is the short link
+  get "/p/:token", to: "polls#app", as: :short_poll
+  get "/polls", to: "polls#app", as: :polls
+  get "/polls/:token(/*path)", to: "polls#app", as: :poll
   mount ActionCable.server => '/cable'
   # AhoyCaptain (Ahoy's own dashboard) isn't mounted: its charts need Groupdate, which needs
   # ActiveRecord.default_timezone = :utc, and this app uses :local. The admin suite's
@@ -222,7 +526,19 @@ end
   resources :topics
   # Your profile (React, app/javascript/entrypoints/profile.jsx) replaces Devise's edit page
   get "/users/edit", to: "profiles#show", as: :edit_profile
-  devise_for :users
+  devise_for :users, controllers: { registrations: "users/registrations", omniauth_callbacks: "users/omniauth_callbacks" }
+  devise_scope :user do
+    get "users/check_email", to: "users/registrations#check_email", as: :users_check_email
+    # Sign in with Apple on the website (AppleSignIn), and the apps' native sign-in sheets (NativeSignIn)
+    post "users/auth/apple", to: "users/apple_sign_ins#start", as: :user_apple_sign_in
+    post "users/auth/apple/callback", to: "users/apple_sign_ins#callback"
+    get "users/auth/native/nonce", to: "users/native_sign_ins#nonce"
+    post "users/auth/native", to: "users/native_sign_ins#create"
+  end
+  # Links to the site open the iPhone and Android apps when they're installed (WellKnownController)
+  get "/.well-known/apple-app-site-association", to: "well_known#apple_app_site_association", format: false
+  get "/apple-app-site-association", to: "well_known#apple_app_site_association", format: false
+  get "/.well-known/assetlinks.json", to: "well_known#assetlinks", format: false
 
   namespace :admin_panel do
     # React app; every path below it routes on the client
@@ -230,6 +546,9 @@ end
     resources :court_verifications, only: [] do
       get :print, on: :collection
     end
+    # Site Admin > Daily story's "Connect Facebook Page" (Facebook's sign-in and back)
+    get "facebook/connect", to: "facebook#connect", as: :facebook_connect
+    get "facebook/callback", to: "facebook#callback", as: :facebook_callback
     # The admin suite, another React app: everything else under /admin_panel
     root "suite#show"
     get "*path", to: "suite#show", as: :suite, format: false
@@ -252,15 +571,86 @@ end
       end
       # the admin suite (Api::Admin::SuiteController)
       resource :overview, only: :show, controller: "overview"
+      # Site Admin > Task board (SCRUMBLBOT)
+      resources :tasks, only: %i[index show create update destroy] do
+        member do
+          post :take
+          post :let_go
+          post :give
+          post :move
+          post :complete
+          post :reopen
+          post :comment
+        end
+      end
+      resources :task_columns, only: %i[create update destroy]
       resource :analytics, only: :show
-      resources :users, only: %i[index update] do
+      resources :users, only: %i[index update destroy] do
         patch :confirm, on: :member
+        get :notifications, on: :member
+        # Their given and claimed chips, and taking one back (ChipRevocation)
+        get :chips, on: :member
+        post :revoke_chip, on: :member
+        get :stats, on: :collection
       end
       resources :readings, only: %i[index update destroy]
       resources :tags, only: %i[index create update destroy]
+      # Blocked words (LanguageRule / BlockedLanguage)
+      resources :language_rules, only: %i[index create destroy] do
+        post :check, on: :collection
+      end
       resources :site_notices, only: %i[index create update destroy]
       resources :text_reports, only: %i[index update destroy] do
         post :comment, on: :member
+      end
+      resources :contact_requests, only: %i[index update destroy]
+      # Groups people started from an intergroup listing, waiting for approval
+      resources :group_requests, only: :index do
+        post :approve, :decline, on: :member
+      end
+      resources :testflight_requests, only: %i[index update destroy] do
+        post :resend, on: :member
+        patch :bulk, on: :collection
+      end
+      resources :user_reports, only: %i[index update destroy]
+      resources :chip_templates, only: %i[index show create update destroy] do
+        post :publish, on: :member
+      end
+      # Step worksheets everyone can start (StepTemplate): draft, publish, history
+      resources :step_templates, only: %i[index show create update destroy] do
+        member do
+          post :publish
+          post :restore
+        end
+      end
+      # HostDeck meeting scripts groups can start from (HostScriptTemplate)
+      resources :host_script_templates, only: %i[index show create update destroy] do
+        post :reset, on: :member
+      end
+      # Local meeting lists (an intergroup's in-person meetings) imported next to AA Intergroup's
+      resources :meeting_directories, only: %i[index create update destroy] do
+        post :bulk, on: :collection
+        member do
+          post :refresh
+          post :preview
+          post :import, action: :import_listings
+        end
+      end
+      # The day's Daily Reflection as a Facebook (and Instagram) Story every morning (DailyStory)
+      resource :daily_story, only: %i[show update destroy] do
+        post :token
+        post :choose
+        post :post_now
+      end
+      resource :chip_design, only: %i[show update] do
+        post :relief
+      end
+      # RecoveryBot's own Special Editions (ChipEdition without a group)
+      resources :chip_editions, only: %i[index create update destroy] do
+        member do
+          post :publish
+          post :duplicate
+        end
       end
     end
   end

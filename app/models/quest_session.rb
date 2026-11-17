@@ -1,4 +1,5 @@
 class QuestSession < ApplicationRecord
+  moderates_language :name
   belongs_to :quest_player
   belongs_to :topic_set, optional: true
   has_one :quest_inventory, dependent: :destroy

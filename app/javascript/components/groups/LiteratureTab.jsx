@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { BookPlus, Trash2 } from "lucide-react";
+import { BookPlus, Lock, Trash2 } from "lucide-react";
 import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { api } from "./lib";
 import { Card, ErrorNote, Tray, dangerButton, primaryButton } from "./ui";
@@ -66,6 +66,11 @@ export default function LiteratureTab({ group, reload }) {
                 <div className="min-w-0 flex-1">
                   <a href={`/library/${book.slug}`} className="font-medium text-slate-900 hover:text-accent dark:text-white">{book.title}</a>
                   {book.author && <p className="text-xs text-slate-500 dark:text-neutral-400">{book.author}</p>}
+                  {book.members_only && (
+                    <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-neutral-400" title="Only members of groups that list it here can open it">
+                      <Lock className="h-3 w-3" /> Members only: open to this group's members
+                    </p>
+                  )}
                   {bookNote && <p className="mt-1 text-sm text-slate-600 dark:text-neutral-300">{bookNote}</p>}
                   {manage && (
                     <button type="button" onClick={() => remove(id)} className={`${dangerButton} mt-1 !px-2 !py-1 !text-xs`}>
@@ -87,7 +92,7 @@ export default function LiteratureTab({ group, reload }) {
                 <label htmlFor="book" className={labelClass}>Book</label>
                 <select id="book" required className={selectClass} value={bookSlug} onChange={(e) => setBookSlug(e.target.value)}>
                   <option value="">{library ? "Pick from the library" : "Loading the library…"}</option>
-                  {choices.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
+                  {choices.map((b) => <option key={b.slug} value={b.slug}>{b.title}{b.members_only ? " (members only)" : ""}</option>)}
                 </select>
               </div>
               <div>
@@ -96,6 +101,11 @@ export default function LiteratureTab({ group, reload }) {
               </div>
               <button type="submit" className={primaryButton}><BookPlus className="h-4 w-4" /> Add</button>
             </form>
+            {choices.find((b) => b.slug === bookSlug)?.members_only && (
+              <p className="mt-2 text-xs text-slate-500 dark:text-neutral-400">
+                This book is members only. Adding it lets everyone in {group.title} open it in the library.
+              </p>
+            )}
           </Card>
         </Tray>
       )}

@@ -2,6 +2,7 @@
 # guidelines set to notify were edited. Everyone following the event hears about it in
 # the app (the bell) and by email: "<event> has an update for you!"
 class EventUpdate < ApplicationRecord
+  moderates_language :title, :body
   KINDS = %w[note guidelines].freeze
 
   belongs_to :event

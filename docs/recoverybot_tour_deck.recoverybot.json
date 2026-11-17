@@ -1,0 +1,2335 @@
+{
+  "format": "recoverybot-document",
+  "version": 1,
+  "exported_at": "2026-10-24T06:30:13.000Z",
+  "document": {
+    "title": "RecoveryBot Tour",
+    "kind": "format",
+    "status": "current"
+  },
+  "objects": {
+    "sections": [
+      {
+        "title": "User Signup"
+      },
+      {
+        "title": "Your Home Feed"
+      },
+      {
+        "title": "Profile and Settings"
+      },
+      {
+        "title": "Timeline Notes"
+      },
+      {
+        "title": "Following People"
+      },
+      {
+        "title": "The Literature Library"
+      },
+      {
+        "title": "Readings"
+      },
+      {
+        "title": "The Topicificator"
+      },
+      {
+        "title": "Notifications and the Home-Screen App"
+      },
+      {
+        "title": "Finding a Meeting"
+      },
+      {
+        "title": "Joining and Using a Group"
+      },
+      {
+        "title": "Hosts and the Meeting Schedule"
+      },
+      {
+        "title": "HostDeck"
+      },
+      {
+        "title": "Decks of Your Own and Sharing Them"
+      },
+      {
+        "title": "Group Tools: The Group Conscience"
+      }
+    ],
+    "forms": [],
+    "dynamic_values": [],
+    "collapsibles": []
+  },
+  "content": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Welcome to RecoveryBot.",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " This deck walks through everything the site does today, from signing up to the tools a group runs itself with. Move through it with Next / Previous or the arrow keys, and open each part on screen as you go."
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "User Signup"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Anyone can make a free account. There is no admin approval; people confirm their email instead."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Go to the sign-up page and enter your name, email and a password."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Tick the “I’m not a robot” box (a small puzzle that solves itself) and agree to the Terms."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open the confirmation email and click the link within 3 days. Didn’t get it? Ask for a new one at "
+                  },
+                  {
+                    "type": "text",
+                    "text": "/users/confirmation/new"
+                  },
+                  {
+                    "type": "text",
+                    "text": "."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Sign in. You land on your home page, "
+                  },
+                  {
+                    "type": "text",
+                    "text": "/people"
+                  },
+                  {
+                    "type": "text",
+                    "text": "."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Privacy first: no cookie banner (every cookie is needed and first-party), and the Privacy page lists exactly what is collected.",
+            "marks": [
+              {
+                "type": "italic"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Sign up",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/users/sign_up"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "Resend confirmation",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/users/confirmation/new"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "Sign in",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/users/sign_in"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "Privacy",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/privacy"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "Terms",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/terms"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Your Home Feed"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "After signing in you land on "
+          },
+          {
+            "type": "text",
+            "text": "/people"
+          },
+          {
+            "type": "text",
+            "text": ". Two thirds is your Notes feed (yours plus what people you follow share). The other third shows your next meetings, sobriety birthdays and events from your groups."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Write a note at the top of the feed, or scroll to read."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Use the side panel to see what is coming up in your groups."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "On a phone, the side panel folds under the feed."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Your home feed",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/people"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Profile and Settings"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Your page lives at "
+          },
+          {
+            "type": "text",
+            "text": "/people/your-username"
+          },
+          {
+            "type": "text",
+            "text": " and is laid out in the HMBLBOT Editor. Account settings are at "
+          },
+          {
+            "type": "text",
+            "text": "/users/edit"
+          },
+          {
+            "type": "text",
+            "text": "."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open Settings to change your name, username, email (a new address must be confirmed) and password."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Choose who can see your new notes and highlights by default: Private, Followers or Members."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Use "
+                  },
+                  {
+                    "type": "text",
+                    "text": "Edit my page",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " to arrange blocks: feed, about, groups, people, headings, photos and notes."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "You can delete your own account on the profile page with your password."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "My page",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/people/me"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "Edit my page",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/people/me/edit"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "Account settings",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/users/edit"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Timeline Notes"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Notes are short posts written in Markdown, with up to 6 pictures, on your timeline. You decide who sees each one."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Write a note and pick its visibility: Private, Followers or Members; share it with your groups if you want them to see it."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Others who can see it can react (Like, Love, Hugs), comment, and repost notes shared with Members."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Paste a link and a preview card appears. Remove it with the X if you don’t want it."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Select text to bold, italicise, underline, strike through or add a link."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "A repost never widens who can see a note: narrowing or deleting the original removes its reposts.",
+            "marks": [
+              {
+                "type": "italic"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Write a note",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/people"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Following People"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow people to see what they share. There is no approval step, and the person you follow gets a notification."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open someone’s profile at "
+                  },
+                  {
+                    "type": "text",
+                    "text": "/people/their-username"
+                  },
+                  {
+                    "type": "text",
+                    "text": "."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Press Follow. Their shared notes appear in your home feed."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Unfollow any time from the same button."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Find people from your feed",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/people"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "The Literature Library"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Recovery books are organised as Books, Chapters and Readings, and read in the browser."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Browse the library and open a book, then a chapter."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Use the rich-text reader; admins edit chapters in the chapter editor."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Groups pick which books they approve, so their members see their own shelf first."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Open the library",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/library"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Readings"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Readings are pieces people write and share: a title, the text, and example topics for sharing."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open "
+                  },
+                  {
+                    "type": "text",
+                    "text": "My readings",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " and press "
+                  },
+                  {
+                    "type": "text",
+                    "text": "New reading",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": "."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Write it in the editor, add example topics, and choose draft, scheduled or published."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Share the link; link previews show the title and a card, never the full text, to chat apps."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "All readings",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/readings"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "My readings",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/readings/mine"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "New reading",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/readings/new"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "The Topicificator"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "A random topic generator for group discussion, with sets of topics, a timer and a copy button."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open "
+                  },
+                  {
+                    "type": "text",
+                    "text": "/topicificator"
+                  },
+                  {
+                    "type": "text",
+                    "text": " and choose a Topic Set in Settings."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Press Shuffle for a random topic, the # button to pick by number, or Previous to go back."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Use Free Share / Check-In when there is no topic, and the Copy button to paste the list into chat."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Hosts can run it from a HostDeck: open the live window in "
+                  },
+                  {
+                    "type": "text",
+                    "text": "Open to share",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": ", then draw topics and run the timer from the deck."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Open the Topicificator",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/topicificator"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Notifications and the Home-Screen App"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Everything that reaches the bell can also be pushed to your phone or computer."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open "
+                  },
+                  {
+                    "type": "text",
+                    "text": "/install"
+                  },
+                  {
+                    "type": "text",
+                    "text": " and follow the steps for iPhone/iPad, Android or computer to add RecoveryBot to your home screen."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "In Settings, turn on "
+                  },
+                  {
+                    "type": "text",
+                    "text": "Notifications on this device",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " and send yourself a test."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Tap a notification to open the right page; it is marked read."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "On iPhone, adding it to the home screen is required for push notifications.",
+            "marks": [
+              {
+                "type": "italic"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Install steps",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/install"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "Notification settings",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/users/edit#notifications"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Finding a Meeting"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Find a meeting lists AA meetings from AA Intergroup and RecoveryBot’s own groups, in your time zone. No account needed."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open "
+                  },
+                  {
+                    "type": "text",
+                    "text": "/groups/meetings"
+                  },
+                  {
+                    "type": "text",
+                    "text": " and search or filter."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open a listing to see details, the group’s page and how to join."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Press Share for a card, link, or your phone’s share sheet."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Find a meeting",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/groups/meetings"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Joining and Using a Group"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "A group has a public page, a members’ area and tools to run itself. Access is rolling out, so some accounts see Groups first."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Find your group and press "
+                  },
+                  {
+                    "type": "text",
+                    "text": "Ask to join",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": ", or use an invite link."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Wait for an admin to approve the request; you then see the members’ tabs."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Group admins design the Home tab in the HMBLBOT Editor ("
+                  },
+                  {
+                    "type": "text",
+                    "text": "Edit page",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": ") and manage members, roles and settings."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Groups",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/groups"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Hosts and the Meeting Schedule"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Every weekly meeting has a host and a co-host place. The Hosts tab keeps the schedule and fills gaps."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open the group’s "
+                  },
+                  {
+                    "type": "text",
+                    "text": "Hosts",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " tab."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Schedulers assign names (and link them to accounts) for the whole series or one date."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Anyone holding a place can press "
+                  },
+                  {
+                    "type": "text",
+                    "text": "I can’t make it",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " to ask for a sub; people marked "
+                  },
+                  {
+                    "type": "text",
+                    "text": "can host",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " are told and can take it."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Turn on host reminders in Settings to be notified before your date."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Your groups (open the Hosts tab)",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/groups"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "HostDeck"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "HostDeck (the Hosting Command Center) is the one screen a host runs a meeting from: script, chat postings, readings, timer, service and milestones, shared live with the co-host."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open "
+                  },
+                  {
+                    "type": "text",
+                    "text": "Host",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " and pick a meeting (or a date)."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Move through the script with Next / Previous; both hosts see where you are."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Copy chat postings with one tap; the ones already posted are marked."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Pick the day’s reading or activity: a chapter, today’s daily page, your own reading, Topicificator topics, a speaker or a meditation."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Share the short link under "
+                  },
+                  {
+                    "type": "text",
+                    "text": "Share with your co-host",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " ("
+                  },
+                  {
+                    "type": "text",
+                    "text": "/h/CODE"
+                  },
+                  {
+                    "type": "text",
+                    "text": "); people without accounts see the chat postings."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Host coordinators set up the script, postings and layout from the gear."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Your groups (open Host)",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/groups"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Decks of Your Own and Sharing Them"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "A deck is HostDeck for anything a group runs from a document: a business meeting, host onboarding, an event day."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Open a document and choose to make a deck from it, or create one on the group’s HostDeck page."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Lay it out in the layout editor: flow, notes, checklists, timers, share queue and more."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "In the deck’s gear, use "
+                  },
+                  {
+                    "type": "text",
+                    "text": "Share this deck",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": ": copy the link, and choose whether people without an account can follow it read-only (with or without the script)."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Make a new link any time to retire the old one."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Your groups (open HostDeck)",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/groups"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "hostSection",
+        "attrs": {
+          "title": "Group Tools: The Group Conscience"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "The group’s record-keeping area, at "
+          },
+          {
+            "type": "text",
+            "text": "/groups/your-group/conscience"
+          },
+          {
+            "type": "text",
+            "text": ", for members. Record keepers (marked by an admin) write; everyone in the group reads."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "How to use it",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Documents:",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " bylaws, formats and minutes in folders, each Public, Members, Hosts or Keepers only; edit in place, keep version history, import Word, RTF or PDF, and Save as PDF."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Decisions:",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " record motions, votes and who moved them, link what replaces what, and see the standing decisions. Robert’s Rules guidance flags missing seconds or counts that don’t carry."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Business meetings:",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " plan a meeting, build its agenda (members suggest items), record minutes, post them for the group; unfinished business carries over."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Elected officials:",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " positions, terms and reminders when a term is nearly up."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Treasury:",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " monthly treasurer’s reports with the prudent reserve and splits."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Court verifications:",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " a group’s own form at "
+                  },
+                  {
+                    "type": "text",
+                    "text": "/court_verifications/new?group=your-group"
+                  },
+                  {
+                    "type": "text",
+                    "text": "."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "That is the tour. Thank you for being here.",
+            "marks": [
+              {
+                "type": "italic"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Follow along: ",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "Your groups (open Conscience)",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/groups"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "Court verification form",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/court_verifications/new"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · "
+          },
+          {
+            "type": "text",
+            "text": "Questions? Contact us",
+            "marks": [
+              {
+                "type": "link",
+                "attrs": {
+                  "href": "https://recoverybot.hmblbot.com/contact"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "html": "<p><strong>Welcome to RecoveryBot.</strong> This deck walks through everything the site does today, from signing up to the tools a group runs itself with. Move through it with Next / Previous or the arrow keys, and open each part on screen as you go.</p><div data-hc-section=\"\" data-title=\"User Signup\"></div><p>Anyone can make a free account. There is no admin approval; people confirm their email instead.</p><p><strong>How to use it</strong></p><ol><li><p>Go to the sign-up page and enter your name, email and a password.</p></li><li><p>Tick the “I’m not a robot” box (a small puzzle that solves itself) and agree to the Terms.</p></li><li><p>Open the confirmation email and click the link within 3 days. Didn’t get it? Ask for a new one at /users/confirmation/new.</p></li><li><p>Sign in. You land on your home page, /people.</p></li></ol><p><em>Privacy first: no cookie banner (every cookie is needed and first-party), and the Privacy page lists exactly what is collected.</em></p><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/users/sign_up\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Sign up</a> · <a href=\"https://recoverybot.hmblbot.com/users/confirmation/new\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Resend confirmation</a> · <a href=\"https://recoverybot.hmblbot.com/users/sign_in\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Sign in</a> · <a href=\"https://recoverybot.hmblbot.com/privacy\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Privacy</a> · <a href=\"https://recoverybot.hmblbot.com/terms\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Terms</a></p><div data-hc-section=\"\" data-title=\"Your Home Feed\"></div><p>After signing in you land on /people. Two thirds is your Notes feed (yours plus what people you follow share). The other third shows your next meetings, sobriety birthdays and events from your groups.</p><p><strong>How to use it</strong></p><ol><li><p>Write a note at the top of the feed, or scroll to read.</p></li><li><p>Use the side panel to see what is coming up in your groups.</p></li><li><p>On a phone, the side panel folds under the feed.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/people\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Your home feed</a></p><div data-hc-section=\"\" data-title=\"Profile and Settings\"></div><p>Your page lives at /people/your-username and is laid out in the HMBLBOT Editor. Account settings are at /users/edit.</p><p><strong>How to use it</strong></p><ol><li><p>Open Settings to change your name, username, email (a new address must be confirmed) and password.</p></li><li><p>Choose who can see your new notes and highlights by default: Private, Followers or Members.</p></li><li><p>Use <em>Edit my page</em> to arrange blocks: feed, about, groups, people, headings, photos and notes.</p></li><li><p>You can delete your own account on the profile page with your password.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/people/me\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">My page</a> · <a href=\"https://recoverybot.hmblbot.com/people/me/edit\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Edit my page</a> · <a href=\"https://recoverybot.hmblbot.com/users/edit\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Account settings</a></p><div data-hc-section=\"\" data-title=\"Timeline Notes\"></div><p>Notes are short posts written in Markdown, with up to 6 pictures, on your timeline. You decide who sees each one.</p><p><strong>How to use it</strong></p><ol><li><p>Write a note and pick its visibility: Private, Followers or Members; share it with your groups if you want them to see it.</p></li><li><p>Others who can see it can react (Like, Love, Hugs), comment, and repost notes shared with Members.</p></li><li><p>Paste a link and a preview card appears. Remove it with the X if you don’t want it.</p></li><li><p>Select text to bold, italicise, underline, strike through or add a link.</p></li></ol><p><em>A repost never widens who can see a note: narrowing or deleting the original removes its reposts.</em></p><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/people\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Write a note</a></p><div data-hc-section=\"\" data-title=\"Following People\"></div><p>Follow people to see what they share. There is no approval step, and the person you follow gets a notification.</p><p><strong>How to use it</strong></p><ol><li><p>Open someone’s profile at /people/their-username.</p></li><li><p>Press Follow. Their shared notes appear in your home feed.</p></li><li><p>Unfollow any time from the same button.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/people\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Find people from your feed</a></p><div data-hc-section=\"\" data-title=\"The Literature Library\"></div><p>Recovery books are organised as Books, Chapters and Readings, and read in the browser.</p><p><strong>How to use it</strong></p><ol><li><p>Browse the library and open a book, then a chapter.</p></li><li><p>Use the rich-text reader; admins edit chapters in the chapter editor.</p></li><li><p>Groups pick which books they approve, so their members see their own shelf first.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/library\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Open the library</a></p><div data-hc-section=\"\" data-title=\"Readings\"></div><p>Readings are pieces people write and share: a title, the text, and example topics for sharing.</p><p><strong>How to use it</strong></p><ol><li><p>Open <em>My readings</em> and press <em>New reading</em>.</p></li><li><p>Write it in the editor, add example topics, and choose draft, scheduled or published.</p></li><li><p>Share the link; link previews show the title and a card, never the full text, to chat apps.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/readings\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">All readings</a> · <a href=\"https://recoverybot.hmblbot.com/readings/mine\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">My readings</a> · <a href=\"https://recoverybot.hmblbot.com/readings/new\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">New reading</a></p><div data-hc-section=\"\" data-title=\"The Topicificator\"></div><p>A random topic generator for group discussion, with sets of topics, a timer and a copy button.</p><p><strong>How to use it</strong></p><ol><li><p>Open /topicificator and choose a Topic Set in Settings.</p></li><li><p>Press Shuffle for a random topic, the # button to pick by number, or Previous to go back.</p></li><li><p>Use Free Share / Check-In when there is no topic, and the Copy button to paste the list into chat.</p></li><li><p>Hosts can run it from a HostDeck: open the live window in <em>Open to share</em>, then draw topics and run the timer from the deck.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/topicificator\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Open the Topicificator</a></p><div data-hc-section=\"\" data-title=\"Notifications and the Home-Screen App\"></div><p>Everything that reaches the bell can also be pushed to your phone or computer.</p><p><strong>How to use it</strong></p><ol><li><p>Open /install and follow the steps for iPhone/iPad, Android or computer to add RecoveryBot to your home screen.</p></li><li><p>In Settings, turn on <em>Notifications on this device</em> and send yourself a test.</p></li><li><p>Tap a notification to open the right page; it is marked read.</p></li></ol><p><em>On iPhone, adding it to the home screen is required for push notifications.</em></p><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/install\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Install steps</a> · <a href=\"https://recoverybot.hmblbot.com/users/edit#notifications\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Notification settings</a></p><div data-hc-section=\"\" data-title=\"Finding a Meeting\"></div><p>Find a meeting lists AA meetings from AA Intergroup and RecoveryBot’s own groups, in your time zone. No account needed.</p><p><strong>How to use it</strong></p><ol><li><p>Open /groups/meetings and search or filter.</p></li><li><p>Open a listing to see details, the group’s page and how to join.</p></li><li><p>Press Share for a card, link, or your phone’s share sheet.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/groups/meetings\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Find a meeting</a></p><div data-hc-section=\"\" data-title=\"Joining and Using a Group\"></div><p>A group has a public page, a members’ area and tools to run itself. Access is rolling out, so some accounts see Groups first.</p><p><strong>How to use it</strong></p><ol><li><p>Find your group and press <em>Ask to join</em>, or use an invite link.</p></li><li><p>Wait for an admin to approve the request; you then see the members’ tabs.</p></li><li><p>Group admins design the Home tab in the HMBLBOT Editor (<em>Edit page</em>) and manage members, roles and settings.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/groups\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Groups</a></p><div data-hc-section=\"\" data-title=\"Hosts and the Meeting Schedule\"></div><p>Every weekly meeting has a host and a co-host place. The Hosts tab keeps the schedule and fills gaps.</p><p><strong>How to use it</strong></p><ol><li><p>Open the group’s <em>Hosts</em> tab.</p></li><li><p>Schedulers assign names (and link them to accounts) for the whole series or one date.</p></li><li><p>Anyone holding a place can press <em>I can’t make it</em> to ask for a sub; people marked <em>can host</em> are told and can take it.</p></li><li><p>Turn on host reminders in Settings to be notified before your date.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/groups\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Your groups (open the Hosts tab)</a></p><div data-hc-section=\"\" data-title=\"HostDeck\"></div><p>HostDeck (the Hosting Command Center) is the one screen a host runs a meeting from: script, chat postings, readings, timer, service and milestones, shared live with the co-host.</p><p><strong>How to use it</strong></p><ol><li><p>Open <em>Host</em> and pick a meeting (or a date).</p></li><li><p>Move through the script with Next / Previous; both hosts see where you are.</p></li><li><p>Copy chat postings with one tap; the ones already posted are marked.</p></li><li><p>Pick the day’s reading or activity: a chapter, today’s daily page, your own reading, Topicificator topics, a speaker or a meditation.</p></li><li><p>Share the short link under <em>Share with your co-host</em> (/h/CODE); people without accounts see the chat postings.</p></li><li><p>Host coordinators set up the script, postings and layout from the gear.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/groups\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Your groups (open Host)</a></p><div data-hc-section=\"\" data-title=\"Decks of Your Own and Sharing Them\"></div><p>A deck is HostDeck for anything a group runs from a document: a business meeting, host onboarding, an event day.</p><p><strong>How to use it</strong></p><ol><li><p>Open a document and choose to make a deck from it, or create one on the group’s HostDeck page.</p></li><li><p>Lay it out in the layout editor: flow, notes, checklists, timers, share queue and more.</p></li><li><p>In the deck’s gear, use <em>Share this deck</em>: copy the link, and choose whether people without an account can follow it read-only (with or without the script).</p></li><li><p>Make a new link any time to retire the old one.</p></li></ol><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/groups\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Your groups (open HostDeck)</a></p><div data-hc-section=\"\" data-title=\"Group Tools: The Group Conscience\"></div><p>The group’s record-keeping area, at /groups/your-group/conscience, for members. Record keepers (marked by an admin) write; everyone in the group reads.</p><p><strong>How to use it</strong></p><ol><li><p><strong>Documents:</strong> bylaws, formats and minutes in folders, each Public, Members, Hosts or Keepers only; edit in place, keep version history, import Word, RTF or PDF, and Save as PDF.</p></li><li><p><strong>Decisions:</strong> record motions, votes and who moved them, link what replaces what, and see the standing decisions. Robert’s Rules guidance flags missing seconds or counts that don’t carry.</p></li><li><p><strong>Business meetings:</strong> plan a meeting, build its agenda (members suggest items), record minutes, post them for the group; unfinished business carries over.</p></li><li><p><strong>Elected officials:</strong> positions, terms and reminders when a term is nearly up.</p></li><li><p><strong>Treasury:</strong> monthly treasurer’s reports with the prudent reserve and splits.</p></li><li><p><strong>Court verifications:</strong> a group’s own form at /court_verifications/new?group=your-group.</p></li></ol><p><em>That is the tour. Thank you for being here.</em></p><p><strong>Follow along: </strong><a href=\"https://recoverybot.hmblbot.com/groups\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Your groups (open Conscience)</a> · <a href=\"https://recoverybot.hmblbot.com/court_verifications/new\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Court verification form</a> · <a href=\"https://recoverybot.hmblbot.com/contact\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">Questions? Contact us</a></p>"
+}

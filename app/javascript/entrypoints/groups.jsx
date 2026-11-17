@@ -12,36 +12,65 @@ import "../styles/tailwind.css";
 import "../styles/reader.css";
 import "../styles/events.css";
 import "../styles/writebook.css";
+import "../styles/documents.css";
 
-import Navbar from "../components/Navbar";
+import Layout from "../components/Layout";
+import { registerRouter } from "../components/shell/useShell";
 import GroupsIndex from "../components/groups/GroupsIndex";
 import GroupForm from "../components/groups/GroupForm";
 import GroupPage from "../components/groups/GroupPage";
+import GroupDashboard, { ConscienceRoute, SettingsRoute } from "../components/groups/GroupDashboard";
 import FindGroup from "../components/groups/FindGroup";
 import FindMeeting from "../components/groups/FindMeeting";
 import IntergroupPage from "../components/groups/page/IntergroupPage";
 import GroupPageEditor from "../components/groups/page/GroupPageEditor";
+import CommandCenter from "../components/groups/hosting/CommandCenter";
+import DeckPage from "../components/groups/hosting/deck/DeckPage";
+import GuestDeck from "../components/groups/hosting/deck/GuestDeck";
+import GuestPostings from "../components/groups/hosting/GuestPostings";
+import HostingIndex from "../components/groups/hosting/HostingIndex";
+import ServiceReadingShare from "../components/groups/hosting/ServiceReadingShare";
+import TimeCapsule from "../components/groups/hosting/TimeCapsule";
+import DeckListPage from "../components/groups/hosting/deck/DeckList";
+import ChatPage from "../components/groups/chat/ChatPage";
+import { withScrollManager } from "../components/shell/ScrollManager";
 
 const isAuthenticated = document.body.dataset.currentUser === "true";
 
-function Shell() {
+function Shell({ children }) {
   return (
-    <>
-      <Navbar isAuthenticated={isAuthenticated} />
-      <main className="w-full pt-[var(--nav-h,56px)]">
-        <div className="mx-auto max-w-7xl px-4 py-6">
-          <Outlet />
-        </div>
-      </main>
-    </>
+    <Layout isAuthenticated={isAuthenticated}>
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        {children || <Outlet />}
+      </div>
+    </Layout>
   );
 }
 
 const router = createBrowserRouter(
-  [
+  withScrollManager([
     // The HMBLBOT Editor takes the whole window
     { path: "/default-page/edit", element: <div className="ev-root w-full"><GroupPageEditor template /></div> },
     { path: "/:slug/page/edit", element: <div className="ev-root w-full"><GroupPageEditor /></div> },
+    // HostDeck (what was the Hosting Command Center) takes the whole window too
+    { path: "/:slug/host/:meetingId", element: <CommandCenter /> },
+    // A HostDeck of its own (a business meeting's, onboarding...), the whole window as well
+    { path: "/:slug/decks/:deckId", element: <DeckPage /> },
+    // A shared deck followed without an account (its /h/CODE link), read-only
+    { path: "/:slug/view/:code", element: <GuestDeck /> },
+    // A service reading on its own, to share that window in Zoom
+    { path: "/:slug/share/service-reading/:id", element: <ServiceReadingShare /> },
+    // What a hosting short link (/h/CODE) shows anyone else: the chat postings
+    { path: "/:slug/chat/:code", element: <GuestPostings /> },
+    // Group conscience: on the stage for people with a role, the group page's tab for members
+    { path: "/:slug/conscience/*", element: <ConscienceRoute fallback={<Shell><GroupPage tab="conscience" /></Shell>} /> },
+    // The group's chat: its channels, and one open (/chat/:code is a hosting short link's postings)
+    { path: "/:slug/messages", element: <ChatPage /> },
+    { path: "/:slug/messages/:channelId", element: <ChatPage /> },
+    // What needs you, a part for each role you hold in the group
+    { path: "/:slug/dashboard", element: <GroupDashboard /> },
+    // Group admins' settings: the group, its meetings, chips, literature, court verifications
+    { path: "/:slug/settings/*", element: <SettingsRoute /> },
     {
       path: "/",
       element: <Shell />,
@@ -53,13 +82,19 @@ const router = createBrowserRouter(
         { path: "find/:oiaaSlug", element: <IntergroupPage /> },
         { path: "default-page", element: <IntergroupPage template /> },
         { path: ":slug", element: <GroupPage /> },
+        { path: ":slug/host", element: <HostingIndex /> },
+        { path: ":slug/host/capsule", element: <TimeCapsule /> },
+        { path: ":slug/decks", element: <DeckListPage /> },
+        { path: ":slug/meetings/:meetingId", element: <GroupPage /> },
         { path: ":slug/:tab", element: <GroupPage /> },
         { path: ":slug/edit", element: <GroupForm /> },
       ],
     },
-  ],
+  ]),
   { basename: "/groups" }
 );
+// The sidebar's links into this app move without a load
+registerRouter(router, "/groups");
 
 const mount = document.getElementById("groups-root");
 if (mount) createRoot(mount).render(<RouterProvider router={router} />);

@@ -47,7 +47,7 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
       sync
       get "/groups/meetings"
       assert_response :success
-      assert_equal "noindex, nofollow", response.headers["X-Robots-Tag"]
+      assert_nil response.headers["X-Robots-Tag"] # Find a meeting may be listed by search engines
       assert_equal 4, find["total"]
 
       group = groups(:one)
@@ -74,7 +74,7 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
       # Ask to join -> make an account -> back on the group's page, which sends the request
       get "/groups/#{group.slug}/ask"
       assert_redirected_to new_user_registration_path
-      post user_registration_path, params: { user: { name: "New Person", email: "new@example.com", password: "password123", password_confirmation: "password123" } }
+      post user_registration_path, params: { user: { name: "New Person", email: "new@example.com", password: "password123", password_confirmation: "password123" }, **human_check_params }
       User.find_by!(email: "new@example.com").update!(confirmed: true) # a site admin confirms new accounts
       post user_session_path, params: { user: { email: "new@example.com", password: "password123" } }
       assert_redirected_to "/groups/#{group.slug}?ask=1"
@@ -90,18 +90,56 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the coming week, soonest first, with what's on now" do
+  test "the coming week, soonest first, from 15 minutes out" do
     at_monday_evening do
       sync
       sign_in @admin
       body = find
-      assert_equal %w[oiaa-mon-530pm oiaa-mon-7pm oiaa-tue-hybrid oiaa-wed-9pm-et], keys(body)
-      happy = body["meetings"].first
-      assert happy["live"], "5:30–6:30 is on at 6:00"
-      assert_equal Time.find_zone(PHOENIX).parse("2026-10-19 17:30"), Time.zone.parse(happy["starts_at"])
-      assert_equal({ "title" => "Happy Hour", "here" => false, "href" => "/find/mon-530pm" }, happy["group"].slice("title", "here", "href"))
+      # 5:30–6:30 is already on at 6:00: it's in Live now, and here only as next Monday's
+      assert_equal %w[oiaa-mon-7pm oiaa-tue-hybrid oiaa-wed-9pm-et oiaa-mon-530pm], keys(body)
+      speaker = body["meetings"].first
+      refute speaker["live"]
+      assert_equal Time.find_zone(PHOENIX).parse("2026-10-19 19:00"), Time.zone.parse(speaker["starts_at"])
       assert_equal 4, body["total"]
-      assert_equal "Desert Light", body["meetings"].second.dig("group", "title")
+      assert_equal Time.find_zone(PHOENIX).parse("2026-10-26 17:30"), Time.zone.parse(body["meetings"].last["starts_at"])
+      assert_equal "Desert Light", speaker.dig("group", "title")
+
+      happy = find(live: "1")["meetings"].first
+      assert happy["live"], "5:30–6:30 is on at 6:00"
+      assert_equal({ "title" => "Happy Hour", "here" => false, "href" => "/find/mon-530pm" }, happy["group"].slice("title", "here", "href"))
+    end
+
+    # 6:50: the 7:00 meeting is 10 minutes off, too soon to get there early, so the list starts with the next one
+    travel_to(Time.find_zone(PHOENIX).parse("2026-10-19 18:50")) do
+      assert_equal %w[oiaa-tue-hybrid oiaa-wed-9pm-et oiaa-mon-530pm], keys(find)
+    end
+    # 6:45 is exactly 15 minutes before: it still shows
+    travel_to(Time.find_zone(PHOENIX).parse("2026-10-19 18:45")) do
+      assert_equal "oiaa-mon-7pm", keys(find).first
+    end
+  end
+
+  test "starting soon: the next 15, 30 or 60 minutes (30 by default), plus meetings that began up to 5 minutes ago" do
+    sync
+    zone = Time.find_zone(PHOENIX)
+    travel_to(zone.parse("2026-10-19 17:33")) do
+      # Happy Hour began 3 minutes ago; Monday Night Speaker is 87 minutes out
+      assert_equal %w[oiaa-mon-530pm], keys(find(soon: "1"))
+    end
+    travel_to(zone.parse("2026-10-19 18:03")) do
+      # Happy Hour is still on but began 33 minutes ago; the speaker meeting is 57 minutes out
+      assert_equal %w[oiaa-mon-7pm], keys(find(soon: "60"))
+      assert_empty keys(find(soon: "30"))
+      assert_empty keys(find(soon: "1")), "30 minutes by default"
+    end
+    travel_to(zone.parse("2026-10-19 18:40")) do
+      # 20 minutes out
+      assert_equal %w[oiaa-mon-7pm], keys(find(soon: "30"))
+      assert_empty keys(find(soon: "15"))
+      assert_equal %w[oiaa-mon-7pm], keys(find(soon: "45")), "an unknown choice means 30"
+    end
+    travel_to(zone.parse("2026-10-19 18:30")) do
+      assert_empty keys(find(soon: "30")), "30 minutes out exactly is the next window's"
     end
   end
 
@@ -115,7 +153,7 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
       assert_empty keys(find(date: "2026-10-18")), "a past day finds nothing"
 
       # Evening in Phoenix (5–9 PM): Night Owls' 9:00 PM Eastern is 6:00 PM here
-      assert_equal %w[oiaa-mon-530pm oiaa-mon-7pm oiaa-wed-9pm-et], keys(find(from: 1020, to: 1260))
+      assert_equal %w[oiaa-mon-7pm oiaa-wed-9pm-et oiaa-mon-530pm], keys(find(from: 1020, to: 1260))
       # ...and in New York the same filter is a different set
       get "/api/meeting_search", params: { time_zone: "America/New_York", from: 1260, to: 1320 }, as: :json
       assert_equal %w[oiaa-wed-9pm-et], keys(response.parsed_body)
@@ -173,6 +211,28 @@ class Api::MeetingSearchTest < ActionDispatch::IntegrationTest
       get "/api/intergroup_pages/mon-7pm", as: :json
       listing = response.parsed_body.dig("context", "meetings").first
       assert_equal "2026-10-19T19:00:00-07:00", listing["upcoming_start"]
+    end
+  end
+
+  test "a meeting's passcode comes with it in search, on its AA Intergroup page and on the group's page" do
+    at_monday_evening do
+      OiaaFeed.sync!([
+        { slug: "tgfi", name: "AA T.G.F.I Thank God For The Internet", day: [1], time: "19:00", end_time: "20:00", timezone: PHOENIX,
+          conference_url: "https://zoom.us/j/81234567899", conference_url_notes: "Password: 415542" },
+      ].to_json)
+      assert_equal ["Password: 415542"], find["meetings"].map { |m| m["conference_url_notes"] }
+
+      get "/api/intergroup_pages/tgfi", as: :json
+      assert_response :success
+      assert_equal "Password: 415542", response.parsed_body.dig("context", "meetings", 0, "conference_url_notes")
+
+      group = groups(:one)
+      group.meetings.create!(name: "Lunch Bunch", day_of_week: 1, start_minute: 19 * 60, end_minute: 20 * 60, time_zone: PHOENIX,
+                             conference_url: "https://zoom.us/j/1", conference_url_notes: "Passcode 12345")
+      assert_includes find["meetings"].map { |m| m["conference_url_notes"] }, "Passcode 12345"
+      get "/api/groups/#{group.slug}/page", as: :json
+      assert_response :success
+      assert_equal ["Passcode 12345"], response.parsed_body.dig("context", "meetings").map { |m| m["conference_url_notes"] }
     end
   end
 end

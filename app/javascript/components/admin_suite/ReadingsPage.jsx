@@ -8,6 +8,7 @@ import { api } from "../topicificator_admin/api";
 import { buttonClass } from "../topicificator_admin/App";
 import { formatCount } from "./App";
 import { Badge, shortDate, td, th } from "./UsersPage";
+import { InlineSkeleton } from "../ui/Skeleton";
 
 const STATUSES = [
   { value: "", label: "All" },
@@ -57,7 +58,7 @@ export default function ReadingsPage({ notify }) {
 
   return (
     <Shell>
-      <ShellBand icon={BookOpen} title="Readings" subtitle={data ? `${formatCount(data.total)} ${data.total === 1 ? "reading" : "readings"}${data.total > data.limit ? `, showing the ${data.limit} most recently changed` : ""}` : "Loading…"} />
+      <ShellBand icon={BookOpen} title="Readings" subtitle={data ? `${formatCount(data.total)} ${data.total === 1 ? "reading" : "readings"}${data.total > data.limit ? `, showing the ${data.limit} most recently changed` : ""}` : <InlineSkeleton className="w-40" />} />
       <ShellPanel position="middle" className="p-4 flex flex-wrap items-center gap-3">
         <SegmentedControl options={STATUSES} value={status} onChange={setStatus} />
         <form className="flex gap-2 flex-1 min-w-[16rem]" onSubmit={(e) => { e.preventDefault(); setSearch(query.trim()); }}>

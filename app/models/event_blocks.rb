@@ -6,6 +6,8 @@
 #
 #   heading    text, level (1-3), align
 #   notes      markdown; update: true sends each change to everyone following the event
+#   conscience_agenda  title: the live agenda of the business meeting this event announces
+#              (BusinessMeeting#event); only members of the group see it
 #   agenda     title, view (list/grid), activities [{ id, title, description, image_url, queue_number }]
 #   guidelines markdown; notify: true sends each change to everyone following the event
 #   photo      photos [{ id, url, caption }]; more than one shows as a carousel
@@ -19,6 +21,11 @@
 #   timeline   title, limit: notes members shared to the group (members see them)
 #   literature title: the books it approved
 #   readings   title, limit: readings members tagged to it (members see them)
+#   documents  title, kind (all or a folder), limit, pinned_only: its documents the viewer may
+#              see; visitors only get the Public ones (GroupDocument.visible_to)
+#   business_meeting  title: the next business meeting; members also see its agenda and can suggest an item
+#   decisions  title, limit, category (all or one): its standing decisions the viewer may see;
+#              visitors only get the Public ones (Motion.visible_to)
 #   members    title: who's in it (members see who; everyone else sees how many)
 #   join       title, markdown: asking to join, or starting the group from its listing
 #
@@ -31,13 +38,14 @@
 #              far as the viewer may see them (Visibility); they post notes from it
 #   groups     title: their groups that the viewer is in too (they see all of theirs)
 #   people     title, which (following/followers)
+#   chips      title: up to five favorite chips they picked on their Chips page (Chips.favorites)
 #
 # Each block has a smaller view for the side column and a larger one for the main column;
 # size "auto" follows the column it's in, "compact" or "full" picks one.
 module EventBlocks
-  TYPES = %w[heading notes agenda guidelines photo gallery poll].freeze
-  GROUP_TYPES = %w[heading notes agenda guidelines photo gallery meetings events timeline literature readings members join].freeze
-  PROFILE_TYPES = %w[heading notes photo gallery about feed groups people].freeze
+  TYPES = %w[heading notes agenda guidelines photo gallery poll conscience_agenda].freeze
+  GROUP_TYPES = %w[heading notes agenda guidelines photo gallery meetings events timeline literature readings members join documents decisions business_meeting].freeze
+  PROFILE_TYPES = %w[heading notes photo gallery about feed groups people chips].freeze
   COLORS = %w[default accent brand sky indigo emerald amber rose slate].freeze
   SIZES = %w[auto compact full].freeze
   REGIONS = %w[main side].freeze
@@ -127,6 +135,19 @@ module EventBlocks
   def timeline_fields(b) = { "title" => text(b.fetch("title", "From our members"), 120), "limit" => limit(b["limit"], 10) }
   def literature_fields(b) = { "title" => text(b.fetch("title", "Our literature"), 120) }
   def readings_fields(b) = { "title" => text(b.fetch("title", "Shared readings"), 120), "limit" => limit(b["limit"], 5) }
+  def documents_fields(b)
+    { "title" => text(b.fetch("title", "Documents"), 120), "kind" => GroupDocument::KINDS.include?(b["kind"]) ? b["kind"] : "all",
+      "limit" => limit(b["limit"], 5), "pinned_only" => bool(b["pinned_only"]) }
+  end
+
+  def conscience_agenda_fields(b) = { "title" => text(b.fetch("title", "Agenda"), 120) }
+  def business_meeting_fields(b) = { "title" => text(b.fetch("title", "Next business meeting"), 120) }
+
+  def decisions_fields(b)
+    { "title" => text(b.fetch("title", "Decisions"), 120), "category" => Motion::CATEGORIES.include?(b["category"]) ? b["category"] : "all",
+      "limit" => limit(b["limit"], 5) }
+  end
+
   def members_fields(b) = { "title" => text(b.fetch("title", "Members"), 120) }
 
   def join_fields(b)
@@ -142,6 +163,7 @@ module EventBlocks
   end
 
   def groups_fields(b) = { "title" => text(b.fetch("title", "Groups"), 120) }
+  def chips_fields(b) = { "title" => text(b.fetch("title", "Chips"), 120) }
 
   def people_fields(b)
     which = b["which"] == "followers" ? "followers" : "following"

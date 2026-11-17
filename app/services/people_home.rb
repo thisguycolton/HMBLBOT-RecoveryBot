@@ -1,10 +1,13 @@
 # The home page people land on after signing in (/people, Api::PeopleController#index):
 # notes and highlights from them and the people they follow, and beside them what's coming
-# up in their groups: the next meetings, members' sobriety birthdays and upcoming events.
+# up in their groups: a greeting with their day count, who is filling in at the meetings they're
+# part of and what needs them in their roles (TodayDuties), the next meetings, members' sobriety
+# birthdays and upcoming events.
 class PeopleHome
   MEETINGS_MAX = 3
   BIRTHDAYS_DAYS = 30
   EVENTS_MAX = 5
+  ADMIN_TASKS_MAX = 5
 
   def initialize(viewer)
     @viewer = viewer
@@ -12,10 +15,27 @@ class PeopleHome
   end
 
   def json
-    { meetings: meetings, birthdays: birthdays, events: events, has_groups: @groups.any? }
+    { me: me, meetings: meetings, birthdays: birthdays, events: events, has_groups: @groups.any? }
+      .merge(TodayDuties.new(@viewer).json)
+      .merge(admin_tasks: admin_tasks, layout: @viewer.today_layout)
   end
 
   private
+
+  # Site admins' "Your admin tasks" (AdminTask.today_for): theirs and those for all admins
+  # nobody took, most pressing first; nil for everyone else
+  def admin_tasks
+    return nil unless @viewer.suite_admin?
+
+    tasks = AdminTask.by_urgency(AdminTask.today_for(@viewer).includes(:assignee).to_a)
+    { tasks: tasks.first(ADMIN_TASKS_MAX).map(&:as_api_json), total: tasks.size, me: @viewer.id }
+  end
+
+  # The greeting at the top ("Good morning, Colton") and their own day count, whether or not
+  # they show their sobriety date to others
+  def me
+    { first_name: @viewer.display_name.split.first, sobriety_date: @viewer.sobriety_date&.iso8601 }
+  end
 
   # A meeting that started in the last half hour still counts: it's on now
   def meetings
@@ -24,7 +44,8 @@ class PeopleHome
       next unless at && at > 30.minutes.ago
 
       { id: m.id, name: m.name, group: { slug: m.group.slug, title: m.group.title }, next_start: at.iso8601,
-        time_zone: m.time_zone, schedule_label: m.schedule_label, conference_url: m.conference_url }
+        time_zone: m.time_zone, schedule_label: m.schedule_label, conference_url: m.conference_url,
+        conference_url_notes: m.conference_url_notes }
     end.sort_by { |m| m[:next_start] }.first(MEETINGS_MAX)
   end
 
@@ -53,7 +74,7 @@ class PeopleHome
   def safe_date(year, start) = Date.new(year, start.month, [start.day, Time.days_in_month(start.month, year)].min)
 
   def events
-    Event.published.where(group_id: @groups.map(&:id)).where("starts_at > ?", 3.hours.ago).includes(:group).with_attached_cover
+    Event.published.where(group_id: @groups.map(&:id)).where.not(starts_at: nil).not_past.includes(:group).with_attached_cover
          .upcoming_first.limit(EVENTS_MAX).map { |e| e.card_json.merge(group: { slug: e.group.slug, title: e.group.title }) }
   end
 end

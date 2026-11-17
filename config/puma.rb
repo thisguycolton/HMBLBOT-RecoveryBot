@@ -49,3 +49,38 @@ on_booted do
 rescue StandardError => e
   warn "[oiaa] couldn't start the refresh: #{e.message}"
 end
+
+# Remind hosts who asked for it before their meetings (see HostReminders; there is no job runner)
+on_booted do
+  HostReminders.start_loop if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[host reminders] couldn't start: #{e.message}"
+end
+
+# The daily gratitude and 10th step reminders members turned on (see RecoveryReminders)
+on_booted do
+  RecoveryReminders.start_loop if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[recovery reminders] couldn't start: #{e.message}"
+end
+
+# Site Admin > Task board's due and overdue reminders (see AdminTaskReminders)
+on_booted do
+  AdminTaskReminders.start_loop if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[admin task reminders] couldn't start: #{e.message}"
+end
+
+# Local intergroups' meeting lists re-import from their feed links weekly (see MeetingListRefresh)
+on_booted do
+  MeetingListRefresh.start_loop if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[meeting lists] couldn't start the weekly refresh: #{e.message}"
+end
+
+# The day's Daily Reflection posted to the Facebook Page as a Story (see DailyStory)
+on_booted do
+  DailyStory.start_loop if ENV["RAILS_ENV"] == "production"
+rescue StandardError => e
+  warn "[daily story] couldn't start: #{e.message}"
+end

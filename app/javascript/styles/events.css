@@ -18,19 +18,47 @@
 .ev-md li + li { margin-top: 0.25em; }
 .ev-md li::marker { color: var(--color-accent); }
 .ev-md a { color: var(--color-accent); text-decoration: underline; }
+.dark .ev-md a { color: var(--color-accent-light); }
 .ev-md blockquote { border-inline-start: 3px solid rgb(203 213 225); padding-inline-start: 0.8em; color: rgb(71 85 105); }
 .ev-md code { background: rgb(241 245 249); border-radius: 0.25em; font-size: 0.9em; padding: 0.05em 0.3em; }
 .dark .ev-md code { background: rgb(38 38 38); }
 .ev-md p { font-size: inherit; line-height: inherit; }
+.ev-md .wb-md__table th, .ev-md .wb-md__table td { border-color: rgb(226 232 240); }
+.ev-md .wb-md__table th { background: rgb(241 245 249); color: rgb(15 23 42); }
+.dark .ev-md .wb-md__table th, .dark .ev-md .wb-md__table td { border-color: rgb(64 64 64); }
+.dark .ev-md .wb-md__table th { background: rgb(38 38 38); color: white; }
 
 /* Editor canvas */
 /* Each block keeps a row on top for its toolbar, so the toolbar never covers what's in it */
-.ev-block { position: relative; padding-top: 2.4rem; border-radius: 1.1rem; outline: 2px solid transparent; outline-offset: 4px; transition: outline-color 0.12s; }
+.ev-block { position: relative; padding-top: 2.4rem; border-radius: var(--radius-2xl, 1.75rem); outline: 2px solid transparent; outline-offset: 4px; transition: outline-color 0.12s; }
 .ev-block .ev-tools, .ev-block .ev-resize { opacity: 0; transition: opacity 0.12s; }
 .ev-block:hover .ev-tools, .ev-block[data-selected="true"] .ev-tools, .ev-block:focus-within .ev-tools { opacity: 1; }
 .ev-block:hover .ev-resize { opacity: 0.5; }
 .ev-block[data-selected="true"] .ev-resize { opacity: 1; }
 .ev-block:hover { outline-color: color-mix(in srgb, var(--color-accent) 35%, transparent); }
 .ev-block[data-selected="true"] { outline-color: var(--color-accent); }
-.ev-block[data-dragging="true"] { opacity: 0.35; }
+/* The gap a dragged block leaves: where it'll land, the others already moved aside for it */
+.ev-block[data-dragging="true"] { opacity: 0.35; outline: 2px dashed var(--color-accent); outline-offset: 4px; }
+.ev-block[data-dragging="true"] .ev-tools, .ev-block[data-dragging="true"] .ev-resize { opacity: 0; }
+
+/* The block in hand while dragging: the real thing, lifted, its toolbar tab on top. Tall
+   blocks are cut off at the bottom with a fade so the page underneath stays in view. */
+.ev-drag-preview { position: relative; padding-top: 2.4rem; cursor: grabbing; transform: rotate(0.6deg) scale(1.015); transform-origin: 1rem 1rem; }
+.ev-drag-preview__tab { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.6rem; border-radius: 0.75rem; background: white; color: rgb(15 23 42); font-size: 0.75rem; font-weight: 600; box-shadow: 0 8px 24px -6px rgb(0 0 0 / 0.3); outline: 2px solid var(--color-accent); }
+.ev-drag-preview__body { background: rgb(241 245 249); border-radius: var(--radius-2xl, 1.75rem); outline: 2px solid var(--color-accent); outline-offset: 4px; box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.45), 0 10px 20px -10px rgb(0 0 0 / 0.25); pointer-events: none; }
+.ev-drag-preview__clip { max-height: 22rem; overflow: hidden; border-radius: inherit; }
+.ev-drag-preview__clip[data-cut="true"] { mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent); -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent); }
+.dark .ev-drag-preview__tab { background: rgb(23 23 23); color: white; }
+.dark .ev-drag-preview__body { background: rgb(10 10 10); }
+
+/* Phones and touch screens move blocks with arrows, not by dragging, and get bigger buttons */
+.ev-arrows { display: none; }
+@media (pointer: coarse), (max-width: 767px) {
+  .ev-arrows { display: contents; }
+}
+@media (pointer: coarse) {
+  .ev-block { padding-top: 2.9rem; }
+  .ev-block .ev-grip { display: none; }
+  .ev-block .ev-tools button { width: 2.25rem; height: 2.25rem; }
+}
 .ev-region-empty { min-height: 7rem; }

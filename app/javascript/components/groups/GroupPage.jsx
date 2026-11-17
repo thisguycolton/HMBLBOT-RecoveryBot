@@ -1,17 +1,20 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BookOpen, CalendarClock, CalendarRange, Gavel, House, LayoutTemplate, NotebookPen, Pencil, Users } from "lucide-react";
+import { Link, Navigate, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { BookOpen, CalendarClock, CalendarRange, House, LayoutDashboard, LayoutTemplate, NotebookPen, Settings, Scale, Users } from "lucide-react";
+import { hasGroupRole } from "./GroupDashboard";
 import { api } from "./lib";
 import { ErrorNote, Loading, Message, Pill } from "./ui";
 import GroupHero, { heroButton, heroQuietButton } from "./page/GroupHero";
 import NextMeeting from "./NextMeeting";
 import GroupHome from "./page/GroupHome";
-import MeetingsTab from "./MeetingsTab";
+import MeetingsPage from "./MeetingsPage";
 import MembersTab from "./MembersTab";
 import LiteratureTab from "./LiteratureTab";
 import ReadingsTab from "./ReadingsTab";
-import CourtTab from "./CourtTab";
 import EventsTab from "./EventsTab";
+import ConscienceTab from "./conscience/ConscienceTab";
+import ShareButton from "../share/ShareButton";
+import { refreshNav } from "../shell/useShell";
 
 const TABS = [
   { key: "home", label: "Home", icon: House },
@@ -19,20 +22,24 @@ const TABS = [
   { key: "events", label: "Events", icon: CalendarRange },
   { key: "readings", label: "Readings", icon: NotebookPen, members: true },
   { key: "literature", label: "Literature", icon: BookOpen, members: true },
+  { key: "conscience", label: "Group conscience", icon: Scale, members: true },
   { key: "members", label: "Members", icon: Users, members: true },
-  { key: "court", label: "Court verifications", icon: Gavel, managers: true },
 ];
 
+// Old addresses of pages that moved: Hosts joined Meetings, court verifications went to Settings
+const MOVED = { hosts: "meetings", court: "settings/court" };
+
 // /groups/:slug(/:tab): the group's own page (Home, made in the HMBLBOT Editor) and its
-// other sections. A new group (?new=1) opens on its meetings, to bring them in.
-export default function GroupPage() {
+// other sections, the same for everyone in the group, a role deciding what they can change.
+// A new group (?new=1) opens on Meeting settings, to bring its meetings in. Group conscience
+// (/:slug/conscience/*) is members' tab, but a Public document opens for anyone; people with a
+// role get it on the stage (GroupDashboard.jsx ConscienceRoute). Settings and the Dashboard
+// are pages of their own there too.
+export default function GroupPage({ tab: fixedTab }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { slug, tab = searchParams.get("new") === "1" ? "meetings" : "home" } = useParams();
+  const { slug, meetingId, tab: routeTab = meetingId ? "meetings" : "home" } = useParams();
+  const tab = fixedTab || routeTab;
   const navigate = useNavigate();
-  // Opened from Find a meeting: back goes to those results
-  const back = useLocation().state?.back;
-  // Groups itself is admin-only for now; everyone else came from Find a meeting
-  const hasGroups = document.body.dataset.groups === "true";
   const [group, setGroup] = useState(null);
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
@@ -60,11 +67,14 @@ export default function GroupPage() {
       </Message>
     );
   }
-  if (!group) return <Loading />;
+  if (!group) return <Loading variant="group" />;
 
   const isMember = group.is_member || group.is_site_admin;
-  const tabs = TABS.filter((t) => (!t.members || isMember) && (!t.managers || group.can_manage));
-  const current = tabs.find((t) => t.key === tab) || tabs[0];
+  const dashboard = hasGroupRole(group);
+  if (MOVED[tab]) return <Navigate to={`/${slug}/${MOVED[tab]}`} replace />;
+  if (searchParams.get("new") === "1" && group.can_manage) return <Navigate to={`/${slug}/settings/meetings?new=1`} replace />;
+  const tabs = TABS.filter((t) => !t.members || isMember);
+  const current = tabs.find((t) => t.key === tab) || (tab === "conscience" && { key: "conscience" }) || tabs[0];
 
   const act = async (path, confirmText) => {
     // Signed out: make an account first, then back here, where the request goes out (?ask=1)
@@ -77,6 +87,7 @@ export default function GroupPage() {
     setActionError(null);
     try {
       const result = await api(`/groups/${slug}/${path}`, { method: "POST" });
+      refreshNav(); // joined or left: the sidebar's groups change
       if (path === "leave") navigate("/");
       else if (result) setGroup(result);
     } catch (e) {
@@ -89,10 +100,8 @@ export default function GroupPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
-      <Link to={back || (hasGroups ? "/" : "/meetings")} className="text-sm text-slate-500 hover:text-accent dark:text-neutral-400">
-        {back || !hasGroups ? "← Find a meeting" : "← Groups"}
-      </Link>
       <GroupHero
+        bleed
         group={group}
         coverUrl={group.cover_url}
         badge={group.status === "pending" && <Pill tone="amber">Waiting for approval</Pill>}
@@ -114,14 +123,19 @@ export default function GroupPage() {
             {group.membership_status === "active" && (
               <span className={heroQuietButton}>You're {group.role === "admin" ? "a group admin" : "a member"}</span>
             )}
+            {dashboard && <Link to={`/${slug}/dashboard`} className={heroButton}><LayoutDashboard className="h-4 w-4" /> Dashboard</Link>}
             {group.can_manage && (
               <>
                 <Link to={`/${slug}/page/edit`} className={heroButton}><LayoutTemplate className="h-4 w-4" /> Edit page</Link>
-                <Link to={`/${slug}/edit`} className={heroQuietButton}><Pencil className="h-4 w-4" /> Details</Link>
+                <Link to={`/${slug}/settings`} className={heroQuietButton}><Settings className="h-4 w-4" /> Settings</Link>
               </>
             )}
             {group.membership_status === "active" && (
               <button type="button" disabled={busy} onClick={() => act("leave", `Leave ${group.title}?`)} className={heroQuietButton}>Leave</button>
+            )}
+            {group.status === "active" && (
+              <ShareButton url={`/groups/${slug}`} title={group.title} text={`${group.title} on RecoveryBot`}
+                image={`/share_cards/group/${slug}.png`} panelTitle="Share this group" className={heroQuietButton} />
             )}
           </>
         }
@@ -129,7 +143,7 @@ export default function GroupPage() {
       <ErrorNote error={actionError} />
 
       {tabs.length > 1 && (
-        <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-neutral-200 px-4 dark:border-neutral-800" aria-label="Group sections">
+        <nav className="group-chrome no-scrollbar -mx-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-neutral-200 px-4 dark:border-neutral-800" aria-label="Group sections">
           {tabs.map(({ key, label, icon: Icon }) => (
             <NavLink
               key={key}
@@ -153,12 +167,12 @@ export default function GroupPage() {
       )}
 
       {current.key === "home" && <GroupHome slug={slug} onJoin={() => act("join")} />}
-      {current.key === "meetings" && <MeetingsTab group={group} setGroup={setGroup} reload={load} isNew={searchParams.get("new") === "1"} />}
+      {current.key === "meetings" && <MeetingsPage group={group} setGroup={setGroup} reload={load} focusId={Number(meetingId) || null} />}
       {current.key === "events" && <EventsTab group={group} />}
       {current.key === "readings" && <ReadingsTab group={group} />}
       {current.key === "literature" && <LiteratureTab group={group} reload={load} />}
+      {current.key === "conscience" && <ConscienceTab group={group} />}
       {current.key === "members" && <MembersTab group={group} reload={load} setGroup={setGroup} />}
-      {current.key === "court" && <CourtTab group={group} setGroup={setGroup} />}
     </div>
   );
 }

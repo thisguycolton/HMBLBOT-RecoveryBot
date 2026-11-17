@@ -5,10 +5,13 @@ import { showToast } from "../../../lib/toast";
 import EditorFrame from "../../events/editor/EditorFrame";
 import BlockInspector, { Choice, Field } from "../../events/editor/Inspector";
 import { LayoutPanel, PanelTitle } from "../../events/editor/Panels";
-import { inputClass } from "../../ui/styles";
+import { inputClass, selectClass } from "../../ui/styles";
+import Toggle from "../../ui/Toggle";
+import { CATEGORIES, KINDS } from "../conscience/lib";
 import { api } from "../lib";
 import GroupHero from "./GroupHero";
 import { GROUP_BLOCK_GROUPS, GROUP_BLOCK_INFO, newGroupBlock } from "./lib";
+import Skeleton from "../../ui/Skeleton";
 
 const PANELS = [
   { key: "page", label: "Page", icon: FileText, note: "The cover across the top" },
@@ -18,7 +21,7 @@ const PANELS = [
 const formFrom = (p) => ({ layout: p.layout, blocks: p.blocks || [] });
 const LIMITS = { events: [[1, "1"], [3, "3"], [6, "6"], [12, "12"]], timeline: [[5, "5"], [10, "10"], [20, "20"]], readings: [[3, "3"], [5, "5"], [10, "10"]] };
 // The group's own blocks; the rest are the event page's, with their own fields
-const GROUP_OWN = ["meetings", "events", "timeline", "literature", "readings", "members", "join"];
+const GROUP_OWN = ["meetings", "events", "timeline", "literature", "readings", "documents", "decisions", "business_meeting", "members", "join"];
 const GROUP_HINT = "{{group}} is the group's name.";
 
 // The HMBLBOT Editor for a group's page (/groups/:slug/page/edit, its admins) or, with
@@ -108,7 +111,7 @@ export default function GroupPageEditor({ template = false }) {
       </div>
     );
   }
-  if (!draft) return <p className="py-24 text-center text-sm text-slate-500">Loading the editor…</p>;
+  if (!draft) return <Skeleton variant="form" label="Loading the editor" className="mx-auto max-w-3xl py-6" />;
 
   const group = saved.context.group;
   const context = { ...saved.context, kind: saved.kind, note_max: saved.note_max };
@@ -169,6 +172,27 @@ export default function GroupPageEditor({ template = false }) {
       <>
         <Field label="Title" hint={GROUP_HINT}><input className={inputClass} value={block.title || ""} onChange={(e) => set("title")(e.target.value)} maxLength={120} /></Field>
         {LIMITS[block.type] && <Field label="How many"><Choice value={block.limit} onChange={set("limit")} options={LIMITS[block.type]} /></Field>}
+        {block.type === "documents" && (
+          <>
+            <Field label="Folder"><select className={selectClass} value={block.kind || "all"} onChange={(e) => set("kind")(e.target.value)}>
+              <option value="all">All folders</option>
+              {KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}
+            </select></Field>
+            <Field label="How many"><Choice value={block.limit} onChange={set("limit")} options={[[3, "3"], [5, "5"], [10, "10"], [20, "20"]]} /></Field>
+            <Toggle checked={!!block.pinned_only} onChange={set("pinned_only")} label="Pinned documents only" />
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Shows the documents each person may see: visitors only see ones marked Public, members also see Members ones. The block hides itself for anyone with nothing to see.</p>
+          </>
+        )}
+        {block.type === "decisions" && (
+          <>
+            <Field label="Kind of decision"><select className={selectClass} value={block.category || "all"} onChange={(e) => set("category")(e.target.value)}>
+              <option value="all">All kinds</option>
+              {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select></Field>
+            <Field label="How many"><Choice value={block.limit} onChange={set("limit")} options={[[3, "3"], [5, "5"], [10, "10"], [20, "20"]]} /></Field>
+            <p className="text-xs text-slate-500 dark:text-neutral-400">Lists the decisions that still stand, newest first. Visitors only see ones marked Public, members also see Members ones. The block hides itself for anyone with nothing to see.</p>
+          </>
+        )}
         {block.type === "join" && (
           <Field label="Text" hint={`Markdown. ${GROUP_HINT} The button under it fits whoever's looking: ask to join, waiting, or already in.`}>
             <textarea className={`${inputClass} min-h-28 font-mono !text-xs`} value={block.markdown || ""} onChange={(e) => set("markdown")(e.target.value)} maxLength={2000} />
@@ -229,7 +253,7 @@ export function CoverField({ cover, setCover }) {
   return (
     <Field label="Cover photo" hint="Across the top of the page. Without one it's the site's blue.">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => input.current?.click()} className="relative grid h-16 w-28 shrink-0 place-items-center overflow-hidden rounded-xl !bg-gradient-to-br from-accent via-sky-600 to-indigo-700 !p-0 text-white/80 ring-1 ring-neutral-200 dark:ring-neutral-700" aria-label="Upload a cover photo">
+        <button type="button" onClick={() => input.current?.click()} className="relative grid h-16 w-28 shrink-0 place-items-center overflow-hidden rounded-xl !cover-default !p-0 text-white/80 ring-1 ring-neutral-200 dark:ring-neutral-700" aria-label="Upload a cover photo">
           {cover.url && <img src={cover.url} alt="" className="absolute inset-0 size-full object-cover" />}
         </button>
         <div className="flex flex-col items-start gap-1">

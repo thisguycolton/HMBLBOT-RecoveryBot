@@ -41,7 +41,7 @@ export default function TextReportDialog({ selector, bookSlug, chapterSlug, onCl
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label="Report a problem with this text">
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label="Report a problem with this text">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <form onSubmit={send} className="wb wb-hl-card relative w-full sm:max-w-lg max-h-[85vh] overflow-auto shadow-xl bg-white dark:bg-neutral-900">
         <div className="wb-hl-card__head">

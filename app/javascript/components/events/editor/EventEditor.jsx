@@ -8,6 +8,7 @@ import RsvpCard from "../RsvpCard";
 import EditorFrame from "./EditorFrame";
 import BlockInspector from "./Inspector";
 import { DangerZone, DetailsPanel, LayoutPanel, PanelTitle, PeoplePanel, RsvpsPanel } from "./Panels";
+import Skeleton from "../../ui/Skeleton";
 
 // The event's own settings, in the sidebar's "Event" section
 const PANELS = [
@@ -116,7 +117,7 @@ export default function EventEditor() {
       </div>
     );
   }
-  if (!draft) return <p className="py-24 text-center text-sm text-slate-500">Loading the editor…</p>;
+  if (!draft) return <Skeleton variant="form" label="Loading the editor" className="mx-auto max-w-3xl py-6" />;
 
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const setBlocks = (fn) => setDraft((d) => ({ ...d, blocks: typeof fn === "function" ? fn(d.blocks) : fn }));

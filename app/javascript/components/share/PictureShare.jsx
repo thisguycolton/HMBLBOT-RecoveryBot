@@ -1,0 +1,384 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { Check, Clapperboard, Copy, Download, ImageIcon, Link2, Loader2, Send, Share2, X } from "lucide-react";
+import { showToast } from "../../lib/toast";
+import { saveNote, VISIBILITY } from "../notes/lib";
+import { Bone, SkeletonGroup } from "../ui/Skeleton";
+import { newProgressToken, ProgressRing, progressLabel, timeLeft, useCardProgress } from "./cardProgress";
+
+// "Share as a picture" for your own highlight or note: pick a look and a size, see it, then
+// share it straight from your phone's share sheet (Instagram, Messages, a story...), save
+// it, copy it, copy the link, or post it to your own timeline as a note with the picture
+// (and a line of your own; a highlight's note links back to it in the book). The picture is drawn on our server (QuoteCard), so the
+// page never calls anyone else. It names nobody unless they tick "Add my first name".
+//
+// Words too long for one picture come back as a GIF that turns its pages (the server says how
+// many in X-Card-Pages). Clipboards don't take GIFs, so "Copy picture" copies a still of it
+// (?still=1), and so does Share on a device that can't hand a GIF to another app.
+//
+// `cardUrl` is where the server draws it (/api/highlights/:id/card); `link` is the share
+// link that goes with a highlight (none for notes, which only members see); `hasNote` offers
+// to leave a highlight's note off.
+//
+// `canVideo` ("Share this day", and your own highlights) also offers a video: an MP4 whose lines fade in one after
+// another, drawn by the server (QuoteCard, ffmpeg) in 15 to 30 seconds. Copy and Post use a
+// still picture of it, since clipboards and posts take pictures. While a video (or a long
+// GIF) is drawn, a ring fills with how far along the server says it is (cardProgress).
+export const LOOKS = [
+  { value: "paper", label: "Paper", swatch: "linear-gradient(135deg,#fdfaf3,#f4ecdc)" },
+  { value: "marker", label: "Marker", swatch: "linear-gradient(135deg,#fff 0 45%,#fef08a 45% 75%,#fff 75%)" },
+  { value: "night", label: "Night", swatch: "linear-gradient(160deg,#1e293b,#0b1120)" },
+  { value: "sunrise", label: "Sunrise", swatch: "linear-gradient(150deg,#fb923c,#db2777)" },
+];
+export const SIZES = [
+  { value: "square", label: "Square", hint: "For a post or a feed", ratio: "1 / 1" },
+  { value: "story", label: "Story", hint: "Tall, for stories", ratio: "9 / 16" },
+  { value: "wide", label: "Wide", hint: "Like a link preview", ratio: "1200 / 630" },
+];
+
+export default function PictureShare({ cardUrl, link, kind = "highlight", hasNote = false, canVideo = false, heading = "Share as a picture", title, text, onClose }) {
+  const [look, setLook] = useState("paper");
+  const [size, setSize] = useState(kind === "day" ? "story" : "square");
+  const [asVideo, setAsVideo] = useState(false);
+  const [fade, setFade] = useState("fast"); // how fast a video's lines fade in
+  const [turn, setTurn] = useState("fast"); // how fast its pages turn
+  const [withNote, setWithNote] = useState(true);
+  const [withName, setWithName] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(null);
+  const [picture, setPicture] = useState(null); // { url, blob, pages }
+  const [busy, setBusy] = useState(null);
+  const [copied, setCopied] = useState(null);
+  const [posting, setPosting] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [visibility, setVisibility] = useState("followers");
+  const [token, setToken] = useState(null); // asks the server how far along the preview is
+  const [gifToken, setGifToken] = useState(null); // ...and the "Save as GIF" one
+
+  const src = useMemo(() => {
+    const q = new URLSearchParams({ look, size });
+    if (hasNote && !withNote) q.set("note", "0");
+    if (withName) q.set("name", "1");
+    if (canVideo && asVideo) {
+      q.set("video", "1");
+      if (fade !== "fast") q.set("fade", fade);
+      if (turn !== "fast") q.set("turn", turn);
+    }
+    return `${cardUrl}?${q}`;
+  }, [cardUrl, look, size, hasNote, withNote, withName, canVideo, asVideo, fade, turn]);
+  // Fetched once per choice: shown from here, and the same file shared, copied or posted
+  useEffect(() => {
+    const stop = new AbortController();
+    let url;
+    const progress = newProgressToken();
+    setLoading(true);
+    setFailed(null);
+    setToken(progress);
+    (async () => {
+      try {
+        const res = await fetch(`${src}&progress=${progress}`, { credentials: "same-origin", signal: stop.signal });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Couldn't draw that one. Try another look.");
+        }
+        const blob = await res.blob();
+        url = URL.createObjectURL(blob);
+        setPicture({ url, blob, pages: Number(res.headers.get("X-Card-Pages")) || 1 });
+      } catch (e) {
+        if (e?.name === "AbortError") return;
+        setPicture(null);
+        setFailed(e?.message || "Couldn't draw that one. Try another look.");
+        setLoading(false);
+      }
+    })();
+    return () => { stop.abort(); if (url) URL.revokeObjectURL(url); };
+  }, [src]);
+  const video = canVideo && asVideo;
+  const moving = !video && (picture?.pages || 1) > 1;
+  const progress = useCardProgress(loading ? token : null);
+  const gifProgress = useCardProgress(gifToken);
+  // A ring for a video, or for a picture slow enough that the server's said how far along it is
+  const ringing = loading && !failed && (video || progress);
+
+  // The link sent with the picture carries its look (and a left-off note), so the preview
+  // Messages and the rest draw from it (ShareMeta.highlight) matches the picture
+  const shareLink = useMemo(() => {
+    if (!link) return link;
+    const [base, hash] = link.split("#");
+    const url = new URL(base, window.location.origin);
+    url.searchParams.set("look", look);
+    if (hasNote && !withNote) url.searchParams.set("note", "0"); else url.searchParams.delete("note");
+    return `${url}${hash ? `#${hash}` : ""}`;
+  }, [link, look, hasNote, withNote]);
+
+  useEffect(() => {
+    const esc = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
+    window.addEventListener("keydown", esc, true);
+    return () => window.removeEventListener("keydown", esc, true);
+  }, [onClose]);
+
+  const asFile = (blob) => {
+    const type = ["image/gif", "video/mp4"].includes(blob.type) ? blob.type : "image/png";
+    return new File([blob], `recoverybot-${kind}-${size}.${{ "image/gif": "gif", "video/mp4": "mp4" }[type] || "png"}`, { type });
+  };
+  // The picture (or video) as shown, or (`still`) one picture of it, never a GIF or a video
+  const fetchFile = async ({ still = false } = {}) => {
+    if (picture?.blob && !(still && (moving || video))) return asFile(picture.blob);
+    const res = await fetch(still ? `${src}&still=1` : src, { credentials: "same-origin" });
+    if (!res.ok) throw new Error("Couldn't make that picture.");
+    return asFile(await res.blob());
+  };
+
+  // Phones (and some computers) can hand the picture itself to another app
+  const canShareFiles = typeof navigator.canShare === "function"
+    && navigator.canShare({ files: [new File([""], "x.png", { type: "image/png" })] });
+  const canCopyPicture = typeof window.ClipboardItem === "function" && !!navigator.clipboard?.write;
+
+  const run = async (which, work) => {
+    if (busy) return;
+    setBusy(which);
+    try {
+      await work();
+    } catch (e) {
+      if (e?.name !== "AbortError") showToast(e?.message || "Something went wrong.", { tone: "error" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const share = () => run("share", async () => {
+    let file = await fetchFile();
+    // Some phones can't hand a GIF (or a video) to another app: send one picture of it instead
+    if (!navigator.canShare({ files: [file] })) file = await fetchFile({ still: true });
+    await navigator.share({ files: [file], title, text: [text, shareLink].filter(Boolean).join("\n") || undefined });
+  });
+
+  const copyPicture = () => run("copy", async () => {
+    // Safari wants the promise handed over right away
+    await navigator.clipboard.write([new window.ClipboardItem({ "image/png": fetchFile({ still: true }).then((f) => f) })]);
+    flash("picture");
+  });
+
+  // The same video as a GIF (smaller and quieter, for places that don't take videos): made
+  // when asked, since it takes the server as long as the video did
+  const saveGif = () => run("gif", async () => {
+    const progressToken = newProgressToken();
+    setGifToken(progressToken);
+    let blob;
+    try {
+      const res = await fetch(`${src}&as=gif&progress=${progressToken}`, { credentials: "same-origin" });
+      if (!res.ok) throw new Error("Couldn't make the GIF.");
+      blob = await res.blob();
+    } finally {
+      setGifToken(null);
+    }
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement("a"), { href: url, download: `recoverybot-${kind}-${size}.gif` });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  });
+
+  const copyLink = () => run("link", async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink);
+    } catch {
+      window.prompt("Copy this link:", shareLink);
+    }
+    flash("link");
+  });
+
+  const post = () => run("post", async () => {
+    // What's picked is what's posted: the video as a video (it plays on the timeline), a
+    // paged GIF as its GIF
+    const file = await fetchFile();
+    const body = [caption.trim(), shareLink && `[Read it in the book](${shareLink})`].filter(Boolean).join("\n\n");
+    await saveNote(null, { body, visibility, images: [file] });
+    showToast(visibility === "private" ? "Posted to your timeline, just for you." : "Posted to your timeline.");
+    setPosting(false);
+    setCaption("");
+  });
+
+  const flash = (what) => { setCopied(what); setTimeout(() => setCopied(null), 1600); };
+  const ratio = SIZES.find((s) => s.value === size)?.ratio;
+
+  return createPortal(
+    <div className="picture-share fixed inset-0 z-[2600] flex items-end justify-center !font-sans sm:items-center sm:p-4 [&_*]:!font-sans" role="dialog" aria-modal="true" aria-label={heading}>
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
+      <div className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white text-sm text-slate-700 shadow-2xl ring-1 ring-neutral-200 sm:max-w-3xl sm:rounded-3xl dark:bg-neutral-900 dark:text-neutral-200 dark:ring-neutral-700">
+        <div className="flex items-center justify-between gap-2 border-b border-neutral-100 px-4 py-3 dark:border-neutral-800">
+          <p className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">{canVideo ? <Clapperboard className="size-4" /> : <ImageIcon className="size-4" />} {heading}</p>
+          <button type="button" onClick={onClose} aria-label="Close" className="grid size-8 place-items-center rounded-lg !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800"><X className="size-4" /></button>
+        </div>
+
+        <div className="grid min-h-0 flex-1 grid-cols-1 content-start gap-4 overflow-y-auto p-4 sm:grid-cols-[minmax(0,1fr)_17rem]">
+          <div className="self-start rounded-2xl bg-neutral-100 p-3 dark:bg-neutral-800">
+            <div className="relative mx-auto w-full" style={{ maxWidth: size === "story" ? "min(15rem, 26dvh)" : size === "square" ? "min(24rem, 46dvh)" : "100%" }}>
+              {/* Which player goes by what came back, so the last picture never lands in the video player while a video is on its way */}
+              {picture && !failed && picture.blob.type.startsWith("video/") ? (
+                <video key={picture.url} src={picture.url} autoPlay loop muted playsInline aria-label="Your video" onLoadedData={() => setLoading(false)}
+                  onError={() => { setLoading(false); setFailed("Couldn't make that video. Try another look."); }}
+                  className={`block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 transition-opacity ${loading ? "opacity-40" : "opacity-100"}`} style={{ aspectRatio: ratio }} />
+              ) : picture && !failed ? (
+                <img key={picture.url} src={picture.url} alt="Your picture" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setFailed("Couldn't draw that one. Try another look."); }}
+                  className={`block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 transition-opacity ${loading ? "opacity-40 motion-safe:animate-pulse" : "opacity-100"}`} style={{ aspectRatio: ratio }} />
+              ) : (
+                <div className="block w-full rounded-xl bg-white shadow-md ring-1 ring-black/5 dark:bg-neutral-700" style={{ aspectRatio: ratio }} />
+              )}
+              {loading && !ringing && (
+                // The picture's shape pulses while the server draws it (a skeleton, not a spinner)
+                <SkeletonGroup label={video ? "Making the video" : "Drawing it"} className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-2.5 p-[8%]">
+                  <Bone className="h-3 w-3/5" /><Bone className="h-3 w-4/5" /><Bone className="h-3 w-2/5" />
+                </SkeletonGroup>
+              )}
+              {ringing && (
+                // A video takes the server 15 to 30 seconds: a ring fills as it goes, with what it's doing and about how long is left
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-white/75 px-4 text-center backdrop-blur-sm dark:bg-neutral-800/80" aria-live="polite">
+                  <ProgressRing percent={progress?.percent ?? null} label={video ? "Making your video" : "Drawing your picture"} />
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-neutral-100">{progressLabel(progress, video ? "video" : "picture")}</p>
+                    <p className="text-[11px] text-slate-500 dark:text-neutral-400">{timeLeft(progress) || (video ? "It takes 15 to 30 seconds." : "\u00a0")}</p>
+                  </div>
+                </div>
+              )}
+              {failed && <p className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-red-600">{failed}</p>}
+            </div>
+            {moving && !loading && !failed && (
+              <p className="mx-auto mt-2.5 max-w-sm text-center text-xs text-slate-500 dark:text-neutral-400">
+                Too long for one picture, so it's a moving picture (a GIF) that turns through {picture.pages} pages.
+                Messages, Facebook and X play it; Instagram only takes still pictures.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {canVideo && (
+              <div className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800" role="group" aria-label="Picture or video">
+                {[[false, "Picture", ImageIcon], [true, "Video", Clapperboard]].map(([v, label, Icon]) => (
+                  <button key={label} type="button" aria-pressed={asVideo === v} onClick={() => setAsVideo(v)}
+                    className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold ${asVideo === v ? "!bg-white text-slate-900 shadow-sm dark:!bg-neutral-950 dark:text-white" : "!bg-transparent text-slate-500 dark:text-neutral-400"}`}>
+                    <Icon className="size-3.5" /> {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <fieldset>
+              <legend className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Look</legend>
+              <div className="grid grid-cols-4 gap-1.5">
+                {LOOKS.map((l) => (
+                  <button key={l.value} type="button" aria-pressed={look === l.value} onClick={() => setLook(l.value)}
+                    className={`flex flex-col items-center gap-1 rounded-xl !bg-transparent p-1.5 text-[11px] font-medium ${look === l.value ? "text-accent ring-2 ring-accent" : "text-slate-600 ring-1 ring-neutral-200 dark:text-neutral-300 dark:ring-neutral-700"}`}>
+                    <span className="block h-8 w-full rounded-lg ring-1 ring-black/10" style={{ background: l.swatch }} />
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Size</legend>
+              <div className="grid grid-cols-3 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800">
+                {SIZES.map((s) => (
+                  <button key={s.value} type="button" aria-pressed={size === s.value} title={s.hint} onClick={() => setSize(s.value)}
+                    className={`rounded-lg px-2 py-1.5 text-xs font-semibold ${size === s.value ? "!bg-white text-slate-900 shadow-sm dark:!bg-neutral-950 dark:text-white" : "!bg-transparent text-slate-500 dark:text-neutral-400"}`}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            {video && [["Lines fade in", fade, setFade], ["Pages turn", turn, setTurn]].map(([label, value, set]) => (
+              <fieldset key={label}>
+                <legend className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">{label}</legend>
+                <div className="grid grid-cols-3 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800">
+                  {["slow", "normal", "fast"].map((v) => (
+                    <button key={v} type="button" aria-pressed={value === v} onClick={() => set(v)}
+                      className={`rounded-lg px-2 py-1.5 text-xs font-semibold capitalize ${value === v ? "!bg-white text-slate-900 shadow-sm dark:!bg-neutral-950 dark:text-white" : "!bg-transparent text-slate-500 dark:text-neutral-400"}`}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            ))}
+
+            {kind !== "day" && <div className="space-y-2">
+              {hasNote && (
+                <label className="flex items-center gap-2"><input type="checkbox" checked={withNote} onChange={(e) => setWithNote(e.target.checked)} /> Include my note</label>
+              )}
+              <label className="flex items-center gap-2"><input type="checkbox" checked={withName} onChange={(e) => setWithName(e.target.checked)} /> Add my first name</label>
+              <p className="text-xs text-slate-500 dark:text-neutral-400">Your name stays off unless you add it.</p>
+            </div>}
+
+            <div className="grid gap-2">
+              {canShareFiles && (
+                <button type="button" onClick={share} disabled={!!busy}
+                  className="flex items-center justify-center gap-2 rounded-xl !bg-accent px-3 py-2.5 font-semibold !text-white disabled:opacity-60">
+                  {busy === "share" ? <Loader2 className="size-4 animate-spin" /> : <Share2 className="size-4" />} {video ? "Share video…" : "Share picture…"}
+                </button>
+              )}
+              <a href={`${src}&download=1`} download
+                className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 font-semibold ${canShareFiles ? "bg-neutral-100 !text-slate-800 hover:bg-neutral-200 dark:bg-neutral-800 dark:!text-white" : "!bg-accent !text-white"}`}>
+                <Download className="size-4" /> {video ? "Save video" : moving ? "Save GIF" : "Save picture"}
+              </a>
+              {video && (
+                <button type="button" onClick={saveGif} disabled={!!busy}
+                  className="flex items-center justify-center gap-2 rounded-xl !bg-neutral-100 px-3 py-2.5 font-semibold text-slate-800 hover:!bg-neutral-200 disabled:opacity-60 dark:!bg-neutral-800 dark:text-white">
+                  {busy === "gif" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" />} {busy === "gif" ? `Making the GIF…${gifProgress ? ` ${gifProgress.percent}%` : ""}` : "Save as GIF"}
+                </button>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                {canCopyPicture && (
+                  <button type="button" onClick={copyPicture} disabled={!!busy} title={moving || video ? "A clipboard can't hold a moving picture, so this copies a still one" : undefined}
+                    className="flex items-center justify-center gap-1.5 rounded-xl !bg-neutral-100 px-2 py-2 text-xs font-semibold text-slate-800 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:text-white">
+                    {copied === "picture" ? <Check className="size-4" /> : <Copy className="size-4" />} {copied === "picture" ? "Copied" : moving || video ? "Copy still" : "Copy picture"}
+                  </button>
+                )}
+                {link && (
+                  <button type="button" onClick={copyLink} disabled={!!busy}
+                    className="flex items-center justify-center gap-1.5 rounded-xl !bg-neutral-100 px-2 py-2 text-xs font-semibold text-slate-800 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:text-white">
+                    {copied === "link" ? <Check className="size-4" /> : <Link2 className="size-4" />} {copied === "link" ? "Copied" : "Copy link"}
+                  </button>
+                )}
+              </div>
+              {!posting ? (
+                <button type="button" onClick={() => setPosting(true)}
+                  className="flex items-center justify-center gap-2 rounded-xl !bg-neutral-100 px-3 py-2.5 font-semibold text-slate-800 hover:!bg-neutral-200 dark:!bg-neutral-800 dark:text-white">
+                  <Send className="size-4" /> Post to my timeline
+                </button>
+              ) : (
+                <div className="space-y-2 rounded-2xl p-3 ring-1 ring-neutral-200 dark:ring-neutral-700">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Post to my timeline</p>
+                  <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={2} maxLength={2000} placeholder="Say something (optional)" aria-label="Say something"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-base sm:text-sm dark:border-neutral-700 dark:bg-neutral-950" />
+                  <div className="grid grid-cols-3 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800" role="group" aria-label="Who sees it">
+                    {VISIBILITY.map((v) => (
+                      <button key={v.value} type="button" aria-pressed={visibility === v.value} title={v.note} onClick={() => setVisibility(v.value)}
+                        className={`rounded-lg px-1 py-1.5 text-xs font-semibold ${visibility === v.value ? "!bg-white text-slate-900 shadow-sm dark:!bg-neutral-950 dark:text-white" : "!bg-transparent text-slate-500 dark:text-neutral-400"}`}>
+                        {v.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setPosting(false)} className="flex-1 rounded-xl !bg-transparent px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-neutral-200 dark:text-neutral-300 dark:ring-neutral-700">Cancel</button>
+                    <button type="button" onClick={post} disabled={!!busy} className="flex flex-[2] items-center justify-center gap-1.5 rounded-xl !bg-accent px-3 py-2 text-xs font-semibold !text-white disabled:opacity-60">
+                      {busy === "post" ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Post
+                    </button>
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-slate-500 dark:text-neutral-400">
+                {video ? "Instagram, Facebook and TikTok take the video: save it, then add it from your photos. Posting to your timeline posts the video."
+                  : size === "story" ? "For Instagram or Facebook stories: save it, then add it from your photos." : kind === "day" ? "Anyone you send the link to can read this day." : link
+                  ? `Anyone you send the link to can open this highlight. Its link preview is a wide ${LOOKS.find((l) => l.value === look)?.label} picture${moving ? " that stays still and shows as much as fits" : ", like this one"}.`
+                  : "Notes are only for members, so there's no link: share the picture."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}

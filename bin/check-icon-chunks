@@ -1,0 +1,60 @@
+#!/usr/bin/env node
+// Checks a finished Vite build (public/vite) for the bug where Lucide icons stop showing after a
+// deploy: every icon LucideIcon loads by name must be its own file that imports only the vendor
+// chunks (React, Lucide's helpers). If an icon file imports an app chunk, its name changes on
+// every deploy and pages opened before the deploy can't load it. Run by bin/deploy after the build.
+//
+//   bin/check-icon-chunks [public/vite]
+const fs = require("fs");
+const path = require("path");
+
+const root = path.resolve(process.argv[2] || "public/vite");
+const manifestPath = path.join(root, ".vite", "manifest.json");
+if (!fs.existsSync(manifestPath)) {
+  console.error(`No Vite manifest at ${manifestPath}; build first.`);
+  process.exit(1);
+}
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+const vendor = /^_?vendor-(react|lucide)-/;
+const problems = [];
+
+const icons = Object.entries(manifest).filter(([src]) => /lucide-react\/dist\/esm\/icons\/[^/]+\.js$/.test(src));
+const dynamic = new Set(Object.values(manifest).flatMap((c) => c.dynamicImports || []));
+const loadable = icons.filter(([src]) => dynamic.has(src));
+if (loadable.length < 1000) problems.push(`expected ~1,600 icons loadable by name, found ${loadable.length}`);
+
+for (const [src, chunk] of loadable) {
+  const name = path.basename(src, ".js");
+  if (!path.basename(chunk.file).startsWith(`${name}-`)) {
+    problems.push(`${name}: bundled into ${chunk.file} instead of its own file`);
+    continue;
+  }
+  const bad = (chunk.imports || []).map((k) => manifest[k]?.file || k).filter((f) => !vendor.test(path.basename(f)));
+  if (bad.length) problems.push(`${name}: imports ${bad.join(", ")}`);
+}
+
+// Icon names the code passes to LucideIcon as plain strings must exist
+const known = new Set(icons.map(([src]) => path.basename(src, ".js")));
+const aliases = fs.readFileSync(require.resolve("lucide-react/dist/esm/dynamicIconImports.js"), "utf8").match(/^\s+"[a-z0-9-]+":/gm) || [];
+aliases.forEach((a) => known.add(a.trim().slice(1, -2)));
+const literals = new Set();
+const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+  const full = path.join(dir, e.name);
+  if (e.isDirectory()) return walk(full);
+  if (!/\.(jsx?|tsx?)$/.test(e.name)) return;
+  const text = fs.readFileSync(full, "utf8");
+  for (const m of text.matchAll(/\bicon(?:_name|Name)?: "([a-z0-9-]+)"/g)) literals.add(m[1]);
+  for (const m of text.matchAll(/<LucideIcon[^>]*?\bname=(?:"([a-z0-9-]+)"|\{([^}]*)\})/g)) {
+    if (m[1]) literals.add(m[1]);
+    for (const q of (m[2] || "").matchAll(/"([a-z0-9-]+)"/g)) literals.add(q[1]);
+  }
+});
+walk(path.resolve("app/javascript"));
+[...literals].filter((n) => !known.has(n)).forEach((n) => problems.push(`icon name used in code doesn't exist: ${n}`));
+
+if (problems.length) {
+  console.error(`Lucide icon chunks would break on deploy (${problems.length} problems):`);
+  problems.slice(0, 20).forEach((p) => console.error(`  - ${p}`));
+  process.exit(1);
+}
+console.log(`Lucide icon chunks OK: ${loadable.length} icons, each in its own file importing only vendor chunks.`);
