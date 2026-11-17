@@ -20,6 +20,26 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- The site's fonts, for the widget styles (WidgetTheme in RecoveryBotWidgets.swift) -->
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fonts/DMMono-Light.ttf</string>
+		<string>Fonts/DMMono-Regular.ttf</string>
+		<string>Fonts/Figtree-Light.ttf</string>
+		<string>Fonts/Figtree-Medium.ttf</string>
+		<string>Fonts/GentiumBookPlus-Bold.ttf</string>
+		<string>Fonts/GentiumBookPlus-Italic.ttf</string>
+		<string>Fonts/GentiumBookPlus-Regular.ttf</string>
+		<string>Fonts/Inter-ExtraLight.ttf</string>
+		<string>Fonts/Inter-Medium.ttf</string>
+		<string>Fonts/Montserrat-Black.ttf</string>
+		<string>Fonts/Montserrat-SemiBold.ttf</string>
+		<string>Fonts/PublicSans-ExtraBold.ttf</string>
+		<string>Fonts/PublicSans-SemiBold.ttf</string>
+		<string>Fonts/TikTokSans-CondensedBlack.ttf</string>
+		<string>Fonts/TikTokSans-ExtraBold.ttf</string>
+		<string>Fonts/TikTokSans-SemiBold.ttf</string>
+	</array>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionPointIdentifier</key>

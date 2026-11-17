@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg_midnight"
+    android:clipToOutline="true"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -12,19 +13,19 @@
         android:id="@+id/day_number"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="monospace"
-        android:textStyle="normal"
+        android:fontFamily="@font/dmmono_light"
+        android:letterSpacing="-0.04"
         android:includeFontPadding="false"
         android:maxLines="1"
         android:text="127"
-        android:textColor="#FFFFFF"
+        android:textColor="#F59E0B"
         android:textSize="44sp" />
 
     <TextView
         android:id="@+id/day_unit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="monospace"
+        android:fontFamily="@font/dmmono_regular"
         android:text="days"
         android:textColor="#CCFFFFFF"
         android:textSize="16sp" />
@@ -38,7 +39,7 @@
         android:id="@+id/day_next"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="monospace"
+        android:fontFamily="@font/dmmono_regular"
         android:maxLines="3"
         android:text="6 months in 55 days"
         android:textColor="#CCFFFFFF"
@@ -60,8 +61,8 @@
         android:id="@+id/day_fact"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:fontFamily="@font/dmmono_regular"
         android:layout_marginTop="10dp"
-        android:fontFamily="monospace"
         android:ellipsize="end"
         android:maxLines="3"
         android:text="🐾 In 12 days: longer than an elephant's pregnancy"

@@ -16,7 +16,7 @@ import android.widget.TextView;
 // Giving one widget its own style: opened when one is placed and from the widget's Edit (Android
 // 12 and up; widgetFeatures reconfigurable|configuration_optional). The same styles for the day
 // count and the chip (WidgetStyles), and first "Same as the app", which follows the style picked
-// in the app (Account settings > Widgets). Leaving without picking keeps the widget as it is.
+// in the app (its settings, Widgets). Leaving without picking keeps the widget as it is.
 public class WidgetSettingsActivity extends Activity {
     private int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
@@ -48,7 +48,7 @@ public class WidgetSettingsActivity extends Activity {
         list.addView(title);
 
         TextView note = new TextView(this);
-        note.setText("Pick the style for all your widgets in RecoveryBot, under Account settings > Widgets, or give this one its own.");
+        note.setText("Pick the style for all your widgets in RecoveryBot, in its settings under Widgets, or give this one its own.");
         note.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         note.setPadding(0, 0, 0, dp(12));
         list.addView(note);

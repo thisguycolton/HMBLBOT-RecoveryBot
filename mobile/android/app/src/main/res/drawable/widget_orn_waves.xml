@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A widget style's backdrop drawing (WidgetStyles.java), the same shapes as the iPhone widgets' OrnamentView and the app's preview (WidgetSettings.jsx) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="100dp" android:height="30dp" android:viewportWidth="100" android:viewportHeight="30">
+    <path android:fillColor="#21FFFFFF" android:pathData="M0,14C15,6 30,6 50,14C70,22 85,22 100,14L100,30L0,30Z" />
+    <path android:fillColor="#1CFFFFFF" android:pathData="M0,20C20,12 35,26 55,19C75,12 85,12 100,20L100,30L0,30Z" />
+</vector>

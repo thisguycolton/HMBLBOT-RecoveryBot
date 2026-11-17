@@ -10,4 +10,7 @@
     <color name="widget_paper_soft">#CC3B2E21</color>
     <color name="widget_paper_accent">#B86B29</color>
     <color name="widget_paper_track">#333B2E21</color>
+    <!-- Paper's notebook lines and margin (widget_bg_paper) -->
+    <color name="widget_paper_rule">#143B2E21</color>
+    <color name="widget_paper_margin">#73B86B29</color>
 </resources>

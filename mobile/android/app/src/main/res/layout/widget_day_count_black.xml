@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg_black"
+    android:clipToOutline="true"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -12,7 +13,8 @@
         android:id="@+id/day_number"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="sans-serif-black"
+        android:fontFamily="@font/inter_extra_light"
+        android:letterSpacing="-0.04"
         android:includeFontPadding="false"
         android:maxLines="1"
         android:text="127"
@@ -23,7 +25,7 @@
         android:id="@+id/day_unit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="sans-serif-medium"
+        android:fontFamily="@font/inter_medium"
         android:text="days"
         android:textColor="#E6FFFFFF"
         android:textSize="16sp" />
@@ -37,6 +39,7 @@
         android:id="@+id/day_next"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:fontFamily="@font/inter_medium"
         android:maxLines="3"
         android:text="6 months in 55 days"
         android:textColor="#E6FFFFFF"
@@ -58,6 +61,7 @@
         android:id="@+id/day_fact"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:fontFamily="@font/inter_medium"
         android:layout_marginTop="10dp"
         android:ellipsize="end"
         android:maxLines="3"

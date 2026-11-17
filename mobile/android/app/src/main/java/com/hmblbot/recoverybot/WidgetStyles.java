@@ -13,9 +13,12 @@ import java.util.Arrays;
 // (res/drawable/widget_bg_*) and a day count layout (res/layout/widget_day_count_*); Paper
 // follows Light/Dark Mode through res/values-night.
 //
-// The style is picked in the app (Account settings > Widgets, WidgetBridgePlugin.setWidgetStyle)
-// and every widget left on "Same as the app" draws in it. A widget's own Edit
-// (WidgetSettingsActivity) can give that one widget its own style instead.
+// Each style also has its own fonts (the site's, in res/font, set in its layout) and a drawing
+// in its background (res/drawable/widget_orn_*, the same shapes as the iPhone widgets).
+//
+// The style is picked in the app (This phone > Widgets, WidgetBridgePlugin.setWidgetStyle), for
+// every widget or for one placed widget (WidgetBridgePlugin.placedWidgets lists them). A widget's
+// own Edit (WidgetSettingsActivity) sets the same per-widget pick.
 final class WidgetStyles {
     private WidgetStyles() {}
 
@@ -55,13 +58,17 @@ final class WidgetStyles {
         return own.isEmpty() ? appStyle(context) : own;
     }
 
-    // For both (which drops each kind's own), or with widget "day" / "chip" for that kind only
+    // For every widget (which drops each kind's own and every placed widget's own), or with
+    // widget "day" / "chip" for that kind only
     static void setAppStyle(Context context, String key, String widget) {
         SharedPreferences.Editor edit = prefs(context).edit();
         if ("day".equals(widget) || "chip".equals(widget)) {
             edit.putString(APP + "." + widget, key);
         } else {
             edit.putString(APP, key).remove(APP + ".day").remove(APP + ".chip");
+            for (String name : prefs(context).getAll().keySet()) {
+                if (name.startsWith("style.")) edit.remove(name);
+            }
         }
         edit.apply();
     }

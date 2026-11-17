@@ -1,9 +1,13 @@
 package com.hmblbot.recoverybot;
 
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
+import android.os.Bundle;
 import android.content.SharedPreferences;
 import android.util.Base64;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -53,7 +57,7 @@ public class WidgetBridgePlugin extends Plugin {
         call.resolve();
     }
 
-    // The styles picked in the app (Account settings > Widgets), which every widget left on
+    // The styles picked in the app (its settings, Widgets), which every widget left on
     // "Same as the app" draws in (WidgetStyles): one for both, and the day count's and chip's own
     // when "Same style for both" is off ("" while they follow the one for both). They belong to
     // the phone, so signing out keeps them.
@@ -67,16 +71,38 @@ public class WidgetBridgePlugin extends Plugin {
         call.resolve(answer);
     }
 
-    // { style } sets the one for both; { style, widget: "day" | "chip" } that widget's own
+    // { style } sets the one for every widget and drops all the others; { style, widget: "day" |
+    // "chip" } a kind's own (older pages); { style, widget: "day.<id>" } one placed widget's own
+    // (from placedWidgets), and with style "" it goes back to the one for every widget
     @PluginMethod
     public void setWidgetStyle(PluginCall call) {
         String style = call.getString("style", "");
         String widget = call.getString("widget", "");
+        String[] placed = widget.split("\\.", 2);
+        if (placed.length == 2 && ("day".equals(placed[0]) || "chip".equals(placed[0]))) {
+            int id;
+            try {
+                id = Integer.parseInt(placed[1]);
+            } catch (NumberFormatException e) {
+                call.reject("Unknown widget");
+                return;
+            }
+            if (!style.isEmpty() && !WidgetStyles.known(style)) {
+                call.reject("Unknown widget style");
+                return;
+            }
+            WidgetStyles.setOwn(getContext(), placed[0], id, style.isEmpty() ? WidgetStyles.APP : style);
+            WidgetData.redrawAll(getContext());
+            JSObject answer = new JSObject();
+            answer.put("style", style);
+            call.resolve(answer);
+            return;
+        }
         if (!WidgetStyles.known(style)) {
             call.reject("Unknown widget style");
             return;
         }
-        if (!widget.isEmpty() && !"both".equals(widget) && !"day".equals(widget) && !"chip".equals(widget)) {
+        if (!widget.isEmpty() && !"both".equals(widget) && !"all".equals(widget) && !"day".equals(widget) && !"chip".equals(widget)) {
             call.reject("Unknown widget");
             return;
         }
@@ -84,6 +110,37 @@ public class WidgetBridgePlugin extends Plugin {
         WidgetData.redrawAll(getContext());
         JSObject answer = new JSObject();
         answer.put("style", style);
+        call.resolve(answer);
+    }
+
+    // The widgets on their Home Screen, each on its own, with its size ("small" up to 2x2,
+    // "medium" when wider, "large" when wider and taller) and the style it has of its own (""
+    // while it follows the one for every widget): { widgets: [{ id: "day.12", kind: "day",
+    // size: "small", style: "" }] }
+    @PluginMethod
+    public void placedWidgets(PluginCall call) {
+        Context context = getContext();
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        JSArray widgets = new JSArray();
+        String[] kinds = {"day", "chip"};
+        Class<?>[] providers = {DayCountWidget.class, ChipWidget.class};
+        for (int k = 0; k < kinds.length; k++) {
+            for (int id : manager.getAppWidgetIds(new ComponentName(context, providers[k]))) {
+                Bundle options = manager.getAppWidgetOptions(id);
+                int width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
+                int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
+                String size = width >= 220 ? (height >= 220 ? "large" : "medium") : "small";
+                String own = WidgetStyles.own(context, kinds[k], id);
+                JSObject widget = new JSObject();
+                widget.put("id", kinds[k] + "." + id);
+                widget.put("kind", kinds[k]);
+                widget.put("size", size);
+                widget.put("style", WidgetStyles.APP.equals(own) ? "" : own);
+                widgets.put(widget);
+            }
+        }
+        JSObject answer = new JSObject();
+        answer.put("widgets", widgets);
         call.resolve(answer);
     }
 
