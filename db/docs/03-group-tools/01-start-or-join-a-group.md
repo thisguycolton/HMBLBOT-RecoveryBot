@@ -30,6 +30,18 @@ If your group is listed by AA Intergroup or a local intergroup, it may already h
 3. A site admin checks it first. Until then the group shows **Waiting for approval** and only you can see it.
 4. Once it's approved you're the group's first **admin**, and anyone following the listing hears it arrived. Invite your members with the invite link from the [Members page](/docs/group-tools/members-and-roles).
 
+### The setup guide
+
+Right after you start a group, the **setup guide** walks you through it one step at a time. You can use it while the group is waiting for approval:
+
+1. **About the group**: its name, a few words about it, its time zone, website and logo.
+2. **Meetings**: check the meetings that came over from the listing, import more from AA Intergroup, or add them by hand.
+3. **Offices**: add the usual offices (Chair, Secretary, Treasurer, Host Coordinator, GSR) or your own, see what each lets its holder do on the site, and say who holds it now. A member you put in an office gets its access right away.
+4. **Invite your group**: copy or share the invite link.
+5. **Extras**: the group page, approved literature, chips, chat and court verification.
+
+Every step can be skipped. Leave any time and pick up where you were from the card on the group's page, or from **Manage > Setup guide**.
+
 If a site admin doesn't approve it, you'll get a notification (with the reason, if they gave one), and you can start it again later.
 
 > [!NOTE] Groups that aren't listed by an intergroup are being opened up gradually. If yours isn't listed, [contact us](/contact) and we'll set it up with you.

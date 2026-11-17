@@ -6,8 +6,8 @@ class Api::GroupsController < ApplicationController
   # Anyone sees an active group's page, signed in or not; any account may ask to join it
   skip_before_action :authenticate_user!, only: :show
   before_action :set_viewable_group, only: %i[show join leave]
-  before_action :set_group, only: %i[update destroy approve regenerate_invite court_verifications]
-  before_action :require_manager, only: %i[update regenerate_invite court_verifications]
+  before_action :set_group, only: %i[update destroy approve regenerate_invite court_verifications setup]
+  before_action :require_manager, only: %i[update regenerate_invite court_verifications setup]
   # Listing your own groups is open to anyone in one (the My groups window in the nav)
   # Starting one from an intergroup listing is open to every account (Group.can_start_from_listing?)
   before_action :require_feature, only: %i[create find]
@@ -190,6 +190,23 @@ class Api::GroupsController < ApplicationController
     render json: group_json
   end
 
+  # POST /api/groups/:slug/setup (group admins), the setup guide's progress:
+  #   { step: "meetings", state: "done" | "skipped" | "" } marks (or clears) a step
+  #   { finished: true } puts the guide away; { finished: false } brings it back
+  def setup
+    if params.key?(:step)
+      return render(json: { error: "That isn't a setup step." }, status: :unprocessable_entity) unless Group::SETUP_STEPS.include?(params[:step].to_s)
+
+      @group.mark_setup_step!(params[:step].to_s, params[:state].presence)
+    end
+    unless params[:finished].nil?
+      @group.update!(setup_finished_at: ActiveModel::Type::Boolean.new.cast(params[:finished]) ? Time.current : nil)
+    end
+    render json: @group.setup_json
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   # GET /api/groups/:slug/court_verifications (group admins)
   def court_verifications
     rows = @group.court_verifications.includes(:meeting).order(meeting_at: :desc).limit(500)
@@ -272,6 +289,7 @@ class Api::GroupsController < ApplicationController
       json[:court_form_url] = "#{request.base_url}/court_verifications/new?group=#{@group.slug}"
       json[:court_email] = @group.court_email_json
       json[:quorum] = { count: @group.quorum_count, percent: @group.quorum_percent, needed: @group.quorum_needed }
+      json[:setup] = @group.setup_json
     end
     json
   end

@@ -20,6 +20,7 @@ import GroupsIndex from "../components/groups/GroupsIndex";
 import GroupForm from "../components/groups/GroupForm";
 import GroupPage from "../components/groups/GroupPage";
 import GroupDashboard, { ConscienceRoute, SettingsRedirect, SettingsRoute } from "../components/groups/GroupDashboard";
+import { SetupRoute } from "../components/groups/setup/SetupGuide";
 import FindGroup from "../components/groups/FindGroup";
 import FindMeeting from "../components/groups/FindMeeting";
 import IntergroupPage from "../components/groups/page/IntergroupPage";
@@ -73,6 +74,8 @@ const router = createBrowserRouter(
     // document templates (Settings' old address goes there)
     { path: "/:slug/manage/*", element: <SettingsRoute /> },
     { path: "/:slug/settings/*", element: <SettingsRedirect /> },
+    // The setup guide, for group admins after they start or claim a group
+    { path: "/:slug/setup/*", element: <SetupRoute /> },
     {
       path: "/",
       element: <Shell />,

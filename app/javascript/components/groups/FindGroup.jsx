@@ -64,12 +64,12 @@ export default function FindGroup() {
   };
 
   const start = async (listing) => {
-    if (!window.confirm(`Start “${listing.group_name || listing.name}” here? You'll be its admin once a site admin approves it.`)) return;
+    if (!window.confirm(`Start “${listing.group_name || listing.name}” here? You'll be its admin, and can set it up while a site admin approves it.`)) return;
     setBusy(listing.slug);
     setError(null);
     try {
       const group = await api("/groups/start", { method: "POST", body: { oiaa_slug: listing.slug } });
-      navigate(`/${group.slug}`);
+      navigate(`/${group.slug}/setup`);
     } catch (err) {
       if (err.data?.slug) navigate(`/${err.data.slug}`);
       setError(err.message);
