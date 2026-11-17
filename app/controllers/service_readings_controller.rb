@@ -1,8 +1,11 @@
 class ServiceReadingsController < ApplicationController
   include KeepsRobotsOut
   keep_robots_out
+  # Only site admins add, change or delete the service readings (the index and show pages hide the buttons too)
+  before_action :authenticate_user!, only: %i[ new create edit update destroy ]
+  before_action :require_admin!, only: %i[ new create edit update destroy ]
   before_action :set_service_reading, only: %i[ show edit update destroy ]
-  layout "reader", only: %i[index show]
+  layout "reader", only: %i[index show new edit]
   # GET /service_readings or /service_readings.json
   def index
     @service_readings = ServiceReading.order(:id)
@@ -30,10 +33,14 @@ class ServiceReadingsController < ApplicationController
     respond_to do |format|
       if @service_reading.save
         format.html { redirect_to service_reading_url(@service_reading), notice: "Service reading was successfully created." }
-        format.json { render :show, status: :created, location: @service_reading }
+        # The React form (ServiceReadingEditor.jsx) goes to the reading itself; the notice shows there
+        format.json do
+          flash[:notice] = "Service reading was successfully created."
+          render json: { id: @service_reading.id, redirect_url: service_reading_path(@service_reading) }, status: :created
+        end
       else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @service_reading.errors, status: :unprocessable_entity }
+        format.html { redirect_to new_service_reading_path, alert: @service_reading.errors.full_messages.to_sentence }
+        format.json { render json: { errors: @service_reading.errors.full_messages }, status: :unprocessable_entity }
       end
     end
   end
@@ -43,10 +50,13 @@ class ServiceReadingsController < ApplicationController
     respond_to do |format|
       if @service_reading.update(service_reading_params)
         format.html { redirect_to service_reading_url(@service_reading), notice: "Service reading was successfully updated." }
-        format.json { render :show, status: :ok, location: @service_reading }
+        format.json do
+          flash[:notice] = "Service reading was successfully updated."
+          render json: { id: @service_reading.id, redirect_url: service_reading_path(@service_reading) }, status: :ok
+        end
       else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @service_reading.errors, status: :unprocessable_entity }
+        format.html { redirect_to edit_service_reading_path(@service_reading), alert: @service_reading.errors.full_messages.to_sentence }
+        format.json { render json: { errors: @service_reading.errors.full_messages }, status: :unprocessable_entity }
       end
     end
   end
@@ -62,6 +72,15 @@ class ServiceReadingsController < ApplicationController
   end
 
   private
+    def require_admin!
+      return if current_user&.admin?
+
+      respond_to do |format|
+        format.html { redirect_to service_readings_path, alert: "Only site admins can change service readings." }
+        format.json { render json: { errors: ["Only site admins can change service readings."] }, status: :forbidden }
+      end
+    end
+
     # Use callbacks to share common setup or constraints between actions.
     def set_service_reading
       @service_reading = ServiceReading.find(params[:id])
