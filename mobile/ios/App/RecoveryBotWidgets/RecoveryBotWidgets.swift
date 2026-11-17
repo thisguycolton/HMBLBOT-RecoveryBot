@@ -430,22 +430,39 @@ struct WidgetCanvas: View {
         return .system(size: size, weight: weight, design: design)
     }
 
-    // The path around the edge, clockwise from the top middle, inset by `inset`
+    // The widget's own outline, inset by `inset`: the same smooth (continuous) corners iOS clips
+    // a widget to, so the edge hugs the real corners
     static func edgePath(_ size: CGSize, radius: CGFloat, inset: CGFloat) -> Path {
-        let x0 = inset, y0 = inset, x1 = size.width - inset, y1 = size.height - inset
-        let r = max(0, radius - inset)
-        var p = Path()
-        p.move(to: CGPoint(x: size.width / 2, y: y0))
-        p.addLine(to: CGPoint(x: x1 - r, y: y0))
-        p.addArc(center: CGPoint(x: x1 - r, y: y0 + r), radius: r, startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false)
-        p.addLine(to: CGPoint(x: x1, y: y1 - r))
-        p.addArc(center: CGPoint(x: x1 - r, y: y1 - r), radius: r, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
-        p.addLine(to: CGPoint(x: x0 + r, y: y1))
-        p.addArc(center: CGPoint(x: x0 + r, y: y1 - r), radius: r, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
-        p.addLine(to: CGPoint(x: x0, y: y0 + r))
-        p.addArc(center: CGPoint(x: x0 + r, y: y0 + r), radius: r, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
-        p.addLine(to: CGPoint(x: size.width / 2, y: y0))
-        return p
+        let rect = CGRect(origin: .zero, size: size).insetBy(dx: inset, dy: inset)
+        return Path(roundedRect: rect, cornerRadius: max(0, radius - inset), style: .continuous)
+    }
+
+    // Where the top middle falls along a path (0-1), and whether the path runs clockwise from it.
+    // SwiftUI picks a rounded rectangle's starting point itself, so it's found by sampling.
+    static func topMiddle(of path: Path, in size: CGSize) -> (start: CGFloat, clockwise: Bool) {
+        let target = CGPoint(x: size.width / 2, y: path.boundingRect.minY)
+        var best: CGFloat = 0
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        for i in 1...400 {
+            let t = CGFloat(i) / 400
+            guard let point = path.trimmedPath(from: 0, to: t).currentPoint else { continue }
+            let d = hypot(point.x - target.x, point.y - target.y)
+            if d < bestDistance { bestDistance = d; best = t }
+        }
+        let ahead = path.trimmedPath(from: 0, to: min(1, best + 0.01)).currentPoint?.x ?? target.x + 1
+        return (best, ahead > target.x)
+    }
+
+    // The stretch of the edge for `p` (0-1), clockwise from the top middle, as one or two pieces
+    static func progressPieces(of path: Path, in size: CGSize, _ amount: CGFloat) -> [Path] {
+        let p = min(1, max(0, amount))
+        guard p > 0 else { return [] }
+        let (start, clockwise) = topMiddle(of: path, in: size)
+        let from = clockwise ? start : start - p
+        let to = clockwise ? start + p : start
+        if from >= 0 && to <= 1 { return [path.trimmedPath(from: from, to: to)] }
+        if to > 1 { return [path.trimmedPath(from: from, to: 1), path.trimmedPath(from: 0, to: to - 1)] }
+        return [path.trimmedPath(from: from + 1, to: 1), path.trimmedPath(from: 0, to: to)]
     }
 
     private func draw(_ ctx: inout GraphicsContext, _ size: CGSize) {
@@ -497,8 +514,9 @@ struct WidgetCanvas: View {
                 let path = Self.edgePath(size, radius: Self.corner, inset: th / 2)
                 let track = op["track"] as? [String: Any] ?? [:]
                 ctx.stroke(path, with: .color(Color(hex: track["c"] as? String ?? "FFFFFF", opacity: Double(num(track, "a", 0.13)))), lineWidth: th)
-                ctx.stroke(path.trimmedPath(from: 0, to: min(1, max(0, p))), with: .color(Color(hex: op["color"] as? String ?? "FFFFFF")),
-                           style: StrokeStyle(lineWidth: th, lineCap: .butt))
+                for piece in Self.progressPieces(of: path, in: size, CGFloat(p)) {
+                    ctx.stroke(piece, with: .color(Color(hex: op["color"] as? String ?? "FFFFFF")), style: StrokeStyle(lineWidth: th, lineCap: .butt))
+                }
             case "rule":
                 let n = Int(num(op, "w") / 7.1)
                 let color = Color(hex: op["color"] as? String ?? "FFFFFF", opacity: Double(num(op, "a", 0.35)))
