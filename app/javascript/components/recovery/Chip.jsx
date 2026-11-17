@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+import React, { createContext, useContext, useId } from "react";
 import SceneArt, { BLACK, Edge, FRAMES, METALS, layoutOf, metalOf, placeTransform } from "./ChipArt";
 
 // Virtual chips, drawn as SVG in a group's design (ChipDesign on the server, set in Group
@@ -151,7 +151,21 @@ export function meetingLook(design) {
 }
 const inkFor = (color, metal) => (metal ? shade(color, -0.55) : light(color) ? shade(color, -0.7) : "#ffffff");
 
-const svgClass = (faded, bare, className) => `${faded ? "opacity-35 grayscale" : bare ? "" : "drop-shadow-md"} ${className}`;
+// Shadows and lighting scale with how big a chip is drawn. SVG filters work in screen pixels:
+// a lighting filter measures a slope per pixel, so the same raised logo looks steeper, with
+// darker shadows, on a small chip than on a big one. Chips are tuned at SHADOW_SIZE pixels wide
+// (the default, about the size the chip designer spins one); each chip tells the filters inside
+// it how wide it really is (ChipPixels), and its own drop shadow grows and shrinks with it.
+export const SHADOW_SIZE = 160;
+const ChipPixels = createContext(SHADOW_SIZE);
+const svgClass = (faded, className) => `${faded ? "opacity-35 grayscale" : ""} ${className}`;
+// Tailwind's drop-shadow-md (0 4px 3px, 0 2px 2px) at SHADOW_SIZE, in proportion at other sizes
+function svgStyle(faded, bare, size) {
+  if (faded || bare) return undefined;
+  const k = size / SHADOW_SIZE;
+  const px = (n) => `${+(n * k).toFixed(2)}px`;
+  return { filter: `drop-shadow(0 ${px(4)} ${px(3)} rgb(0 0 0 / 0.07)) drop-shadow(0 ${px(2)} ${px(2)} rgb(0 0 0 / 0.06))` };
+}
 
 // Lines of text that fit a width: the given line breaks, or words wrapped at `width` letters
 function wrap(text, width) {
@@ -251,9 +265,12 @@ function Relief({ id, round, look, cy = 86 }) {
 // metal struck `height` high, rising from the coin as steeply as `sharpness` (1 to 10) says;
 // not metal, a slight raised print in `ink`. `inset` cuts it into the coin instead. The raised
 // logo and struck chip art (ChipArt.jsx) both use it, over the whole 200 × 200 chip.
+// Lighting measures the slope per screen pixel, so the height is scaled by how wide the chip
+// is drawn (ChipPixels) to look the same at every size.
 export function LiftFilter({ id, metal, color, ink, height = 4, sharpness = 7, inset = false }) {
+  const pixels = useContext(ChipPixels);
   const soft = 0.12 + (10 - sharpness) * 0.2; // how far the slope from the face to the top runs
-  const lift = (inset ? -1 : 1) * height * 1.4;
+  const lift = (inset ? -1 : 1) * height * 1.4 * (pixels / SHADOW_SIZE);
   const light = <feDistantLight azimuth="225" elevation="55" />;
   return (
     <filter id={id} filterUnits="userSpaceOnUse" x="0" y="0" width="200" height="200" colorInterpolationFilters="sRGB">
@@ -333,7 +350,7 @@ export function RoundChip({ design: given, milestone, logoUrl, size = 160, faded
   const bigSize = big.length > 4 ? 26 : big.length > 2 ? 32 : 40;
 
   return (
-    <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label={title || `${milestone.label} chip`} className={svgClass(faded, bare, className)}>
+    <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label={title || `${milestone.label} chip`} className={svgClass(faded, className)} style={svgStyle(faded, bare, size)}>
       <RoundBase id={id} look={look} edge={d.edge} />
       <defs><clipPath id={`${id}-logo`}><circle cx="100" cy="88" r="27" /></clipPath></defs>
       <ArcText id={id} top={d.top_text} bottom={d.bottom_text} ink={ink} />
@@ -344,7 +361,7 @@ export function RoundChip({ design: given, milestone, logoUrl, size = 160, faded
           <path d="M 100,46 L 146.8,127 L 53.2,127 Z" />
         </g>
       )}
-      {emblem === "relief" && <Relief id={id} round={d} look={look} cy={badge ? 100 : 86} />}
+      {emblem === "relief" && <ChipPixels.Provider value={size}><Relief id={id} round={d} look={look} cy={badge ? 100 : 86} /></ChipPixels.Provider>}
       {badge && (
         <g>
           <circle cx="100.6" cy="101" r="23" fill="#000000" opacity="0.18" />
@@ -453,9 +470,9 @@ function SceneRound({ id, round, milestone, size, faded, bare, className, title 
   const bottom = at === "rim" ? `${big} ${small}` : round.bottom_text;
   const place = layoutOf(round.scene).round?.milestone;
   return (
-    <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label={title || `${milestone.label} chip`} className={svgClass(faded, bare, className)}>
+    <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label={title || `${milestone.label} chip`} className={svgClass(faded, className)} style={svgStyle(faded, bare, size)}>
       <SceneRim id={id} color={color} edge={round.edge} plastic={!metal} />
-      <SceneArt id={id} scene={round.scene} clip={`${id}-face`} />
+      <ChipPixels.Provider value={size}><SceneArt id={id} scene={round.scene} clip={`${id}-face`} /></ChipPixels.Provider>
       <circle cx="100" cy="100" r="88" fill="none" stroke={shade(color, -0.35)} strokeWidth="1.6" />
       <SceneBand id={id} top={round.top_text} bottom={bottom} color={color} ink={metal ? undefined : "#ffffff"} />
       {at === "badge" && (
@@ -598,7 +615,7 @@ export function TriangleChip({ design: given, kind, count, size = 160, faded = f
   }
 
   return (
-    <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title || `${count} ${(count === 1 ? one : many).replace("\n", " ").toLowerCase()} chip`} className={svgClass(faded, bare, className)}>
+    <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title || `${count} ${(count === 1 ? one : many).replace("\n", " ").toLowerCase()} chip`} className={svgClass(faded, className)} style={svgStyle(faded, bare, size)}>
       <TriangleBase id={id} look={look} sides={design.triangle.sides} />
       <g fill={look.ink} fontFamily={FONT} textAnchor="middle">
         <text x="100" y={words.length > 1 ? 116 : 121} fontSize={num.length > 3 ? 19 : num.length > 2 ? 23 : 28} fontWeight="800">{num}</text>
@@ -662,13 +679,13 @@ function SceneTriangle({ id, tri, num, words, size, faded, bare, className, titl
   const look = { color, metal: body.metal, ink: body.metal ? shade(color, -0.6) : body.ink };
   const letters = body.metal ? `url(#${id}-metal)` : "#ffffff";
   return (
-    <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title} className={svgClass(faded, bare, className)}>
+    <svg viewBox="0 0 200 176" width={size} height={(size * 176) / 200} role="img" aria-label={title} className={svgClass(faded, className)} style={svgStyle(faded, bare, size)}>
       <TriangleBase id={id} look={look} sides={tri.sides} />
       <defs>
         <clipPath id={`${id}-art`}><path d={roundedTriangle(24, 10)} /></clipPath>
         <linearGradient id={`${id}-metal`} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor={shade(color, 0.45)} /><stop offset="100%" stopColor={shade(color, -0.3)} /></linearGradient>
       </defs>
-      <SceneArt id={`${id}-s`} scene={tri.scene} x={48} y={52} w={104} h={92} clip={`${id}-art`} frame="triangle" />
+      <ChipPixels.Provider value={size}><SceneArt id={`${id}-s`} scene={tri.scene} x={48} y={52} w={104} h={92} clip={`${id}-art`} frame="triangle" /></ChipPixels.Provider>
       <path d={roundedTriangle(24, 10)} fill="none" stroke={shade(color, -0.35)} strokeWidth="1.6" />
       <g transform={placeTransform(layoutOf(tri.scene).triangle?.milestone, ...FRAMES.triangle.badge)} data-milestone="">
       <circle cx="100.6" cy="123.6" r="16" fill="#000000" opacity="0.25" />
