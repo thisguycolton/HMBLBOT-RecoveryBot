@@ -85,6 +85,7 @@ class Api::HostCoordinatorSlotsTest < ActionDispatch::IntegrationTest
   end
 
   test "sub requests reach the coordinators of that slot only" do
+    @group.update!(sub_requests_audience: "hosts")
     limit!
     sign_in @whole
     post "/api/groups/#{@group.slug}/host_sub_requests", params: { sub_request: { meeting_id: @theirs.id, role: "host", on: (@today + 8).iso8601 } }, as: :json
