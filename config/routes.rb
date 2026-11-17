@@ -71,6 +71,11 @@ Rails.application.routes.draw do
   get "topicificator_links/:code", to: "topicificator_links#show"
   resources :site_notices, only: :index
   resource :profile, only: %i[show update destroy]
+  # Account settings > Sign-in methods: link and unlink Google and Apple
+  get "sign_in_methods", to: "sign_in_methods#show"
+  post "sign_in_methods/move", to: "sign_in_methods#move"
+  delete "sign_in_methods/move", to: "sign_in_methods#cancel_move"
+  delete "sign_in_methods/:provider", to: "sign_in_methods#destroy", constraints: { provider: /google|apple/ }
   resources :push_subscriptions, only: %i[index create destroy] do
     collection do
       delete "/", action: :destroy
