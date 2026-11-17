@@ -1,5 +1,5 @@
 # Giving chips (/recovery/give): a group's hosts, host coordinators, record keepers and admins
-# (Group#can_host?) give a round chip in the group's design to a member or to an email address
+# (Group#gives_chips?) give a round chip in the group's design to a member or to an email address
 # (ChipAward). An address with an account gets it straight away; any other gets an email with
 # a link to claim it (ChipMailer, ChipsController#claim). Site admins (User#suite_admin?) also
 # get "Admin Chips": RecoveryBot's own chip as designed in Site Admin > Sobriety chips, to anyone.
@@ -114,7 +114,7 @@ class Api::ChipAwardsController < ApplicationController
     end
   end
 
-  def giving_groups = current_user.groups.includes(logo_attachment: :blob).order(:title).select { |g| g.can_host?(current_user) }
+  def giving_groups = current_user.groups.includes(logo_attachment: :blob).order(:title).select { |g| g.gives_chips?(current_user) }
 
   def given_scope(groups)
     managed = groups.select { |g| g.manageable_by?(current_user) }.map(&:id)

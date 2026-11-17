@@ -25,7 +25,7 @@ export default function GroupHome({ slug, onJoin }) {
           <span className="min-w-0 flex-1 basis-56">
             {page.custom ? "You can change this page in the HMBLBOT Editor." : "This is the default group page. Make it your group's own in the HMBLBOT Editor."}
           </span>
-          <Link to={`/${slug}/page/edit`} className="inline-flex items-center gap-1.5 rounded-xl !bg-accent px-3 py-1.5 font-semibold !text-white"><Pencil className="size-4" /> Edit the page</Link>
+          <Link to={`/${slug}/page/edit`} className="inline-flex items-center gap-1.5 rounded-xl !bg-accent px-3 py-1.5 font-semibold !text-white"><Pencil className="size-4" /> Edit the group page</Link>
         </div>
       )}
       <PageBlocks layout={page.layout} blocks={page.blocks} context={context} hidden={(b) => hiddenFor(b, context)} />

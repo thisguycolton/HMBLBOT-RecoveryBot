@@ -9,7 +9,7 @@ The **Hosting Command Center** puts everything a host needs in one window: your 
 
 ## Host a meeting
 
-1. Open your group's **HostDeck** page and choose the meeting (or choose **HostDeck** next to it on the Meetings page, Hosting or Today when you're on the schedule).
+1. Open your group's **Host tools** and choose the meeting under **Host a meeting** (or choose **Host it** next to it on the Meetings page, or **HostDeck** on Hosting or Today when you're on the schedule).
 2. Work through the script one section at a time with **Next**. **Meeting flow** on the left lists every section; sections that don't apply tonight are dimmed and skipped.
 3. **Chat postings** pop up at their minute into the meeting. Choose **Copy** on one and paste it into the Zoom chat. Placeholders like `{{ zoom_passcode }}` are already filled in.
 4. Open a **reading** to share it on screen. It opens without menus, ready for screen sharing.

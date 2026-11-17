@@ -245,6 +245,25 @@ class Api::GroupsTest < ActionDispatch::IntegrationTest
     assert_match "waiting for a site admin already", response.parsed_body["error"]
   end
 
+  test "a group's page names the roles you hold, for the badge" do
+    group = create_group
+    get "/api/groups/#{group.slug}", as: :json
+    assert_equal ["Group admin"], response.parsed_body["my_roles"]
+
+    membership = group.memberships.create!(user: @member)
+    sign_in @member
+    get "/api/groups/#{group.slug}", as: :json
+    assert_equal [], response.parsed_body["my_roles"]
+
+    membership.update!(can_keep_records: true, can_host: true)
+    get "/api/groups/#{group.slug}", as: :json
+    assert_equal ["Record keeper", "Can host"], response.parsed_body["my_roles"]
+
+    sign_in @stranger
+    get "/api/groups/#{group.slug}", as: :json
+    assert_equal [], response.parsed_body["my_roles"]
+  end
+
   test "literature and readings show to members" do
     group = create_group
     group.memberships.create!(user: @member)

@@ -227,6 +227,15 @@ class Api::GroupsController < ApplicationController
     }
   end
 
+  # What someone does in the group, for the badge on its page ("Record keeper", "Can host")
+  def my_roles(membership)
+    return [] unless membership&.active?
+    return ["Group admin"] if membership.admin?
+
+    [("Record keeper" if membership.can_keep_records), ("Treasurer" if membership.can_keep_treasury),
+     ("Host coordinator" if membership.can_schedule_hosts), ("Can host" if membership.can_host)].compact
+  end
+
   def group_json
     membership = @group.membership_for(current_user)
     member = current_user&.suite_admin? || membership&.active?
@@ -235,7 +244,8 @@ class Api::GroupsController < ApplicationController
       slug: @group.slug, title: @group.title, description: @group.description, website: @group.website,
       time_zone: @group.time_zone, status: @group.status,
       role: membership&.role, membership_status: membership&.status,
-      is_member: !!membership&.active?, can_manage: manager, can_keep_records: @group.records_editable_by?(current_user), can_schedule_hosts: @group.hosts_editable_by?(current_user), can_keep_treasury: @group.treasury_editable_by?(current_user), can_host: @group.can_host?(current_user), can_arrange_decks: @group.decks_editable_by?(current_user), is_site_admin: !!current_user&.suite_admin?, signed_in: current_user.present?,
+      my_roles: my_roles(membership),
+      is_member: !!membership&.active?, can_manage: manager, can_keep_records: @group.records_editable_by?(current_user), can_schedule_hosts: @group.hosts_editable_by?(current_user), can_keep_treasury: @group.treasury_editable_by?(current_user), can_host: @group.can_host?(current_user), can_give: @group.gives_chips?(current_user), can_arrange_decks: @group.decks_editable_by?(current_user), is_site_admin: !!current_user&.suite_admin?, signed_in: current_user.present?,
       meetings: @group.meetings.ordered.map(&:as_api_json),
       oiaa_synced_at: OiaaFeed.last_synced_at&.iso8601,
       members_count: @group.members.count,

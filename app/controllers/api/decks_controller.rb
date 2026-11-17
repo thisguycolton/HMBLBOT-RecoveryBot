@@ -20,7 +20,7 @@ class Api::DecksController < ApplicationController
     decks = decks.where(script_document_id: params[:document_id]) if params[:document_id].present?
     decks = decks.includes(:group).to_a
     documents = GroupDocument.visible_to(@group, current_user).where(id: decks.filter_map(&:script_document_id)).pluck(:id, :title).to_h
-    json = { decks: decks.map { |d| d.as_list_json(documents: documents) }, can_create: @group.decks_editable_by?(current_user), can_host: @group.can_host?(current_user) }
+    json = { decks: decks.map { |d| d.as_list_json(documents: documents) }, can_create: @group.decks_editable_by?(current_user), can_host: @group.can_host?(current_user), can_give: @group.gives_chips?(current_user) }
     if params[:document_id].present?
       kits = @group.hosting_kits.where(script_document_id: params[:document_id]).includes(:meeting)
       json[:meetings] = kits.map { |k| k.meeting ? { id: k.meeting.id, name: k.meeting.name } : { id: nil, name: "All the group's meetings" } }

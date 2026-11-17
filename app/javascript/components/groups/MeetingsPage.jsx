@@ -71,13 +71,13 @@ function TodayCard({ occurrence, hosts, needsSub, now, canHost, slug }) {
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {canHost && <Link to={`/${slug}/host/${meeting.id}`} className={quietButton}><MonitorPlay className="size-4" /> HostDeck</Link>}
+        {canHost && <Link to={`/${slug}/host/${meeting.id}`} className={quietButton}><MonitorPlay className="size-4" /> Host it</Link>}
         {meeting.conference_url ? (
           <>
             <MeetingPasscode notes={meeting.conference_url_notes} copy className="text-sm text-slate-500 dark:text-neutral-400" />
             <a href={meeting.conference_url} data-meeting-join={meeting.id} target="_blank" rel="noreferrer"
               className="inline-flex items-center gap-1.5 rounded-xl !bg-accent px-3.5 py-2 text-sm font-semibold !text-white hover:opacity-90">
-              <Video className="size-4" /> Join
+              <Video className="size-4" /> Join meeting
             </a>
           </>
         ) : (meeting.location || meeting.formatted_address) ? (
@@ -92,7 +92,7 @@ function TodayCard({ occurrence, hosts, needsSub, now, canHost, slug }) {
 // hosts them and a way in, then (for members) the schedule week by week, by date (WeekView: your
 // dates, "I can't make it", coordinators filling gaps), the regular hosts of each weekly meeting
 // (HostsTab), then every meeting's details. Adding and changing the meetings themselves
-// is Meeting settings (/groups/:slug/settings/meetings), for group admins.
+// is Manage > Meetings setup (/groups/:slug/manage/meetings), for group admins.
 export default function MeetingsPage({ group, setGroup, reload, focusId }) {
   const slug = group.slug;
   const isMember = group.is_member || group.is_site_admin;
@@ -113,7 +113,7 @@ export default function MeetingsPage({ group, setGroup, reload, focusId }) {
     <div className="space-y-6">
       {group.can_manage && (
         <div className="flex flex-wrap justify-end gap-2">
-          <Link to={`/${slug}/settings/meetings`} className={quietButton}><Settings className="size-4" /> Meeting settings</Link>
+          <Link to={`/${slug}/manage/meetings`} className={quietButton}><Settings className="size-4" /> Meetings setup</Link>
         </div>
       )}
       <Tray label={label}>
@@ -129,7 +129,7 @@ export default function MeetingsPage({ group, setGroup, reload, focusId }) {
 
       {isMember && (
         <>
-          <section className="space-y-3">
+          <section id="week" className="scroll-mt-20 space-y-3">
             <Heading>Week by week</Heading>
             <WeekView group={group} onChanged={() => setVersion((v) => v + 1)} />
           </section>

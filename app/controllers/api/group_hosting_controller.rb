@@ -15,7 +15,7 @@ class Api::GroupHostingController < ApplicationController
   # GET /api/groups/:group_slug/hosting: the meetings, and their dates over the next week, to pick one
   def index
     render json: { meetings: HostingCenter.meetings_json(@group, current_user), occurrences: HostingCenter.occurrences_json(@group, current_user),
-                   time_zone: @group.zone.tzinfo.name, can_edit: @group.hosts_editable_by?(current_user) }
+                   time_zone: @group.zone.tzinfo.name, can_edit: @group.hosts_editable_by?(current_user), can_give: @group.gives_chips?(current_user) }
   end
 
   # GET /api/groups/:group_slug/hosting/capsule?meeting_id=&page=: the Time Capsule, past meetings as the hosts ran them

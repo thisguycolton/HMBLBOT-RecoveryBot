@@ -10,7 +10,7 @@ export default function ReadingsTab({ group }) {
       {group.is_member && (
         <a href="/readings/new" className={primaryButton}><Plus className="h-4 w-4" /> New reading</a>
       )}
-      <Tray label="Shared with the group">
+      <Tray label="Members' readings">
         {group.readings.length === 0 ? (
           <Card className="p-4 text-sm text-slate-600 dark:text-neutral-400">
             No readings yet. When members write a reading for {group.title}, it shows up here.

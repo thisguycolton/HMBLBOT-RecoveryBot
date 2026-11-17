@@ -37,4 +37,4 @@ Below the sub requests, **Your next two weeks** lists your own dates. Sam's show
 
 ## Showing hosts publicly
 
-Groups can show host names on their public page, or keep them to members. Admins set this in [Group settings](/docs/group-tools/group-settings).
+Groups can show host names on their public page, or keep them to members. Admins set this in [Manage](/docs/group-tools/group-settings).
