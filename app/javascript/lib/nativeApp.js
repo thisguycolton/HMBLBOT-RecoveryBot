@@ -36,9 +36,9 @@ export function onPlugin(name, event, callback) {
   return () => handle?.remove?.();
 }
 
-// Apple only allows tips to the developer through in-app purchase, so the iPhone app has no
-// Donate button (Android and the website keep theirs)
-export const donationsShown = () => nativePlatform() !== "ios";
+// Apple and Google both only allow tips to the developer through their own in-app purchase, so
+// neither app shows the Donate button or links to Buy Me a Coffee (only the website does)
+export const donationsShown = () => !isNativeApp();
 
 // Whether this build of the app's plugin has a method (a newer method on an older install won't)
 export function hasPluginMethod(name, method) {
