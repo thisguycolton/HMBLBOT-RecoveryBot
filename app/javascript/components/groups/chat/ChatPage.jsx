@@ -879,10 +879,23 @@ const MORE_EMOJI = [
 function EmojiPicker({ onPick, onClose }) {
   const ref = useRef(null);
   const [up, setUp] = useState(false);
+  const [shift, setShift] = useState(0);
   useLayoutEffect(() => {
     const anchor = ref.current?.parentElement?.getBoundingClientRect();
     if (anchor) setUp(anchor.top > window.innerHeight / 2);
   }, []);
+  // It opens leftward from its button, which on a phone runs it off the left of the screen (and
+  // the message list clips it): slide it back in to keep a little margin on both sides
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const room = document.documentElement.clientWidth;
+    const left = r.left - shift;
+    const right = r.right - shift;
+    const margin = 8;
+    setShift(left < margin ? margin - left : right > room - margin ? room - margin - right : 0);
+  }, [up]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const away = (e) => { if (!ref.current?.parentElement?.contains(e.target)) onClose(); };
     const esc = (e) => { if (e.key === "Escape") onClose(); };
@@ -892,13 +905,13 @@ function EmojiPicker({ onPick, onClose }) {
   }, [onClose]);
   const cell = "inline-grid size-9 place-items-center rounded-lg !bg-transparent text-xl hover:!bg-neutral-100 dark:hover:!bg-neutral-800";
   return (
-    <div ref={ref} role="dialog" aria-label="Pick a reaction"
+    <div ref={ref} role="dialog" aria-label="Pick a reaction" style={shift ? { transform: `translateX(${shift}px)` } : undefined}
       className={`absolute right-0 z-20 w-[19.5rem] ${up ? "bottom-full mb-1" : "top-full mt-1"} max-w-[calc(100vw-2rem)] rounded-xl bg-white p-2 shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700`}>
       <div className="flex justify-between border-b border-neutral-200 pb-1.5 dark:border-neutral-700">
         {QUICK_EMOJI.map((e) => <button key={e} type="button" className={cell} onClick={() => onPick(e)} aria-label={`React with ${e}`}>{e}</button>)}
       </div>
       <div className="grid max-h-48 grid-cols-8 overflow-y-auto pt-1.5">
-        {MORE_EMOJI.map((e) => <button key={e} type="button" className={cell} onClick={() => onPick(e)} aria-label={`React with ${e}`}>{e}</button>)}
+        {MORE_EMOJI.map((e) => <button key={e} type="button" className={`${cell} !w-full`} onClick={() => onPick(e)} aria-label={`React with ${e}`}>{e}</button>)}
       </div>
     </div>
   );
