@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_18_200100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -164,6 +164,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
     t.index ["user_id"], name: "index_ahoy_visits_on_user_id"
     t.index ["visit_token"], name: "index_ahoy_visits_on_visit_token", unique: true
     t.index ["visitor_token", "started_at"], name: "index_ahoy_visits_on_visitor_token_and_started_at"
+  end
+
+  create_table "app_releases", force: :cascade do |t|
+    t.string "platform", null: false
+    t.integer "build", null: false
+    t.string "version", null: false
+    t.text "notes"
+    t.date "released_on"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["platform", "build"], name: "index_app_releases_on_platform_and_build", unique: true
   end
 
   create_table "books", force: :cascade do |t|
@@ -1567,6 +1578,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
     t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "platforms", default: [], null: false, array: true
+    t.integer "ios_build_below"
+    t.integer "android_build_below"
     t.index ["active", "starts_at", "ends_at"], name: "index_site_notices_on_active_and_starts_at_and_ends_at"
     t.index ["user_id"], name: "index_site_notices_on_user_id"
   end

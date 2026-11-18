@@ -5,6 +5,8 @@ class SiteNotice < ApplicationRecord
   moderates_language :title, :summary, :body, :link_label
   TONES = %w[info success warning].freeze
   AUDIENCES = %w[everyone members guests].freeze
+  # Where it shows. None picked = everywhere.
+  PLATFORMS = %w[web ios android].freeze
 
   belongs_to :user, optional: true
 
@@ -13,7 +15,10 @@ class SiteNotice < ApplicationRecord
   validates :tone, inclusion: { in: TONES }
   validates :audience, inclusion: { in: AUDIENCES }
   validates :link_url, format: { with: %r{\A(https?://|/(?!/))}i, message: "must start with https:// or /" }, allow_blank: true
+  validates :ios_build_below, :android_build_below, numericality: { only_integer: true, greater_than: 1 }, allow_nil: true
   validate :ends_after_start
+
+  before_validation { self.platforms = Array(platforms).map(&:to_s).compact_blank.uniq & PLATFORMS }
 
   # Switched on, started and not yet over
   scope :live, lambda {
@@ -31,16 +36,34 @@ class SiteNotice < ApplicationRecord
   APP_WORDS = /\b(testflight|app store|google play|play store)\b/i
 
   # What this visitor should see: members-only notices need an account, guest notices
-  # (say, "sign up for highlights") go only to people who aren't signed in. in_app leaves out
-  # notices about getting the app.
-  def self.for_viewer(user, in_app: false)
-    notices = live.where(audience: ["everyone", user ? "members" : "guests"]).order(created_at: :desc).to_a
-    in_app ? notices.reject(&:about_getting_the_app?) : notices
+  # (say, "sign up for highlights") go only to people who aren't signed in. platform is "web",
+  # "ios" or "android" and build the app's build number (shown_to?).
+  def self.for_viewer(user, platform: "web", build: nil)
+    live.where(audience: ["everyone", user ? "members" : "guests"]).order(created_at: :desc)
+        .select { |notice| notice.shown_to?(platform, build) }
   end
+
+  # A notice picked for some devices goes only there, and in an app with "builds older than" only
+  # to older builds. An app build too old to say its number (before the App plugin, iPhone build 1)
+  # counts as older than everything. A notice for everywhere that's about getting the app skips the
+  # apps; one picked for the apps on purpose (say, how to update in TestFlight) doesn't.
+  def shown_to?(platform, build = nil)
+    platform = "web" unless %w[ios android].include?(platform)
+    return false if platforms.any? && !platforms.include?(platform)
+    return !about_getting_the_app? if platforms.empty? && platform != "web"
+
+    below = build_below(platform)
+    below.nil? || build.to_i < below
+  end
+
+  def build_below(platform) = { "ios" => ios_build_below, "android" => android_build_below }[platform]
 
   def about_getting_the_app?
     link_url.to_s.strip.match?(APP_LINK) || [title, summary].any? { |t| t.to_s.match?(APP_WORDS) }
   end
+
+  # Picked for the apps on purpose, so the "about getting the app" rule doesn't hide it there
+  def hidden_in_app? = platforms.empty? && about_getting_the_app?
 
   def live?
     active? && (starts_at.nil? || starts_at <= Time.current) && (ends_at.nil? || ends_at > Time.current)
@@ -63,7 +86,8 @@ class SiteNotice < ApplicationRecord
   def as_admin_json
     as_api_json.merge(
       link_label: link_label, audience: audience, active: active, live: live?,
-      hidden_in_app: about_getting_the_app?,
+      hidden_in_app: hidden_in_app?,
+      platforms: platforms, ios_build_below: ios_build_below, android_build_below: android_build_below,
       starts_at: starts_at&.iso8601, ends_at: ends_at&.iso8601,
       author: user&.name.presence || user&.email, created_at: created_at.iso8601, updated_at: updated_at.iso8601,
     )

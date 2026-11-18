@@ -17,6 +17,7 @@ import TestflightRequestsPage from "./TestflightRequestsPage";
 import GroupRequestsPage from "./GroupRequestsPage";
 import UserReportsPage from "./UserReportsPage";
 import NoticesPage from "./NoticesPage";
+import AppReleasesPage from "./AppReleasesPage";
 import ChipTemplatesPage from "./ChipTemplatesPage";
 import ChipDesignPage from "./ChipDesignPage";
 import StepTemplatesPage from "./StepTemplatesPage";
@@ -67,6 +68,7 @@ function SuiteShell() {
           <Route path="/tags" element={<TagsPage notify={notify} />} />
           <Route path="/blocked_words" element={<BlockedWordsPage notify={notify} />} />
           <Route path="/notices" element={<NoticesPage notify={notify} />} />
+          <Route path="/app_releases" element={<AppReleasesPage notify={notify} />} />
           <Route path="/meeting_lists" element={<MeetingListsPage notify={notify} />} />
           <Route path="/daily_story" element={<DailyStoryPage notify={notify} />} />
           <Route path="/chip_design" element={<ChipDesignPage notify={notify} />} />
