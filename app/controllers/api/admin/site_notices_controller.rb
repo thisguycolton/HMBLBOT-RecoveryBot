@@ -23,6 +23,7 @@ class Api::Admin::SiteNoticesController < Api::Admin::SuiteController
 
   def notice_params
     params.require(:site_notice).permit(:title, :summary, :body, :tone, :link_url, :link_label,
-                                        :audience, :active, :starts_at, :ends_at)
+                                        :audience, :active, :starts_at, :ends_at,
+                                        :ios_build_below, :android_build_below, platforms: [])
   end
 end

@@ -70,6 +70,8 @@ Rails.application.routes.draw do
   get "deck_links/:code/live", to: "deck_links#live"
   get "topicificator_links/:code", to: "topicificator_links#show"
   resources :site_notices, only: :index
+  # Account settings > App info: app builds out and their release notes (AppRelease)
+  get "app_info", to: "app_info#show"
   resource :profile, only: %i[show update destroy]
   # Account settings > Sign-in methods: link and unlink Google and Apple
   get "sign_in_methods", to: "sign_in_methods#show"
@@ -611,6 +613,7 @@ end
         post :check, on: :collection
       end
       resources :site_notices, only: %i[index create update destroy]
+      resources :app_releases, only: %i[index create update destroy]
       resources :text_reports, only: %i[index update destroy] do
         post :comment, on: :member
       end

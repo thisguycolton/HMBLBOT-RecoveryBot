@@ -96,4 +96,46 @@ class Api::SiteNoticesTest < ActionDispatch::IntegrationTest
     assert_response :no_content
     assert_equal 0, SiteNotice.count
   end
+
+  IPHONE = "Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 RecoveryBotApp/1.0 (iOS)"
+  ANDROID = "Mozilla/5.0 (Linux; Android 15; wv) AppleWebKit/537.36 Chrome/140.0 Mobile Safari/537.36 RecoveryBotApp/1.0 (Android)"
+
+  def titles_on(agent, build = nil)
+    get "/api/site_notices", params: build.nil? ? {} : { build: build }, headers: { "User-Agent" => agent }
+    assert_response :success
+    response.parsed_body.map { |n| n["title"] }.sort
+  end
+
+  test "a notice can go to some devices and to app builds older than a number" do
+    SiteNotice.create!(title: "Everywhere")
+    SiteNotice.create!(title: "Website", platforms: ["web"])
+    SiteNotice.create!(title: "Apps", platforms: %w[ios android])
+    # about TestFlight, but picked for the iPhone app on purpose, so the apps get it
+    SiteNotice.create!(title: "Update in TestFlight", platforms: ["ios"], ios_build_below: 6, link_url: "https://testflight.apple.com/join/x")
+    SiteNotice.create!(title: "Update in Play", platforms: ["android"], android_build_below: 7)
+
+    assert_equal %w[Everywhere Website], titles_on("Mozilla/5.0 (Macintosh) Safari/604.1")
+    assert_equal ["Apps", "Everywhere", "Update in TestFlight"], titles_on(IPHONE, 5)
+    assert_equal %w[Apps Everywhere], titles_on(IPHONE, 6)
+    # an app too old to say its build counts as older than every build
+    assert_equal ["Apps", "Everywhere", "Update in TestFlight"], titles_on(IPHONE)
+    assert_equal ["Apps", "Everywhere", "Update in Play"], titles_on(ANDROID, 6)
+    assert_equal %w[Apps Everywhere], titles_on(ANDROID, 7)
+
+    sign_in @admin
+    get "/api/admin/site_notices", as: :json
+    update = response.parsed_body.find { |n| n["title"] == "Update in TestFlight" }
+    assert_equal [["ios"], 6, nil, false], update.values_at("platforms", "ios_build_below", "android_build_below", "hidden_in_app")
+  end
+
+  test "admins pick where a notice shows" do
+    sign_in @admin
+    post "/api/admin/site_notices", params: { site_notice: { title: "Update", platforms: ["android", "", "fax"], android_build_below: 7 } }, as: :json
+    assert_response :created
+    assert_equal [["android"], 7], SiteNotice.sole.values_at(:platforms, :android_build_below)
+
+    patch "/api/admin/site_notices/#{SiteNotice.sole.id}", params: { site_notice: { platforms: [], android_build_below: nil } }, as: :json
+    assert_response :success
+    assert_equal [[], nil], SiteNotice.sole.reload.values_at(:platforms, :android_build_below)
+  end
 end

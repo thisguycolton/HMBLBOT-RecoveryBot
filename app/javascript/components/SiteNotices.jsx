@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Markdown from "./book/Markdown";
+import { appInfo } from "../lib/appInfo";
 
 // Site-wide notices from admins (SiteNotice, /api/site_notices). Toasts.jsx shows them
 // above the ordinary toasts. They don't time out: closing one hides it in this browser
@@ -41,7 +42,9 @@ export function useSiteNotices() {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/site_notices", { headers: { Accept: "application/json" }, credentials: "same-origin" })
+    // The apps say which build they are, so notices for older builds (how to update) skip newer ones
+    appInfo()
+      .then((info) => fetch(`/api/site_notices${info.build != null ? `?build=${info.build}` : ""}`, { headers: { Accept: "application/json" }, credentials: "same-origin" }))
       .then((res) => (res.ok ? res.json() : []))
       .then((rows) => {
         if (!alive || !Array.isArray(rows)) return;

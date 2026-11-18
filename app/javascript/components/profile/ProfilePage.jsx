@@ -8,6 +8,7 @@ import Toggle from "../ui/Toggle";
 import PushSettings from "./PushSettings";
 import WidgetSettings from "./WidgetSettings";
 import AppLockSettings from "./AppLockSettings";
+import AppInfoSettings from "./AppInfoSettings";
 import { appLockHere } from "../../lib/appLock";
 import SignInMethods from "./SignInMethods";
 import { ReminderSetting } from "../recovery/ReminderSetting";
@@ -49,9 +50,11 @@ const TABS = [
   { key: "notifications", label: "Notifications", saves: "instant" },
   // In the apps: the app lock and the Home Screen widgets (the key stays "widgets" for old links)
   { key: "widgets", label: "This phone", saves: "instant" },
+  // Which app build this is and what's new in each (on the website: what's new in the apps)
+  { key: "app-info", label: "App info", saves: "none" },
 ];
 // Old links (reminder emails, the bell) point at a section; open the tab it lives on
-const HASH_TAB = { hosting: "notifications", reminders: "notifications", notifications: "notifications", widgets: "widgets", "app-lock": "widgets" };
+const HASH_TAB = { app: "app-info", hosting: "notifications", reminders: "notifications", notifications: "notifications", widgets: "widgets", "app-lock": "widgets" };
 
 // The same tests WidgetSettings and AppLockSettings use to show themselves: only in the iPhone
 // and Android apps
@@ -402,6 +405,8 @@ export default function ProfilePage() {
             <WidgetSettings />
           </>
         )}
+
+        {current.key === "app-info" && <AppInfoSettings />}
       </div>
     </div>
   );
@@ -442,6 +447,7 @@ function SaveBar({ dirty, dirtyTabs, saving, saved, error, blocker, onSave, onDi
 
 // One line at the top of each tab: whether its changes need the Save button or keep at once
 function SavesHow({ saves }) {
+  if (saves === "none") return null;
   return saves === "button" ? (
     <p className="flex items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
       <Save className="h-3.5 w-3.5 shrink-0" /> Changes here need <strong className="font-semibold text-slate-700 dark:text-neutral-200">Save changes</strong> in the bar above.

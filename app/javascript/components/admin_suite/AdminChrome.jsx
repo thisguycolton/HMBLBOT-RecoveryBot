@@ -15,6 +15,7 @@ import {
   MapPin,
   Medal,
   Megaphone,
+  Rocket,
   Menu,
   Moon,
   NotebookPen,
@@ -64,6 +65,8 @@ export const SECTIONS = [
     title: "Content",
     items: [
       { to: "/notices", label: "Site notices", icon: Megaphone, count: "notices", countTone: "info" },
+      // Builds of the iPhone and Android apps and their release notes (AppRelease)
+      { to: "/app_releases", label: "App releases", icon: Rocket },
       { to: "/readings", label: "Readings", icon: NotebookPen },
       { to: "/tags", label: "Tags", icon: Tags },
       { to: "/blocked_words", label: "Blocked words", icon: ShieldBan },
