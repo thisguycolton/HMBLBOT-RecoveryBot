@@ -2,7 +2,8 @@
 # every group has, and the ones people add. Who's in it: the group's admins always, then
 # everyone ("members" in access_roles), or the members holding one of its roles, and the
 # people named in access_user_ids. Members read and write in the channels they're in;
-# messages arrive live (GroupChatChannel), and only @ mentions notify anyone (Mentions).
+# messages arrive live (GroupChatChannel), and @ mentions and replies notify people, or every
+# message, or nothing, as each person chose (ChatNotificationSetting).
 class ChatChannel < ApplicationRecord
   moderates_language :name, :topic
   # Who a channel can be open to, and who an admin can let add channels (Group#chat_creator_roles)
@@ -19,6 +20,7 @@ class ChatChannel < ApplicationRecord
   belongs_to :created_by, class_name: "User", optional: true
   has_many :messages, class_name: "ChatMessage", dependent: :delete_all
   has_many :reads, class_name: "ChatRead", dependent: :delete_all
+  has_many :notification_settings, class_name: "ChatNotificationSetting", dependent: :delete_all
 
   before_validation do
     self.name = name.to_s.strip.downcase.delete_prefix("#").gsub(/[\s_]+/, "-").gsub(/[^a-z0-9-]/, "").squeeze("-").sub(/\A-+/, "").first(40).sub(/-+\z/, "")
@@ -39,6 +41,8 @@ class ChatChannel < ApplicationRecord
   def general? = name == "general"
   def everyone? = access_roles.include?("members")
   def stream = "chat:#{id}"
+  # The start of the links to its messages (ChatMessage#path)
+  def path_prefix = "/groups/#{group.slug}/messages/#{id}?"
 
   # Whether `user` is in it: an active member of the group it's open to (its admins always)
   def readable_by?(user, membership = group.membership_for(user))

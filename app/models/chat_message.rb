@@ -1,6 +1,8 @@
 # A message in a group's chat channel (ChatChannel): Markdown like a note, edited or deleted
 # by its writer (the group's admins delete any). Its @ mentions notify people (Mentionable).
 # Anyone in the channel puts emoji on it (ChatReaction) and replies to it, which tells its writer.
+# People who chose every message in its channel hear about it too (ChatNotificationSetting); people
+# who chose none aren't told even when it mentions them.
 # Whoever manages the channel pins it there; the group's admins move it (and the replies under
 # it) to another channel when it went in the wrong one. It can carry pictures and files, seen
 # only by people in its channel (Api::GroupChatMessagesController#file), and shows a card for
@@ -88,18 +90,25 @@ class ChatMessage < ApplicationRecord
   def path = "/groups/#{group.slug}/messages/#{chat_channel_id}?m=#{id}"
 
   # Saves it, then tells who it newly @ mentions (if they're in the channel), and, when it's a
-  # new reply, whoever wrote the message it answers (unless they were mentioned anyway)
+  # new reply, whoever wrote the message it answers (unless they were mentioned anyway), leaving out
+  # anyone who turned chat notifications off there; a new message also tells those who want them all
   def save_and_mention!(author)
     channel = chat_channel
-    replying = new_record? && reply_to
+    fresh = new_record?
+    replying = fresh && reply_to
     people = take_mentions(body, author: author, groups: [group],
                                  everyone: group.manageable_by?(author) && channel.readers,
                                  can_see: ->(u) { channel.readable_by?(u) })
     save!
     ChatLinkPreviewJob.perform_later(self) if link_outdated?
-    tell_mentioned(people, kind: "mention.chat", body: summary(200), url: path, from: author,
+    told = people.keys.map(&:id)
+    told << reply_to.user_id if replying
+    levels = ChatNotificationSetting.levels_in(channel, told.uniq)
+    quiet = levels.select { |_, level| level == "none" }.keys
+    tell_mentioned(people, kind: "mention.chat", body: summary(200), url: path, from: author, quiet: quiet,
                            title: ->(handle) { "#{author.display_name} mentioned #{handle ? "@#{handle}" : 'you'} in ##{channel.name}" })
-    tell_replied_to(author) if replying && people.keys.none? { |u| u.id == reply_to.user_id }
+    tell_replied_to(author) if replying && people.keys.none? { |u| u.id == reply_to.user_id } && !quiet.include?(reply_to.user_id)
+    tell_followers(author, except: told) if fresh
   end
 
   # What the viewer may do to it, worked out once for a page of them (ChatMessage.permissions)
@@ -247,6 +256,31 @@ class ChatMessage < ApplicationRecord
   end
 
   private
+
+  # Everyone in the channel who wants every message there (ChatNotificationSetting "all"), other
+  # than its writer, people who blocked them and those `except` (told already): one bell
+  # notification per channel until they read it, saying how many came in since (only the first
+  # one goes to their devices)
+  def tell_followers(author, except:)
+    ids = ChatNotificationSetting.all_user_ids(chat_channel) - [author.id, *except]
+    ids -= UserBlock.where(blocked_id: author.id, blocker_id: ids).pluck(:blocker_id) if ids.any?
+    return if ids.empty?
+
+    channel = chat_channel
+    User.where(id: ids).find_each do |person|
+      next unless channel.readable_by?(person)
+
+      waiting = person.notifications.unread.where(kind: "message.chat").where("url LIKE ?", "#{channel.path_prefix}%").order(:id).last
+      if waiting
+        since = waiting.url[/[?&]m=(\d+)/, 1].to_i
+        count = channel.messages.where(id: since..).where.not(user_id: person.id).count
+        waiting.update!(title: "#{count} new messages in ##{channel.name}", body: "#{author.display_name}: #{summary(200)}".truncate(300), created_at: Time.current)
+        NotificationsChannel.changed(person)
+      else
+        Notification.deliver(person, kind: "message.chat", title: "#{author.display_name} in ##{channel.name}", body: summary(200), url: path)
+      end
+    end
+  end
 
   def tell_replied_to(author)
     person = reply_to.user

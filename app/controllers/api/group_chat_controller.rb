@@ -1,6 +1,7 @@
 # A group's chat (ChatChannel): the channels a member is in with what they haven't read, and
 # who may add channels, which the group's admins pick (roles from ChatChannel::ROLES, and people),
-# and the order the channels go in, which they set for everyone.
+# and the order the channels go in, which they set for everyone. Each member picks how much of
+# it notifies them, for the group and per channel (ChatNotificationSetting).
 class Api::GroupChatController < ApplicationController
   include GroupScoped
 
@@ -39,6 +40,28 @@ class Api::GroupChatController < ApplicationController
     render json: chat_json
   end
 
+  # PATCH /api/groups/:group_slug/chat/notifications { level, channel_id? } -> the chat
+  # How much of the chat notifies them: "all", "mentions" or "none", for the whole group, or for
+  # one channel (a blank level there follows the group's again)
+  def notifications
+    level = params[:level].to_s
+    channel = (@group.chat_channels.find_by(id: params[:channel_id]) if params[:channel_id].present?)
+    return render(json: { error: "Not found." }, status: :not_found) if params[:channel_id].present? && !channel&.readable_by?(current_user)
+    unless ChatNotificationSetting::LEVELS.include?(level) || (channel && level.blank?)
+      return render(json: { error: "Pick All, @ mentions or None." }, status: :unprocessable_entity)
+    end
+
+    ChatNotificationSetting.set!(current_user, @group, level, channel: channel)
+    current_user.update_column(:chat_notify_nudged_at, Time.current) unless current_user.chat_notify_nudged_at
+    render json: chat_json
+  end
+
+  # POST /api/groups/:group_slug/chat/nudged -> they've seen the banner about chat notifications
+  def nudged
+    current_user.update_column(:chat_notify_nudged_at, Time.current) unless current_user.chat_notify_nudged_at
+    head :no_content
+  end
+
   private
 
   def require_chat_member
@@ -62,6 +85,10 @@ class Api::GroupChatController < ApplicationController
       # Who can be put in a channel (and allowed to add channels)
       people: @group.members.includes(avatar_attachment: :blob).order(:name).map(&:as_person_json),
       message_max: ChatMessage::BODY_MAX,
+      # How much notifies them (ChatNotificationSetting): the group's level and each channel they set
+      notify: ChatNotificationSetting.for(current_user, @group),
+      # Whether to show the one-time banner saying they can change that
+      notify_nudge: current_user.chat_notify_nudged_at.nil?,
     }
     json[:settings] = { creator_roles: @group.chat_creator_roles, creator_user_ids: @group.chat_creator_user_ids } if manage
     json

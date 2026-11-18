@@ -466,4 +466,85 @@ class Api::GroupChatTest < ActionDispatch::IntegrationTest
     seen = response.parsed_body["messages"].last["documents"]
     assert_equal [{ "id" => treasury.id, "hidden" => true }, guidelines.id], [seen.first, seen.last["id"]]
   end
+
+  test "chat notifications: mentions by default, every message, or none, per group and per channel" do
+    general = @group.general_channel
+    side = @group.chat_channels.create!(name: "side", access_roles: ["members"])
+    post_in = ->(channel, body) { post "/api/groups/#{@group.slug}/chat_channels/#{channel.id}/messages", params: { body: body }, as: :json }
+
+    sign_in @cy
+    get chat_path
+    assert_equal({ "group" => "mentions", "channels" => {} }, response.parsed_body["notify"])
+    assert response.parsed_body["notify_nudge"]
+
+    # The default: only a mention tells Cy
+    sign_in @bo
+    assert_no_difference(-> { @cy.notifications.count }) { post_in.(general, "hello") }
+
+    # Cy wants everything from the group, but nothing from #side
+    sign_in @cy
+    patch "#{chat_path}/notifications", params: { level: "all" }, as: :json
+    assert_response :success
+    patch "#{chat_path}/notifications", params: { level: "none", channel_id: side.id }, as: :json
+    assert_equal({ "group" => "all", "channels" => { side.id.to_s => "none" } }, response.parsed_body["notify"])
+    refute response.parsed_body["notify_nudge"], "changing it counts as having seen the banner"
+    patch "#{chat_path}/notifications", params: { level: "loud" }, as: :json
+    assert_response :unprocessable_entity
+
+    sign_in @bo
+    assert_difference(-> { @cy.notifications.where(kind: "message.chat").count }, 1) { post_in.(general, "first") }
+    # More before Cy reads it: still one notification, counting them
+    assert_no_difference(-> { @cy.notifications.count }) { post_in.(general, "second") }
+    note = @cy.notifications.where(kind: "message.chat").last
+    assert_equal "2 new messages in #general", note.title
+    assert_includes note.body, "second"
+    refute @bo.notifications.where(kind: "message.chat").exists?, "the writer isn't told"
+    # #side is off, even for a mention
+    assert_no_difference(-> { @cy.notifications.count }) { post_in.(side, "@#{@cy.username} you there?") }
+    assert_includes ChatMessage.last.mentioned_user_ids, @cy.id
+
+    # Reading the channel puts the notification away; the next message starts a new one
+    sign_in @cy
+    post "/api/groups/#{@group.slug}/chat_channels/#{general.id}/read", as: :json
+    assert note.reload.read?
+    sign_in @bo
+    assert_difference(-> { @cy.notifications.where(kind: "message.chat").count }, 1) { post_in.(general, "third") }
+
+    # A mention is a mention, not also a message notification
+    assert_difference(-> { @cy.notifications.count }, 1) { post_in.(general, "@#{@cy.username} hi") }
+    assert_equal "mention.chat", @cy.notifications.order(:id).last.kind
+
+    # #side back to the group's setting
+    sign_in @cy
+    patch "#{chat_path}/notifications", params: { level: "", channel_id: side.id }, as: :json
+    assert_equal({}, response.parsed_body["notify"]["channels"])
+    sign_in @bo
+    assert_difference(-> { @cy.notifications.where(kind: "message.chat").count }, 1) { post_in.(side, "back on") }
+  end
+
+  test "the chat notifications banner shows once" do
+    sign_in @cy
+    get chat_path
+    assert response.parsed_body["notify_nudge"]
+    post "#{chat_path}/nudged"
+    assert_response :no_content
+    get chat_path
+    refute response.parsed_body["notify_nudge"]
+  end
+
+  test "none turns off replies too, and channel settings need the channel" do
+    general = @group.general_channel
+    secret = @group.chat_channels.create!(name: "secret", access_roles: ["hosts"])
+    sign_in @cy
+    patch "#{chat_path}/notifications", params: { level: "all", channel_id: secret.id }, as: :json
+    assert_response :not_found
+    first = general.messages.create!(user: @cy, body: "question")
+    patch "#{chat_path}/notifications", params: { level: "none", channel_id: general.id }, as: :json
+
+    sign_in @bo
+    assert_no_difference(-> { @cy.notifications.count }) do
+      post "/api/groups/#{@group.slug}/chat_channels/#{general.id}/messages", params: { body: "answer", reply_to_id: first.id }, as: :json
+    end
+    assert_response :created
+  end
 end

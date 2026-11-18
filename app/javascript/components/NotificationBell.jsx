@@ -30,6 +30,7 @@ function timeAgo(iso) {
 const LOOKS = {
   follows: [UserPlus, "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300"],
   comments: [MessageCircle, "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300"],
+  chat_messages: [MessageCircle, "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300"],
   mentions: [MessageCircle, "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300"],
   profile_notes: [MessageCircle, "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300"],
   document_comments: [FileText, "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300"],

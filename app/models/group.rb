@@ -32,6 +32,7 @@ class Group < ApplicationRecord
   has_many :timeline_notes, through: :timeline_note_shares
   # Its chat (ChatChannel) and the people its admins blocked (GroupBlock)
   has_many :chat_channels, dependent: :destroy
+  has_many :chat_notification_settings, dependent: :delete_all
   has_many :blocks, class_name: "GroupBlock", dependent: :delete_all
 
   # The group's page (Api::GroupPagesController): page_blocks stays nil until the group

@@ -25,6 +25,8 @@ class Notification < ApplicationRecord
                           kinds: %w[schedule_poll.invitee schedule_poll.collaborator schedule_poll.vote] },
     "mentions" => { label: "Mentions and replies", description: "When someone @ mentions you, or a role you hold, in chat, a note, a comment or a highlight note, and when someone replies to your chat message.",
                     kinds: %w[mention.chat mention.note reply.chat] },
+    "chat_messages" => { label: "Group chat messages", description: "Every new message in group chats or channels you set to All (from the ••• beside a channel).",
+                         kinds: %w[message.chat] },
     "comments" => { label: "Comments on your notes", description: "When someone comments on one of your notes.",
                     kinds: %w[note.comment] },
     "profile_notes" => { label: "Notes on your page", description: "When someone writes a note on your profile.",
