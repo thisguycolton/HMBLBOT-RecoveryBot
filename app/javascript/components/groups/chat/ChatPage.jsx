@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Archive, ArrowDownUp, FolderOpen, Paperclip, ArrowLeft, ArrowRightLeft, Ban, ChevronDown, ChevronUp, EyeOff, Flag, GripVertical, Hash, Loader2, Lock, MoreHorizontal, Pencil, Pin, PinOff, Plus, Reply, SendHorizontal, Settings, SmilePlus, Trash2, UserX, X } from "lucide-react";
+import { Archive, ArrowDownUp, Bell, FolderOpen, Paperclip, ArrowLeft, ArrowRightLeft, Ban, ChevronDown, ChevronUp, EyeOff, Flag, GripVertical, Hash, Loader2, Lock, MoreHorizontal, Pencil, Pin, PinOff, Plus, Reply, SendHorizontal, Settings, SmilePlus, Trash2, UserX, X } from "lucide-react";
 import { blockPerson, useBlocked } from "../../notes/PostMenu";
 import Layout from "../../Layout";
 import Markdown from "../../book/Markdown";
@@ -21,6 +21,7 @@ import { MoveDialog, PinnedPanel, excerptOf } from "./PinsAndMove";
 import { ACCEPT, DocumentPicker, FILES_MAX, MessageDocuments, MessageFiles, PendingFiles, fileProblem } from "./Attachments";
 import LinkCard from "../../notes/LinkCard";
 import useKeyboardFit from "./useKeyboardFit";
+import { LevelMark, NotifyDialog, NotifyNudge } from "./ChatNotifications";
 
 // Messages from the same person this close together run on under one name, like Slack
 const RUN_GAP = 5 * 60 * 1000;
@@ -46,6 +47,7 @@ export default function ChatPage() {
   const [typing, setTyping] = useState({}); // { channelId: { userId: { name, until } } }
   const [form, setForm] = useState(null); // { channel? } while adding or changing a channel
   const [settings, setSettings] = useState(false);
+  const [notifyFor, setNotifyFor] = useState(null); // { channel? } while picking notifications
   const listeners = useRef(new Set());
   const sub = useRef(null);
   const currentId = channelId ? Number(channelId) : null;
@@ -103,6 +105,12 @@ export default function ChatPage() {
 
   const listen = useCallback((fn) => { listeners.current.add(fn); return () => listeners.current.delete(fn); }, []);
   const sayTyping = useCallback((id) => sub.current?.perform("typing", { channel_id: id }), []);
+  // The one-time banner about chat notifications goes away for good
+  const nudged = useCallback(() => {
+    setChat((c) => c && { ...c, notify_nudge: false });
+    api(`/groups/${slug}/chat/nudged`, { method: "POST" }).catch(() => {});
+  }, [slug]);
+  const openNotify = useCallback((channel = null) => { setNotifyFor({ channel }); nudged(); }, [nudged]);
   const markedRead = useCallback((id) => {
     setChat((c) => c && { ...c, channels: c.channels.map((ch) => (ch.id === id && ch.unread ? { ...ch, unread: 0 } : ch)) });
   }, []);
@@ -122,11 +130,13 @@ export default function ChatPage() {
       <div ref={setPageEl} className="wb chat-page flex h-[calc(100dvh-var(--nav-h)-var(--shell-bottom,0px))] min-h-[22rem] !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none lg:h-[calc(100dvh-var(--nav-h))]">
         {showList && (
           <ChannelList chat={chat} slug={slug} currentId={currentId} wide={wide}
-            onAdd={() => setForm({})} onSettings={() => setSettings(true)} onArranged={setChat} />
+            onAdd={() => setForm({})} onSettings={() => setSettings(true)} onArranged={setChat}
+            onNotify={openNotify} onEditChannel={(channel) => setForm({ channel })} />
         )}
         {showConversation && (current ? (
           <Conversation key={current.id} chat={chat} channel={current} slug={slug} wide={wide} listen={listen}
-            sayTyping={sayTyping} typingNames={typingIn} onRead={markedRead} onEdit={() => setForm({ channel: current })} reload={load} />
+            sayTyping={sayTyping} typingNames={typingIn} onRead={markedRead} onEdit={() => setForm({ channel: current })} reload={load}
+            onNotify={openNotify} onNudged={nudged} />
         ) : (
           currentId ? (
             <section className="grid flex-1 place-items-center p-6 text-sm text-slate-500">
@@ -146,12 +156,16 @@ export default function ChatPage() {
             else if (saved && !form.channel) navigate(`/${slug}/messages/${saved.id}`);
           }} />
       )}
+      {notifyFor && (
+        <NotifyDialog chat={chat} slug={slug} channel={notifyFor.channel} onSaved={setChat} onClose={() => setNotifyFor(null)}
+          onGroup={() => setNotifyFor({ channel: null })} />
+      )}
       {settings && <ChatSettings chat={chat} slug={slug} onClose={() => setSettings(false)} onSaved={(data) => { setChat(data); setSettings(false); }} />}
     </Layout>
   );
 }
 
-function ChannelList({ chat, slug, currentId, wide, onAdd, onSettings, onArranged }) {
+function ChannelList({ chat, slug, currentId, wide, onAdd, onSettings, onArranged, onNotify, onEditChannel }) {
   const [showArchived, setShowArchived] = useState(false);
   const [arranging, setArranging] = useState(false);
   const open = chat.channels.filter((c) => !c.archived);
@@ -166,6 +180,8 @@ function ChannelList({ chat, slug, currentId, wide, onAdd, onSettings, onArrange
             <span className="block text-xs text-slate-500 dark:text-neutral-400">Chat</span>
           </span>
         </Link>
+        <button type="button" onClick={() => onNotify(null)} aria-label="Group chat notifications" title="Group chat notifications"
+          className="inline-grid size-9 place-items-center rounded-full !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800"><Bell className="size-4" /></button>
         {chat.can_manage && (
           <button type="button" onClick={onSettings} aria-label="Chat settings" title="Who can add channels"
             className="inline-grid size-9 place-items-center rounded-full !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800"><Settings className="size-4" /></button>
@@ -195,13 +211,13 @@ function ChannelList({ chat, slug, currentId, wide, onAdd, onSettings, onArrange
         <ArrangeChannels channels={open} slug={slug} big={!wide} onArranged={onArranged} />
       ) : (
         <nav className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-6">
-          {open.map((c) => <ChannelLink key={c.id} channel={c} slug={slug} active={c.id === currentId} big={!wide} />)}
+          {open.map((c) => <ChannelLink key={c.id} chat={chat} channel={c} slug={slug} active={c.id === currentId} big={!wide} onNotify={onNotify} onEdit={onEditChannel} />)}
           {archived.length > 0 && (
             <>
               <button type="button" onClick={() => setShowArchived((s) => !s)} className="mt-3 flex w-full items-center gap-1.5 rounded-lg !bg-transparent px-3 py-1.5 text-xs font-medium text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800">
                 <Archive className="size-3.5" /> {showArchived ? "Hide" : "Show"} {archived.length} archived
               </button>
-              {showArchived && archived.map((c) => <ChannelLink key={c.id} channel={c} slug={slug} active={c.id === currentId} big={!wide} />)}
+              {showArchived && archived.map((c) => <ChannelLink key={c.id} chat={chat} channel={c} slug={slug} active={c.id === currentId} big={!wide} onNotify={onNotify} onEdit={onEditChannel} />)}
             </>
           )}
         </nav>
@@ -276,15 +292,33 @@ function ArrangeRow({ channel: c, big, first, last, onUp, onDown }) {
   );
 }
 
-function ChannelLink({ channel: c, slug, active, big }) {
+// A channel in the list, with a ••• beside it (always there on phones, on hover or focus on a
+// computer, and while its menu is open) for its notifications, and changing it for whoever may
+function ChannelLink({ chat, channel: c, slug, active, big, onNotify, onEdit }) {
+  const [menu, setMenu] = useState(false);
   const restricted = !c.access_roles.includes("members");
   return (
-    <Link to={`/${slug}/messages/${c.id}`} aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-2 rounded-xl px-3 ${big ? "py-3 text-base" : "py-1.5 text-sm"} ${active ? "!bg-accent/10 font-semibold !text-accent" : c.unread ? "font-bold !text-slate-900 hover:!bg-neutral-100 dark:!text-white dark:hover:!bg-neutral-800" : "!text-slate-600 hover:!bg-neutral-100 dark:!text-neutral-300 dark:hover:!bg-neutral-800"} ${c.archived ? "opacity-60" : ""}`}>
-      {restricted ? <Lock className="size-3.5 shrink-0" aria-label="Not everyone" /> : <Hash className="size-4 shrink-0" aria-hidden="true" />}
-      <span className="min-w-0 flex-1 truncate">{c.name}</span>
-      {c.unread > 0 && !active && <span className="rounded-full !bg-accent px-1.5 py-0.5 text-[0.7rem] font-bold leading-none tabular-nums !text-white">{c.unread > 99 ? "99+" : c.unread}</span>}
-    </Link>
+    <div className={`group/row relative flex items-center rounded-xl ${active ? "bg-accent/10" : "hover:bg-neutral-100 dark:hover:bg-neutral-800"} ${c.archived ? "opacity-60" : ""}`}>
+      <Link to={`/${slug}/messages/${c.id}`} aria-current={active ? "page" : undefined}
+        className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl !bg-transparent pl-3 pr-1 ${big ? "py-3 text-base" : "py-1.5 text-sm"} ${active ? "font-semibold !text-accent" : c.unread ? "font-bold !text-slate-900 dark:!text-white" : "!text-slate-600 dark:!text-neutral-300"}`}>
+        {restricted ? <Lock className="size-3.5 shrink-0" aria-label="Not everyone" /> : <Hash className="size-4 shrink-0" aria-hidden="true" />}
+        <span className="min-w-0 flex-1 truncate">{c.name}</span>
+        <LevelMark chat={chat} channel={c} />
+        {c.unread > 0 && !active && <span className="rounded-full !bg-accent px-1.5 py-0.5 text-[0.7rem] font-bold leading-none tabular-nums !text-white">{c.unread > 99 ? "99+" : c.unread}</span>}
+      </Link>
+      <div className="relative shrink-0 pr-1">
+        <button type="button" onClick={() => setMenu((o) => !o)} aria-label={`More for #${c.name}`} aria-haspopup="menu" aria-expanded={menu}
+          className={`inline-grid place-items-center rounded-lg !bg-transparent text-slate-500 hover:!bg-neutral-200 hover:text-slate-800 dark:text-neutral-400 dark:hover:!bg-neutral-700 dark:hover:text-white ${big ? "size-9" : "size-7"} ${menu || big ? "opacity-100" : "opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100"}`}>
+          <MoreHorizontal className="size-4" />
+        </button>
+        {menu && (
+          <PopMenu onClose={() => setMenu(false)}>
+            <MenuItem icon={Bell} onClick={() => { setMenu(false); onNotify(c); }}>Channel Notifications</MenuItem>
+            {c.can_manage && <MenuItem icon={Pencil} onClick={() => { setMenu(false); onEdit(c); }}>Change this channel</MenuItem>}
+          </PopMenu>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -299,7 +333,7 @@ function dayLabel(iso) {
 }
 const clockOf = (iso) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
-function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingNames, onRead, onEdit, reload }) {
+function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingNames, onRead, onEdit, reload, onNotify, onNudged }) {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [messages, setMessages] = useState(null);
@@ -314,6 +348,7 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
   const [pins, setPins] = useState([]);
   const [showPins, setShowPins] = useState(false);
   const [moving, setMoving] = useState(null);
+  const [headerMenu, setHeaderMenu] = useState(false);
   const [focusId, setFocusId] = useState(() => Number(params.get("m")) || null);
   const startAt = useRef(focusId);
   const shownFocus = useRef(null);
@@ -561,10 +596,16 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
             <Pin className="size-4" /> {pins.length}
           </button>
         )}
-        {channel.can_manage && (
-          <button type="button" onClick={onEdit} aria-label="Change this channel" title="Change this channel"
-            className="inline-grid size-9 shrink-0 place-items-center rounded-full !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800"><Pencil className="size-4" /></button>
-        )}
+        <div className="relative shrink-0">
+          <button type="button" onClick={() => setHeaderMenu((o) => !o)} aria-label={`More for #${channel.name}`} aria-haspopup="menu" aria-expanded={headerMenu}
+            className="inline-grid size-9 place-items-center rounded-full !bg-transparent text-slate-500 hover:!bg-neutral-100 dark:text-neutral-400 dark:hover:!bg-neutral-800"><MoreHorizontal className="size-4" /></button>
+          {headerMenu && (
+            <PopMenu onClose={() => setHeaderMenu(false)}>
+              <MenuItem icon={Bell} onClick={() => { setHeaderMenu(false); onNotify(channel); }}>Channel Notifications</MenuItem>
+              {channel.can_manage && <MenuItem icon={Pencil} onClick={() => { setHeaderMenu(false); onEdit(); }}>Change this channel</MenuItem>}
+            </PopMenu>
+          )}
+        </div>
       </header>
 
       <div className="relative flex min-h-0 flex-1 flex-col">
@@ -621,6 +662,9 @@ function Conversation({ chat, channel, slug, wide, listen, sayTyping, typingName
       </div>
       </div>
 
+      {chat.notify_nudge && messages && (
+        <NotifyNudge channel={channel} onChannel={() => onNotify(channel)} onGroup={() => onNotify(null)} onDismiss={onNudged} />
+      )}
       <div className="h-5 px-5 text-xs text-slate-500 dark:text-neutral-400" aria-live="polite">
         {typingNames.length > 0 && <TypingLine names={typingNames} />}
       </div>
@@ -835,10 +879,23 @@ const MORE_EMOJI = [
 function EmojiPicker({ onPick, onClose }) {
   const ref = useRef(null);
   const [up, setUp] = useState(false);
+  const [shift, setShift] = useState(0);
   useLayoutEffect(() => {
     const anchor = ref.current?.parentElement?.getBoundingClientRect();
     if (anchor) setUp(anchor.top > window.innerHeight / 2);
   }, []);
+  // It opens leftward from its button, which on a phone runs it off the left of the screen (and
+  // the message list clips it): slide it back in to keep a little margin on both sides
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const room = document.documentElement.clientWidth;
+    const left = r.left - shift;
+    const right = r.right - shift;
+    const margin = 8;
+    setShift(left < margin ? margin - left : right > room - margin ? room - margin - right : 0);
+  }, [up]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const away = (e) => { if (!ref.current?.parentElement?.contains(e.target)) onClose(); };
     const esc = (e) => { if (e.key === "Escape") onClose(); };
@@ -848,13 +905,13 @@ function EmojiPicker({ onPick, onClose }) {
   }, [onClose]);
   const cell = "inline-grid size-9 place-items-center rounded-lg !bg-transparent text-xl hover:!bg-neutral-100 dark:hover:!bg-neutral-800";
   return (
-    <div ref={ref} role="dialog" aria-label="Pick a reaction"
+    <div ref={ref} role="dialog" aria-label="Pick a reaction" style={shift ? { transform: `translateX(${shift}px)` } : undefined}
       className={`absolute right-0 z-20 w-[19.5rem] ${up ? "bottom-full mb-1" : "top-full mt-1"} max-w-[calc(100vw-2rem)] rounded-xl bg-white p-2 shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-700`}>
       <div className="flex justify-between border-b border-neutral-200 pb-1.5 dark:border-neutral-700">
         {QUICK_EMOJI.map((e) => <button key={e} type="button" className={cell} onClick={() => onPick(e)} aria-label={`React with ${e}`}>{e}</button>)}
       </div>
       <div className="grid max-h-48 grid-cols-8 overflow-y-auto pt-1.5">
-        {MORE_EMOJI.map((e) => <button key={e} type="button" className={cell} onClick={() => onPick(e)} aria-label={`React with ${e}`}>{e}</button>)}
+        {MORE_EMOJI.map((e) => <button key={e} type="button" className={`${cell} !w-full`} onClick={() => onPick(e)} aria-label={`React with ${e}`}>{e}</button>)}
       </div>
     </div>
   );

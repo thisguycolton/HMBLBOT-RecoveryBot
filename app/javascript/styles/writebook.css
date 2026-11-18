@@ -2532,6 +2532,9 @@ body:has(.wb) {
 
 /* The chat laid over what's visible while the phone's keyboard is up (groups/chat/useKeyboardFit.js) */
 .chat-page--keyboard { background: #fff; overscroll-behavior: contain; }
+/* The bottom bar steps aside while typing on a phone (BottomBar useKeepOnBottom): nothing keeps
+   room for it then (beats the measured value set on the root's style) */
+html.shell-bar-away { --shell-bottom: 0px !important; }
 .dark .chat-page--keyboard { background: var(--color-neutral-900, #171717); }
 
 /* The group chat (groups/chat/ChatPage.jsx): its message box, the @ suggestions above it, the

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_18_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -276,6 +276,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
     t.index ["pinned_by_id"], name: "index_chat_messages_on_pinned_by_id"
     t.index ["reply_to_id"], name: "index_chat_messages_on_reply_to_id"
     t.index ["user_id"], name: "index_chat_messages_on_user_id"
+  end
+
+  create_table "chat_notification_settings", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "group_id", null: false
+    t.bigint "chat_channel_id"
+    t.string "level", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chat_channel_id"], name: "index_chat_notification_settings_on_chat_channel_id"
+    t.index ["group_id"], name: "index_chat_notification_settings_on_group_id"
+    t.index ["user_id", "chat_channel_id"], name: "index_chat_notify_on_user_channel", unique: true, where: "(chat_channel_id IS NOT NULL)"
+    t.index ["user_id", "group_id"], name: "index_chat_notify_on_user_group", unique: true, where: "(chat_channel_id IS NULL)"
   end
 
   create_table "chat_reactions", force: :cascade do |t|
@@ -1993,6 +2006,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
     t.datetime "onboarded_at"
     t.jsonb "today_layout"
     t.boolean "see_all_posts", default: false, null: false
+    t.datetime "chat_notify_nudged_at"
     t.index ["apple_uid"], name: "index_users_on_apple_uid", unique: true
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
@@ -2024,6 +2038,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_040000) do
   add_foreign_key "chat_messages", "chat_channels"
   add_foreign_key "chat_messages", "users"
   add_foreign_key "chat_messages", "users", column: "pinned_by_id", on_delete: :nullify
+  add_foreign_key "chat_notification_settings", "chat_channels"
+  add_foreign_key "chat_notification_settings", "groups"
+  add_foreign_key "chat_notification_settings", "users"
   add_foreign_key "chat_reactions", "chat_messages", on_delete: :cascade
   add_foreign_key "chat_reactions", "users", on_delete: :cascade
   add_foreign_key "chat_reads", "chat_channels"

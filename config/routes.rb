@@ -183,6 +183,8 @@ Rails.application.routes.draw do
     # Its chat (ChatChannel): channels, messages, who may add channels; and who its admins blocked
     resource :chat, controller: "group_chat", only: %i[show update] do
       patch :order
+      patch :notifications
+      post :nudged
     end
     resources :chat_channels, controller: "group_chat_channels", only: %i[create update destroy] do
       member do

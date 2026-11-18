@@ -102,6 +102,8 @@ class Api::GroupChatChannelsController < ApplicationController
   # POST /api/groups/:group_slug/chat_channels/:id/read { message_id } -> read up to there
   def read
     ChatRead.mark!(@channel, current_user, params[:message_id] || @channel.messages.maximum(:id).to_i)
+    # The "new messages in #channel" bell notification is done with once they've read it here
+    current_user.notifications.unread.where(kind: "message.chat").where("url LIKE ?", "#{@channel.path_prefix}%").update_all(read_at: Time.current)
     head :no_content
   end
 

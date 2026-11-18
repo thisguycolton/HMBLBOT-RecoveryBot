@@ -94,6 +94,10 @@ function useKeepOnBottom(ref) {
         el.style.transform = away ? "translateY(calc(100% + 2rem))" : gap > 1 ? `translateY(${-gap}px)` : "";
         el.style.opacity = away ? "0" : "";
         el.inert = away;
+        // Pages sized around the bar (the chat, floating buttons) use its room while it's away.
+        // In the apps the keyboard shrinks the page, so without this the chat's message box sat
+        // a bar's height above the keyboard.
+        document.documentElement.classList.toggle("shell-bar-away", away);
       });
     };
     // After the keyboard closes, iOS can take a moment to settle; check again once it has
@@ -115,6 +119,7 @@ function useKeepOnBottom(ref) {
       el.style.transition = "";
       el.style.opacity = "";
       el.inert = false;
+      document.documentElement.classList.remove("shell-bar-away");
     };
   }, [ref]);
 }

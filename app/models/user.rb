@@ -85,6 +85,7 @@ class User < ApplicationRecord
   has_many :note_comments, dependent: :destroy
   has_many :chat_messages, dependent: :delete_all
   has_many :chat_reads, dependent: :delete_all
+  has_many :chat_notification_settings, dependent: :delete_all
   has_many :group_blocks, dependent: :delete_all
   has_many :blocks_given, class_name: "UserBlock", foreign_key: :blocker_id, dependent: :delete_all, inverse_of: :blocker
   has_many :blocks_received, class_name: "UserBlock", foreign_key: :blocked_id, dependent: :delete_all, inverse_of: :blocked
