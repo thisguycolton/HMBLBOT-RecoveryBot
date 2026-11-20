@@ -21,6 +21,10 @@ Each reading shows the meeting it was read at, its tags, and buttons for the **H
 
 For example, "On asking for help" was read at the Lantern Street Thursday Night Step Meeting and is tagged **help** and **newcomers**. The host ended it with tonight's topic: "the first time we asked for help, and what made it possible."
 
+## Readings from AA Grapevine
+
+A reading taken from an AA Grapevine story says **From AA Grapevine** under its text, with a **Read on Grapevine** button that opens the story on Grapevine's site. Grapevine owns these stories, so the whole text is public only around the meeting that reads it: from the day before until 48 hours after. The rest of the time, visitors see the title, the first few lines and the Grapevine button. The reading's group members and hosts always see the whole thing.
+
 ## Add your own
 
 Signed in, you can write readings of your own and publish them to the archive. See [My readings](/docs/library/my-readings).

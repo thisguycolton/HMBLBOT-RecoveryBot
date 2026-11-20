@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_18_200200) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_20_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1438,6 +1438,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_18_200200) do
     t.bigint "group_id"
     t.datetime "published_at"
     t.bigint "adopted_from_id"
+    t.string "source_url"
+    t.datetime "last_used_at"
     t.index ["adopted_from_id"], name: "index_readings_on_adopted_from_id"
     t.index ["group_id"], name: "index_readings_on_group_id"
     t.index ["user_id"], name: "index_readings_on_user_id"

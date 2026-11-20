@@ -22,6 +22,25 @@ module ReadingsHelper
     "/groups/#{group.slug}/host/#{meeting.id}?on=#{reading.meetingDate.iso8601}"
   end
 
+  # Its source link and Grapevine credit for its page and cards, and whether its words are held
+  # back from this viewer (a Grapevine reading outside its public window: Reading#full_text_for?)
+  def reading_source_json(reading, user)
+    grapevine = reading.grapevine?
+    locked = !reading.full_text_for?(user)
+    {
+      source_url: reading.source_url.presence,
+      grapevine: grapevine,
+      grapevine_search: reading.grapevine_search_link?,
+      # A Grapevine reading with no link yet still gets one: a search for its title
+      read_on_url: reading.source_url.presence || (Reading.grapevine_search_url(reading.title) if grapevine),
+      text_locked: locked,
+      excerpt: (reading.excerpt if locked),
+      # Shown to whoever sees the whole thing because they're in the group, so they know the public doesn't
+      public_until: (reading.public_text_until&.iso8601 if grapevine && !locked),
+      public_now: grapevine ? reading.public_text_open? : true,
+    }
+  end
+
   private
 
   def reading_meeting(reading, group)

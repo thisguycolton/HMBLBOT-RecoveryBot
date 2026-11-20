@@ -92,6 +92,8 @@ class Api::GroupHostingController < ApplicationController
       return render(json: { error: "That isn't one of your readings." }, status: :unprocessable_entity) unless reading
 
       pick = my_reading_pick(reading)
+      # Its meeting is using it, which opens a Grapevine reading's full text to the public for a while
+      reading.mark_used!(occurrence_start || Time.current)
     end
     data = params[:data].respond_to?(:permit) ? params[:data].permit(:value, :id, :name, :length, :done, :by, :block_id, :op, :item).to_h : {}
     hosting_session.act!(act, user: current_user, index: params[:index], label: params[:label], posting: posting, pick: pick, data: data,
@@ -278,6 +280,17 @@ class Api::GroupHostingController < ApplicationController
     nil
   end
   def hosting_session = center.session
+
+  # When this date's meeting starts (a weekly meeting at its minute on the session's date)
+  def occurrence_start
+    on = hosting_session.on
+    return unless on && @meeting
+
+    zone = @meeting.zone
+    if @meeting.weekly? then on.in_time_zone(zone) + @meeting.start_minute.to_i.minutes
+    else @meeting.starts_at&.in_time_zone(zone)
+    end
+  end
 
   # A topic from the activity's Topicificator set: by its number, or at random among the ones not
   # drawn yet today

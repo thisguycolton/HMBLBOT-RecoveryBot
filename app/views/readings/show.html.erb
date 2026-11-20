@@ -36,14 +36,15 @@
         title: @reading.title,
         published: @reading.published?,
         source: @reading.source,
+        **@source,
         user_id: @reading.user_id,
         host: @reading.host,
         meetingName: @reading.meetingName,
         meetingUrl: @reading.meetingUrl,
         meetingDate: @reading.meetingDate,
         meetingTime: @reading.meetingTime&.strftime('%H:%M:%S'),
-        content_html: @reading.content&.body&.to_s,
-        richer_content_html: @reading.richer_content&.body&.to_s,
+        content_html: (@reading.content&.body&.to_s unless @source[:text_locked]),
+        richer_content_html: (@reading.richer_content&.body&.to_s unless @source[:text_locked]),
         topic_html: @reading.topic&.body&.to_s,
         tags: @reading.tags.order(:title).map { |tag|
           { id: tag.id, title: tag.title, slug: tag.slug }

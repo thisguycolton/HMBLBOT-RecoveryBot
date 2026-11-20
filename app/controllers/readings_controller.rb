@@ -12,7 +12,7 @@ class ReadingsController < ApplicationController
 
 
   def index
-    @readings = Reading.published.includes(:tags).order(created_at: :desc)
+    @readings = Reading.published.includes(:tags, :group).order(created_at: :desc)
 
     # Qualify columns: the tag filter below joins `tags`, which also has a `title`
     if params[:q].present?
@@ -89,11 +89,15 @@ class ReadingsController < ApplicationController
 
     # The older rich text, else the newer editor's (matching how the form loads an edit)
     content = @reading.content.to_plain_text.strip.present? ? @reading.content.body.to_s : @reading.richer_content&.body.to_s
+    # A Grapevine reading whose words are held back from this person comes without them
+    locked = !@reading.full_text_for?(current_user)
     render json: {
       id: @reading.id,
       title: @reading.title,
       source: @reading.source,
-      content_html: content.to_s,
+      source_url: @reading.source_url,
+      text_locked: locked,
+      content_html: locked ? "" : content.to_s,
       topic_html: @reading.topic&.body&.to_s,
       tag_ids: @reading.tag_ids,
     }
@@ -109,6 +113,7 @@ class ReadingsController < ApplicationController
     end
 
     ahoy.track "Viewed Reading", title: @reading.title
+    @source = helpers.reading_source_json(@reading, current_user)
     @share = ShareMeta.safely { ShareMeta.reading(@reading) }
   end
 
@@ -265,7 +270,10 @@ end
         meetingUrl: reading.meetingUrl,
         meetingDate: reading.meetingDate,
         meetingTime: reading.meetingTime&.strftime("%H:%M:%S"),
-        preview: text.truncate(500),
+        # A Grapevine reading outside its public window shows only its opening lines
+        preview: reading.full_text_for?(current_user) ? text.truncate(500) : reading.excerpt,
+        source_url: reading.source_url.presence,
+        grapevine: reading.grapevine?,
         meeting_date_iso: reading.meetingDate&.iso8601,
         path: reading_path(reading),
         tags: reading.tags.map { |tag|
@@ -276,6 +284,6 @@ end
 
     # Only allow a list of trusted parameters through.
     def reading_params
-      params.require(:reading).permit(:title, :adopted_from_id, :content, :topic, :meetingTime, :meetingDate, :source, :meetingName, :meetingUrl, :host, :hour, :minute, :meridiem, :group_id, :richer_content, :published_at, tag_ids: [])
+      params.require(:reading).permit(:title, :adopted_from_id, :content, :topic, :meetingTime, :meetingDate, :source, :meetingName, :meetingUrl, :source_url, :host, :hour, :minute, :meridiem, :group_id, :richer_content, :published_at, tag_ids: [])
     end
 end

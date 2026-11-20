@@ -9,11 +9,49 @@ import {
   MonitorPlay,
   Users,
   Vote,
+  ExternalLink,
 } from "lucide-react";
 import ShareButton from "./share/ShareButton";
 import { isShareView } from "./shell/shareView";
 import EmbeddedPoll from "./polls/EmbeddedPoll";
 import { TextSizeControl, useReadingTextSize } from "./ui/TextSize";
+
+// The link to where a reading came from: "Read on Grapevine" for a Grapevine story (a search
+// for its title when the story itself couldn't be matched), else the source's own site
+function SourceLink({ reading, className = "" }) {
+  let label = "Read the original";
+  if (reading.grapevine) label = reading.grapevine_search || !reading.source_url ? "Find it on Grapevine" : "Read on Grapevine";
+  return (
+    <a
+      href={reading.read_on_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`mt-3 inline-flex items-center gap-2 rounded-xl border border-stone-300 px-4 py-2 text-sm font-semibold !font-sans !text-slate-700 hover:border-sky-500 hover:!text-sky-700 dark:border-neutral-600 dark:!text-neutral-200 ${className}`}
+    >
+      <ExternalLink size={16} /> {label}
+    </a>
+  );
+}
+
+// A Grapevine reading outside its public window: its opening lines and the way to the rest
+function GrapevineExcerpt({ reading, textStyle }) {
+  return (
+    <div>
+      {reading.excerpt && (
+        <div className="reading-prose wrap-normal" style={textStyle}>
+          <p>{reading.excerpt}</p>
+        </div>
+      )}
+      <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50 p-5 !font-sans dark:border-neutral-700 dark:bg-neutral-900">
+        <p className="text-base text-neutral-700 dark:text-neutral-200">
+          This story belongs to AA Grapevine. The full text is shared here around the meeting that
+          reads it. Read the whole story on Grapevine.
+        </p>
+        {reading.read_on_url && <SourceLink reading={reading} />}
+      </div>
+    </div>
+  );
+}
 
 function hasMeaningfulContent(value) {
   if (value == null) return false;
@@ -397,11 +435,29 @@ const topicHtml = renderRichContent(topicSource);
               {share && <TextSizeControl scale={textSize.scale} change={textSize.change} className="ml-auto" />}
             </div>
 
-            <div className="reading-prose wrap-normal" style={textSize.style} dangerouslySetInnerHTML={{ __html: contentHtml }} />
+            {reading.text_locked ? (
+              <GrapevineExcerpt reading={reading} textStyle={textSize.style} />
+            ) : (
+              <div className="reading-prose wrap-normal" style={textSize.style} dangerouslySetInnerHTML={{ __html: contentHtml }} />
+            )}
 
-            {reading.source && (
-              <div className="mt-8 border-t border-stone-200 pt-4 text-base italic text-neutral-600 dark:border-neutral-700 dark:text-neutral-400 wrap-normal">
-                {reading.source}
+            {(reading.source || reading.read_on_url) && (
+              <div className="mt-8 border-t border-stone-200 pt-4 text-base text-neutral-600 dark:border-neutral-700 dark:text-neutral-400 wrap-normal">
+                {reading.grapevine && (
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wider !font-sans text-neutral-500 dark:text-neutral-400">
+                    From AA Grapevine
+                  </div>
+                )}
+                {reading.source && <div className="italic">{reading.source}</div>}
+                {reading.read_on_url && !share && !reading.text_locked && (
+                  <SourceLink reading={reading} />
+                )}
+                {reading.grapevine && reading.public_until && !reading.public_now && !share && (
+                  <p className="mt-3 text-sm !font-sans text-neutral-500 dark:text-neutral-400">
+                    You see the whole reading because you're in this group. Outside the meeting
+                    window, visitors see a short excerpt and the Grapevine link.
+                  </p>
+                )}
               </div>
             )}
 

@@ -384,6 +384,7 @@ function buildFormData(reading, currentUser, activeGroup) {
     host: reading?.host || currentUser?.name || "",
     title: reading?.title || "",
     source: reading?.source || "",
+    sourceUrl: reading?.source_url || "",
     topic: renderRichContent(
       firstMeaningfulContent(
         reading?.topic_html,
@@ -525,7 +526,7 @@ useEffect(() => {
 
     beforeAdoptRef.current = {
       title: formData.title, content: formData.content, topic: formData.topic,
-      source: formData.source, tagIds: formData.tagIds,
+      source: formData.source, sourceUrl: formData.sourceUrl, tagIds: formData.tagIds,
     };
     setFormData((f) => ({
       ...f,
@@ -533,6 +534,7 @@ useEffect(() => {
       content: renderRichContent(source.content_html) || f.content,
       topic: renderRichContent(source.topic_html),
       source: source.source || f.source,
+      sourceUrl: source.source_url || f.sourceUrl,
       tagIds: [...new Set([...f.tagIds, ...(source.tag_ids || []).map(Number)])],
     }));
     setAdopted(match);
@@ -675,6 +677,7 @@ async function handleSubmit(e) {
         host: formData.host,
         title: formData.title,
         source: formData.source,
+        source_url: formData.sourceUrl.trim(),
         content: formData.content,
         topic: formData.topic,
         tag_ids: formData.tagIds,
@@ -938,6 +941,18 @@ async function handleSubmit(e) {
                         onChange={(e) => updateField("source", e.target.value)}
                         className="w-full border-0 bg-transparent p-0 text-xl italic text-neutral-600 dark:text-neutral-300 md:text-2xl placeholder:text-neutral-400 focus:outline-none focus:ring-0"
                       />
+                      {/* Where it came from on the web. A Grapevine link adds a "From AA Grapevine" credit
+                          and a Read on Grapevine button to the reading's page */}
+                      <input
+                        id="reading_source_url"
+                        type="url"
+                        inputMode="url"
+                        aria-label="Source link"
+                        placeholder="Source link (optional): https://www.aagrapevine.org/…"
+                        value={formData.sourceUrl}
+                        onChange={(e) => updateField("sourceUrl", e.target.value)}
+                        className="mt-2 w-full border-0 bg-transparent p-0 text-base text-neutral-500 dark:text-neutral-400 placeholder:text-neutral-400 focus:outline-none focus:ring-0"
+                      />
                     </figcaption>
                   </figure>
                 </section>
@@ -1194,6 +1209,7 @@ async function handleSubmit(e) {
         <input type="hidden" name="reading[host]" value={formData.host} />
         <input type="hidden" name="reading[title]" value={formData.title} />
         <input type="hidden" name="reading[source]" value={formData.source} />
+        <input type="hidden" name="reading[source_url]" value={formData.sourceUrl} />
         <input type="hidden" name="reading[content]" value={formData.content} />
         <input type="hidden" name="reading[topic]" value={formData.topic} />
         <input type="hidden" name="reading[user_id]" value={formData.userId} />
