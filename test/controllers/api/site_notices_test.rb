@@ -56,6 +56,30 @@ class Api::SiteNoticesTest < ActionDispatch::IntegrationTest
     assert_equal 6, hidden.size
   end
 
+  test "app users without notifications see App, notifications off notices" do
+    SiteNotice.create!(title: "Everyone")
+    SiteNotice.create!(title: "Turn them on", audience: "app_push_off", link_url: "/users/edit#notifications")
+    iphone = { "User-Agent" => "Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 Mobile/15E148 RecoveryBotApp/1.0 (iOS)" }
+    android = { "User-Agent" => "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 RecoveryBotApp/1.0 (Android)" }
+    seen = lambda do |headers, push = nil|
+      get "/api/site_notices", params: push.nil? ? {} : { push: push }, headers: headers
+      response.parsed_body.map { |n| n["title"] }
+    end
+
+    assert_equal %w[Everyone], seen.(iphone, "0") # signed out
+    sign_in @reader
+    assert_equal %w[Everyone], titles # the website never gets it
+    assert_equal ["Turn them on", "Everyone"], seen.(iphone, "0")
+    assert_equal ["Turn them on", "Everyone"], seen.(iphone, "1") # the app thinks so, but no token reached us
+    assert_equal ["Turn them on", "Everyone"], seen.(iphone)
+
+    @reader.device_tokens.create!(token: "ios-token", platform: "ios")
+    assert_equal %w[Everyone], seen.(iphone, "1")
+    assert_equal %w[Everyone], seen.(iphone) # an app that didn't say: the token counts
+    assert_equal ["Turn them on", "Everyone"], seen.(iphone, "0") # turned off or not allowed on this phone
+    assert_equal ["Turn them on", "Everyone"], seen.(android, "1") # no token for their Android phone
+  end
+
   test "a notice carries its write-up for the modal, and the admin's link" do
     SiteNotice.create!(title: "Story", body: "The **long** version", link_url: "/library", link_label: "Open the library")
     SiteNotice.create!(title: "Link", link_url: "https://example.com", link_label: "Go")
