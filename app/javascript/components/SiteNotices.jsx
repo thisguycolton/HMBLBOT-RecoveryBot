@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import Markdown from "./book/Markdown";
 import { appInfo } from "../lib/appInfo";
+import { isNativeApp } from "../lib/nativeApp";
+import { nativePushOn } from "../lib/nativePush";
 
 // Site-wide notices from admins (SiteNotice, /api/site_notices). Toasts.jsx shows them
 // above the ordinary toasts. They don't time out: closing one hides it in this browser
@@ -42,9 +44,16 @@ export function useSiteNotices() {
 
   useEffect(() => {
     let alive = true;
-    // The apps say which build they are, so notices for older builds (how to update) skip newer ones
-    appInfo()
-      .then((info) => fetch(`/api/site_notices${info.build != null ? `?build=${info.build}` : ""}`, { headers: { Accept: "application/json" }, credentials: "same-origin" }))
+    // The apps say which build they are, so notices for older builds (how to update) skip newer
+    // ones, and whether this phone gets notifications (notices for "App, notifications off")
+    Promise.all([appInfo(), isNativeApp() ? nativePushOn().catch(() => false) : null])
+      .then(([info, push]) => {
+        const query = new URLSearchParams();
+        if (info.build != null) query.set("build", info.build);
+        if (push != null) query.set("push", push ? "1" : "0");
+        const qs = query.toString();
+        return fetch(`/api/site_notices${qs ? `?${qs}` : ""}`, { headers: { Accept: "application/json" }, credentials: "same-origin" });
+      })
       .then((res) => (res.ok ? res.json() : []))
       .then((rows) => {
         if (!alive || !Array.isArray(rows)) return;

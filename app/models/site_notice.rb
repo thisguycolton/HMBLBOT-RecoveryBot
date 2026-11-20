@@ -4,7 +4,9 @@
 class SiteNotice < ApplicationRecord
   moderates_language :title, :summary, :body, :link_label
   TONES = %w[info success warning].freeze
-  AUDIENCES = %w[everyone members guests].freeze
+  # app_push_off: signed in on the iPhone or Android app, on a phone that isn't getting
+  # notifications (for nudges like "turn on notifications for your reminders")
+  AUDIENCES = %w[everyone members guests app_push_off].freeze
   # Where it shows. None picked = everywhere.
   PLATFORMS = %w[web ios android].freeze
 
@@ -37,10 +39,21 @@ class SiteNotice < ApplicationRecord
 
   # What this visitor should see: members-only notices need an account, guest notices
   # (say, "sign up for highlights") go only to people who aren't signed in. platform is "web",
-  # "ios" or "android" and build the app's build number (shown_to?).
-  def self.for_viewer(user, platform: "web", build: nil)
-    live.where(audience: ["everyone", user ? "members" : "guests"]).order(created_at: :desc)
+  # "ios" or "android" and build the app's build number (shown_to?). push is what the app says
+  # about this phone's notifications (true, false or nil when it didn't say; push_off_in_app?).
+  def self.for_viewer(user, platform: "web", build: nil, push: nil)
+    audiences = ["everyone", user ? "members" : "guests"]
+    audiences << "app_push_off" if push_off_in_app?(user, platform, push)
+    live.where(audience: audiences).order(created_at: :desc)
         .select { |notice| notice.shown_to?(platform, build) }
+  end
+
+  # Signed in on the app, and this phone isn't getting notifications: the app says they're off
+  # here (no permission, turned off in settings, or a build without notifications), or the
+  # account has no notification token for this kind of phone at all (DeviceToken).
+  def self.push_off_in_app?(user, platform, push)
+    return false unless user && %w[ios android].include?(platform)
+    push == false || !user.device_tokens.exists?(platform: platform)
   end
 
   # A notice picked for some devices goes only there, and in an app with "builds older than" only

@@ -11,7 +11,10 @@ audience: admins
 1. Choose **New notice**.
 2. Write a short headline, and a longer write-up if you need one (it opens in a window).
 3. Pick a tone (news, info, warning) and when it starts and ends.
-4. Save. It shows to everyone until it ends or they close it.
+4. Under **Who sees it**, pick **Everyone**, **Members** (signed in), **Signed out**, or **App, notifications off**.
+5. Save. It shows to that audience until it ends or they close it.
+
+**App, notifications off** goes only to signed-in members using the iPhone or Android app on a phone that isn't getting notifications: they never allowed them, turned them off in the app, or have a build too old for notifications. The website never shows it. Link it to `/users/edit#notifications` so they land on the switch.
 
 ## Example
 

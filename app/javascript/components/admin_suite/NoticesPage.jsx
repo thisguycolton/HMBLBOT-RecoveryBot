@@ -20,9 +20,13 @@ const AUDIENCES = [
   { value: "everyone", label: "Everyone" },
   { value: "members", label: "Members" },
   { value: "guests", label: "Signed out" },
+  { value: "app_push_off", label: "App, notifications off" },
 ];
 
-const AUDIENCE_LABEL = { everyone: "everyone", members: "signed-in members", guests: "people who aren't signed in" };
+const AUDIENCE_LABEL = {
+  everyone: "everyone", members: "signed-in members", guests: "people who aren't signed in",
+  app_push_off: "app users without notifications",
+};
 
 // Where a notice shows. None picked = everywhere.
 const PLATFORMS = [
@@ -292,6 +296,12 @@ function NoticeForm({ notice, updateNotices = {}, onSave, onCancel }) {
         <div className="rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-700">
           <SegmentedControl options={AUDIENCES} value={v.audience} onChange={set("audience")} />
         </div>
+        {v.audience === "app_push_off" && (
+          <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">
+            Signed-in members in the iPhone or Android app whose phone isn't getting notifications (never allowed, turned off, or an
+            old build). The website never shows it. Link it to <code>/users/edit#notifications</code> so they can turn them on.
+          </p>
+        )}
       </div>
       <div>
         <span className={labelClass}>Where it shows</span>

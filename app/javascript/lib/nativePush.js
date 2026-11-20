@@ -18,6 +18,13 @@ export const nativePushSupported = () => hasPlugin("FirebaseMessaging");
 export const storedToken = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
 const store = (token) => { try { if (token) localStorage.setItem(KEY, token); else localStorage.removeItem(KEY); } catch { /* private mode */ } };
 
+// Whether this phone gets the app's notifications: the phone allows them and the server has its
+// token. A build without the plugin can't get any. Site notices for "App, notifications off" use it.
+export async function nativePushOn() {
+  if (!nativePushSupported() || !storedToken()) return false;
+  return (await nativePermission()) === "granted";
+}
+
 // "granted", "denied" or "prompt"
 export async function nativePermission() {
   try { return (await callPlugin("FirebaseMessaging", "checkPermissions")).receive; } catch { return "prompt"; }
