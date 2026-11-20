@@ -1,11 +1,12 @@
 require "test_helper"
 
 class GrapevineSourceLinkerTest < ActiveSupport::TestCase
-  def row(title, url, date)
+  def row(title, url, date, author = "Anonymous | Somewhere")
     <<~HTML
       <div class="views-row"><div class="layout--article"><div class="main-region">
         <h3 class="audible"><a class="article-node" href="#{url}">#{title}</a></h3>
         <div class="article-publication-date">#{date} | Something</div>
+        <div class="article-author">By: #{author}</div>
       </div></div></div>
     HTML
   end
@@ -52,5 +53,16 @@ class GrapevineSourceLinkerTest < ActiveSupport::TestCase
 
     GrapevineSourceLinker.new(dry_run: true, delay: 0, out: StringIO.new, fetcher: ->(_) { page }).run(Reading.where(id: todo.id))
     assert_nil todo.reload.source_url
+  end
+
+  test "the byline in the source picks between stories with the same title, and a pasted story link is used as is" do
+    html = page(row("Love", "https://www.aagrapevine.org/magazine/1980/jan/love", "January 1980", "J. D. | Ohio"),
+                row("Love", "https://www.aagrapevine.org/magazine/2019/feb/love", "February 2019", "C.C. | North Hollywood, California"))
+    by_line = Reading.create!(title: "Love", source: "AA Grapevine| C.C. | NORTH HOLLYWOOD, CALIFORNIA", content: "x", user: @user)
+    pasted = Reading.create!(title: "Bullets", source: "https://www.aagrapevine.org/magazine/2024/oct/bullets-bottles", content: "x", user: @user)
+
+    GrapevineSourceLinker.new(delay: 0, out: StringIO.new, fetcher: ->(_) { html }).run(Reading.where(id: [by_line.id, pasted.id]))
+    assert_equal "https://www.aagrapevine.org/magazine/2019/feb/love", by_line.reload.source_url
+    assert_equal "https://www.aagrapevine.org/magazine/2024/oct/bullets-bottles", pasted.reload.source_url
   end
 end

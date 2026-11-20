@@ -19,7 +19,9 @@ class GrapevineSourceLinker
   Result = Struct.new(:reading, :status, :url, :note, keyword_init: true)
 
   # Readings taken from Grapevine that have no link yet (or, with redo, only a search link)
-  def self.scope(redo_search_links: false, all: false)
+  def self.scope(redo_search_links: false, all: false, ids: [])
+    return Reading.where(id: ids) if ids.any?
+
     readings = Reading.where("readings.source ILIKE ? OR readings.source ILIKE ? OR readings.source_url ILIKE ?", "%grapevine%", "%grape vine%", "%aagrapevine.org%")
     return readings if all
 
@@ -47,8 +49,16 @@ class GrapevineSourceLinker
     title = reading.title.to_s.squish
     return Result.new(reading: reading, status: :skipped, note: "no title") if title.blank?
 
+    # The story's own link pasted into the Source line: use it as it is
+    pasted = reading.source.to_s[%r{https?://(?:www\.)?aagrapevine\.org/magazine/\d{4}/[a-z]{3}/[^\s/?#]+}]
+    if pasted
+      save(reading, pasted)
+      return Result.new(reading: reading, status: :matched, url: pasted, note: "link from the Source line")
+    end
+
     articles = search(title)
     matches = articles.select { |a| self.class.normalize(a[:title]) == self.class.normalize(title) }
+    matches = pick_by_author(matches, reading.source) if matches.size > 1
     matches = pick_by_date(matches, reading.source) if matches.size > 1
 
     if matches.size == 1
@@ -85,7 +95,8 @@ class GrapevineSourceLinker
       # Stories only: not their audio versions or other kinds of page
       next unless url.match?(%r{\Ahttps://(www\.)?aagrapevine\.org/magazine/\d{4}/[a-z]{3}/(?!audio/)[^/?#]+\z})
 
-      { title: link.text.squish, url: url, date: row.at_css(".article-publication-date")&.text.to_s.split("|").first.to_s.squish }
+      { title: link.text.squish, url: url, date: row.at_css(".article-publication-date")&.text.to_s.split("|").first.to_s.squish,
+        author: row.at_css(".article-author")&.text.to_s.sub(/\A\s*By:\s*/i, "").squish }
     end.uniq { |a| a[:url] }
   end
 
@@ -95,6 +106,19 @@ class GrapevineSourceLinker
   end
 
   private
+
+  # Several articles share the title: the one whose byline the source line names
+  # ("AA Grapevine | CHRIS C. | OREGON, OHIO" against "By: Chris C. | Oregon, Ohio")
+  def pick_by_author(matches, source)
+    parts = source.to_s.split(/\s*[|\-–]\s*/).map { |p| self.class.normalize(p.sub(/\ABy:\s*/i, "")) }.reject { |p| p.blank? || p.include?("grapevine") }
+    return matches if parts.empty?
+
+    by_author = matches.select do |a|
+      byline = a[:author].to_s.split("|").map { |p| self.class.normalize(p) }
+      byline.first.present? && parts.include?(byline.first)
+    end
+    by_author.any? ? by_author : matches
+  end
 
   # Several articles share the title: the one from the month and year (or year) the source names
   def pick_by_date(matches, source)
