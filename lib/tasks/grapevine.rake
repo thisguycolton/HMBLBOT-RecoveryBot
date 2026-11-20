@@ -58,4 +58,27 @@ namespace :grapevine do
     end
     puts "\n#{counts.map { |status, n| "#{n} #{status}" }.join(", ")}#{" (dry run: nothing saved)" if dry_run}"
   end
+
+  # Tops up each Grapevine reading to 3 tags from db/data/grapevine_tags.csv (picked from the
+  # title and Grapevine's public summary). Only adds tags that already exist, never removes
+  # one, and leaves readings that already have 3 or more alone. DRY_RUN=1 shows what it would do.
+  desc "Top up Grapevine readings to 3 tags from db/data/grapevine_tags.csv (DRY_RUN=1 to preview)"
+  task apply_tags: :environment do
+    dry_run = ENV["DRY_RUN"].present?
+    tags = Tag.all.index_by { |tag| tag.title.downcase }
+    counts = Hash.new(0)
+    CSV.foreach(Rails.root.join("db/data/grapevine_tags.csv"), headers: true) do |row|
+      reading = Reading.find_by(id: row["id"])
+      next counts[:missing] += 1 unless reading && reading.title.to_s.squish == row["title"].to_s.squish
+
+      have = reading.tags.to_a
+      added = row["tags"].split("|").filter_map { |title| tags[title.strip.downcase] }
+                         .reject { |tag| have.include?(tag) }.first([3 - have.size, 0].max)
+      reading.tags << added unless dry_run || added.empty?
+      counts[added.any? ? :tagged : :already_tagged] += 1
+      puts "##{reading.id} #{reading.title}: +#{added.map(&:title).join(', ')}" if added.any?
+    end
+    puts "\n#{counts.map { |status, n| "#{n} #{status}" }.join(", ")}#{" (dry run: nothing saved)" if dry_run}"
+  end
 end
+
