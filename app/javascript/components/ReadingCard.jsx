@@ -32,7 +32,7 @@ const ReadingCard = ({ reading }) => {
         <p className="serif mt-2 line-clamp-3 text-sm leading-relaxed text-slate-600 dark:text-neutral-400">{reading.preview}</p>
 
         <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 dark:border-neutral-800">
-          <cite className={`max-w-[150px] truncate text-xs not-italic ${accentTheme.text}`}>{reading.source || "Unknown source"}</cite>
+          <cite className={`max-w-[150px] truncate text-xs not-italic ${accentTheme.text}`}>{reading.source || (reading.grapevine ? "AA Grapevine" : "Unknown source")}</cite>
           <span className={`ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform group-hover:translate-x-1 ${accentTheme.iconBg} ${accentTheme.text}`}>
             <ArrowRight className="h-4 w-4" />
           </span>

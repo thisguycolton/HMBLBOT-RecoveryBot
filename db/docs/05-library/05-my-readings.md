@@ -11,7 +11,7 @@ audience: everyone
 ## Write one
 
 1. Open **My readings** and choose **New Reading**.
-2. Give it a title and source, and write or paste the text.
+2. Give it a title and source, and write or paste the text. If it came from a web page, paste that page into **Source link** under the source. A link to an AA Grapevine story adds a **From AA Grapevine** credit and a **Read on Grapevine** button, and keeps the full text public only around your meeting (see [Reading Archive](/docs/meetings/reading-archive)).
 3. Add **tags** so others can find it.
 4. Save it. It stays yours (a **Draft**) until you publish.
 

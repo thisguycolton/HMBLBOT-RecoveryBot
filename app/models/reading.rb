@@ -99,6 +99,76 @@ class Reading < ApplicationRecord
     text.size <= length ? text : "#{text.first(length - 1).sub(/\s+\S*\z/, '')}…"
   end
 
+  # AA Grapevine stories ------------------------------------------------------------------
+  # Grapevine owns its stories' copyright, so a reading taken from one credits it and links to it
+  # (source_url, filled by `bin/rails grapevine:link_sources`), and its full text is public only
+  # for a while around the meeting that last used it. Outside that window, people who aren't in
+  # the reading's group see its title, a short excerpt and the Read on Grapevine link. Its author,
+  # admins, and the group's members and hosts always see the whole reading.
+  # This keeps the text out of public view most of the time; it isn't permission to post it.
+  GRAPEVINE_PUBLIC_WINDOW = ENV.fetch("GRAPEVINE_PUBLIC_HOURS", 48).to_i.hours
+  # The public window opens this long before the meeting, so a reading posted the day before can be read ahead
+  GRAPEVINE_OPENS_BEFORE = 24.hours
+  GRAPEVINE_HOST = /(\A|\.)aagrapevine\.org\z/i
+  GRAPEVINE_SEARCH_URL = "https://www.aagrapevine.org/site-search?keys="
+  EXCERPT_LENGTH = 280
+
+  validates :source_url, length: { maximum: 500 }, format: { with: %r{\Ahttps?://\S+\z}, message: "must be a web link" }, allow_blank: true
+
+  def self.grapevine_search_url(title) = "#{GRAPEVINE_SEARCH_URL}#{ERB::Util.url_encode(title.to_s.squish)}"
+
+  def source_host = (URI.parse(source_url.to_s).host rescue nil)
+
+  # Taken from Grapevine: its source link is on aagrapevine.org, or its source line names it
+  def grapevine?
+    source_host.to_s.match?(GRAPEVINE_HOST) || source.to_s.match?(/grape\s*vine/i)
+  end
+
+  # Its link points at a Grapevine search rather than the story itself (the title couldn't be matched)
+  def grapevine_search_link? = grapevine? && source_url.to_s.include?("/site-search")
+
+  # When its meeting started: the reading's date and time in its group's time zone
+  def meeting_at
+    return unless meetingDate
+
+    zone = group&.zone || Time.zone
+    start = meetingDate.in_time_zone(zone)
+    meetingTime ? start + meetingTime.hour.hours + meetingTime.min.minutes : start
+  end
+
+  # The last time a meeting used it: its own meeting, or a later one whose host picked it
+  def last_used_on = [last_used_at, meeting_at].compact.max
+
+  # A meeting is using it now (a host picked it for the day): remember when
+  def mark_used!(at = Time.current)
+    update_column(:last_used_at, at) if last_used_at.nil? || at > last_used_at
+  end
+
+  # The time its full text stops being public (nil: it isn't time-limited, or was never used)
+  def public_text_until
+    used = last_used_on
+    used && used + GRAPEVINE_PUBLIC_WINDOW
+  end
+
+  # Whether anyone at all may read the whole thing right now
+  def public_text_open?(now = Time.current)
+    return true unless grapevine?
+
+    used = last_used_on
+    !!used && now >= used - GRAPEVINE_OPENS_BEFORE && now <= used + GRAPEVINE_PUBLIC_WINDOW
+  end
+
+  # Whether this person sees the whole reading (else the excerpt and the Grapevine link)
+  def full_text_for?(user, now = Time.current)
+    return true if public_text_open?(now)
+    return false unless user
+    return true if user.admin? || user_id == user.id
+
+    !!group && (group.member?(user) || group.can_host?(user))
+  end
+
+  def excerpt(length = EXCERPT_LENGTH) = summary(length)
+
   after_validation :parse_time
 
   def parse_time
