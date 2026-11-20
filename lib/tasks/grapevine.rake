@@ -1,3 +1,5 @@
+require "csv"
+
 namespace :grapevine do
   # Links readings taken from AA Grapevine to their stories on Grapevine's public site (GrapevineSourceLinker).
   #
@@ -31,5 +33,29 @@ namespace :grapevine do
       puts "\nNot matched to a single story (linked to a Grapevine search instead):"
       unmatched.each { |r| puts "  ##{r.reading.id} #{r.reading.title} | #{r.reading.source} (#{r.note})" }
     end
+  end
+
+  # Saves the links in db/data/grapevine_links.csv: every Grapevine reading on the site as of
+  # 2026-11-20, matched by hand-checked search of Grapevine's public site (title and byline).
+  # A row is used only when the reading still has that id and title, and has no link yet
+  # (FORCE=1 replaces links already there). DRY_RUN=1 shows what it would do.
+  desc "Save the checked Grapevine links in db/data/grapevine_links.csv (DRY_RUN=1 to preview, FORCE=1 to replace links)"
+  task apply_links: :environment do
+    dry_run = ENV["DRY_RUN"].present?
+    counts = Hash.new(0)
+    CSV.foreach(Rails.root.join("db/data/grapevine_links.csv"), headers: true) do |row|
+      reading = Reading.find_by(id: row["id"])
+      status =
+        if reading.nil? then :missing
+        elsif reading.title.to_s.squish != row["title"].to_s.squish then :renamed
+        elsif reading.source_url.present? && ENV["FORCE"].blank? then :has_link
+        else
+          reading.update_column(:source_url, row["source_url"]) unless dry_run
+          row["status"] == "search" ? :search_link : :linked
+        end
+      counts[status] += 1
+      puts "#{status.to_s.ljust(11)} ##{row['id']} #{row['title']}#{" (#{row['note']})" if row['note'].present?}"
+    end
+    puts "\n#{counts.map { |status, n| "#{n} #{status}" }.join(", ")}#{" (dry run: nothing saved)" if dry_run}"
   end
 end
