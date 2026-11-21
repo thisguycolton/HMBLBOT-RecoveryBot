@@ -8,6 +8,8 @@ class ShareCardsController < ApplicationController
     record = find_record
     meta = if record.is_a?(UserHighlight)
       ShareMeta.highlight(record, look: params[:look], note: params[:note] != "0")
+    elsif record.is_a?(DayFacts::Fact)
+      ShareMeta.fact(record, look: params[:look])
     else
       record ? ShareMeta.for(record) : (ShareMeta.site if params[:kind] == "site")
     end
@@ -34,6 +36,7 @@ class ShareCardsController < ApplicationController
     when "meeting" then Meeting.find(id)
     when "listing" then OiaaMeeting.find_by!(slug: id)
     when "highlight" then UserHighlight.find_signed(id, purpose: :share) || raise(ActiveRecord::RecordNotFound)
+    when "fact" then DayFacts.find(id) || raise(ActiveRecord::RecordNotFound)
     end
   end
 end

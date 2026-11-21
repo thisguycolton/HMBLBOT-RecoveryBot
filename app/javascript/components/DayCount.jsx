@@ -5,6 +5,7 @@ import { DAY_COUNT_OPEN_EVENT as OPEN_EVENT } from "../lib/openDayCount";
 import { dayFacts, TOPIC_ICONS } from "../lib/dayFacts";
 import { api, soberFor } from "./groups/lib";
 import { SpinningChip } from "./recovery/ChipModal";
+import FactShare from "./FactShare";
 import "../styles/day-count.css";
 
 // The member's day count, in a modal when they sign in (the server marks a fresh sign-in:
@@ -31,7 +32,7 @@ export default function DayCount({ since, signedIn }) {
   const [open, setOpen] = useState(() => Boolean(status && (signedIn || (status.today && !seenToday()))));
   const closeRef = useRef(null);
   const [chip, setChip] = useState(null); // { chip, design } on a milestone day
-  const [moreFacts, setMoreFacts] = useState(false); // some days have several fun facts; two show at first
+  const [sharing, setSharing] = useState(null); // the fun fact being shared (FactShare), or null
 
   useEffect(() => {
     if (!status) return undefined;
@@ -74,16 +75,19 @@ export default function DayCount({ since, signedIn }) {
   if (!open) return null;
   const { days, today, next } = status;
   const facts = dayFacts(days);
+  // Today's fun fact, or else the last one they passed, with a way to share it
+  const fact = facts.today[0] || facts.last;
   const close = () => setOpen(false);
   const sinceLabel = new Date(`${since}T00:00:00`).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" });
 
   return (
     <div className="hb-daycount" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="hb-daycount-title" className={`hb-daycount__panel ${today ? "hb-daycount__panel--milestone hb-daycount__panel--chip" : ""}`}>
+      <div role="dialog" aria-modal="true" aria-labelledby="hb-daycount-title" className={`hb-daycount__panel ${today ? "hb-daycount__panel--milestone hb-daycount__panel--chip" : ""} ${sharing ? "hb-daycount__panel--sharing" : ""}`}>
         <button type="button" aria-label="Close" className="hb-daycount__close" onClick={close}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
-        <div className="hb-daycount__head">
+        {/* the share view needs the room, so the big count steps aside while it is open */}
+        {!sharing && <div className="hb-daycount__head">
           {today && chip && <div className="hb-daycount__chip"><SpinningChip chip={chip.chip} design={chip.design} size={180} /></div>}
           <div className="hb-daycount__meta">{today ? "Milestone" : "Your day count"}</div>
           {today && <h2 id="hb-daycount-title" className="hb-daycount__title">Happy {today.label}!</h2>}
@@ -94,8 +98,8 @@ export default function DayCount({ since, signedIn }) {
           <div className="hb-daycount__since">
             {days >= 90 && <>{soberFor(since)} · </>}since {sinceLabel}
           </div>
-        </div>
-        <div className="hb-daycount__body">
+        </div>}
+        {sharing ? <FactShare fact={sharing} onBack={() => setSharing(null)} /> : <div className="hb-daycount__body">
           {today ? (
             <p>Today you celebrate {today.label}. Congratulations, and thank you for showing the way for the rest of us.</p>
           ) : days === 0 ? (
@@ -103,14 +107,17 @@ export default function DayCount({ since, signedIn }) {
           ) : (
             <p>One day at a time. Keep coming back.</p>
           )}
-          {facts.today.slice(0, moreFacts ? undefined : 2).map((f) => (
-            <div key={f.title} className="hb-daycount__fact">
-              <span className="hb-daycount__fact-icon" aria-hidden="true">{TOPIC_ICONS[f.topic]}</span>
-              <span><strong>{f.title}</strong><span className="hb-daycount__fact-detail">{f.detail}</span></span>
+          {fact && (
+            <div className="hb-daycount__fact">
+              <span className="hb-daycount__fact-icon" aria-hidden="true">{TOPIC_ICONS[fact.topic]}</span>
+              <span className="hb-daycount__fact-text">
+                {fact.days !== days && <span className="hb-daycount__fact-when">Day {fact.days.toLocaleString()}</span>}
+                <strong>{fact.title}</strong><span className="hb-daycount__fact-detail">{fact.detail}</span>
+              </span>
+              <button type="button" className="hb-daycount__fact-share" onClick={() => setSharing(fact)} aria-label="Share this fun fact" title="Share this fun fact">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
+              </button>
             </div>
-          ))}
-          {!moreFacts && facts.today.length > 2 && (
-            <button type="button" className="hb-daycount__more" onClick={() => setMoreFacts(true)}>{facts.today.length - 2} more fun {facts.today.length === 3 ? "fact" : "facts"} for today</button>
           )}
           {next && (
             <p className="hb-daycount__next">
@@ -122,7 +129,7 @@ export default function DayCount({ since, signedIn }) {
               {facts.next.inDays === 1 ? "Tomorrow" : `In ${facts.next.inDays.toLocaleString()} days`}: {TOPIC_ICONS[facts.next.topic]} {facts.next.title.charAt(0).toLowerCase() + facts.next.title.slice(1)}
             </p>
           )}
-        </div>
+        </div>}
         <div className="hb-daycount__foot">
           {today ? <a className="hb-daycount__link" href="/recovery">See all my chips</a> : <a className="hb-daycount__link" href="/users/edit">Change my sobriety date</a>}
           {today && chip && <a className="hb-daycount__link" href={`/recovery?chip=${encodeURIComponent(chip.chip.id)}&share=1`}>Share it</a>}

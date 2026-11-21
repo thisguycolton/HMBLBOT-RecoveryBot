@@ -109,7 +109,6 @@ html.dark .hb-daycount__panel {
   padding: 0.75rem 0.9rem;
   text-align: left;
 }
-.hb-daycount .hb-daycount__more { background: none; border: 0; color: var(--hb-daycount-edge); cursor: pointer; font: inherit; font-size: 0.9rem; margin: 0 0 0.75rem; text-decoration: underline; }
 .hb-daycount__fact-icon { font-size: 1.5rem; line-height: 1.2; }
 .hb-daycount .hb-daycount__fact-detail { color: var(--hb-daycount-muted); display: block; font-size: 0.9rem; margin-top: 0.15rem; }
 
@@ -141,3 +140,109 @@ html.dark .hb-daycount__panel {
 @keyframes hb-daycount-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes hb-daycount-pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .hb-daycount, .hb-daycount__panel { animation: none; } }
+
+/* The fun fact's text, its "Day N" label when it isn't today's, and its share button */
+.hb-daycount__fact-text { flex: 1; min-width: 0; }
+.hb-daycount .hb-daycount__fact-when { color: var(--hb-daycount-muted); display: block; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+.hb-daycount__fact-share {
+  align-items: center;
+  align-self: flex-start;
+  background: var(--hb-daycount-bg);
+  border: 1px solid var(--hb-daycount-line);
+  border-radius: 999px;
+  color: var(--hb-daycount-ink);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  height: 2.25rem;
+  justify-content: center;
+  width: 2.25rem;
+}
+.hb-daycount__fact-share:hover { background: color-mix(in srgb, var(--hb-daycount-edge) 14%, var(--hb-daycount-bg)); }
+.hb-daycount__fact-share svg { fill: none; height: 1.05rem; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; width: 1.05rem; }
+
+/* Sharing a fun fact as a picture (components/FactShare.jsx) */
+.hb-factshare { padding: 1rem 1.25rem 0.75rem; text-align: center; }
+/* The big count steps aside while sharing, so the close button sits on the panel itself */
+.hb-daycount__panel--sharing .hb-daycount__close { background: rgb(127 127 127 / 0.14); color: var(--hb-daycount-ink); }
+.hb-daycount__panel--sharing .hb-daycount__close:hover { background: rgb(127 127 127 / 0.26); }
+.hb-daycount .hb-factshare__title { color: var(--hb-daycount-ink); font-family: inherit; font-size: 1rem; font-weight: 700; line-height: 2rem; margin: 0 2.5rem 0.75rem; }
+.hb-daycount .hb-factshare__back {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: var(--hb-daycount-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.85rem;
+  gap: 0.2rem;
+  height: 2rem;
+  left: 0.9rem;
+  padding: 0 0.5rem 0 0.25rem;
+  position: absolute;
+  top: 0.9rem;
+}
+.hb-factshare__back svg { fill: none; height: 1rem; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.25; width: 1rem; }
+.hb-factshare__stage { display: flex; justify-content: center; margin: 0 auto 0.9rem; }
+.hb-factshare__stage img,
+.hb-factshare__placeholder {
+  border-radius: 1rem;
+  box-shadow: 0 12px 28px -12px rgb(0 0 0 / 0.45);
+  display: block;
+  max-width: 100%;
+  width: 100%;
+}
+.hb-factshare__stage--story img,
+.hb-factshare__stage--story .hb-factshare__placeholder { max-height: min(28rem, 55dvh); width: auto; }
+.hb-factshare__stage--story .hb-factshare__placeholder { height: min(28rem, 55dvh); }
+.hb-factshare__placeholder {
+  align-items: center;
+  background: color-mix(in srgb, var(--hb-daycount-edge) 10%, transparent);
+  box-shadow: none;
+  color: var(--hb-daycount-muted);
+  display: flex;
+  font-size: 0.9rem;
+  justify-content: center;
+  padding: 1rem;
+}
+.hb-factshare__looks { display: flex; flex-wrap: wrap; gap: 0.3rem; justify-content: center; margin-bottom: 0.6rem; }
+.hb-factshare__looks button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--hb-daycount-line);
+  border-radius: 999px;
+  color: var(--hb-daycount-ink);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem 0.25rem 0.3rem;
+}
+.hb-factshare__looks button span { border-radius: 999px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); display: inline-block; height: 1rem; width: 1rem; }
+.hb-factshare__looks button[aria-pressed="true"] { border-color: var(--hb-daycount-ink); box-shadow: inset 0 0 0 1px var(--hb-daycount-ink); }
+.hb-factshare__sizes {
+  background: color-mix(in srgb, var(--hb-daycount-ink) 7%, transparent);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 0.2rem;
+  margin-bottom: 0.9rem;
+  padding: 0.2rem;
+}
+.hb-factshare__sizes button {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--hb-daycount-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.9rem;
+}
+.hb-factshare__sizes button[aria-pressed="true"] { background: var(--hb-daycount-bg); box-shadow: 0 1px 3px rgb(0 0 0 / 0.18); color: var(--hb-daycount-ink); }
+.hb-factshare__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+.hb-factshare__actions a.hb-daycount__button { text-decoration: none; }
+.hb-daycount .hb-factshare__note { color: var(--hb-daycount-muted); font-size: 0.75rem; margin: 0.75rem 0 0; }

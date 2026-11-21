@@ -46,7 +46,10 @@ Rails.application.routes.draw do
 
   # The picture a shared link shows (og:image)
   get "/share_cards/:kind/:id.png", to: "share_cards#show", as: :share_card, format: false,
-      constraints: { kind: /document|reading|event|group|meeting|listing|highlight|site/, id: %r{[^/]+} }
+      constraints: { kind: /document|reading|event|group|meeting|listing|highlight|fact|site/, id: %r{[^/]+} }
+  # A fun day-count fact to share (FactsController): its page and its picture
+  get "/facts/:days/card", to: "facts#card", as: :fact_card, format: false, constraints: { days: /\d+/ }
+  get "/facts/:days", to: "facts#show", as: :fact, format: false, constraints: { days: /\d+/ }
   # The little map of where an in-person meeting is (MeetingMap)
   get "/meeting_maps/:kind/:id.png", to: "meeting_maps#show", as: :meeting_map, format: false,
       constraints: { kind: /meeting|listing/, id: %r{[^/]+} }

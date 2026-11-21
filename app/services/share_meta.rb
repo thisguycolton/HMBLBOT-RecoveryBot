@@ -58,6 +58,16 @@ class ShareMeta
         card: QuoteCard.highlight(highlight, look: look, note: note, still: true), query: picture)
   end
 
+  # A fun day-count fact (DayFacts): "1,827 days: As long as ...", its detail, and its wide
+  # picture (FactCard) in the look it was shared in. It says nothing about whose count it is.
+  def self.fact(fact, look: nil)
+    look = FactCard::LOOKS.include?(look.to_s) ? look.to_s : nil
+    query = { look: look }.compact
+    new(title: fact.share_title, description: fact.detail,
+        path: query.empty? ? fact.path : "#{fact.path}?#{query.to_query}", kind: "fact", id: fact.days,
+        card: FactCard.new(fact, look: look, size: "wide"), query: query)
+  end
+
   def self.document(doc)
     group = doc.group
     return unless group.page_visible_to?(nil) && GroupDocument.visible_to(group, nil).exists?(doc.id)

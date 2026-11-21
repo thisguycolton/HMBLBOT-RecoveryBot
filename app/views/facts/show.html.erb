@@ -1,0 +1,48 @@
+<%# A shared fun fact (FactsController#show): the picture, the words, and the way in. Its own small page, so a link opens fast. %>
+<% from, to = FactCard::TOPIC_COLORS.fetch(@fact.topic, FactCard::TOPIC_COLORS["numbers"]) %>
+<% all = DayFacts.all; i = all.index(@fact); before = i.positive? ? all[i - 1] : nil; after = all[i + 1] %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title><%= @fact.share_title %> | RecoveryBot</title>
+  <%= render "application/share_meta" %>
+  <meta name="theme-color" content="<%= from %>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;800&display=swap">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; min-height: 100dvh; font-family: "Public Sans", system-ui, sans-serif; color: #fff;
+           background: linear-gradient(135deg, <%= from %>, <%= to %>); display: grid; place-items: center; padding: 2rem 1.25rem; }
+    main { width: 100%; max-width: 34rem; }
+    .kicker { font-size: .8rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .82; margin: 0 0 .5rem; }
+    .count { font-size: clamp(3.5rem, 16vw, 6rem); font-weight: 800; letter-spacing: -.03em; line-height: 1; margin: 0; }
+    .count span { font-size: .32em; font-weight: 600; letter-spacing: 0; opacity: .85; margin-left: .3rem; }
+    h1 { font-size: clamp(1.6rem, 6vw, 2.2rem); line-height: 1.15; margin: 1.5rem 0 .75rem; }
+    .detail { font-size: 1.15rem; line-height: 1.55; margin: 0; opacity: .9; }
+    .card { aspect-ratio: 1; display: block; height: auto; width: 100%; border-radius: 1.25rem; margin-top: 2rem; box-shadow: 0 20px 40px -12px rgb(0 0 0 / .45); }
+    .cta { display: inline-flex; align-items: center; gap: .5rem; margin-top: 2rem; padding: .85rem 1.25rem; border-radius: 999px;
+           background: #fff; color: #0f172a; font-weight: 700; text-decoration: none; }
+    .cta img { height: 1.4rem; }
+    nav { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem; font-size: .9rem; }
+    nav a { color: #fff; opacity: .85; }
+    .about { font-size: .85rem; opacity: .75; margin-top: 1.25rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="kicker">Fun fact · <%= @fact.topic_label %></p>
+    <p class="count"><%= @fact.days.to_fs(:delimited) %><span><%= @fact.days == 1 ? "day" : "days" %></span></p>
+    <h1><%= @fact.headline %></h1>
+    <% if @fact.subline %><p class="detail"><%= @fact.subline %></p><% end %>
+    <img class="card" src="<%= fact_card_path(@fact.days, look: @look, size: "square") %>" width="1080" height="1080" alt="<%= @fact.share_title %>">
+    <a class="cta" href="/"><img src="<%= image_path("recoverybot-mark.svg") %>" alt="">Count your days on RecoveryBot</a>
+    <p class="about">RecoveryBot counts your days one at a time and shows a fun fact like this one as you pass each milestone.</p>
+    <nav>
+      <% if before %><a href="<%= before.path %>">← <%= before.days_label %></a><% else %><span></span><% end %>
+      <% if after %><a href="<%= after.path %>"><%= after.days_label %> →</a><% end %>
+    </nav>
+  </main>
+</body>
+</html>
