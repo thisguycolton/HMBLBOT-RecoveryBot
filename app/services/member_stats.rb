@@ -115,10 +115,10 @@ module MemberStats
   def day_counts(today)
     counts = User.where.not(sobriety_date: nil).pluck(:sobriety_date).map { |d| (today - d).to_i }.select { |n| n >= 0 }
     spans = [["Under 30 days", 0, 29], ["30–89 days", 30, 89], ["90 days to 1 year", 90, 364], ["1–5 years", 365, 1825], ["5–10 years", 1826, 3652], ["10+ years", 3653, nil]]
-    week = facts.flat_map do |f|
+    week = DayFacts.all.flat_map do |f|
       (0..6).filter_map do |ahead|
-        n = counts.count { |c| c + ahead == f["days"] }
-        { days: f["days"], title: f["title"], topic: f["topic"], in_days: ahead, people: n } if n.positive?
+        n = counts.count { |c| c + ahead == f.days }
+        { days: f.days, title: f.title, topic: f.topic, in_days: ahead, people: n } if n.positive?
       end
     end
     {
@@ -126,9 +126,5 @@ module MemberStats
       spans: spans.map { |label, lo, hi| { label: label, people: counts.count { |c| c >= lo && (hi.nil? || c <= hi) } } },
       facts_this_week: week.sort_by { |w| [w[:in_days], w[:days]] },
     }
-  end
-
-  def facts
-    @facts ||= JSON.parse(File.read(Rails.root.join("app/javascript/lib/dayFacts.json")))
   end
 end
