@@ -15,7 +15,7 @@ On iPhone and iPad, notifications only work from the [home-screen app](/docs/get
 
 ## Pick what you get
 
-Notifications come in kinds you can turn on and off: mentions and replies, chips, hosting reminders, recovery reminders, sponsorship, group news and more. Your choices are kept per account; each device just needs to be switched on once.
+Notifications come in kinds you can turn on and off: mentions and replies, chips, hosting reminders, recovery reminders, sponsorship, group news, shares on readings (waiting for your approval, replies and reactions), and more. Your choices are kept per account; each device just needs to be switched on once.
 
 ## What they look like
 

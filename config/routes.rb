@@ -303,6 +303,7 @@ Rails.application.routes.draw do
     end
     resource :page, controller: "group_pages", only: %i[show update] do
       post :images
+      get :timeline
       delete "timeline/:note_id", action: :remove_note
     end
     resources :meetings, controller: "group_meetings", only: %i[create update destroy] do
@@ -332,6 +333,20 @@ Rails.application.routes.draw do
   end
   resources :note_comments, only: %i[update destroy] do
     member do
+      put :reaction, action: :react
+      delete :reaction, action: :unreact
+    end
+  end
+  # Members' shares on a reading, named or anonymous, approved by its poster (ReadingShare)
+  get "readings/:reading_id/shares", to: "reading_shares#index"
+  post "readings/:reading_id/shares", to: "reading_shares#create"
+  patch "readings/:reading_id/shares/setting", to: "reading_shares#setting"
+  delete "readings/:reading_id/shares/mutes", to: "reading_shares#unmute_all"
+  resources :reading_shares, only: %i[update destroy] do
+    member do
+      post :approve
+      post :decline
+      post :mute
       put :reaction, action: :react
       delete :reaction, action: :unreact
     end

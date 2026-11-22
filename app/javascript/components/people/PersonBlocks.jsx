@@ -5,6 +5,7 @@ import GroupLogo from "../groups/GroupLogo";
 import { api } from "../groups/lib";
 import { Card, Empty } from "../groups/page/GroupBlocks";
 import FeedItem from "../notes/FeedItem";
+import FeedMore from "../notes/FeedMore";
 import NoteEditor from "../notes/NoteEditor";
 import ProfileChips from "./ProfileChips";
 import { soberFor } from "./lib";
@@ -48,32 +49,45 @@ const SHOW = { all: null, notes: "note", highlights: "highlight" };
 // Their notes and highlights, and notes written on their page, newest first, as far as the
 // viewer may see them. On your own profile you write notes right here; on the page of
 // someone you follow or who follows you, you write a note on their page.
+//
+// It shows the block's own count (block.limit) at first and "Load more" (FeedMore) shows that
+// many more each time, from what's loaded and then a page at a time from the server
+// (`feed_next` is the cursor). Nothing loads by itself as you scroll.
 function FeedBlock({ block, compact, editing, context, title }) {
+  const step = block.limit || 10;
   const [items, setItems] = useState(context.feed || []);
-  const [more, setMore] = useState((context.feed || []).length >= 40);
-  const [limit, setLimit] = useState(block.limit || 10);
-  const [loading, setLoading] = useState(false);
-  useEffect(() => { setItems(context.feed || []); }, [context.feed]);
-  useEffect(() => { setLimit(block.limit || 10); }, [block.limit]);
+  const [next, setNext] = useState(context.feed_next || null);
+  const [limit, setLimit] = useState(step);
+  useEffect(() => { setItems(context.feed || []); setNext(context.feed_next || null); }, [context.feed, context.feed_next]);
+  useEffect(() => { setLimit(step); }, [step]);
 
   const kind = SHOW[block.show];
-  const shown = items.filter((i) => !kind || i.kind === kind || (kind === "note" && i.kind === "repost"));
+  const matches = (i) => !kind || i.kind === kind || (kind === "note" && i.kind === "repost");
+  const shown = items.filter(matches);
   const me = context.viewer?.is_me;
   const replace = (item) => setItems((list) => list.map((i) => (i.kind === item.kind && i.id === item.id ? { ...i, ...item } : i)));
   const remove = (kindOf) => (id) => setItems((list) => list.filter((i) => !(i.kind === kindOf && i.id === id)));
 
   const showMore = async () => {
-    if (shown.length > limit) { setLimit((l) => l + (block.limit || 10)); return; }
-    if (!more || loading) return;
-    setLoading(true);
-    try {
-      const { feed } = await api(`/people/${context.person.username}/feed?before=${encodeURIComponent(items[items.length - 1].created_at)}`);
-      setItems((list) => [...list, ...feed]);
-      setMore(feed.length >= 40);
-      setLimit((l) => l + (block.limit || 10));
-    } finally {
-      setLoading(false);
+    // Pages from the server until there's a block's worth more to show (a block showing only
+    // notes or only highlights may skip a page of the other kind), or nothing older
+    let have = shown.length;
+    let cursor = next;
+    let added = [];
+    for (let tries = 0; have < limit + step && cursor && tries < 3; tries += 1) {
+      const page = await api(`/people/${context.person.username}/feed?cursor=${encodeURIComponent(cursor)}`);
+      added = [...added, ...page.feed];
+      have += page.feed.filter(matches).length;
+      cursor = page.next;
     }
+    if (added.length) {
+      setItems((list) => {
+        const seen = new Set(list.map((i) => `${i.kind}-${i.id}`));
+        return [...list, ...added.filter((i) => !seen.has(`${i.kind}-${i.id}`))];
+      });
+    }
+    setNext(cursor);
+    setLimit((l) => l + step);
   };
 
   const nothing = me
@@ -106,8 +120,9 @@ function FeedBlock({ block, compact, editing, context, title }) {
             ))}
           </div>
         )}
-        {(shown.length > limit || (more && shown.length >= limit)) && !editing && (
-          <button type="button" className="wb-btn mt-3 w-full" onClick={showMore} disabled={loading}>{loading ? "Loading…" : "Show more"}</button>
+        {!editing && (
+          <FeedMore more={shown.length > limit || !!next} count={Math.min(shown.length, limit)} onMore={showMore}
+            endText={me ? "That's everything on your timeline" : "That's everything here"} />
         )}
         {!me && !editing && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400">

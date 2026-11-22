@@ -16,7 +16,9 @@ Group service (like who's hosting) still shows, so the group keeps running. Unbl
 
 ## Report
 
-Choose **•••** and **Report** to tell the site admins about a note, message or person. Say what's wrong in a few words. Reports go to the site admins only.
+Choose **•••** and **Report** to tell the site admins about a note, message, [share on a reading](/docs/meetings/shares-on-readings) or person. Say what's wrong in a few words. Reports go to the site admins only. Reporting an anonymous share doesn't tell anyone who wrote it, the admins included.
+
+Blocking someone also hides their shares on readings from you, anonymous ones included, without showing you which ones were theirs.
 
 ## Words that aren't allowed
 

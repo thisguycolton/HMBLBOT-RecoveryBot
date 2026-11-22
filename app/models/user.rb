@@ -83,6 +83,12 @@ class User < ApplicationRecord
   has_many :notes_received, class_name: "TimelineNote", foreign_key: :recipient_id, dependent: :destroy, inverse_of: :recipient
   has_many :note_reactions, dependent: :delete_all
   has_many :note_comments, dependent: :destroy
+  # Their shares on readings, named or anonymous, go with the account (ReadingShare), as do
+  # their mutes of other people's shares and other people's mutes of theirs (ShareMute)
+  has_many :reading_shares, dependent: :destroy
+  has_many :share_mutes, dependent: :delete_all
+  has_many :share_mutes_received, class_name: "ShareMute", foreign_key: :muted_user_id, dependent: :delete_all, inverse_of: :muted_user
+  has_many :reading_shares_moderated, class_name: "ReadingShare", foreign_key: :moderated_by_id, dependent: :nullify, inverse_of: :moderated_by
   has_many :chat_messages, dependent: :delete_all
   has_many :chat_reads, dependent: :delete_all
   has_many :chat_notification_settings, dependent: :delete_all
@@ -136,6 +142,9 @@ class User < ApplicationRecord
 
   # A site admin who switched their home feed to everyone's posts (Api::AdminFeedsController)
   def sees_all_posts? = see_all_posts? && suite_admin?
+
+  # A site admin stopped them sharing on readings for now (from a report: ReadingShare)
+  def shares_suspended? = shares_suspended_until.present? && shares_suspended_until > Time.current
 
   def display_name = name.presence || email.to_s.split("@").first
 

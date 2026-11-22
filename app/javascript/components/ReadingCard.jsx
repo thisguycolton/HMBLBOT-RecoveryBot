@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowRight, BookOpen } from "lucide-react";
+import { ArrowRight, BookOpen, MessageCircleHeart } from "lucide-react";
 import TagBadge from "./TagBadge";
 import { getAccentThemeFromIcon, getTagIcon } from "./ReadingArchiveUtils";
 
@@ -33,6 +33,12 @@ const ReadingCard = ({ reading }) => {
 
         <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 dark:border-neutral-800">
           <cite className={`max-w-[150px] truncate text-xs not-italic ${accentTheme.text}`}>{reading.source || (reading.grapevine ? "AA Grapevine" : "Unknown source")}</cite>
+          {reading.share_count > 0 && (
+            // Members' shares on it that this viewer can see; never who wrote them
+            <span className="ml-auto mr-2 inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-neutral-400">
+              <MessageCircleHeart className="h-3.5 w-3.5" /> {reading.share_count} {reading.share_count === 1 ? "share" : "shares"}
+            </span>
+          )}
           <span className={`ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform group-hover:translate-x-1 ${accentTheme.iconBg} ${accentTheme.text}`}>
             <ArrowRight className="h-4 w-4" />
           </span>

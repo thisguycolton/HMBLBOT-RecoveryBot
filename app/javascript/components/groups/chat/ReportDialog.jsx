@@ -6,7 +6,8 @@ import { ErrorNote, primaryButton, quietButton } from "../ui";
 import Dialog from "./Dialog";
 
 // Telling the site admins about something someone wrote (a chat message, note or comment:
-// `subject` { type, id }) or about them (`person` alone). Api::UserReportsController keeps a
+// `subject` { type, id }) or about them (`person` alone). An anonymous share on a reading passes
+// `person.anonymous`, so nothing here names its writer. Api::UserReportsController keeps a
 // copy of what they wrote, so it can still be read if it's deleted.
 export default function ReportDialog({ subject = null, person, onClose }) {
   const [reason, setReason] = useState("");
@@ -36,7 +37,7 @@ export default function ReportDialog({ subject = null, person, onClose }) {
         </>
       )}>
       <p className="mb-3 text-slate-600 dark:text-neutral-300">
-        This goes to RecoveryBot's site admins, not to {person?.name?.split(" ")[0] || "them"}. {subject ? "They'll see what was written, even if it's deleted later." : ""}
+        This goes to RecoveryBot's site admins, not to {person?.anonymous ? "its writer" : person?.name?.split(" ")[0] || "them"}.{person?.anonymous ? " The admins don't see who wrote it either." : ""} {subject ? "They'll see what was written, even if it's deleted later." : ""}
       </p>
       <label className="block">
         <span className="mb-1 block font-medium text-slate-900 dark:text-white">What's wrong?</span>
