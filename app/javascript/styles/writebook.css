@@ -2172,6 +2172,39 @@ body:has(.wb) {
 .wb-feed-item__body { font-size: 1rem; }
 .wb-feed-item__body--compact { font-size: 0.925rem; }
 
+/* A long note cut to about eight lines (notes/ExpandableBody.jsx): the box slides between the
+   cut and the text's full height, fading out at the bottom while it's cut. */
+.wb-expandable {
+  overflow: hidden;
+  scroll-margin-top: 5rem;
+  transition: max-height 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wb-expandable.is-clipped {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 3.5rem), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 3.5rem), transparent);
+}
+.wb-expandable__inner { display: flow-root; }
+.wb .wb-expandable__toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--wb-ink-soft);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 600;
+  gap: 0.3rem;
+  margin: 0.15rem 0 0 -0.5rem;
+  padding: 0.3rem 0.5rem;
+}
+.wb .wb-expandable__toggle:hover { background: var(--wb-subtle); color: var(--wb-ink); }
+.wb-expandable__chevron { transition: transform 0.3s ease; }
+.wb-expandable__chevron.is-open { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) {
+  .wb-expandable, .wb-expandable__chevron { transition: none; }
+}
+
 .wb-feed-item__quote { display: block; font-size: 1.05rem; }
 
 .wb .wb-feed-item__source {

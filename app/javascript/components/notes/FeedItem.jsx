@@ -9,6 +9,7 @@ import Avatar from "../groups/Avatar";
 import { api } from "../groups/lib";
 import { timeAgo } from "../groups/page/lib";
 import { showToast } from "../../lib/toast";
+import ExpandableBody from "./ExpandableBody";
 import LinkCard from "./LinkCard";
 import NoteActions, { HighlightActions } from "./NoteActions";
 import PictureShare from "../share/PictureShare";
@@ -255,7 +256,11 @@ function NoteBody({ item, editing, setEditing, groups, max, imagesMax, compact, 
   return (
     <>
       {item.chip && <SharedChip chip={item.chip} hidden={item.chip_hidden} />}
-      {item.body?.trim() && <Markdown source={item.body} hashtags mentions={item.mentions} mine={item.mentions_me} className={`wb-feed-item__body ${compact ? "wb-feed-item__body--compact" : ""}`} />}
+      {item.body?.trim() && (
+        <ExpandableBody>
+          <Markdown source={item.body} hashtags mentions={item.mentions} mine={item.mentions_me} className={`wb-feed-item__body ${compact ? "wb-feed-item__body--compact" : ""}`} />
+        </ExpandableBody>
+      )}
       {images.length > 0 && (
         <div className={`wb-feed-item__images wb-feed-item__images--${Math.min(images.length, 4)}`}>
           {images.slice(0, 4).map((image, i) => (image.video ? (
