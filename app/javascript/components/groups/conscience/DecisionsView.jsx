@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ChevronDown, ClipboardCheck, Download, Globe, MessagesSquare, Pencil, Plus, Regex, Search, Trash2, Upload, Vote, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, ClipboardCheck, Download, Globe, Link2, Link2Off, MessagesSquare, Pencil, Plus, Regex, Search, Trash2, Upload, Vote, X } from "lucide-react";
 import EmbeddedPoll from "../../polls/EmbeddedPoll";
 import { showToast } from "../../../lib/toast";
 import Markdown from "../../book/Markdown";
 import { inputClass, selectClass } from "../../ui/styles";
 import { api } from "../lib";
-import { Card, ErrorNote, Loading, Pill, Tray, dangerButton, linkButton, primaryButton, quietButton } from "../ui";
+import { Card, ErrorNote, Loading, Pill, Tray, copy, dangerButton, linkButton, primaryButton, quietButton } from "../ui";
+import { fullUrl } from "../../share/ShareButton";
 import DecisionForm from "./DecisionForm";
 import DecisionsImport from "./DecisionsImport";
 import BulkBar, { RowCheck } from "./BulkBar";
@@ -110,6 +111,7 @@ function Badges({ m }) {
       <Pill tone={STATUS_TONES[m.status]}>{MOTION_STATUS_LABELS[m.status]}</Pill>
       {m.amended_text && <Pill>As amended</Pill>}
       {m.visibility === "public" && <Pill tone="green"><Globe className="size-3" /> Public</Pill>}
+      {m.share && <Pill tone="accent"><Link2 className="size-3" /> Link shared</Pill>}
       {m.needs_review && <Pill tone="amber">To check</Pill>}
       {m.one_time && m.status === "passed" && <Pill>One-time</Pill>}
       {m.ignore_rules && <Pill>No Robert's Rules</Pill>}
@@ -120,6 +122,47 @@ function Badges({ m }) {
 
 const paneLabel = "mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
 const inlineLink = "!bg-transparent p-0 text-left text-accent hover:underline";
+
+const SHARE_WARNING = "Anyone with the link will be able to read this decision without signing in: its title, wording, how it came out and the vote count. "
+  + "Who moved and seconded it, notes, the minority opinion and the meeting stay private. Check that the wording doesn't name anyone.\n\nTurn on a public link?";
+
+// Its public link (Motion#share!), for record keepers: off until they turn it on, past a
+// warning; turning it off stops the link at once, and turning it on again makes a new one.
+function DecisionShare({ slug, motion: m, onChanged }) {
+  const [busy, setBusy] = useState(false);
+  const change = async (on) => {
+    if (on && !window.confirm(SHARE_WARNING)) return;
+    if (!on && !window.confirm("Turn off this decision's public link? It stops working right away, for everyone who has it.")) return;
+    setBusy(true);
+    try {
+      const saved = await api(`/groups/${slug}/motions/${m.id}/share`, { method: on ? "POST" : "DELETE" });
+      if (on && saved.share) copy(fullUrl(saved.share.path), () => showToast("Public link copied.", { tone: "success" }));
+      else showToast(on ? "Public link on." : "Public link turned off.", { tone: "success" });
+      onChanged?.();
+    } catch (e) {
+      showToast(e.message, { tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (m.needs_review) return null;
+  if (!m.share) {
+    return <button type="button" disabled={busy} onClick={() => change(true)} className={quietButton}><Link2 className="size-4" /> Public link</button>;
+  }
+  const url = fullUrl(m.share.path);
+  return (
+    <div className="w-full space-y-2 rounded-xl bg-sky-50 p-3 text-sm text-sky-950 dark:bg-sky-950/30 dark:text-sky-100">
+      <p className="flex items-center gap-1.5 font-semibold"><Globe className="size-4" /> Anyone with this link can read it</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <input readOnly value={url} onFocus={(e) => e.target.select()} aria-label="Public link" className={`${inputClass} min-w-0 flex-1 !py-1 text-xs`} />
+        <button type="button" onClick={() => copy(url, () => showToast("Link copied.", { tone: "success" }))} className={`${quietButton} !py-1 text-xs`}>Copy</button>
+        <a href={m.share.path} target="_blank" rel="noreferrer" className={`${quietButton} !py-1 text-xs`}>Open</a>
+        <button type="button" disabled={busy} onClick={() => change(false)} className={`${quietButton} !py-1 text-xs`}><Link2Off className="size-3.5" /> Turn off</button>
+      </div>
+      <p className="text-xs opacity-80">Shows the title, wording, outcome and count, never names. Paste it in a document comment to cite it.</p>
+    </div>
+  );
+}
 
 // The open decision, in the side pane: everything about it, then what else it might be related to
 function DecisionDetail({ slug, motion: m, parent, thread, canEdit, canDelete, onEdit, onDelete, onOpen, onClose, finder, onChanged }) {
@@ -196,9 +239,11 @@ function DecisionDetail({ slug, motion: m, parent, thread, canEdit, canDelete, o
             <ul className="space-y-1 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">{m.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
           )}
         </div>
+        {canEdit && m.share && <div className="border-t border-neutral-100 p-3 dark:border-neutral-800"><DecisionShare slug={slug} motion={m} onChanged={onChanged} /></div>}
         <div className="flex flex-wrap items-center gap-2 border-t border-neutral-100 p-3 dark:border-neutral-800">
           <button type="button" onClick={onClose} className={quietButton}><ArrowLeft className="size-4" /> Back</button>
           <div className="flex-1" />
+          {canEdit && !m.share && <DecisionShare slug={slug} motion={m} onChanged={onChanged} />}
           {canDelete && <button type="button" onClick={() => onDelete(m)} className={dangerButton}><Trash2 className="size-4" /> Delete</button>}
           {canEdit && <button type="button" onClick={() => onEdit(m)} className={quietButton}><Pencil className="size-4" /> Change</button>}
         </div>

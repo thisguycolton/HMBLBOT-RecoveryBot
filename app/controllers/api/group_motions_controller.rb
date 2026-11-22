@@ -9,9 +9,9 @@ class Api::GroupMotionsController < ApplicationController
   skip_before_action :authenticate_user!, only: :index
   before_action :set_viewable_group, only: :index
   before_action :set_group, except: :index
-  before_action :require_keeper, only: %i[create update check bulk export import]
+  before_action :require_keeper, only: %i[create update check bulk export import share unshare]
   before_action :require_manager, only: :destroy
-  before_action :set_motion, only: %i[update destroy]
+  before_action :set_motion, only: %i[update destroy share unshare]
 
   # GET /api/groups/:group_slug/motions?q= -> every decision the viewer may see, newest first
   def index
@@ -53,6 +53,23 @@ class Api::GroupMotionsController < ApplicationController
   def destroy
     @motion.destroy!
     head :no_content
+  end
+
+  # POST /api/groups/:group_slug/motions/:id/share (record keepers) -> the decision, with its
+  # public link (Motion#share!): anyone with it can read the decision's wording and outcome, no
+  # names. Already shared, it keeps the link it has.
+  def share
+    return render(json: { error: "Check this record against the minutes and save it before sharing it." }, status: :unprocessable_entity) if @motion.needs_review
+
+    @motion.share!(current_user)
+    render json: motion_json
+  end
+
+  # DELETE /api/groups/:group_slug/motions/:id/share (record keepers) -> the decision; its link
+  # stops working at once, and sharing it again makes a new one
+  def unshare
+    @motion.stop_sharing!
+    render json: motion_json
   end
 
   BULK_ACTIONS = %w[ignore_rules follow_rules one_time standing mark_checked category visibility status delete].freeze

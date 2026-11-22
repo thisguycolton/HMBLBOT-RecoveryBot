@@ -24,6 +24,8 @@ class Motion < ApplicationRecord
 
   belongs_to :group
   belongs_to :created_by, class_name: "User", optional: true
+  # Who turned on its public link (#share!)
+  belongs_to :shared_by, class_name: "User", optional: true
   belongs_to :supersedes, class_name: "Motion", optional: true
   # Where it was decided, when it was made at a business meeting
   belongs_to :business_meeting, optional: true
@@ -187,6 +189,42 @@ class Motion < ApplicationRecord
       warnings: keeper ? warnings : [], needs_review: needs_review, imported: imported, ignore_rules: ignore_rules, one_time: one_time,
       business_meeting_id: business_meeting_id, polls: polls.map(&:token),
       meeting: business_meeting && (meetings.nil? || meetings.include?(business_meeting_id)) ? { id: business_meeting_id, held_on: business_meeting.held_on.iso8601 } : nil,
+      # Its public link, for record keepers (who turn it on and off)
+      share: keeper && shared? ? { path: share_path, shared_at: shared_at&.iso8601 } : nil,
+    }
+  end
+
+  # Its own public link, /d/:token: off unless a record keeper turns it on (#share!). Anyone
+  # with the link reads #public_json and nothing else, without an account, whatever the
+  # decision's visibility, until a keeper turns it off (or deletes the decision). Turning it off
+  # and on again makes a new link, so an old one never comes back. A record still to be checked
+  # against old minutes (needs_review) can't be shared, and its link shows nothing meanwhile.
+  def shared? = share_token.present? && !needs_review
+  def share_path = share_token && "/d/#{share_token}"
+  def share!(user) = shared? ? self : tap { update!(share_token: SecureRandom.urlsafe_base64(18), shared_at: Time.current, shared_by: user) }
+  def stop_sharing! = update!(share_token: nil, shared_at: nil, shared_by: nil)
+
+  def self.find_shared(token)
+    return if token.blank? || token.to_s.length > 64
+
+    find_by(share_token: token.to_s, needs_review: false)
+  end
+
+  # What a shared link shows: the decision as the group wrote it, how it came out, and the
+  # count. Never who moved or seconded it, the keepers' note, the minority opinion or the
+  # meeting (they can carry names), nor the titles of decisions around it. The group is named
+  # only when its page is open to visitors anyway.
+  def public_json(replacers: nil)
+    replacer = (replacers || self.class.replacers_for(group))[id]
+    open_group = group.page_visible_to?(nil)
+    {
+      title: title, text: text.to_s, amended_text: amended_text.to_s, amended_label: kind == "amend" ? "As it now reads" : "As amended",
+      status: status, kind: kind, kind_label: kind_info[:label], category: category, decided_on: decided_on&.iso8601,
+      votes_for: votes_for, votes_against: votes_against, abstentions: abstentions,
+      standing: passed? && decision? && !one_time && replacer.nil?, one_time: one_time,
+      replaced_on: replacer&.decided_on&.iso8601, replaced: replacer.present?,
+      group: open_group ? { title: group.title, path: "/groups/#{group.slug}" } : nil,
+      path: share_path,
     }
   end
 

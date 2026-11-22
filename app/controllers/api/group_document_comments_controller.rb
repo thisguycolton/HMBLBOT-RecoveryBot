@@ -12,8 +12,9 @@ class Api::GroupDocumentCommentsController < ApplicationController
 
   # GET /api/groups/:group_slug/documents/:document_id/comments -> { comments: [threads], can_resolve }
   def index
-    threads = @document.comments.threads.includes(:user, :version, :resolved_by, replies: :user).order(:created_at, :id)
-    render json: { comments: threads.map { |c| comment_json(c) }, can_resolve: keeper? }
+    threads = @document.comments.threads.includes(:user, :version, :resolved_by, replies: :user).order(:created_at, :id).to_a
+    decisions = DecisionRefs.new(@group, current_user).cards_for(threads.flat_map { |t| [t.body, *t.replies.map(&:body)] })
+    render json: { comments: threads.map { |c| comment_json(c, decisions) }, can_resolve: keeper? }
   end
 
   # POST .../comments { body, quote, prefix, suffix } or { body, parent_id } -> the thread
@@ -68,7 +69,7 @@ class Api::GroupDocumentCommentsController < ApplicationController
     @comment = @document.comments.find(params[:id])
   end
 
-  def comment_json(comment) = comment.as_api_json(viewer: current_user, can_moderate: @group.manageable_by?(current_user))
+  def comment_json(comment, decisions = nil) = comment.as_api_json(viewer: current_user, can_moderate: @group.manageable_by?(current_user), decisions: decisions)
 
   # A new comment tells whoever last saved the document and its writer; a reply tells everyone
   # in the thread. Never the person writing, nor anyone who can't comment on it any more.
@@ -82,7 +83,7 @@ class Api::GroupDocumentCommentsController < ApplicationController
     return if people.empty?
 
     title = parent ? "#{current_user.display_name} replied to a comment on “#{@document.title}”" : "#{current_user.display_name} commented on “#{@document.title}”"
-    Notification.deliver(people, kind: "document.comment", title: title, body: comment.body,
+    Notification.deliver(people, kind: "document.comment", title: title, body: DecisionRefs.plain(comment.body),
                                  url: "/groups/#{@group.slug}/conscience/documents/#{@document.id}?comment=#{parent&.id || comment.id}")
   end
 end

@@ -39,6 +39,14 @@ The **Standing** list shows what's currently in force, grouped by category (Mone
 
 At Lantern Street, three decisions are standing: the Big Book purchase, "Keep 3 months of rent as prudent reserve" and "Hold a gratitude potluck in November". A fourth, "Add a 7th Tradition QR code to the script", was tabled, so it shows under **Unfinished**.
 
+## Share a decision by link (record keepers)
+
+Open a decision and choose **Public link**. After a warning, RecoveryBot makes a link only for that decision and copies it. Anyone with the link can read it without signing in: its title, wording, how it came out and the vote count. It never shows who moved or seconded it, notes, the minority opinion or the meeting, and it names your group only if your group's page is open to visitors. Search engines are told not to list it.
+
+Check that the wording names nobody before you share it. **Turn off** stops the link right away for everyone. Sharing again makes a new link, so the old one never works again. Records still marked **To check** can't be shared.
+
+You can also cite a decision in a [document comment](/docs/group-tools/group-documents#comments).
+
 ## Taking a poll
 
 **Take a poll on this** makes a [poll](/docs/meetings/polls) for members. When it closes, **Use these counts** fills in the vote.

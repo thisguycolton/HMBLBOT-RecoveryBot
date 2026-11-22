@@ -68,6 +68,21 @@ class ShareMeta
         card: FactCard.new(fact, look: look, size: "wide"), query: query)
   end
 
+  # A decision shared by link (Motion#share!): its title, how it came out and the start of its
+  # wording, and the site's own picture. Names nobody; names the group only when its page is
+  # open to visitors anyway.
+  def self.decision(motion)
+    return unless motion.shared?
+
+    data = motion.public_json
+    outcome = [motion.status.humanize, motion.decided_on&.strftime("%B %-d, %Y")].compact.join(" on ")
+    count = [[data[:votes_for], "for"], [data[:votes_against], "against"], [data[:abstentions], "abstained"]].select(&:first).map { |n, w| "#{n} #{w}" }.join(", ")
+    wording = (data[:amended_text].presence || data[:text]).to_s.gsub(/[*_#>`~]+/, " ").squish
+    site(title: [motion.title, data.dig(:group, :title)].compact.join(" · "),
+         description: [[outcome, count.presence].compact.join(" · "), wording.presence].compact.join(". "),
+         path: motion.share_path)
+  end
+
   def self.document(doc)
     group = doc.group
     return unless group.page_visible_to?(nil) && GroupDocument.visible_to(group, nil).exists?(doc.id)
