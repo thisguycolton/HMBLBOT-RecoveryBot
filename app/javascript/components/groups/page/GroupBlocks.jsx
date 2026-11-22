@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { BookOpen, CalendarClock, CalendarDays, ExternalLink, FileText, Gavel, Lock, MapPin, MessagesSquare, Mic, Navigation, Pin, Scale, Trash2, UserPlus, Users, Video } from "lucide-react";
 import Markdown from "../../book/Markdown";
 import { tone } from "../../events/lib";
 import Avatar from "../Avatar";
 import MeetingPasscode from "../MeetingPasscode";
 import FeedItem from "../../notes/FeedItem";
+import FeedMore from "../../notes/FeedMore";
 import NoteEditor from "../../notes/NoteEditor";
 import { api, typeLabel } from "../lib";
 import { scheduleLabel, toSeries } from "../MeetingsTab";
@@ -220,11 +221,29 @@ function EventsBlock({ block, compact, editing, context, title }) {
 }
 
 // Notes members shared to the group. Members post right here (it goes on their own
-// timeline too, shared to this group); everyone else sees that it's for members.
+// timeline too, shared to this group); everyone else sees that it's for members. It shows the
+// block's count (block.limit) at first, and "Load more" (FeedMore) that many more each time,
+// a page at a time from the server after `timeline_next`. Nothing loads by itself as you scroll.
 function TimelineBlock({ block, compact, editing, context, title }) {
+  const step = block.limit || 10;
   const [removed, setRemoved] = useState([]);
   const [changed, setChanged] = useState({});
-  const notes = context.timeline?.filter((n) => !removed.includes(n.id)).map((n) => changed[n.id] || n).slice(0, block.limit || 10);
+  const [older, setOlder] = useState([]);
+  const [next, setNext] = useState(context.timeline_next || null);
+  const [limit, setLimit] = useState(step);
+  useEffect(() => { setOlder([]); setNext(context.timeline_next || null); }, [context.timeline, context.timeline_next]);
+  useEffect(() => { setLimit(step); }, [step]);
+  const all = context.timeline && [...context.timeline, ...older.filter((o) => !context.timeline.some((n) => n.id === o.id))]
+    .filter((n) => !removed.includes(n.id)).map((n) => changed[n.id] || n);
+  const notes = all?.slice(0, limit);
+  const showMore = async () => {
+    if (all.length < limit + step && next) {
+      const page = await api(`/groups/${context.group.slug}/page/timeline?cursor=${encodeURIComponent(next)}`);
+      setOlder((list) => [...list, ...page.feed]);
+      setNext(page.next);
+    }
+    setLimit((l) => l + step);
+  };
   const canPost = !editing && context.viewer?.is_member && context.group?.slug;
   const remove = async (note) => {
     if (!window.confirm(note.mine ? "Take this note off the group's timeline? It stays on yours." : "Take this note off the group's timeline?")) return;
@@ -265,6 +284,9 @@ function TimelineBlock({ block, compact, editing, context, title }) {
                 )} />
             ))}
           </div>
+        )}
+        {notes && !editing && (
+          <FeedMore more={all.length > limit || !!next} count={notes.length} onMore={showMore} endText="That's every note shared here" />
         )}
       </div>
     </Card>

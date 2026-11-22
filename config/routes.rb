@@ -301,6 +301,7 @@ Rails.application.routes.draw do
     end
     resource :page, controller: "group_pages", only: %i[show update] do
       post :images
+      get :timeline
       delete "timeline/:note_id", action: :remove_note
     end
     resources :meetings, controller: "group_meetings", only: %i[create update destroy] do

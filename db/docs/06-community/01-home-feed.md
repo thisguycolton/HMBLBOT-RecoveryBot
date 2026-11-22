@@ -14,6 +14,12 @@ Your **Home feed** is the page you land on after signing in.
 - On the side (folded on phones): [Today](/docs/getting-started/find-your-way-around) with your day count, what needs you, your next meetings, sobriety birthdays in your groups, and events.
 - **Find someone by name** searches people you can see.
 
+## Older notes
+
+Your feed shows 20 notes at a time. When you reach the bottom, choose **Load more** to see the next 20. Nothing loads by itself as you scroll, so there's always a place to stop. When you've seen everything, the feed says **You're all caught up**.
+
+Your page, other people's pages, a group's timeline and a #hashtag's page work the same way.
+
 ## Write a note
 
 1. Choose the box at the top ("What's on your mind today?"), or the robot button on a phone.

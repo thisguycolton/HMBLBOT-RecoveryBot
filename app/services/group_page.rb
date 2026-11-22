@@ -8,7 +8,7 @@
 # (#template_json). Members' things (members, readings, the timeline) are only there for
 # members; everyone else gets nil for those and a count of members.
 class GroupPage
-  TIMELINE_MAX = 20
+  TIMELINE_MAX = FeedPage::SIZE
   MEMBERS_MAX = 48
   DOCUMENTS_MAX = 60
   DECISIONS_MAX = 40
@@ -43,9 +43,15 @@ class GroupPage
         decisions: decisions(group),
         business_meeting: business_meeting(group),
         members: member ? members(group) : nil,
-        timeline: member ? group.shared_notes.not_blocked_by(@viewer).for_feed.limit(TIMELINE_MAX).map { |n| n.as_api_json(viewer: @viewer, group: group) } : nil,
+        **timeline_context(group, member),
       }
     )
+  end
+
+  # One page of notes members shared to the group, newest first (FeedPage)
+  def timeline(group, cursor: nil)
+    FeedPage.new(viewer: @viewer, notes: group.shared_notes.not_blocked_by(@viewer), cursor: cursor,
+                 as_json: ->(n) { n.as_api_json(viewer: @viewer, group: group) }).call
   end
 
   # `listings`: the OiaaMeeting rows filed under one group name (OiaaMeeting.for_group)
@@ -110,6 +116,15 @@ class GroupPage
     return blocks unless index
 
     blocks.dup.tap { |list| list[index] = list[index].merge("markdown" => description) }
+  end
+
+  # The first page of the group's Timeline block, for members (timeline, and timeline_next:
+  # the cursor for the next page, which Api::GroupPagesController#timeline sends)
+  def timeline_context(group, member)
+    return { timeline: nil, timeline_next: nil } unless member
+
+    page = timeline(group)
+    { timeline: page[:items], timeline_next: page[:next] }
   end
 
   def page(**json)
