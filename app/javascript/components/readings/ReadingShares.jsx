@@ -97,7 +97,7 @@ export default function ReadingShares({ readingId }) {
   const shown = top.length;
   const ctx = { readingId, myName, grapevine: data.grapevine, canModerate: data.can_moderate, canShare: data.can_share, onAdd: add, onMuted: load };
   return (
-    <section id="shares" className="mt-10 scroll-mt-24 rounded-2xl border border-stone-200 bg-white px-5 py-6 !font-sans dark:border-neutral-700 dark:bg-neutral-800/60 md:px-8">
+    <section id="shares" className="mt-10 scroll-mt-24 rounded-2xl border border-stone-200 bg-white px-3 py-5 !font-sans dark:border-neutral-700 dark:bg-neutral-800/60 sm:px-5 sm:py-6 md:px-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-2xl font-bold ttSans">
           Shares{shown > 0 && <span className="ml-2 text-lg font-semibold text-neutral-400">{shown}</span>}
@@ -211,7 +211,7 @@ function Composer({ ctx, parentId = null, onCancel = null }) {
       </label>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <IdentityPicker anonymous={anonymous} onChange={pick} myName={myName} />
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {onCancel && (
             <button type="button" onClick={onCancel} className="rounded-xl !bg-transparent px-3 py-2 text-sm font-semibold text-slate-700 hover:!bg-stone-200 dark:text-neutral-200 dark:hover:!bg-neutral-700">Cancel</button>
           )}
@@ -322,8 +322,8 @@ function Share({ share: s, ctx, onChange, onRemove, replies = null, onReplyChang
   const status = s.status === "pending" ? "Waiting for approval" : s.status === "declined" ? "Not approved" : null;
 
   return (
-    <li id={`share-${s.id}`} className={`scroll-mt-24 rounded-xl ${isReply ? "px-3 py-2" : "px-4 py-3"} ${s.status === "pending" ? "bg-amber-50/70 ring-1 ring-amber-200 dark:bg-amber-500/5 dark:ring-amber-500/30" : s.status === "declined" ? "bg-stone-50 opacity-80 ring-1 ring-stone-200 dark:bg-neutral-900 dark:ring-neutral-700" : "bg-stone-50 dark:bg-neutral-900/60"}`}>
-      <div className="flex items-start gap-3">
+    <li id={`share-${s.id}`} className={`scroll-mt-24 rounded-xl ${isReply ? "px-2.5 py-2 sm:px-3" : "px-3 py-3 sm:px-4"} ${s.status === "pending" ? "bg-amber-50/70 ring-1 ring-amber-200 dark:bg-amber-500/5 dark:ring-amber-500/30" : s.status === "declined" ? "bg-stone-50 opacity-80 ring-1 ring-stone-200 dark:bg-neutral-900 dark:ring-neutral-700" : "bg-stone-50 dark:bg-neutral-900/60"}`}>
+      <div className="flex items-start gap-2.5 sm:gap-3">
         {s.author ? (
           <a href={`/people/${s.author.username}`} className="shrink-0"><Avatar person={s.author} size={isReply ? 28 : 36} /></a>
         ) : (
@@ -332,7 +332,8 @@ function Share({ share: s, ctx, onChange, onRemove, replies = null, onReplyChang
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 text-sm">
+          <div className="flex items-start gap-2 text-sm">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 pt-1">
             {s.author ? (
               <a href={`/people/${s.author.username}`} className="!font-semibold !text-slate-900 hover:underline dark:!text-white">{name}</a>
             ) : (
@@ -342,8 +343,8 @@ function Share({ share: s, ctx, onChange, onRemove, replies = null, onReplyChang
             {status && (
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.status === "pending" ? "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200" : "bg-stone-200 text-stone-700 dark:bg-neutral-700 dark:text-neutral-200"}`}>{status}</span>
             )}
-            <span className="flex-1" />
-            <div className="relative">
+            </div>
+            <div className="relative shrink-0">
               <button type="button" onClick={() => setMenu((m) => !m)} aria-label="Share options" aria-expanded={menu}
                 className="rounded-full !bg-transparent p-1 text-neutral-500 hover:!bg-stone-200 dark:hover:!bg-neutral-700">
                 <MoreHorizontal size={18} />
@@ -398,16 +399,18 @@ function Share({ share: s, ctx, onChange, onRemove, replies = null, onReplyChang
               )}
             </div>
           )}
-          {replies && replies.length > 0 && (
-            <ul className="mt-3 space-y-2 border-l-2 border-stone-200 pl-3 dark:border-neutral-700">
-              {replies.map((r) => (
-                <Share key={r.id} share={r} ctx={ctx} onChange={onReplyChange} onRemove={() => onReplyRemove(r.id)} />
-              ))}
-            </ul>
-          )}
-          {replying && <Composer ctx={ctx} parentId={s.id} onCancel={() => setReplying(false)} />}
         </div>
       </div>
+      {/* Replies and the reply box sit under the share at full width on phones, indented past
+          the picture on wider screens */}
+      {replies && replies.length > 0 && (
+        <ul className="mt-3 space-y-2 border-l-2 border-stone-200 pl-2 dark:border-neutral-700 sm:ml-12 sm:pl-3">
+          {replies.map((r) => (
+            <Share key={r.id} share={r} ctx={ctx} onChange={onReplyChange} onRemove={() => onReplyRemove(r.id)} />
+          ))}
+        </ul>
+      )}
+      {replying && <div className="sm:ml-12"><Composer ctx={ctx} parentId={s.id} onCancel={() => setReplying(false)} /></div>}
       {reporting && <ReportDialog subject={{ type: "reading_share", id: s.id }} person={{ name: s.anonymous ? "this share" : s.name, anonymous: s.anonymous }} onClose={() => setReporting(false)} />}
     </li>
   );
