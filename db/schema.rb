@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_20_200000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_22_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1414,6 +1414,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_200000) do
     t.index ["quest_session_id"], name: "index_quest_stories_on_quest_session_id"
   end
 
+  create_table "reading_shares", force: :cascade do |t|
+    t.bigint "reading_id", null: false
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.boolean "anonymous", default: true, null: false
+    t.string "status", default: "pending", null: false
+    t.bigint "moderated_by_id"
+    t.datetime "moderated_at"
+    t.text "decline_reason"
+    t.datetime "edited_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "parent_id"
+    t.index ["moderated_by_id"], name: "index_reading_shares_on_moderated_by_id"
+    t.index ["parent_id"], name: "index_reading_shares_on_parent_id"
+    t.index ["reading_id", "status", "created_at"], name: "index_reading_shares_on_reading_id_and_status_and_created_at"
+    t.index ["user_id", "created_at"], name: "index_reading_shares_on_user_id_and_created_at"
+  end
+
   create_table "reading_tags", force: :cascade do |t|
     t.bigint "reading_id", null: false
     t.bigint "tag_id", null: false
@@ -1440,6 +1459,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_200000) do
     t.bigint "adopted_from_id"
     t.string "source_url"
     t.datetime "last_used_at"
+    t.boolean "shares_off", default: false, null: false
     t.index ["adopted_from_id"], name: "index_readings_on_adopted_from_id"
     t.index ["group_id"], name: "index_readings_on_group_id"
     t.index ["user_id"], name: "index_readings_on_user_id"
@@ -1564,6 +1584,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_200000) do
     t.datetime "updated_at", null: false
     t.index ["service_position_id"], name: "index_service_terms_on_service_position_id"
     t.index ["user_id"], name: "index_service_terms_on_user_id"
+  end
+
+  create_table "share_mutes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "muted_user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["muted_user_id"], name: "index_share_mutes_on_muted_user_id"
+    t.index ["user_id", "muted_user_id"], name: "index_share_mutes_on_user_id_and_muted_user_id", unique: true
   end
 
   create_table "sharing_modes", force: :cascade do |t|
@@ -2023,6 +2052,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_200000) do
     t.jsonb "today_layout"
     t.boolean "see_all_posts", default: false, null: false
     t.datetime "chat_notify_nudged_at"
+    t.datetime "shares_suspended_until"
     t.index ["apple_uid"], name: "index_users_on_apple_uid", unique: true
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
@@ -2184,6 +2214,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_200000) do
   add_foreign_key "quest_sessions", "quest_players"
   add_foreign_key "quest_sessions", "topic_sets"
   add_foreign_key "quest_stories", "quest_sessions"
+  add_foreign_key "reading_shares", "reading_shares", column: "parent_id", on_delete: :cascade
+  add_foreign_key "reading_shares", "readings"
+  add_foreign_key "reading_shares", "users"
+  add_foreign_key "reading_shares", "users", column: "moderated_by_id"
   add_foreign_key "reading_tags", "readings"
   add_foreign_key "reading_tags", "tags"
   add_foreign_key "readings", "groups"
@@ -2198,6 +2232,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_200000) do
   add_foreign_key "service_positions", "groups", on_delete: :cascade
   add_foreign_key "service_terms", "service_positions", on_delete: :cascade
   add_foreign_key "service_terms", "users", on_delete: :nullify
+  add_foreign_key "share_mutes", "users"
+  add_foreign_key "share_mutes", "users", column: "muted_user_id"
   add_foreign_key "site_notices", "users", on_delete: :nullify
   add_foreign_key "sponsor_profiles", "users", column: "stopped_by_id", on_delete: :nullify
   add_foreign_key "sponsor_profiles", "users", on_delete: :cascade

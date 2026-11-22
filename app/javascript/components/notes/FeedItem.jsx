@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
-import { Ban, BookOpen, CircleDot, EyeOff, Flag, ImageIcon, Lock, MessageSquareOff, MessageSquareText, Pencil, Repeat2, Trash2 } from "lucide-react";
+import { Ban, BookOpen, CircleDot, EyeOff, Flag, ImageIcon, Lock, MessageCircleHeart, MessageSquareOff, MessageSquareText, Pencil, Repeat2, Trash2 } from "lucide-react";
 import ReportDialog from "../groups/chat/ReportDialog";
+import MoveToSharesDialog, { linkedReadingId } from "../readings/MoveToSharesDialog";
 import Markdown from "../book/Markdown";
 import HighlightNote from "../book/HighlightNote";
 import { highlightCss } from "../book/HighlightCard";
@@ -41,6 +42,7 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
   const [hidden, setHidden] = useState(false);
   const [picturing, setPicturing] = useState(false);
   const [swapping, setSwapping] = useState(false);
+  const [moving, setMoving] = useState(false);
   const authorId = item.kind === "repost" ? item.note?.author?.id : item.author?.id;
   useBlocked((id, blocked) => { if (blocked && (id === authorId || id === item.author?.id)) setHidden(true); });
   if (hidden) return null;
@@ -72,10 +74,14 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
   const picturable = (item.kind === "highlight" && !item.members_only) || (note && !!item.body?.trim());
   // Site admins: change a chip someone was given or claimed by mistake (ChipSwapDialog)
   const chipFix = !readOnly && !editing && item.chip_admin && { label: "Change this chip", icon: CircleDot, onClick: () => setSwapping(true) };
+  const movingTo = note && item.mine && !item.recipient ? linkedReadingId(item.body) : null;
+  const movable = !!movingTo;
   const menu = readOnly || editing ? [] : item.mine ? [
     chipFix,
     picturable && { label: item.kind === "highlight" ? "Share as a picture or video" : "Share as a picture", icon: ImageIcon, onClick: () => setPicturing(true) },
     note && { label: "Edit", icon: Pencil, onClick: () => setEditing(true) },
+    // A note about a reading can move to that reading's shares (ReadingShares)
+    movable && { label: "Move to the reading's shares", icon: MessageCircleHeart, onClick: () => setMoving(true) },
     note && { label: item.comments_off ? "Turn comments on" : "Turn comments off", icon: item.comments_off ? MessageSquareText : MessageSquareOff, onClick: toggleComments },
     note && { label: "Delete", icon: Trash2, danger: true, onClick: destroy },
   ] : [chipFix, ...othersMenu(item.author, {
@@ -94,6 +100,7 @@ export default function FeedItem({ item: given, readOnly = false, showAuthor = f
       {picturing && <PictureShare onClose={() => setPicturing(false)} {...pictureProps(item)} />}
       {swapping && <ChipSwapDialog item={item} onChange={onChange} onClose={() => setSwapping(false)} />}
       {reporting && <ReportDialog subject={{ type: "timeline_note", id: item.id }} person={item.author} onClose={() => setReporting(false)} />}
+      {moving && <MoveToSharesDialog note={item} readingId={movingTo} onClose={() => setMoving(false)} onMoved={(deleted) => deleted && onRemove?.(item.id)} />}
     </article>
   );
 }

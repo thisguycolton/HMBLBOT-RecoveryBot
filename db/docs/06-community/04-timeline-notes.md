@@ -18,7 +18,7 @@ Choose **Comment** to reply. Comments take Markdown and can have their own react
 
 ## The ••• menu
 
-On your own notes: **Edit**, **Turn comments off**, **Delete**. On a note on your page: **Take off my page**. On anyone's: **Report** or **Block**.
+On your own notes: **Edit**, **Turn comments off**, **Delete**, and on a note that links to a reading, **Move to the reading's shares** ([Shares on readings](/docs/meetings/shares-on-readings)). On a note on your page: **Take off my page**. On anyone's: **Report** or **Block**.
 
 ## Example
 

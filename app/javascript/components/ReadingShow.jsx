@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Video,
   Copy,
@@ -14,6 +14,7 @@ import {
 import ShareButton from "./share/ShareButton";
 import { isShareView } from "./shell/shareView";
 import EmbeddedPoll from "./polls/EmbeddedPoll";
+import ReadingShares from "./readings/ReadingShares";
 import { TextSizeControl, useReadingTextSize } from "./ui/TextSize";
 
 // The link to where a reading came from: "Read on Grapevine" for a Grapevine story (a search
@@ -84,6 +85,8 @@ export default function ReadingShow({
   onDelete,
 }) {
   const [scrollWidth, setScrollWidth] = useState(0);
+  // Where the reading ends (just above the Shares): the progress bar is full once it's on screen
+  const readingEndRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const textSize = useReadingTextSize();
 
@@ -98,9 +101,12 @@ export default function ReadingShow({
   useEffect(() => {
     function updateScrollProgress() {
       const doc = document.documentElement;
-      const height = doc.scrollHeight - doc.clientHeight;
       const scrollTop = window.scrollY || doc.scrollTop || 0;
-      const pct = height > 0 ? (scrollTop / height) * 100 : 0;
+      const end = readingEndRef.current;
+      const height = end
+        ? end.getBoundingClientRect().top + scrollTop - doc.clientHeight
+        : doc.scrollHeight - doc.clientHeight;
+      const pct = height > 0 ? (scrollTop / height) * 100 : end ? 100 : 0;
       setScrollWidth(Math.max(0, Math.min(100, pct)));
     }
 
@@ -497,6 +503,11 @@ const topicHtml = renderRichContent(topicSource);
               />
             </section>
           )}
+
+          <div ref={readingEndRef} aria-hidden="true" />
+
+          {/* SHARES: members only, never on the hosting screen (it's shown in the meeting) */}
+          {signedIn && !share && reading.published && <ReadingShares readingId={reading.id} />}
 
           {/* CTA, for visitors without an account */}
           {!signedIn && !share && (

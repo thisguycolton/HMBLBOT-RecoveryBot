@@ -334,6 +334,20 @@ Rails.application.routes.draw do
       delete :reaction, action: :unreact
     end
   end
+  # Members' shares on a reading, named or anonymous, approved by its poster (ReadingShare)
+  get "readings/:reading_id/shares", to: "reading_shares#index"
+  post "readings/:reading_id/shares", to: "reading_shares#create"
+  patch "readings/:reading_id/shares/setting", to: "reading_shares#setting"
+  delete "readings/:reading_id/shares/mutes", to: "reading_shares#unmute_all"
+  resources :reading_shares, only: %i[update destroy] do
+    member do
+      post :approve
+      post :decline
+      post :mute
+      put :reaction, action: :react
+      delete :reaction, action: :unreact
+    end
+  end
   resources :hashtags, only: %i[index show], param: :tag
   # What typing @ offers (Mentions), and reporting someone to the site admins
   get "mentions", to: "mentions#index"

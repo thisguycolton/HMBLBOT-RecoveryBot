@@ -32,6 +32,10 @@ Highlights stay with you unless you open one and choose **Share to timeline**. P
 
 Sam highlights "Half measures availed us nothing" in Chapter 5 and writes a note. On its own, that highlight is Sam's alone. When Sam chooses **Share to timeline** with **Members**, it shows in the feeds of people who follow Sam and on Sam's page for anyone signed in, and Riley (mentioned in the note) gets a notification. If Sam later sets it back to **Only me**, it leaves every timeline, reposts included.
 
+## Shares on readings
+
+Under a reading you can share as **A member** instead of your name. Nobody else sees who wrote an anonymous share, not even the person who approves it or the admins, and notifications about it never name you. Shares are only for signed-in members, and on a group's reading only for that group. See [Shares on readings](/docs/meetings/shares-on-readings).
+
 ## Groups
 
 What you write in a group (chat, comments, documents) is seen by that group's members. Some group records are kept for **record keepers** only. Group pages and meeting lists are public so newcomers can find them, but member lists are not.

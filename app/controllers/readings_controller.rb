@@ -44,16 +44,22 @@ class ReadingsController < ApplicationController
     @total = @readings.count
     @pages = [(@total / READINGS_PER_PAGE.to_f).ceil, 1].max
     @page = params[:page].to_i.clamp(1, @pages)
-    @readings_json = @readings.includes(:rich_text_content, :richer_text_richer_content)
-                              .offset((@page - 1) * READINGS_PER_PAGE).limit(READINGS_PER_PAGE)
-                              .map { |reading| reading_card_json(reading) }
+    page = @readings.includes(:rich_text_content, :richer_text_richer_content)
+                    .offset((@page - 1) * READINGS_PER_PAGE).limit(READINGS_PER_PAGE).to_a
+    @share_counts = ReadingShare.counts_for(page, current_user)
+    @readings_json = page.map { |reading| reading_card_json(reading) }
   end
 
   # GET /readings/mine
   # The signed-in user's own readings in every state: published, scheduled, and drafts
   def mine
-    @readings_json = Reading.where(user: current_user).includes(:tags).order(updated_at: :desc).map do |reading|
+    readings = Reading.where(user: current_user).includes(:tags).order(updated_at: :desc).to_a
+    @share_counts = ReadingShare.counts_for(readings, current_user)
+    # Shares waiting for them to approve, by reading
+    waiting = ReadingShare.pending.where(reading_id: readings.map(&:id)).where.not(user_id: current_user.id).group(:reading_id).count
+    @readings_json = readings.map do |reading|
       reading_card_json(reading).merge(
+        shares_waiting: waiting[reading.id].to_i,
         status: reading_status(reading),
         published_at: reading.published_at&.iso8601,
         updated_at: reading.updated_at.iso8601,
@@ -276,6 +282,8 @@ end
         grapevine: reading.grapevine?,
         meeting_date_iso: reading.meetingDate&.iso8601,
         path: reading_path(reading),
+        # Approved shares the viewer can see (ReadingShare.counts_for), when the page worked them out
+        share_count: @share_counts&.fetch(reading.id, 0),
         tags: reading.tags.map { |tag|
           { id: tag.id, title: tag.title, slug: tag.slug, icon_name: tag.icon_name }
         }

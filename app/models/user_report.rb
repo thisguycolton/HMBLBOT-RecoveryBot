@@ -3,7 +3,8 @@
 # still be read if it's deleted. Admins see them in the admin suite (Reports).
 class UserReport < ApplicationRecord
   STATUSES = %w[open resolved].freeze
-  SUBJECTS = { "chat_message" => "ChatMessage", "timeline_note" => "TimelineNote", "note_comment" => "NoteComment", "sponsor_profile" => "SponsorProfile" }.freeze
+  SUBJECTS = { "chat_message" => "ChatMessage", "timeline_note" => "TimelineNote", "note_comment" => "NoteComment", "sponsor_profile" => "SponsorProfile",
+               "reading_share" => "ReadingShare" }.freeze
 
   belongs_to :reporter, class_name: "User"
   belongs_to :user
@@ -20,10 +21,22 @@ class UserReport < ApplicationRecord
   def resolve!(by) = update!(status: "resolved", resolved_at: Time.current, resolved_by: by)
   def reopen! = update!(status: "open", resolved_at: nil, resolved_by: nil)
 
+  # About a share on a reading that was anonymous (or is gone, so it can't be told): the admins
+  # see "A member", never who wrote it (ReadingShare)
+  def anonymous_subject?
+    return false unless subject_type == "ReadingShare"
+
+    share = ReadingShare.find_by(id: subject_id)
+    share.nil? || share.anonymous?
+  end
+
+  # Who it's about, as the admins see it
+  def reported_name = anonymous_subject? ? ReadingShare::ANONYMOUS_NAME : user.display_name
+
   private
 
   def notify_admins
-    Notification.deliver(User.suite_admins, kind: "user_report.created", title: "#{reporter.display_name} reported #{user.display_name}",
+    Notification.deliver(User.suite_admins, kind: "user_report.created", title: "#{reporter.display_name} reported #{anonymous_subject? ? 'an anonymous share' : user.display_name}",
                                             body: reason, url: "/admin_panel/reports")
   end
 end
