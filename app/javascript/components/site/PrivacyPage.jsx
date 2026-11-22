@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 // The privacy policy (/privacy, PrivacyController). Keep it true to the code: when a feature
 // starts collecting something new, or a cookie or outside service is added, change this page
 // (and UPDATED) in the same change.
-const UPDATED = "November 17, 2026";
+const UPDATED = "November 22, 2026";
 
 const SECTIONS = [
   ["short-version", "The short version"],
@@ -161,6 +161,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
             <li><strong>Group chat:</strong> messages you post in your groups' chat channels (with any pictures and files you attach), when you posted and changed them, and how far you've read in each channel (so we can show what's new). We also keep each channel's name, what it's for, who added it and who's in it.</li>
             <li><strong>@ mentions:</strong> when you @ mention someone, or a role like @hosts, in a chat message, note, comment or highlight note, we keep who it meant and who we told, and send them a notification. People are only told about things they can already read.</li>
             <li><strong>Reports and blocks:</strong> if you report someone to the site admins, we keep your report, who it's about, and a copy of what they wrote, so it can still be read if they delete it. If a group's admins block someone, we keep who was blocked from which group, and by whom. If you block someone yourself, we keep that you blocked them, so their notes, comments and chat messages stay hidden from you and you aren't told about what they do. They aren't told you blocked them.</li>
+            <li><strong>Shares on readings:</strong> what you write under a reading, and whether it shows your name or just says “A member”. Either way we keep which account wrote it, so you can edit or delete it, it goes when your account does, and blocks, reports and limits on posting still work. An anonymous share never shows who wrote it to anyone else: not to members, not to the reading's poster who approves it, not to group or site admins on any page, and not in notifications. The few people who run RecoveryBot could reach that link in the database, like anything stored, and would look only if the law required it or to protect someone's safety. We also keep whether each share is waiting, approved or declined, who approved or declined it and the reason they gave, and when it was edited. If a reading's poster turns shares off, we keep that with the reading. What you write in a share is kept out of our server logs.</li>
             <li><strong>Comments turned off:</strong> if you turn off comments on a note, we keep that setting with the note.</li>
             <li><strong>Link previews:</strong> when a note or chat message has a link, our server visits that page to read its title, description and picture, and keeps them (with a copy of the picture) with your note or message. The other site sees a visit from RecoveryBot, not from you or the people reading it.</li>
             <li><strong>Groups:</strong> the groups you join or ask to join, your role (member, admin, record keeper, host scheduler, treasurer), and the meetings you host or cover. While you have a meeting's HostDeck open, the group's other hosts see that you're there and what you're on, and what you did in it (like copying a chat posting) is kept with that meeting's date.</li>
@@ -215,6 +216,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
             <li><strong>Only you:</strong> your 10th step inventories, gratitude lists and chips (except the favorite chips you choose to show on your profile, which members who can see your profile see), and notes set to <em>Private</em>.</li>
             <li><strong>Your groups:</strong> members of a group see its member list, its members-only pages and records, and notes you share to it. Record keepers and admins of the group see drafts and everything else the group keeps.</li>
             <li><strong>Group chat:</strong> what you post in a channel is seen by the people in that channel: everyone in the group for most channels, or only the group's admins and the roles and people a channel is limited to. Pictures and files in a message are only handed to people in that channel, through links that stop working after a few minutes. A group's admins can delete any message. Typing in a channel briefly shows "is typing" to the others there; that isn't stored.</li>
+            <li><strong>Shares on readings:</strong> only signed-in members, never the public or the hosting screen shown in a meeting. On a group's reading, only that group's members and hosts. A share shows to others once the reading's poster (or the group's admins, or a site admin) approves it; until then, and if it's declined, only you and they see it. Notifications about shares never include their words or who wrote them.</li>
             <li><strong>Notes on someone's page:</strong> seen as you choose when you write it: just the two of you, your followers, or Members. The person whose page it's on always sees it.</li>
             <li><strong>Site admins:</strong> reports about people, with the copy of what was reported.</li>
             <li><strong>Site admins:</strong> the few people who run RecoveryBot can see what's stored, to fix problems and answer requests. We don't browse your things without a reason.</li>
@@ -292,7 +294,7 @@ export default function PrivacyPage({ turnstile = false, google = false }) {
           </p>
           <ul>
             <li>your account, profile, picture and settings;</li>
-            <li>your highlights, notes, timeline notes and their pictures;</li>
+            <li>your highlights, notes, timeline notes and their pictures, and your shares on readings (named or anonymous);</li>
             <li>your 10th step inventories, gratitude lists, chip choices, meetings you joined, and chips given to you;</li>
             <li>your follows, reactions, comments, reposts, notifications (and the devices you get them on), RSVPs, group memberships and schedule polls you made;</li>
             <li>your chat messages and where you'd read up to, notes others wrote on your page, and reports you made or that were made about you.</li>

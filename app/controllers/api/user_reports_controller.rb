@@ -3,7 +3,7 @@
 class Api::UserReportsController < ApplicationController
   before_action :authenticate_user!
 
-  # POST /api/user_reports { subject_type: chat_message|timeline_note|note_comment|sponsor_profile, subject_id | user_id, reason }
+  # POST /api/user_reports { subject_type: chat_message|timeline_note|note_comment|sponsor_profile|reading_share, subject_id | user_id, reason }
   def create
     report = UserReport.new(reporter: current_user, reason: params[:reason].to_s.strip)
     if (klass = UserReport::SUBJECTS[params[:subject_type].to_s])
@@ -11,7 +11,7 @@ class Api::UserReportsController < ApplicationController
       raise ActiveRecord::RecordNotFound unless visible?(subject)
 
       report.assign_attributes(user: subject.user, subject_type: klass, subject_id: subject.id, quote: subject.body.to_s.first(4000),
-                               group: subject.try(:group), where_label: where_label(subject))
+                               group: subject.is_a?(ReadingShare) ? subject.reading.group : subject.try(:group), where_label: where_label(subject))
     else
       report.user = User.find(params[:user_id])
       report.where_label = "Their profile"
@@ -32,6 +32,7 @@ class Api::UserReportsController < ApplicationController
     when TimelineNote then subject.visible_to?(current_user)
     when NoteComment then subject.timeline_note.visible_to?(current_user)
     when SponsorProfile then SponsorProfile.visible_to(current_user).key?(subject)
+    when ReadingShare then subject.readable_by?(current_user)
     end
   end
 
@@ -41,6 +42,7 @@ class Api::UserReportsController < ApplicationController
     when TimelineNote then "A note"
     when NoteComment then "A comment on a note"
     when SponsorProfile then "Their offer to sponsor"
+    when ReadingShare then "A share on \u201C#{subject.reading.title}\u201D"
     end
   end
 end

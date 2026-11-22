@@ -83,6 +83,9 @@ class User < ApplicationRecord
   has_many :notes_received, class_name: "TimelineNote", foreign_key: :recipient_id, dependent: :destroy, inverse_of: :recipient
   has_many :note_reactions, dependent: :delete_all
   has_many :note_comments, dependent: :destroy
+  # Their shares on readings, named or anonymous, go with the account (ReadingShare)
+  has_many :reading_shares, dependent: :delete_all
+  has_many :reading_shares_moderated, class_name: "ReadingShare", foreign_key: :moderated_by_id, dependent: :nullify, inverse_of: :moderated_by
   has_many :chat_messages, dependent: :delete_all
   has_many :chat_reads, dependent: :delete_all
   has_many :chat_notification_settings, dependent: :delete_all

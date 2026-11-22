@@ -14,6 +14,7 @@ import {
 import ShareButton from "./share/ShareButton";
 import { isShareView } from "./shell/shareView";
 import EmbeddedPoll from "./polls/EmbeddedPoll";
+import ReadingShares from "./readings/ReadingShares";
 import { TextSizeControl, useReadingTextSize } from "./ui/TextSize";
 
 // The link to where a reading came from: "Read on Grapevine" for a Grapevine story (a search
@@ -497,6 +498,9 @@ const topicHtml = renderRichContent(topicSource);
               />
             </section>
           )}
+
+          {/* SHARES: members only, never on the hosting screen (it's shown in the meeting) */}
+          {signedIn && !share && reading.published && <ReadingShares readingId={reading.id} />}
 
           {/* CTA, for visitors without an account */}
           {!signedIn && !share && (

@@ -29,6 +29,8 @@ class Notification < ApplicationRecord
                          kinds: %w[message.chat] },
     "comments" => { label: "Comments on your notes", description: "When someone comments on one of your notes.",
                     kinds: %w[note.comment] },
+    "reading_shares" => { label: "Shares on your readings", description: "When someone's share on a reading you posted is waiting for your approval. It never says who wrote it.",
+                          kinds: %w[reading_share.pending] },
     "profile_notes" => { label: "Notes on your page", description: "When someone writes a note on your profile.",
                          kinds: %w[note.on_profile] },
     "document_comments" => { label: "Comments on group documents", description: "New comments on documents you saved, and replies in comment threads you're in.",

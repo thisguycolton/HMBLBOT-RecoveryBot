@@ -15,6 +15,8 @@ class Api::Admin::UserReportsController < Api::Admin::SuiteController
   def update
     report = UserReport.find(params[:id])
     if params[:sponsoring].present?
+      return render(json: { error: "That share was anonymous." }, status: :unprocessable_entity) if report.anonymous_subject?
+
       profile = SponsorProfile.for(report.user)
       stop = params[:sponsoring] == "stop"
       profile.update!(stopped_at: (Time.current if stop), stopped_by: (current_user if stop), available: stop ? false : profile.available)
@@ -37,14 +39,18 @@ class Api::Admin::UserReportsController < Api::Admin::SuiteController
 
   def person(u) = { name: u.display_name, username: u.username, email: u.email }
 
+  # An anonymous share's writer stays hidden here too: the admins act on the share, not the person
+  def reported(r) = r.anonymous_subject? ? { name: ReadingShare::ANONYMOUS_NAME, username: nil, email: nil, anonymous: true } : person(r.user)
+
   def report_json(r)
     {
       id: r.id, status: r.status, reason: r.reason, quote: r.quote, where: r.where_label,
       created_at: r.created_at.iso8601, resolved_at: r.resolved_at&.iso8601, resolved_by: r.resolved_by&.display_name,
-      reporter: person(r.reporter), user: person(r.user),
+      reporter: person(r.reporter), user: reported(r),
+      reading_path: (r.subject_type == "ReadingShare" && (share = ReadingShare.find_by(id: r.subject_id)) ? "/readings/#{share.reading_id}#shares" : nil),
       group: r.group && { slug: r.group.slug, title: r.group.title },
       still_there: r.subject_type.present? && r.subject_type.constantize.exists?(r.subject_id),
-      sponsoring: r.user.sponsor_profile&.then { |p| p.stopped_at ? "stopped" : (p.available ? "offering" : "off") },
+      sponsoring: (r.user.sponsor_profile&.then { |p| p.stopped_at ? "stopped" : (p.available ? "offering" : "off") } unless r.anonymous_subject?),
     }
   end
 end

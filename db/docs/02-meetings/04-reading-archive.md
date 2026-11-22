@@ -25,6 +25,10 @@ For example, "On asking for help" was read at the Lantern Street Thursday Night 
 
 A reading taken from an AA Grapevine story says **From AA Grapevine** under its text, with a **Read on Grapevine** button that opens the story on Grapevine's site. Grapevine owns these stories, so the whole text is public only around the meeting that reads it: from the day before until 48 hours after. The rest of the time, visitors see the title, the first few lines and the Grapevine button. The reading's group members and hosts always see the whole thing.
 
+## Shares
+
+Signed in, you'll find **Shares** under a reading: what it brought up for members, under their name or as "A member". The reading's poster approves each one. See [Shares on readings](/docs/meetings/shares-on-readings).
+
 ## Add your own
 
 Signed in, you can write readings of your own and publish them to the archive. See [My readings](/docs/library/my-readings).

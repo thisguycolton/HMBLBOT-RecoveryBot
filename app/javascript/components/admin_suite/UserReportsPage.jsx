@@ -65,8 +65,15 @@ function Report({ report: r, act }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="break-words font-semibold text-slate-900 dark:text-white">
-            <a href={`/people/${r.user.username}`} className="hover:underline">{r.user.name}</a>
-            <span className="font-normal text-slate-500 dark:text-neutral-400"> &lt;{r.user.email}&gt;</span>
+            {r.user.anonymous ? (
+              // An anonymous share on a reading: who wrote it stays hidden here too
+              <>{r.user.name} <span className="font-normal text-slate-500 dark:text-neutral-400">(anonymous share)</span></>
+            ) : (
+              <>
+                <a href={`/people/${r.user.username}`} className="hover:underline">{r.user.name}</a>
+                <span className="font-normal text-slate-500 dark:text-neutral-400"> &lt;{r.user.email}&gt;</span>
+              </>
+            )}
           </p>
           <p className="text-slate-500 dark:text-neutral-400">
             <Badge tone="warn">{r.where}</Badge>
@@ -76,6 +83,7 @@ function Report({ report: r, act }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-1">
+          {r.reading_path && <a href={r.reading_path} className={buttonClass.secondary}><ExternalLink className="h-4 w-4" /> Open the reading</a>}
           {r.group && <a href={`/groups/${r.group.slug}/members`} className={buttonClass.secondary}><ExternalLink className="h-4 w-4" /> {r.group.title}</a>}
           {r.sponsoring === "offering" && (
             <button type="button" className={buttonClass.secondary} onClick={() => act(`/user_reports/${r.id}`, { method: "PATCH", body: { sponsoring: "stop" } }, "They can no longer offer to sponsor.")}>
