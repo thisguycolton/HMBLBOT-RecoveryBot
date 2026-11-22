@@ -47,9 +47,9 @@ class Api::HighlightRepostsTest < ActionDispatch::IntegrationTest
     end
 
     # On Mo's profile, and on Oz's home feed (Oz follows Mo)
-    feed = ProfilePage.new(@oz).feed(@mo)
+    feed = ProfilePage.new(@oz).feed(@mo)[:items]
     assert_equal [["repost", h.id]], feed.map { |i| [i[:kind], i.dig(:note, :id)] }
-    assert_equal ["repost"], ProfilePage.new(@oz).following_feed.map { |i| i[:kind] }
+    assert_equal ["repost"], ProfilePage.new(@oz).following_feed[:items].map { |i| i[:kind] }
 
     # Undo
     delete "/api/highlights/#{h.id}/repost", as: :json
@@ -105,8 +105,8 @@ class Api::HighlightRepostsTest < ActionDispatch::IntegrationTest
     @mo.timeline_notes.create!(repost_of_highlight: h, body: "", visibility: "public")
     UserBlock.create!(blocker: @oz, blocked: @lee)
 
-    assert_empty ProfilePage.new(@oz).feed(@mo)
-    assert_equal 1, ProfilePage.new(@lee).feed(@mo).size
+    assert_empty ProfilePage.new(@oz).feed(@mo)[:items]
+    assert_equal 1, ProfilePage.new(@lee).feed(@mo)[:items].size
 
     sign_in @oz
     post "/api/highlights/#{h.id}/repost", as: :json
@@ -140,7 +140,7 @@ class Api::HighlightRepostsTest < ActionDispatch::IntegrationTest
       put "/api/highlights/#{h.id}/reaction", params: { kind: "hugs" }, as: :json
     end
     assert_equal({ "like" => 0, "love" => 0, "hugs" => 1 }, response.parsed_body["reactions"])
-    assert_equal [["Mo", "hugs"]], ProfilePage.new(@oz).feed(@lee).first[:reactors].map { |p| [p[:name], p[:reaction]] }
+    assert_equal [["Mo", "hugs"]], ProfilePage.new(@oz).feed(@lee)[:items].first[:reactors].map { |p| [p[:name], p[:reaction]] }
 
     delete "/api/highlights/#{h.id}/reaction", as: :json
     assert_nil response.parsed_body["my_reaction"]

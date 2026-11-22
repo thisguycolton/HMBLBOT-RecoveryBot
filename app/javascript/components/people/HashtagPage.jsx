@@ -4,6 +4,7 @@ import { ArrowLeft, Hash } from "lucide-react";
 import { api } from "../groups/lib";
 import { Card, ErrorNote, Loading } from "../groups/ui";
 import FeedItem from "../notes/FeedItem";
+import FeedMore from "../notes/FeedMore";
 
 // A #hashtag's page (/people/tags/:tag): the notes with it that you can see, newest first,
 // from Api::HashtagsController. Tags in notes link here (book/Markdown.jsx).
@@ -11,7 +12,6 @@ export default function HashtagPage() {
   const { tag } = useParams();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     setData(null);
@@ -26,16 +26,11 @@ export default function HashtagPage() {
   const replace = (item) => setData((d) => ({ ...d, feed: d.feed.map((i) => (i.kind === item.kind && i.id === item.id ? { ...i, ...item } : i)) }));
   const remove = (id) => setData((d) => ({ ...d, count: d.count - 1, feed: d.feed.filter((i) => i.id !== id) }));
   const more = async () => {
-    setLoadingMore(true);
-    try {
-      const last = data.feed[data.feed.length - 1];
-      const next = await api(`/hashtags/${encodeURIComponent(tag)}?before=${encodeURIComponent(last.created_at)}`);
-      setData((d) => ({ ...d, feed: [...d.feed, ...next.feed], more: next.more }));
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoadingMore(false);
-    }
+    const next = await api(`/hashtags/${encodeURIComponent(tag)}?cursor=${encodeURIComponent(data.next)}`);
+    setData((d) => {
+      const seen = new Set(d.feed.map((i) => `${i.kind}-${i.id}`));
+      return { ...d, feed: [...d.feed, ...next.feed.filter((i) => !seen.has(`${i.kind}-${i.id}`))], next: next.next, more: next.more };
+    });
   };
 
   return (
@@ -63,11 +58,7 @@ export default function HashtagPage() {
                 onChange={replace} onRemove={remove} />
             ))}
           </div>
-          {data.more && (
-            <div className="mt-4 text-center">
-              <button type="button" className="wb-btn" onClick={more} disabled={loadingMore}>{loadingMore ? "Loading…" : "Show older notes"}</button>
-            </div>
-          )}
+          <FeedMore more={!!data.next} count={data.feed.length} onMore={more} moreText="Show older notes" endText={`That's every note with #${data.name}`} />
         </div>
       )}
     </div>

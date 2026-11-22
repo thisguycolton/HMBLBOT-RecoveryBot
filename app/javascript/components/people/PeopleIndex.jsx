@@ -6,6 +6,7 @@ import { api } from "../groups/lib";
 import { Card, ErrorNote } from "../groups/ui";
 import { SkeletonGroup, SkeletonHome, SkeletonToday } from "../ui/Skeleton";
 import FeedItem from "../notes/FeedItem";
+import FeedMore from "../notes/FeedMore";
 import NoteEditor from "../notes/NoteEditor";
 import InstallNudge from "../site/InstallNudge";
 import PageAside from "../shell/PageAside";
@@ -13,7 +14,8 @@ import TodayPanel from "../shell/TodayPanel";
 
 // The home page after signing in (/people): your notes and highlights and those of the
 // people you follow, and as the page's side panel (Today) what's coming up in your groups:
-// next meetings, sobriety birthdays and events.
+// next meetings, sobriety birthdays and events. The feed comes 20 at a time; "Load more"
+// (FeedMore) asks for the page after `feed_next`, and it ends with "You're all caught up".
 export default function PeopleIndex() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -57,6 +59,14 @@ export default function PeopleIndex() {
 
   const replace = (item) => setData((d) => ({ ...d, feed: d.feed.map((i) => (i.kind === item.kind && i.id === item.id ? { ...i, ...item } : i)) }));
   const remove = (kind) => (id) => setData((d) => ({ ...d, feed: d.feed.filter((i) => !(i.kind === kind && i.id === id)) }));
+  // The next page goes under what's here; anything already shown (a post you just wrote) isn't doubled
+  const loadMore = async () => {
+    const next = await api(`/people?cursor=${encodeURIComponent(data.feed_next)}`);
+    setData((d) => {
+      const seen = new Set(d.feed.map((i) => `${i.kind}-${i.id}`));
+      return { ...d, feed: [...d.feed, ...next.feed.filter((i) => !seen.has(`${i.kind}-${i.id}`))], feed_next: next.feed_next };
+    });
+  };
 
   return (
     <div className="mx-auto max-w-3xl !font-sans [&_*]:!font-sans [&_p]:!text-left [&_p]:!hyphens-none">
@@ -120,6 +130,7 @@ export default function PeopleIndex() {
                 ))}
               </div>
             )}
+            <FeedMore more={!!data.feed_next} count={data.feed.length} onMore={loadMore} />
           </div>
         )}
       </div>

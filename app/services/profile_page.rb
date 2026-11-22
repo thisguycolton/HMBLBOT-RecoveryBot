@@ -8,7 +8,8 @@
 # Profiles are only for signed-in people who can use Groups (User.profiles_open_to?);
 # nothing here is ever public on the web.
 class ProfilePage
-  FEED_MAX = 40
+  # How many notes and highlights a feed sends at a time (FeedPage)
+  FEED_MAX = FeedPage::SIZE
   PEOPLE_MAX = 48
 
   DEFAULT_LAYOUT = "main_side"
@@ -53,7 +54,7 @@ class ProfilePage
           # Groups their notes can go to, for the note composer
           groups: (me ? @viewer.groups.order(:title).map { |g| { slug: g.slug, title: g.title } } : nil),
         },
-        feed: feed(person),
+        **feed_context(person),
         groups: groups(person, me),
         following: people(person.following),
         followers: people(person.followers),
@@ -66,8 +67,10 @@ class ProfilePage
   end
 
   # The viewer's own notes and shared highlights, notes written on their page, and what
-  # people they follow shared with followers or members, newest first (the home page, /people)
-  def following_feed(before: nil)
+  # people they follow shared with followers or members, newest first (the home page, /people).
+  # Each of these feeds is one page (FeedPage): { items:, next: } where `next` is the cursor
+  # for the page after it, or nil.
+  def following_feed(cursor: nil)
     ids = @viewer.follows_given.select(:followed_id)
     shared = %w[followers public]
     notes = TimelineNote.where(user_id: ids, visibility: shared).shown.or(TimelineNote.where(user_id: @viewer.id))
@@ -75,25 +78,31 @@ class ProfilePage
     notes = notes.not_blocked_by(@viewer)
     highlights = UserHighlight.on_timeline.where(user_id: ids, visibility: shared).or(UserHighlight.on_timeline.where(user_id: @viewer.id))
     highlights = highlights.where.not(user_id: @viewer.blocked_ids) if @viewer.blocked_ids.any?
-    merge(notes, highlights, before: before)
+    merge(notes, highlights, cursor: cursor)
   end
 
   # A site admin's home page with "Everyone's posts" on (User#sees_all_posts?): what every member
   # shared with Followers or Members, whether they follow them or not, plus their own. Never
   # "Only me" notes and highlights (a private note shared to a group stays with that group, and
   # a private note on someone's page stays between the two of them). People they blocked are left out.
-  def everyone_feed(before: nil)
+  def everyone_feed(cursor: nil)
     shared = %w[followers public]
     notes = TimelineNote.where(visibility: shared).shown.or(TimelineNote.where(user_id: @viewer.id))
                         .or(TimelineNote.where(recipient_id: @viewer.id))
     highlights = UserHighlight.on_timeline.where(visibility: shared).or(UserHighlight.on_timeline.where(user_id: @viewer.id))
-    merge(notes.not_blocked_by(@viewer), highlights.not_blocked_by(@viewer), before: before)
+    merge(notes.not_blocked_by(@viewer), highlights.not_blocked_by(@viewer), cursor: cursor)
   end
 
-  def feed(person, before: nil)
+  def feed(person, cursor: nil)
     notes = TimelineNote.on_profile_of(person, @viewer)
     notes = notes.shown unless @viewer&.id == person.id
-    merge(notes, UserHighlight.visible_to(@viewer, owner: person).on_timeline.not_blocked_by(@viewer), before: before)
+    merge(notes, UserHighlight.visible_to(@viewer, owner: person).on_timeline.not_blocked_by(@viewer), cursor: cursor)
+  end
+
+  # A profile's first page, for its Feed block: feed (the items) and feed_next (the cursor)
+  def feed_context(person)
+    page = feed(person)
+    { feed: page[:items], feed_next: page[:next] }
   end
 
   # Followers or following, newest first
@@ -103,15 +112,8 @@ class ProfilePage
 
   private
 
-  def merge(notes, highlights, before: nil)
-    if before
-      notes = notes.where(created_at: ...before)
-      highlights = highlights.where(shared_at: ...before)
-    end
-    notes = notes.for_feed.newest_first.limit(FEED_MAX)
-    highlights = highlights.includes(:reposts, reactions: { user: { avatar_attachment: :blob } }, chapter: :book, user: { avatar_attachment: :blob }).order(shared_at: :desc, id: :desc).limit(FEED_MAX)
-    (notes.map { |n| n.as_api_json(viewer: @viewer) } + highlights.map { |h| h.as_feed_json(viewer: @viewer) })
-      .sort_by { |item| item[:created_at] }.reverse.first(FEED_MAX)
+  def merge(notes, highlights, cursor: nil)
+    FeedPage.new(viewer: @viewer, notes: notes, highlights: highlights, cursor: cursor).call
   end
 
   # Their own groups, for themselves; for anyone else only the groups they're both in

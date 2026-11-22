@@ -8,9 +8,16 @@ class Api::PeopleController < ApplicationController
   before_action :require_profiles
   before_action :set_person, except: :index
 
-  # GET /api/people[?q=name][&before=ISO8601] -> the home page: people matching q, or your
-  # notes and highlights and those of the people you follow, and what's coming up in your groups
+  # GET /api/people[?q=name] -> the home page: people matching q, or the first page of your
+  # notes and highlights and those of the people you follow (feed, and feed_next: the cursor
+  # for the next page), and what's coming up in your groups.
+  # GET /api/people?cursor=... -> { feed, feed_next }: the next page only ("Load more")
   def index
+    if cursor_param
+      page = home_feed
+      return render(json: { feed: page[:items], feed_next: page[:next] })
+    end
+
     q = params[:q].to_s.strip
     matches = if q.length >= 2
                 like = "%#{User.sanitize_sql_like(q)}%"
@@ -21,10 +28,10 @@ class Api::PeopleController < ApplicationController
       me: current_user.as_person_json,
       matches: matches,
       following_count: current_user.follows_given.count,
-      feed: (home_feed unless q.present?),
+      **home_feed_json(q),
       # Site admins only: whether the feed is everyone's posts (the sidebar's switch)
       everyone: (current_user.sees_all_posts? if current_user.suite_admin?),
-      coming_up: (PeopleHome.new(current_user).json if q.blank? && before_param.nil?),
+      coming_up: (PeopleHome.new(current_user).json if q.blank?),
       note_max: TimelineNote::BODY_MAX, images_max: TimelineNote::IMAGES_MAX,
       default_note_visibility: current_user.default_note_visibility,
       groups: current_user.groups.order(:title).map { |g| { slug: g.slug, title: g.title } },
@@ -35,18 +42,27 @@ class Api::PeopleController < ApplicationController
   # posts" on, every member's shared notes (ProfilePage#everyone_feed)
   def home_feed
     page = ProfilePage.new(current_user)
-    current_user.sees_all_posts? ? page.everyone_feed(before: before_param) : page.following_feed(before: before_param)
+    current_user.sees_all_posts? ? page.everyone_feed(cursor: cursor_param) : page.following_feed(cursor: cursor_param)
   end
-  private :home_feed
+
+  def home_feed_json(q)
+    return { feed: nil, feed_next: nil } if q.present?
+
+    page = home_feed
+    { feed: page[:items], feed_next: page[:next] }
+  end
+  private :home_feed, :home_feed_json
 
   # GET /api/people/:username
   def show
     render json: ProfilePage.new(current_user).person_json(@person)
   end
 
-  # GET /api/people/:username/feed?before=ISO8601 -> older notes and highlights
+  # GET /api/people/:username/feed?cursor=... -> { feed, next }: the next page of their notes
+  # and highlights (FeedPage), after the one ending at `cursor`
   def feed
-    render json: { feed: ProfilePage.new(current_user).feed(@person, before: before_param) }
+    page = ProfilePage.new(current_user).feed(@person, cursor: cursor_param)
+    render json: { feed: page[:items], next: page[:next] }
   end
 
   # GET /api/people/:username/followers and /following -> everyone on that list, newest first
@@ -114,9 +130,8 @@ class Api::PeopleController < ApplicationController
     { following: current_user.following?(@person), followers_count: @person.follows_received.count }
   end
 
-  def before_param
-    Time.iso8601(params[:before]) if params[:before].present?
-  rescue ArgumentError
-    nil
+  # A FeedPage cursor; `before` (an ISO 8601 time) is what older pages of the app sent
+  def cursor_param
+    (params[:cursor].presence || params[:before].presence)&.to_s
   end
 end

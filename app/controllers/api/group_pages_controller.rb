@@ -35,6 +35,17 @@ class Api::GroupPagesController < ApplicationController
     render json: GroupPage.new(current_user).group_json(@group.reload)
   end
 
+  # GET /api/groups/:group_slug/page/timeline?cursor=... -> { feed, next }: the next page of the
+  # Timeline block's notes (GroupPage#timeline), for members and site admins only
+  def timeline
+    unless current_user.suite_admin? || @group.membership_for(current_user)&.active?
+      return render(json: { error: "Members only" }, status: :forbidden)
+    end
+
+    page = GroupPage.new(current_user).timeline(@group, cursor: params[:cursor].to_s.presence)
+    render json: { feed: page[:items], next: page[:next] }
+  end
+
   # POST /api/groups/:group_slug/page/images { file } -> { url }
   def images
     attach_page_image(@group.page_images)

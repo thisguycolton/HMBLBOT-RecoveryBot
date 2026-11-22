@@ -168,7 +168,7 @@ export function SkeletonFeed({ items = 3, composer = false }) {
 // when it arrives: the Notes title and Your profile button, the name search, the composer card
 // (the same wb-note-editor--card box) and notes in wb-feed-item boxes. PeopleIndex puts it in
 // the page's own column and SkeletonToday in the Today side panel.
-function SkeletonHomeNote({ seed = 0 }) {
+export function SkeletonHomeNote({ seed = 0 }) {
   const lines = [["w-1/4", "w-3/5", "w-4/5", "w-2/3"], ["w-11/12"], ["w-2/3", "w-1/2"]][seed % 3];
   return (
     <div className="wb-feed-item">
