@@ -282,6 +282,8 @@ Rails.application.routes.draw do
     resources :minutes_imports, controller: "group_minutes_imports", only: :create
     resources :document_templates, controller: "group_document_templates", only: %i[index update]
     resources :motions, controller: "group_motions", only: %i[index create update destroy] do
+      post :share, on: :member
+      delete :share, on: :member, action: :unshare
       post :check, on: :collection
       post :bulk, on: :collection
       get :export, on: :collection
@@ -533,6 +535,8 @@ end
   # A worksheet someone shared with a password (StepWork#share!): a small page that asks for it
   get "/worksheet/print/:token", to: "step_work_prints#show", as: :step_work_print
   get "/worksheet/:token", to: "shared_worksheets#show", as: :shared_worksheet
+  # A decision a group's record keepers shared by link (Motion#share!), for anyone
+  get "/d/:token", to: "decision_shares#show", as: :decision_share
   get "/recovery/*path", to: "recovery#app", format: false
   get 'host_helper/scratchpaper'
   # config/routes.rb

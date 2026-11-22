@@ -30,14 +30,21 @@ class GroupDocumentComment < ApplicationRecord
 
   def resolved? = resolved_at.present?
 
-  def as_api_json(viewer: nil, can_moderate: false)
+  # `decisions`: the cards for decisions cited in comments (DecisionRefs#cards_for), so a
+  # thread's comments only show what this viewer may see of them
+  def as_api_json(viewer: nil, can_moderate: false, decisions: nil)
+    decisions ||= DecisionRefs.new(group_document.group, viewer).cards_for([body, *(replies.map(&:body) unless parent_id)])
     json = { id: id, body: body, user: user&.as_person_json, created_at: created_at.iso8601,
-             mine: viewer.present? && user_id == viewer.id, can_delete: viewer.present? && (user_id == viewer.id || can_moderate) }
+             mine: viewer.present? && user_id == viewer.id, can_delete: viewer.present? && (user_id == viewer.id || can_moderate),
+             decisions: decisions.slice(*cited_keys) }
     return json if parent_id
 
     json.merge(quote: quote, prefix: prefix, suffix: suffix, version: version&.number, resolved: resolved?, resolved_by: resolved_by&.display_name,
-               replies: replies.map { |r| r.as_api_json(viewer: viewer, can_moderate: can_moderate) })
+               replies: replies.map { |r| r.as_api_json(viewer: viewer, can_moderate: can_moderate, decisions: decisions) })
   end
+
+  # The DecisionRefs keys this comment cites
+  def cited_keys = body.scan(DecisionRefs::TOKEN).flatten.map { |i| "decision:#{i.to_i}" } + body.scan(DecisionRefs::LINK).flatten.map { |t| "link:#{t}" }
 
   private
 

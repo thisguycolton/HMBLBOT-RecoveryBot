@@ -10,8 +10,9 @@ class Api::GroupMotionsController < ApplicationController
   before_action :set_viewable_group, only: :index
   before_action :set_group, except: :index
   before_action :require_keeper, only: %i[create update check bulk export import]
+  before_action :require_sharer, only: %i[share unshare]
   before_action :require_manager, only: :destroy
-  before_action :set_motion, only: %i[update destroy]
+  before_action :set_motion, only: %i[update destroy share unshare]
 
   # GET /api/groups/:group_slug/motions?q= -> every decision the viewer may see, newest first
   def index
@@ -19,8 +20,8 @@ class Api::GroupMotionsController < ApplicationController
     visible = scope.pluck(:id)
     @meetings = BusinessMeeting.visible_to(@group, current_user).pluck(:id)
     motions = (params[:q].present? ? Motion.search(scope, params[:q]) : scope).includes(:supersedes, :parent, :polls, business_meeting: :group).newest_first.to_a
-    render json: { motions: motions.map { |m| m.as_api_json(replacers: replacers, visible: visible, meetings: @meetings, keeper: keeper?) },
-                   can_edit: keeper?, can_delete: @group.manageable_by?(current_user) }.merge(MotionKinds.metadata)
+    render json: { motions: motions.map { |m| m.as_api_json(replacers: replacers, visible: visible, meetings: @meetings, keeper: keeper?, sharer: sharer?) },
+                   can_edit: keeper?, can_share: sharer?, can_delete: @group.manageable_by?(current_user) }.merge(MotionKinds.metadata)
   end
 
   # POST /api/groups/:group_slug/motions/check { motion: {...} } -> what the rules say about a
@@ -53,6 +54,23 @@ class Api::GroupMotionsController < ApplicationController
   def destroy
     @motion.destroy!
     head :no_content
+  end
+
+  # POST /api/groups/:group_slug/motions/:id/share (whoever the group lets share, Group#decisions_shareable_by?) -> the decision, with its
+  # public link (Motion#share!): anyone with it can read the decision's wording and outcome, no
+  # names. Already shared, it keeps the link it has.
+  def share
+    return render(json: { error: "Check this record against the minutes and save it before sharing it." }, status: :unprocessable_entity) if @motion.needs_review
+
+    @motion.share!(current_user)
+    render json: motion_json
+  end
+
+  # DELETE /api/groups/:group_slug/motions/:id/share (the same people) -> the decision; its link
+  # stops working at once, and sharing it again makes a new one
+  def unshare
+    @motion.stop_sharing!
+    render json: motion_json
   end
 
   BULK_ACTIONS = %w[ignore_rules follow_rules one_time standing mark_checked category visibility status delete].freeze
@@ -122,9 +140,17 @@ class Api::GroupMotionsController < ApplicationController
 
   def replacers = @replacers ||= Motion.replacers_for(@group)
 
+  def sharer? = @group.decisions_shareable_by?(current_user)
+
+  def require_sharer
+    return if sharer?
+
+    render json: { error: @group.decision_sharers == "admins" ? "Only this group's admins can share decisions." : "Only the group's officers can share decisions." }, status: :forbidden
+  end
+
   def motion_json
     @motion.reload.as_api_json(visible: Motion.visible_to(@group, current_user).pluck(:id),
-                               meetings: BusinessMeeting.visible_to(@group, current_user).pluck(:id), keeper: keeper?)
+                               meetings: BusinessMeeting.visible_to(@group, current_user).pluck(:id), keeper: keeper?, sharer: sharer?)
   end
 
   # What a passed motion does to the one it applies to, and the agenda item a decision settles

@@ -1,0 +1,4 @@
+<% content_for(:page_title) { "#{@motion.title.truncate(60)} | RecoveryBot" } %>
+<%= vite_javascript_tag "site.jsx" %>
+<%# w-full: the reader styles make <body> a centring flexbox %>
+<div id="site-page" class="w-full" data-page="decision" data-props="<%= @props.to_json %>"></div>

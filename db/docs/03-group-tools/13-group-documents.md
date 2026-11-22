@@ -40,6 +40,8 @@ Every save is a **version** with a note about what changed. **History** shows ea
 
 Select text and choose **Comment** to start a discussion beside it.
 
+To point to a decision, choose **Cite a decision** under the comment box and pick one from your group's decisions, or paste a decision's public link. It shows as a small card that opens the decision. Someone who can't see that decision in the log sees only what its public link shows, or "A decision you can't see" if it has no link.
+
 ## Collapsible sections
 
 Long documents can fold sections open and shut. Use **Insert > Collapsible section**.

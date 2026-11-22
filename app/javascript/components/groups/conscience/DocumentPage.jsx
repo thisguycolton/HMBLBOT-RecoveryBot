@@ -725,7 +725,7 @@ function DocumentSheet({ group, initialDoc, initialHtml, canEdit, embedded, live
               canEdit={canEdit} onRestore={restore} slug={slug} docId={doc.id} />
           )}
           {side === "comments" && commentsOn && (
-            <CommentsPane threads={threads} order={anchorOrder.order} located={anchorOrder.located} active={activeComment} pending={pendingComment} canResolve={canResolve}
+            <CommentsPane slug={slug} threads={threads} order={anchorOrder.order} located={anchorOrder.located} active={activeComment} pending={pendingComment} canResolve={canResolve}
               onSelect={selectComment} onCreate={createComment} onCancelPending={() => setPendingComment(null)} onReply={replyComment} onResolve={resolveComment} onDelete={deleteComment} />
           )}
         </aside>

@@ -39,6 +39,18 @@ The **Standing** list shows what's currently in force, grouped by category (Mone
 
 At Lantern Street, three decisions are standing: the Big Book purchase, "Keep 3 months of rent as prudent reserve" and "Hold a gratitude potluck in November". A fourth, "Add a 7th Tradition QR code to the script", was tabled, so it shows under **Unfinished**.
 
+## Share a decision by link
+
+Open a decision and choose **Public link**. After a warning, RecoveryBot makes a link for that one decision and copies it. Anyone with the link can read the decision without signing in. Search engines are told not to list it.
+
+By default, the group's officers can share: admins, record keepers, treasurers, host coordinators and anyone serving in one of the group's offices now. Admins can change that in **Manage > Group details > Sharing decisions** to every member, or to admins only.
+
+A shared decision always shows its title and how it came out. By default it also shows the wording, the amended wording, the vote count, the minority opinion, and your group's name if your group's page is open to visitors. Admins can turn any of those off in the same place. They can also turn on who moved and seconded it, which is off by default. Notes and the meeting are never shown. A change applies to links already shared.
+
+Check that what's shown names nobody who'd mind. **Turn off** stops the link right away for everyone. Sharing again makes a new link, so the old one never works again. Records still marked **To check** can't be shared.
+
+You can also cite a decision in a [document comment](/docs/group-tools/group-documents#comments).
+
 ## Taking a poll
 
 **Take a poll on this** makes a [poll](/docs/meetings/polls) for members. When it closes, **Use these counts** fills in the vote.

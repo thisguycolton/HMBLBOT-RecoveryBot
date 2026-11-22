@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_22_220000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_22_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -893,6 +893,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_220000) do
     t.date "office_roles_synced_on"
     t.jsonb "setup_steps", default: {}, null: false
     t.datetime "setup_finished_at"
+    t.string "decision_sharers", default: "officers", null: false
+    t.string "decision_share_fields", default: ["text", "amended_text", "counts", "minority_opinion", "group"], null: false, array: true
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true
@@ -1206,12 +1208,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_220000) do
     t.boolean "ignore_rules", default: false, null: false
     t.boolean "imported", default: false, null: false
     t.boolean "one_time", default: false, null: false
+    t.string "share_token"
+    t.datetime "shared_at"
+    t.bigint "shared_by_id"
     t.index ["agenda_item_id"], name: "index_motions_on_agenda_item_id"
     t.index ["business_meeting_id"], name: "index_motions_on_business_meeting_id"
     t.index ["created_by_id"], name: "index_motions_on_created_by_id"
     t.index ["group_id", "decided_on"], name: "index_motions_on_group_id_and_decided_on"
     t.index ["group_id"], name: "index_motions_on_group_id"
     t.index ["parent_id"], name: "index_motions_on_parent_id"
+    t.index ["share_token"], name: "index_motions_on_share_token", unique: true
     t.index ["supersedes_id"], name: "index_motions_on_supersedes_id"
   end
 
@@ -2196,6 +2202,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_220000) do
   add_foreign_key "motions", "motions", column: "parent_id", on_delete: :nullify
   add_foreign_key "motions", "motions", column: "supersedes_id", on_delete: :nullify
   add_foreign_key "motions", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "motions", "users", column: "shared_by_id", on_delete: :nullify
   add_foreign_key "note_comments", "timeline_notes", on_delete: :cascade
   add_foreign_key "note_comments", "users", on_delete: :cascade
   add_foreign_key "note_reactions", "users", on_delete: :cascade
