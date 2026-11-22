@@ -44,7 +44,8 @@ class DecisionSharesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Send 7th Tradition 60/30/10"
     assert_includes response.headers["X-Robots-Tag"], "noindex"
-    %w[Jane Bob Sam Pat].each { |name| assert_not_includes response.body, name }
+    %w[Jane Bob Pat].each { |name| assert_not_includes response.body, name }
+    assert_includes response.body, "Sam R. wanted 50/50", "the minority opinion shows unless the group turns it off"
 
     sign_in @keeper
     delete share_path, as: :json
@@ -57,6 +58,56 @@ class DecisionSharesTest < ActionDispatch::IntegrationTest
     sign_in @keeper
     post share_path, as: :json
     assert_not_equal link, response.parsed_body.dig("share", "path"), "sharing again makes a new link"
+  end
+
+  test "Group settings decide who shares: officers by default, members or admins if the group picks" do
+    treasurer = User.create!(email: "t@example.com", name: "Tess", password: "password123", confirmed: true)
+    gsr = User.create!(email: "g@example.com", name: "Gus", password: "password123", confirmed: true)
+    @group.memberships.create!(user: treasurer, role: "member", can_keep_treasury: true)
+    @group.memberships.create!(user: gsr, role: "member")
+    office = @group.service_positions.create!(title: "GSR")
+    office.terms.create!(user: gsr, name: "Gus G.", starts_on: Date.new(2026, 1, 1))
+
+    [treasurer, gsr].each do |officer|
+      sign_in officer
+      post share_path, as: :json
+      assert_response :success, "#{officer.name} holds an elected role"
+    end
+    sign_in @member
+    post share_path, as: :json
+    assert_response :forbidden
+    get "/api/groups/#{@group.slug}/motions", as: :json
+    assert_equal false, response.parsed_body["can_share"]
+
+    @group.update!(decision_sharers: "members")
+    post share_path, as: :json
+    assert_response :success
+    assert response.parsed_body["share"], "a member who may share sees the link"
+
+    @group.update!(decision_sharers: "admins")
+    sign_in @keeper
+    delete share_path, as: :json
+    assert_response :forbidden
+    sign_in @leader
+    delete share_path, as: :json
+    assert_response :success
+  end
+
+  test "Group settings decide what the page shows" do
+    @money.share!(@keeper)
+    @group.update!(decision_share_fields: %w[moved_by])
+    json = @money.reload.public_json
+    assert_equal "", json[:text]
+    assert_equal "", json[:minority_opinion]
+    assert_nil json[:votes_for]
+    assert_nil json[:group]
+    assert_equal "Jane D.", json[:moved_by]
+    get @money.share_path, headers: BROWSER
+    assert_not_includes response.body, "Sam R."
+    assert_not_includes response.body, "Pat M.", "the note never shows"
+    assert_includes response.body, "Jane D."
+    @group.update!(decision_share_fields: %w[bogus text])
+    assert_equal %w[text], @group.reload.decision_share_fields
   end
 
   test "members don't see the link, records to check can't be shared" do

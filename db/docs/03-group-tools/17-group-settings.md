@@ -24,6 +24,7 @@ Elsewhere:
 - **Invite link**: on the [Members page](/docs/group-tools/members-and-roles). **New link** turns off the old one.
 - **Privacy**: whether host names show on the public page, and whether members available to sponsor are listed.
 - **HostDeck**: who can rearrange decks.
+- **Sharing decisions**: who can give a decision its own [public link](/docs/group-tools/decisions-and-roberts-rules#share-a-decision-by-link) (officers by default, every member, or admins only), and what a shared decision shows.
 - **Chat**: who can add channels (the gear in Chat).
 
 ## Example: setting up meetings

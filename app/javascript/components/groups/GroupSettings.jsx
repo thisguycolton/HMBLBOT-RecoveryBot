@@ -6,6 +6,7 @@ import { inputClass, labelClass, selectClass } from "../ui/styles";
 import { api, ZONES } from "./lib";
 import { Card, ErrorNote, dangerButton, primaryButton, quietButton } from "./ui";
 import GroupLogo from "./GroupLogo";
+import { DECISION_SHARERS, DEFAULT_SHARE_FIELDS, SHARE_FIELDS } from "./conscience/lib";
 
 export { GroupLogo };
 
@@ -19,7 +20,7 @@ const DECK_EDITORS = [
 // Group settings in the group dashboard (group admins): its name, about, website, time zone and logo
 export default function GroupSettings({ group, setGroup }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ title: group.title || "", description: group.description || "", website: group.website || "", time_zone: group.time_zone, follows_roberts_rules: group.follows_roberts_rules !== false, show_hosts_publicly: group.show_hosts_publicly !== false, show_sponsors: group.show_sponsors !== false, search_listed: group.search_listed !== false, deck_editors: group.deck_editors || ["host_coordinators", "record_keepers"] });
+  const [form, setForm] = useState({ title: group.title || "", description: group.description || "", website: group.website || "", time_zone: group.time_zone, follows_roberts_rules: group.follows_roberts_rules !== false, show_hosts_publicly: group.show_hosts_publicly !== false, show_sponsors: group.show_sponsors !== false, search_listed: group.search_listed !== false, deck_editors: group.deck_editors || ["host_coordinators", "record_keepers"], decision_sharers: group.decision_sharers || "officers", decision_share_fields: group.decision_share_fields || DEFAULT_SHARE_FIELDS });
   const [logo, setLogo] = useState(null); // a File waiting to be saved
   const [removeLogo, setRemoveLogo] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -104,6 +105,25 @@ export default function GroupSettings({ group, setGroup }) {
         <h2 className="font-semibold text-slate-900 dark:text-white">Business meetings</h2>
         <Toggle checked={form.follows_roberts_rules} onChange={(v) => set({ follows_roberts_rules: v })} label="Run business by Robert's Rules"
           description="When this is on, recording a motion notes where it doesn't follow the rules (a missing second, a count that doesn't carry it). Turn it off if your group decides things its own way; the warnings go away for every decision." />
+      </Card>
+
+      <Card className="space-y-3 p-4 sm:p-5">
+        <h2 className="font-semibold text-slate-900 dark:text-white">Sharing decisions</h2>
+        <p className="text-sm text-slate-600 dark:text-neutral-400">A decision can get its own public link, so anyone with it can read that one decision without signing in. Links are off until someone turns one on, and turning it off stops it at once.</p>
+        <div>
+          <label htmlFor="s-sharers" className={labelClass}>Who can share a decision</label>
+          <select id="s-sharers" className={selectClass} value={form.decision_sharers} onChange={(e) => set({ decision_sharers: e.target.value })}>
+            {DECISION_SHARERS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+          <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">{DECISION_SHARERS.find(([k]) => k === form.decision_sharers)?.[2]}</p>
+        </div>
+        <p className={labelClass}>What a shared decision shows</p>
+        <p className="-mt-2 text-xs text-slate-500 dark:text-neutral-400">It always shows the title and how it came out. Notes and the meeting are never shown. A change here applies to links already shared.</p>
+        {SHARE_FIELDS.map(([key, label]) => (
+          <div key={key}><Toggle checked={form.decision_share_fields.includes(key)} label={label}
+            description={key === "moved_by" ? "First names and last initials, as recorded. Off unless you turn it on, since the page is public." : undefined}
+            onChange={(on) => set({ decision_share_fields: on ? [...form.decision_share_fields, key] : form.decision_share_fields.filter((k) => k !== key) })} /></div>
+        ))}
       </Card>
 
       <Card className="space-y-3 p-4 sm:p-5">

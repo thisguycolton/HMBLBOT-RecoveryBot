@@ -13,7 +13,7 @@ import DecisionsImport from "./DecisionsImport";
 import BulkBar, { RowCheck } from "./BulkBar";
 import { relatedIndex, searchableText, toRegex } from "./related";
 import { buildThreads } from "./threads";
-import { CATEGORIES, MOTION_STATUS_LABELS, STATUS_TONES, VOTE_METHOD_SHORT, countLabel, dateLabel, longDate, meetingsPath } from "./lib";
+import { CATEGORIES, MOTION_STATUS_LABELS, STATUS_TONES, VOTE_METHOD_SHORT, countLabel, dateLabel, longDate, meetingsPath, SHARE_FIELDS, DEFAULT_SHARE_FIELDS } from "./lib";
 
 const FILTERS = [
   ["standing", "Standing"],
@@ -123,15 +123,19 @@ function Badges({ m }) {
 const paneLabel = "mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400";
 const inlineLink = "!bg-transparent p-0 text-left text-accent hover:underline";
 
-const SHARE_WARNING = "Anyone with the link will be able to read this decision without signing in: its title, wording, how it came out and the vote count. "
-  + "Who moved and seconded it, notes, the minority opinion and the meeting stay private. Check that the wording doesn't name anyone.\n\nTurn on a public link?";
+function shareWarning(fields = DEFAULT_SHARE_FIELDS) {
+  const shown = SHARE_FIELDS.filter(([k]) => fields.includes(k)).map(([, l]) => l.replace(/ \(.*\)$/, "").toLowerCase());
+  const hidden = SHARE_FIELDS.filter(([k]) => !fields.includes(k)).map(([, l]) => l.replace(/ \(.*\)$/, "").toLowerCase());
+  return `Anyone with the link will be able to read this decision without signing in: its title, how it came out${shown.length ? `, ${shown.join(", ")}` : ""}. `
+    + `Notes${hidden.length ? `, ${hidden.join(", ")}` : ""} and the meeting stay private (Group settings decides this). Check that what's shown names nobody who'd mind.\n\nTurn on a public link?`;
+}
 
-// Its public link (Motion#share!), for record keepers: off until they turn it on, past a
+// Its public link (Motion#share!), for whoever the group lets share (Group settings): off until they turn it on, past a
 // warning; turning it off stops the link at once, and turning it on again makes a new one.
-function DecisionShare({ slug, motion: m, onChanged }) {
+function DecisionShare({ slug, motion: m, fields, onChanged }) {
   const [busy, setBusy] = useState(false);
   const change = async (on) => {
-    if (on && !window.confirm(SHARE_WARNING)) return;
+    if (on && !window.confirm(shareWarning(fields))) return;
     if (!on && !window.confirm("Turn off this decision's public link? It stops working right away, for everyone who has it.")) return;
     setBusy(true);
     try {
@@ -159,13 +163,13 @@ function DecisionShare({ slug, motion: m, onChanged }) {
         <a href={m.share.path} target="_blank" rel="noreferrer" className={`${quietButton} !py-1 text-xs`}>Open</a>
         <button type="button" disabled={busy} onClick={() => change(false)} className={`${quietButton} !py-1 text-xs`}><Link2Off className="size-3.5" /> Turn off</button>
       </div>
-      <p className="text-xs opacity-80">Shows the title, wording, outcome and count, never names. Paste it in a document comment to cite it.</p>
+      <p className="text-xs opacity-80">What it shows is set in Group settings. Paste it in a document comment to cite it.</p>
     </div>
   );
 }
 
 // The open decision, in the side pane: everything about it, then what else it might be related to
-function DecisionDetail({ slug, motion: m, parent, thread, canEdit, canDelete, onEdit, onDelete, onOpen, onClose, finder, onChanged }) {
+function DecisionDetail({ slug, motion: m, parent, thread, canEdit, canShare, shareFields, canDelete, onEdit, onDelete, onOpen, onClose, finder, onChanged }) {
   const replaced = isReplaced(m);
   const counts = countLabel(m);
   // A closed Yes / No / Abstain poll's votes go into the record as the count
@@ -239,11 +243,11 @@ function DecisionDetail({ slug, motion: m, parent, thread, canEdit, canDelete, o
             <ul className="space-y-1 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">{m.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
           )}
         </div>
-        {canEdit && m.share && <div className="border-t border-neutral-100 p-3 dark:border-neutral-800"><DecisionShare slug={slug} motion={m} onChanged={onChanged} /></div>}
+        {canShare && m.share && <div className="border-t border-neutral-100 p-3 dark:border-neutral-800"><DecisionShare slug={slug} motion={m} fields={shareFields} onChanged={onChanged} /></div>}
         <div className="flex flex-wrap items-center gap-2 border-t border-neutral-100 p-3 dark:border-neutral-800">
           <button type="button" onClick={onClose} className={quietButton}><ArrowLeft className="size-4" /> Back</button>
           <div className="flex-1" />
-          {canEdit && !m.share && <DecisionShare slug={slug} motion={m} onChanged={onChanged} />}
+          {canShare && !m.share && <DecisionShare slug={slug} motion={m} fields={shareFields} onChanged={onChanged} />}
           {canDelete && <button type="button" onClick={() => onDelete(m)} className={dangerButton}><Trash2 className="size-4" /> Delete</button>}
           {canEdit && <button type="button" onClick={() => onEdit(m)} className={quietButton}><Pencil className="size-4" /> Change</button>}
         </div>
@@ -557,7 +561,7 @@ export default function DecisionsView({ group }) {
             <DecisionsImport slug={slug} file={importing.file} preview={importing.preview} onDone={importDone} onCancel={() => setImporting(null)} />
           ) : editing ? form(editing === "new" ? null : editing) : current ? (
             <DecisionDetail slug={slug} motion={current} parent={index.byId.get(current.parent_id)} thread={currentThread}
-              canEdit={canEdit} canDelete={data.can_delete} onEdit={setEditing} onDelete={remove} onOpen={open} onClose={close} finder={finder} onChanged={load} />
+              canEdit={canEdit} canShare={data.can_share} shareFields={group.decision_share_fields} canDelete={data.can_delete} onEdit={setEditing} onDelete={remove} onOpen={open} onClose={close} finder={finder} onChanged={load} />
           ) : (
             <div className="rounded-2xl border-2 border-dashed border-neutral-200 p-10 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
               {openId ? "That decision isn't in the log, or you can't see it." : "Choose a decision to read it, see what it replaced, and find others that might be related."}

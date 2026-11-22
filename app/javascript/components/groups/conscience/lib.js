@@ -136,3 +136,16 @@ export const AGENDA_KINDS = [
 ];
 export const AGENDA_KIND_LABELS = Object.fromEntries(AGENDA_KINDS.map((k) => [k.key, k.label]));
 export const AGENDA_STATUS_LABELS = { suggested: "Suggested", on_agenda: "On the agenda", tabled: "Tabled", done: "Done" };
+
+// What a decision's public page shows, as the group set it in Group settings (Group::DECISION_SHARE_FIELDS)
+export const SHARE_FIELDS = [
+  ["text", "The wording"], ["amended_text", "The amended wording"], ["counts", "The vote count"],
+  ["minority_opinion", "The minority opinion"], ["group", "The group's name (only if its page is open to visitors)"], ["moved_by", "Who moved and seconded it"],
+];
+export const DEFAULT_SHARE_FIELDS = ["text", "amended_text", "counts", "minority_opinion", "group"];
+// Who may turn a decision's public link on (Group decision_sharers)
+export const DECISION_SHARERS = [
+  ["officers", "Officers", "Admins, record keepers, treasurers, host coordinators and anyone serving in one of the group's offices now."],
+  ["members", "Every member", "Any member of the group can share a decision they can see."],
+  ["admins", "Admins only", "Only the group's admins."],
+];

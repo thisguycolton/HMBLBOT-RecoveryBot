@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_22_220000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_22_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -893,6 +893,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_22_220000) do
     t.date "office_roles_synced_on"
     t.jsonb "setup_steps", default: {}, null: false
     t.datetime "setup_finished_at"
+    t.string "decision_sharers", default: "officers", null: false
+    t.string "decision_share_fields", default: ["text", "amended_text", "counts", "minority_opinion", "group"], null: false, array: true
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["join_token"], name: "index_groups_on_join_token", unique: true
     t.index ["slug"], name: "index_groups_on_slug", unique: true

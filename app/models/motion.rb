@@ -171,7 +171,8 @@ class Motion < ApplicationRecord
   # list needn't ask once per row; `visible`: ids this viewer may see.
   # `meetings`: ids of the business meetings this viewer may see, so a link never leads nowhere
   # `keeper`: record keepers also get #warnings
-  def as_api_json(replacers: nil, visible: nil, meetings: nil, keeper: false)
+  # `sharer`: may turn its public link on and off (Group#decisions_shareable_by?), so sees it
+  def as_api_json(replacers: nil, visible: nil, meetings: nil, keeper: false, sharer: keeper)
     replacer = (replacers || self.class.replacers_for(group))[id]
     shown = ->(m) { m && (visible.nil? || visible.include?(m.id)) }
     {
@@ -189,14 +190,15 @@ class Motion < ApplicationRecord
       warnings: keeper ? warnings : [], needs_review: needs_review, imported: imported, ignore_rules: ignore_rules, one_time: one_time,
       business_meeting_id: business_meeting_id, polls: polls.map(&:token),
       meeting: business_meeting && (meetings.nil? || meetings.include?(business_meeting_id)) ? { id: business_meeting_id, held_on: business_meeting.held_on.iso8601 } : nil,
-      # Its public link, for record keepers (who turn it on and off)
-      share: keeper && shared? ? { path: share_path, shared_at: shared_at&.iso8601 } : nil,
+      # Its public link, for whoever may turn it on and off
+      share: sharer && shared? ? { path: share_path, shared_at: shared_at&.iso8601 } : nil,
     }
   end
 
-  # Its own public link, /d/:token: off unless a record keeper turns it on (#share!). Anyone
+  # Its own public link, /d/:token: off unless someone the group lets share decisions turns it
+  # on (#share!, Group#decisions_shareable_by?). Anyone
   # with the link reads #public_json and nothing else, without an account, whatever the
-  # decision's visibility, until a keeper turns it off (or deletes the decision). Turning it off
+  # decision's visibility, until it's turned off (or deletes the decision). Turning it off
   # and on again makes a new link, so an old one never comes back. A record still to be checked
   # against old minutes (needs_review) can't be shared, and its link shows nothing meanwhile.
   def shared? = share_token.present? && !needs_review
@@ -210,20 +212,25 @@ class Motion < ApplicationRecord
     find_by(share_token: token.to_s, needs_review: false)
   end
 
-  # What a shared link shows: the decision as the group wrote it, how it came out, and the
-  # count. Never who moved or seconded it, the keepers' note, the minority opinion or the
-  # meeting (they can carry names), nor the titles of decisions around it. The group is named
-  # only when its page is open to visitors anyway.
+  # What a shared link shows: the title and how it came out, plus what the group chose in Group
+  # settings (Group#decision_share_fields): the wording, the amended wording, the count, the
+  # minority opinion, the group's name (only when its page is open to visitors anyway) and,
+  # only if the group turned it on, who moved and seconded it. Never the keepers' note, the
+  # meeting, or the titles of decisions around it.
   def public_json(replacers: nil)
     replacer = (replacers || self.class.replacers_for(group))[id]
-    open_group = group.page_visible_to?(nil)
+    show = Array(group.decision_share_fields)
+    on = ->(field, value) { show.include?(field) ? value : nil }
     {
-      title: title, text: text.to_s, amended_text: amended_text.to_s, amended_label: kind == "amend" ? "As it now reads" : "As amended",
+      title: title, text: on.call("text", text.to_s).to_s, amended_text: on.call("amended_text", amended_text.to_s).to_s,
+      amended_label: kind == "amend" ? "As it now reads" : "As amended",
+      minority_opinion: on.call("minority_opinion", minority_opinion.to_s).to_s,
+      moved_by: on.call("moved_by", moved_by_name), seconded_by: on.call("moved_by", seconded_by_name),
       status: status, kind: kind, kind_label: kind_info[:label], category: category, decided_on: decided_on&.iso8601,
-      votes_for: votes_for, votes_against: votes_against, abstentions: abstentions,
+      votes_for: on.call("counts", votes_for), votes_against: on.call("counts", votes_against), abstentions: on.call("counts", abstentions),
       standing: passed? && decision? && !one_time && replacer.nil?, one_time: one_time,
       replaced_on: replacer&.decided_on&.iso8601, replaced: replacer.present?,
-      group: open_group ? { title: group.title, path: "/groups/#{group.slug}" } : nil,
+      group: show.include?("group") && group.page_visible_to?(nil) ? { title: group.title, path: "/groups/#{group.slug}" } : nil,
       path: share_path,
     }
   end

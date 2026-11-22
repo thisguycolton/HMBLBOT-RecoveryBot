@@ -72,6 +72,8 @@ class Group < ApplicationRecord
   validates :time_zone, inclusion: { in: TIME_ZONES }
   validates :status, inclusion: { in: STATUSES }
   validates :sub_requests_audience, inclusion: { in: %w[members hosts off] }
+  validates :decision_sharers, inclusion: { in: %w[admins officers members] }
+  before_validation { self.decision_share_fields = DECISION_SHARE_FIELDS & Array(decision_share_fields).map(&:to_s) }
   validates :description, length: { maximum: 1000 }
   validates :quorum_count, numericality: { only_integer: true, in: 1..9999 }, allow_nil: true
   validates :quorum_percent, numericality: { only_integer: true, in: 1..100 }, allow_nil: true
@@ -267,6 +269,38 @@ class Group < ApplicationRecord
     roles = Array(deck_editors)
     (roles.include?("host_coordinators") && hosts_editable_by?(user)) || (roles.include?("record_keepers") && records_editable_by?(user)) ||
       (roles.include?("hosts") && can_host?(user))
+  end
+
+  # A decision's public link (Motion#share!), as the group set it in Group settings:
+  # decision_sharers is who may turn one on or off: "officers" (the default: admins, record
+  # keepers, treasurers, host coordinators and anyone serving in one of its offices now),
+  # "admins" only, or every "members". decision_share_fields is what its page shows besides the
+  # title and how it came out (Motion#public_json).
+  DECISION_SHARE_FIELDS = %w[text amended_text counts minority_opinion group moved_by].freeze
+  def decisions_shareable_by?(user)
+    return false unless user
+    return true if manageable_by?(user)
+
+    case decision_sharers
+    when "members" then member?(user)
+    when "officers" then officer?(user)
+    else false
+    end
+  end
+
+  # Holds an elected role: a role (record keeper, treasurer, host coordinator), or a current
+  # term in one of the group's offices
+  def officer?(user)
+    return false unless user
+    return true if manageable_by?(user)
+
+    membership = membership_for(user)
+    return false unless membership&.active?
+    return true if membership.can_keep_records || membership.can_keep_treasury || membership.can_schedule_hosts
+
+    today = zone.today
+    ServiceTerm.joins(:service_position).where(user_id: user.id, service_positions: { group_id: id, archived: false })
+               .where("service_terms.starts_on <= ? AND (service_terms.ends_on IS NULL OR service_terms.ends_on >= ?)", today, today).exists?
   end
 
   def member_or_site_admin?(user) = !!user && (user.suite_admin? || member?(user))
