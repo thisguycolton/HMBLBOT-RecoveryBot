@@ -90,6 +90,25 @@ function Report({ report: r, act }) {
               Stop them offering to sponsor
             </button>
           )}
+          {r.share_report && !r.shares_suspended_until && (
+            // Pausing works on the hidden writer: nobody learns who wrote an anonymous share
+            <>
+              <button type="button" className={buttonClass.secondary} onClick={() => act(`/user_reports/${r.id}`, { method: "PATCH", body: { shares: "7" } }, "They can't share on readings for 7 days.")}>
+                Pause their shares 7 days
+              </button>
+              <button type="button" className={buttonClass.secondary} onClick={() => act(`/user_reports/${r.id}`, { method: "PATCH", body: { shares: "30" } }, "They can't share on readings for 30 days.")}>
+                30 days
+              </button>
+              <button type="button" className={buttonClass.secondary} onClick={() => act(`/user_reports/${r.id}`, { method: "PATCH", body: { shares: "forever" } }, "They can't share on readings anymore.")}>
+                For good
+              </button>
+            </>
+          )}
+          {r.share_report && r.shares_suspended_until && (
+            <button type="button" className={buttonClass.secondary} onClick={() => act(`/user_reports/${r.id}`, { method: "PATCH", body: { shares: "allow" } }, "They can share on readings again.")}>
+              Shares paused{new Date(r.shares_suspended_until).getFullYear() > new Date().getFullYear() + 50 ? "" : ` until ${shortDate(r.shares_suspended_until)}`} · Let them share again
+            </button>
+          )}
           {r.sponsoring === "stopped" && (
             <button type="button" className={buttonClass.secondary} onClick={() => act(`/user_reports/${r.id}`, { method: "PATCH", body: { sponsoring: "allow" } }, "They can offer to sponsor again.")}>
               Let them offer to sponsor again

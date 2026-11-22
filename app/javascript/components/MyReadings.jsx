@@ -10,6 +10,7 @@ import {
   Plus,
   Search,
   Trash2,
+  MessageCircleHeart,
 } from "lucide-react";
 import { Shell, ShellPanel } from "./ui/Shell";
 import SegmentedControl from "./ui/SegmentedControl";
@@ -260,6 +261,17 @@ function MyReadingCard({ reading, deleting, onDelete }) {
         <a href={reading.path} className="flex h-full flex-col p-5 hover:bg-accent/[0.03] dark:hover:bg-white/[0.03] transition-colors">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <StatusBadge reading={reading} />
+            {reading.shares_waiting > 0 && (
+              // Shares on it waiting for their approval (ReadingShares)
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">
+                <MessageCircleHeart className="h-3.5 w-3.5" /> {reading.shares_waiting} waiting
+              </span>
+            )}
+            {reading.share_count > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-neutral-400">
+                <MessageCircleHeart className="h-3.5 w-3.5" /> {reading.share_count} {reading.share_count === 1 ? "share" : "shares"}
+              </span>
+            )}
           </div>
 
           <h3 className="text-lg font-bold uppercase tracking-wider text-slate-900 dark:text-white ttSans line-clamp-2">

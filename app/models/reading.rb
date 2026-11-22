@@ -13,7 +13,7 @@ class Reading < ApplicationRecord
   # Polls shown with it (Poll#subject); a poll outlives the reading
   has_many :polls, -> { order(:created_at) }, as: :subject, dependent: :nullify
   # Members' shares on it (ReadingShare), which its poster approves; `shares_off` turns them off
-  has_many :shares, class_name: "ReadingShare", dependent: :delete_all
+  has_many :shares, class_name: "ReadingShare", dependent: :destroy
 
   # Publishing scopes
   # Visibility is computed from published_at at query time, so a scheduled reading

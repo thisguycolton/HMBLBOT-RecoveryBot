@@ -175,4 +175,136 @@ class Api::ReadingSharesTest < ActionDispatch::IntegrationTest
       @tina.destroy!
     end
   end
+
+  test "replies: one level, approved like shares, and the share's writer hears by the name the replier chose" do
+    top = share!(@tina)
+    ReadingShare.find(top["id"]).approve!(@poster)
+
+    reply = nil
+    assert_no_difference -> { @tina.notifications.count } do
+      sign_in @mo
+      post "/api/readings/#{@reading.id}/shares", params: { share: { body: "Me too", anonymous: true, parent_id: top["id"] } }, as: :json
+      assert_response :created
+      reply = response.parsed_body
+    end
+    assert_equal top["id"], reply["parent_id"]
+
+    sign_in @poster
+    assert_difference -> { @tina.notifications.where(kind: "reading_share.reply").count }, 1 do
+      post "/api/reading_shares/#{reply['id']}/approve", as: :json
+    end
+    assert_equal "A member replied to your share on \u201COn acceptance\u201D", @tina.notifications.last.title
+    assert_nil @tina.notifications.last.body
+
+    # No replies to replies
+    sign_in @tina
+    post "/api/readings/#{@reading.id}/shares", params: { share: { body: "Deeper", parent_id: reply["id"] } }, as: :json
+    assert_response :unprocessable_entity
+  end
+
+  test "reactions show counts, never who, and the writer hears someone reacted" do
+    s = share!(@tina, anonymous: false)
+    ReadingShare.find(s["id"]).approve!(@poster)
+    sam = User.create!(email: "sam@example.com", name: "Sam", password: "password123", confirmed: true)
+
+    sign_in sam
+    assert_difference -> { @tina.notifications.count }, 1 do
+      put "/api/reading_shares/#{s['id']}/reaction", params: { kind: "hugs" }, as: :json
+    end
+    assert_equal 1, response.parsed_body["reactions"]["hugs"]
+    assert_equal "hugs", response.parsed_body["my_reaction"]
+    assert_nil response.parsed_body["reactors"]
+    assert_match(/\ASomeone reacted/, @tina.notifications.last.title)
+
+    sign_in @tina
+    get "/api/readings/#{@reading.id}/shares"
+    refute_includes response.body, "Sam"
+  end
+
+  test "muting hides that person's shares without saying who they are" do
+    s = share!(@tina)
+    ReadingShare.find(s["id"]).approve!(@poster)
+    sign_in @poster
+    post "/api/reading_shares/#{s['id']}/mute", as: :json
+    assert_response :no_content
+    get "/api/readings/#{@reading.id}/shares"
+    body = response.parsed_body
+    assert_equal [], body["shares"]
+    assert_equal 1, body["muted"]
+    refute_includes response.body, "Tina"
+
+    delete "/api/readings/#{@reading.id}/shares/mutes", as: :json
+    assert_equal 1, response.parsed_body["shares"].size
+  end
+
+  test "a site admin pauses an anonymous writer's shares from a report without learning who" do
+    s = share!(@tina)
+    ReadingShare.find(s["id"]).approve!(@poster)
+    admin = User.create!(email: "site@example.com", name: "Site", password: "password123", confirmed: true, admin: true)
+    ENV["ADMIN_EMAILS"] = "site@example.com"
+    sign_in @mo
+    post "/api/user_reports", params: { subject_type: "reading_share", subject_id: s["id"], reason: "Rude" }, as: :json
+    report = UserReport.last
+
+    sign_in admin
+    patch "/api/admin/user_reports/#{report.id}", params: { shares: "7" }, as: :json
+    assert_response :success
+    assert response.parsed_body["shares_suspended_until"]
+    refute_includes response.body, "tina"
+    assert @tina.reload.shares_suspended?
+
+    share!(@tina, body: "again")
+    assert_response :forbidden
+
+    # The member's bell in the admin suite leaves out share notifications
+    Notification.deliver(@tina, kind: "reading_share.reply", title: "A member replied to your share")
+    sign_in admin
+    get "/api/admin/users/#{@tina.id}/notifications"
+    refute_includes response.body, "replied to your share"
+  ensure
+    ENV.delete("ADMIN_EMAILS")
+  end
+
+  test "also post to my timeline makes a note for a named share only" do
+    sign_in @tina
+    assert_difference -> { @tina.timeline_notes.count }, 1 do
+      post "/api/readings/#{@reading.id}/shares", params: { share: { body: "Named", anonymous: false, also_timeline: true } }, as: :json
+    end
+    assert_match %r{/readings/#{@reading.id}}, @tina.timeline_notes.last.body
+    assert_no_difference -> { @tina.timeline_notes.count } do
+      post "/api/readings/#{@reading.id}/shares", params: { share: { body: "Anon", anonymous: true, also_timeline: true } }, as: :json
+    end
+  end
+
+  test "a note moves to the reading's shares and is deleted" do
+    note = @tina.timeline_notes.create!(body: "Loved [this](/readings/#{@reading.id})", visibility: "public")
+    sign_in @tina
+    post "/api/readings/#{@reading.id}/shares", params: { share: { body: note.body, anonymous: true, from_note_id: note.id, delete_note: true } }, as: :json
+    assert_response :created
+    refute TimelineNote.exists?(note.id)
+
+    other = @mo.timeline_notes.create!(body: "Mo's note", visibility: "public")
+    post "/api/readings/#{@reading.id}/shares", params: { share: { body: "x", from_note_id: other.id, delete_note: true } }, as: :json
+    assert TimelineNote.exists?(other.id), "only their own notes"
+  end
+
+  test "reading cards count approved shares the viewer can see" do
+    s = share!(@tina)
+    ReadingShare.find(s["id"]).approve!(@poster)
+    assert_equal({ @reading.id => 1 }, ReadingShare.counts_for([@reading], @mo))
+    assert_equal({}, ReadingShare.counts_for([@reading], nil))
+    group = Group.create!(title: "Closed", time_zone: "America/Phoenix")
+    @reading.update!(group: group)
+    assert_equal({}, ReadingShare.counts_for([@reading.reload], @mo))
+  end
+
+  test "deleting a share takes its replies and reactions with it" do
+    top = share!(@tina)
+    ReadingShare.find(top["id"]).approve!(@poster)
+    reply = ReadingShare.create!(reading: @reading, user: @mo, parent_id: top["id"], body: "Same", status: "approved")
+    reply.reactions.create!(user: @poster, kind: "like")
+    assert_difference -> { ReadingShare.count } => -2, -> { NoteReaction.count } => -1 do
+      @tina.destroy!
+    end
+  end
 end

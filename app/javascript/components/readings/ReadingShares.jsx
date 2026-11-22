@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Check, Flag, MessageCircleHeart, MoreHorizontal, Pencil, Trash2, UserRound, X } from "lucide-react";
+import { Check, Flag, HandHeart, Heart, MessageCircleHeart, MoreHorizontal, Pencil, Reply, ThumbsUp, Trash2, UserRound, VolumeX, X } from "lucide-react";
 import { api } from "../groups/lib";
 import Avatar from "../groups/Avatar";
 import ReportDialog from "../groups/chat/ReportDialog";
@@ -50,6 +50,7 @@ export default function ReadingShares({ readingId }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
+  const load = () => api(`/readings/${readingId}/shares`).then(setData).catch(setError);
   useEffect(() => {
     let live = true;
     api(`/readings/${readingId}/shares`)
@@ -57,6 +58,13 @@ export default function ReadingShares({ readingId }) {
       .catch((e) => live && setError(e));
     return () => { live = false; };
   }, [readingId]);
+
+  // Arriving from a notification (#share-12): bring that share into view once it's drawn
+  useEffect(() => {
+    if (!data) return;
+    const id = window.location.hash.match(/^#share-(\d+)$/)?.[1];
+    if (id) document.getElementById(`share-${id}`)?.scrollIntoView({ block: "center" });
+  }, [!!data]);
 
   // Not open to them here (a group's reading they aren't in, profiles not open yet): no section
   if (error || !data) return null;
@@ -75,7 +83,19 @@ export default function ReadingShares({ readingId }) {
     }
   };
 
-  const shown = shares.length;
+  const unmuteAll = async () => {
+    try {
+      setData(await api(`/readings/${readingId}/shares/mutes`, { method: "DELETE" }));
+      showToast("Everyone's shares show again.");
+    } catch (e) {
+      showToast(e.message, { tone: "error" });
+    }
+  };
+
+  const top = shares.filter((s) => !s.parent_id);
+  const repliesTo = (id) => shares.filter((s) => s.parent_id === id);
+  const shown = top.length;
+  const ctx = { readingId, myName, grapevine: data.grapevine, canModerate: data.can_moderate, canShare: data.can_share, onAdd: add, onMuted: load };
   return (
     <section id="shares" className="mt-10 scroll-mt-24 rounded-2xl border border-stone-200 bg-white px-5 py-6 !font-sans dark:border-neutral-700 dark:bg-neutral-800/60 md:px-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -99,16 +119,28 @@ export default function ReadingShares({ readingId }) {
 
       {shown > 0 && (
         <ul className="mt-5 space-y-3">
-          {shares.map((s) => (
-            <Share key={s.id} share={s} myName={myName} onChange={replace} onRemove={() => remove(s.id)} />
+          {top.map((s) => (
+            <Share key={s.id} share={s} ctx={ctx} onChange={replace} onRemove={() => remove(s.id)}
+              replies={repliesTo(s.id)} onReplyChange={replace} onReplyRemove={remove} />
           ))}
         </ul>
       )}
 
+      {data.muted > 0 && (
+        <p className="mt-4 text-sm text-neutral-500 dark:text-neutral-400">
+          You've muted {data.muted === 1 ? "someone's shares" : `${data.muted} people's shares`}.{" "}
+          <button type="button" onClick={unmuteAll} className="!bg-transparent p-0 font-medium text-sky-700 hover:underline dark:text-sky-300">Unmute all</button>
+        </p>
+      )}
+
       {data.can_share ? (
-        <Composer readingId={readingId} myName={myName} grapevine={data.grapevine} canModerate={data.can_moderate} onPosted={add} />
+        <div className="mt-6 border-t border-stone-200 pt-5 dark:border-neutral-700">
+          <Composer ctx={ctx} />
+        </div>
       ) : (
-        <p className="mt-5 text-sm text-neutral-500 dark:text-neutral-400">Shares are off for this reading.</p>
+        <p className="mt-5 text-sm text-neutral-500 dark:text-neutral-400">
+          {data.suspended ? "You can't share on readings right now. A site admin paused it after a report." : "Shares are off for this reading."}
+        </p>
       )}
     </section>
   );
@@ -137,10 +169,15 @@ function IdentityPicker({ anonymous, onChange, myName }) {
   );
 }
 
-function Composer({ readingId, myName, grapevine, canModerate, onPosted }) {
+// Writing a share, or a reply to one (`parentId`): the words, who it's from, and for a share
+// under their own name, "Also post to my timeline"
+function Composer({ ctx, parentId = null, onCancel = null }) {
+  const { readingId, myName, grapevine, canModerate, onAdd } = ctx;
   const [body, setBody] = useState("");
   const [anonymous, setAnonymous] = useState(rememberedAnonymous);
+  const [alsoTimeline, setAlsoTimeline] = useState(false);
   const [saving, setSaving] = useState(false);
+  const reply = !!parentId;
 
   const pick = (value) => { setAnonymous(value); rememberAnonymous(value); };
 
@@ -149,44 +186,98 @@ function Composer({ readingId, myName, grapevine, canModerate, onPosted }) {
     if (!body.trim() || saving) return;
     setSaving(true);
     try {
-      const share = await api(`/readings/${readingId}/shares`, { method: "POST", body: { share: { body, anonymous } } });
+      const share = await api(`/readings/${readingId}/shares`, {
+        method: "POST",
+        body: { share: { body, anonymous, parent_id: parentId, also_timeline: !reply && !anonymous && alsoTimeline } },
+      });
       setBody("");
-      onPosted(share);
-      if (share.status === "pending") showToast("Thanks for sharing. It shows to others once the reading's poster approves it.");
+      onAdd(share);
+      if (share.status === "pending") showToast(`Thanks. Your ${reply ? "reply" : "share"} shows to others once the reading's poster approves it.`);
+      onCancel?.();
     } catch (err) {
-      showToast(err.message || "Couldn't post your share.", { tone: "error" });
+      showToast(err.message || "Couldn't post that.", { tone: "error" });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <form onSubmit={post} className="mt-6 space-y-3 border-t border-stone-200 pt-5 dark:border-neutral-700">
+    <form onSubmit={post} className={`space-y-3 ${reply ? "mt-3" : ""}`}>
       <label className="block">
-        <span className="sr-only">Your share</span>
-        <textarea rows={4} maxLength={MAX} value={body} onChange={(e) => setBody(e.target.value)}
-          placeholder={grapevine ? "Share your experience. Please don't copy the story's text." : "Share your experience, strength and hope…"}
+        <span className="sr-only">{reply ? "Your reply" : "Your share"}</span>
+        <textarea rows={reply ? 2 : 4} maxLength={MAX} value={body} onChange={(e) => setBody(e.target.value)} autoFocus={reply}
+          placeholder={reply ? "Write a reply…" : grapevine ? "Share your experience. Please don't copy the story's text." : "Share your experience, strength and hope…"}
           className="w-full rounded-xl border-0 bg-stone-100 px-4 py-3 text-base text-slate-900 ring-1 ring-stone-200 placeholder:text-neutral-400 focus:ring-2 focus:ring-sky-500 dark:bg-neutral-900 dark:text-white dark:ring-neutral-700" />
       </label>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <IdentityPicker anonymous={anonymous} onChange={pick} myName={myName} />
-        <button type="submit" disabled={saving || !body.trim()}
-          className="inline-flex items-center gap-2 rounded-xl !bg-sky-600 px-5 py-2.5 font-semibold !text-white hover:!bg-sky-500 disabled:opacity-50">
-          <MessageCircleHeart size={18} /> {saving ? "Sharing…" : "Share"}
-        </button>
+        <div className="flex items-center gap-2">
+          {onCancel && (
+            <button type="button" onClick={onCancel} className="rounded-xl !bg-transparent px-3 py-2 text-sm font-semibold text-slate-700 hover:!bg-stone-200 dark:text-neutral-200 dark:hover:!bg-neutral-700">Cancel</button>
+          )}
+          <button type="submit" disabled={saving || !body.trim()}
+            className={`inline-flex items-center gap-2 rounded-xl !bg-sky-600 font-semibold !text-white hover:!bg-sky-500 disabled:opacity-50 ${reply ? "px-4 py-2 text-sm" : "px-5 py-2.5"}`}>
+            {reply ? <Reply size={16} /> : <MessageCircleHeart size={18} />} {saving ? "Posting…" : reply ? "Reply" : "Share"}
+          </button>
+        </div>
       </div>
+      {!reply && !anonymous && (
+        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-200">
+          <input type="checkbox" checked={alsoTimeline} onChange={(e) => setAlsoTimeline(e.target.checked)} />
+          Also post to my timeline, for the people who see my notes
+        </label>
+      )}
       <p className="text-xs text-neutral-500 dark:text-neutral-400">
         {anonymous
           ? "Your name stays hidden from everyone, moderators included. People who know you may still recognize your story."
-          : "Your name and picture show with your share."}
-        {canModerate ? "" : " The reading's poster approves shares before others see them."}
+          : "Your name and picture show with it."}
+        {canModerate ? "" : ` The reading's poster approves ${reply ? "replies" : "shares"} before others see them.`}
       </p>
     </form>
   );
 }
 
-function Share({ share: s, myName, onChange, onRemove }) {
+const REACTIONS = [
+  { value: "like", label: "Like", icon: ThumbsUp },
+  { value: "love", label: "Love", icon: Heart },
+  { value: "hugs", label: "Hugs", icon: HandHeart },
+];
+
+// Like, Love or Hugs with how many, never who
+function Reactions({ share: s, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const react = async (kind) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const mine = s.my_reaction === kind;
+      onChange(await api(`/reading_shares/${s.id}/reaction`, mine ? { method: "DELETE" } : { method: "PUT", body: { kind } }));
+    } catch (e) {
+      showToast(e.message, { tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex items-center gap-1">
+      {REACTIONS.map(({ value, label, icon: Icon }) => {
+        const count = s.reactions?.[value] || 0;
+        const mine = s.my_reaction === value;
+        return (
+          <button key={value} type="button" onClick={() => react(value)} aria-pressed={mine} title={label} aria-label={`${label}${count ? `, ${count}` : ""}`}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${mine ? "!bg-sky-100 text-sky-800 dark:!bg-sky-500/20 dark:text-sky-200" : "!bg-transparent text-neutral-500 hover:!bg-stone-200 dark:text-neutral-400 dark:hover:!bg-neutral-700"}`}>
+            <Icon size={14} fill={mine && value !== "hugs" ? "currentColor" : "none"} aria-hidden="true" />
+            {count > 0 && count}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Share({ share: s, ctx, onChange, onRemove, replies = null, onReplyChange, onReplyRemove }) {
   const [editing, setEditing] = useState(false);
+  const [replying, setReplying] = useState(false);
   const [menu, setMenu] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [declining, setDeclining] = useState(false);
@@ -204,7 +295,7 @@ function Share({ share: s, myName, onChange, onRemove }) {
 
   const destroy = async () => {
     setMenu(false);
-    if (!window.confirm("Delete this share?")) return;
+    if (!window.confirm(isReply ? "Delete this reply?" : "Delete this share? Its replies go too.")) return;
     try {
       await api(`/reading_shares/${s.id}`, { method: "DELETE" });
       onRemove();
@@ -213,17 +304,31 @@ function Share({ share: s, myName, onChange, onRemove }) {
     }
   };
 
+  const mute = async () => {
+    setMenu(false);
+    if (!window.confirm(`Mute ${s.anonymous ? "this person" : s.name}? You won't see their shares or replies on any reading, named or anonymous. They aren't told.`)) return;
+    try {
+      await api(`/reading_shares/${s.id}/mute`, { method: "POST" });
+      showToast("Muted. Unmute from the bottom of Shares.");
+      ctx.onMuted();
+    } catch (e) {
+      showToast(e.message, { tone: "error" });
+    }
+  };
+
+  const isReply = !!s.parent_id;
+  const what = isReply ? "reply" : "share";
   const name = s.mine ? `${s.anonymous ? "A member" : s.name} (you)` : s.name;
   const status = s.status === "pending" ? "Waiting for approval" : s.status === "declined" ? "Not approved" : null;
 
   return (
-    <li className={`rounded-xl px-4 py-3 ${s.status === "pending" ? "bg-amber-50/70 ring-1 ring-amber-200 dark:bg-amber-500/5 dark:ring-amber-500/30" : s.status === "declined" ? "bg-stone-50 opacity-80 ring-1 ring-stone-200 dark:bg-neutral-900 dark:ring-neutral-700" : "bg-stone-50 dark:bg-neutral-900/60"}`}>
+    <li id={`share-${s.id}`} className={`scroll-mt-24 rounded-xl ${isReply ? "px-3 py-2" : "px-4 py-3"} ${s.status === "pending" ? "bg-amber-50/70 ring-1 ring-amber-200 dark:bg-amber-500/5 dark:ring-amber-500/30" : s.status === "declined" ? "bg-stone-50 opacity-80 ring-1 ring-stone-200 dark:bg-neutral-900 dark:ring-neutral-700" : "bg-stone-50 dark:bg-neutral-900/60"}`}>
       <div className="flex items-start gap-3">
         {s.author ? (
-          <a href={`/people/${s.author.username}`} className="shrink-0"><Avatar person={s.author} size={36} /></a>
+          <a href={`/people/${s.author.username}`} className="shrink-0"><Avatar person={s.author} size={isReply ? 28 : 36} /></a>
         ) : (
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-stone-200 text-stone-500 dark:bg-neutral-700 dark:text-neutral-300" aria-hidden="true">
-            <UserRound size={18} />
+          <span className={`flex ${isReply ? "size-7" : "size-9"} shrink-0 items-center justify-center rounded-full bg-stone-200 text-stone-500 dark:bg-neutral-700 dark:text-neutral-300`} aria-hidden="true">
+            <UserRound size={isReply ? 14 : 18} />
           </span>
         )}
         <div className="min-w-0 flex-1">
@@ -246,10 +351,11 @@ function Share({ share: s, myName, onChange, onRemove }) {
               {menu && (
                 <ShareMenu share={s} onClose={() => setMenu(false)}
                   onEdit={() => { setMenu(false); setEditing(true); }}
-                  onToggleName={() => call(`/reading_shares/${s.id}`, { method: "PATCH", body: { share: { anonymous: !s.anonymous } } }, s.anonymous ? "Your name shows on this share now." : "This share says “A member” now.")}
+                  onToggleName={() => call(`/reading_shares/${s.id}`, { method: "PATCH", body: { share: { anonymous: !s.anonymous } } }, s.anonymous ? `Your name shows on this ${what} now.` : `This ${what} says “A member” now.`)}
                   onDelete={destroy}
                   onReport={() => { setMenu(false); setReporting(true); }}
-                  onDecline={() => { setMenu(false); setDeclining(true); }} />
+                  onDecline={() => { setMenu(false); setDeclining(true); }}
+                  onMute={mute} />
               )}
             </div>
           </div>
@@ -280,6 +386,26 @@ function Share({ share: s, myName, onChange, onRemove }) {
             <DeclineBox onCancel={() => setDeclining(false)}
               onSend={(reason) => { setDeclining(false); call(`/reading_shares/${s.id}/decline`, { method: "POST", body: { reason } }, "Declined. Only its writer sees it now."); }} />
           )}
+          {/* Others only ever get approved ones, without a status */}
+          {(s.status ?? "approved") === "approved" && !editing && (
+            <div className="mt-2 flex flex-wrap items-center gap-1">
+              <Reactions share={s} onChange={onChange} />
+              {!isReply && ctx.canShare && !replying && (
+                <button type="button" onClick={() => setReplying(true)}
+                  className="inline-flex items-center gap-1 rounded-full !bg-transparent px-2 py-1 text-xs font-semibold text-neutral-500 hover:!bg-stone-200 dark:text-neutral-400 dark:hover:!bg-neutral-700">
+                  <Reply size={14} /> Reply
+                </button>
+              )}
+            </div>
+          )}
+          {replies && replies.length > 0 && (
+            <ul className="mt-3 space-y-2 border-l-2 border-stone-200 pl-3 dark:border-neutral-700">
+              {replies.map((r) => (
+                <Share key={r.id} share={r} ctx={ctx} onChange={onReplyChange} onRemove={() => onReplyRemove(r.id)} />
+              ))}
+            </ul>
+          )}
+          {replying && <Composer ctx={ctx} parentId={s.id} onCancel={() => setReplying(false)} />}
         </div>
       </div>
       {reporting && <ReportDialog subject={{ type: "reading_share", id: s.id }} person={{ name: s.anonymous ? "this share" : s.name, anonymous: s.anonymous }} onClose={() => setReporting(false)} />}
@@ -287,7 +413,7 @@ function Share({ share: s, myName, onChange, onRemove }) {
   );
 }
 
-function ShareMenu({ share: s, onClose, onEdit, onToggleName, onDelete, onReport, onDecline }) {
+function ShareMenu({ share: s, onClose, onEdit, onToggleName, onDelete, onReport, onDecline, onMute }) {
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -308,6 +434,7 @@ function ShareMenu({ share: s, onClose, onEdit, onToggleName, onDelete, onReport
         {s.can_moderate && !s.mine && s.status === "approved" && (
           <button type="button" role="menuitem" className={item} onClick={onDecline}><X size={15} /> Take down</button>
         )}
+        {!s.mine && <button type="button" role="menuitem" className={item} onClick={onMute}><VolumeX size={15} /> Mute {s.anonymous ? "this person" : s.name.split(" ")[0]}</button>}
         {!s.mine && <button type="button" role="menuitem" className={item} onClick={onReport}><Flag size={15} /> Report</button>}
         {s.can_remove && <button type="button" role="menuitem" className={`${item} !text-red-600`} onClick={onDelete}><Trash2 size={15} /> Delete</button>}
       </div>

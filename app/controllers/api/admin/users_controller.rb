@@ -98,7 +98,8 @@ class Api::Admin::UsersController < Api::Admin::SuiteController
         { label: d.label, app_version: d.app_version, created_at: d.created_at.iso8601, updated_at: d.updated_at.iso8601, last_sent_at: d.last_sent_at&.iso8601 }
       end,
       browsers: user.push_subscriptions.order(created_at: :desc).map { |s| s.as_api_json.slice(:label, :created_at, :last_sent_at) },
-      recent: user.notifications.recent.limit(8).map { |n| n.as_api_json.slice(:title, :kind, :read, :created_at) },
+      # Left out: notifications about shares on readings, which could show that they wrote an anonymous one
+      recent: user.notifications.where("kind NOT LIKE 'reading_share.%'").recent.limit(8).map { |n| n.as_api_json.slice(:title, :kind, :read, :created_at) },
     }
   end
 
